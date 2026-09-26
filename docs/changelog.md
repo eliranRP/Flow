@@ -2,6 +2,10 @@
 
 ## 2026-09-26
 
+Decision [0032](decisions/0032-home-hero-stays-company-net-profit.md), Accepted. With the after-overhead switch on, Home's hero number stays company net profit. The band's small figures show profit before overhead and the overhead amount, and each project row shows profit after its share. The project screen shows before, share, then after. Evidence: [18](../design/screens/18-home-overhead-on-light.png) and [19](../design/screens/19-project-overhead-on-light.png). The open question is resolved.
+
+## 2026-09-26
+
 The approved design package and the logo are in [design](../design/README.md), byte for byte, with [MANIFEST.txt](../design/MANIFEST.txt). Decisions [0024](decisions/0024-design-system-approved.md) through [0031](decisions/0031-logo.md), all Accepted.
 
 - **0024.** Light and dark, the same violet top band `#7B3FE4`, tokens in [design-tokens.json](../design/system/design-tokens.json) and [implementation-tokens.css](../design/system/implementation-tokens.css), Rubik 400/500/600/700 (700 for the wordmark only), spacing and radius scales, and WCAG AA text. Boards [ds-1](../design/system/ds-1-colours-light.png) through [ds-8](../design/system/ds-8-pickers-sheets-light.png).

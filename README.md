@@ -50,7 +50,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
 | [UI directions](docs/module-1-project-pnl/design/README.md) | Superseded exploration (styles A/B/C, then Mercury). Not the approved system |
 | [Approved design](design/README.md) | V1 Violet package: screens, states, system, and logo. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0031 and the record format |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0032 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |
