@@ -1,6 +1,6 @@
-# Project P&L
+# Flow
 
-A mobile-first way for Israeli project-based businesses to see project profit and loss: income, expenses, and the bottom line. The proof of concept is for owners of small and mid-size construction contractors. The same model is meant to fit any project-based business after that.
+Flow is a mobile-first way for Israeli project-based businesses to see project profit and loss: income, expenses, and the bottom line. The proof of concept is for owners of small and mid-size construction contractors. The same model is meant to fit any project-based business after that.
 
 This repository is the product home. It holds documentation and design artifacts only. There is no application code yet.
 
@@ -44,7 +44,9 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | Document | What it is |
 | --- | --- |
 | [Module 1 spec](docs/module-1-project-pnl/spec.md) | Product behavior, data model, scope, success metrics |
-| [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe: purpose, elements, interactions |
+| [Calculations](docs/module-1-project-pnl/calculations.md) | Income, expenses, profit, margin, periods, rounding |
+| [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe, with links to the detailed specs |
+| [Settings (Draft)](docs/module-1-project-pnl/settings.md) | Proposed Settings screen, not approved |
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
 | [Decisions](docs/decisions/README.md) | Decision records 0001–0014 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |

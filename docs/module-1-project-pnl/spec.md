@@ -1,6 +1,6 @@
-# Module 1 — Project P&L
+# Flow — Module 1, Project P&L
 
-Proof-of-concept specification for the first module. Screen-by-screen fields, empty states, and edge cases are not written yet; each wireframe in [screens.md](screens.md) has a `Detailed spec: TODO` subsection, and the open items are listed in [open questions](../open-questions.md).
+Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
 Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0014](../decisions/0014-optional-project-budget.md).
 
@@ -29,7 +29,7 @@ Minimal operations. The product suggests a project and a category. The owner con
 
 Every shekel belongs to exactly one project, or to overhead. A split transaction is several lines; each line belongs to one project or to overhead, and the lines sum to the transaction.
 
-For a reporting period, using approved cash amounts:
+For a reporting period, using approved cash amounts, as defined in [calculations.md](calculations.md):
 
 - Company income = income on every project + income on overhead.
 - Company expenses = expenses on every project + expenses on overhead.
@@ -130,13 +130,13 @@ Enough structure for the proof of concept. This is not a chart of accounts.
 
 **Document.** Image or PDF, plus extracted fields: supplier, amount, VAT, date, invoice number, allocation number when present, and a duplicate flag.
 
-Project codes are assigned so search has a stable handle (`P-12`). The create sheet in the wireframes asks for a name, and optionally a client and a budget. How the code is generated is part of the per-screen spec still to write.
+Project codes are assigned on create so search has a stable handle (`P-01`, `P-02`, …). The owner does not type the code. The create sheet asks for a name, and optionally a client and a budget. See [Projects](screens/05-projects.md).
 
 ## Reports and export
 
 Reports use approved, paid, cash amounts, net of VAT, with VAT available beside them.
 
-The owner can export to Excel for the accountant. The file covers approved transactions and keeps the identifiers needed to reconcile, including invoice number and the `חשבונית ישראל` allocation number when the linked document has one. Column layout is part of the later screen spec, not this page.
+The owner can export to Excel for the accountant. The file covers approved transactions and keeps the identifiers needed to reconcile, including invoice number and the `חשבונית ישראל` allocation number when the linked document has one. Proposed columns are in the [Settings draft](settings.md). They are not approved.
 
 A Hashavshevet-compatible format is a later export, not the proof of concept. [0001](../decisions/0001-management-tool-alongside-accounting.md).
 
@@ -164,5 +164,7 @@ A Hashavshevet-compatible format is a later export, not the proof of concept. [0
 ## Related
 
 - [Screens and wireframe notes](screens.md)
+- [Calculations](calculations.md)
+- [Settings draft](settings.md)
 - [Wireframe files](wireframes/README.md)
 - [Open questions](../open-questions.md)
