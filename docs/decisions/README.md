@@ -1,0 +1,39 @@
+# Decisions
+
+Product decisions are numbered records in this folder. The record is the source of truth for why the product works the way it does. The [Module 1 spec](../module-1-project-pnl/spec.md) describes the behavior that follows from these records.
+
+## Format
+
+One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and are never reused.
+
+```markdown
+# Title
+
+**Date:** YYYY-MM-DD
+**Status:** Accepted
+
+## Context
+
+## Decision
+
+## Alternatives rejected
+
+## Consequences
+```
+
+`Status` is `Accepted` or `Superseded`. A superseded record keeps its original text and gains a `Superseded by` line that links to the newer record. The newer record links back. How to add and supersede records is in [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
+## Index
+
+| Record | Date | Status | Decision |
+| --- | --- | --- | --- |
+| [0001](0001-management-tool-alongside-accounting.md) | 2026-09-26 | Accepted | Management tool alongside the accountant's books, not a replacement |
+| [0002](0002-poc-targets-construction-contractors.md) | 2026-09-26 | Accepted | Proof of concept targets construction contractors; the model stays generic |
+| [0003](0003-no-invoicing-in-the-poc.md) | 2026-09-26 | Accepted | No invoicing in the proof of concept; Morning comes later |
+| [0004](0004-cash-basis-for-v1.md) | 2026-09-26 | Accepted | Cash basis for v1 |
+| [0005](0005-mobile-first.md) | 2026-09-26 | Accepted | Mobile first |
+| [0006](0006-confirm-not-type.md) | 2026-09-26 | Accepted | Confirm, don't type; corrections become supplier rules |
+| [0007](0007-bank-statement-is-primary-input.md) | 2026-09-26 | Accepted | The bank statement is the primary input; unpaid invoices stay out of P&L |
+| [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used |
+| [0009](0009-scalable-pickers.md) | 2026-09-26 | Accepted | Pickers and Home stay usable with many projects |
+| [0010](0010-docs-are-the-source-of-truth.md) | 2026-09-26 | Accepted | These docs, including decision records, are the source of truth |
