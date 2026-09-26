@@ -9,7 +9,7 @@
 
 ## Decision
 
-Front end: TypeScript, React and Vite with route code-splitting, React Router, TanStack Query with an IndexedDB-persisted cache, supabase-js, vite-plugin-pwa, and plain CSS on the design tokens. The UI is right to left, Rubik is self-hosted, and there is no component kit. Sheets use Vaul. Dates use date-fns with the `he` locale. Shekels use `Intl`. SheetJS is loaded only for the bank file. Invoice photos use browser-image-compression. Validation is Zod.
+Front end: TypeScript, React and Vite with route code-splitting, React Router, TanStack Query with an IndexedDB-persisted cache, supabase-js, and vite-plugin-pwa. Styling is Tailwind CSS v4 on the design tokens ([0040](0040-tailwind-v4.md)), which replaces the plain-CSS line. The UI is right to left, Rubik is self-hosted, and there is no component kit. Sheets use Vaul. Dates use date-fns with the `he` locale. Shekels use `Intl`. SheetJS is loaded only for the bank file. Invoice photos use browser-image-compression. Validation is Zod.
 
 Back end: Supabase as in 0037, Deno Edge Functions, and envelope encryption for SUMIT keys with the master key as a function secret. AI uses `@google/genai` (Gemini Flash-Lite, paid tier). Push uses `web-push`, which still has to be verified in Deno.
 
@@ -21,4 +21,4 @@ Preact, from the Cloudflare plan. A component kit instead of the design tokens.
 
 ## Consequences
 
-Build Module 1 on this stack. If `web-push` does not run in Deno, the plan's fallback is a Deno-native Web Push library. That check does not change the rest of this record.
+Build Module 1 on this stack. The plain-CSS styling line is replaced by [0040](0040-tailwind-v4.md). If `web-push` does not run in Deno, the plan's fallback is a Deno-native Web Push library. That check does not change the rest of this record.

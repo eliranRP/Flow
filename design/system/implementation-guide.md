@@ -57,6 +57,7 @@ These rules come before everything else. When in doubt, choose the calmer option
   - The only exceptions are `0`, `1px` hairlines, and component internals copied from the reference CSS in `flow.py`.
 - You **MUST NOT** invent new colours or tints: no opacity tricks on the accent, no `color-mix()` and no new greys. If you need a colour that doesn't exist, raise it in the PR.
 - You **MUST** import `implementation-tokens.css` once at the app root. Components read `var(--color-*)`, `var(--type-*)`, `var(--space-*)` and `var(--radius-*)`.
+- **App consumption:** styling is Tailwind CSS v4. Map these tokens into `@theme` (colours, including light and dark, spacing, radii, the type scale, and shadows) and use only those utilities. An arbitrary value needs a justification. RTL uses logical utilities (`ms-`, `me-`, `ps-`, `pe-`, `start`, `end`) with `dir="rtl"` on the root. Dark mode uses this same token set. Vaul stays for sheets. No component kit with its own look. Decision [0040](../../docs/decisions/0040-tailwind-v4.md).
 - Tokens change in one place only: `tokens.py` → `design-tokens.json` → `python3 ../gen_implementation_tokens.py`. You **MUST NOT** edit `implementation-tokens.css` by hand.
 
 ### 2.2 Colour token names

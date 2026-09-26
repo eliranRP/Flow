@@ -350,5 +350,5 @@ d2cc8ec46817e6bff1356af7457db444b8dffa409aa58a51c14a501cf2f22319  443643  flow-d
 a610eca26168fecafcb12be698da81ed87d249476d12d300e2d0328905336a65  1002921  flow-design-part2.zip  design/system/ds-7-empty-loading-light.png
 76200bd06903254ff7d98b5f104bfc75d85b3fa0e81e7fbd5ed8b051f6910460  900403  flow-design-part2.zip  design/system/ds-8-pickers-sheets-dark.png
 78e4f910d9903d1e2ba3027a0330bb500e34dc0f539db1a029f68c77beef3a1a  899735  flow-design-part2.zip  design/system/ds-8-pickers-sheets-light.png
-aed88ca1a9dccd84d892ada2882516e9f3c4783a088153cbe0c81a8c0f3df462  76132  flow-design-part2.zip  design/system/implementation-guide.md
+3d982b36d5acfe87e31ea3ed36153a5cbd2a1ed2e37de71fb06c47a54f57cc81  76623  flow-design-part2.zip  design/system/implementation-guide.md
 68ab3fcb9cab5eff1e10ab0814096f66b01618a0fddb7353b059caad85602624  10408  flow-design-part2.zip  design/system/implementation-tokens.css
