@@ -476,3 +476,59 @@ ov3 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exla
 <div style="display:flex;gap:32px">{cols}</div></div>'''
 (OUT / "overview-3.html").write_text(page(ov3, 916, 1100), encoding="utf-8")
 print("ok3")
+
+# =================== BATCH 4 (auto-approve, Hapoalim) ===================
+def must_replace(s, a, b):
+    assert a in s, a[:60]
+    return s.replace(a, b)
+
+strip = '''<div style="display:flex;align-items:center;gap:8px;background:#eef3ee;border:1.5px solid #b9d1ba;border-radius:12px;padding:8px 10px;margin-bottom:10px;font-size:14px;color:#335a36">
+<span style="width:22px;height:22px;border-radius:50%;background:#2e7d32;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none">✓</span>
+<span style="flex:1"><b>12 תנועות אושרו אוטומטית היום</b> · <span style="color:#5b6b8a;font-weight:600">צפייה ›</span></span>
+<span style="color:#8aa58c;font-size:16px;padding:0 2px">✕</span></div>'''
+rev2_inner = must_replace(rev_inner, '<div class="btn ghost">אשר הכל · 4 בביטחון גבוה</div>', '')
+rev2_inner = must_replace(rev2_inner, '<div class="sub">מה שה-AI לא היה בטוח בו</div></div>', '<div class="sub">רק מה שה-AI לא היה בטוח בו</div></div>')
+rev2_inner = must_replace(rev2_inner, '<div style="display:flex;gap:4px;margin-bottom:12px">', strip + '<div style="display:flex;gap:4px;margin-bottom:12px">')
+
+up2_inner = f'''<div class="content">
+<div class="topbar" style="margin-bottom:10px"><div><div class="title">דוח בנק הועלה</div><div class="sub"><span class="emo">📄</span> <bdi dir=ltr>פועלים_ספטמבר.xlsx</bdi> · <span class="num">01–30/09</span></div><div class="sub" style="font-size:12.5px">בנק הפועלים · חשבון <span class="num">12-345-678901</span></div></div><div class="iconbtn">✕</div></div>
+<div class="card" style="text-align:center;padding:12px;margin-bottom:10px;border-width:2px;border-color:#bbb">
+<div style="font-size:34px;font-weight:800;color:#222;line-height:1.1">42</div><div style="font-size:16px;color:#555">שורות נקלטו</div>
+<div class="bar" style="height:12px;border-radius:6px;margin-top:10px"><div class="e" style="width:42.9%;background:#8a8a8a"></div><div class="e" style="width:35.7%;background:#b5b5b5"></div><div class="e" style="width:4.8%;background:#dcdcdc"></div><div class="e" style="width:16.6%;background:#5b6b8a"></div></div></div>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#2e7d32;margin:2px 2px 6px">✓ אושרו אוטומטית (33)</div>
+<div class="brow"><span class="bi">✓</span><span class="bc">18</span><span class="bt">הותאמו לחשבוניות קיימות<small>אושרו אוטומטית · ספק + סכום + תאריך תואמים</small></span></div>
+<div class="brow"><span class="bi">⚙</span><span class="bc">15</span><span class="bt">סווגו לפי כללים שלמדנו<small>אושרו אוטומטית · ספקים שאישרת בעבר</small></span></div>
+<div class="brow" style="opacity:.75"><span class="bi">⇄</span><span class="bc">2</span><span class="bt">העברות בין חשבונות שלך<small>הוסרו – לא נספרות ברווח</small></span></div>
+<div class="brow" style="border:2px solid #5b6b8a;background:#eef0f5"><span class="bi" style="background:#5b6b8a;color:#fff;border-color:#5b6b8a">!</span><span class="bc" style="color:#2f3a52">7</span><span class="bt" style="font-weight:700;color:#2f3a52">ממתינות לאישור<small>ה-AI לא היה בטוח – צריך את האישור שלך</small></span></div>
+<div style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:#777;margin:4px 2px 12px"><span style="width:20px;height:20px;border-radius:50%;border:1.5px solid #aaa;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none">i</span>3 חשבוניות עדיין לא שולמו – לא נספרות ברווח ›</div>
+<div class="btn pri">לאשר 7 פריטים</div>
+<div style="text-align:center;font-size:14px;color:#5b6b8a;font-weight:600;margin-top:12px">הצג את כל 42 השורות ›</div>
+</div>''' + nav("")
+
+SCREENS4 = [
+ ("03-review-v2","Review queue – auto-approve","לאישור · v2", phone(rev2_inner), [
+  "<b>Purpose:</b> only uncertain items reach the queue. High-confidence items are auto-approved by default and never show up here.",
+  "<b>Info strip:</b> “12 auto-approved today”, dismissible (✕). <b>צפייה ›</b> opens a list where any auto-approved item can be reopened and changed, so auto-approval is reversible.",
+  "<b>Counter</b> (3 of 7) + progress bar unchanged.",
+  "<b>One card at a time:</b> approve <bdi dir=rtl>אישור</bdi> (primary) · change <bdi dir=rtl>שינוי</bdi> · skip <bdi dir=rtl>דלג</bdi>. No bulk “approve all” anymore.",
+  "<b>Remember hint:</b> after a change the app keeps a rule for that supplier.",
+  "<b>Next in queue</b> preview shows what’s coming."]),
+ ("08-upload-results-v2","Upload results – Hapoalim","דוח בנק הועלה · v2", phone(up2_inner), [
+  "<b>Purpose:</b> summary after uploading a statement. The POC supports <b>Bank Hapoalim exports only</b>; other banks and credit cards come later.",
+  "<b>Header:</b> file name + bank and account number, so the user sees which account was imported.",
+  "<b>Auto-approved (33):</b> 18 matched to invoices + 15 by learned rules. Already in P&amp;L, reversible from the auto-approved list.",
+  "<b>Transfers (2)</b> between own accounts are removed. <b>7 need review</b>: 33 + 2 + 7 = 42.",
+  "<b>Cash basis:</b> a bank row is what makes money count. The 3 unpaid invoices stay out of P&amp;L until the payment appears or they’re marked paid.",
+  "<b>Single action:</b> <bdi dir=rtl>לאשר 7 פריטים</bdi> → Review queue. Link to view all rows."]),
+]
+for fid, en, he, ph, notes in SCREENS4:
+    nh = "".join(f'<div class="n">{n}</div>' for n in notes)
+    body = f'<div class="wrap">{ph}<div class="notes"><h2>{fid[:2]} · {en}</h2><div class="he">{he}</div>{nh}</div></div>'
+    (OUT / f"{fid}.html").write_text(page(body, 794, 920), encoding="utf-8")
+cols = ""
+for fid, en, he, ph, notes in SCREENS4:
+    cols += f'<div style="display:flex;flex-direction:column;gap:12px;width:410px"><div style="font-size:18px;font-weight:700;color:#333">{fid[:2]} · {en}</div>{ph}<div class="notes" style="width:410px"><div class="n">{notes[0]}</div></div></div>'
+ov4 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exlabel">Example data · low-fi wireframe · v2 (auto-approve)</div>
+<div style="display:flex;gap:32px">{cols}</div></div>'''
+(OUT / "overview-4.html").write_text(page(ov4, 916, 1100), encoding="utf-8")
+print("ok4")

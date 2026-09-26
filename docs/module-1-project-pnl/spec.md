@@ -61,7 +61,7 @@ Three paths, all opened from the center **+** button (`הוספה`).
 | Bank statement | `העלה דוח בנק/אשראי` | Excel or CSV from Bank Hapoalim (`בנק הפועלים`). Each row becomes a transaction. Own-account transfers are removed. Rows are matched and classified as below. |
 | Manual entry | `הזנה ידנית` | Fallback for cash and cheques: amount, project, and category. This is the path that marks money as paid when there will never be a statement row. |
 
-The proof of concept parses Hapoalim files only. Other banks, and credit-card company files, come after the proof of concept. [0012](../decisions/0012-bank-hapoalim-first.md). When credit-card statement support starts is an [open question](../open-questions.md). The add-sheet label still says bank and credit (`בנק/אשראי`), and the upload wireframe uses a Leumi file name; both are earlier example art, not the bank to build.
+The proof of concept parses Hapoalim files only. Other banks, and credit-card company files, come after the proof of concept. [0012](../decisions/0012-bank-hapoalim-first.md). When credit-card statement support starts is an [open question](../open-questions.md). The add-sheet label still says bank and credit (`בנק/אשראי`). Credit-card company files are still rejected. The upload wireframe to build is [08-upload-results-v2](screens.md#08-upload-results-v2), which shows a Hapoalim file.
 
 ## Matching, confidence, and review
 

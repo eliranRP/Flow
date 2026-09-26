@@ -5,7 +5,7 @@
 
 ## Context
 
-Under [0007](0007-bank-statement-is-primary-input.md), a statement row is what makes money count. Israeli banks and credit-card companies each export a different Excel or CSV layout. Parsing several of them before one contractor can import a real file slows the proof of concept. The upload wireframe uses a Leumi file name (`לאומי_ספטמבר.xlsx`) as example art only.
+Under [0007](0007-bank-statement-is-primary-input.md), a statement row is what makes money count. Israeli banks and credit-card companies each export a different Excel or CSV layout. Parsing several of them before one contractor can import a real file slows the proof of concept. The first upload wireframe used a Leumi file name (`לאומי_ספטמבר.xlsx`). That file is superseded by [08-upload-results-v2](../module-1-project-pnl/wireframes/08-upload-results-v2.png), which shows `הפועלים_ספטמבר.xlsx`.
 
 ## Decision
 

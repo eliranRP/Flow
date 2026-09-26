@@ -26,4 +26,4 @@ Opt-in auto-approve, and a flow whose only bulk action is a manual "Approve all"
 
 The pending count on Home is the review queue, not the auto-approved set. A wrong rule still matters, because it will approve the next row from that supplier without a card; the summary is how the owner spots that and reopens the row. Reopening uses the same change sheet as a review correction, including "remember for this supplier" (`לזכור לספק הזה`).
 
-The review and upload wireframes still draw `אשר הכל` and `אשר את כל המסווגים (33)`. Those buttons are the earlier sketch. The proof of concept does not require that tap. The summary itself is not wireframed yet; its fields belong in the per-screen spec.
+[03-review-v2](../module-1-project-pnl/wireframes/03-review-v2.png) shows the auto-approved strip above the card and has no `אשר הכל` button. [08-upload-results-v2](../module-1-project-pnl/wireframes/08-upload-results-v2.png) groups those rows as `אושרו אוטומטית` and has no secondary approve button. The v1 wireframes that drew those buttons are superseded.

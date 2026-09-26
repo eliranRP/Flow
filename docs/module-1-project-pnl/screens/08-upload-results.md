@@ -1,7 +1,7 @@
 # Upload results
 
-**Status:** Approved behavior, with one deliberate difference from the wireframe [08-upload-results](../wireframes/08-upload-results.png).
-**Decisions:** [0011](../../decisions/0011-auto-approve-high-confidence.md) auto-approves unique invoice matches and supplier rules. The wireframe button `אשר את כל המסווגים (33)` is not built. [0012](../../decisions/0012-bank-hapoalim-first.md) accepts Bank Hapoalim only. The sample file name `לאומי_ספטמבר.xlsx` on the wireframe is old art.
+**Status:** Approved. Wireframe [08-upload-results-v2](../wireframes/08-upload-results-v2.png). [08-upload-results](../wireframes/08-upload-results.png) is superseded.
+**Decisions:** [0011](../../decisions/0011-auto-approve-high-confidence.md) auto-approves unique invoice matches and supplier rules. [0012](../../decisions/0012-bank-hapoalim-first.md) accepts Bank Hapoalim only. The approved wireframe uses `הפועלים_ספטמבר.xlsx` and has no secondary approve button.
 
 This screen is also the short summary of what was auto-approved for a statement batch.
 
@@ -43,12 +43,12 @@ Title `דוח בנק הועלה`. File line: the real file name, then the min an
 | Already imported | `{n} כבר היו במערכת` | Overlap skips. Shown only when `n` > 0. |
 | Unpaid | `{n} חשבוניות עדיין לא שולמו – לא נספרות ברווח` | Documents, not rows from this file. Company-wide unpaid count, not only this file. |
 | Primary | `לאשר {n} פריטים` | |
-| Summary link | `{n} אושרו אוטומטית` | The matched count plus the rules count. Replaces `אשר את כל המסווגים`. |
+| Summary link | `{n} אושרו אוטומטית` | The matched count plus the rules count. On the approved wireframe this is one collapsed row, `33 אושרו אוטומטית`, with `18 הותאמו לחשבוניות · 15 לפי כללים` underneath. |
 | All rows | `הצג את כל {n} השורות` | |
 
 Amounts inside the row lists use the detail display, net of VAT, signed, red minus for outflows. Dates are `dd/mm/yyyy`.
 
-The stacked bar's segments, in order, are: matched, rules, transfers, review. Skipped duplicates are not a bar segment; they are the extra line. The wireframe's 18 / 15 / 2 / 7 example sums to 42 and remains a valid illustration of the four bar segments. In that example the summary link would read `33 אושרו אוטומטית`.
+The stacked bar's segments, in order, are: matched, rules, transfers, review. On the approved wireframe the matched and rules segments are the auto-approved group (18 + 15 = 33), then transfers (2) and review (7). Skipped duplicates are not a bar segment; they are the extra line, shown only when the count is above zero. The example file has none.
 
 ## States
 

@@ -2,6 +2,15 @@
 
 ## 2026-09-26
 
+Review and upload wireframes updated to match auto-approve and Bank Hapoalim.
+
+- [03-review-v2.png](module-1-project-pnl/wireframes/03-review-v2.png) supersedes `03-review`. The card has no `אשר הכל` button. A strip at the top reads `12 אושרו אוטומטית`.
+- [08-upload-results-v2.png](module-1-project-pnl/wireframes/08-upload-results-v2.png) supersedes `08-upload-results`. The sample file is `הפועלים_ספטמבר.xlsx`. The 33 invoice and rule matches are one collapsed `אושרו אוטומטית` group. The secondary approve button is gone.
+- [overview-4.png](module-1-project-pnl/wireframes/overview-4.png) shows those two phones together.
+- `wireframes/source/gen.py` is the generator for this set. `render.sh` also renders `03-review-v2`, `08-upload-results-v2`, and `overview-4`, and still writes PNGs into `wireframes/`.
+
+## 2026-09-26
+
 The product is named Flow. Detailed specs replace every `Detailed spec: TODO`.
 
 - [README](../README.md) and [spec.md](module-1-project-pnl/spec.md) titles use Flow.
