@@ -50,3 +50,11 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0021](0021-shared-costs-and-overhead.md) | 2026-09-26 | Accepted | Shared project costs are split; true overhead stays overhead, with a view-only share |
 | [0022](0022-after-overhead-starts-off.md) | 2026-09-26 | Accepted | The after-overhead switch starts off, so the default numbers match the bank |
 | [0023](0023-violet-coloured-top-band.md) | 2026-09-26 | Accepted | Visual direction: violet with a coloured top band |
+| [0024](0024-design-system-approved.md) | 2026-09-26 | Accepted | Design system approved: light and dark, one violet band, Rubik, WCAG AA text |
+| [0025](0025-implementation-guide-is-mandatory.md) | 2026-09-26 | Accepted | The implementation guide, including its definition of done, is mandatory |
+| [0026](0026-empty-loading-error-states.md) | 2026-09-26 | Accepted | Every screen has empty, loading, and error states, in light and dark |
+| [0027](0027-date-picker.md) | 2026-09-26 | Accepted | Week starts Sunday; dates are dd/mm/yyyy; single and range pickers |
+| [0028](0028-period-sheet-with-custom-range.md) | 2026-09-26 | Accepted | Period sheet from the band pill, including a custom range |
+| [0029](0029-pwa-install-prompt.md) | 2026-09-26 | Accepted | PWA install prompt after the first successful report; Android and iPhone variants |
+| [0030](0030-confirmation-sheets.md) | 2026-09-26 | Accepted | Confirmation sheets for delete, archive, hide, and a two-step merge |
+| [0031](0031-logo.md) | 2026-09-26 | Accepted | Flow wordmark and the S1 app icon |

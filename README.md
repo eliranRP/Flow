@@ -33,7 +33,7 @@ Correcting a suggestion can become a rule ("remember for this supplier" is on by
 
 In scope: company and project P&L for a single user (the owner) on an installable mobile web app, Hebrew only, sign-in by SMS code, the three intake paths with Bank Hapoalim as the statement format, review and rules, auto-approve for high-confidence rows, two notifications (a Sunday summary and an end-of-day review nudge), Home periods of this month, last month, and year to date, a flat category list, optional project budgets, project and category pickers that still work with many jobs, and an Excel export for the accountant.
 
-Out of scope: a desktop site, native iOS or Android apps, another language at launch, email and password, custom date ranges, a notification per transaction, a WhatsApp or email forwarding address, replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, other banks' statement files, credit-card company files, roles and permissions, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant.
+Out of scope: a desktop site, native iOS or Android apps, another language at launch, email and password, a notification per transaction, a WhatsApp or email forwarding address, replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, other banks' statement files, credit-card company files, roles and permissions, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant. A custom range is in scope from the period sheet ([0028](docs/decisions/0028-period-sheet-with-custom-range.md)).
 
 Default expense categories, preloaded: `חומרים` (materials), `קבלני משנה` (subcontractors), `עבודה` (labor), `ציוד והשכרה` (equipment and rental), `הובלה` (transport), `ביטוח` (insurance), `אחר` (other). Income categories: `תקבול מלקוח` (payment from a client), `הכנסה אחרת` (other income).
 
@@ -48,8 +48,9 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe, with links to the detailed specs |
 | [Settings (Draft)](docs/module-1-project-pnl/settings.md) | Proposed Settings screen, not approved |
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
-| [UI directions](docs/module-1-project-pnl/design/README.md) | Violet with a coloured top band. Earlier boards are superseded |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0023 and the record format |
+| [UI directions](docs/module-1-project-pnl/design/README.md) | Superseded exploration (styles A/B/C, then Mercury). Not the approved system |
+| [Approved design](design/README.md) | V1 Violet package: screens, states, system, and logo. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0031 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |

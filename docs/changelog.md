@@ -2,6 +2,20 @@
 
 ## 2026-09-26
 
+The approved design package and the logo are in [design](../design/README.md), byte for byte, with [MANIFEST.txt](../design/MANIFEST.txt). Decisions [0024](decisions/0024-design-system-approved.md) through [0031](decisions/0031-logo.md), all Accepted.
+
+- **0024.** Light and dark, the same violet top band `#7B3FE4`, tokens in [design-tokens.json](../design/system/design-tokens.json) and [implementation-tokens.css](../design/system/implementation-tokens.css), Rubik 400/500/600/700 (700 for the wordmark only), spacing and radius scales, and WCAG AA text. Boards [ds-1](../design/system/ds-1-colours-light.png) through [ds-8](../design/system/ds-8-pickers-sheets-light.png).
+- **0025.** [implementation-guide.md](../design/system/implementation-guide.md) is mandatory for every screen and every PR review, including the [definition of done](../design/system/implementation-guide.md#12-checklists).
+- **0026.** Empty, loading, and error states are required on every screen, light and dark (`design/states/es-*`, `ld-*`, `er-*`, board [ds-7](../design/system/ds-7-empty-loading-light.png)).
+- **0027.** Date picker: week starts Sunday, dates are dd/mm/yyyy, single and range pickers with shortcuts ([15a](../design/screens/15a-date-field-light.png)–[15c](../design/screens/15c-date-range-light.png)).
+- **0028.** Period sheet from the band pill: this month, last month, year to date, plus a custom range ([16](../design/screens/16-period-sheet-light.png)). This supersedes only 0019's "no custom date range" clause. The three named periods stay.
+- **0029.** PWA install prompt after the first successful report, never inside the installed app. Android uses `beforeinstallprompt` ([17a](../design/screens/17a-install-android-light.png)). iPhone is three Safari steps ([17b](../design/screens/17b-install-iphone-light.png)). Onboarding's install step in 0015 stays.
+- **0030.** Confirmation sheets for delete, archive, hide category, and a two-step merge. Soft bad-tint button, then an undo toast ([20](../design/screens/20-confirm-delete-light.png)–[23](../design/screens/23-confirm-hide-light.png)).
+- **0031.** Logo: Flow wordmark in Rubik 700, letter-spacing −0.01em, `#7B3FE4` on light, `#B894FF` on dark, white on the band. The in-app wordmark uses the `logo` token, not `accent-text`. App icon S1. Cursive and calligraphic explorations were rejected. See [LOGO.md](../design/logo/LOGO.md).
+- Open, not decided: with the after-overhead switch on, should Home's big number stay company net profit? The current design keeps it ([18 light](../design/screens/18-home-overhead-on-light.png), [18 dark](../design/screens/18-home-overhead-on-dark.png)).
+
+## 2026-09-26
+
 Decision [0023](decisions/0023-violet-coloured-top-band.md), Accepted. Visual direction: violet with a coloured top band.
 
 - Light-mode accent `#7B3FE4`. Home has a solid violet band with rounded bottom corners: wordmark, greeting, hero profit, and the income and expense line. Text on the band is white, with a light-lilac secondary. The page below is `#FFFFFF`.

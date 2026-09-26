@@ -21,6 +21,8 @@ Each company total (income, expenses, profit) shows an up or down percent arrow 
 
 The project screen defaults to project to date (`מתחילת הפרויקט`). There is no custom date range in this phase.
 
+[0028](0028-period-sheet-with-custom-range.md) supersedes only that last sentence. The three periods above, and the comparison arrows, stay. A custom range is allowed from the period sheet.
+
 ## Alternatives rejected
 
 Custom ranges in this phase. Leaving Home as only this month and year to date.
