@@ -62,3 +62,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0033](0033-google-sign-in.md) | 2026-09-26 | Accepted | Sign in with a Google account (Gmail). Supersedes 0017 |
 | [0034](0034-cost-and-load-limits.md) | 2026-09-26 | Accepted | Running cost at most $5 a month; Home usable within 2 seconds |
 | [0035](0035-sumit-api-first.md) | 2026-09-26 | Accepted | The first data integration is the SUMIT API |
+| [0036](0036-sumit-read-only.md) | 2026-09-26 | Accepted | SUMIT integration is read-only for the proof of concept |
