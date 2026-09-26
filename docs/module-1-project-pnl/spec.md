@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0020](../decisions/0020-capture-from-the-phone.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0021](../decisions/0021-shared-costs-and-overhead.md).
 
 ## Goal
 
@@ -38,6 +38,8 @@ For a reporting period, using approved cash amounts, as defined in [calculations
 - Company profit = company income − company expenses.
 
 Home always shows those company totals, including projects that are collapsed off the list and including overhead. Overhead is a built-in bucket, not a project the owner creates, and not a footnote under the projects. Hiding a row never removes it from the total.
+
+A cost that belongs to several jobs (site salaries, a shared rental) is split onto those projects, so the stored lines are project lines. True overhead (office rent, the accountant, insurance) stays on the overhead bucket and is not split into transactions. Home and the project screen can show profit after each project's income share of that overhead. That view does not change stored lines or the company totals. [0021](../decisions/0021-shared-costs-and-overhead.md). The formulas are in [calculations](calculations.md#overhead-share).
 
 Amounts on screen are **net of VAT**. VAT is stored and shown separately. The owner reads profit without VAT mixed into the job.
 
@@ -139,7 +141,12 @@ Enough structure for the proof of concept. This is not a chart of accounts.
 
 **Transaction.** Date, amount net, VAT, direction (in or out), counterparty, project (or overhead), category, source (`invoice`, `bank`, or `manual`), status (`suggested` or `approved`), paid state, linked document, and split lines when the amount is shared across projects. A suggested transaction is excluded from reports. An unpaid invoice document with no transaction yet is excluded as well.
 
-**Rule.** Supplier or other counterparty → project + category. Created from the remember toggle. Applied on the next matching row before the AI guess.
+**Rule.** One payee has one rule. Applied on the next matching row after an invoice link and before the AI guess. Two kinds:
+
+- One project. Supplier or other counterparty → project + category. Created from `לזכור לספק הזה`.
+- Split. The same payee → a split across active projects, or a manual list of project and percent. Created from "split like this every month" on the split sheet. Equal and income-share are computed when the payment arrives. A manual rule stores the proportions. Income-share recalculates each month. [0021](../decisions/0021-shared-costs-and-overhead.md).
+
+Saving a split rule replaces a one-project rule for that payee. Saving a one-project rule replaces a split rule. Deleting a rule does not rewrite payments already saved.
 
 **Document.** Image or PDF, plus extracted fields: supplier, amount, VAT, date, invoice number, allocation number when present, and a duplicate flag.
 

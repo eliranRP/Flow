@@ -54,7 +54,7 @@ List rows show a radio, the code (overhead has none), the name (one line, ellips
 
 ## Split mode
 
-A dedicated sheet is drawn on [11-split](../screens.md#11-split) and is pending owner approval. Until that approval, this section is the rule, including one category for every line.
+A dedicated sheet is drawn on [11-split](../screens.md#11-split) and is pending owner approval. [11-split-v2](../screens.md#11-split-v2) is coming: split across every active project, and an optional recurring split rule ([0021](../../decisions/0021-shared-costs-and-overhead.md)). Until v2 is drawn, a hand-built split still uses one category for every line, and `לזכור לספק הזה` stays off. The recurring control is a different switch, off unless the owner turns it on.
 
 Title `פצל בין פרויקטים`. The amount at the top is the parent net.
 

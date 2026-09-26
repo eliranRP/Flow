@@ -32,6 +32,8 @@ Build the **Approved** files. **Superseded** files stay so the earlier layout is
 
 What each file shows, and how it behaves, is in [screens.md](../screens.md).
 
+Coming, no PNG yet. Do not treat these names as files: `11-split-v2`, `01-home-v4`, `02-project-v2`. The behavior is Accepted in [0021](../../decisions/0021-shared-costs-and-overhead.md). The layout is not drawn.
+
 ## Versions
 
 A replacement keeps the stem and adds `-v2`, `-v3`, and so on. Do not overwrite a PNG. Mark the previous row `Superseded` here and in `screens.md`. The rule is in [CONTRIBUTING.md](../../../CONTRIBUTING.md).

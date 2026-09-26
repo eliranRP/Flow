@@ -1,6 +1,6 @@
 # Project
 
-**Status:** Approved. Wireframe [02-project](../wireframes/02-project.png).
+**Status:** Approved. Wireframe [02-project](../wireframes/02-project.png). [02-project-v2](../screens.md#02-project-v2) is coming and is not drawn. It adds the after-overhead toggle. This image does not have it.
 **Numbers:** Project to date, [calculations](../calculations.md). Budget card only when a budget is set ([0014](../../decisions/0014-optional-project-budget.md)).
 
 ## Purpose
@@ -39,7 +39,8 @@ Back (`›` on the right, because the UI is RTL) returns to the screen that open
 | Subtitle | `לקוח: {name} · מתחילת הפרויקט` | Client is omitted when empty: `מתחילת הפרויקט` only. Finished projects add `· הסתיים`. |
 | Income | `הכנסות` | Project-to-date income. Whole shekels, neutral. |
 | Expenses | `הוצאות` | Project-to-date expenses. Whole shekels, neutral. |
-| Profit | `רווח · {margin}` or `הפסד · {margin}` | [Margin rule](../calculations.md#income-expenses-profit-margin). Green or red. Percent omitted when income is 0. |
+| Profit | `רווח · {margin}` or `הפסד · {margin}` | [Margin rule](../calculations.md#income-expenses-profit-margin). Green or red. Percent omitted when income is 0. With the after-overhead view on, profit and margin use profit after [overhead share](../calculations.md#overhead-share). Income in that margin is still this project's income. |
+| Overhead share | `חלק מהתקורה` | Coming on [02-project-v2](../screens.md#02-project-v2). Shown only while the view is on and allocation is available. The signed share for this project. ₪0 when this project has no income and other projects do. |
 | Budget | `הוצאות מול תקציב` | Hidden when budget is unset or 0. `{used} / {budget}`, bar, `{percent} נוצל`. Percent may exceed 100. The word `אופציונלי` is not shown in the product; it was a wireframe note that the card is optional. |
 | Categories | `לפי קטגוריה` | The seven expense categories that have a non-zero project-to-date total, in the owner's category order, then any custom expense categories in that order. Zero categories are hidden. Amounts are whole shekels. Bar width is relative to the largest category. |
 | Recent | `תנועות אחרונות` | Up to three counting lines, newest first. Source mark: invoice document linked, or bank, or manual. Second line `{category} · {dd/mm}`. Amount is signed cash, detail-display rule, green `+` for inflow, red `−` for outflow. |
@@ -80,7 +81,9 @@ Dates on rows are `dd/mm` when the year is the current year, and `dd/mm/yyyy` ot
 
 ## Acceptance criteria
 
-- [ ] Income, expenses, profit, and margin match project-to-date counting lines, and they do not include overhead or other projects.
+- [ ] With the after-overhead view off, income, expenses, profit, and margin match project-to-date counting lines, and they do not include overhead or other projects.
+- [ ] With the view on, income, own expenses, category bars, and the budget card stay those stored figures. Profit and margin use the overhead share. Company totals elsewhere do not change. If no project has income, the view does not switch and the screen says the allocation is unavailable.
+- [ ] The overhead screen has no after-overhead toggle.
 - [ ] The budget card is absent when no budget is set, and present with used / budget / percent when it is.
 - [ ] Category amounts sum to the expenses tile, after refunds.
 - [ ] Recent amounts are signed and net of VAT. VAT is not added into the tiles.

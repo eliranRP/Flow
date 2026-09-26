@@ -27,6 +27,8 @@ Build the approved screens. Superseded screens are kept below and marked. [01-ho
 | Unpaid invoices | [12-unpaid](#12-unpaid) |
 | Notifications | [13-notifications](#13-notifications) |
 
+Coming, no image yet: [11-split-v2](#11-split-v2), [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2). Behavior for those three is Accepted. The layout is not.
+
 Behavior that these screens illustrate is specified in [spec.md](spec.md).
 
 <a id="01-home-v3"></a>
@@ -84,6 +86,8 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 - [ ] The unpaid line shows the count and the net total, opens the unpaid list, and is absent from profit.
 - [ ] The v2 checks in [Home](screens/01-home.md) still hold: top 5, overhead last, suggested rows only in the banner.
 
+[01-home-v4](#01-home-v4) is coming. It adds the view-only toggle for profit after an overhead share. This image does not have it. Company tiles on v3 stay the stored totals.
+
 ### Wireframe
 
 ![Home v3, pending owner approval: three periods, comparison arrows, unpaid line](wireframes/01-home-v3.png)
@@ -91,6 +95,30 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 ### Detailed spec
 
 [Home](screens/01-home.md). `☰` opens the [Settings draft](settings.md), which is not approved. The unpaid wireframe also names `☰` as a way into the unpaid list; what that button opens is still [open](../open-questions.md#settings-screen).
+
+<a id="01-home-v4"></a>
+
+## 01-home-v4 — Home, profit after overhead share
+
+**Status:** Coming. No image yet. Not buildable as a layout. The behavior is Accepted in [0021](../decisions/0021-shared-costs-and-overhead.md).
+**Supersedes:** nothing yet. [01-home-v3](#01-home-v3) stays the latest drawn Home.
+**File:** none yet. Do not invent a PNG.
+
+### What the wireframe has to add
+
+A view-only toggle `רווח אחרי חלק מהתקורה` on the Home in [01-home-v3](#01-home-v3).
+
+- Off: project rows and the overhead row are the stored profits. This is today's Home.
+- On: each project row shows profit after its income share of overhead for the selected period. The overhead row shows ₪0 and says this view has spread it. Company tiles do not change. Comparison arrows do not change.
+- If the projects have no income in the selected period, the toggle does not switch. The screen says the allocation is unavailable.
+- A project with no income shows a zero share. Its profit stays its own profit.
+- Whether the toggle starts on is [open](../open-questions.md#after-overhead-by-default). Home and the project screen use one preference.
+
+The formula is [overhead share](calculations.md#overhead-share). The Hebrew label is the copy for this wireframe. It is not on an image yet.
+
+### Detailed spec
+
+[Home](screens/01-home.md) and [overhead share](calculations.md#overhead-share).
 
 <a id="01-home-v2"></a>
 
@@ -175,7 +203,29 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 ### Detailed spec
 
-[Project](screens/02-project.md). Overhead reuses this layout. The budget card is omitted when no budget is set.
+[Project](screens/02-project.md). Overhead reuses this layout. The budget card is omitted when no budget is set. [02-project-v2](#02-project-v2) is coming and adds the after-overhead toggle. This image does not have it.
+
+<a id="02-project-v2"></a>
+
+## 02-project-v2 — Project, profit after overhead share
+
+**Status:** Coming. No image yet. Not buildable as a layout. The behavior is Accepted in [0021](../decisions/0021-shared-costs-and-overhead.md).
+**Supersedes:** nothing yet. [02-project](#02-project) stays the latest drawn project screen.
+**File:** none yet. Do not invent a PNG.
+
+### What the wireframe has to add
+
+The same view-only toggle as [01-home-v4](#01-home-v4), `רווח אחרי חלק מהתקורה`. One preference for both screens.
+
+- The period on this screen stays project to date. The share uses every project's income over all dates, and overhead profit over all dates.
+- Income, own expenses, category bars, and the budget card stay the stored project figures.
+- The profit tile and its margin use profit after the share. A line shows `חלק מהתקורה` and the share.
+- A project with no income shows share ₪0 and its own profit. If no project has any income, the toggle does not switch and the screen says the allocation is unavailable.
+- The overhead screen does not get this toggle. It keeps showing the stored bucket.
+
+### Detailed spec
+
+[Project](screens/02-project.md) and [overhead share](calculations.md#overhead-share).
 
 <a id="03-review-v2"></a>
 
@@ -933,7 +983,7 @@ The annotation on the image also draws the unbalanced state: `נותר לשיי�
 - Each project field opens the same project picker as the change sheet, including search and overhead.
 - `+ שורה` adds a line. At least two lines are required.
 - `שמור פיצול` is enabled only when the remainder is ₪0 (amount mode) or the percents sum to 100 (percent mode). Saving replaces the single project assignment with one counting line per row. Company profit does not change because of the split itself.
-- A split does not write a supplier rule. The remember toggle is not on this sheet.
+- On this image, saving does not write a rule. The one-project remember toggle is not on this sheet. [0021](../decisions/0021-shared-costs-and-overhead.md) adds a separate recurring control on [11-split-v2](#11-split-v2), which is not drawn yet. It stays off until the owner turns it on.
 
 The image draws a category control on each line, defaulting to the invoice category, and the annotation says a line's category can change. The accepted rule is still one category for every line ([calculations](calculations.md#splits)). Per-line categories stay [open](../open-questions.md#category-on-each-split-line) until this sheet is approved. Until then, every line keeps the invoice category.
 
@@ -957,14 +1007,14 @@ The image draws a category control on each line, defaulting to the invoice categ
 - **One line cleared.** Save stays disabled. A split of one line is not a split.
 - **Overhead on a line.** Allowed. That line counts in `הוצאות כלליות`.
 - **More than two sites.** `+ שורה`. The same remainder rule.
-- **Remember.** No rule is written, even if the change sheet behind it had remember on.
+- **Remember.** This image writes no rule, even if the change sheet behind it had remember on. A recurring split rule is the v2 control, and only when the owner turns it on.
 
 ### Acceptance criteria
 
 - [ ] The parent net is the invoice net, ₪12,000 in the example.
 - [ ] Amount and percent modes both refuse to save until the lines cover the parent exactly.
 - [ ] The balanced remainder is green `✓ ₪0`. The unbalanced remainder is red and save is disabled.
-- [ ] Saving does not write a supplier rule.
+- [ ] Saving from this image does not write a one-project rule. A recurring split rule exists only on v2, and only if the owner turns it on.
 - [ ] Until per-line categories are approved, every line uses the one invoice category.
 
 ### Wireframe
@@ -974,6 +1024,28 @@ The image draws a category control on each line, defaulting to the invoice categ
 ### Detailed spec
 
 This section, plus [Splits](calculations.md#splits). There is no separate file until the owner approves the image.
+
+<a id="11-split-v2"></a>
+
+## 11-split-v2 — Split across active projects
+
+**Status:** Coming. No image yet. Not buildable as a layout. The behavior is Accepted in [0021](../decisions/0021-shared-costs-and-overhead.md).
+**File:** none yet. Do not invent a PNG.
+
+### What the wireframe has to add
+
+On top of [11-split](#11-split):
+
+- An option to split across every active project (`פצל בין כל הפרויקטים הפעילים`). Overhead and finished projects are not targets.
+- Three methods: equal (`שווה`), income share (`לפי חלק מההכנסה`), manual percent or shekels (the amount and percent controls already on v1).
+- A control, off until the owner turns it on: `פצל ככה כל חודש`. Saving with it on writes a split rule. The next payment from that payee arrives already split. Income share recalculates on the calendar month of that later payment.
+- If income share has no income to divide, or there is no active project, that method cannot be saved. The sheet says the allocation is unavailable. It does not fall back to equal.
+
+Manual lines, the remainder, and one category for every line stay as on v1 and in [calculations](calculations.md#splits). Hebrew strings above are the copy for this wireframe. They are not on an image yet.
+
+### Detailed spec
+
+[Splits](calculations.md#splits) and [largest remainder](calculations.md#largest-remainder).
 
 <a id="12-unpaid"></a>
 

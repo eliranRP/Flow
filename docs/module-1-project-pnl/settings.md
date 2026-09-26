@@ -28,7 +28,7 @@ A row `קטגוריות` opens the approved Categories screen. Behavior is [0008
 
 ### Rules
 
-A list of learned rules: supplier or counterparty, project, category. The owner can edit the project and category, or delete the rule.
+A list of learned rules. A one-project rule shows supplier or counterparty, project, and category. A split rule ([0021](../decisions/0021-shared-costs-and-overhead.md)) shows the payee and the method (equal, income share, or manual proportions). The owner can edit or delete either. This screen is still a draft.
 
 Delete asks for confirmation (`למחוק את הכלל?`). Deleting a rule does not rewrite transactions already approved. The next row from that supplier will not auto-approve on the deleted rule; it goes to review unless an invoice link matches.
 
