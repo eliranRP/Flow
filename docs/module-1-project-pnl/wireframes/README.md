@@ -31,6 +31,7 @@ Build the **Approved** files. **Superseded** files stay so the earlier layout is
 | [11-split-v2.png](11-split-v2.png) | Split across active projects, monthly rule | v2 | Pending owner approval. Example data. |
 | [12-unpaid.png](12-unpaid.png) | Unpaid invoices | v1 | Pending owner approval |
 | [13-notifications.png](13-notifications.png) | The two notifications, on the lock screen | v1 | Pending owner approval |
+| [14-settings.png](14-settings.png) | Settings | v1 | Pending owner approval. Example data. |
 | [overview-5.png](overview-5.png) | Board of detail, split, unpaid, and Home v3 | v1 | Pending owner approval. All four phones are pending. The split and Home phones are the earlier images. |
 | [overview-6.png](overview-6.png) | Board of split v2, Home v4, and project v2 | v1 | Pending owner approval. Example data. |
 
@@ -47,7 +48,8 @@ A replacement keeps the stem and adds `-v2`, `-v3`, and so on. Do not overwrite 
 | File | Role |
 | --- | --- |
 | [source/gen.py](source/gen.py) | Writes one HTML file per screen into `source/`. |
-| [source/render.sh](source/render.sh) | Screenshots those HTML files with headless Chrome and writes PNGs into this folder. |
+| [source/hifi.py](source/hifi.py) | Writes the three Home style directions. The PNGs land in [../design](../design/README.md). |
+| [source/render.sh](source/render.sh) | Screenshots those HTML files with headless Chrome. Wireframes land in this folder. Style names land in `design/`. |
 
 From `source/`:
 
@@ -56,6 +58,6 @@ python3 gen.py
 bash render.sh
 ```
 
-`render.sh` with no arguments renders every name, including `09-onboarding`, `10-transaction-detail`, `11-split`, `12-unpaid`, `13-notifications`, `01-home-v3`, and `overview-5`. Pass names to render a subset (`bash render.sh 01-home-v3`). Phone pages are captured at 794×920 CSS pixels. Boards: `overview` 2274×1100, `overview-2` 1358×1100, `overview-3` and `overview-4` and `13-notifications` 916×1100, `09-onboarding` 2274×1180, `overview-5` 1800×1100. Device scale is 2.
+`render.sh` with no arguments renders every name, including `14-settings` and the four style files. Pass names to render a subset (`bash render.sh 14-settings`). Phone pages are captured at 794×920 CSS pixels. Boards: `overview` 2274×1100, `overview-2` and `overview-6` 1358×1100, `overview-3` and `overview-4` and `13-notifications` 916×1100, `09-onboarding` 2274×1180, `overview-5` 1800×1100. Style phones are 460×980. `style-overview` is 1480×1020. Device scale is 2.
 
 `gen.py` is the generator that produced this set. `render.sh` writes into the parent `wireframes/` directory so the script runs from this repo. The copy it was adapted from wrote PNGs into `/workspace/wireframes-pnl`.

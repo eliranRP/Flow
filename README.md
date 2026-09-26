@@ -48,6 +48,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe, with links to the detailed specs |
 | [Settings (Draft)](docs/module-1-project-pnl/settings.md) | Proposed Settings screen, not approved |
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
+| [UI directions](docs/module-1-project-pnl/design/README.md) | Three Home styles. The owner's choice is pending |
 | [Decisions](docs/decisions/README.md) | Decision records 0001–0022 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |

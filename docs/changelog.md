@@ -2,6 +2,15 @@
 
 ## 2026-09-26
 
+Settings wireframe and the first UI directions. The owner's style choice is pending. Every number is example data.
+
+- [14-settings.png](module-1-project-pnl/wireframes/14-settings.png) is pending owner approval. Company details, phone sign-in, Bank Hapoalim with the last statement date and upload, links to Categories and Projects, recurring split rules with edit and delete, the two notifications as toggles, an auto-approve toggle, the after-overhead default (off, [0022](decisions/0022-after-overhead-starts-off.md)), Excel and CSV export, log out, and a version line.
+- The auto-approve toggle and the notification toggles are on the image. They do not change [0011](decisions/0011-auto-approve-high-confidence.md) or [0018](decisions/0018-two-notifications.md) unless the owner approves this screen.
+- UI phase, in [design](module-1-project-pnl/design/README.md). Three Homes, choice pending: A calm fintech (IBM Plex Sans Hebrew), B bold dark (Heebo), C warm practical (Rubik). [style-overview.png](module-1-project-pnl/design/style-overview.png) shows all three. The after-overhead switch is off, so the numbers match the default.
+- `wireframes/source/gen.py` adds `14-settings`. `hifi.py` writes the style HTML. `render.sh` screenshots both batches.
+
+## 2026-09-26
+
 Decision [0022](decisions/0022-after-overhead-starts-off.md), Accepted. The after-overhead switch starts off.
 
 - Home and the project screen open on stored project profit, so the default numbers match the bank and the accountant. The owner turns `רווח אחרי חלק מהתקורה` on when they want the overhead view.
