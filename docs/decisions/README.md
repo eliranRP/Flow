@@ -63,3 +63,6 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0034](0034-cost-and-load-limits.md) | 2026-09-26 | Accepted | Running cost at most $5 a month; Home usable within 2 seconds |
 | [0035](0035-sumit-api-first.md) | 2026-09-26 | Accepted | The first data integration is the SUMIT API |
 | [0036](0036-sumit-read-only.md) | 2026-09-26 | Accepted | SUMIT integration is read-only for the proof of concept |
+| [0037](0037-supabase-pilot.md) | 2026-09-26 | Accepted | Pilot on Supabase Free in Frankfurt; Pro at the first customer or limit. Supersedes the D1 plan |
+| [0038](0038-stack.md) | 2026-09-26 | Accepted | TypeScript, React, Vite, and Supabase Edge Functions |
+| [0039](0039-pilot-defaults.md) | 2026-09-26 | Accepted | Pilot defaults: supabase.co on the Google screen, photos in Storage, Pro trigger as in 0037 |

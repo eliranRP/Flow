@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0036](../decisions/0036-sumit-read-only.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0039](../decisions/0039-pilot-defaults.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
 
 ## Goal
 
@@ -23,7 +23,7 @@ This phase is an installable mobile web app. There is no desktop version and no 
 
 The proof of concept is single-user. That user is the business owner, signed in with a Google account (Gmail). There are no roles and no permissions. An office-manager role can come later. [0013](../decisions/0013-single-user-owner.md), [0033](../decisions/0033-google-sign-in.md).
 
-The whole system costs at most $5 per month to run. Home is usable within 2 seconds on a mid-range phone on 4G. [0034](../decisions/0034-cost-and-load-limits.md).
+The whole system costs at most $5 per month to run during the pilot. Moving to Supabase Pro is about $27 a month once the pilot is growing ([0037](../decisions/0037-supabase-pilot.md)). Home is usable within 2 seconds on a mid-range phone on 4G. [0034](../decisions/0034-cost-and-load-limits.md).
 
 ## UX principle
 

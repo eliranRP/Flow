@@ -20,3 +20,5 @@ A higher monthly budget. A first screen that takes longer than 2 seconds to beco
 ## Consequences
 
 A feature that pushes the running cost over $5 a month, or that leaves Home unusable after 2 seconds on that phone and network, does not fit this phase. The $5 cap is the whole system, not a per-service allowance.
+
+[0037](0037-supabase-pilot.md) refines this cap. It holds for the pilot. Moving to Supabase Pro is about $27 a month once the pilot is growing. The 2-second load limit is unchanged.

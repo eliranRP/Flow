@@ -2,6 +2,15 @@
 
 ## 2026-09-26
 
+Decisions [0037](decisions/0037-supabase-pilot.md), [0038](decisions/0038-stack.md), and [0039](decisions/0039-pilot-defaults.md), all Accepted. The current technical plan is [tech-plan.md](tech/tech-plan.md). The Cloudflare version is [tech-plan.v1-cloudflare.md](tech/tech-plan.v1-cloudflare.md), superseded.
+
+- **0037.** The pilot runs on Supabase Free in Frankfurt: Postgres with row-level security, Auth with Google, Storage, Edge Functions, `pg_cron`, and a `pgmq` queue. Move to Supabase Pro ($25 a month) at the first paying customer or the first technical limit (database 300 MB, storage 750 MB, egress 3 GB a month, a nightly dump of about 100 MB, or about 15–20 active companies), whichever comes first. PWA static files are free on Cloudflare. Nightly encrypted backups go to Cloudflare R2, with a monthly restore test, because Free has no backups. This supersedes the Cloudflare D1 recommendation. It refines [0034](decisions/0034-cost-and-load-limits.md): the $5 a month cap holds for the pilot; Pro is about $27 a month once growing.
+- **0038.** Front end: TypeScript, React and Vite with route code-splitting, React Router, TanStack Query with an IndexedDB cache, supabase-js, vite-plugin-pwa, plain CSS on the design tokens, self-hosted Rubik, Vaul, date-fns `he`, `Intl` for shekels, lazy SheetJS, browser-image-compression, and Zod. Back end: Deno Edge Functions, envelope encryption for SUMIT keys, `@google/genai` (Gemini Flash-Lite, paid tier), and `web-push` (still to verify in Deno). Tests: Vitest, Playwright, and pgTAP.
+- **0039.** Pilot defaults, revisitable: the Google screen may show `supabase.co` (no $10 a month custom domain for now); invoice photos stay in Supabase Storage; the Pro trigger is the one in 0037.
+- Still open from the plan: skipping SUMIT triggers in this phase, an app domain, VAT on bank-only income, unknown-VAT expenses, cheque date, auto-approve thresholds, nudge days, file retention, and backfill history. The accountant's export shape is also open. A single owner is already [0013](decisions/0013-single-user-owner.md). The Pro trigger, photo storage, and the Auth domain are decided.
+
+## 2026-09-26
+
 Decision [0036](decisions/0036-sumit-read-only.md), Accepted. SUMIT integration is read-only for the proof of concept. Flow never writes to the customer's SUMIT, including project tags, even where a write would cost no quota. Project tags chosen in Flow stay in Flow. Revisit after the proof of concept. The open question on writing project tags back is resolved.
 
 Verified SUMIT API research is in [sumit-api-research.md](tech/sumit-api-research.md).
