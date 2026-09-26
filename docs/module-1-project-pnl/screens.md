@@ -10,12 +10,12 @@ Build the approved screens. Superseded screens are kept below and marked.
 | --- | --- | --- |
 | Home | [01-home-v2](#01-home-v2) | [screens/01-home.md](screens/01-home.md) |
 | Project | [02-project](#02-project) | [screens/02-project.md](screens/02-project.md) |
-| Review | [03-review](#03-review) | [screens/03-review.md](screens/03-review.md) |
+| Review | [03-review-v2](#03-review-v2) | [screens/03-review.md](screens/03-review.md) |
 | Add | [04-add](#04-add) | [screens/04-add.md](screens/04-add.md) |
 | Projects | [05-projects](#05-projects) | [screens/05-projects.md](screens/05-projects.md) |
 | Change sheet | [06-change-sheet-v2](#06-change-sheet-v2) | [screens/06-change-sheet.md](screens/06-change-sheet.md) |
 | Categories | [07-categories](#07-categories) | [screens/07-categories.md](screens/07-categories.md) |
-| Upload results | [08-upload-results](#08-upload-results) | [screens/08-upload-results.md](screens/08-upload-results.md) |
+| Upload results | [08-upload-results-v2](#08-upload-results-v2) | [screens/08-upload-results.md](screens/08-upload-results.md) |
 
 `הגדרות` (Settings) is a tab in the bottom bar. Its screen is not wireframed. See [open questions](../open-questions.md).
 
@@ -106,20 +106,22 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 [Project](screens/02-project.md). Overhead reuses this layout. The budget card is omitted when no budget is set.
 
-<a id="03-review"></a>
+<a id="03-review-v2"></a>
 
-## 03-review — Review queue
+## 03-review-v2 — Review queue
 
-**Status:** Approved.
-**File:** [wireframes/03-review.png](wireframes/03-review.png)
+**Status:** Approved. This is the review queue to build.
+**Supersedes:** [03-review](#03-review).
+**File:** [wireframes/03-review-v2.png](wireframes/03-review-v2.png)
 
 ### Purpose
 
-Confirm what the product is not sure about. The owner approves or corrects one item, and the queue advances. [0011](../decisions/0011-auto-approve-high-confidence.md): a bank row matched to an invoice, or a row covered by a supplier rule, never reaches this queue. It is auto-approved, listed in a short summary, and can be reopened. The `אשר הכל` button on this wireframe is the earlier sketch of that bulk step.
+Confirm what Flow did not auto-approve. One card at a time. Rows that already matched an invoice or a supplier rule stay out of the card and show as a strip the owner can open.
 
 ### Main elements
 
 - Title `לאישור`, subtitle `מה שה-AI לא היה בטוח בו`.
+- Strip `12 אושרו אוטומטית` with `הצג`, separated from the queue by a light rule.
 - Position pill `3 מתוך 7` and a seven-segment progress bar with three segments filled.
 - One card:
   - A thumbnail placeholder labeled `חשבונית`.
@@ -129,27 +131,59 @@ Confirm what the product is not sure about. The owner approves or corrects one i
   - `הצעת AI`: project chip `וילה רעננה` at 92%, category chip `חומרים` at 95%.
 - Primary button `אישור` (with a check) and secondary button `שינוי`.
 - Caption `אחרי שינוי – נזכור את הבחירה לספק הזה`.
-- Dashed button `אשר הכל · 4 בביטחון גבוה`.
-- Text button `דלג`.
+- Text button `דלג`. There is no `אשר הכל` button.
 - `הבא בתור`: a dimmed bank row, `העברה ל״מ.ש. הובלות״`, `שורת בנק · 19/09 · לא הותאם`, −₪3,000.
 - Bottom nav with `לאישור` active and badge `7`.
 
 ### Key interactions
 
+- `הצג` on the auto-approved strip opens that list. A row there can be reopened in the change sheet.
 - `אישור` accepts the chips, marks the transaction approved, and brings the next card up.
 - `שינוי`, or tapping a chip, opens the change sheet ([06-change-sheet-v2](#06-change-sheet-v2)).
-- `אשר הכל` is drawn on the wireframe as a bulk confirm for four high-confidence items. Under [0011](../decisions/0011-auto-approve-high-confidence.md) those items are already approved before this screen, so the proof of concept does not depend on this tap. The summary they land in is not wireframed yet.
 - `דלג` parks the card and moves on. The item stays suggested and out of reports.
 - The thumbnail opens the document larger. That viewer is not wireframed.
 - The dimmed "next" row is a preview, not a second set of actions.
 
 ### Wireframe
 
-![Approved wireframe: review queue](wireframes/03-review.png)
+![Approved wireframe: review queue with an auto-approved strip](wireframes/03-review-v2.png)
 
 ### Detailed spec
 
-[Review queue](screens/03-review.md). Auto-approved rows are summarized on [upload results](screens/08-upload-results.md), not on this card. The wireframe's `אשר הכל` button is not part of the spec.
+[Review queue](screens/03-review.md).
+
+<a id="03-review"></a>
+
+## 03-review — Review queue, with Approve all
+
+**Status:** Superseded by [03-review-v2](#03-review-v2). Kept for history. Do not build this layout. It includes a bulk `אשר הכל` button for high-confidence items, which now auto-approve and skip this card.
+**File:** [wireframes/03-review.png](wireframes/03-review.png)
+
+### Purpose
+
+The first review queue: one card, plus a dashed bulk action for high-confidence items.
+
+### Main elements
+
+- Title `לאישור`, subtitle `מה שה-AI לא היה בטוח בו`.
+- Position pill `3 מתוך 7` and a seven-segment progress bar with three segments filled.
+- The same invoice card as v2: `חומרי בניין השרון בע״מ`, `21/09/2026`, ₪8,500 net, VAT ₪1,530, chips `וילה רעננה` 92% and `חומרים` 95%.
+- Buttons `אישור` and `שינוי`, caption `אחרי שינוי – נזכור את הבחירה לספק הזה`.
+- Dashed button `אשר הכל · 4 בביטחון גבוה`.
+- `דלג`, then `הבא בתור` with the bank row `העברה ל״מ.ש. הובלות״`, −₪3,000.
+- Bottom nav with `לאישור` active and badge `7`. There is no auto-approved strip.
+
+### Key interactions
+
+`אישור`, `שינוי`, and `דלג` match v2. `אשר הכל` was the bulk confirm this version replaced.
+
+### Wireframe
+
+![Superseded wireframe: review queue with Approve all](wireframes/03-review.png)
+
+### Detailed spec
+
+Do not build this screen. The spec to build is [Review queue](screens/03-review.md), against [03-review-v2](#03-review-v2).
 
 <a id="04-add"></a>
 
@@ -176,7 +210,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 ### Key interactions
 
 - `צלם חשבונית` opens the camera or a PDF picker. After extraction, the document enters matching and, if it is not high confidence, the review queue.
-- `העלה דוח בנק/אשראי` picks an Excel or CSV file and then shows [upload results](#08-upload-results). In the proof of concept that file is a Bank Hapoalim (`בנק הפועלים`) statement. [0012](../decisions/0012-bank-hapoalim-first.md). The label still mentions credit (`אשראי`); credit-card company files are later.
+- `העלה דוח בנק/אשראי` picks an Excel or CSV file and then shows [upload results](#08-upload-results-v2). In the proof of concept that file is a Bank Hapoalim (`בנק הפועלים`) statement. [0012](../decisions/0012-bank-hapoalim-first.md). The label still mentions credit (`אשראי`); credit-card company files are later.
 - `הזנה ידנית` is the cash and cheque fallback. The form itself is not wireframed.
 - `ביטול`, or tapping the scrim, closes the sheet and leaves the data unchanged.
 
@@ -328,49 +362,79 @@ Light category maintenance. The seven expense defaults and the two income defaul
 
 [Categories](screens/07-categories.md).
 
+<a id="08-upload-results-v2"></a>
+
+## 08-upload-results-v2 — Statement upload results
+
+**Status:** Approved. This is the upload summary to build.
+**Supersedes:** [08-upload-results](#08-upload-results).
+**File:** [wireframes/08-upload-results-v2.png](wireframes/08-upload-results-v2.png)
+
+### Purpose
+
+Show what a Bank Hapoalim file became. High-confidence rows are already approved. The owner is sent only to the rows that still need a decision.
+
+### Main elements
+
+- Title `דוח בנק הועלה`, file line `הפועלים_ספטמבר.xlsx` and the range `01–30/09`, and a close button.
+- Summary card: `42` and `שורות נקלטו`, plus a stacked bar.
+- Collapsed group `33 אושרו אוטומטית` with `הצג`. The caption under it is `18 הותאמו לחשבוניות · 15 לפי כללים`.
+- Dimmed row: `2` `העברות בין חשבונות שלך` — `הוסרו – לא נספרות ברווח`.
+- Emphasized row: `7` `ממתינות לאישור` — `ה-AI הציע שיוך – צריך את האישור שלך`.
+- Note: `3 חשבוניות עדיין לא שולמו – לא נספרות ברווח`.
+- Primary button `לאשר 7 פריטים`. There is no secondary approve button.
+- Link `הצג את כל 42 השורות`.
+- Bottom nav is present and no tab is marked active.
+
+18 + 15 = 33 auto-approved. 33 + 2 + 7 = 42 rows in the file.
+
+### Key interactions
+
+- `הצג` on the auto-approved group expands those 33 rows. A row opens in the change sheet so the owner can reopen it.
+- `לאשר 7 פריטים` opens the review queue at the unmatched rows from this file.
+- The unpaid-invoice note opens the invoices that still have no payment. They stay out of P&L until a match or a cash "mark paid".
+- `הצג את כל 42 השורות` opens the imported rows, including the removed transfers. That list is not a separate wireframe.
+- Close returns without undoing the import. The 33 already count. The 7 stay suggested.
+
+### Wireframe
+
+![Approved wireframe: Hapoalim upload results with an auto-approved group](wireframes/08-upload-results-v2.png)
+
+### Detailed spec
+
+[Upload results](screens/08-upload-results.md).
+
 <a id="08-upload-results"></a>
 
-## 08-upload-results — Statement upload results
+## 08-upload-results — Statement upload results, with bulk approve
 
-**Status:** Approved.
+**Status:** Superseded by [08-upload-results-v2](#08-upload-results-v2). Kept for history. Do not build this layout. It shows a Leumi file name and a button that asks the owner to approve the 33 classified rows.
 **File:** [wireframes/08-upload-results.png](wireframes/08-upload-results.png)
 
 ### Purpose
 
-Show what a statement file became, and send the owner only to the rows that need a decision. This is the screen after `העלה דוח בנק/אשראי`. The proof of concept parses a Bank Hapoalim (`בנק הפועלים`) file. [0012](../decisions/0012-bank-hapoalim-first.md).
+The first upload summary: four separate outcome rows, and a secondary button to approve the classified set by hand.
 
 ### Main elements
 
-- Title `דוח בנק הועלה`, file line with the example name `לאומי_ספטמבר.xlsx` and the range `01–30/09`, and a close button.
-- Summary card: `42` and `שורות נקלטו`, plus a stacked bar.
-- Four result rows. The example sums to 42:
-  - 18 `הותאמו לחשבוניות קיימות` — `ספק + סכום + תאריך תואמים`
-  - 15 `סווגו לפי כללים שלמדנו` — `ספקים שאישרת בעבר`
-  - 2 `העברות בין חשבונות שלך` — `הוסרו – לא נספרות ברווח` (dimmed)
-  - 7 `ממתינות לאישור` — `ה-AI הציע שיוך – צריך את האישור שלך` (this row is emphasized)
+- Title `דוח בנק הועלה`, file line `לאומי_ספטמבר.xlsx`, range `01–30/09`.
+- `42` `שורות נקלטו` and a stacked bar.
+- Separate rows for 18 invoice matches, 15 learned rules, 2 removed transfers, and 7 waiting for review.
 - Note: `3 חשבוניות עדיין לא שולמו – לא נספרות ברווח`.
-- Primary button `לאשר 7 פריטים`.
-- Secondary button `אשר את כל המסווגים (33)`. The 33 are the 18 invoice matches plus the 15 rule matches. The 2 transfers are not included; they were removed.
+- Primary `לאשר 7 פריטים` and secondary `אשר את כל המסווגים (33)`.
 - Link `הצג את כל 42 השורות`.
-- Bottom nav is present and no tab is marked active.
-
-The file name `לאומי_ספטמבר.xlsx` is example art from before [0012](../decisions/0012-bank-hapoalim-first.md). The bank to support is Hapoalim, not Leumi.
 
 ### Key interactions
 
-- `לאשר 7 פריטים` opens the review queue at the unmatched rows from this file. Those seven are the low-confidence rows.
-- `אשר את כל המסווגים (33)` is drawn as a manual confirm of the 18 invoice matches plus the 15 rule matches. Under [0011](../decisions/0011-auto-approve-high-confidence.md) those 33 are auto-approved and skip the queue. This screen's job for them is a short summary, with a way to reopen any row. The summary layout is not a separate wireframe yet. The 2 transfers stay removed.
-- The unpaid-invoice note opens the invoices that still have no payment. They stay out of P&L until a match or a cash "mark paid".
-- `הצג את כל 42 השורות` opens the imported rows, including the removed transfers. That list is not wireframed.
-- Close returns without forcing a decision. Unapproved rows stay suggested and stay in the pending count.
+The primary button opens review for the 7. The secondary button was the manual confirm of the 33. v2 collapses those 33 into `אושרו אוטומטית` and removes that button.
 
 ### Wireframe
 
-![Approved wireframe: bank upload results](wireframes/08-upload-results.png)
+![Superseded wireframe: upload results with a Leumi file and a bulk-approve button](wireframes/08-upload-results.png)
 
 ### Detailed spec
 
-[Upload results](screens/08-upload-results.md). High-confidence rows are auto-approved; the wireframe's bulk-approve button is not built.
+Do not build this screen. The spec to build is [Upload results](screens/08-upload-results.md), against [08-upload-results-v2](#08-upload-results-v2).
 
 <a id="01-home"></a>
 
@@ -451,7 +515,7 @@ Do not build this screen. The spec to build is [Change sheet](screens/06-change-
 
 ## overview — Board of screens 01–05
 
-**Status:** Approved composite. The Home phone on this board is the superseded [01-home](#01-home). The other four phones match the approved screens.
+**Status:** Approved composite. The Home phone is the superseded [01-home](#01-home). The review phone is the superseded [03-review](#03-review). Project, Add, and Projects match the approved screens.
 **File:** [wireframes/overview.png](wireframes/overview.png)
 
 ### Purpose
@@ -464,7 +528,7 @@ A header line `Construction P&L – mobile POC · Hebrew RTL · 390×844` and a 
 
 1. Home / Company (`בית`) — the superseded three-project Home.
 2. Project view (`פרויקט`) — `וילה רעננה`.
-3. Review queue (`לאישור`).
+3. Review queue (`לאישור`) — the superseded layout, with `אשר הכל`.
 4. Add sheet (`הוספה`) over Home.
 5. Projects list (`פרויקטים`) with the create sheet open.
 
@@ -484,7 +548,7 @@ Not a product screen. No fields, states, or acceptance criteria. The Home phone 
 
 ## overview-2 — Board of screens 06–08
 
-**Status:** Approved composite. The change-sheet phone is the superseded [06-change-sheet](#06-change-sheet). Categories and upload results match the approved screens.
+**Status:** Approved composite. The change-sheet phone is the superseded [06-change-sheet](#06-change-sheet). The upload phone is the superseded [08-upload-results](#08-upload-results). Categories match the approved screen.
 **File:** [wireframes/overview-2.png](wireframes/overview-2.png)
 
 ### Purpose
@@ -497,7 +561,7 @@ Labeled `Example data · low-fi wireframe · POC · part 2`, with the same produ
 
 1. Change sheet (`שינוי`) — the superseded all-chips sheet, over the review card.
 2. Categories (`הגדרות › קטגוריות`) — expense list with the row menu open.
-3. Upload results (`דוח בנק הועלה`).
+3. Upload results (`דוח בנק הועלה`) — the superseded layout, with a Leumi file name and `אשר את כל המסווגים (33)`.
 
 ### Key interactions
 
@@ -509,7 +573,7 @@ None. This file is a board, not a screen.
 
 ### Detailed spec
 
-Not a product screen. The change-sheet phone is superseded. Build [Change sheet](screens/06-change-sheet.md), [Categories](screens/07-categories.md), and [Upload results](screens/08-upload-results.md).
+Not a product screen. The change sheet and the upload results on this board are superseded. Build [Change sheet](screens/06-change-sheet.md), [Categories](screens/07-categories.md), and [Upload results](screens/08-upload-results.md) from [08-upload-results-v2](#08-upload-results-v2).
 
 <a id="overview-3"></a>
 
@@ -542,3 +606,33 @@ None. This file is a board, not a screen.
 ### Detailed spec
 
 Not a product screen. Build [Home](screens/01-home.md) and [Change sheet](screens/06-change-sheet.md).
+
+<a id="overview-4"></a>
+
+## overview-4 — Board of review v2 and upload results v2
+
+**Status:** Approved composite. Both phones are current.
+**File:** [wireframes/overview-4.png](wireframes/overview-4.png)
+
+### Purpose
+
+One picture of the two screens that show auto-approve: the review queue with the strip above the card, and the Hapoalim upload summary with the collapsed group.
+
+### Main elements
+
+Labeled `Example data · low-fi wireframe · auto-approve`. Two phones:
+
+1. `03-review-v2` — strip `12 אושרו אוטומטית`, then the invoice card for `חומרי בניין השרון בע״מ`, with `אישור` and `שינוי` only.
+2. `08-upload-results-v2` — file `הפועלים_ספטמבר.xlsx`, `33 אושרו אוטומטית`, 2 transfers removed, 7 waiting, primary `לאשר 7 פריטים`.
+
+### Key interactions
+
+None. This file is a board, not a screen.
+
+### Wireframe
+
+![Overview board of review v2 and Hapoalim upload results](wireframes/overview-4.png)
+
+### Detailed spec
+
+Not a product screen. Build [Review](screens/03-review.md) and [Upload results](screens/08-upload-results.md).
