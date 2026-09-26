@@ -889,3 +889,70 @@ ov6 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exla
 <div style="display:flex;gap:32px">{cols}</div></div>'''
 (OUT / "overview-6.html").write_text(page(ov6, 1358, 1100), encoding="utf-8")
 print("ok6")
+
+# =================== BATCH 7 (14-settings) ===================
+def setrow(title, meta=""):
+    m = f'<div class="meta">{meta}</div>' if meta else ""
+    return f'<div class="row" style="padding:5px 10px;margin-bottom:4px"><div class="name" style="font-size:14px">{title}</div>{m}</div>'
+
+def linkrow(title):
+    return f'<div class="row" style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;margin-bottom:4px"><span class="name" style="font-size:14px">{title}</span><span style="color:#999;font-size:16px">‹</span></div>'
+
+def tgl(title, meta, on):
+    if on:
+        sw = '<div class="toggle on2"><span class="ck">✓</span></div>'
+    else:
+        sw = '<div style="width:54px;height:30px;border-radius:15px;background:#d5d5d5;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#fff"></div></div>'
+    return f'<div class="row" style="display:flex;align-items:center;gap:8px;padding:5px 10px;margin-bottom:4px"><div style="flex:1;font-size:13px"><span class="name">{title}</span> <span class="meta">{meta}</span></div>{sw}</div>'
+
+settings_inner = f'''<div class="content" style="padding-top:0;min-height:0;padding-bottom:70px">
+<div class="topbar" style="margin:0 0 2px"><div><div class="title" style="font-size:20px">הגדרות</div><div class="sub">א.ב. בנייה ושיפוצים בע״מ</div></div></div>
+<div class="sect" style="margin:0 2px 2px;font-size:12px">פרטי חברה</div>
+<div class="card" style="padding:6px 10px;margin-bottom:4px">
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span style="color:#777">שם העסק</span><span style="font-weight:600">א.ב. בנייה ושיפוצים בע״מ</span></div>
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span style="color:#777">ח.פ</span><span class="num" style="font-weight:600">51-234567-8</span></div>
+<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#777">סוג</span><span style="font-weight:600">חברה בע״מ</span></div>
+</div>
+<div class="sect" style="margin:2px;font-size:12px">כניסה</div>
+{setrow("טלפון", "050-123-4567 · קוד ב-SMS")}
+<div class="sect" style="margin:2px;font-size:12px">בנק הפועלים</div>
+<div class="card" style="padding:6px 10px;margin-bottom:4px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span class="name" style="font-size:14px">מחובר</span><span class="num" style="font-weight:700">••4521</span></div>
+<div class="meta">דוח אחרון 30/09/2026</div>
+<div class="btn sec" style="height:32px;margin-top:4px;font-size:14px">העלה דוח</div>
+</div>
+<div class="sect" style="margin:2px;font-size:12px">ניהול</div>
+{linkrow("קטגוריות")}
+{linkrow("פרויקטים")}
+<div class="sect" style="margin:2px;font-size:12px">כללי פיצול</div>
+<div class="row" style="padding:6px 10px;margin-bottom:4px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span class="name" style="font-size:13px">חומרי בניין השרון</span><span style="font-size:12px;color:#5b6b8a;font-weight:700">לפי הכנסה</span></div>
+<div style="display:flex;gap:8px;margin-top:4px"><div class="btn sec" style="flex:1;height:30px;font-size:13px">עריכה</div><div class="btn sec" style="flex:1;height:30px;font-size:13px;color:#c62828;border-color:#e3b4b4">מחיקה</div></div>
+</div>
+<div class="sect" style="margin:2px;font-size:12px">התראות</div>
+{tgl("סיכום שבועי", "יום ראשון · 08:00", True)}
+{tgl("תזכורת לאישור", "18:00 · רק כשיש פריטים", True)}
+<div class="sect" style="margin:2px;font-size:12px">תצוגה</div>
+{tgl("רווח אחרי חלק מהתקורה", "כבוי כברירת מחדל", False)}
+{tgl("אישור אוטומטי", "חשבונית יחידה או כלל קיים", True)}
+<div class="sect" style="margin:2px;font-size:12px">נתונים</div>
+<div style="display:flex;gap:8px;margin-bottom:4px"><div class="btn sec" style="flex:1;height:32px;font-size:13px">ייצוא לאקסל</div><div class="btn sec" style="flex:1;height:32px;font-size:13px">ייצוא ל-CSV</div></div>
+<div class="btn sec" style="height:32px;font-size:14px;color:#c62828;border-color:#e3b4b4">התנתקות</div>
+<div style="text-align:center;font-size:11px;color:#aaa;margin-top:3px">Flow · 0.1.0</div>
+</div>''' + nav("set").replace(
+    '<div class="nav">',
+    '<div class="nav" style="position:absolute;left:0;right:0;bottom:0;height:68px;padding-top:4px">',
+)
+
+SCREENS7 = [
+ ("14-settings", "Settings", "הגדרות", phone(settings_inner), [
+  "<b>Pending owner approval. Example data.</b> Company, phone sign-in, Hapoalim with last statement date and upload.",
+  "<b>Links:</b> Categories and Projects. Recurring split rules have edit and delete.",
+  "<b>Toggles:</b> the two notifications, auto-approve (drawn on), after-overhead default (off, decided).",
+  "<b>Footer:</b> Excel and CSV export, log out, version line."]),
+]
+for fid, en, he, ph, notes in SCREENS7:
+    nh = "".join(f'<div class="n">{n}</div>' for n in notes)
+    body = f'<div class="wrap">{ph}<div class="notes"><h2>{fid[:2]} · {en}</h2><div class="he">{he}</div>{nh}</div></div>'
+    (OUT / f"{fid}.html").write_text(page(body, 794, 920), encoding="utf-8")
+print("ok7")

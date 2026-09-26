@@ -4,7 +4,7 @@ Each section is one wireframe. The detailed spec for each product screen is a se
 
 The phone UI is Hebrew only, right to left. Profit is green, loss is red, and a negative amount uses a minus sign. Income and expense totals on the summary tiles are neutral. The English notes beside the phone in the PNG are annotations for design review. They are not in the product.
 
-Build the approved screens. Superseded screens are kept below and marked. [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2), [11-split-v2](#11-split-v2), and screens 09, 10, 12, and 13 are drawn and **pending owner approval**. Until that approval, do not treat a difference between those images and an accepted decision as a change to the decision.
+Build the approved screens. Superseded screens are kept below and marked. [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2), [11-split-v2](#11-split-v2), [14-settings](#14-settings), and screens 09, 10, 12, and 13 are drawn and **pending owner approval**. Until that approval, do not treat a difference between those images and an accepted decision as a change to the decision.
 
 | Build this | Wireframe notes | Detailed spec |
 | --- | --- | --- |
@@ -17,9 +17,7 @@ Build the approved screens. Superseded screens are kept below and marked. [01-ho
 | Categories | [07-categories](#07-categories) | [screens/07-categories.md](screens/07-categories.md) |
 | Upload results | [08-upload-results-v2](#08-upload-results-v2) | [screens/08-upload-results.md](screens/08-upload-results.md) |
 
-`הגדרות` (Settings) is a tab in the bottom bar. Its screen is not wireframed. The [Settings draft](settings.md) is not approved. See [open questions](../open-questions.md).
-
-The draft has a display option, `רווח אחרי חלק מהתקורה`. [0022](../decisions/0022-after-overhead-starts-off.md): it starts off, so Home and Project open on the stored figures that match the bank and the accountant. The owner turns it on for the overhead view. Home, Project, and this option are one preference. The rest of Settings stays open.
+`הגדרות` (Settings) is a tab in the bottom bar. The wireframe is [14-settings](#14-settings), pending owner approval. The [Settings draft](settings.md) follows that image and is still not approved. See [open questions](../open-questions.md).
 
 | Pending owner approval | Section |
 | --- | --- |
@@ -28,6 +26,7 @@ The draft has a display option, `רווח אחרי חלק מהתקורה`. [0022
 | Split sheet | [11-split-v2](#11-split-v2) |
 | Unpaid invoices | [12-unpaid](#12-unpaid) |
 | Notifications | [13-notifications](#13-notifications) |
+| Settings | [14-settings](#14-settings) |
 
 Pending owner approval, now drawn: [11-split-v2](#11-split-v2), [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2), [overview-6](#overview-6). Every number on those images is example data.
 
@@ -1301,6 +1300,80 @@ The ₪42,000, the 15%, the count 7, and "about 2 minutes" are example data. Whi
 ### Detailed spec
 
 This section, plus [0018](../decisions/0018-two-notifications.md). There is no separate file until the owner approves the image.
+
+<a id="14-settings"></a>
+
+## 14-settings — Settings
+
+**Status:** Pending owner approval.
+**File:** [wireframes/14-settings.png](wireframes/14-settings.png)
+
+### Purpose
+
+The owner's screen for company details, the Hapoalim connection, the lists they edit elsewhere, and the few switches that change how Home looks or how rows are filed. Every number and name on the image is example data.
+
+### Main elements
+
+Title `הגדרות`. Subtitle is the business name, example `א.ב. בנייה ושיפוצים בע״מ`. Bottom nav with `הגדרות` active.
+
+- **Company details** (`פרטי חברה`). `שם העסק`, company number `ח.פ` `51-234567-8`, and type `חברה בע״מ`.
+- **Phone sign-in** (`כניסה`). `טלפון` `050-123-4567 · קוד ב-SMS`.
+- **Bank Hapoalim** (`בנק הפועלים`). Status `מחובר`, example account `••4521`, last statement `דוח אחרון 30/09/2026`, and `העלה דוח`.
+- **Links.** `קטגוריות` and `פרויקטים`, each with a chevron.
+- **Recurring split rules** (`כללי פיצול`). One example row: `חומרי בניין השרון`, method `לפי הכנסה`, buttons `עריכה` and `מחיקה`.
+- **The two notifications** (`התראות`), both drawn on. `סיכום שבועי` · `יום ראשון · 08:00`. `תזכורת לאישור` · `18:00 · רק כשיש פריטים`.
+- **Auto-approve** (`אישור אוטומטי`), drawn on. Subline `חשבונית יחידה או כלל קיים`.
+- **After-overhead default** (`רווח אחרי חלק מהתקורה`), drawn off. Subline `כבוי כברירת מחדל`. This default is decided ([0022](../decisions/0022-after-overhead-starts-off.md)).
+- **Data export** (`נתונים`). `ייצוא לאקסל` and `ייצוא ל-CSV`.
+- **Log out.** `התנתקות`.
+- **Version line.** `Flow · 0.1.0`. Example text, not a versioning rule.
+
+### Key interactions
+
+- Company fields are the same three captured in onboarding. The business-type list on this image is `חברה בע״מ` only. The enum, including `עוסק פטור`, stays [open](../open-questions.md#settings-screen).
+- The phone row shows the number the owner signed in with ([0017](../decisions/0017-sms-sign-in.md)). Changing that number is still [open](../open-questions.md#changing-the-phone-number). This image does not draw a change flow.
+- `העלה דוח` opens the Hapoalim statement upload. Other banks are still rejected ([0012](../decisions/0012-bank-hapoalim-first.md)). The masked account and the 30/09/2026 date are example data.
+- `קטגוריות` opens the categories screen. `פרויקטים` opens the projects list.
+- `עריכה` on a split rule opens that rule. `מחיקה` removes it after confirm (`למחוק את הכלל?`). The confirm is not drawn. Deleting does not rewrite payments already saved. One-project rules are not on this image.
+- The two notification switches are drawn on. [0018](../decisions/0018-two-notifications.md) defines the two sends and did not add a settings screen for them. Until this image is approved, those sends stay as 0018 describes, and these switches are not a change to that decision.
+- `אישור אוטומטי` is drawn on, which matches what the product does today. [0011](../decisions/0011-auto-approve-high-confidence.md) rejected a switch to turn auto-approve off. Until this image is approved, that control is not built.
+- `רווח אחרי חלק מהתקורה` starts off. It is the same preference as the switch on Home and the project screen ([0022](../decisions/0022-after-overhead-starts-off.md)).
+- `ייצוא לאקסל` downloads the counting lines. `ייצוא ל-CSV` is the same rows in CSV. The column list is the one in the [Settings draft](settings.md). Hashavshevet stays out of scope.
+- `התנתקות` ends the session and returns to the SMS sign-in.
+
+### States
+
+**Normal.** The connected Hapoalim account, one split rule, both notifications on, auto-approve on, after-overhead off, as drawn.
+
+**Empty.** No statement yet: the bank card says no file has been uploaded, and `העלה דוח` is the action. No split rule: the section says there are none. Neither empty state is drawn.
+
+**Error.** A failed export shows `לא הצלחנו לייצא` and retry. Not drawn.
+
+**Offline.** The screen still shows the saved company, phone, and switches. Upload and export wait until the network is back.
+
+### Edge cases
+
+- **After overhead.** Off on a new company. Turning it on here turns it on for Home and the project screen. Company tiles do not change.
+- **Auto-approve drawn on.** Turning it off is on the image and is not approved. Do not build that off position unless a decision supersedes 0011.
+- **Notification switches drawn on.** Turning one off is on the image and is not approved. Do not drop a send from 0018 unless this screen is approved.
+- **Version line.** `0.1.0` is example data.
+
+### Acceptance criteria
+
+- [ ] The screen shows company details, the phone sign-in, Hapoalim with the last statement date and upload, and links to Categories and Projects.
+- [ ] Recurring split rules can be edited and deleted.
+- [ ] The two notifications are toggles. Auto-approve is a toggle drawn on. After-overhead is a toggle drawn off.
+- [ ] Export offers Excel and CSV. Log out and a version line are on the screen.
+- [ ] Every name, account, date, and the version string are example data.
+- [ ] The image does not by itself change 0011 or 0018.
+
+### Wireframe
+
+![Settings, pending owner approval](wireframes/14-settings.png)
+
+### Detailed spec
+
+This section, plus the [Settings draft](settings.md). There is no separate file until the owner approves the image.
 
 <a id="overview-5"></a>
 

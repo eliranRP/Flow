@@ -8,14 +8,15 @@ Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-
 
 A proposal is in [settings.md](module-1-project-pnl/settings.md). **Status: Draft. Not approved.**
 
-The draft includes company details, VAT status, a VAT rate, categories, a rules list with edit and delete, an accountant Excel export, Bank Hapoalim account numbers, a display option for profit after overhead share, and an auto-approve toggle.
+A wireframe is now drawn: [14-settings](module-1-project-pnl/screens.md#14-settings), pending owner approval. It shows company details, phone sign-in, the Hapoalim connection, links to Categories and Projects, recurring split rules, the two notifications as toggles, an auto-approve toggle, the after-overhead default (off), Excel and CSV export, log out, and a version line. Every figure on it is example data. The after-overhead default is decided ([0022](decisions/0022-after-overhead-starts-off.md)). The rest of this screen is not.
 
 Open until the draft is accepted or replaced:
 
 - Whether this set of sections is what ships.
 - The VAT-status enum (`עוסק מורשה`, `עוסק פטור`, `חברה`) and the 18% default rate. Onboarding, pending approval, draws only `חברה בע״מ` and `עוסק מורשה`.
 - Whether Home's `☰` opens this screen. The unpaid-invoices wireframe, also pending approval, lists `☰` as a way into that list.
-- The auto-approve toggle. [0011](decisions/0011-auto-approve-high-confidence.md) auto-approves by default and rejected an opt-in switch. The draft draws the toggle and says not to build it unless a new decision supersedes 0011.
+- The auto-approve toggle. [0011](decisions/0011-auto-approve-high-confidence.md) auto-approves by default and rejected an opt-in switch. The wireframe draws the toggle and says not to build the off position unless a new decision supersedes 0011, or this screen is approved as that decision.
+- The two notification toggles. [0018](decisions/0018-two-notifications.md) defines the two sends and did not add a settings screen for turning one off. The wireframe draws both on. That does not change 0018 until the screen is approved.
 - The after-overhead display option is not part of this open list. Its default is off ([0022](decisions/0022-after-overhead-starts-off.md)). Adding it does not approve the rest of this draft.
 
 ## Pricing
