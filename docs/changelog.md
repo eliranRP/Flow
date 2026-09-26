@@ -2,6 +2,14 @@
 
 ## 2026-09-26
 
+Decisions [0033](decisions/0033-google-sign-in.md), [0034](decisions/0034-cost-and-load-limits.md), and [0035](decisions/0035-sumit-api-first.md), all Accepted. [0017](decisions/0017-sms-sign-in.md) is Superseded by 0033.
+
+- **0033.** Sign-in is a Google account (Gmail). SMS is out because each code had a cost. The onboarding SMS step and the wrong-code and expired-code states (`er-03`, `er-04`) are obsolete. A Google sign-in screen and a Google sign-in error state will replace them later. Those files are not in this change.
+- **0034.** The whole system costs at most $5 per month to run. Home is usable within 2 seconds on a mid-range phone on 4G.
+- **0035.** The first data integration is the SUMIT API (sumit.co.il). Flow pulls from SUMIT. Endpoints, sync, and the relation to the Hapoalim upload are still for the tech plan. Open: does SUMIT replace that upload in the proof of concept, or sit alongside it?
+
+## 2026-09-26
+
 Decision [0032](decisions/0032-home-hero-stays-company-net-profit.md), Accepted. With the after-overhead switch on, Home's hero number stays company net profit. The band's small figures show profit before overhead and the overhead amount, and each project row shows profit after its share. The project screen shows before, share, then after. Evidence: [18](../design/screens/18-home-overhead-on-light.png) and [19](../design/screens/19-project-overhead-on-light.png). The open question is resolved.
 
 ## 2026-09-26

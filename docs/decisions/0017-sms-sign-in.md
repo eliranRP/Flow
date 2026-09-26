@@ -1,7 +1,8 @@
 # Sign in with phone number and SMS code
 
 **Date:** 2026-09-26
-**Status:** Accepted
+**Status:** Superseded
+**Superseded by:** [0033](0033-google-sign-in.md)
 
 ## Context
 
