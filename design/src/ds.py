@@ -1,7 +1,7 @@
 # Flow design-system boards (pages 1–8, light + dark). Run: python3 ds.py && bash render-ds.sh
 import pathlib
 from tokens import COLOR, TYPE, SPACE, RADIUS, contrast
-from flow import appic, BASE, ic, num, n, tabbar, vars_css, EXTAG, STATUS, spin, sk
+from flow import gbtn, appic, BASE, ic, num, n, tabbar, vars_css, EXTAG, STATUS, spin, sk
 OUT = pathlib.Path(__file__).parent
 
 def scope(mode):  # inline CSS variables so a block can show the other mode
@@ -239,11 +239,13 @@ def p8(mode):
     conf = cmp("Confirmation sheet", "Question as the title, the item as the subtitle, one line on the consequence. Destructive: bad-tint fill with red text, never a solid red block. Always a quiet ‘ביטול’.",
         cell("Neutral (archive, hide, merge)", '<div class="acts" style="padding:0"><div class="btn pri">העברה לארכיון</div><div class="btn gho" style="height:44px;color:var(--text-secondary)">ביטול</div></div>') +
         cell(f"Destructive · bad on bad-tint {contrast(C['bad'], C['bad-tint']):.1f}:1", f'<div class="acts" style="padding:0"><div class="btn dngs">{ic("trash",20,2)}מחיקה</div><div class="btn gho" style="height:44px;color:var(--text-secondary)">ביטול</div></div>'), "1fr 1fr")
-    errs = cmp("Error pattern", "Say what happened, that nothing was lost, and give one action. No red blocks: red only for the field border and its message.",
-        cell("Code · default", '<div class="code">' + '<span></span>' * 6 + '</div>') +
-        cell("Code · wrong", '<div class="code err">' + "".join(f'<span class="n">{d}</span>' for d in "482917") + f'</div><div style="margin-top:10px;display:flex;justify-content:center"><span class="msg-e">{ic("info",16,2)}<span>הקוד לא נכון. אפשר לנסות שוב.</span></span></div>') +
+    errs = cmp("Error pattern", "Say what happened, that nothing was lost, and give one action. No red blocks: red only for a field border, its message, or the icon of a note.",
+        cell("Sign-in note · cancelled (neutral)", f'<div class="note"><span class="ni">{ic("info",20,2)}</span><div><div class="nt">הכניסה לא הושלמה</div><div class="nl">החלון של Google נסגר. אפשר לנסות שוב.</div></div></div>') +
+        cell("Sign-in note · failed", f'<div class="note bad"><span class="ni">{ic("info",20,2)}</span><div><div class="nt">לא הצלחנו להתחבר</div><div class="nl">כדאי לבדוק את החיבור ולנסות שוב.</div></div></div>') +
         cell("Wrong file", f'<span class="filechip">{ic("doc",18,1.9)}<bdi>קבלות_ספטמבר.pdf</bdi></span>') +
         cell("Save failed · toast", f'<div class="toast"><span style="color:var(--toast-bad);display:grid">{ic("info",18,2.2)}</span><span>לא נשמר – אין חיבור</span><span class="u">ניסיון חוזר</span></div>'), "1.3fr 1.3fr 1fr 1.2fr")
+    gs = cmp("Sign in with Google", f"Google branding, light theme in both modes: white fill, 1px #747775 stroke ({contrast(C['gsi-border'], C['bg']):.1f}:1 on the page), #1F1F1F text ({contrast(C['gsi-text'], C['gsi-bg']):.1f}:1), the standard four-colour G at 20px on the start side, pill, 52px high. Text <bdi dir=rtl>המשך עם Google</bdi> (Roboto Medium; Hebrew falls back to Rubik). Only sign-in method in the POC.",
+        cell("Default", gbtn()) + cell("Pressed · 12% overlay", gbtn("press")) + cell("Focus · app focus ring", gbtn("foc")) + cell("Loading · Google window open", gbtn("load")) + cell("Disabled", gbtn("dis")), "repeat(5,1fr)")
     inst = cmp("Install prompt", "Android: one ‘התקנה’ button (the browser’s install event). iPhone: three numbered steps with the Safari icons in tint tiles.",
         cell("App icon", appic()) + cell("Step", f'<div style="display:flex;gap:14px;align-items:center"><span class="stepn n">1</span><span style="line-height:2">מקישים על <span class="tile">{ic("share",18,2)}</span> ״שיתוף״</span></div>') +
         cell("Android action", f'<div class="btn pri">{ic("download",20,2)}התקנה</div>'), "0.6fr 1.4fr 1fr")
@@ -253,10 +255,10 @@ def p8(mode):
         cell("On", '<span class="sw on"><i></i></span>') + cell("Off", '<span class="sw"><i></i></span>'), "1fr 1fr")
     phones = "".join(f'<div class="phw{" dk" if mode=="dark" else ""}"><div class="fr"><iframe src="{f}-{mode}.html" width="390" height="844" scrolling="no"></iframe></div><h3>{t}</h3><p>{d}</p></div>' for f, t, d in [("15b-date-single","Date picker","Single date for a transaction"),("16-period-sheet","Period sheet","From the band pill"),("20-confirm-delete","Confirm delete","Soft destructive button")])
     body = (f'<div class="cards" style="grid-template-columns:1fr">{days}</div><div class="cards" style="grid-template-columns:1fr">{cal}</div>'
-            f'<div class="cards" style="grid-template-columns:1fr 1fr">{per}{conf}</div><div class="cards" style="grid-template-columns:1fr">{errs}</div>'
+            f'<div class="cards" style="grid-template-columns:1fr 1fr">{per}{conf}</div><div class="cards" style="grid-template-columns:1fr">{gs}</div><div class="cards" style="grid-template-columns:1fr">{errs}</div>'
             f'<div class="cards" style="grid-template-columns:1.4fr 1fr">{inst}{sw}</div><div class="cards" style="grid-template-columns:1fr">{bk}</div>'
             f'<div class="phones" style="gap:36px">{phones}</div>')
-    return page(8, mode, body, "Pickers, confirmations, errors and the install prompt. Israeli conventions: Sunday first, dd/mm/yyyy, Hebrew month names, fully right-to-left.")
+    return page(8, mode, body, "Pickers, confirmations, Google sign-in, errors and the install prompt. Israeli conventions: Sunday first, dd/mm/yyyy, Hebrew month names, fully right-to-left.")
 
 FNS = [p1, p2, p3, p4, p5, p6, p7, p8]
 SLUG = ["ds-1-colours", "ds-2-type", "ds-3-spacing", "ds-4-controls", "ds-5-content", "ds-6-band", "ds-7-empty-loading", "ds-8-pickers-sheets"]

@@ -72,7 +72,8 @@ In CSS, every colour is `--color-<name>`, for example `--color-text-secondary`.
 | `tint-strong` / `tint-pressed` | #E7DAFD | #382A5E | Pressed state of tinted things |
 | `line` | #EEE8FA | #2E2740 | 1px hairlines between rows, card and input borders |
 | `control-off` | #8F86A3 | #736A8C | Switch track when off, unchecked checkbox border, sheet grab handle (≥ 3:1) |
-| `control-border` | #8F86A3 | #736A8C | Borders of inputs, search fields, outlined chips, radio circles, code boxes (≥ 3:1) |
+| `control-border` | #8F86A3 | #736A8C | Borders of inputs, search fields, outlined chips, radio circles (≥ 3:1) |
+| `gsi-bg` / `gsi-border` / `gsi-text` | #FFFFFF / #747775 / #1F1F1F | same | The "המשך עם Google" button only (§7.24). Fixed by Google branding, identical in both modes. Stroke 4.5:1 (light) / 4.1:1 (dark) on the page |
 | `bad-tint` | #FCEDEC | #3A1E24 | Soft fill behind a destructive confirm button (`bad` text on it: 4.9:1 / 6.6:1) |
 | `text` | #1D1728 | #F1EDF8 | Main text and **all figures** |
 | `text-secondary` | #564E66 | #B1A8C4 | Labels, secondary lines, row icons |
@@ -197,7 +198,7 @@ From top to bottom:
 ### 3.4 Template C: full-screen flow (onboarding) and full-screen task
 - There is **no tab bar** and **no band**.
 - The top bar has **back** (steps 2 and later), or **✕** for tasks opened from elsewhere (Split, Upload results).
-- **Onboarding only:** a progress row under the top bar, made of a 4px progress bar (`tint` track, `accent` fill) and the hint "שלב X מתוך 4". The login step (09a) has no progress row.
+- **Onboarding only:** a progress row under the top bar, made of a 4px progress bar (`tint` track, `accent` fill) and the hint "שלב X מתוך 4". The sign-in step (09a, Google) has no top bar and no progress row.
 - The header is `title-1` plus a one-line `label` explaining why this step matters.
 - **Pinned action area:** the primary CTA (52px) sits `calc(var(--safe-bottom) + 16px)` above the bottom edge, with an optional ghost secondary (40px high, e.g. "דלג לעכשיו") under it. Content scrolls behind it and **MUST NOT** be hidden by it (add bottom padding equal to the action area's height).
 - One primary per step. Step titles are short nouns (e.g. "פרטי החברה", "הפרויקטים שלך").
@@ -556,13 +557,14 @@ Screens: `20-confirm-delete`, `21-confirm-archive`, `22a-merge-pick` → `22b-me
 - **Multi-step** (merge a category): step 1 picks the target from option rows (§7.18 radios), with "שלב 1 מתוך 2". Step 2 shows *from → to* chips, "21 תנועות יעברו ל״ציוד והשכרה״" and two ✓ lines about what happens next, then "מיזוג" and "חזרה".
 
 ### 7.20 Error pattern
-Screens: `er-01-bank-file`, `er-02-invoice-blurry`, `er-03-sms-wrong`, `er-04-sms-expired`, `er-05-save-failed`.
-- **Tone:** say what happened, that nothing was lost, and give **one** action. No red blocks. Red (`error`) appears only on a field border and its one-line message.
+Screens: `er-01-bank-file`, `er-02-invoice-blurry`, `er-03-google-cancelled`, `er-04-google-failed`, `er-05-save-failed`.
+- **Tone:** say what happened, that nothing was lost, and give **one** action. No red blocks. Red (`error`) appears only on a field border and its one-line message, or on the icon of a note.
 - **Wrong file** (not a Poalim Excel): full-screen empty-state layout. The file name goes in an outlined chip (`<bdi>`), the title is "זה לא דוח מפועלים", one line names the expected file, the primary action is "בחירת קובץ אחר", plus a quiet help link.
 - **Unreadable photo:** a blurred thumbnail, "החשבונית לא ברורה", one tip (light, flat, filling the frame), a "צילום מחדש" primary, and a quiet "הזנה ידנית" link.
-- **SMS code:** six 48×56 LTR boxes with a `control-border` outline.
-  - *Wrong:* the boxes get an `error` border, with "הקוד לא נכון. אפשר לנסות שוב." and a countdown "שליחת קוד חדש בעוד 0:42"; "אימות" stays disabled until the code changes.
-  - *Expired:* the boxes are empty and neutral, with a clock line saying it expired after 10 minutes; the primary action is "שליחת קוד חדש".
+- **Google sign-in** (same layout as 09a, with a note card above "כניסה או הרשמה"; the Google button itself is the retry, §7.24):
+  - *Cancelled* (`er-03`, the user closed the Google window, `popup_closed` / user cancel): a neutral `tint` note with an `accent-text` info icon, "הכניסה לא הושלמה" / "החלון של Google נסגר. אפשר לנסות שוב." It is not treated as an error.
+  - *Failed* (`er-04`, no connection, Google error, or the account couldn't be verified): the same note with the icon in `bad` (4.8:1 / 6.6:1 on tint) and text in `text` / `text-secondary`, "לא הצלחנו להתחבר" / one line suggesting checking the connection, plus a quiet "צריך עזרה בכניסה?" link.
+  - Never show Google's error codes. Keep the note until the next attempt starts.
 - **Save failed:** the form keeps every value, and the error toast shows above the button ("לא נשמר – אין חיבור" · "ניסיון חוזר"), with the icon in `toast-bad`.
 
 ### 7.21 Install prompt (PWA)
@@ -587,6 +589,18 @@ Screens: `18-home-overhead-on`, `19-project-overhead-on`.
   - For the PWA, use `design/logo/pwa/`: `manifest.webmanifest` icons (any, maskable, monochrome), `apple-touch-icon.png` (180), and `favicon.ico` / `favicon.svg`. Set `theme-color` to #7B3FE4.
   - **Don't** redraw the F, add effects, or scale the ≤48px PNGs up. The small PNGs are pixel-snapped.
 - Clear space, minimum sizes and the list of don'ts are in `design/logo/LOGO.md` and `flow-logo-usage.png`. Decision 0031.
+
+### 7.24 Sign in with Google
+Screens: `09a-onboarding` (sign-in), `er-03-google-cancelled`, `er-04-google-failed`; board 8. Google is the **only** sign-in method in the POC (no phone number, no one-time code, no password).
+- **Layout (09a):** status bar only (no top bar, no progress row). The wordmark (44px, `logo`) and one value line ("הרווח וההפסד של העסק, בלי אקסלים") sit in the upper third. The bottom block holds "כניסה או הרשמה" (title-2), "בלי סיסמה – עם חשבון Google שכבר יש לך", the button, and a hint-size privacy line: "נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר." with underlined links to the terms and the privacy policy.
+- **Button (follow Google's sign-in branding guidelines):**
+  - Light theme in **both** modes: `gsi-bg` #FFFFFF fill, 1px `gsi-border` #747775 stroke, `gsi-text` #1F1F1F. Don't recolour it in violet or tint it for dark mode.
+  - The standard four-colour "G" at 20px, unmodified, on the start side (the right in RTL), 12px gap to the text. Pill shape, 52px high, full width.
+  - Text exactly "המשך עם Google" in Roboto Medium 16px; Roboto has no Hebrew, so the Hebrew falls back to Rubik. Don't shorten it or use only the "G".
+  - Prefer Google Identity Services' rendered button (`google.accounts.id.renderButton` with `theme:"outline"`, `shape:"pill"`, `text:"continue_with"`, `locale:"he"`, `width` = the column width). Use the custom HTML button above only if the rendered one can't fit, keeping the exact spec.
+- **States:** default; pressed = 12% #1F1F1F overlay; focus = the app focus ring (2px `bg` gap + 2px `focus`); loading while the Google window is open = spinner in place of the G and "מתחברים…", button not tappable; disabled (offline before tapping) = 38% fill and text, 12% stroke.
+- **After sign-in:** a new account goes to 09b (company details). A returning account goes straight to Home. Use the Google name only as a greeting ("בוקר טוב, אלירן").
+- **Errors:** see §7.20 (`er-03`, `er-04`).
 
 ---
 
@@ -652,7 +666,7 @@ The button is optional when there is truly nothing to do (Unpaid). Otherwise the
   - Disable actions that need the network (disabled style, with the reason given on tap).
   - Queue approvals if the backend supports it. The toast then says "יישלח כשהחיבור יחזור".
 - **Action failed:** the button leaves its busy state and an error toast shows ("לא נשמר", with "שוב"), as on `ds-5`. Form errors show at the field (§7.11). Destructive actions that fail restore the item.
-- **Upload failed or unreadable file:** use the error pattern (§7.20): `er-01-bank-file` for a wrong or non-Poalim file, `er-02-invoice-blurry` for a photo that can't be read. Sign-in code errors: `er-03` / `er-04`. Save failed: `er-05`.
+- **Upload failed or unreadable file:** use the error pattern (§7.20): `er-01-bank-file` for a wrong or non-Poalim file, `er-02-invoice-blurry` for a photo that can't be read. Google sign-in cancelled or failed: `er-03` / `er-04`. Save failed: `er-05`.
 
 ### 8.4 Partial data
 Screens **MUST** stay honest and calm when data is incomplete:
@@ -717,7 +731,7 @@ Remove the grey tap highlight with `-webkit-tap-highlight-color: transparent` **
   - Don't disable pinch-zoom.
 - **Reduced motion:** honour `prefers-reduced-motion` (§10).
 - **Timing:** the 4-second toast pauses while it has focus. Undo stays reachable by keyboard and screen reader.
-- **Non-text contrast (WCAG 1.4.11), resolved:** switch tracks, knobs, checkbox and radio borders, input and search borders, outlined chips and code boxes are all ≥ 3:1 (`control-off`, `control-border`, `knob`, `knob-on`). `tokens.py` checks them against 3:1. Checkboxes and switches still keep a visible text label that states their state.
+- **Non-text contrast (WCAG 1.4.11), resolved:** switch tracks, knobs, checkbox and radio borders, input and search borders, outlined chips and the Google button stroke are all ≥ 3:1 (`control-off`, `control-border`, `knob`, `knob-on`). `tokens.py` checks them against 3:1. Checkboxes and switches still keep a visible text label that states their state.
 
 ---
 
@@ -932,7 +946,7 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 | `06-change-sheet-*` | Change assignment: tall sheet with chips, search, remember switch | B |
 | `07-categories-*` | Categories (Settings): segmented, reorder list | A |
 | `08-upload-results-*` | Bank report uploaded: results summary | A (✕ close) |
-| `09a…09e-onboarding-*` | Onboarding: login, company details, bank report, projects, install and notifications | C |
+| `09a…09e-onboarding-*` | Onboarding: Google sign-in, company details, bank report, projects, install and notifications | C |
 | `09-onboarding-*` | Strip showing all onboarding steps (overview only) | none |
 | `10-transaction-detail-*` | Expense detail with source, links and actions | C |
 | `11-split-*` | Split between projects | C (✕ close) |
@@ -952,7 +966,7 @@ All paths are relative to `/workspace/wireframes-pnl/final/`. Every screen exist
 | `17a-install-android-*` / `17b-install-iphone-*` | Add-to-home-screen prompt | C |
 | `18-home-overhead-on-*` / `19-project-overhead-on-*` | Overhead switch on: before, share, after | A+band |
 | `20-confirm-delete-*`, `21-confirm-archive-*`, `22a-merge-pick-*`, `22b-merge-confirm-*`, `23-confirm-hide-*` | Confirmation sheets | B |
-| `er-01-bank-file-*` … `er-05-save-failed-*` | Wrong bank file, blurry invoice, wrong SMS code, expired code, save failed | C |
+| `er-01-bank-file-*` … `er-05-save-failed-*` | Wrong bank file, blurry invoice, Google window closed, Google sign-in failed, save failed | C |
 
 Note: `flow.py` itself says its screens are an early pass. The **boards and tokens** are approved. Where a draft screen differs from this guide, follow the guide (see §14).
 
@@ -975,6 +989,8 @@ Note: `flow.py` itself says its screens are an early pass. The **boards and toke
 | Physical `left`/`right`, `margin-right` | `flow.py` CSS | logical properties (§6.1) |
 | `#fff` knob, `#000` island, error-toast colour hard-coded | `flow.py` / `ds.py` | `--color-knob`. The island is device chrome and is not built. Use `--color-toast-bad` for the error-toast icon. |
 | "אתה רק מאשר" | 04 Add | gender-neutral copy (§11.1) |
+
+**Sign-in decision (26 Sep 2026):** Google sign-in replaces phone-number sign-in for the POC. 09a, `er-03-google-cancelled` and `er-04-google-failed` replace the old code-entry screens (deleted), and the code-box component is removed.
 
 **Status (26 Sep 2026):** every row above is fixed in `flow.py` and re-rendered. Screen 10 was also simplified: project and category stay visible, and the invoice and payment details fold into one "חשבונית ותשלום" row.
 

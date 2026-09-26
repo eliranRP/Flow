@@ -3,6 +3,8 @@
 # knob-on = knob when the switch is on (dark: dark knob on the light violet track, 7.3:1). bad-tint = soft fill behind destructive confirm buttons.
 # knob, toast-bad, badge-*, focus* = component colours defined in implementation-guide.md, now tokens.
 # logo = wordmark colour off the band (brand violet / lilac, decision 0031); on the band the wordmark stays on-band (white).
+# gsi-* = "Sign in with Google" button, fixed by Google branding (light theme, same in both modes: white fill, #747775 1px stroke, #1F1F1F text).
+#   In light the white fill equals bg, so the stroke carries the edge; in dark the white fill itself is the edge.
 # skeleton* = loading placeholders (decorative, exempt from AA). -band variants sit on the violet band (= white 20% / 32% over #7B3FE4).
 def _lum(h):
     h = h.lstrip('#'); r, g, b = [int(h[i:i+2], 16) / 255 for i in (0, 2, 4)]
@@ -22,6 +24,7 @@ COLOR = {
   "accent-pressed": "#6631C9", "tint-pressed": "#E7DAFD", "disabled-bg": "#F1EEF6", "disabled-text": "#8F889C", "error": "#C3302B",
   "skeleton": "#F3ECFE", "skeleton-shine": "#FAF6FF", "skeleton-band": "#9565E9", "skeleton-band-shine": "#A57CED",
   "knob": "#FFFFFF", "knob-on": "#FFFFFF", "bad-tint": "#FCEDEC", "toast-bad": "#FF8A80", "badge-bg": "#1D1728", "badge-text": "#FFFFFF", "focus": "#6C2ED6", "focus-on-band": "#FFFFFF",
+  "gsi-bg": "#FFFFFF", "gsi-border": "#747775", "gsi-text": "#1F1F1F",
  },
  "dark": {
   "bg": "#15111E", "surface": "#1E1929", "raised": "#251F33", "tint": "#2A2045", "tint-strong": "#382A5E", "line": "#2E2740", "control-off": "#736A8C", "control-border": "#736A8C",
@@ -33,6 +36,7 @@ COLOR = {
   "accent-pressed": "#A47FF0", "tint-pressed": "#382A5E", "disabled-bg": "#2A2438", "disabled-text": "#7A7290", "error": "#FF8A80",
   "skeleton": "#2A2045", "skeleton-shine": "#33285A", "skeleton-band": "#9565E9", "skeleton-band-shine": "#A57CED",
   "knob": "#FFFFFF", "knob-on": "#1E0B45", "bad-tint": "#3A1E24", "toast-bad": "#C3302B", "badge-bg": "#F1EDF8", "badge-text": "#1E1929", "focus": "#C3A5FF", "focus-on-band": "#FFFFFF",
+  "gsi-bg": "#FFFFFF", "gsi-border": "#747775", "gsi-text": "#1F1F1F",
  },
 }
 TYPE = {  # size px, line-height, weight
@@ -47,8 +51,8 @@ FONT = {"family": "Rubik", "fallback": "system-ui, sans-serif", "google": "https
 CHECKS = [("text","bg"),("text","surface"),("text-secondary","bg"),("text-secondary","surface"),("text-muted","bg"),("text-muted","surface"),("text-muted","tint"),("text","tint"),
           ("accent-text","bg"),("accent-text","surface"),("accent-text","tint"),("on-accent","accent"),("on-band","band"),("on-band-secondary","band"),
           ("bad","band-chip"),("good","band-chip"),("bad","surface"),("good","surface"),("warning","surface"),("text","band-pill"),("toast-text","toast-bg"),("text","seg-on"),("text","raised"),("text-muted","raised"),("on-accent","accent-pressed"),("text","tint-pressed"),("accent-text","tint-pressed"),("error","surface"),
-          ("control-off","bg"),("control-off","surface"),("control-border","bg"),("control-border","surface"),("knob","control-off"),("knob-on","accent"),("bad","bad-tint"),("toast-bad","toast-bg"),("badge-text","badge-bg"),("focus","bg"),("focus-on-band","band"),("logo","bg"),("logo","surface")]
-NONTEXT = {"control-off", "control-border", "knob", "knob-on", "focus", "focus-on-band"}  # WCAG 1.4.11: 3:1, not 4.5:1
+          ("control-off","bg"),("control-off","surface"),("control-border","bg"),("control-border","surface"),("knob","control-off"),("knob-on","accent"),("bad","bad-tint"),("toast-bad","toast-bg"),("badge-text","badge-bg"),("focus","bg"),("focus-on-band","band"),("logo","bg"),("logo","surface"),("gsi-text","gsi-bg"),("gsi-border","bg")]
+NONTEXT = {"gsi-border", "control-off", "control-border", "knob", "knob-on", "focus", "focus-on-band"}  # WCAG 1.4.11: 3:1, not 4.5:1
 def need(a, b): return 3.0 if a in NONTEXT or b in NONTEXT else 4.5
 if __name__ == "__main__":
     for m, c in COLOR.items():

@@ -26,3 +26,5 @@ Posting invoices straight into P&L and treating the bank import as a reconciliat
 ## Consequences
 
 Upload results show four outcomes: matched to an existing invoice, classified by a learned rule, removed as an own-account transfer, or waiting for review. A separate note lists invoices that are still unpaid and therefore not in profit. Linking a statement row to an invoice does not create a second transaction. The invoice's extracted fields hang off the payment that counts.
+
+[0042](0042-sumit-primary-income-and-expenses.md) makes SUMIT the primary source for income and expenses. The Hapoalim upload stays as a complement for cash matching and for anything not in SUMIT. This record's cash-basis rule is unchanged: an unpaid invoice stays out of profit.

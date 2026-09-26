@@ -36,9 +36,10 @@ Tokens live in `design-tokens.json`. The boards are `ds-1…ds-6` (light and dar
 | Error (inputs) | error | #C3302B | #FF8A80 |
 | Disabled fill / text | disabled-bg / disabled-text | #F1EEF6 / #8F889C | #2A2438 / #7A7290 |
 | Switch track (off), unchecked checkbox border | control-off | #8F86A3 | #736A8C |
-| Input, search, outlined-chip, radio and code-box border | control-border | #8F86A3 | #736A8C |
+| Input, search, outlined-chip and radio border | control-border | #8F86A3 | #736A8C |
 | Switch knob (off / on) | knob / knob-on | #FFFFFF / #FFFFFF | #FFFFFF / #1E0B45 |
 | Destructive button fill | bad-tint | #FCEDEC | #3A1E24 |
+| "המשך עם Google" button: fill / stroke / text (Google branding, same in both modes) | gsi-bg / gsi-border / gsi-text | #FFFFFF / #747775 / #1F1F1F | #FFFFFF / #747775 / #1F1F1F |
 | Focus ring / on the band | focus / focus-on-band | #6C2ED6 / #FFFFFF | #C3A5FF / #FFFFFF |
 | Tab badge | badge-bg / badge-text | #1D1728 / #FFFFFF | #F1EDF8 / #1E1929 |
 | Error icon in the (inverted) toast | toast-bad | #FF8A80 | #C3302B |
@@ -100,9 +101,10 @@ Weights: 400 hints only · 500 body and labels · 600 titles, amounts and hero �
 - **Date picker** (`15a`–`15c`, board 8). The field shows dd/mm/yyyy with a calendar icon and opens a sheet with quick chips (היום / אתמול, or החודש / חודש קודם / מתחילת השנה for a range), a Hebrew month header with ‹ ›, a Sunday-first grid (א׳ on the right), today ringed, the selection in accent, a range as a tint strip between two accent circles, future days disabled, and one confirm button.
 - **Period sheet** (`16`). Opens from the band pill: החודש / חודש קודם / מתחילת השנה as radio rows (tapping applies), plus "טווח מותאם", which opens the range picker.
 - **Confirmation sheet** (`20`–`23`). The question is the title, the item the subtitle, one line on the consequence, the action and a quiet ביטול. Destructive actions use a bad-tint button with red text (never a solid red block), then the undo toast. Merge takes two steps: pick the target, then confirm "X תנועות יעברו ל…".
-- **Error pattern** (`er-01`–`er-05`). What happened, that nothing was lost, one action. Red only on a field border and its message. Six LTR code boxes for SMS, with a resend countdown. Save failures use the error toast with "ניסיון חוזר".
+- **Error pattern** (`er-01`–`er-05`). What happened, that nothing was lost, one action. Red only on a field border, its message, or the icon of a note. Google sign-in cancelled (`er-03`, neutral tint note) or failed (`er-04`, the same note with a red icon) keeps the sign-in layout, and the Google button is the retry. Save failures use the error toast with "ניסיון חוזר".
 - **Install prompt** (`17a`, `17b`). The S1 app icon (white F on violet), title, one line. Android: benefits plus "התקנה" / "לא עכשיו". iPhone: three numbered Safari steps with the icons in tint tiles, plus "הבנתי".
 - **Overhead breakdown** (`18`, `19`). With the switch on: the band shows profit after overhead; an "איך מחושב" block lists before, the share (by income share), and after.
+- **Sign in with Google** (`09a`, board 8). The only sign-in in the POC. Wordmark, one value line, then "כניסה או הרשמה", the Google button and a small privacy line (name and email only, no inbox access). The button follows Google's branding: white fill, 1px #747775 stroke (4.5:1 / 4.1:1 on the page), #1F1F1F text, the standard four-colour G at 20px on the start side, pill, 52px, text "המשך עם Google" (Roboto Medium, Hebrew falls back to Rubik). Same light button in dark mode. States: default, pressed (12% overlay), focus (app ring), loading (spinner + "מתחברים…"), disabled (38%).
 - **Toast.** Dark pill above the tab bar (light pill in dark mode). It stays 4 seconds and offers undo.
 
 ## Logo

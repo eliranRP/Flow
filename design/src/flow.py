@@ -201,10 +201,16 @@ body{font-family:"Rubik",system-ui,sans-serif;font-weight:500;background:var(--b
 .opt .tx{flex:1} .opt .rd{width:22px;height:22px;border-radius:9999px;border:1.5px solid var(--control-border);flex:none}
 .opt .rd.on{border:0;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
 .list .opt+.opt{border-top:1px solid var(--line)}
-/* code boxes */
-.code{display:flex;gap:8px;direction:ltr;justify-content:center}
-.code span{width:48px;height:56px;border:1px solid var(--control-border);border-radius:12px;display:grid;place-items:center;font-size:22px;font-weight:600;background:var(--surface)}
-.code.err span{border-color:var(--error);box-shadow:inset 0 0 0 1px var(--error)}
+/* Sign in with Google (Google branding: light theme in both modes, pill, standard G, Roboto Medium; Hebrew falls back to Rubik) */
+.gsi{height:52px;border-radius:9999px;background:var(--gsi-bg);border:1px solid var(--gsi-border);color:var(--gsi-text);display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding-inline:16px;font-family:"Roboto","Rubik",system-ui,sans-serif;font-weight:500;font-size:16px;position:relative}
+.gsi .g{width:20px;height:20px;flex:none;display:block}
+.gsi.press{background:linear-gradient(rgba(31,31,31,.12),rgba(31,31,31,.12)),var(--gsi-bg)}
+.gsi.foc{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus)}
+.gsi.load{color:rgba(31,31,31,.6)}
+.gsi.dis{background:rgba(255,255,255,.38);border-color:rgba(31,31,31,.12);color:rgba(31,31,31,.38)} .gsi.dis .g{opacity:.38}
+.note{display:flex;gap:12px;align-items:flex-start;background:var(--tint);border-radius:16px;padding:14px 16px}
+.note .ni{display:grid;color:var(--accent-text);padding-top:2px} .note.bad .ni{color:var(--bad)}
+.note .nt{font-weight:600;font-size:16px;color:var(--text)} .note .nl{font-size:15px;color:var(--text-secondary);font-weight:400;margin-top:2px}
 .msg-e{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--error);font-weight:400}
 /* file chip, app icon, step tiles */
 .filechip{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:9999px;border:1px solid var(--control-border);font-size:15px;color:var(--text-secondary)}
@@ -367,11 +373,24 @@ def ob_frame(step, body, cta, sec=""):
     stp = f'<div class="pad" style="margin-top:4px;display:flex;align-items:center;gap:12px"><div class="prog" style="flex:1;height:4px"><i style="width:{step*25}%"></i></div><span class="hint">שלב {n(step)} מתוך {n(4)}</span></div>' if step else ""
     return f'''<div class="scr">{STATUS}{topbar(back=bool(step))}{stp}{body}
 <div class="acts" style="position:absolute;bottom:34px;inset-inline:0"><div class="btn pri">{cta}</div>{sec}</div></div>'''
+# Google "G" (standard multicolour mark, unmodified)
+GLOGO = '<svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>'
+def gbtn(state=""):
+    """Sign in with Google. state: '' | press | foc | load | dis"""
+    lead = spin(20, 2.5) if state == "load" else GLOGO
+    txt = "מתחברים…" if state == "load" else "המשך עם Google"
+    return f'<div class="gsi {state}" role="button">{lead}<span>{txt}</span></div>'
+def signin(mode, notice="", state="", extra=""):
+    """09a sign-in (Google only). notice = inline note above the button (error screens)."""
+    return f'''<div class="scr">{STATUS}
+<div class="pad" style="margin-top:132px"><div class="wm logo" style="font-size:44px;display:inline-block">Flow</div>
+<div class="lbl" style="margin-top:6px;font-size:17px">הרווח וההפסד של העסק, בלי אקסלים</div></div>
+<div style="position:absolute;bottom:34px;inset-inline:0" class="pad">{notice}
+<div class="t2" style="margin-top:{24 if notice else 0}px">כניסה או הרשמה</div><div class="lbl" style="margin-top:2px">בלי סיסמה – עם חשבון Google שכבר יש לך</div>
+<div style="margin-top:20px">{gbtn(state)}</div>{extra}
+<div class="hint" style="margin-top:16px;text-align:center">נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.<br><span style="text-decoration:underline">תנאי שימוש</span> · <span style="text-decoration:underline">מדיניות פרטיות</span></div></div></div>'''
 def ob_a(mode):
-    return ob_frame(0, f'''<div class="pad" style="margin-top:48px"><div class="wm logo" style="font-size:36px;display:inline-block">Flow</div><div class="lbl" style="margin-top:4px">הרווח וההפסד של העסק, בלי אקסלים</div></div>
-<div class="pad" style="margin-top:56px"><div class="t1">כניסה</div><div class="lbl">רק מספר טלפון – בלי סיסמה</div>
-<div class="fld" style="margin-top:24px"><label>מספר טלפון</label><div class="inp focus"><span class="n">050-123-4567</span></div></div>
-<div class="hint" style="margin-top:10px">נשלח קוד בן 6 ספרות ב-SMS</div></div>''', "שלחו לי קוד")
+    return signin(mode)
 def ob_b(mode):
     return ob_frame(1, f'''<div class="head" style="margin-top:24px"><div class="t1">פרטי החברה</div><div class="lbl">3 פרטים ומתחילים. אפשר לשנות אחר כך.</div></div>
 <div class="pad" style="margin-top:36px;display:flex;flex-direction:column;gap:20px">
@@ -456,7 +475,7 @@ def settings(mode):
     on, off = '<span class="sw on"><i></i></span>', '<span class="sw"><i></i></span>'
     return f'''<div class="scr tall">{STATUS}{topbar(back=False)}
 <div class="head" style="padding-top:0"><div class="t1">הגדרות</div></div>
-<div class="grp">החברה</div><div class="pad list">{r("folder","א.ב. בנייה ושיפוצים בע״מ",f"ח.פ. {n('51-234567-8')} · חברה בע״מ")}{r("phone","טלפון וכניסה",f"{n('050-123-4567')} · קוד SMS")}</div>
+<div class="grp">החברה</div><div class="pad list">{r("folder","א.ב. בנייה ושיפוצים בע״מ",f"ח.פ. {n('51-234567-8')} · חברה בע״מ")}<div class="rowi">{GLOGO.replace('class="g"','class="g" width="22" height="22" style="flex:none"')}<div class="tx"><div>חשבון Google</div><div class="hint"><bdi>eliran.ab@gmail.com</bdi></div></div><span class="cv">{ic("chev",20,2)}</span></div></div>
 <div class="grp">חיבור בנק</div><div class="pad list">{r("bank","בנק הפועלים",f"חשבון {n('12-345-678901')} · דוח אחרון {n('25/09/2026')}", "")}{r("upload","העלאת דוח חדש","קובץ Excel מאפליקציית פועלים")}</div>
 <div class="grp">סיווג</div><div class="pad list">{r("tag","קטגוריות",f"{n(7)} הוצאות · {n(2)} הכנסות")}{r("folder","פרויקטים",f"{n(17)} פעילים · {n(21)} הסתיימו")}{r("repeat","כללי פיצול חוזרים",f"{n(2)} כללים פעילים")}</div>
 <div class="grp">התראות</div><div class="pad list">{r("bell","סיכום שבועי",f"ראשון {n('08:00')}",on)}{r("clock","תזכורת לפריטים ממתינים",f"כל יום {n('18:00')} · רק אם יש",on)}</div>

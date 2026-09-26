@@ -50,7 +50,10 @@
       "badge-bg": "#1D1728",
       "badge-text": "#FFFFFF",
       "focus": "#6C2ED6",
-      "focus-on-band": "#FFFFFF"
+      "focus-on-band": "#FFFFFF",
+      "gsi-bg": "#FFFFFF",
+      "gsi-border": "#747775",
+      "gsi-text": "#1F1F1F"
     },
     "dark": {
       "bg": "#15111E",
@@ -96,7 +99,10 @@
       "badge-bg": "#F1EDF8",
       "badge-text": "#1E1929",
       "focus": "#C3A5FF",
-      "focus-on-band": "#FFFFFF"
+      "focus-on-band": "#FFFFFF",
+      "gsi-bg": "#FFFFFF",
+      "gsi-border": "#747775",
+      "gsi-text": "#1F1F1F"
     }
   },
   "type": {
@@ -215,7 +221,9 @@
       "focus on bg": 7.0,
       "focus-on-band on band": 5.72,
       "logo on bg": 5.72,
-      "logo on surface": 5.72
+      "logo on surface": 5.72,
+      "gsi-text on gsi-bg": 16.48,
+      "gsi-border on bg": 4.53
     },
     "dark": {
       "text on bg": 16.1,
@@ -258,7 +266,9 @@
       "focus on bg": 8.97,
       "focus-on-band on band": 5.72,
       "logo on bg": 7.71,
-      "logo on surface": 7.11
+      "logo on surface": 7.11,
+      "gsi-text on gsi-bg": 16.48,
+      "gsi-border on bg": 4.1
     }
   }
 }

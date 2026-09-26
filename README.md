@@ -25,7 +25,7 @@ The owner is on site most of the day, so the product is a phone UI: bottom navig
 2. A Bank Hapoalim (`בנק הפועלים`) statement (Excel or CSV). Each row becomes a transaction. Transfers between the company's own accounts are removed. Other banks, and credit-card company files, come after the proof of concept.
 3. Manual entry, for cash and cheques.
 
-The first data integration is the SUMIT API (sumit.co.il). Flow pulls data from SUMIT ([0035](docs/decisions/0035-sumit-api-first.md)) and does not write back ([0036](docs/decisions/0036-sumit-read-only.md)). Whether that replaces the Hapoalim statement upload in the proof of concept, or sits alongside it, is [open](docs/open-questions.md#sumit-and-the-hapoalim-upload). The verified notes are in [SUMIT API research](docs/tech/sumit-api-research.md).
+The first data integration is the SUMIT API (sumit.co.il). Flow pulls data from SUMIT ([0035](docs/decisions/0035-sumit-api-first.md)) and does not write back ([0036](docs/decisions/0036-sumit-read-only.md)). SUMIT is the primary source for income and expenses. The Hapoalim upload stays as a complement for cash matching and for anything not in SUMIT ([0042](docs/decisions/0042-sumit-primary-income-and-expenses.md)). Amounts are before VAT; a missing split is shown gross and flagged "VAT unknown" ([0041](docs/decisions/0041-amounts-before-vat.md)). The verified notes are in [SUMIT API research](docs/tech/sumit-api-research.md).
 
 Suggestions follow a fixed order: link a bank row to an existing invoice (amount, date, supplier), then apply a learned supplier rule, then an AI guess. A deposit from a client is suggested onto that client's project. A high-confidence match (an invoice or a learned rule) is auto-approved, skips the review queue, and appears in a short summary the owner can reopen and change. Everything else waits in the review queue. Only approved transactions appear in reports. A pending-count banner stays visible while the numbers can still move.
 
@@ -53,7 +53,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [UI directions](docs/module-1-project-pnl/design/README.md) | Superseded exploration (styles A/B/C, then Mercury). Not the approved system |
 | [Approved design](design/README.md) | V1 Violet package: screens, states, system, and logo. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
 | [Technical plan](docs/tech/tech-plan.md) | Supabase pilot. The Cloudflare version is superseded |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0040 and the record format |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0042 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |

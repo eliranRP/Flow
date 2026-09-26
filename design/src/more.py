@@ -1,7 +1,7 @@
 # Flow — remaining designs: date & period pickers, errors, install prompt, overhead ON, confirmation sheets.
 # Run: python3 more.py && bash render-more.sh   (flow.py first: sheets sit over existing screens)
 import pathlib, calendar
-from flow import appic, ic, num, n, spin, tabbar, doc, STATUS, EXTAG, topbar, home, project, PROJ
+from flow import signin, appic, ic, num, n, spin, tabbar, doc, STATUS, EXTAG, topbar, home, project, PROJ
 OUT = pathlib.Path(__file__).parent
 M = {}
 def scr(fid):
@@ -197,22 +197,18 @@ def er_invoice(mode):
 {centre(err_block("camera","החשבונית לא ברורה","לא הצלחנו לקרוא סכום ותאריך. כדאי לצלם באור טוב, כשהחשבונית שטוחה וממלאת את המסך.",
   '<div class="btn pri">' + ic("camera",20,2) + 'צילום מחדש</div>', extra_top=paper, link='<span class="lnk q" style="margin-top:14px">הזנה ידנית ' + ic("chev",16,2) + '</span>').replace('<span class="eic">' + ic("camera",36,1.6) + '</span>', ''), 60, 60)}</div>'''
 
-def sms(mode, digits, cls, msg, act):
-    boxes = "".join(f'<span class="n">{d}</span>' for d in digits)
-    return f'''<div class="scr">{STATUS}{topbar()}
-<div class="head" style="margin-top:24px"><div class="t1">הקוד מה-SMS</div><div class="lbl">נשלח ל-{n("050-123-4567")}</div></div>
-<div class="pad" style="margin-top:36px"><div class="code {cls}">{boxes}</div><div style="margin-top:14px;display:flex;justify-content:center">{msg}</div></div>
-{act}</div>'''
+def gnote(icon, title, line, cls=""):
+    return f'<div class="note {cls}" role="status"><span class="ni">{ic(icon,20,2)}</span><div><div class="nt">{title}</div><div class="nl">{line}</div></div></div>'
 
-@scr("er-03-sms-wrong")
-def er_sms_wrong(mode):
-    return sms(mode, "482917", "err", f'<span class="msg-e">{ic("info",16,2)}<span>הקוד לא נכון. אפשר לנסות שוב.</span></span>',
-        f'<div class="pad" style="margin-top:28px;text-align:center"><span class="hint">שליחת קוד חדש בעוד {n("0:42")}</span></div>' + bottom('<div class="btn dis">אימות</div>'))
+@scr("er-03-google-cancelled")
+def er_g_cancel(mode):
+    # the user closed the Google window: not an error, neutral note, the Google button is the retry
+    return signin(mode, gnote("info", "הכניסה לא הושלמה", "החלון של Google נסגר. אפשר לנסות שוב."))
 
-@scr("er-04-sms-expired")
-def er_sms_expired(mode):
-    return sms(mode, "      ", "", f'<span class="lbl" style="display:flex;gap:6px;align-items:center"><span style="color:var(--text-muted);display:grid">{ic("clock",18,2)}</span>הקוד כבר לא בתוקף – הוא פג אחרי {n(10)} דקות.</span>',
-        bottom(f'<div class="btn pri">{ic("refresh",20,2)}שליחת קוד חדש</div>'))
+@scr("er-04-google-failed")
+def er_g_failed(mode):
+    return signin(mode, gnote("info", "לא הצלחנו להתחבר", "אולי אין חיבור לאינטרנט, או ש-Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב.", "bad"),
+        extra='<div style="margin-top:12px;text-align:center"><span class="lnk q">צריך עזרה בכניסה?</span></div>')
 
 @scr("er-05-save-failed")
 def er_save(mode):
@@ -220,7 +216,7 @@ def er_save(mode):
     return manual_form(toast)
 
 ORDER = [("15a-date-field","15א שדה תאריך"),("15b-date-single","15ב בחירת תאריך"),("15c-date-range","15ג טווח מותאם"),("16-period-sheet","16 תקופה"),("17a-install-android","17א התקנה · אנדרואיד"),("17b-install-iphone","17ב התקנה · אייפון"),("18-home-overhead-on","18 בית · אחרי כלליות"),("19-project-overhead-on","19 פרויקט · אחרי כלליות"),("10-transaction-detail","10 פרטי הוצאה (מעודכן)"),
-         ("20-confirm-delete","20 מחיקה"),("21-confirm-archive","21 ארכיון"),("22a-merge-pick","22א מיזוג · יעד"),("22b-merge-confirm","22ב מיזוג · אישור"),("23-confirm-hide","23 הסתרה"),("er-01-bank-file","er-01 קובץ בנק"),("er-02-invoice-blurry","er-02 חשבונית לא ברורה"),("er-03-sms-wrong","er-03 קוד שגוי"),("er-04-sms-expired","er-04 קוד פג"),("er-05-save-failed","er-05 שמירה נכשלה")]
+         ("20-confirm-delete","20 מחיקה"),("21-confirm-archive","21 ארכיון"),("22a-merge-pick","22א מיזוג · יעד"),("22b-merge-confirm","22ב מיזוג · אישור"),("23-confirm-hide","23 הסתרה"),("er-01-bank-file","er-01 קובץ בנק"),("er-02-invoice-blurry","er-02 חשבונית לא ברורה"),("er-03-google-cancelled","er-03 חלון Google נסגר"),("er-04-google-failed","er-04 הכניסה נכשלה"),("er-05-save-failed","er-05 שמירה נכשלה")]
 def build():
     for mode in ("light", "dark"):
         for fid, fn in M.items():
