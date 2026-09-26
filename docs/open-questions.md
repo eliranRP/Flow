@@ -2,7 +2,7 @@
 
 These are not decisions. When one is settled, add a numbered decision record, point the question at it, and update the [changelog](changelog.md).
 
-Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), SMS sign-in ([0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)), and Home's big number staying company net profit when that switch is on ([0032](decisions/0032-home-hero-stays-company-net-profit.md)). The per-screen spec for the eight approved screens is written.
+Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), Google account sign-in ([0033](decisions/0033-google-sign-in.md), which supersedes [0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)), and Home's big number staying company net profit when that switch is on ([0032](decisions/0032-home-hero-stays-company-net-profit.md)). The per-screen spec for the eight approved screens is written.
 
 ## Settings screen
 
@@ -57,9 +57,13 @@ Open: is more than one phone in scope for the proof of concept, and if it is, ho
 
 ## Changing the phone number
 
-[0017](decisions/0017-sms-sign-in.md) makes the mobile number the account. Signing in on a new phone with the same number is specified. Replacing that number is not.
+No longer applies. [0033](decisions/0033-google-sign-in.md) supersedes [0017](decisions/0017-sms-sign-in.md). The account is a Google account, not a phone number.
 
-Open: what the owner does when the phone number changes.
+## SUMIT and the Hapoalim upload
+
+[0035](decisions/0035-sumit-api-first.md) makes the SUMIT API (sumit.co.il) the first data integration. Flow pulls data from SUMIT. [0012](decisions/0012-bank-hapoalim-first.md) still describes a Bank Hapoalim statement upload. Endpoints and the sync design are for the tech plan.
+
+Open: does SUMIT replace the Hapoalim statement upload in the POC, or sit alongside it?
 
 ## Which project alert is the weekly one
 

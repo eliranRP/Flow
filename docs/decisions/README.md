@@ -43,7 +43,7 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0014](0014-optional-project-budget.md) | 2026-09-26 | Accepted | Project budget stays optional |
 | [0015](0015-installable-mobile-web-app.md) | 2026-09-26 | Accepted | Installable mobile web app; no desktop and no native app in this phase |
 | [0016](0016-hebrew-only.md) | 2026-09-26 | Accepted | Hebrew only |
-| [0017](0017-sms-sign-in.md) | 2026-09-26 | Accepted | Sign in with phone number and an SMS code |
+| [0017](0017-sms-sign-in.md) | 2026-09-26 | Superseded | Sign in with phone number and an SMS code. Superseded by 0033 |
 | [0018](0018-two-notifications.md) | 2026-09-26 | Accepted | Two notifications: Sunday summary, and an 18:00 review nudge |
 | [0019](0019-home-periods-and-comparison.md) | 2026-09-26 | Accepted | Home: this month, last month, year to date, with a month comparison |
 | [0020](0020-capture-from-the-phone.md) | 2026-09-26 | Accepted | Multi-photo and files on the phone; Android share target only |
@@ -59,3 +59,6 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0030](0030-confirmation-sheets.md) | 2026-09-26 | Accepted | Confirmation sheets for delete, archive, hide, and a two-step merge |
 | [0031](0031-logo.md) | 2026-09-26 | Accepted | Flow wordmark and the S1 app icon |
 | [0032](0032-home-hero-stays-company-net-profit.md) | 2026-09-26 | Accepted | With the after-overhead switch on, Home's big number stays company net profit |
+| [0033](0033-google-sign-in.md) | 2026-09-26 | Accepted | Sign in with a Google account (Gmail). Supersedes 0017 |
+| [0034](0034-cost-and-load-limits.md) | 2026-09-26 | Accepted | Running cost at most $5 a month; Home usable within 2 seconds |
+| [0035](0035-sumit-api-first.md) | 2026-09-26 | Accepted | The first data integration is the SUMIT API |
