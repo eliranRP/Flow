@@ -25,7 +25,7 @@ The owner is on site most of the day, so the product is a phone UI: bottom navig
 2. A Bank Hapoalim (`בנק הפועלים`) statement (Excel or CSV). Each row becomes a transaction. Transfers between the company's own accounts are removed. Other banks, and credit-card company files, come after the proof of concept.
 3. Manual entry, for cash and cheques.
 
-The first data integration is the SUMIT API (sumit.co.il). Flow pulls data from SUMIT ([0035](docs/decisions/0035-sumit-api-first.md)). Whether that replaces the Hapoalim statement upload in the proof of concept, or sits alongside it, is [open](docs/open-questions.md#sumit-and-the-hapoalim-upload).
+The first data integration is the SUMIT API (sumit.co.il). Flow pulls data from SUMIT ([0035](docs/decisions/0035-sumit-api-first.md)) and does not write back ([0036](docs/decisions/0036-sumit-read-only.md)). Whether that replaces the Hapoalim statement upload in the proof of concept, or sits alongside it, is [open](docs/open-questions.md#sumit-and-the-hapoalim-upload). The verified notes are in [SUMIT API research](docs/tech/sumit-api-research.md).
 
 Suggestions follow a fixed order: link a bank row to an existing invoice (amount, date, supplier), then apply a learned supplier rule, then an AI guess. A deposit from a client is suggested onto that client's project. A high-confidence match (an invoice or a learned rule) is auto-approved, skips the review queue, and appears in a short summary the owner can reopen and change. Everything else waits in the review queue. Only approved transactions appear in reports. A pending-count banner stays visible while the numbers can still move.
 
@@ -33,7 +33,7 @@ Correcting a suggestion can become a rule ("remember for this supplier" is on by
 
 ## Proof of concept
 
-In scope: company and project P&L for a single user (the owner) on an installable mobile web app, Hebrew only, sign-in with a Google account (Gmail), the three intake paths with Bank Hapoalim as the statement format, a pull from the SUMIT API as the first data integration, review and rules, auto-approve for high-confidence rows, two notifications (a Sunday summary and an end-of-day review nudge), Home periods of this month, last month, and year to date, a flat category list, optional project budgets, project and category pickers that still work with many jobs, and an Excel export for the accountant. Running cost of the whole system is at most $5 per month. Home is usable within 2 seconds on a mid-range phone on 4G ([0033](docs/decisions/0033-google-sign-in.md), [0034](docs/decisions/0034-cost-and-load-limits.md), [0035](docs/decisions/0035-sumit-api-first.md)).
+In scope: company and project P&L for a single user (the owner) on an installable mobile web app, Hebrew only, sign-in with a Google account (Gmail), the three intake paths with Bank Hapoalim as the statement format, a read-only pull from the SUMIT API as the first data integration, review and rules, auto-approve for high-confidence rows, two notifications (a Sunday summary and an end-of-day review nudge), Home periods of this month, last month, and year to date, a flat category list, optional project budgets, project and category pickers that still work with many jobs, and an Excel export for the accountant. Running cost of the whole system is at most $5 per month. Home is usable within 2 seconds on a mid-range phone on 4G ([0033](docs/decisions/0033-google-sign-in.md), [0034](docs/decisions/0034-cost-and-load-limits.md), [0035](docs/decisions/0035-sumit-api-first.md), [0036](docs/decisions/0036-sumit-read-only.md)).
 
 Out of scope: a desktop site, native iOS or Android apps, another language at launch, email and password, a notification per transaction, a WhatsApp or email forwarding address, replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, other banks' statement files, credit-card company files, roles and permissions, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant. A custom range is in scope from the period sheet ([0028](docs/decisions/0028-period-sheet-with-custom-range.md)).
 
@@ -52,7 +52,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
 | [UI directions](docs/module-1-project-pnl/design/README.md) | Superseded exploration (styles A/B/C, then Mercury). Not the approved system |
 | [Approved design](design/README.md) | V1 Violet package: screens, states, system, and logo. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0035 and the record format |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0036 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |

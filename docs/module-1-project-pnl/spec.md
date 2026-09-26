@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0035](../decisions/0035-sumit-api-first.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0036](../decisions/0036-sumit-read-only.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
 
 ## Goal
 
@@ -49,7 +49,7 @@ Amounts on screen are **net of VAT**. VAT is stored and shown separately. The ow
 
 Version 1 is cash basis. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 
-A Bank Hapoalim (`בנק הפועלים`) statement row is what makes money count in the proof of concept. An invoice is a supporting document linked to that row. Cash and cheques count when the owner records them and marks them paid. [0012](../decisions/0012-bank-hapoalim-first.md). The first data integration is a pull from the SUMIT API ([0035](../decisions/0035-sumit-api-first.md)). Whether that replaces the Hapoalim upload or sits alongside it is [open](../open-questions.md#sumit-and-the-hapoalim-upload).
+A Bank Hapoalim (`בנק הפועלים`) statement row is what makes money count in the proof of concept. An invoice is a supporting document linked to that row. Cash and cheques count when the owner records them and marks them paid. [0012](../decisions/0012-bank-hapoalim-first.md). The first data integration is a pull from the SUMIT API ([0035](../decisions/0035-sumit-api-first.md)). That pull is read-only ([0036](../decisions/0036-sumit-read-only.md)): Flow does not create documents in SUMIT and does not write project tags back. Whether the pull replaces the Hapoalim upload or sits alongside it is [open](../open-questions.md#sumit-and-the-hapoalim-upload).
 
 An invoice with no matching payment is **unpaid**. It stays out of P&L until a later statement row matches it, or the owner marks it paid. Unpaid invoices remain visible so the owner can see what is still open.
 
