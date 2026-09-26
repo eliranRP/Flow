@@ -17,7 +17,9 @@ Build the approved screens. Superseded screens are kept below and marked. [01-ho
 | Categories | [07-categories](#07-categories) | [screens/07-categories.md](screens/07-categories.md) |
 | Upload results | [08-upload-results-v2](#08-upload-results-v2) | [screens/08-upload-results.md](screens/08-upload-results.md) |
 
-`הגדרות` (Settings) is a tab in the bottom bar. Its screen is not wireframed. See [open questions](../open-questions.md).
+`הגדרות` (Settings) is a tab in the bottom bar. Its screen is not wireframed. The [Settings draft](settings.md) is not approved. See [open questions](../open-questions.md).
+
+The draft has a display option, `רווח אחרי חלק מהתקורה`. [0022](../decisions/0022-after-overhead-starts-off.md): it starts off, so Home and Project open on the stored figures that match the bank and the accountant. The owner turns it on for the overhead view. Home, Project, and this option are one preference. The rest of Settings stays open.
 
 | Pending owner approval | Section |
 | --- | --- |
@@ -128,7 +130,7 @@ The shares are ₪60,000 in total. They are the September example overhead, roun
 
 - The switch is view-only. Off restores stored project profits, the bars, and the overhead row as on v3. On uses the shares above. Company tiles and comparison arrows do not move either way.
 - Turning it on does not write transactions.
-- Whether it starts on is [open](../open-questions.md#after-overhead-by-default). Home and the project screen share one preference.
+- It starts off. [0022](../decisions/0022-after-overhead-starts-off.md). Home, the project screen, and the Settings display option share one preference. This image draws the switch on so the on state can be reviewed. That is not the default.
 - If project income in the selected period is 0, the switch does not enter this view. The screen says the allocation is unavailable. That state is not drawn.
 - A project with no income of its own shows share ₪0. None of the example rows are in that state.
 
@@ -144,6 +146,7 @@ Same as [Home](screens/01-home.md), plus the switch. This image is the on state.
 
 ### Acceptance criteria
 
+- [ ] The switch starts off. This image is the on state, not the default.
 - [ ] Company tiles match v3 and ignore the switch.
 - [ ] With the switch on, each visible project row shows after-share profit and a before · share subline, and no bar.
 - [ ] The overhead row is grey and struck through, labeled as allocated in this view.
@@ -258,7 +261,7 @@ The project screen with the same view-only switch as Home. The share is company 
 ### Main elements
 
 - Same title `וילה רעננה`, client, and `מתחילת הפרויקט`.
-- Switch `רווח אחרי חלק מהתקורה`, drawn on. One preference with Home.
+- Switch `רווח אחרי חלק מהתקורה`, drawn on. One preference with Home and with the Settings display option. It starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). This image is the on state, not the default.
 - Tiles: `הכנסות` ₪900,000 and `הוצאות` ₪720,000 unchanged. Profit tile `רווח · 15.6%` ₪140,000, which is the after-share profit. 140,000 / 900,000 is 15.6%.
 - Card, three rows:
   - `לפני` ₪180,000
@@ -287,7 +290,7 @@ Same as [Project](screens/02-project.md). This image is the on state.
 
 ### Acceptance criteria
 
-- [ ] The switch matches Home's preference.
+- [ ] The switch starts off and matches Home's preference, and the Settings display option.
 - [ ] The card shows before, share, and after. After equals before plus the signed share.
 - [ ] The share is company overhead times this project's share of company income since the project started.
 - [ ] Income, expenses, categories, and budget stay the stored project figures.

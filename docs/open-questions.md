@@ -2,13 +2,13 @@
 
 These are not decisions. When one is settled, add a numbered decision record, point the question at it, and update the [changelog](changelog.md).
 
-Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), SMS sign-in ([0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), and phone capture ([0020](decisions/0020-capture-from-the-phone.md)). The per-screen spec for the eight approved screens is written.
+Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), SMS sign-in ([0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), and the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)). The per-screen spec for the eight approved screens is written.
 
 ## Settings screen
 
 A proposal is in [settings.md](module-1-project-pnl/settings.md). **Status: Draft. Not approved.**
 
-The draft includes company details, VAT status, a VAT rate, categories, a rules list with edit and delete, an accountant Excel export, Bank Hapoalim account numbers, and an auto-approve toggle.
+The draft includes company details, VAT status, a VAT rate, categories, a rules list with edit and delete, an accountant Excel export, Bank Hapoalim account numbers, a display option for profit after overhead share, and an auto-approve toggle.
 
 Open until the draft is accepted or replaced:
 
@@ -16,6 +16,7 @@ Open until the draft is accepted or replaced:
 - The VAT-status enum (`עוסק מורשה`, `עוסק פטור`, `חברה`) and the 18% default rate. Onboarding, pending approval, draws only `חברה בע״מ` and `עוסק מורשה`.
 - Whether Home's `☰` opens this screen. The unpaid-invoices wireframe, also pending approval, lists `☰` as a way into that list.
 - The auto-approve toggle. [0011](decisions/0011-auto-approve-high-confidence.md) auto-approves by default and rejected an opt-in switch. The draft draws the toggle and says not to build it unless a new decision supersedes 0011.
+- The after-overhead display option is not part of this open list. Its default is off ([0022](decisions/0022-after-overhead-starts-off.md)). Adding it does not approve the rest of this draft.
 
 ## Pricing
 
@@ -106,9 +107,3 @@ Open: after confirm, is the bank row, the invoice, or both removed, and does the
 Home greets `שלום, {first name}`. The example is `יוסי`. Onboarding as drawn asks for a phone number and company details, not a person's name.
 
 Open: where that given name is captured.
-
-## After overhead by default
-
-[0021](decisions/0021-shared-costs-and-overhead.md) puts a view-only toggle on Home and the project screen: profit after each project's income share of overhead. Stored lines and company totals do not change. The toggle is one preference on both screens.
-
-Open: should `רווח אחרי חלק מהתקורה` be on by default?

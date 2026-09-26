@@ -1,6 +1,6 @@
 # Flow — Settings (Draft)
 
-**Status: Draft.** This screen is not approved and not wireframed. It does not override decisions 0001–0021. [Settings contents](../open-questions.md) stay open until this draft is accepted or replaced.
+**Status: Draft.** This screen is not approved and not wireframed. It does not override decisions 0001–0022. [Settings contents](../open-questions.md) stay open until this draft is accepted or replaced. The display option below is decided.
 
 ## Entry
 
@@ -58,6 +58,10 @@ Hashavshevet format is out of scope ([0001](../decisions/0001-management-tool-al
 One or more Bank Hapoalim account numbers (`חשבון הפועלים`). Flow uses them to drop own-account transfers: a row whose counterparty account equals another saved account on this company is removed and does not enter P&L. Other banks are not accepted ([0012](../decisions/0012-bank-hapoalim-first.md)).
 
 If no account is saved yet, Flow does not auto-remove transfers. A row that merely looks like a transfer is suggested, and the owner can mark it `העברה בין חשבונות` on the review card, which excludes it.
+
+### Display
+
+`רווח אחרי חלק מהתקורה` (profit after overhead share). Off by default ([0022](../decisions/0022-after-overhead-starts-off.md)). One preference with the switch on Home and the project screen. Off, those screens show stored project profit, which is what matches the bank and the accountant. On, they show profit after the overhead share. The option does not change stored lines or company totals. [0021](../decisions/0021-shared-costs-and-overhead.md).
 
 ### Auto-approve
 

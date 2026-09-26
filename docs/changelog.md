@@ -2,6 +2,15 @@
 
 ## 2026-09-26
 
+Decision [0022](decisions/0022-after-overhead-starts-off.md), Accepted. The after-overhead switch starts off.
+
+- Home and the project screen open on stored project profit, so the default numbers match the bank and the accountant. The owner turns `רווח אחרי חלק מהתקורה` on when they want the overhead view.
+- Home, Project, and a display option on the Settings draft are one preference. The Settings option starts off. The rest of Settings stays a draft.
+- [01-home-v4](module-1-project-pnl/screens.md#01-home-v4) and [02-project-v2](module-1-project-pnl/screens.md#02-project-v2) still draw the switch on. That is the on state under review, not the default. Both images stay pending owner approval.
+- The open question "should the after-overhead toggle be on by default?" is closed.
+
+## 2026-09-26
+
 Wireframes for shared costs and the after-overhead view. All pending owner approval. Every number is example data.
 
 - [11-split-v2.png](module-1-project-pnl/wireframes/11-split-v2.png) supersedes `11-split`. Method control: equal, by income (drawn selected), or manual percent or amount. One tap for every active project. The remainder must reach ₪0 and 100%. `פצל ככה כל חודש` is the recurring split rule.

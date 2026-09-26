@@ -40,7 +40,7 @@ Back (`›` on the right, because the UI is RTL) returns to the screen that open
 | Income | `הכנסות` | Project-to-date income. Whole shekels, neutral. |
 | Expenses | `הוצאות` | Project-to-date expenses. Whole shekels, neutral. |
 | Profit | `רווח · {margin}` or `הפסד · {margin}` | [Margin rule](../calculations.md#income-expenses-profit-margin). Green or red. Percent omitted when income is 0. With the after-overhead view on, profit and margin use profit after [overhead share](../calculations.md#overhead-share). Income in that margin is still this project's income. |
-| Overhead share | `חלק מהתקורה` | Drawn on [02-project-v2](../screens.md#02-project-v2), pending owner approval. Shown only while the view is on and allocation is available. The signed share for this project. ₪0 when this project has no income and other projects do. |
+| Overhead share | `חלק מהתקורה` | The switch starts off ([0022](../../decisions/0022-after-overhead-starts-off.md)). [02-project-v2](../screens.md#02-project-v2) draws it on and is pending owner approval. The card is shown only while the view is on and allocation is available. The signed share for this project. ₪0 when this project has no income and other projects do. |
 | Budget | `הוצאות מול תקציב` | Hidden when budget is unset or 0. `{used} / {budget}`, bar, `{percent} נוצל`. Percent may exceed 100. The word `אופציונלי` is not shown in the product; it was a wireframe note that the card is optional. |
 | Categories | `לפי קטגוריה` | The seven expense categories that have a non-zero project-to-date total, in the owner's category order, then any custom expense categories in that order. Zero categories are hidden. Amounts are whole shekels. Bar width is relative to the largest category. |
 | Recent | `תנועות אחרונות` | Up to three counting lines, newest first. Source mark: invoice document linked, or bank, or manual. Second line `{category} · {dd/mm}`. Amount is signed cash, detail-display rule, green `+` for inflow, red `−` for outflow. |
@@ -81,7 +81,7 @@ Dates on rows are `dd/mm` when the year is the current year, and `dd/mm/yyyy` ot
 
 ## Acceptance criteria
 
-- [ ] With the after-overhead view off, income, expenses, profit, and margin match project-to-date counting lines, and they do not include overhead or other projects.
+- [ ] The after-overhead view starts off. Off, income, expenses, profit, and margin match project-to-date counting lines, and they do not include overhead or other projects.
 - [ ] With the view on, income, own expenses, category bars, and the budget card stay those stored figures. Profit and margin use the overhead share. Company totals elsewhere do not change. If no project has income, the view does not switch and the screen says the allocation is unavailable.
 - [ ] The overhead screen has no after-overhead toggle.
 - [ ] The budget card is absent when no budget is set, and present with used / budget / percent when it is.

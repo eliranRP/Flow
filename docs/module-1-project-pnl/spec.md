@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0021](../decisions/0021-shared-costs-and-overhead.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0022](../decisions/0022-after-overhead-starts-off.md).
 
 ## Goal
 
@@ -39,7 +39,7 @@ For a reporting period, using approved cash amounts, as defined in [calculations
 
 Home always shows those company totals, including projects that are collapsed off the list and including overhead. Overhead is a built-in bucket, not a project the owner creates, and not a footnote under the projects. Hiding a row never removes it from the total.
 
-A cost that belongs to several jobs (site salaries, a shared rental) is split onto those projects, so the stored lines are project lines. True overhead (office rent, the accountant, insurance) stays on the overhead bucket and is not split into transactions. Home and the project screen can show profit after each project's income share of that overhead. That view does not change stored lines or the company totals. [0021](../decisions/0021-shared-costs-and-overhead.md). The formulas are in [calculations](calculations.md#overhead-share).
+A cost that belongs to several jobs (site salaries, a shared rental) is split onto those projects, so the stored lines are project lines. True overhead (office rent, the accountant, insurance) stays on the overhead bucket and is not split into transactions. Home and the project screen can show profit after each project's income share of that overhead. That view does not change stored lines or the company totals. It starts off, so the default numbers match the bank and the accountant. [0021](../decisions/0021-shared-costs-and-overhead.md), [0022](../decisions/0022-after-overhead-starts-off.md). The formulas are in [calculations](calculations.md#overhead-share).
 
 Amounts on screen are **net of VAT**. VAT is stored and shown separately. The owner reads profit without VAT mixed into the job.
 

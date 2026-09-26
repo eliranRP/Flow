@@ -1,6 +1,6 @@
 # Flow — Calculations
 
-Exact definitions for Module 1. Screen specs use these rules and do not invent a second formula. Decisions in force: cash basis ([0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md)), net of VAT ([0001](../decisions/0001-management-tool-alongside-accounting.md)), auto-approve ([0011](../decisions/0011-auto-approve-high-confidence.md)), overhead in the company total ([0009](../decisions/0009-scalable-pickers.md)), shared costs versus overhead ([0021](../decisions/0021-shared-costs-and-overhead.md)).
+Exact definitions for Module 1. Screen specs use these rules and do not invent a second formula. Decisions in force: cash basis ([0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md)), net of VAT ([0001](../decisions/0001-management-tool-alongside-accounting.md)), auto-approve ([0011](../decisions/0011-auto-approve-high-confidence.md)), overhead in the company total ([0009](../decisions/0009-scalable-pickers.md)), shared costs versus overhead ([0021](../decisions/0021-shared-costs-and-overhead.md)), and the after-overhead view starting off ([0022](../decisions/0022-after-overhead-starts-off.md)).
 
 The calendar is `Asia/Jerusalem`. A "date" is a calendar date in that zone, never a UTC day that slips across midnight.
 
@@ -190,7 +190,7 @@ Example data, September 2026, this month, overhead profit −₪60,000, company 
 
 Those six shares sum to ₪60,000. They are the figures on [01-home-v4](screens.md#01-home-v4). The ₪40,000 on [02-project-v2](screens.md#02-project-v2) is a different example, for project to date, not this September split.
 - The overhead screen itself has no toggle.
-- Home and the project screen share one preference. Whether it starts on is [open](../open-questions.md#after-overhead-by-default).
+- Home, the project screen, and the Settings display option share one preference. It starts off ([0022](../decisions/0022-after-overhead-starts-off.md)), so the first figures match the bank and the accountant. The owner turns it on for this view.
 
 Losses-first and the collapsed-row profit use the displayed profit. Activity does not.
 
