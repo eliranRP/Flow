@@ -1,8 +1,8 @@
 # Flow — Module 1 screens
 
-Each section is one wireframe. The detailed spec for each product screen is a separate file, linked below. Figures in the wireframes are example data for September 2026, not a real company. Numbers follow [calculations](calculations.md). Two example companies appear: screens from the first pass use three projects, and the v2 Home uses a larger company (17 active projects this month). Do not expect the month totals on Home to equal the lifetime totals on a project screen. Home is the current period. The project screen is since the job started.
+Each section is one wireframe. The detailed spec for each product screen is a separate file, linked below. Figures in the wireframes are example data for September 2026, not a real company. Numbers follow [calculations](calculations.md). Two example companies appear: screens from the first pass use three projects, and the v2 Home uses a larger company (17 active projects this month). Do not expect the month totals on Home to equal the lifetime totals on a project screen. Home is this month, last month, or year to date. The project screen is since the job started.
 
-The phone UI is Hebrew, right to left. Profit is green, loss is red, and a negative amount uses a minus sign. Income and expense totals on the summary tiles are neutral. The English notes beside the phone in the PNG are annotations for design review. They are not in the product.
+The phone UI is Hebrew only, right to left. Profit is green, loss is red, and a negative amount uses a minus sign. Income and expense totals on the summary tiles are neutral. The English notes beside the phone in the PNG are annotations for design review. They are not in the product.
 
 Build the approved screens. Superseded screens are kept below and marked.
 
@@ -19,6 +19,8 @@ Build the approved screens. Superseded screens are kept below and marked.
 
 `הגדרות` (Settings) is a tab in the bottom bar. Its screen is not wireframed. See [open questions](../open-questions.md).
 
+Five more screens are being wireframed. They have no image and no field spec yet. See [Not wireframed yet](#not-wireframed-yet).
+
 Behavior that these screens illustrate is specified in [spec.md](spec.md).
 
 <a id="01-home-v2"></a>
@@ -28,6 +30,7 @@ Behavior that these screens illustrate is specified in [spec.md](spec.md).
 **Status:** Approved. This is the Home to build.
 **Supersedes:** [01-home](#01-home).
 **File:** [wireframes/01-home-v2.png](wireframes/01-home-v2.png)
+**Image vs product:** [0019](../decisions/0019-home-periods-and-comparison.md) adds `חודש קודם` and a comparison arrow on the three tiles for this month and last month. This PNG still draws two segments and no arrows. It is not superseded. Build the periods in [Home](screens/01-home.md).
 
 ### Purpose
 
@@ -36,7 +39,7 @@ The same company answer as the first Home — "am I making money this period?" �
 ### Main elements
 
 - Greeting `שלום, יוסי` and the line `סיכום החברה · 17 פרויקטים פעילים · ספטמבר 2026`. A menu button (`☰`) sits at the end of the top bar. What it opens is not specified.
-- Period switch: `החודש` (selected) and `מתחילת השנה`.
+- Period switch on this image: `החודש` (selected) and `מתחילת השנה`. No comparison arrows. The product switch is `החודש`, `חודש קודם`, and `מתחילת השנה`.
 - Three tiles: `הכנסות` ₪1,310,000, `הוצאות` ₪1,110,000, `רווח/הפסד` ₪200,000 in green. The profit tile is emphasized.
 - Pending banner: a count badge `7` and `7 פריטים ממתינים לאישור`, with a chevron.
 - Section `פרויקטים · 5 המובילים` and a sort pill: `לפי פעילות` (selected) and `הפסד קודם`.
@@ -209,7 +212,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 
 ### Key interactions
 
-- `צלם חשבונית` opens the camera or a PDF picker. After extraction, the document enters matching and, if it is not high confidence, the review queue.
+- `צלם חשבונית` takes several photos in a row, or picks a PDF or image already on the phone. [0020](../decisions/0020-capture-from-the-phone.md). The image still labels the row `מצלמה או PDF`. After extraction, the document enters matching and, if it is not high confidence, the review queue. An installed Android app can also receive an image or PDF from the system share sheet. iPhone cannot, and this sheet does not offer that.
 - `העלה דוח בנק/אשראי` picks an Excel or CSV file and then shows [upload results](#08-upload-results-v2). In the proof of concept that file is a Bank Hapoalim (`בנק הפועלים`) statement. [0012](../decisions/0012-bank-hapoalim-first.md). The label still mentions credit (`אשראי`); credit-card company files are later.
 - `הזנה ידנית` is the cash and cheque fallback. The form itself is not wireframed.
 - `ביטול`, or tapping the scrim, closes the sheet and leaves the data unchanged.
@@ -590,7 +593,7 @@ One picture of the two screens that replaced the short-list layouts: Home with m
 
 Labeled `Example data · low-fi wireframe · v2 (~40 projects)`. Two phones:
 
-1. `01-home-v2` — top 5, twelve more collapsed, overhead, company tiles at ₪1,310,000 / ₪1,110,000 / ₪200,000.
+1. `01-home-v2` — top 5, twelve more collapsed, overhead, company tiles at ₪1,310,000 / ₪1,110,000 / ₪200,000. The period switch on this phone is the two segments drawn in the PNG. The product also has `חודש קודם` and comparison arrows ([0019](../decisions/0019-home-periods-and-comparison.md)).
 2. `06-change-sheet-v2` — three project chips, search, activity list, three category chips, remember toggle on.
 
 The "~40 projects" label is the annotation's round number. The sheet's list header says 38, and Home's subtitle says 17 active this month. Those are example figures on the two screens, not a second spec.
@@ -636,3 +639,100 @@ None. This file is a board, not a screen.
 ### Detailed spec
 
 Not a product screen. Build [Review](screens/03-review.md) and [Upload results](screens/08-upload-results.md).
+
+<a id="not-wireframed-yet"></a>
+
+## Not wireframed yet
+
+These five screens were named on 2026-09-26. Images will follow. There is no PNG, and there is no file under `screens/` for them. Do not invent the layout from this list. What is already decided is linked. Anything not linked is still open.
+
+| Screen | Section |
+| --- | --- |
+| First-run onboarding | [09-onboarding](#09-onboarding) |
+| Transaction detail | [10-transaction](#10-transaction) |
+| Split sheet | [11-split](#11-split) |
+| Unpaid invoices | [12-unpaid](#12-unpaid) |
+| Notifications | [13-notifications](#13-notifications) |
+
+<a id="09-onboarding"></a>
+
+## 09-onboarding — First-run onboarding
+
+**Status:** Wireframe pending. Not buildable from this section.
+**File:** none yet.
+
+### What the upcoming wireframe covers
+
+A first-run path, in this order. Hebrew only, right to left ([0016](../decisions/0016-hebrew-only.md)).
+
+1. Sign in with a mobile number and an SMS code ([0017](../decisions/0017-sms-sign-in.md)).
+2. Company details.
+3. A Bank Hapoalim statement upload, with instructions for exporting the file onto the phone ([0012](../decisions/0012-bank-hapoalim-first.md), [0015](../decisions/0015-installable-mobile-web-app.md)).
+4. Projects the product proposes from recurring clients, for the owner to confirm. What counts as recurring is [open](../open-questions.md#projects-proposed-at-onboarding).
+5. Install the app, and turn notifications on. On iPhone, adding Flow to the Home Screen is what makes push possible ([0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md)).
+
+### Detailed spec
+
+None until the image lands.
+
+<a id="10-transaction"></a>
+
+## 10-transaction — Transaction detail
+
+**Status:** Wireframe pending. Not buildable from this section.
+**File:** none yet.
+
+### What is already decided
+
+One transaction can be reopened and changed after it was auto-approved ([0011](../decisions/0011-auto-approve-high-confidence.md)). Today that reopen opens the [change sheet](screens/06-change-sheet.md) from the review strip and from upload results. This screen is the upcoming place to read a single transaction. Until the image lands, keep that change-sheet path.
+
+Amounts, dates, and what counts stay as in [calculations](calculations.md).
+
+### Detailed spec
+
+None until the image lands.
+
+<a id="11-split"></a>
+
+## 11-split — Split sheet
+
+**Status:** Wireframe pending. Not buildable from this section.
+**File:** none yet.
+
+### What is already decided
+
+One payment can be split across projects by amount or by percent. The lines must sum to the parent, they share one category, and "remember for this supplier" stays off. The rules are in [calculations](calculations.md). The [change sheet](screens/06-change-sheet.md) already includes a split mode. This section is a dedicated sheet still to be drawn. Do not replace the change-sheet split from this placeholder.
+
+### Detailed spec
+
+None until the image lands.
+
+<a id="12-unpaid"></a>
+
+## 12-unpaid — Unpaid invoices
+
+**Status:** Wireframe pending. Not buildable from this section.
+**File:** none yet.
+
+### What is already decided
+
+Invoices with no matching payment stay out of P&L ([0007](../decisions/0007-bank-statement-is-primary-input.md)). The note on [upload results](#08-upload-results-v2) (`חשבוניות עדיין לא שולמו`) opens this list. A partial payment leaves the remainder here. The list has no wireframe, so row contents are not specified yet.
+
+### Detailed spec
+
+None until the image lands.
+
+<a id="13-notifications"></a>
+
+## 13-notifications — Notifications
+
+**Status:** Wireframe pending. Not buildable from this section.
+**File:** none yet.
+
+### What is already decided
+
+There are exactly two notifications ([0018](../decisions/0018-two-notifications.md)): the Sunday 08:00 summary, which opens Home, and the 18:00 review nudge, which opens Review and is skipped when nothing is waiting. No per-transaction notification. Enabling them is an onboarding step, not a separate settings decision. Which project is named in the weekly alert is [open](../open-questions.md#which-project-alert-is-the-weekly-one). How the minute estimate is calculated is [open](../open-questions.md#estimated-minutes-on-the-daily-nudge).
+
+### Detailed spec
+
+None until the image lands.

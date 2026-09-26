@@ -4,7 +4,7 @@ Flow is a mobile-first way for Israeli project-based businesses to see project p
 
 This repository is the product home. It holds documentation and design artifacts only. There is no application code yet.
 
-Amounts are in shekels (₪), shown net of VAT, with VAT tracked beside them. The interface is Hebrew, right to left. The owner confirms what the product suggests instead of typing a classification for every shekel.
+Amounts are in shekels (₪), shown net of VAT, with VAT tracked beside them. This phase is Hebrew only, right to left. The owner signs in with a mobile number and an SMS code, on an installable phone web app. There is no desktop version in this phase. The owner confirms what the product suggests instead of typing a classification for every shekel.
 
 ## What the owner gets
 
@@ -21,7 +21,7 @@ The owner is on site most of the day, so the product is a phone UI: bottom navig
 
 ## How data gets in
 
-1. A photo or PDF of an expense invoice. The product reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate.
+1. Photos or a PDF of an expense invoice, taken in a row or picked from files on the phone. Android can also share an image or PDF into the installed app. iPhone cannot. The product reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate.
 2. A Bank Hapoalim (`בנק הפועלים`) statement (Excel or CSV). Each row becomes a transaction. Transfers between the company's own accounts are removed. Other banks, and credit-card company files, come after the proof of concept.
 3. Manual entry, for cash and cheques.
 
@@ -31,9 +31,9 @@ Correcting a suggestion can become a rule ("remember for this supplier" is on by
 
 ## Proof of concept
 
-In scope: company and project P&L for a single user (the owner), the three intake paths with Bank Hapoalim as the statement format, review and rules, auto-approve for high-confidence rows, a flat category list, optional project budgets, project and category pickers that still work with many jobs, and an Excel export for the accountant.
+In scope: company and project P&L for a single user (the owner) on an installable mobile web app, Hebrew only, sign-in by SMS code, the three intake paths with Bank Hapoalim as the statement format, review and rules, auto-approve for high-confidence rows, two notifications (a Sunday summary and an end-of-day review nudge), Home periods of this month, last month, and year to date, a flat category list, optional project budgets, project and category pickers that still work with many jobs, and an Excel export for the accountant.
 
-Out of scope: replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, other banks' statement files, credit-card company files, roles and permissions, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant.
+Out of scope: a desktop site, native iOS or Android apps, another language at launch, email and password, custom date ranges, a notification per transaction, a WhatsApp or email forwarding address, replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, other banks' statement files, credit-card company files, roles and permissions, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant.
 
 Default expense categories, preloaded: `חומרים` (materials), `קבלני משנה` (subcontractors), `עבודה` (labor), `ציוד והשכרה` (equipment and rental), `הובלה` (transport), `ביטוח` (insurance), `אחר` (other). Income categories: `תקבול מלקוח` (payment from a client), `הכנסה אחרת` (other income).
 
@@ -48,7 +48,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe, with links to the detailed specs |
 | [Settings (Draft)](docs/module-1-project-pnl/settings.md) | Proposed Settings screen, not approved |
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0014 and the record format |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0020 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |

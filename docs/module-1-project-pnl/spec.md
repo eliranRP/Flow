@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0014](../decisions/0014-optional-project-budget.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0020](../decisions/0020-capture-from-the-phone.md).
 
 ## Goal
 
@@ -17,9 +17,11 @@ The owner should be able to answer "am I making money?" for the company in a few
 
 ## Who it is for
 
-Owners of small and mid-size Israeli contractor businesses. They are on site most of the day, so the product is mobile first: Hebrew, right to left, ₪, bottom navigation in the thumb zone, large tap targets. [0002](../decisions/0002-poc-targets-construction-contractors.md), [0005](../decisions/0005-mobile-first.md).
+Owners of small and mid-size Israeli contractor businesses. They are on site most of the day, so the product is mobile first: Hebrew only, right to left, ₪, bottom navigation in the thumb zone, large tap targets. [0002](../decisions/0002-poc-targets-construction-contractors.md), [0005](../decisions/0005-mobile-first.md), [0016](../decisions/0016-hebrew-only.md).
 
-The proof of concept is single-user. That user is the business owner. There are no roles and no permissions. An office-manager role can come later. [0013](../decisions/0013-single-user-owner.md).
+This phase is an installable mobile web app. There is no desktop version and no native store app. [0015](../decisions/0015-installable-mobile-web-app.md).
+
+The proof of concept is single-user. That user is the business owner, signed in with a mobile number and an SMS code. There are no roles and no permissions. An office-manager role can come later. [0013](../decisions/0013-single-user-owner.md), [0017](../decisions/0017-sms-sign-in.md).
 
 ## UX principle
 
@@ -57,11 +59,22 @@ Three paths, all opened from the center **+** button (`הוספה`).
 
 | Path | Label | What happens |
 | --- | --- | --- |
-| Invoice photo or PDF | `צלם חשבונית` | The product reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate. It keeps the Israel invoice allocation number (`חשבונית ישראל`) when the document has one. The document waits to be linked to a payment. |
+| Invoice photo or file | `צלם חשבונית` | One photo, several photos in a row, or a PDF or image already on the phone. Flow reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate. It keeps the Israel invoice allocation number (`חשבונית ישראל`) when the document has one. The document waits to be linked to a payment. Android can also share an image or PDF into the installed app. iPhone cannot. [0020](../decisions/0020-capture-from-the-phone.md). |
 | Bank statement | `העלה דוח בנק/אשראי` | Excel or CSV from Bank Hapoalim (`בנק הפועלים`). Each row becomes a transaction. Own-account transfers are removed. Rows are matched and classified as below. |
 | Manual entry | `הזנה ידנית` | Fallback for cash and cheques: amount, project, and category. This is the path that marks money as paid when there will never be a statement row. |
 
-The proof of concept parses Hapoalim files only. Other banks, and credit-card company files, come after the proof of concept. [0012](../decisions/0012-bank-hapoalim-first.md). When credit-card statement support starts is an [open question](../open-questions.md). The add-sheet label still says bank and credit (`בנק/אשראי`). Credit-card company files are still rejected. The upload wireframe to build is [08-upload-results-v2](screens.md#08-upload-results-v2), which shows a Hapoalim file.
+The proof of concept parses Hapoalim files only. The file has to be on the phone; onboarding shows how to export it from Hapoalim. Other banks, and credit-card company files, come after the proof of concept. [0012](../decisions/0012-bank-hapoalim-first.md), [0015](../decisions/0015-installable-mobile-web-app.md). When credit-card statement support starts is an [open question](../open-questions.md). The add-sheet label still says bank and credit (`בנק/אשראי`). Credit-card company files are still rejected. The upload wireframe to build is [08-upload-results-v2](screens.md#08-upload-results-v2), which shows a Hapoalim file.
+
+Home periods are this month (`החודש`), last month (`חודש קודם`), and year to date (`מתחילת השנה`). The project screen stays on project to date. There is no custom range. [0019](../decisions/0019-home-periods-and-comparison.md).
+
+## Notifications
+
+Two, and only two. [0018](../decisions/0018-two-notifications.md).
+
+- Sunday 08:00, Israel time: last week's profit and one project alert. Opens Home.
+- 18:00, only if the review queue is not empty, at most once a day: the count and an estimated duration. Opens Review.
+
+Nothing is sent per transaction. On iPhone these arrive only after the owner has added Flow to the Home Screen.
 
 ## Matching, confidence, and review
 

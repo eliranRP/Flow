@@ -41,3 +41,9 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0012](0012-bank-hapoalim-first.md) | 2026-09-26 | Accepted | Proof of concept imports Bank Hapoalim statements only |
 | [0013](0013-single-user-owner.md) | 2026-09-26 | Accepted | Single user: the business owner; no roles yet |
 | [0014](0014-optional-project-budget.md) | 2026-09-26 | Accepted | Project budget stays optional |
+| [0015](0015-installable-mobile-web-app.md) | 2026-09-26 | Accepted | Installable mobile web app; no desktop and no native app in this phase |
+| [0016](0016-hebrew-only.md) | 2026-09-26 | Accepted | Hebrew only |
+| [0017](0017-sms-sign-in.md) | 2026-09-26 | Accepted | Sign in with phone number and an SMS code |
+| [0018](0018-two-notifications.md) | 2026-09-26 | Accepted | Two notifications: Sunday summary, and an 18:00 review nudge |
+| [0019](0019-home-periods-and-comparison.md) | 2026-09-26 | Accepted | Home: this month, last month, year to date, with a month comparison |
+| [0020](0020-capture-from-the-phone.md) | 2026-09-26 | Accepted | Multi-photo and files on the phone; Android share target only |
