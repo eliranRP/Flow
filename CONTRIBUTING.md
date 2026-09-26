@@ -36,14 +36,14 @@ Wireframes for Module 1 live in [docs/module-1-project-pnl/wireframes/](docs/mod
 
 - Keep the existing file. A new version uses the same stem plus `-v2`, `-v3`, and so on (`06-change-sheet-v2.png`). Do not overwrite an approved or superseded PNG.
 - Mark the previous file `Superseded` in `wireframes/README.md` and in [screens.md](docs/module-1-project-pnl/screens.md). The new file is `Approved` once it is the one to build.
-- Add a section in `screens.md` for the new file (purpose, main elements, key interactions, the image, and a `Detailed spec: TODO` subsection until the field-level spec exists).
+- Add a section in `screens.md` for the new file (purpose, main elements, key interactions, and the image). Add the field-level spec as `docs/module-1-project-pnl/screens/NN-name.md` and link it from that section.
 - Overview boards are composites. If a board still shows an old screen, say so in the wireframes table. Do not delete it.
 - Regenerate from [source/gen.py](docs/module-1-project-pnl/wireframes/source/gen.py) and [source/render.sh](docs/module-1-project-pnl/wireframes/source/render.sh) when the HTML source changes. Commit both the source change and the PNGs.
 - Add a changelog entry.
 
 ## Screen specs
 
-[screens.md](docs/module-1-project-pnl/screens.md) describes what each wireframe shows. The subsection `Detailed spec: TODO` on each screen is the placeholder for fields, states, empty states, and edge cases. Filling one in is a documentation change: replace that subsection, and log it in the changelog. If the fill-in contradicts an accepted decision, supersede the decision first.
+[screens.md](docs/module-1-project-pnl/screens.md) describes what each wireframe shows. The field-level spec for a screen lives in `docs/module-1-project-pnl/screens/` and is linked from that wireframe's section. Filling one in, or changing one, is a documentation change: update the file and log it in the changelog. If the fill-in contradicts an accepted decision, supersede the decision first.
 
 ## Open questions
 

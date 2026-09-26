@@ -1,21 +1,21 @@
-# Module 1 — Screens
+# Flow — Module 1 screens
 
-Each section is one wireframe. Figures are example data for September 2026, not a real company. Two example companies appear: screens from the first pass use three projects, and the v2 Home uses a larger company (17 active projects this month). Do not expect the month totals on Home to equal the lifetime totals on a project screen. Home is the current period. The project screen is since the job started.
+Each section is one wireframe. The detailed spec for each product screen is a separate file, linked below. Figures in the wireframes are example data for September 2026, not a real company. Numbers follow [calculations](calculations.md). Two example companies appear: screens from the first pass use three projects, and the v2 Home uses a larger company (17 active projects this month). Do not expect the month totals on Home to equal the lifetime totals on a project screen. Home is the current period. The project screen is since the job started.
 
 The phone UI is Hebrew, right to left. Profit is green, loss is red, and a negative amount uses a minus sign. Income and expense totals on the summary tiles are neutral. The English notes beside the phone in the PNG are annotations for design review. They are not in the product.
 
 Build the approved screens. Superseded screens are kept below and marked.
 
-| Build this | File |
-| --- | --- |
-| Home | [01-home-v2](#01-home-v2) |
-| Project | [02-project](#02-project) |
-| Review | [03-review](#03-review) |
-| Add | [04-add](#04-add) |
-| Projects | [05-projects](#05-projects) |
-| Change sheet | [06-change-sheet-v2](#06-change-sheet-v2) |
-| Categories | [07-categories](#07-categories) |
-| Upload results | [08-upload-results](#08-upload-results) |
+| Build this | Wireframe notes | Detailed spec |
+| --- | --- | --- |
+| Home | [01-home-v2](#01-home-v2) | [screens/01-home.md](screens/01-home.md) |
+| Project | [02-project](#02-project) | [screens/02-project.md](screens/02-project.md) |
+| Review | [03-review](#03-review) | [screens/03-review.md](screens/03-review.md) |
+| Add | [04-add](#04-add) | [screens/04-add.md](screens/04-add.md) |
+| Projects | [05-projects](#05-projects) | [screens/05-projects.md](screens/05-projects.md) |
+| Change sheet | [06-change-sheet-v2](#06-change-sheet-v2) | [screens/06-change-sheet.md](screens/06-change-sheet.md) |
+| Categories | [07-categories](#07-categories) | [screens/07-categories.md](screens/07-categories.md) |
+| Upload results | [08-upload-results](#08-upload-results) | [screens/08-upload-results.md](screens/08-upload-results.md) |
 
 `הגדרות` (Settings) is a tab in the bottom bar. Its screen is not wireframed. See [open questions](../open-questions.md).
 
@@ -64,9 +64,9 @@ The example arithmetic, so the tiles can be checked against the rows: top-5 inco
 
 ![Approved wireframe: Home with many projects](wireframes/01-home-v2.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: a month with no projects, all projects profitable, fewer than five projects, and what the `☰` button opens.
+[Home](screens/01-home.md). `☰` opens the [Settings draft](settings.md), which is not approved.
 
 <a id="02-project"></a>
 
@@ -102,9 +102,9 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 ![Approved wireframe: project view](wireframes/02-project.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: a project with no transactions, a project with no budget (the budget card is omitted), a finished project opened from reports, and the overhead screen if it reuses this layout.
+[Project](screens/02-project.md). Overhead reuses this layout. The budget card is omitted when no budget is set.
 
 <a id="03-review"></a>
 
@@ -147,9 +147,9 @@ Confirm what the product is not sure about. The owner approves or corrects one i
 
 ![Approved wireframe: review queue](wireframes/03-review.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: an empty queue, a card that is a bank row with no thumbnail, a duplicate invoice, and the auto-approve summary (not drawn here) from which the owner reopens an item.
+[Review queue](screens/03-review.md). Auto-approved rows are summarized on [upload results](screens/08-upload-results.md), not on this card. The wireframe's `אשר הכל` button is not part of the spec.
 
 <a id="04-add"></a>
 
@@ -184,9 +184,9 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 
 ![Approved wireframe: add sheet over Home](wireframes/04-add.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: camera permission denied, a PDF with several invoices, a file that is not a statement, and the manual-entry form.
+[Add sheet](screens/04-add.md), including the manual-entry form, unreadable photos, and rejected files.
 
 <a id="05-projects"></a>
 
@@ -230,9 +230,9 @@ Create sheet, in front:
 
 ![Approved wireframe: projects list with the create sheet open](wireframes/05-projects.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: the first-run empty list, duplicate names, where the project code is assigned, and the expanded `הסתיימו` list.
+[Projects list and create](screens/05-projects.md). Codes are assigned as `P-01`, `P-02`, and are not typed.
 
 <a id="06-change-sheet-v2"></a>
 
@@ -278,9 +278,9 @@ The review card behind the sheet still shows the earlier suggestion (`וילה �
 
 ![Approved wireframe: change sheet with search and a short suggestion row](wireframes/06-change-sheet-v2.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: search with no hits, creating a project inline, the split form (amount and percent, lines must sum to the transaction), choosing overhead, and the full category list behind `עוד קטגוריות`.
+[Change sheet](screens/06-change-sheet.md), including search, inline create, overhead, and the split form. Split lines must sum to the parent net in agorot.
 
 <a id="07-categories"></a>
 
@@ -324,9 +324,9 @@ Light category maintenance. The seven expense defaults and the two income defaul
 
 ![Approved wireframe: expense categories with the row menu open](wireframes/07-categories.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: the income tab, the merge picker, the rename field, the hint once there are more than about 15 categories, and restoring a hidden category.
+[Categories](screens/07-categories.md).
 
 <a id="08-upload-results"></a>
 
@@ -368,9 +368,9 @@ The file name `לאומי_ספטמבר.xlsx` is example art from before [0012](.
 
 ![Approved wireframe: bank upload results](wireframes/08-upload-results.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: a file with zero rows, a file the parser does not recognize, every row removed as a transfer, and the all-rows list.
+[Upload results](screens/08-upload-results.md). High-confidence rows are auto-approved; the wireframe's bulk-approve button is not built.
 
 <a id="01-home"></a>
 
@@ -407,9 +407,9 @@ Same as v2 for the period switch, the banner, a project row, overhead, and the c
 
 ![Superseded wireframe: Home with three projects](wireframes/01-home.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Not specified. This screen is superseded; write the detailed spec on [01-home-v2](#01-home-v2) instead.
+Do not build this screen. The spec to build is [Home](screens/01-home.md). This wireframe is the earlier layout: every project is a full row, there is no top-5 cutoff, and there is no losses-first sort. The same calculation rules apply to the tiles.
 
 <a id="06-change-sheet"></a>
 
@@ -443,9 +443,9 @@ Select one project chip and one category chip, leave the remember toggle on, and
 
 ![Superseded wireframe: change sheet with a chip for every project and category](wireframes/06-change-sheet.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Not specified. This screen is superseded; write the detailed spec on [06-change-sheet-v2](#06-change-sheet-v2) instead.
+Do not build this screen. The spec to build is [Change sheet](screens/06-change-sheet.md). This wireframe shows a chip for every project and every category, which [0009](../decisions/0009-scalable-pickers.md) replaced.
 
 <a id="overview"></a>
 
@@ -476,9 +476,9 @@ None. This file is a board, not a screen.
 
 ![Overview board of the first five wireframes](wireframes/overview.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Not a product screen. Specs belong on the individual screens. The Home shown here is superseded.
+Not a product screen. No fields, states, or acceptance criteria. The Home phone on this board is superseded. Build [Home](screens/01-home.md), [Project](screens/02-project.md), [Review](screens/03-review.md), [Add](screens/04-add.md), and [Projects](screens/05-projects.md).
 
 <a id="overview-2"></a>
 
@@ -507,9 +507,9 @@ None. This file is a board, not a screen.
 
 ![Overview board of the change sheet, categories, and upload results](wireframes/overview-2.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Not a product screen. The change sheet shown here is superseded by [06-change-sheet-v2](#06-change-sheet-v2).
+Not a product screen. The change-sheet phone is superseded. Build [Change sheet](screens/06-change-sheet.md), [Categories](screens/07-categories.md), and [Upload results](screens/08-upload-results.md).
 
 <a id="overview-3"></a>
 
@@ -539,6 +539,6 @@ None. This file is a board, not a screen.
 
 ![Overview board of Home v2 and the scalable change sheet](wireframes/overview-3.png)
 
-### Detailed spec: TODO
+### Detailed spec
 
-Not a product screen. Specs belong on [01-home-v2](#01-home-v2) and [06-change-sheet-v2](#06-change-sheet-v2).
+Not a product screen. Build [Home](screens/01-home.md) and [Change sheet](screens/06-change-sheet.md).
