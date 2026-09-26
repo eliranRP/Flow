@@ -49,7 +49,7 @@ Amounts on screen are **net of VAT**. VAT is stored and shown separately. The ow
 
 Version 1 is cash basis. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 
-A Bank Hapoalim (`בנק הפועלים`) statement row is what makes money count in the proof of concept. An invoice is a supporting document linked to that row. Cash and cheques count when the owner records them and marks them paid. [0012](../decisions/0012-bank-hapoalim-first.md).
+A Bank Hapoalim (`בנק הפועלים`) statement row is what makes money count in the proof of concept. An invoice is a supporting document linked to that row. Cash and cheques count when the owner records them and marks them paid. [0012](../decisions/0012-bank-hapoalim-first.md). The first data integration is a pull from the SUMIT API ([0035](../decisions/0035-sumit-api-first.md)). Whether that replaces the Hapoalim upload or sits alongside it is [open](../open-questions.md#sumit-and-the-hapoalim-upload).
 
 An invoice with no matching payment is **unpaid**. It stays out of P&L until a later statement row matches it, or the owner marks it paid. Unpaid invoices remain visible so the owner can see what is still open.
 
