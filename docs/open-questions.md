@@ -138,3 +138,69 @@ Open: where that given name is captured.
 ## Home's big number when after-overhead is on
 
 Resolved by [0032](decisions/0032-home-hero-stays-company-net-profit.md). With the switch on, Home's hero number stays company net profit. The band's small figures show profit before overhead and the overhead amount. Each project row shows profit after its share. The project screen shows before, share, then after. Evidence: [18 light](../design/screens/18-home-overhead-on-light.png), [18 dark](../design/screens/18-home-overhead-on-dark.png), [19 light](../design/screens/19-project-overhead-on-light.png), [19 dark](../design/screens/19-project-overhead-on-dark.png).
+
+## Technical plan
+
+From [tech-plan.md](tech/tech-plan.md) §10.2. Three of these are decided. The rest are still open.
+
+## When to move to Supabase Pro
+
+Resolved by [0037](decisions/0037-supabase-pilot.md) and [0039](decisions/0039-pilot-defaults.md). Move at the first paying customer or the first technical limit, whichever comes first.
+
+## SUMIT triggers in this phase
+
+[0036](decisions/0036-sumit-read-only.md) forbids writing to the customer's SUMIT. Registering a trigger is a write. The plan asks to confirm that SUMIT triggers are skipped in this phase.
+
+Open: are SUMIT triggers skipped for Module 1?
+
+## Invoice photo storage
+
+Resolved by [0039](decisions/0039-pilot-defaults.md). Invoice photos are stored in Supabase Storage for the pilot.
+
+## Custom domain on the Google sign-in screen
+
+Resolved by [0039](decisions/0039-pilot-defaults.md). The pilot accepts the `supabase.co` address. The $10 a month custom domain is not bought for now.
+
+## App domain
+
+Open: use a `workers.dev` address for the pilot, or buy a domain before inviting customers?
+
+## VAT on bank-only income
+
+Open: derive VAT at the standard rate, or show the gross amount until the row is matched?
+
+## Unknown-VAT expenses
+
+Open: show the gross amount with a marker, or ask in review when the item is large?
+
+## Cheque date
+
+Open: count a cheque on the receipt date, or on the cheque due date?
+
+## Auto-approve thresholds
+
+[0011](decisions/0011-auto-approve-high-confidence.md) auto-approves a unique invoice match or a supplier rule. The plan asks for numbers on top of that.
+
+Open: is 90% the threshold, with a ₪5,000 limit on a new supplier, and is auto-approve off in the first week?
+
+## Nudge days
+
+[0018](decisions/0018-two-notifications.md) sets a Sunday summary and an 18:00 review nudge.
+
+Open: does the nudge skip Saturdays and Jewish holidays?
+
+## File and backup retention
+
+Open: are invoice photos and bank files kept for 7 years, or until the owner deletes them? Is backup retention of 30 days, and 12 monthly copies, acceptable?
+
+## SUMIT history to backfill
+
+Open: backfill the current tax year and the previous one, or the current year only?
+
+## Accountant export shape
+
+Open: does the accountant's export need a specific import format, or is generic Excel or CSV enough?
+
+## More than one user
+
+Already decided. [0013](decisions/0013-single-user-owner.md) is a single owner for this phase. The plan's question does not reopen that.
