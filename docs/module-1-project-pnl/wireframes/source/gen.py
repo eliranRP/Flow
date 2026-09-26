@@ -532,3 +532,269 @@ ov4 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exla
 <div style="display:flex;gap:32px">{cols}</div></div>'''
 (OUT / "overview-4.html").write_text(page(ov4, 916, 1100), encoding="utf-8")
 print("ok4")
+
+# =================== BATCH 5 (Flow: onboarding, detail, split, unpaid, notifications, home v3) ===================
+CSS += r"""
+.step{display:flex;align-items:center;gap:6px;margin:4px 0 14px}
+.step .d{flex:1;height:5px;border-radius:3px;background:#d8d8d8}
+.step .d.on{background:#5b6b8a}
+.step .t{font-size:12.5px;color:#888;margin-inline-start:6px;white-space:nowrap}
+.h1{font-size:24px;font-weight:800;color:#222;margin-bottom:6px}
+.para{font-size:14.5px;color:#777;line-height:1.45;margin-bottom:16px}
+.logo{display:inline-flex;align-items:center;gap:8px;font-size:22px;font-weight:800;color:#333;direction:ltr}
+.logo .m{width:40px;height:40px;border-radius:11px;background:#5b6b8a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+.codebox{display:flex;gap:8px;direction:ltr;justify-content:center;margin:10px 0}
+.codebox div{width:46px;height:56px;border:1.5px solid #bbb;border-radius:10px;background:#fff;font-size:24px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#333}
+.codebox div.cur{border:2px solid #5b6b8a}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;direction:ltr;background:#d9d9d9;padding:8px 6px 26px;position:absolute;left:0;right:0;bottom:0}
+.keys div{height:44px;background:#f4f4f4;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#444}
+.cb{width:24px;height:24px;border-radius:6px;background:#5b6b8a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.ostep{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.ostep .k{width:28px;height:28px;border-radius:50%;border:2px solid #5b6b8a;color:#5b6b8a;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.ostep .x{font-size:15px;color:#444;line-height:1.4}
+.ostep .x small{display:block;color:#999;font-size:12.5px}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee;font-size:15px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:#888;font-size:14px}.kv .v{color:#333;font-weight:600}
+.stchip{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;border-radius:14px;padding:4px 10px;background:#e8f1e8;color:#2e6b31;border:1px solid #bcd6bd}
+.stchip.g{background:#ececec;color:#555;border-color:#d0d0d0}
+.act{display:flex;align-items:center;gap:10px;height:48px;font-size:16px;font-weight:600;color:#3e4a63;border-bottom:1px solid #eee}
+.act:last-child{border-bottom:none}
+.act .ai{width:30px;text-align:center;color:#888}
+.delta{font-size:11.5px;font-weight:700;margin-top:1px}
+.lock{position:absolute;inset:0;background:linear-gradient(170deg,#9a9a9a,#5e5e5e);direction:rtl}
+.lock .tm{font-size:84px;font-weight:300;color:#fff;text-align:center;margin-top:80px;letter-spacing:-2px;direction:ltr}
+.lock .dt{font-size:18px;color:#f0f0f0;text-align:center}
+.notif{margin:40px 12px 0;background:rgba(245,245,245,.92);border-radius:20px;padding:12px 14px}
+.notif .hd{display:flex;align-items:center;gap:8px;font-size:13px;color:#666;margin-bottom:6px}
+.notif .ic{width:26px;height:26px;border-radius:7px;background:#5b6b8a;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}
+.notif .ti{font-size:15.5px;font-weight:700;color:#222;margin-bottom:2px}
+.notif .bd{font-size:15px;color:#333;line-height:1.35}
+"""
+
+def plain_phone(inner, extra=""):
+    return f'<div class="phone"><div class="screen" style="background:#fff">{STATUS}{inner}</div>{extra}</div>'
+
+def row_wide(items, title, label, w, h, fname, gap=32):
+    cols = ""
+    for ph, cap, note in items:
+        cols += f'<div style="display:flex;flex-direction:column;gap:12px;width:410px"><div style="font-size:18px;font-weight:700;color:#333">{cap}</div>{ph}<div class="notes" style="width:410px">{note}</div></div>'
+    body = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exlabel">{label}</div>
+<div style="position:absolute;top:16px;right:32px;font-size:20px;font-weight:700;color:#333">{title}</div>
+<div style="display:flex;gap:{gap}px">{cols}</div></div>'''
+    (OUT / f"{fname}.html").write_text(page(body, w, h), encoding="utf-8")
+
+# ---- 09 onboarding ----
+ob_a = f'''<div class="content" style="padding-top:20px">
+<div class="logo" style="margin-bottom:22px"><span class="m">F</span>Flow</div>
+<div class="h1">כניסה</div><div class="para" style="margin-bottom:10px">רק מספר טלפון – בלי סיסמה.</div>
+<div class="lbl">מספר טלפון</div>
+<div class="field" style="color:#333;direction:ltr;justify-content:flex-end">050-123-4567</div>
+<div class="btn pri" style="height:48px;opacity:.45;margin-bottom:18px">שלחו לי קוד</div>
+<div style="font-size:15px;font-weight:700;color:#333">הזינו את הקוד שקיבלתם ב-SMS</div>
+<div style="font-size:12.5px;color:#999">נשלח ל-<span class="num">050-123-4567</span></div>
+<div class="codebox"><div>4</div><div>8</div><div>2</div><div>7</div><div class="cur"></div><div></div></div>
+<div style="text-align:center;font-size:13px;color:#999">שליחה מחדש בעוד <span class="num">0:42</span></div>
+</div>
+<div class="keys">{"".join(f"<div>{k}</div>" for k in "123456789")}<div></div><div>0</div><div>⌫</div></div>'''
+
+ob_b = '''<div class="content" style="padding-top:12px;display:flex;flex-direction:column">
+<div class="step"><div class="d on"></div><div class="d"></div><div class="d"></div><div class="d"></div><span class="t">שלב 1 מתוך 4</span></div>
+<div class="h1">פרטי החברה</div><div class="para">3 פרטים ומתחילים. אפשר לשנות אחר כך.</div>
+<div class="lbl">שם החברה</div><div class="field focus">א.ב. בנייה ושיפוצים בע״מ</div>
+<div class="lbl">ח.פ. / מספר עוסק</div><div class="field" style="color:#333"><span class="num">51-234567-8</span></div>
+<div class="lbl">סוג העסק</div>
+<div class="seg"><div class="on">חברה בע״מ</div><div>עוסק מורשה</div></div>
+<div class="btn pri" style="margin-top:auto;margin-bottom:24px">המשך</div>
+</div>'''
+
+ob_c = '''<div class="content" style="padding-top:12px;display:flex;flex-direction:column">
+<div class="step"><div class="d on"></div><div class="d on"></div><div class="d"></div><div class="d"></div><span class="t">שלב 2 מתוך 4</span></div>
+<div class="h1">העלאת דוח פועלים</div><div class="para">מהדוח נבנה את הרווח וההפסד שלך. כך מייצאים:</div>
+<div class="ostep"><span class="k">1</span><div class="x">באפליקציית פועלים: עו״ש › תנועות<small>בוחרים טווח תאריכים</small></div></div>
+<div class="ostep"><span class="k">2</span><div class="x">ייצוא לאקסל › שמירה בקבצים<small>Files / הקבצים שלי</small></div></div>
+<div class="ostep"><span class="k">3</span><div class="x">חוזרים לכאן ובוחרים את הקובץ</div></div>
+<div class="ph" style="height:120px;margin:4px 0 14px">איור: מסך ייצוא בפועלים</div>
+<div style="font-size:13px;color:#777;text-align:center;margin-bottom:10px">מומלץ: 3 החודשים האחרונים</div>
+<div class="btn pri" style="height:62px;font-size:19px"><span class="emo">📄</span> בחר קובץ</div>
+<div style="text-align:center;font-size:14px;color:#888;margin-top:12px">דלג לעכשיו</div>
+</div>'''
+
+def obproj(name, meta):
+    return f'''<div class="row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:8px"><span class="cb">✓</span>
+<div style="flex:1"><div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px dashed #ccc;padding-bottom:3px"><span class="name" style="font-size:15.5px">{name}</span><span style="color:#aaa;font-size:14px">✎</span></div><div class="meta" style="margin-top:4px">{meta}</div></div></div>'''
+ob_d = f'''<div class="content" style="padding-top:12px;display:flex;flex-direction:column">
+<div class="step"><div class="d on"></div><div class="d on"></div><div class="d on"></div><div class="d"></div><span class="t">שלב 3 מתוך 4</span></div>
+<div class="h1">הפרויקטים שלך</div><div class="para" style="margin-bottom:12px">מצאנו לקוחות חוזרים בדוח – כנראה אלה הפרויקטים שלך. אפשר לשנות שם.</div>
+{obproj("וילה רעננה", "משפ׳ כהן · 6 תקבולים · " + num(540000))}
+{obproj("בניין מגורים חולון", "א.ב. נכסים · 4 תקבולים · " + num(900000))}
+{obproj('שיפוץ דירה ת"א', "משפ׳ לוי · 3 תקבולים · " + num(120000))}
+{obproj("בית פרטי כפר סבא", "י. מזרחי · 2 תקבולים · " + num(240000))}
+<div style="font-size:15px;color:#5b6b8a;font-weight:600;margin:4px 2px">+ הוסף פרויקט</div>
+<div class="btn pri" style="margin-top:auto;margin-bottom:24px">אשר והמשך</div>
+</div>'''
+
+ob_e = '''<div class="content" style="padding-top:12px;display:flex;flex-direction:column">
+<div class="step"><div class="d on"></div><div class="d on"></div><div class="d on"></div><div class="d on"></div><span class="t">שלב 4 מתוך 4</span></div>
+<div class="h1">התקנת Flow</div><div class="para" style="margin-bottom:10px">הוסיפו למסך הבית – נפתח כמו אפליקציה.</div>
+<div class="card" style="display:flex;gap:10px;align-items:center;padding:10px;margin-bottom:12px">
+<div style="flex:1;text-align:center"><div class="ph" style="height:66px;font-size:22px">⬆</div><div style="font-size:12.5px;color:#666;margin-top:4px">1. שיתוף בספארי</div></div>
+<div style="color:#aaa">‹</div>
+<div style="flex:1;text-align:center"><div class="ph" style="height:66px;font-size:12px;padding:4px">⊞ הוסף למסך הבית</div><div style="font-size:12.5px;color:#666;margin-top:4px">2. הוסף למסך הבית</div></div></div>
+<div style="font-size:15px;font-weight:700;color:#333;margin-bottom:6px">שתי התראות בלבד:</div>
+<div class="ostep" style="margin-bottom:8px"><span class="k" style="font-size:12px">א</span><div class="x">סיכום שבועי<small>ראשון 08:00 · רווח ומה חרג</small></div></div>
+<div class="ostep" style="margin-bottom:12px"><span class="k" style="font-size:12px">ב</span><div class="x">תזכורת לאישור<small>18:00 · רק אם יש פריטים ממתינים</small></div></div>
+<div class="btn sec" style="height:50px;margin-bottom:10px"><span class="emo">🔔</span> אפשר התראות</div>
+<div class="btn pri" style="margin-top:auto;margin-bottom:24px">לדוח הרווח שלי</div>
+</div>'''
+
+N = lambda *xs: "".join(f'<div class="n">{x}</div>' for x in xs)
+row_wide([
+ (plain_phone(ob_a), "a · Sign-in · כניסה", N("<b>Phone + SMS code</b>, no password. Shown as two states: number entered (button used), then 6-digit code with numeric keypad and resend timer. Code auto-fills from SMS where supported.")),
+ (plain_phone(ob_b), "b · Company · פרטי החברה", N("<b>Step 1/4.</b> Only 3 fields: company name, company/dealer number, business type (company vs licensed dealer). Everything editable later in settings.")),
+ (plain_phone(ob_c), "c · Bank file · דוח פועלים", N("<b>Step 2/4.</b> 3 short steps to export from the Hapoalim app into Files. Big <bdi dir=rtl>בחר קובץ</bdi>; last 3 months recommended so the first P&amp;L is meaningful. Hapoalim only in the POC.")),
+ (plain_phone(ob_d), "d · Projects · הפרויקטים שלך", N("<b>Step 3/4.</b> Suggested from recurring incoming payers in the bank file. Pre-checked, names editable inline (✎), uncheck to skip, + add another.")),
+ (plain_phone(ob_e), "e · Install · התקנה", N("<b>Step 4/4.</b> PWA: add Flow to home screen (iPhone: Share › Add to Home Screen). Enable notifications, only two kinds (weekly summary, daily review reminder). CTA → first P&amp;L.")),
+], "09 · Onboarding (first run) — goal: first P&amp;L within 15 minutes", "Example data · low-fi wireframe · Flow", 2274, 1180, "09-onboarding")
+
+# ---- 10 transaction detail ----
+def detail_inner(net, invno="10452", alloc="123456789", paid="23/09"):
+    vat = int(net * 0.18); gross = net + vat
+    return f'''<div class="content">
+<div class="topbar" style="margin-bottom:8px"><div class="iconbtn">›</div><div class="sub" style="flex:1;margin-inline-start:10px;font-size:15px">הוצאה</div><div class="iconbtn">⋯</div></div>
+<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px">
+<div style="flex:1"><div style="font-size:20px;font-weight:800;color:#222">חומרי בניין השרון בע״מ</div>
+<div style="font-size:30px;font-weight:800;color:#222;line-height:1.2">{num(net)}</div>
+<div style="font-size:12.5px;color:#888">לפני מע״מ · מע״מ {num(vat)} · כולל {num(gross)}</div>
+<div style="font-size:13px;color:#888;margin-top:2px">21/09/2026</div>
+<div style="display:flex;gap:6px;margin-top:8px"><span class="stchip">✓ מאושר · אוטומטי</span><span class="stchip g">שולם</span></div></div>
+<div style="text-align:center"><div class="ph" style="width:78px;height:100px">חשבונית</div><div style="font-size:11px;color:#999;margin-top:3px">הקישו להגדלה</div></div></div>
+<div class="row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px"><span class="emo" style="font-size:18px">🏦</span><div style="flex:1"><div style="font-size:15px;font-weight:600;color:#333">שולם {paid} · פועלים</div><div class="meta">שורת בנק מקושרת · {num(-gross)}</div></div><span style="color:#5b6b8a">‹</span></div>
+<div class="card" style="padding:2px 12px;margin-bottom:10px">
+<div class="kv"><span class="k">פרויקט</span><span class="v">בניין מגורים חולון <span style="color:#5b6b8a">‹</span></span></div>
+<div class="kv"><span class="k">קטגוריה</span><span class="v">חומרים <span style="color:#5b6b8a">‹</span></span></div>
+<div style="font-size:12.5px;color:#888;padding:0 0 9px">✦ למה? לפי כלל: חומרי בניין השרון ← חולון</div></div>
+<div class="card" style="padding:2px 12px;margin-bottom:10px">
+<div class="kv"><span class="k">מס׳ חשבונית</span><span class="v"><span class="num">{invno}</span></span></div>
+<div class="kv"><span class="k">מספר הקצאה</span><span class="v"><span class="num">{alloc}</span></span></div></div>
+<div class="card" style="padding:0 12px">
+<div class="act"><span class="ai">⇆</span>פצל בין פרויקטים</div>
+<div class="act"><span class="ai">↪</span>העבר לפרויקט אחר</div>
+<div class="act" style="color:#c62828"><span class="ai" style="color:#c62828">🗑</span>מחק</div></div>
+</div>'''
+
+SCREENS5 = [
+ ("10-transaction-detail","Transaction detail","פרטי הוצאה", plain_phone(detail_inner(8500)), [
+  "<b>Purpose:</b> every number in reports is traceable to a document and/or a bank row. This is the bottom of that trail.",
+  "<b>Header:</b> supplier, net amount (big), VAT + gross beneath, date. Status chips: approved · auto, paid.",
+  "<b>Document thumbnail:</b> tap to enlarge (pinch to zoom).",
+  "<b>Linked bank row</b> (paid 23/09 · Hapoalim) — tap to see the bank line. On cash basis this row is what puts it in P&amp;L.",
+  "<b>Project / category rows:</b> tap to change → opens the Change sheet. <b>✦ Why</b> line explains the rule or AI reason.",
+  "<b>Invoice no. + allocation no.</b> (מספר הקצאה, Israeli tax-authority invoice allocation number), for the accountant.",
+  "<b>Actions:</b> split, move to another project, delete (red, asks for confirmation). Pushed screen: no bottom nav."]),
+]
+
+# ---- 11 split ----
+def splitline(proj, amt, pct):
+    return f'''<div class="card" style="padding:10px;margin-bottom:8px">
+<div style="display:flex;gap:8px;margin-bottom:6px"><div class="field" style="flex:1;height:46px;margin:0;color:#333;justify-content:space-between">{proj}<span style="color:#999">⌄</span></div>
+<div class="field" style="width:118px;height:46px;margin:0;color:#333;font-weight:700;justify-content:center"><span class="num">₪{amt:,}</span></div></div>
+<div style="display:flex;justify-content:space-between;font-size:12.5px;color:#888;padding:0 2px"><span>קטגוריה: חומרים ⌄ <span style="color:#aaa">(כמו בחשבונית)</span></span><span class="num">{pct}%</span></div></div>'''
+split_sheet = f'''<div class="overlay"></div><div class="sheet" style="padding-bottom:26px">
+<div class="grab"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+<div><div style="font-size:19px;font-weight:700;color:#222">פיצול בין פרויקטים</div><div style="font-size:13px;color:#888">חומרי בניין השרון · חומרים</div></div>
+<div style="font-size:20px;font-weight:800;color:#222">{num(12000)}</div></div>
+<div class="seg"><div class="on">סכום</div><div>אחוזים</div></div>
+{splitline("בניין מגורים חולון",7000,"58")}
+{splitline("וילה רעננה",5000,"42")}
+<div style="font-size:15px;color:#5b6b8a;font-weight:600;margin:4px 2px 12px">+ שורה</div>
+<div style="display:flex;justify-content:space-between;align-items:center;background:#eef3ee;border:1.5px solid #b9d1ba;border-radius:12px;padding:11px 12px;margin-bottom:12px;font-size:15px"><span style="color:#335a36;font-weight:600">נותר לשייך</span><span class="pos" style="font-weight:800">✓ <span class="num">₪0</span></span></div>
+<div class="btn pri">שמור פיצול</div>
+</div>'''
+SCREENS5.append(("11-split","Split sheet","פיצול", plain_phone(detail_inner(12000, "10988", "204315877", "24/09"), split_sheet), [
+  "<b>Purpose:</b> divide one invoice across sites, e.g. ₪12,000 of materials delivered to two projects.",
+  "<b>Toggle</b> amount / percent. Each line: project picker + amount (percent shown as helper).",
+  "<b>Category per line</b> defaults to the invoice’s category; can be changed per line.",
+  "<b>+ שורה</b> adds a line. <b>Live remainder:</b> green ₪0 when balanced. <b>Lines must sum to the total</b>; save stays disabled until they do:",
+  '<div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px;direction:rtl;font-size:13px"><div style="display:flex;justify-content:space-between;color:#c62828;font-weight:700;margin-bottom:6px"><span>נותר לשייך</span><span class="num">₪1,500</span></div><div style="background:#c9ccd4;color:#fff;border-radius:8px;text-align:center;padding:7px;font-weight:700">שמור פיצול</div></div><div style="font-size:12px;color:#777;margin-top:4px">Unbalanced state: red remainder, disabled save.</div>',
+  "Opened from the Change sheet or Transaction detail."]))
+
+# ---- 12 unpaid ----
+def unpaid(sup, date, proj, amt, age, hl=False):
+    st = "border:2px solid #5b6b8a" if hl else ""
+    return f'''<div class="row" style="padding:10px 12px;{st}"><div class="top"><span class="name">{sup}</span><span class="num" style="font-weight:700">₪{amt:,}</span></div>
+<div class="meta">{date} · {proj} · <b style="color:#777">{age}</b></div>
+<div style="display:flex;justify-content:flex-end;margin-top:6px"><span style="font-size:14px;font-weight:700;color:#3e4a63;border:1.5px solid #5b6b8a;border-radius:10px;padding:5px 12px">✓ סמן כשולם</span></div></div>'''
+unpaid_inner = f'''<div class="content">
+<div class="topbar" style="margin-bottom:10px"><div class="iconbtn">›</div><div style="flex:1;margin-inline-start:10px"><div class="title" style="font-size:20px">חשבוניות שלא שולמו</div></div></div>
+<div class="card" style="text-align:center;padding:12px;margin-bottom:10px;border-width:2px;border-color:#bbb"><div style="font-size:26px;font-weight:800;color:#222">{num(23400)}</div><div style="font-size:14px;color:#666">ממתין לתשלום · לא נכלל ברווח</div></div>
+{unpaid("מ.ש. הובלות","02/09",'שיפוץ דירה ת"א',6000,"לפני 24 ימים")}
+{unpaid("אבי חשמל","10/09","וילה רעננה",8000,"לפני 16 ימים")}
+{unpaid("חומרי בניין השרון","14/09","בניין מגורים חולון",9400,"לפני 12 ימים", True)}
+</div>''' + nav("")
+paid_sheet = '''<div class="overlay"></div><div class="sheet">
+<div class="grab"></div>
+<div style="font-size:18px;font-weight:700;color:#222">סימון כשולם</div>
+<div style="font-size:13px;color:#888;margin-bottom:12px">חומרי בניין השרון · <span class="num">₪9,400</span></div>
+<div class="lbl">איך שולם?</div>
+<div class="seg" style="margin-bottom:10px"><div>מזומן</div><div class="on">צ׳ק</div><div>אחר</div></div>
+<div class="lbl">תאריך תשלום</div>
+<div class="field" style="color:#333;justify-content:space-between">26/09/2026 <span class="emo" style="color:#999">📅</span></div>
+<div class="btn pri" style="margin-top:4px">שמור</div>
+</div>'''
+SCREENS5.append(("12-unpaid","Unpaid invoices","חשבוניות שלא שולמו", plain_phone(unpaid_inner, paid_sheet), [
+  "<b>Purpose:</b> invoices that have no matching bank payment yet. <b>Cash basis:</b> they count in P&amp;L only once paid.",
+  "<b>Header total:</b> ₪23,400 waiting for payment, not included in profit.",
+  "<b>Rows:</b> supplier, date, project, amount, age (oldest first).",
+  "<b>סמן כשולם</b> opens a small sheet (shown open): cash / cheque / other + payment date. Saving moves it into P&amp;L on that date. If a matching bank row arrives later, it links automatically.",
+  "<b>Entry points:</b> the “3 invoices not paid” line on Upload results, the light link on Home, and the Home menu (☰)."]))
+
+# ---- 01 home v3 ----
+home3_inner = must_replace(home2_inner, '<div class="seg" style="margin-bottom:8px"><div class="on" style="padding:7px 0">החודש</div><div style="padding:7px 0">מתחילת השנה</div></div>',
+  '<div class="seg" style="margin-bottom:8px"><div class="on" style="padding:7px 0">החודש</div><div style="padding:7px 0">חודש קודם</div><div style="padding:7px 0">מתחילת השנה</div></div>')
+for lbl, d in [("הכנסות",'<div class="delta pos"><span class="num">▲ 8%</span></div>'),("הוצאות",'<div class="delta neg"><span class="num">▲ 12%</span></div>'),("רווח/הפסד",'<div class="delta neg"><span class="num">▼ 10%</span></div>')]:
+    import re as _re
+    home3_inner = _re.sub(rf'(<div class="l">{lbl}</div><div class="v">.*?</span></div>)', lambda m: m.group(1) + d, home3_inner, count=1)
+assert home3_inner.count('class="delta') == 3
+home3_inner = must_replace(home3_inner, '7 פריטים ממתינים לאישור<span class="go">‹</span></div>',
+  '7 פריטים ממתינים לאישור<span class="go">‹</span></div><div style="font-size:13px;color:#777;margin:-2px 4px 4px;display:flex;justify-content:space-between"><span>3 חשבוניות לא שולמו · <span class="num">₪23,400</span></span><span style="color:#5b6b8a">‹</span></div>')
+home3_inner = must_replace(home3_inner, '<div class="topbar" style="margin-bottom:8px"><div><div class="title">שלום, יוסי</div>', '<div class="topbar" style="margin:0 0 6px"><div><div class="title" style="font-size:20px">שלום, יוסי</div>')
+home3_inner = home3_inner.replace('class="crow2"><div class="top">', 'class="crow2" style="padding:6px 12px 7px;margin-bottom:5px"><div class="top">')
+home3_inner = must_replace(home3_inner, '<div class="banner" style="padding:9px 12px;margin-bottom:8px;font-size:15px">', '<div class="banner" style="padding:7px 12px;margin-bottom:6px;font-size:15px">')
+SCREENS5.append(("01-home-v3","Home v3 – compare + unpaid","בית · v3", phone(home3_inner), [
+  "<b>Purpose:</b> Home v2 plus month-over-month context and a light path to unpaid invoices.",
+  "<b>Period switcher</b> now has 3 options: this month / previous month / year to date.",
+  "<b>Deltas vs previous month</b> under each big number. Colour = good/bad, not direction: income ▲ green, expenses ▲ red, profit ▼ red.",
+  "<b>Unpaid line</b> under the review banner: 3 unpaid invoices · ₪23,400 → Unpaid list. Deliberately quiet (not part of profit).",
+  "Top 5 + “12 more” + overhead unchanged; totals still include everything (1,310k − 1,110k = 200k)."]))
+
+for fid, en, he, ph, notes in SCREENS5:
+    nh = "".join(f'<div class="n">{n}</div>' for n in notes)
+    body = f'<div class="wrap">{ph}<div class="notes"><h2>{fid[:2]} · {en}</h2><div class="he">{he}</div>{nh}</div></div>'
+    (OUT / f"{fid}.html").write_text(page(body, 794, 920), encoding="utf-8")
+
+# ---- 13 notifications ----
+def lockphone(tm, dt, title, body):
+    return f'''<div class="phone"><div class="lock"><div class="status" style="color:#eee"><span></span><div class="notch"></div><span>▮▮▮ ◔</span></div>
+<div class="tm">{tm}</div><div class="dt">{dt}</div>
+<div class="notif"><div class="hd"><span class="ic">F</span><span style="font-weight:700;color:#444">Flow</span><span style="margin-inline-start:auto">עכשיו</span></div>
+<div class="ti">{title}</div><div class="bd">{body}</div></div>
+<div style="position:absolute;bottom:40px;left:0;right:0;display:flex;justify-content:space-between;padding:0 40px"><span style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.25)"></span><span style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.25)"></span></div>
+<div class="homeind" style="background:#eee"></div></div></div>'''
+row_wide([
+ (lockphone("08:00","יום ראשון, 27 בספטמבר","סיכום שבועי",'רווח <span class="num">₪42,000</span>. וילה רעננה חרגה ב-<span class="num">15%</span> מהתקציב'),
+  "a · Weekly summary · Sunday 08:00", N("<b>Sent every Sunday at 08:00.</b> Last week’s profit + the single most important alert (e.g. a project over budget). Tap → opens Home.")),
+ (lockphone("18:00","יום שלישי, 29 בספטמבר","7 תנועות מחכות לך","בערך 2 דקות"),
+  "b · Review reminder · daily 18:00", N("<b>Max once a day at 18:00, only if items are waiting.</b> Shows count + time estimate to lower friction. Tap → opens Review.")),
+], "13 · Notifications", "Example data · low-fi wireframe · Flow", 916, 1100, "13-notifications")
+
+# ---- overview 5 ----
+cols = ""
+for fid, en, he, ph, notes in SCREENS5:
+    cols += f'<div style="display:flex;flex-direction:column;gap:12px;width:410px"><div style="font-size:18px;font-weight:700;color:#333">{fid[:2]} · {en}</div>{ph}<div class="notes" style="width:410px"><div class="n">{notes[0]}</div></div></div>'
+cols = cols  # order: 10, 11, 12, 01-home-v3
+ov5 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exlabel">Example data · low-fi wireframe · Flow</div>
+<div style="display:flex;gap:32px">{cols}</div></div>'''
+(OUT / "overview-5.html").write_text(page(ov5, 1800, 1100), encoding="utf-8")
+print("ok5")

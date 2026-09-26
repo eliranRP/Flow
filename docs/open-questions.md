@@ -13,8 +13,8 @@ The draft includes company details, VAT status, a VAT rate, categories, a rules 
 Open until the draft is accepted or replaced:
 
 - Whether this set of sections is what ships.
-- The VAT-status enum (`עוסק מורשה`, `עוסק פטור`, `חברה`) and the 18% default rate.
-- Whether Home's `☰` opens this screen.
+- The VAT-status enum (`עוסק מורשה`, `עוסק פטור`, `חברה`) and the 18% default rate. Onboarding, pending approval, draws only `חברה בע״מ` and `עוסק מורשה`.
+- Whether Home's `☰` opens this screen. The unpaid-invoices wireframe, also pending approval, lists `☰` as a way into that list.
 - The auto-approve toggle. [0011](decisions/0011-auto-approve-high-confidence.md) auto-approves by default and rejected an opt-in switch. The draft draws the toggle and says not to build it unless a new decision supersedes 0011.
 
 ## Pricing
@@ -85,6 +85,24 @@ Open, as backlog: the forwarding address.
 
 ## Projects proposed at onboarding
 
-The first-run onboarding wireframe will include a step where Flow proposes projects from recurring clients and the owner confirms them. No rule defines "recurring," and no decision says what confirming a proposal creates.
+[09-onboarding](module-1-project-pnl/screens.md#09-onboarding), pending owner approval, proposes a project for each repeated incoming payer on the Hapoalim file. Rows start checked. The owner can rename, uncheck, or add one. Confirm creates the checked projects. The example rows have 6, 4, 3, and 2 incoming payments. Those counts are the sample, not a threshold.
 
-Open: what counts as a recurring client, and what confirming a proposal writes.
+Open: how many incoming payments, over what period, make a payer "recurring."
+
+## Category on each split line
+
+[11-split](module-1-project-pnl/screens.md#11-split), pending owner approval, draws a category on each line and the annotation says it can differ from the invoice. [Splits](module-1-project-pnl/calculations.md#splits) still copy one category onto every line. A split still does not write a supplier rule.
+
+Open, until that sheet is approved: may two lines of one payment use two categories?
+
+## Delete on transaction detail
+
+[10-transaction-detail](module-1-project-pnl/screens.md#10-transaction-detail), pending owner approval, has `מחק`. The first tap asks for confirmation. The image does not say what a confirmed delete removes.
+
+Open: after confirm, is the bank row, the invoice, or both removed, and does the shekel leave the P&L?
+
+## Owner's given name
+
+Home greets `שלום, {first name}`. The example is `יוסי`. Onboarding as drawn asks for a phone number and company details, not a person's name.
+
+Open: where that given name is captured.
