@@ -37,4 +37,4 @@ A split rule is a [Rule](../module-1-project-pnl/spec.md#data-model). It is appl
 
 The one-project remember toggle stays off on a hand-built split. The recurring control is separate, and it is off until the owner turns it on for that save.
 
-Whether the after-overhead toggle starts on is [open](../open-questions.md#after-overhead-by-default). The wireframes are [11-split-v2](../module-1-project-pnl/screens.md#11-split-v2), [01-home-v4](../module-1-project-pnl/screens.md#01-home-v4), and [02-project-v2](../module-1-project-pnl/screens.md#02-project-v2). They are pending owner approval. Every number on them is example data.
+The switch starts off. [0022](0022-after-overhead-starts-off.md). The wireframes are [11-split-v2](../module-1-project-pnl/screens.md#11-split-v2), [01-home-v4](../module-1-project-pnl/screens.md#01-home-v4), and [02-project-v2](../module-1-project-pnl/screens.md#02-project-v2). They are pending owner approval. Home v4 and project v2 draw the switch on so that state can be reviewed. That is not the default. Every number on them is example data.

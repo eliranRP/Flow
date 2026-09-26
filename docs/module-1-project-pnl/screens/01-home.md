@@ -31,7 +31,7 @@ There is one user, the owner. No other home exists.
 | `{n} חשבוניות לא שולמו` | [Unpaid invoices](../screens.md#12-unpaid). Hidden when `n` is 0. The amount is the unpaid net and is not part of the tiles. |
 | Center `+` | Add sheet. |
 | `☰` | Settings. The screen behind that button is [draft](../settings.md) and is not approved. |
-| `רווח אחרי חלק מהתקורה` | View only. Drawn on [01-home-v4](../screens.md#01-home-v4), pending owner approval. On: each project row shows profit after its share, plus a before · share subline, and the bars are hidden. The overhead row is grey and struck through as allocated in this view. Company tiles stay. See [overhead share](../calculations.md#overhead-share). |
+| `רווח אחרי חלק מהתקורה` | View only. Starts off ([0022](../../decisions/0022-after-overhead-starts-off.md)), one preference with Project and the Settings display option. [01-home-v4](../screens.md#01-home-v4) draws it on and is pending owner approval. On: each project row shows profit after its share, plus a before · share subline, and the bars are hidden. The overhead row is grey and struck through as allocated in this view. Company tiles stay. See [overhead share](../calculations.md#overhead-share). |
 | `פרויקטים` / `לאישור` / `הגדרות` | Those tabs. |
 
 ## Elements and fields
@@ -93,7 +93,7 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 - [ ] `החודש` is the calendar month, `חודש קודם` is the previous calendar month, and `מתחילת השנה` is 1 January through today, `Asia/Jerusalem`.
 - [ ] This month and last month show the comparison arrow on income, expenses, and profit. Color follows whether the change helps. Year to date shows no arrow until that baseline is [decided](../../open-questions.md#year-to-date-comparison).
 - [ ] The unpaid line shows the count and net, opens the unpaid list, and is absent from the tiles.
-- [ ] The after-overhead toggle does not change company tiles or stored lines. On [01-home-v4](../screens.md#01-home-v4) the on state hides the bars, shows a before · share subline, and strikes through the overhead row. Shares follow the ₪100 rule. A period with no project income shows the allocation as unavailable.
+- [ ] The after-overhead toggle starts off and does not change company tiles or stored lines. On [01-home-v4](../screens.md#01-home-v4) the on state hides the bars, shows a before · share subline, and strikes through the overhead row. Shares follow the ₪100 rule. A period with no project income shows the allocation as unavailable.
 - [ ] Suggested rows are absent from the tiles and present in the banner count.
 - [ ] Top 5 follows activity or losses-first. Overhead stays the last row. The collapsed row is the rest.
 - [ ] With no projects and no transactions, the only emphasized action is `+ פרויקט חדש`.
