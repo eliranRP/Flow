@@ -53,4 +53,4 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |
 
-The approved screen set is project, review, add, the projects list, the v2 change sheet, categories, and upload results. Home v3 (three periods and comparison arrows) and the onboarding, transaction detail, split, unpaid, and notification wireframes are in the repo and pending owner approval. Earlier Home and change-sheet images are kept and marked superseded.
+The approved screen set is review, add, the projects list, the v2 change sheet, categories, and upload results. Home v4 (after an overhead share), project v2, and split v2 are in the repo and pending owner approval, as are onboarding, transaction detail, unpaid invoices, and notifications. Earlier Home, project, and split images are kept and marked superseded.

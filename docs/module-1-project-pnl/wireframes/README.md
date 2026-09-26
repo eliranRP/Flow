@@ -8,8 +8,10 @@ Build the **Approved** files. **Superseded** files stay so the earlier layout is
 | --- | --- | --- | --- |
 | [01-home.png](01-home.png) | Home, few projects | v1 | Superseded by [01-home-v2.png](01-home-v2.png) |
 | [01-home-v2.png](01-home-v2.png) | Home, many projects, two periods | v2 | Superseded by [01-home-v3.png](01-home-v3.png) |
-| [01-home-v3.png](01-home-v3.png) | Home, three periods, comparison arrows, unpaid line | v3 | Pending owner approval |
-| [02-project.png](02-project.png) | Project | v1 | Approved |
+| [01-home-v3.png](01-home-v3.png) | Home, three periods, comparison arrows, unpaid line | v3 | Superseded by [01-home-v4.png](01-home-v4.png). Was pending owner approval. |
+| [01-home-v4.png](01-home-v4.png) | Home, after overhead share | v4 | Pending owner approval. Example data. |
+| [02-project.png](02-project.png) | Project | v1 | Superseded by [02-project-v2.png](02-project-v2.png) |
+| [02-project-v2.png](02-project-v2.png) | Project, after overhead share | v2 | Pending owner approval. Example data. |
 | [03-review.png](03-review.png) | Review queue, with Approve all | v1 | Superseded by [03-review-v2.png](03-review-v2.png) |
 | [03-review-v2.png](03-review-v2.png) | Review queue, auto-approved strip | v2 | Approved |
 | [04-add.png](04-add.png) | Add sheet | v1 | Approved |
@@ -25,14 +27,16 @@ Build the **Approved** files. **Superseded** files stay so the earlier layout is
 | [overview-4.png](overview-4.png) | Board of review v2 and upload results v2 | v2 | Approved composite. Both phones are current. |
 | [09-onboarding.png](09-onboarding.png) | First-run onboarding, five phones | v1 | Pending owner approval |
 | [10-transaction-detail.png](10-transaction-detail.png) | Transaction detail | v1 | Pending owner approval |
-| [11-split.png](11-split.png) | Split sheet | v1 | Pending owner approval |
+| [11-split.png](11-split.png) | Split sheet | v1 | Superseded by [11-split-v2.png](11-split-v2.png). Was pending owner approval. |
+| [11-split-v2.png](11-split-v2.png) | Split across active projects, monthly rule | v2 | Pending owner approval. Example data. |
 | [12-unpaid.png](12-unpaid.png) | Unpaid invoices | v1 | Pending owner approval |
 | [13-notifications.png](13-notifications.png) | The two notifications, on the lock screen | v1 | Pending owner approval |
-| [overview-5.png](overview-5.png) | Board of detail, split, unpaid, and Home v3 | v1 | Pending owner approval. All four phones are pending. |
+| [overview-5.png](overview-5.png) | Board of detail, split, unpaid, and Home v3 | v1 | Pending owner approval. All four phones are pending. The split and Home phones are the earlier images. |
+| [overview-6.png](overview-6.png) | Board of split v2, Home v4, and project v2 | v1 | Pending owner approval. Example data. |
 
 What each file shows, and how it behaves, is in [screens.md](../screens.md).
 
-Coming, no PNG yet. Do not treat these names as files: `11-split-v2`, `01-home-v4`, `02-project-v2`. The behavior is Accepted in [0021](../../decisions/0021-shared-costs-and-overhead.md). The layout is not drawn.
+`01-home-v4`, `02-project-v2`, `11-split-v2`, and `overview-6` are drawn and pending owner approval. Every number on them is example data.
 
 ## Versions
 

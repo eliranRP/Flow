@@ -4,12 +4,12 @@ Each section is one wireframe. The detailed spec for each product screen is a se
 
 The phone UI is Hebrew only, right to left. Profit is green, loss is red, and a negative amount uses a minus sign. Income and expense totals on the summary tiles are neutral. The English notes beside the phone in the PNG are annotations for design review. They are not in the product.
 
-Build the approved screens. Superseded screens are kept below and marked. [01-home-v3](#01-home-v3) and screens 09–13 are drawn and **pending owner approval**. Until that approval, do not treat a difference between those images and an accepted decision as a change to the decision.
+Build the approved screens. Superseded screens are kept below and marked. [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2), [11-split-v2](#11-split-v2), and screens 09, 10, 12, and 13 are drawn and **pending owner approval**. Until that approval, do not treat a difference between those images and an accepted decision as a change to the decision.
 
 | Build this | Wireframe notes | Detailed spec |
 | --- | --- | --- |
-| Home | [01-home-v3](#01-home-v3), pending approval. Supersedes [01-home-v2](#01-home-v2). | [screens/01-home.md](screens/01-home.md) |
-| Project | [02-project](#02-project) | [screens/02-project.md](screens/02-project.md) |
+| Home | [01-home-v4](#01-home-v4), pending approval. Supersedes [01-home-v3](#01-home-v3). | [screens/01-home.md](screens/01-home.md) |
+| Project | [02-project-v2](#02-project-v2), pending approval. Supersedes [02-project](#02-project). | [screens/02-project.md](screens/02-project.md) |
 | Review | [03-review-v2](#03-review-v2) | [screens/03-review.md](screens/03-review.md) |
 | Add | [04-add](#04-add) | [screens/04-add.md](screens/04-add.md) |
 | Projects | [05-projects](#05-projects) | [screens/05-projects.md](screens/05-projects.md) |
@@ -23,11 +23,11 @@ Build the approved screens. Superseded screens are kept below and marked. [01-ho
 | --- | --- |
 | First-run onboarding | [09-onboarding](#09-onboarding) |
 | Transaction detail | [10-transaction-detail](#10-transaction-detail) |
-| Split sheet | [11-split](#11-split) |
+| Split sheet | [11-split-v2](#11-split-v2) |
 | Unpaid invoices | [12-unpaid](#12-unpaid) |
 | Notifications | [13-notifications](#13-notifications) |
 
-Coming, no image yet: [11-split-v2](#11-split-v2), [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2). Behavior for those three is Accepted. The layout is not.
+Pending owner approval, now drawn: [11-split-v2](#11-split-v2), [01-home-v4](#01-home-v4), [02-project-v2](#02-project-v2), [overview-6](#overview-6). Every number on those images is example data.
 
 Behavior that these screens illustrate is specified in [spec.md](spec.md).
 
@@ -35,7 +35,7 @@ Behavior that these screens illustrate is specified in [spec.md](spec.md).
 
 ## 01-home-v3 — Home, three periods and unpaid
 
-**Status:** Pending owner approval. This is the Home image that matches [0019](../decisions/0019-home-periods-and-comparison.md).
+**Status:** Superseded by [01-home-v4](#01-home-v4). Kept. It was pending owner approval and did not include the after-overhead switch.
 **Supersedes:** [01-home-v2](#01-home-v2).
 **File:** [wireframes/01-home-v3.png](wireframes/01-home-v3.png)
 
@@ -86,7 +86,7 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 - [ ] The unpaid line shows the count and the net total, opens the unpaid list, and is absent from profit.
 - [ ] The v2 checks in [Home](screens/01-home.md) still hold: top 5, overhead last, suggested rows only in the banner.
 
-[01-home-v4](#01-home-v4) is coming. It adds the view-only toggle for profit after an overhead share. This image does not have it. Company tiles on v3 stay the stored totals.
+[01-home-v4](#01-home-v4) is drawn and pending owner approval. It adds the view-only toggle for profit after an overhead share. This image does not have it. Company tiles on v3 stay the stored totals.
 
 ### Wireframe
 
@@ -100,21 +100,59 @@ The 8%, 12%, and 10% figures are example data on this image. The formula is in [
 
 ## 01-home-v4 — Home, profit after overhead share
 
-**Status:** Coming. No image yet. Not buildable as a layout. The behavior is Accepted in [0021](../decisions/0021-shared-costs-and-overhead.md).
-**Supersedes:** nothing yet. [01-home-v3](#01-home-v3) stays the latest drawn Home.
-**File:** none yet. Do not invent a PNG.
+**Status:** Pending owner approval.
+**Supersedes:** [01-home-v3](#01-home-v3).
+**File:** [wireframes/01-home-v4.png](wireframes/01-home-v4.png)
 
-### What the wireframe has to add
+### Purpose
 
-A view-only toggle `רווח אחרי חלק מהתקורה` on the Home in [01-home-v3](#01-home-v3).
+The Home from v3, with the view-only switch on. Project rows show profit after an overhead share. Company tiles stay the stored totals. Every number is example data for September 2026.
 
-- Off: project rows and the overhead row are the stored profits. This is today's Home.
-- On: each project row shows profit after its income share of overhead for the selected period. The overhead row shows ₪0 and says this view has spread it. Company tiles do not change. Comparison arrows do not change.
-- If the projects have no income in the selected period, the toggle does not switch. The screen says the allocation is unavailable.
-- A project with no income shows a zero share. Its profit stays its own profit.
-- Whether the toggle starts on is [open](../open-questions.md#after-overhead-by-default). Home and the project screen use one preference.
+### Main elements
 
-The formula is [overhead share](calculations.md#overhead-share). The Hebrew label is the copy for this wireframe. It is not on an image yet.
+- Same greeting, three-period switch (`החודש` selected), and company tiles as v3: `הכנסות` ₪1,310,000 `▲ 8%`, `הוצאות` ₪1,110,000 `▲ 12%`, `רווח/הפסד` ₪200,000 `▼ 10%`. The arrows are unchanged because company totals are unchanged.
+- Switch `רווח אחרי חלק מהתקורה`, drawn on.
+- Review banner `7` and unpaid line `3 חשבוניות לא שולמו · ₪23,400`.
+- Project rows have no bars. The big number is profit after the share. The subline is `לפני` the stored profit and `חלק` the share. Example, this month:
+  - `בניין מגורים חולון` ₪66,300 — `לפני ₪80,000 · חלק ₪13,700`
+  - `וילה רעננה` ₪41,800 — `לפני ₪50,000 · חלק ₪8,200`
+  - `מגדל משרדים פ"ת` ₪28,500 — `לפני ₪40,000 · חלק ₪11,500`
+  - `בית פרטי כפר סבא` ₪24,500 — `לפני ₪30,000 · חלק ₪5,500`
+  - `שיפוץ דירה ת"א` −₪12,800 — `לפני −₪10,000 · חלק ₪2,800`
+- Collapsed `עוד 12 פרויקטים` ₪51,700 — `לפני ₪70,000 · חלק ₪18,300`.
+- Overhead row, grey and struck through: `הוצאות כלליות` and −₪60,000, caption `חולק לפרויקטים בתצוגה הזו`.
+
+The shares are ₪60,000 in total. They are the September example overhead, rounded to ₪100, with the leftover ₪100 on `שיפוץ דירה ת"א`. See [overhead share](calculations.md#overhead-share).
+
+### Key interactions
+
+- The switch is view-only. Off restores stored project profits, the bars, and the overhead row as on v3. On uses the shares above. Company tiles and comparison arrows do not move either way.
+- Turning it on does not write transactions.
+- Whether it starts on is [open](../open-questions.md#after-overhead-by-default). Home and the project screen share one preference.
+- If project income in the selected period is 0, the switch does not enter this view. The screen says the allocation is unavailable. That state is not drawn.
+- A project with no income of its own shows share ₪0. None of the example rows are in that state.
+
+### States
+
+Same as [Home](screens/01-home.md), plus the switch. This image is the on state.
+
+### Edge cases
+
+- **Bars.** Hidden while the switch is on. They return when it is off.
+- **Overhead row.** Struck through in this view. Tapping it still opens the overhead screen, which shows the stored bucket.
+- **Rows versus tiles.** After-share project profits, including the collapsed row, sum to the company profit ₪200,000. The struck overhead line is not added again.
+
+### Acceptance criteria
+
+- [ ] Company tiles match v3 and ignore the switch.
+- [ ] With the switch on, each visible project row shows after-share profit and a before · share subline, and no bar.
+- [ ] The overhead row is grey and struck through, labeled as allocated in this view.
+- [ ] Shares are multiples of ₪100 except the one project that absorbs the rounding difference, and they sum to overhead.
+- [ ] Every figure on the image is example data.
+
+### Wireframe
+
+![Home v4, pending owner approval: after-overhead switch on](wireframes/01-home-v4.png)
 
 ### Detailed spec
 
@@ -171,7 +209,7 @@ The example arithmetic, so the tiles can be checked against the rows: top-5 inco
 
 ## 02-project — Project
 
-**Status:** Approved.
+**Status:** Superseded by [02-project-v2](#02-project-v2). Kept. This image has no after-overhead switch.
 **File:** [wireframes/02-project.png](wireframes/02-project.png)
 
 ### Purpose
@@ -203,25 +241,61 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 ### Detailed spec
 
-[Project](screens/02-project.md). Overhead reuses this layout. The budget card is omitted when no budget is set. [02-project-v2](#02-project-v2) is coming and adds the after-overhead toggle. This image does not have it.
+[Project](screens/02-project.md). Overhead reuses this layout. The budget card is omitted when no budget is set. [02-project-v2](#02-project-v2) is drawn and pending owner approval. It adds the after-overhead toggle. This image does not have it.
 
 <a id="02-project-v2"></a>
 
 ## 02-project-v2 — Project, profit after overhead share
 
-**Status:** Coming. No image yet. Not buildable as a layout. The behavior is Accepted in [0021](../decisions/0021-shared-costs-and-overhead.md).
-**Supersedes:** nothing yet. [02-project](#02-project) stays the latest drawn project screen.
-**File:** none yet. Do not invent a PNG.
+**Status:** Pending owner approval.
+**Supersedes:** [02-project](#02-project).
+**File:** [wireframes/02-project-v2.png](wireframes/02-project-v2.png)
 
-### What the wireframe has to add
+### Purpose
 
-The same view-only toggle as [01-home-v4](#01-home-v4), `רווח אחרי חלק מהתקורה`. One preference for both screens.
+The project screen with the same view-only switch as Home. The share is company overhead times this project's share of company income since the project started. Every number is example data.
 
-- The period on this screen stays project to date. The share uses every project's income over all dates, and overhead profit over all dates.
-- Income, own expenses, category bars, and the budget card stay the stored project figures.
-- The profit tile and its margin use profit after the share. A line shows `חלק מהתקורה` and the share.
-- A project with no income shows share ₪0 and its own profit. If no project has any income, the toggle does not switch and the screen says the allocation is unavailable.
-- The overhead screen does not get this toggle. It keeps showing the stored bucket.
+### Main elements
+
+- Same title `וילה רעננה`, client, and `מתחילת הפרויקט`.
+- Switch `רווח אחרי חלק מהתקורה`, drawn on. One preference with Home.
+- Tiles: `הכנסות` ₪900,000 and `הוצאות` ₪720,000 unchanged. Profit tile `רווח · 15.6%` ₪140,000, which is the after-share profit. 140,000 / 900,000 is 15.6%.
+- Card, three rows:
+  - `לפני` ₪180,000
+  - `חלק מהתקורה` −₪40,000
+  - `אחרי` ₪140,000
+- Caption `תקורה × חלק מהכנסות החברה · מתחילת הפרויקט`.
+- Budget card, category bars, and recent transactions are the stored project figures, as on [02-project](#02-project).
+
+The −₪40,000 is example data for a project-to-date share. It is not the ₪8,200 September share on Home. Home uses this month. This screen uses every date since the jobs started.
+
+### Key interactions
+
+- The switch does not move transactions. Off shows the stored profit ₪180,000 and 20% margin, and hides the before / share / after card.
+- Income, own expenses, categories, and the budget card ignore the switch.
+- If no project in the company has income over all dates, the switch does not enter this view. Not drawn.
+- The overhead screen has no switch.
+
+### States
+
+Same as [Project](screens/02-project.md). This image is the on state.
+
+### Edge cases
+
+- **Zero income on this project, income elsewhere.** Share ₪0. Before and after match. Not drawn.
+- **Rounding.** The share follows the ₪100 rule in [calculations](calculations.md#overhead-share). The example ₪40,000 is already a multiple of ₪100.
+
+### Acceptance criteria
+
+- [ ] The switch matches Home's preference.
+- [ ] The card shows before, share, and after. After equals before plus the signed share.
+- [ ] The share is company overhead times this project's share of company income since the project started.
+- [ ] Income, expenses, categories, and budget stay the stored project figures.
+- [ ] Every figure on the image is example data.
+
+### Wireframe
+
+![Project v2, pending owner approval: before, share, and after](wireframes/02-project-v2.png)
 
 ### Detailed spec
 
@@ -700,7 +774,7 @@ Not a product screen. The change sheet and the upload results on this board are 
 
 ## overview-3 — Board of the v2 screens
 
-**Status:** Approved composite. The Home phone is the superseded [01-home-v2](#01-home-v2). The change sheet is current. The three-period Home is [01-home-v3](#01-home-v3), pending owner approval.
+**Status:** Approved composite. The Home phone is the superseded [01-home-v2](#01-home-v2). The change sheet is current. Later Homes are [01-home-v3](#01-home-v3) and [01-home-v4](#01-home-v4).
 **File:** [wireframes/overview-3.png](wireframes/overview-3.png)
 
 ### Purpose
@@ -955,7 +1029,7 @@ This section. There is no separate file until the owner approves the image.
 
 ## 11-split — Split sheet
 
-**Status:** Pending owner approval.
+**Status:** Superseded by [11-split-v2](#11-split-v2). Kept.
 **File:** [wireframes/11-split.png](wireframes/11-split.png)
 
 ### Purpose
@@ -983,7 +1057,7 @@ The annotation on the image also draws the unbalanced state: `נותר לשיי�
 - Each project field opens the same project picker as the change sheet, including search and overhead.
 - `+ שורה` adds a line. At least two lines are required.
 - `שמור פיצול` is enabled only when the remainder is ₪0 (amount mode) or the percents sum to 100 (percent mode). Saving replaces the single project assignment with one counting line per row. Company profit does not change because of the split itself.
-- On this image, saving does not write a rule. The one-project remember toggle is not on this sheet. [0021](../decisions/0021-shared-costs-and-overhead.md) adds a separate recurring control on [11-split-v2](#11-split-v2), which is not drawn yet. It stays off until the owner turns it on.
+- On this image, saving does not write a rule. The one-project remember toggle is not on this sheet. [0021](../decisions/0021-shared-costs-and-overhead.md) adds a separate recurring control, `פצל ככה כל חודש`, on [11-split-v2](#11-split-v2), which is drawn and pending owner approval. It stays off until the owner turns it on.
 
 The image draws a category control on each line, defaulting to the invoice category, and the annotation says a line's category can change. The accepted rule is still one category for every line ([calculations](calculations.md#splits)). Per-line categories stay [open](../open-questions.md#category-on-each-split-line) until this sheet is approved. Until then, every line keeps the invoice category.
 
@@ -1029,23 +1103,64 @@ This section, plus [Splits](calculations.md#splits). There is no separate file u
 
 ## 11-split-v2 — Split across active projects
 
-**Status:** Coming. No image yet. Not buildable as a layout. The behavior is Accepted in [0021](../decisions/0021-shared-costs-and-overhead.md).
-**File:** none yet. Do not invent a PNG.
+**Status:** Pending owner approval.
+**Supersedes:** [11-split](#11-split).
+**File:** [wireframes/11-split-v2.png](wireframes/11-split-v2.png)
 
-### What the wireframe has to add
+### Purpose
 
-On top of [11-split](#11-split):
+Split one payment across jobs, including every active project in one tap, and optionally remember that split for next month. Every number is example data. [0021](../decisions/0021-shared-costs-and-overhead.md).
 
-- An option to split across every active project (`פצל בין כל הפרויקטים הפעילים`). Overhead and finished projects are not targets.
-- Three methods: equal (`שווה`), income share (`לפי חלק מההכנסה`), manual percent or shekels (the amount and percent controls already on v1).
-- A control, off until the owner turns it on: `פצל ככה כל חודש`. Saving with it on writes a split rule. The next payment from that payee arrives already split. Income share recalculates on the calendar month of that later payment.
-- If income share has no income to divide, or there is no active project, that method cannot be saved. The sheet says the allocation is unavailable. It does not fall back to equal.
+### Main elements
 
-Manual lines, the remainder, and one category for every line stay as on v1 and in [calculations](calculations.md#splits). Hebrew strings above are the copy for this wireframe. They are not on an image yet.
+Sheet over the ₪12,000 materials detail (`חומרי בניין השרון`).
+
+- Title `פיצול בין פרויקטים`. Parent `₪12,000`.
+- Method control: `שווה`, `לפי הכנסה` (selected), `ידני`. Manual is percent or amount, as on v1.
+- One-tap button `כל הפרויקטים הפעילים`, drawn as applied.
+- Example lines, which sum to ₪12,000: `בניין מגורים חולון` ₪2,700 (23%), `וילה רעננה` ₪1,600 (13%), and `עוד 15 פרויקטים · ₪7,700`. Category on the visible lines is `חומרים`.
+- Remainder `נותר לשייך` with `✓ ₪0 · 100%`. Save stays off until both are true: nothing left in shekels, and 100 percent.
+- Toggle `פצל ככה כל חודש`, drawn on. That is the recurring split rule.
+- `שמור פיצול`.
+
+### Key interactions
+
+- `שווה` divides the payment across active projects with equal weights.
+- `לפי הכנסה` uses each active project's income in the calendar month of the payment. It recalculates when a later payment arrives under the monthly rule.
+- `ידני` is the amount or percent lines from v1.
+- `כל הפרויקטים הפעילים` fills one line per active project for the selected method. Overhead and finished projects are not included.
+- `פצל ככה כל חודש` is off until the owner turns it on. On writes the split rule. It does not turn on `לזכור לספק הזה`.
+- If income share has no income, or there is no active project, that method cannot be saved. The sheet does not fall back to equal. That state is not drawn.
+
+### States
+
+**Normal.** Remainder ₪0 and 100%, save enabled, as drawn.
+
+**Partial.** Remainder not zero, or percents not 100. The remainder is red and save is disabled, as on v1.
+
+**Error and offline.** Same as [11-split](#11-split).
+
+### Edge cases
+
+- **One active project.** The button puts the whole payment on that project.
+- **Zero share.** A project with no income is omitted from an income-share split. The other lines still sum to the parent.
+- **Monthly rule.** Equal uses whoever is active when the next payment arrives. Income share uses that payment's month. Manual stores the proportions.
+
+### Acceptance criteria
+
+- [ ] The method control offers equal, by income, and manual percent or amount.
+- [ ] One tap targets every active project.
+- [ ] Save is impossible until the remainder is ₪0 and the percents are 100%.
+- [ ] `פצל ככה כל חודש` is the recurring rule, and it is off unless the owner turns it on.
+- [ ] Every figure on the image is example data.
+
+### Wireframe
+
+![Split v2, pending owner approval: by income, all active projects, monthly rule](wireframes/11-split-v2.png)
 
 ### Detailed spec
 
-[Splits](calculations.md#splits) and [largest remainder](calculations.md#largest-remainder).
+[Splits](calculations.md#splits). Payment lines still sum in agorot. The ₪100 rounding rule is only for the overhead view.
 
 <a id="12-unpaid"></a>
 
@@ -1217,4 +1332,35 @@ None. This file is a board, not a screen.
 ### Detailed spec
 
 Not a product screen. The four phones are specified in the sections above.
+
+<a id="overview-6"></a>
+
+## overview-6 — Board of split v2, Home v4, and project v2
+
+**Status:** Pending owner approval. Composite of three phones that are themselves pending.
+**File:** [wireframes/overview-6.png](wireframes/overview-6.png)
+
+### Purpose
+
+One picture of the shared-cost split and the after-overhead view. Every number is example data.
+
+### Main elements
+
+Labeled `Example data · low-fi wireframe · Flow`. Three phones:
+
+1. `11-split-v2` — method `לפי הכנסה`, all active projects, remainder `₪0 · 100%`, `פצל ככה כל חודש` on.
+2. `01-home-v4` — after-overhead switch on, company tiles unchanged, overhead row struck through.
+3. `02-project-v2` — the same switch, and the before / share / after card.
+
+### Key interactions
+
+None. This file is a board, not a screen.
+
+### Wireframe
+
+![Overview board, pending owner approval: split v2, Home v4, project v2](wireframes/overview-6.png)
+
+### Detailed spec
+
+Not a product screen. The three phones are specified above.
 

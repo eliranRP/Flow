@@ -798,3 +798,94 @@ ov5 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exla
 <div style="display:flex;gap:32px">{cols}</div></div>'''
 (OUT / "overview-5.html").write_text(page(ov5, 1800, 1100), encoding="utf-8")
 print("ok5")
+
+# ---- batch 6: shared costs / overhead view. Example data, September 2026. ----
+# Overhead cost ₪60,000. Income shares rounded to ₪100; the ₪100 remainder goes to שיפוץ דירה ת"א.
+SHARES = [
+    ("בניין מגורים חולון", 80000, 13700),
+    ("וילה רעננה", 50000, 8200),
+    ('מגדל משרדים פ"ת', 40000, 11500),
+    ("בית פרטי כפר סבא", 30000, 5500),
+    ('שיפוץ דירה ת"א', -10000, 2800),
+]
+assert sum(s for _, _, s in SHARES) + 18300 == 60000
+
+def crow4(name, before, share):
+    after = before - share
+    return f'''<div class="crow2" style="padding:6px 12px 6px;margin-bottom:5px"><div class="top"><span class="name">{name}</span>{num(after,"pl")}</div>
+<div style="font-size:11.5px;color:#888;margin-top:1px">לפני {num(before)} · חלק {num(share)}</div></div>'''
+
+home4_inner = f'''<div class="content">
+<div class="topbar" style="margin:0 0 6px"><div><div class="title" style="font-size:20px">שלום, יוסי</div><div class="sub">סיכום החברה · 17 פרויקטים פעילים · ספטמבר 2026</div></div><div class="iconbtn">☰</div></div>
+<div class="seg" style="margin-bottom:8px"><div class="on" style="padding:7px 0">החודש</div><div style="padding:7px 0">חודש קודם</div><div style="padding:7px 0">מתחילת השנה</div></div>
+<div class="kpis v2" style="margin-bottom:8px">
+<div class="kpi"><div class="l">הכנסות</div><div class="v">{num(1310000)}</div><div class="delta pos"><span class="num">▲ 8%</span></div></div>
+<div class="kpi"><div class="l">הוצאות</div><div class="v">{num(1110000)}</div><div class="delta neg"><span class="num">▲ 12%</span></div></div>
+<div class="kpi big"><div class="l">רווח/הפסד</div><div class="v">{num(200000,"pl")}</div><div class="delta neg"><span class="num">▼ 10%</span></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;background:#f3f4f7;border-radius:12px;padding:8px 12px;margin-bottom:6px">
+<div style="flex:1;font-size:14px;font-weight:700;color:#333">רווח אחרי חלק מהתקורה</div><div class="toggle on2"><span class="ck">✓</span></div></div>
+<div class="banner" style="padding:7px 12px;margin-bottom:6px;font-size:15px"><span class="dot" style="width:26px;height:26px">7</span>7 פריטים ממתינים לאישור<span class="go">‹</span></div>
+<div style="font-size:13px;color:#777;margin:-2px 4px 4px;display:flex;justify-content:space-between"><span>3 חשבוניות לא שולמו · {num(23400)}</span><span style="color:#5b6b8a">‹</span></div>
+<div class="sect" style="margin:6px 2px 6px;align-items:center"><span>פרויקטים · 5 המובילים</span><div class="sortpill"><span class="on">לפי פעילות</span><span>הפסד קודם</span></div></div>
+{"".join(crow4(*p) for p in SHARES)}
+<div class="crow2" style="padding:8px 12px;margin-bottom:5px;background:#f7f7f7"><div class="top"><span style="font-weight:600;color:#555;font-size:15px">עוד 12 פרויקטים</span>{num(51700,"pl")}</div>
+<div style="font-size:11.5px;color:#888;margin-top:1px">לפני {num(70000)} · חלק {num(18300)}</div></div>
+<div class="crow2" style="background:#ececec;border-style:dashed;padding:8px 12px;opacity:.55"><div class="top"><span class="name" style="font-size:15px;text-decoration:line-through;color:#777">הוצאות כלליות</span><span class="num" style="text-decoration:line-through;color:#777">−₪60,000</span></div>
+<div style="font-size:11.5px;color:#888;margin-top:2px">חולק לפרויקטים בתצוגה הזו</div></div>
+</div>''' + nav("home")
+
+# Project v2. ₪40,000 share is example data for project-to-date, not the September Home share.
+proj2_inner = proj_inner.replace(
+    '<div class="kpi big"><div class="l">רווח · 20%</div><div class="v">' + num(180000, "pl") + '</div></div>\n</div>',
+    '<div class="kpi big"><div class="l">רווח · 15.6%</div><div class="v">' + num(140000, "pl") + '</div></div>\n</div>'
+    + '''<div style="display:flex;align-items:center;gap:10px;background:#f3f4f7;border-radius:12px;padding:8px 12px;margin:-4px 0 8px">
+<div style="flex:1;font-size:14px;font-weight:700;color:#333">רווח אחרי חלק מהתקורה</div><div class="toggle on2"><span class="ck">✓</span></div></div>
+<div class="card" style="margin-bottom:10px;padding:8px 12px">
+<div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0"><span style="color:#666">לפני</span>''' + num(180000) + '''</div>
+<div style="display:flex;justify-content:space-between;font-size:14px;padding:4px 0;border-top:1px solid #eee"><span style="color:#666">חלק מהתקורה</span>''' + num(-40000) + '''</div>
+<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0;border-top:1px solid #eee"><span>אחרי</span>''' + num(140000, "pl") + '''</div>
+<div style="font-size:11.5px;color:#888">תקורה × חלק מהכנסות החברה · מתחילת הפרויקט</div></div>''',
+    1,
+)
+
+split2_sheet = f'''<div class="overlay"></div><div class="sheet" style="padding-bottom:18px">
+<div class="grab"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+<div><div style="font-size:18px;font-weight:700;color:#222">פיצול בין פרויקטים</div><div style="font-size:12.5px;color:#888">חומרי בניין השרון · חומרים</div></div>
+<div style="font-size:20px;font-weight:800;color:#222">{num(12000)}</div></div>
+<div class="seg" style="margin-bottom:8px"><div style="padding:7px 0">שווה</div><div class="on" style="padding:7px 0">לפי הכנסה</div><div style="padding:7px 0">ידני</div></div>
+<div class="btn sec" style="height:44px;margin-bottom:8px;font-size:15px">✓ כל הפרויקטים הפעילים</div>
+{splitline("בניין מגורים חולון",2700,"23")}
+{splitline("וילה רעננה",1600,"13")}
+<div style="font-size:14px;color:#5b6b8a;font-weight:600;margin:0 2px 8px">עוד 15 פרויקטים · {num(7700)}</div>
+<div style="display:flex;justify-content:space-between;align-items:center;background:#eef3ee;border:1.5px solid #b9d1ba;border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:14px"><span style="color:#335a36;font-weight:600">נותר לשייך</span><span class="pos" style="font-weight:800">✓ <span class="num">₪0</span> · <span class="num">100%</span></span></div>
+<div style="display:flex;align-items:center;gap:10px;background:#f3f4f7;border-radius:12px;padding:8px 12px;margin-bottom:8px"><div style="flex:1;font-size:14px;font-weight:600;color:#333">פצל ככה כל חודש</div><div class="toggle on2"><span class="ck">✓</span></div></div>
+<div class="btn pri">שמור פיצול</div>
+</div>'''
+
+SCREENS6 = [
+ ("11-split-v2", "Split across active projects", "פיצול · v2", plain_phone(detail_inner(12000, "10988", "204315877", "24/09"), split2_sheet), [
+  "<b>Example data.</b> Method: equal / by income (selected) / manual % or ₪.",
+  "<b>One tap:</b> כל הפרויקטים הפעילים fills every active project.",
+  "<b>Remainder</b> must reach ₪0 and 100% before save.",
+  "<b>פצל ככה כל חודש</b> saves a recurring split rule. Income share recalculates each month."]),
+ ("01-home-v4", "Home – after overhead share", "בית · v4", phone(home4_inner), [
+  "<b>Example data.</b> Switch on: each row is profit after its overhead share, with a before · share subline. Bars hidden.",
+  "<b>Overhead row</b> is grey and struck through: allocated in this view only. Company tiles stay ₪1,310,000 / ₪1,110,000 / ₪200,000.",
+  "Shares round to ₪100. The ₪100 difference in this example sits on שיפוץ דירה ת״א so the shares sum to ₪60,000."]),
+ ("02-project-v2", "Project – after overhead share", "פרויקט · v2", phone(proj2_inner), [
+  "<b>Example data.</b> Same switch. Card: before ₪180,000, share −₪40,000, after ₪140,000.",
+  "Share = company overhead × this project's share of company income since the project started. The ₪40,000 is an example, not the September Home share."]),
+]
+for fid, en, he, ph, notes in SCREENS6:
+    nh = "".join(f'<div class="n">{n}</div>' for n in notes)
+    body = f'<div class="wrap">{ph}<div class="notes"><h2>{fid[:2]} · {en}</h2><div class="he">{he}</div>{nh}</div></div>'
+    (OUT / f"{fid}.html").write_text(page(body, 794, 920), encoding="utf-8")
+cols = ""
+for fid, en, he, ph, notes in SCREENS6:
+    cols += f'<div style="display:flex;flex-direction:column;gap:12px;width:410px"><div style="font-size:18px;font-weight:700;color:#333">{fid[:2]} · {en}</div>{ph}<div class="notes" style="width:410px"><div class="n">{notes[0]}</div></div></div>'
+ov6 = f'''<div style="position:relative;padding:60px 32px 32px"><div class="exlabel">Example data · low-fi wireframe · Flow</div>
+<div style="display:flex;gap:32px">{cols}</div></div>'''
+(OUT / "overview-6.html").write_text(page(ov6, 1358, 1100), encoding="utf-8")
+print("ok6")
