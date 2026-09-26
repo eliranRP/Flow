@@ -1,12 +1,18 @@
 # UI directions — Module 1
 
-The current direction is Mercury-inspired. The palette is **pending**: Graphite, Cobalt, or Petrol. Low-fi wireframes in [../wireframes](../wireframes/README.md) stay the screen spec until a direction is accepted.
+The chosen direction is violet with a coloured top band ([0023](../../decisions/0023-violet-coloured-top-band.md)). Light-mode accent `#7B3FE4`. Home has a solid violet band with rounded bottom corners, holding the wordmark, the greeting, the hero profit, and the income and expense line. Text on the band is white. Secondary text on the band is a light lilac. The page below the band is pure white `#FFFFFF`.
 
-Every number on these boards is example data for September 2026. The after-overhead switch is off, which is the default ([0022](../../decisions/0022-after-overhead-starts-off.md)), so the rows are stored project profit and overhead is still its own line. Company profit on the headline is ₪200,000.
+The accent is also on the `+` button, the active tab, the tinted pending card, and the period pill. The profit delta sits in a small white pill: a red `▼` or a green `▲`.
 
-The English caption above each phone is a design label. It is not product copy.
+The font is Rubik. Hero and titles are 600, body is 500, hints are 400, and the wordmark is 700.
 
-## Current direction
+A light and dark design system, and hi-fi screens, are not in this folder yet. The low-fi wireframes in [../wireframes](../wireframes/README.md) stay the screen spec until those images land. No image in this folder is the chosen direction.
+
+Every number on the boards below is example data for September 2026. Those boards are superseded. The English caption above a phone is a design label. It is not product copy.
+
+## Superseded — Mercury-inspired P1, P2, P3
+
+Superseded by [0023](../../decisions/0023-violet-coloured-top-band.md). Kept. Too busy, and IBM Plex was too stiff.
 
 | File | What it is |
 | --- | --- |
@@ -32,7 +38,7 @@ Alternative: Assistant.
 
 ### Palettes
 
-Choice pending. Each text color below meets WCAG AA (4.5:1) on that palette's background and on white.
+Superseded. Each text color below meets WCAG AA (4.5:1) on that palette's background and on white.
 
 **P1 Graphite.** Accent `#1D1E26`, ink `#1D1E26`, secondary `#565866`, muted `#6E7080`, background `#F6F6F8`, line `#E6E6EC`, good `#12733D`, bad `#C0312B`, warning `#8F5A00`.
 
@@ -65,9 +71,9 @@ Taken from Design Motion's public patterns, so the screens do not drift into gen
 - A positive profit is ink. Green is only for a good delta.
 - A takeaway headline sits above the list.
 
-## Superseded
+## Superseded — styles A, B, and C
 
-Styles A, B, and C are superseded by the Mercury direction. The files stay.
+Superseded. The files stay. A, B, and C were rejected before the Mercury set, and the Mercury set was rejected in [0023](../../decisions/0023-violet-coloured-top-band.md).
 
 | File | Direction | Status |
 | --- | --- | --- |

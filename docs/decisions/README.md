@@ -49,3 +49,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0020](0020-capture-from-the-phone.md) | 2026-09-26 | Accepted | Multi-photo and files on the phone; Android share target only |
 | [0021](0021-shared-costs-and-overhead.md) | 2026-09-26 | Accepted | Shared project costs are split; true overhead stays overhead, with a view-only share |
 | [0022](0022-after-overhead-starts-off.md) | 2026-09-26 | Accepted | The after-overhead switch starts off, so the default numbers match the bank |
+| [0023](0023-violet-coloured-top-band.md) | 2026-09-26 | Accepted | Visual direction: violet with a coloured top band |
