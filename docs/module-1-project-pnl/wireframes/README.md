@@ -48,7 +48,8 @@ A replacement keeps the stem and adds `-v2`, `-v3`, and so on. Do not overwrite 
 | File | Role |
 | --- | --- |
 | [source/gen.py](source/gen.py) | Writes one HTML file per screen into `source/`. |
-| [source/hifi.py](source/hifi.py) | Writes the three Home style directions. The PNGs land in [../design](../design/README.md). |
+| [source/hifi.py](source/hifi.py) | Writes the Mercury Home directions and the font-reference board. The PNGs land in [../design](../design/README.md). |
+| [source/palettes.py](source/palettes.py) | Type scale, spacing, radii, and the Graphite, Cobalt, and Petrol palettes. |
 | [source/render.sh](source/render.sh) | Screenshots those HTML files with headless Chrome. Wireframes land in this folder. Style names land in `design/`. |
 
 From `source/`:
@@ -58,6 +59,6 @@ python3 gen.py
 bash render.sh
 ```
 
-`render.sh` with no arguments renders every name, including `14-settings` and the four style files. Pass names to render a subset (`bash render.sh 14-settings`). Phone pages are captured at 794×920 CSS pixels. Boards: `overview` 2274×1100, `overview-2` and `overview-6` 1358×1100, `overview-3` and `overview-4` and `13-notifications` 916×1100, `09-onboarding` 2274×1180, `overview-5` 1800×1100. Style phones are 460×980. `style-overview` is 1480×1020. Device scale is 2.
+`render.sh` with no arguments renders every name, including `14-settings`, the superseded style files, and the Mercury boards. Pass names to render a subset (`bash render.sh ui-mercury-p1`). Phone pages are captured at 794×920 CSS pixels. Boards: `overview` 2274×1100, `overview-2` and `overview-6` 1358×1100, `overview-3` and `overview-4` and `13-notifications` 916×1100, `09-onboarding` 2274×1180, `overview-5` 1800×1100. Style and Mercury phones are 460×980. `style-overview` and `ui-mercury-overview` are 1480×1020. `ui-refs` is 1100×720. Device scale is 2.
 
 `gen.py` is the generator that produced this set. `render.sh` writes into the parent `wireframes/` directory so the script runs from this repo. The copy it was adapted from wrote PNGs into `/workspace/wireframes-pnl`.

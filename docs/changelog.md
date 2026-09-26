@@ -2,6 +2,18 @@
 
 ## 2026-09-26
 
+The UI direction moves to a Mercury-inspired Home. Styles A, B, and C are superseded. Their files stay. The palette is still pending. Every number is example data.
+
+- [ui-mercury-p1.png](module-1-project-pnl/design/ui-mercury-p1.png), [ui-mercury-p2.png](module-1-project-pnl/design/ui-mercury-p2.png), and [ui-mercury-p3.png](module-1-project-pnl/design/ui-mercury-p3.png) are Graphite, Cobalt, and Petrol. [ui-mercury-overview.png](module-1-project-pnl/design/ui-mercury-overview.png) shows all three. [ui-refs.png](module-1-project-pnl/design/ui-refs.png) records the reference fonts.
+- Font: IBM Plex Sans Hebrew, plus IBM Plex Sans for tabular numerals and the shekel sign. Alternative: Assistant.
+- Type 12/13/15/17/20/40. Spacing 4/8/12/16/20/24/32/40. Radius 4/8/12/16/full, with cards at 12 and buttons at 8.
+- Text colors meet WCAG AA on each background and on white.
+- Reference fonts from live CSS: Mercury uses Arcadia, Morning uses Ploni and Ping (Assistant as fallback), RiseUp uses Simpler Pro. Flow does not ship those faces.
+- Rules from Design Motion's public patterns: no decorative gradients, no emoji, no identical stat cards, one accent about twice per screen, hairline borders, an arrow or sign with the color, positive profit in ink with green only on a good delta, and a takeaway above the list.
+- `wireframes/source/hifi.py`, `palettes.py`, and `render.sh` produce this set.
+
+## 2026-09-26
+
 Settings wireframe and the first UI directions. The owner's style choice is pending. Every number is example data.
 
 - [14-settings.png](module-1-project-pnl/wireframes/14-settings.png) is pending owner approval. Company details, phone sign-in, Bank Hapoalim with the last statement date and upload, links to Categories and Projects, recurring split rules with edit and delete, the two notifications as toggles, an auto-approve toggle, the after-overhead default (off, [0022](decisions/0022-after-overhead-starts-off.md)), Excel and CSV export, log out, and a version line.
