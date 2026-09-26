@@ -66,3 +66,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0037](0037-supabase-pilot.md) | 2026-09-26 | Accepted | Pilot on Supabase Free in Frankfurt; Pro at the first customer or limit. Supersedes the D1 plan |
 | [0038](0038-stack.md) | 2026-09-26 | Accepted | TypeScript, React, Vite, and Supabase Edge Functions |
 | [0039](0039-pilot-defaults.md) | 2026-09-26 | Accepted | Pilot defaults: supabase.co on the Google screen, photos in Storage, Pro trigger as in 0037 |
+| [0040](0040-tailwind-v4.md) | 2026-09-26 | Accepted | Styling is Tailwind CSS v4, mapped from the design tokens. Replaces the plain-CSS line in 0038 |

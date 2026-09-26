@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0039](../decisions/0039-pilot-defaults.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0040](../decisions/0040-tailwind-v4.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
 
 ## Goal
 

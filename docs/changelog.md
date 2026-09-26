@@ -2,6 +2,10 @@
 
 ## 2026-09-26
 
+Decision [0040](decisions/0040-tailwind-v4.md), Accepted. Styling is Tailwind CSS v4. This replaces the plain-CSS line in [0038](decisions/0038-stack.md). The design tokens in `design/system/implementation-tokens.css` are mapped into `@theme`. Screen code uses those values. RTL uses logical utilities and `dir="rtl"`. Dark mode uses the same tokens. Vaul stays. No component kit with its own look. [tech-plan.md](tech/tech-plan.md) §1.4.1 and task P0-5 record the setup, including a lint rule against arbitrary values. The implementation guide notes how the tokens are consumed.
+
+## 2026-09-26
+
 Decisions [0037](decisions/0037-supabase-pilot.md), [0038](decisions/0038-stack.md), and [0039](decisions/0039-pilot-defaults.md), all Accepted. The current technical plan is [tech-plan.md](tech/tech-plan.md). The Cloudflare version is [tech-plan.v1-cloudflare.md](tech/tech-plan.v1-cloudflare.md), superseded.
 
 - **0037.** The pilot runs on Supabase Free in Frankfurt: Postgres with row-level security, Auth with Google, Storage, Edge Functions, `pg_cron`, and a `pgmq` queue. Move to Supabase Pro ($25 a month) at the first paying customer or the first technical limit (database 300 MB, storage 750 MB, egress 3 GB a month, a nightly dump of about 100 MB, or about 15–20 active companies), whichever comes first. PWA static files are free on Cloudflare. Nightly encrypted backups go to Cloudflare R2, with a monthly restore test, because Free has no backups. This supersedes the Cloudflare D1 recommendation. It refines [0034](decisions/0034-cost-and-load-limits.md): the $5 a month cap holds for the pilot; Pro is about $27 a month once growing.
