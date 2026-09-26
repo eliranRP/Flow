@@ -58,3 +58,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0029](0029-pwa-install-prompt.md) | 2026-09-26 | Accepted | PWA install prompt after the first successful report; Android and iPhone variants |
 | [0030](0030-confirmation-sheets.md) | 2026-09-26 | Accepted | Confirmation sheets for delete, archive, hide, and a two-step merge |
 | [0031](0031-logo.md) | 2026-09-26 | Accepted | Flow wordmark and the S1 app icon |
+| [0032](0032-home-hero-stays-company-net-profit.md) | 2026-09-26 | Accepted | With the after-overhead switch on, Home's big number stays company net profit |
