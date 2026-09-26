@@ -3,6 +3,8 @@
 **Date:** 2026-09-26
 **Status:** Accepted
 
+[0011](0011-auto-approve-high-confidence.md) decides what happens to a high-confidence row. This record stays Accepted for confirm-not-type.
+
 ## Context
 
 Classifying every bank row by typing a project and a category will not happen in a truck between site visits. The owner will abandon a queue that feels like data entry. The same suppliers repeat: a timber yard is almost always materials on a known site.
@@ -12,7 +14,7 @@ Classifying every bank row by typing a project and a category will not happen in
 The product suggests a project and a category. The owner confirms. The daily operation is a tap, not a form.
 
 - Suggestion order: link the row to an existing invoice (amount, date, supplier), then apply a learned rule, then an AI guess. A deposit from a client is suggested onto that client's project.
-- High confidence means a matched invoice or a learned rule. Those items are pre-approved and can be cleared with "Approve all". An optional setting auto-approves them. Whether that setting is on by default is an [open question](../open-questions.md).
+- High confidence means a matched invoice or a learned rule. Those items are auto-approved and skip the review queue. See [0011](0011-auto-approve-high-confidence.md).
 - Other items go to the review queue (`לאישור`). Actions are Approve, Change, and Split.
 - Change opens a bottom sheet. The owner picks a project and a category (two taps) and saves. "Remember for this supplier" (`לזכור לספק הזה`) is on by default and creates a rule: this supplier or counterparty maps to that project and category.
 - The next document or statement row from that supplier uses the rule, so it does not return to the queue as an unknown.

@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for the first module. Screen-by-screen fields, empty states, and edge cases are not written yet; each wireframe in [screens.md](screens.md) has a `Detailed spec: TODO` subsection, and the open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0014](../decisions/0014-optional-project-budget.md).
 
 ## Goal
 
@@ -19,7 +19,7 @@ The owner should be able to answer "am I making money?" for the company in a few
 
 Owners of small and mid-size Israeli contractor businesses. They are on site most of the day, so the product is mobile first: Hebrew, right to left, ₪, bottom navigation in the thumb zone, large tap targets. [0002](../decisions/0002-poc-targets-construction-contractors.md), [0005](../decisions/0005-mobile-first.md).
 
-An office-manager role is not defined yet. See [open questions](../open-questions.md).
+The proof of concept is single-user. That user is the business owner. There are no roles and no permissions. An office-manager role can come later. [0013](../decisions/0013-single-user-owner.md).
 
 ## UX principle
 
@@ -43,7 +43,7 @@ Amounts on screen are **net of VAT**. VAT is stored and shown separately. The ow
 
 Version 1 is cash basis. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 
-A bank or card row is what makes money count. An invoice is a supporting document linked to that row. Cash and cheques count when the owner records them and marks them paid.
+A Bank Hapoalim (`בנק הפועלים`) statement row is what makes money count in the proof of concept. An invoice is a supporting document linked to that row. Cash and cheques count when the owner records them and marks them paid. [0012](../decisions/0012-bank-hapoalim-first.md).
 
 An invoice with no matching payment is **unpaid**. It stays out of P&L until a later statement row matches it, or the owner marks it paid. Unpaid invoices remain visible so the owner can see what is still open.
 
@@ -58,10 +58,10 @@ Three paths, all opened from the center **+** button (`הוספה`).
 | Path | Label | What happens |
 | --- | --- | --- |
 | Invoice photo or PDF | `צלם חשבונית` | The product reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate. It keeps the Israel invoice allocation number (`חשבונית ישראל`) when the document has one. The document waits to be linked to a payment. |
-| Bank or credit-card statement | `העלה דוח בנק/אשראי` | Excel or CSV. Each row becomes a transaction. Own-account transfers are removed. Rows are matched and classified as below. |
+| Bank statement | `העלה דוח בנק/אשראי` | Excel or CSV from Bank Hapoalim (`בנק הפועלים`). Each row becomes a transaction. Own-account transfers are removed. Rows are matched and classified as below. |
 | Manual entry | `הזנה ידנית` | Fallback for cash and cheques: amount, project, and category. This is the path that marks money as paid when there will never be a statement row. |
 
-Which bank file layouts are parsed first is an [open question](../open-questions.md). The Leumi file name on the upload wireframe is example data.
+The proof of concept parses Hapoalim files only. Other banks, and credit-card company files, come after the proof of concept. [0012](../decisions/0012-bank-hapoalim-first.md). When credit-card statement support starts is an [open question](../open-questions.md). The add-sheet label still says bank and credit (`בנק/אשראי`), and the upload wireframe uses a Leumi file name; both are earlier example art, not the bank to build.
 
 ## Matching, confidence, and review
 
@@ -73,7 +73,7 @@ For each statement row, in order:
 
 A deposit from a client is suggested onto that client's project.
 
-**High confidence** means step 1 or step 2 matched. The row is pre-approved. The owner can clear those rows with "Approve all" (`אשר הכל`). An optional setting auto-approves them instead. Whether auto-approve is the default is an [open question](../open-questions.md).
+**High confidence** means step 1 or step 2 matched. Those rows are auto-approved. They skip the review queue and count in reports immediately. The owner gets a short summary of what was auto-approved and can reopen any item and change it. [0011](../decisions/0011-auto-approve-high-confidence.md).
 
 Anything else goes to the review queue (`לאישור`), one card at a time.
 
@@ -84,7 +84,7 @@ Anything else goes to the review queue (`לאישור`), one card at a time.
 | Remember | `לזכור לספק הזה` | On by default when changing. Writes a rule: this supplier maps to the chosen project and category. Later rows from that supplier take step 2 and skip the queue. |
 | Split | `פצל בין פרויקטים` | One transaction across projects, by amount or by percent. |
 | Skip | `דלג` | Leave the card for later. It stays unapproved and out of the reports. |
-| Approve all | `אשר הכל` | Clears the high-confidence set in one tap. |
+| Reopen | — | From the auto-approve summary. Opens an already approved item in the change sheet. |
 
 The change sheet shows the rule it will write (supplier → project · category) while the toggle is on, so a wrong memory is visible before save.
 
@@ -120,7 +120,7 @@ Enough structure for the proof of concept. This is not a chart of accounts.
 
 **Company.** VAT id, VAT status (whether the business is registered for VAT, so net-vs-gross display and the VAT column stay meaningful).
 
-**Project.** Name, code, status (`active` or `finished`), optional client, optional budget. One built-in Overhead record represents `הוצאות כלליות`. The owner does not delete it. Budget versus actual is shown when a budget is set; whether budget is required in the proof of concept is an [open question](../open-questions.md). The current spec and the create sheet treat it as optional.
+**Project.** Name, code, status (`active` or `finished`), optional client, optional budget. One built-in Overhead record represents `הוצאות כלליות`. The owner does not delete it. Budget is optional. Budget versus actual appears on the project screen only when a budget is set; with no budget, that card is omitted. [0014](../decisions/0014-optional-project-budget.md).
 
 **Category.** Type (`income` or `expense`), name, order, hidden flag.
 
@@ -151,6 +151,8 @@ A Hashavshevet-compatible format is a later export, not the proof of concept. [0
 - Progress billing and retention.
 - Category sub-groups.
 - Accrual basis.
+- Statement files from banks other than Bank Hapoalim (`בנק הפועלים`), and credit-card company statement files. [0012](../decisions/0012-bank-hapoalim-first.md).
+- Roles and permissions. The proof of concept is the owner alone. [0013](../decisions/0013-single-user-owner.md).
 
 ## Success metrics
 

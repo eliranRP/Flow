@@ -2,38 +2,28 @@
 
 These are not decisions. When one is settled, add a numbered decision record, point the question at it, and update the [changelog](changelog.md).
 
-## Auto-approve high-confidence items
-
-A matched invoice or a learned supplier rule is high confidence. Those items are pre-approved and can be cleared together with "Approve all". An auto-approve setting would let them count without that tap.
-
-Open: is auto-approve on by default, or off until the owner opts in?
-
-## Which Israeli bank statements come first
-
-Statement upload accepts Excel and CSV. The upload wireframe uses a Leumi file name as example data only.
-
-Open: which banks' export formats does the proof of concept parse first?
+Settled on 2026-09-26 and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)).
 
 ## Settings screen
 
 `הגדרות` is in the bottom navigation, and Categories is reached from Settings. The Settings screen itself is not wireframed.
 
-Open: what else lives on Settings (company profile, VAT status, export, the auto-approve switch, connected files)?
+Open: what else lives on Settings (company profile, VAT status, export, connected files)? Auto-approve is not a setting. It is the default, per [0011](decisions/0011-auto-approve-high-confidence.md).
 
 ## Per-screen specification
 
-[screens.md](module-1-project-pnl/screens.md) describes each wireframe. It does not yet specify fields, validation, empty states, loading and error states, or edge cases. Each screen has a `Detailed spec: TODO` subsection for that pass.
+[screens.md](module-1-project-pnl/screens.md) describes each wireframe. It does not yet specify fields, validation, empty states, loading and error states, or edge cases. Each screen has a `Detailed spec: TODO` subsection for that pass. The auto-approve summary from [0011](decisions/0011-auto-approve-high-confidence.md) has no wireframe yet and belongs in that pass.
 
 Open: write that pass. It is the next documentation step.
 
-## Budget versus actual
+## Pricing
 
-A project may have a budget. The create sheet labels it optional, and the project screen shows expenses against budget only when a budget exists.
+Pricing has not been discussed. Who uses the product in the proof of concept is decided: one user, the owner ([0013](decisions/0013-single-user-owner.md)).
 
-Open: does the proof of concept require budget versus actual, or does budget stay optional?
+Open: pricing.
 
-## Pricing and roles
+## Credit-card statement support timing
 
-The person in the wireframes is the owner. An office manager who reviews the queue during the day has not been defined, and neither has pricing.
+[0012](decisions/0012-bank-hapoalim-first.md) keeps credit-card company files out of the proof of concept. Bank Hapoalim (`בנק הפועלים`) is the statement format the proof of concept imports.
 
-Open: pricing, and whether owner and office manager are different roles.
+Open: when, after the proof of concept, credit-card statement import starts.
