@@ -20,3 +20,5 @@ Leaving the first integration unnamed. Starting with a different API.
 ## Consequences
 
 0012 stays Accepted until that open question is decided. Do not treat this record as dropping the Hapoalim upload, and do not treat it as requiring both. Build the pull from SUMIT. The tech plan fills in the endpoints and the sync.
+
+[0042](0042-sumit-primary-income-and-expenses.md) answers the open question. SUMIT is the primary source for income and expenses. The Hapoalim upload sits alongside it, for cash matching and for anything not in SUMIT.

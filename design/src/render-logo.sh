@@ -13,5 +13,5 @@ for m in light dark; do
   r overview-states-$m 2080 1160
   for p in ds-1-colours ds-2-type ds-3-spacing ds-4-controls ds-5-content ds-6-band; do rd $p-$m 1440 3000; $PY crop.py $p-$m.png; done
   rd ds-7-empty-loading-$m 1440 4000; $PY crop.py ds-7-empty-loading-$m.png
-  rd ds-8-pickers-sheets-$m 1440 4200; $PY crop.py ds-8-pickers-sheets-$m.png
+  rd ds-8-pickers-sheets-$m 1440 4600; $PY crop.py ds-8-pickers-sheets-$m.png
 done

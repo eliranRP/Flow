@@ -1,6 +1,6 @@
 <!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>Flow · 22b-merge-confirm · dark</title>
 <!-- production: <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet"> -->
-<style>:root{--bg:#15111E;--surface:#1E1929;--raised:#251F33;--tint:#2A2045;--tint-strong:#382A5E;--line:#2E2740;--control-off:#736A8C;--control-border:#736A8C;--text:#F1EDF8;--text-secondary:#B1A8C4;--text-muted:#978EAB;--accent:#B894FF;--accent-text:#C3A5FF;--on-accent:#1E0B45;--logo:#B894FF;--band:#7B3FE4;--on-band:#FFFFFF;--on-band-secondary:#F0E8FF;--band-chip:#1E1929;--band-pill:#1E1929;--good:#62CB8D;--bad:#FF8A80;--warning:#EDB866;--scrim:rgba(5,3,10,.62);--toast-bg:#F1EDF8;--toast-text:#15111E;--seg-on:#3B2F5E;--accent-pressed:#A47FF0;--tint-pressed:#382A5E;--disabled-bg:#2A2438;--disabled-text:#7A7290;--error:#FF8A80;--skeleton:#2A2045;--skeleton-shine:#33285A;--skeleton-band:#9565E9;--skeleton-band-shine:#A57CED;--knob:#FFFFFF;--knob-on:#1E0B45;--bad-tint:#3A1E24;--toast-bad:#C3302B;--badge-bg:#F1EDF8;--badge-text:#1E1929;--focus:#C3A5FF;--focus-on-band:#FFFFFF}
+<style>:root{--bg:#15111E;--surface:#1E1929;--raised:#251F33;--tint:#2A2045;--tint-strong:#382A5E;--line:#2E2740;--control-off:#736A8C;--control-border:#736A8C;--text:#F1EDF8;--text-secondary:#B1A8C4;--text-muted:#978EAB;--accent:#B894FF;--accent-text:#C3A5FF;--on-accent:#1E0B45;--logo:#B894FF;--band:#7B3FE4;--on-band:#FFFFFF;--on-band-secondary:#F0E8FF;--band-chip:#1E1929;--band-pill:#1E1929;--good:#62CB8D;--bad:#FF8A80;--warning:#EDB866;--scrim:rgba(5,3,10,.62);--toast-bg:#F1EDF8;--toast-text:#15111E;--seg-on:#3B2F5E;--accent-pressed:#A47FF0;--tint-pressed:#382A5E;--disabled-bg:#2A2438;--disabled-text:#7A7290;--error:#FF8A80;--skeleton:#2A2045;--skeleton-shine:#33285A;--skeleton-band:#9565E9;--skeleton-band-shine:#A57CED;--knob:#FFFFFF;--knob-on:#1E0B45;--bad-tint:#3A1E24;--toast-bad:#C3302B;--badge-bg:#F1EDF8;--badge-text:#1E1929;--focus:#C3A5FF;--focus-on-band:#FFFFFF;--gsi-bg:#FFFFFF;--gsi-border:#747775;--gsi-text:#1F1F1F}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Rubik",system-ui,sans-serif;font-weight:500;background:var(--bg);color:var(--text);direction:rtl;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .n{font-variant-numeric:tabular-nums lining-nums;direction:ltr;unicode-bidi:isolate}
@@ -129,10 +129,16 @@ body{font-family:"Rubik",system-ui,sans-serif;font-weight:500;background:var(--b
 .opt .tx{flex:1} .opt .rd{width:22px;height:22px;border-radius:9999px;border:1.5px solid var(--control-border);flex:none}
 .opt .rd.on{border:0;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
 .list .opt+.opt{border-top:1px solid var(--line)}
-/* code boxes */
-.code{display:flex;gap:8px;direction:ltr;justify-content:center}
-.code span{width:48px;height:56px;border:1px solid var(--control-border);border-radius:12px;display:grid;place-items:center;font-size:22px;font-weight:600;background:var(--surface)}
-.code.err span{border-color:var(--error);box-shadow:inset 0 0 0 1px var(--error)}
+/* Sign in with Google (Google branding: light theme in both modes, pill, standard G, Roboto Medium; Hebrew falls back to Rubik) */
+.gsi{height:52px;border-radius:9999px;background:var(--gsi-bg);border:1px solid var(--gsi-border);color:var(--gsi-text);display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding-inline:16px;font-family:"Roboto","Rubik",system-ui,sans-serif;font-weight:500;font-size:16px;position:relative}
+.gsi .g{width:20px;height:20px;flex:none;display:block}
+.gsi.press{background:linear-gradient(rgba(31,31,31,.12),rgba(31,31,31,.12)),var(--gsi-bg)}
+.gsi.foc{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus)}
+.gsi.load{color:rgba(31,31,31,.6)}
+.gsi.dis{background:rgba(255,255,255,.38);border-color:rgba(31,31,31,.12);color:rgba(31,31,31,.38)} .gsi.dis .g{opacity:.38}
+.note{display:flex;gap:12px;align-items:flex-start;background:var(--tint);border-radius:16px;padding:14px 16px}
+.note .ni{display:grid;color:var(--accent-text);padding-top:2px} .note.bad .ni{color:var(--bad)}
+.note .nt{font-weight:600;font-size:16px;color:var(--text)} .note .nl{font-size:15px;color:var(--text-secondary);font-weight:400;margin-top:2px}
 .msg-e{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--error);font-weight:400}
 /* file chip, app icon, step tiles */
 .filechip{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:9999px;border:1px solid var(--control-border);font-size:15px;color:var(--text-secondary)}

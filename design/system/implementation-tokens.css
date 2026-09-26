@@ -147,6 +147,9 @@
   --color-badge-text: #FFFFFF;
   --color-focus: #6C2ED6;
   --color-focus-on-band: #FFFFFF;
+  --color-gsi-bg: #FFFFFF;
+  --color-gsi-border: #747775;
+  --color-gsi-text: #1F1F1F;
   /* derived colours (guide-defined) */
   /* none: all colours now come from design-tokens.json */
 }
@@ -198,6 +201,9 @@
     --color-badge-text: #1E1929;
     --color-focus: #C3A5FF;
     --color-focus-on-band: #FFFFFF;
+    --color-gsi-bg: #FFFFFF;
+    --color-gsi-border: #747775;
+    --color-gsi-text: #1F1F1F;
     /* derived colours (guide-defined) */
     /* none: all colours now come from design-tokens.json */
   }
@@ -249,6 +255,9 @@
   --color-badge-text: #1E1929;
   --color-focus: #C3A5FF;
   --color-focus-on-band: #FFFFFF;
+  --color-gsi-bg: #FFFFFF;
+  --color-gsi-border: #747775;
+  --color-gsi-text: #1F1F1F;
   /* derived colours (guide-defined) */
   /* none: all colours now come from design-tokens.json */
 }

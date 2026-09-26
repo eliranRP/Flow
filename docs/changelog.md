@@ -2,6 +2,16 @@
 
 ## 2026-09-26
 
+Google sign-in screens replace the SMS code screens, under [0033](decisions/0033-google-sign-in.md). The design update is byte-for-byte: 120 files checked against the update manifest (9 added, 111 changed), and the eight `er-03-sms-wrong` and `er-04-sms-expired` files are removed. `09a` is "המשך עם Google". `er-03-google-cancelled` and `er-04-google-failed` replace the code errors. Settings shows the connected Google account. The implementation guide keeps the Tailwind note from [0040](decisions/0040-tailwind-v4.md) and adds §7.24.
+
+Decisions [0041](decisions/0041-amounts-before-vat.md) and [0042](decisions/0042-sumit-primary-income-and-expenses.md), both Accepted.
+
+- **0041.** The P&L shows amounts before VAT on Home, projects, and reports. VAT is stored per document and excluded from profit. Where a source has no VAT split, the gross amount is flagged "VAT unknown". That closes the bank-only income question and the unknown-VAT expense question.
+- **0042.** Contractors record expenses in SUMIT. SUMIT (the expense module and the documents) is the primary source for income and expenses. The Hapoalim upload stays as a complement for cash matching and for anything not in SUMIT.
+- The SUMIT test company "Flow Test" is being set up as Flow's first demo client.
+
+## 2026-09-26
+
 Decision [0040](decisions/0040-tailwind-v4.md), Accepted. Styling is Tailwind CSS v4. This replaces the plain-CSS line in [0038](decisions/0038-stack.md). The design tokens in `design/system/implementation-tokens.css` are mapped into `@theme`. Screen code uses those values. RTL uses logical utilities and `dir="rtl"`. Dark mode uses the same tokens. Vaul stays. No component kit with its own look. [tech-plan.md](tech/tech-plan.md) §1.4.1 and task P0-5 record the setup, including a lint rule against arbitrary values. The implementation guide notes how the tokens are consumed.
 
 ## 2026-09-26
