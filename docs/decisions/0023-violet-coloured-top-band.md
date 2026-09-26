@@ -44,3 +44,5 @@ Faint off-white tinted backgrounds. The page is clean white, or a clear colour. 
 [design/README.md](../module-1-project-pnl/design/README.md) records this direction. The P1, P2, and P3 boards, and styles A, B, and C, stay in that folder and are superseded. Do not build from them.
 
 The light and dark design system, and hi-fi screens for the product, are still to be added. This record does not replace the low-fi wireframes, and it does not change how the numbers are calculated.
+
+The approved package has since landed at [design/README.md](../../design/README.md). Decisions [0024](0024-design-system-approved.md) through [0031](0031-logo.md) record it. This record's direction is unchanged.

@@ -108,3 +108,9 @@ Open: after confirm, is the bank row, the invoice, or both removed, and does the
 Home greets `שלום, {first name}`. The example is `יוסי`. Onboarding as drawn asks for a phone number and company details, not a person's name.
 
 Open: where that given name is captured.
+
+## Home's big number when after-overhead is on
+
+[0022](decisions/0022-after-overhead-starts-off.md) starts the after-overhead switch off. Company tiles stay the stored totals when the switch is on, as [0021](decisions/0021-shared-costs-and-overhead.md) already says. The approved Home with the switch on still shows company net profit as the big number: [18 light](../design/screens/18-home-overhead-on-light.png) and [18 dark](../design/screens/18-home-overhead-on-dark.png).
+
+Open: with the after-overhead switch ON, should Home's big number stay company net profit (current design) or change?

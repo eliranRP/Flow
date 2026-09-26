@@ -1,0 +1,4 @@
+# Keep the approved design package byte-for-byte. No CRLF conversion,
+# no LFS pointer rewrite, no text diff normalisation.
+design/* -text -filter -diff -merge
+design/** -text -filter -diff -merge
