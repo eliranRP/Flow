@@ -7,7 +7,7 @@ Build the **Approved** files. **Superseded** files stay so the earlier layout is
 | File | Screen | Version | Status |
 | --- | --- | --- | --- |
 | [01-home.png](01-home.png) | Home, few projects | v1 | Superseded by [01-home-v2.png](01-home-v2.png) |
-| [01-home-v2.png](01-home-v2.png) | Home, many projects | v2 | Approved |
+| [01-home-v2.png](01-home-v2.png) | Home, many projects | v2 | Approved. The image still has two period segments and no arrows. [0019](../../decisions/0019-home-periods-and-comparison.md) adds last month and the comparison. A replacement PNG has not landed. |
 | [02-project.png](02-project.png) | Project | v1 | Approved |
 | [03-review.png](03-review.png) | Review queue, with Approve all | v1 | Superseded by [03-review-v2.png](03-review-v2.png) |
 | [03-review-v2.png](03-review-v2.png) | Review queue, auto-approved strip | v2 | Approved |

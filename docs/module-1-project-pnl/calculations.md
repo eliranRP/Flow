@@ -72,13 +72,32 @@ Category bars on a project use the expense sum for that category over project-to
 
 ## Period filters
 
+[0019](../decisions/0019-home-periods-and-comparison.md). No custom range. The calendar is `Asia/Jerusalem`.
+
 | Label | Where | Included dates |
 | --- | --- | --- |
-| `החודש` (this month) | Home | The whole calendar month that contains today, from the 1st through the last day of that month. A row dated later this month is included. A row dated next month is not. |
+| `החודש` (this month) | Home, default | The whole calendar month that contains today, from the 1st through the last day of that month. A row dated later this month is included. A row dated next month is not. |
+| `חודש קודם` (last month) | Home | The whole calendar month before the one that contains today. |
 | `מתחילת השנה` (year to date) | Home | 1 January of the current year through today, inclusive. A row dated after today is excluded until that day arrives. |
-| `מתחילת הפרויקט` (project to date) | Project screen, projects list | Every counting line on that project, any date. No end cap. |
+| `מתחילת הפרויקט` (project to date) | Project screen, default; projects list | Every counting line on that project, any date. No end cap. The project screen does not offer the Home periods. |
 
-Changing the Home period recomputes tiles, the top 5, the collapsed-row profit, overhead, and activity. It does not change the review-queue count.
+Changing the Home period recomputes tiles, the comparison arrows, the top 5, the collapsed-row profit, overhead, and activity. It does not change the review-queue count.
+
+### Comparison arrow
+
+Income, expenses, and profit on Home each show an up or down arrow and a percent, using the percent rounding rule. The change is `(current − baseline) / |baseline|`.
+
+| Selected period | Baseline |
+| --- | --- |
+| This month | The full previous calendar month. |
+| Last month | The full month before that. |
+| Year to date | Not shown. Comparing a year-to-date sum with one month is a different question, and it is [open](../open-questions.md#year-to-date-comparison). |
+
+Direction follows the sign of the change. Zero change shows `0%` and no arrow. If the baseline is 0 and the current total is not, show the arrow and no percent. If both are 0, show nothing beside the total.
+
+Color is whether the change helps: income up and profit up are green; income down and profit down are red; expenses up are red; expenses down are green. A zero change is neutral.
+
+The approved Home wireframe still draws only `החודש` and `מתחילת השנה`, with no arrows. The behavior above is what to build. The image has not been replaced yet.
 
 ## Overhead
 

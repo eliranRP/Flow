@@ -22,7 +22,7 @@ There is one user, the owner. No other home exists.
 
 | Tap | Goes to |
 | --- | --- |
-| `החודש` / `מתחילת השנה` | Stays on Home. Recomputes every figure for that period. |
+| `החודש` / `חודש קודם` / `מתחילת השנה` | Stays on Home. Recomputes every figure for that period, including the comparison arrows on this month and last month. [0019](../../decisions/0019-home-periods-and-comparison.md). The current PNG still shows only two segments and no arrows. |
 | `לפי פעילות` / `הפסד קודם` | Stays on Home. Rebuilds the top 5 only. Tiles do not change. |
 | A project row | That project's screen, project to date. |
 | `עוד N פרויקטים` | Projects list. |
@@ -36,14 +36,14 @@ There is one user, the owner. No other home exists.
 
 Greeting `שלום, {first name}`. The name is the owner's given name from the company profile. Until Settings is approved, the proof of concept uses the name captured at signup. Signup fields are not specified beyond that one string.
 
-Subtitle `סיכום החברה · {active project count} פרויקטים פעילים · {month name} {year}`. Active means status `active`, not "had cash this month". The month name is the selected period's month when the period is this month, and the year when the period is year to date (`סיכום החברה · {n} פרויקטים פעילים · {year}`).
+Subtitle `סיכום החברה · {active project count} פרויקטים פעילים · {period label}`. Active means status `active`, not "had cash this month". The period label is the month name and year for this month and for last month, and the year alone for year to date.
 
 | Element | Hebrew | Source and format |
 | --- | --- | --- |
-| Period | `החודש`, `מתחילת השנה` | [Period filters](../calculations.md#period-filters). One is selected. |
-| Income tile | `הכנסות` | Company income for the period. Whole shekels, neutral color. |
-| Expenses tile | `הוצאות` | Company expenses for the period. Whole shekels, neutral color. |
-| Profit tile | `רווח/הפסד` | Company profit. Whole shekels. Green if > 0, red with `−` if < 0, `₪0` if 0. This tile is visually emphasized. |
+| Period | `החודש`, `חודש קודם`, `מתחילת השנה` | [Period filters](../calculations.md#period-filters). One is selected. Default is `החודש`. |
+| Income tile | `הכנסות` | Company income for the period. Whole shekels, neutral color. Beside it, the [comparison arrow](../calculations.md#comparison-arrow) when the selected period is this month or last month. |
+| Expenses tile | `הוצאות` | Company expenses for the period. Whole shekels, neutral color. Same arrow. |
+| Profit tile | `רווח/הפסד` | Company profit. Whole shekels. Green if > 0, red with `−` if < 0, `₪0` if 0. This tile is visually emphasized. Same arrow. |
 | Banner | `{n} פריטים ממתינים לאישור` | `n` = suggested rows. Hidden when `n` is 0. Badge on `לאישור` shows the same `n`, hidden at 0. |
 | Section | `פרויקטים · 5 המובילים` | When fewer than 5 projects have lines in the period, the title is `פרויקטים` and the "5" is omitted. |
 | Sort | `לפי פעילות`, `הפסד קודם` | [Activity and losses first](../calculations.md#overhead). |
@@ -87,7 +87,8 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 
 - [ ] Company income, expenses, and profit equal the sums in [calculations](../calculations.md), including projects that are not on screen, and including overhead.
 - [ ] Amounts are whole shekels, net of VAT. Losses use a red Unicode minus.
-- [ ] `החודש` is the calendar month. `מתחילת השנה` is 1 January through today, `Asia/Jerusalem`.
+- [ ] `החודש` is the calendar month, `חודש קודם` is the previous calendar month, and `מתחילת השנה` is 1 January through today, `Asia/Jerusalem`.
+- [ ] This month and last month show the comparison arrow on income, expenses, and profit. Year to date shows no arrow until that baseline is [decided](../../open-questions.md#year-to-date-comparison).
 - [ ] Suggested rows are absent from the tiles and present in the banner count.
 - [ ] Top 5 follows activity or losses-first. Overhead stays the last row. The collapsed row is the rest.
 - [ ] With no projects and no transactions, the only emphasized action is `+ פרויקט חדש`.

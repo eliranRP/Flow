@@ -17,7 +17,7 @@ If Home's empty state button `+ פרויקט חדש` was used, that opens the cr
 
 | Tap | Goes to |
 | --- | --- |
-| `צלם חשבונית` | System camera, or a PDF picker offered on the same step (`מצלמה או PDF`). |
+| `צלם חשבונית` | The camera, several photos in a row, or a PDF or image from files on the phone. [0020](../../decisions/0020-capture-from-the-phone.md). |
 | `העלה דוח בנק/אשראי` | System file picker, Excel or CSV. The label still says credit (`אשראי`). The proof of concept accepts Hapoalim only. |
 | `הזנה ידנית` | Manual form, below. Not on the wireframe. |
 | `ביטול` or the scrim | Dismiss. |
@@ -28,7 +28,7 @@ Sheet title `הוספה`. Subtitle `ה-AI ישייך לפרויקט ולקטגו
 
 | Row | Hebrew | What it captures |
 | --- | --- | --- |
-| Invoice | `צלם חשבונית` / `מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך` | Image or PDF. |
+| Invoice | `צלם חשבונית` / `מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך` | Several photos in one visit, or one PDF or image picked from the phone. Each file is its own document. Android, once Flow is installed, can share one image or PDF into this same path. iPhone cannot, and the sheet does not offer a share action. A WhatsApp or email forwarding address is after the proof of concept ([open questions](../../open-questions.md#forwarding-address)). |
 | Statement | `העלה דוח בנק/אשראי` / `קובץ Excel / CSV · התאמה אוטומטית` | One file. |
 | Manual | `הזנה ידנית` / `סכום, פרויקט וקטגוריה – במקרה הצורך` | Cash or cheque. |
 | Cancel | `ביטול` | |
@@ -95,6 +95,8 @@ When supplier, net, and date are all present, Flow saves the document as unpaid 
 ## Acceptance criteria
 
 - [ ] `+` from every tab opens this sheet. Cancel and the scrim discard nothing because nothing was written yet.
+- [ ] Several photos in one visit each become their own document. A PDF or image picked from the phone does the same.
+- [ ] An Android share of an image or PDF lands in that same capture path. iPhone is not offered a share action.
 - [ ] A complete invoice photo becomes an unpaid document and is absent from P&L and from the review queue.
 - [ ] A duplicate invoice does not create a second document.
 - [ ] A non-Hapoalim file and an unreadable photo create no transactions.

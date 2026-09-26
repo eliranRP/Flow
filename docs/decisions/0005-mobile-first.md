@@ -3,6 +3,8 @@
 **Date:** 2026-09-26
 **Status:** Accepted
 
+[0015](0015-installable-mobile-web-app.md) ships this phone UI as an installable web app, with no desktop version in this phase. [0016](0016-hebrew-only.md) keeps the UI Hebrew only.
+
 ## Context
 
 The target user owns a small or mid-size contracting business and spends most of the day on site. Invoices show up in the truck and at the supplier's counter. A review queue that requires a desk will not get done the same day.
