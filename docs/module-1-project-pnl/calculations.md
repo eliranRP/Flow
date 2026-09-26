@@ -97,7 +97,7 @@ Direction follows the sign of the change. Zero change shows `0%` and no arrow. I
 
 Color is whether the change helps: income up and profit up are green; income down and profit down are red; expenses up are red; expenses down are green. A zero change is neutral.
 
-The approved Home wireframe still draws only `החודש` and `מתחילת השנה`, with no arrows. The behavior above is what to build. The image has not been replaced yet.
+[01-home-v3](screens.md#01-home-v3) draws the three periods and these arrows, including color for whether the change helps. That image is pending owner approval. [01-home-v2](screens.md#01-home-v2) is superseded and still shows only two segments.
 
 ## Overhead
 

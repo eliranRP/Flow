@@ -7,7 +7,7 @@
 
 Home had two periods: this month (`החודש`) and year to date (`מתחילת השנה`). Owners also ask what changed versus the month they just finished. The project screen is already "since the job started."
 
-The approved Home wireframe [01-home-v2](../module-1-project-pnl/wireframes/01-home-v2.png) still draws only the two-segment switch. This decision changes the product. A new Home wireframe has not landed yet.
+Home v2 drew only the two-segment switch. [01-home-v3](../module-1-project-pnl/screens.md#01-home-v3) draws the three periods and the arrows. That image is pending owner approval.
 
 ## Decision
 

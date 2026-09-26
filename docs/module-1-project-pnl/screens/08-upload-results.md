@@ -25,7 +25,7 @@ Close (`✕`) returns to the tab the owner was on when they tapped `+`. It does 
 | `לאשר {n} פריטים` | Review, filtered to this file's suggested rows. Hidden when `n` is 0. |
 | `אושרו אוטומטית ({n})` | A plain list of those rows: date, counterparty, net, project, category. Tapping a row opens the change sheet (reopen). |
 | Transfers row | A list of removed rows, read only, with the reason `העברה בין חשבונות`. |
-| Unpaid note | List of invoice documents that still have a remaining net. Each row can `סמן כשולם במזומן`, which opens the manual form prefilled from the invoice and, on save, links it and marks it paid. |
+| Unpaid note | [Unpaid invoices](../screens.md#12-unpaid). That screen is pending owner approval. It uses `סמן כשולם` and a short sheet: cash, cheque, or other, plus a payment date. |
 | `הצג את כל {n} השורות` | Every row in the file, including skipped duplicates and removed transfers, with a status label. |
 | Close | Previous tab. |
 

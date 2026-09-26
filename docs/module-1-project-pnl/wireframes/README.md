@@ -2,12 +2,13 @@
 
 Low-fidelity phone wireframes, Hebrew right to left. **Every number in these files is example data** for a fictional contractor in September 2026. The English column beside a phone is design annotation. It is not product copy.
 
-Build the **Approved** files. **Superseded** files stay so the earlier layout is still readable.
+Build the **Approved** files. **Superseded** files stay so the earlier layout is still readable. **Pending owner approval** means the PNG is in the repo and described in `screens.md`, and it is not approved yet.
 
 | File | Screen | Version | Status |
 | --- | --- | --- | --- |
 | [01-home.png](01-home.png) | Home, few projects | v1 | Superseded by [01-home-v2.png](01-home-v2.png) |
-| [01-home-v2.png](01-home-v2.png) | Home, many projects | v2 | Approved. The image still has two period segments and no arrows. [0019](../../decisions/0019-home-periods-and-comparison.md) adds last month and the comparison. A replacement PNG has not landed. |
+| [01-home-v2.png](01-home-v2.png) | Home, many projects, two periods | v2 | Superseded by [01-home-v3.png](01-home-v3.png) |
+| [01-home-v3.png](01-home-v3.png) | Home, three periods, comparison arrows, unpaid line | v3 | Pending owner approval |
 | [02-project.png](02-project.png) | Project | v1 | Approved |
 | [03-review.png](03-review.png) | Review queue, with Approve all | v1 | Superseded by [03-review-v2.png](03-review-v2.png) |
 | [03-review-v2.png](03-review-v2.png) | Review queue, auto-approved strip | v2 | Approved |
@@ -20,8 +21,14 @@ Build the **Approved** files. **Superseded** files stay so the earlier layout is
 | [08-upload-results-v2.png](08-upload-results-v2.png) | Statement upload results, Hapoalim, auto-approved group | v2 | Approved |
 | [overview.png](overview.png) | Board of screens 01–05 | v1 | Approved composite. The Home phone is the superseded [01-home](01-home.png). The review phone is the superseded [03-review](03-review.png). |
 | [overview-2.png](overview-2.png) | Board of screens 06–08 | v1 | Approved composite. The change-sheet phone is the superseded [06-change-sheet](06-change-sheet.png). The upload phone is the superseded [08-upload-results](08-upload-results.png). |
-| [overview-3.png](overview-3.png) | Board of Home v2 and change sheet v2 | v2 | Approved composite. Both phones are current. |
+| [overview-3.png](overview-3.png) | Board of Home v2 and change sheet v2 | v2 | Approved composite. The Home phone is the superseded [01-home-v2](01-home-v2.png). The change sheet is current. |
 | [overview-4.png](overview-4.png) | Board of review v2 and upload results v2 | v2 | Approved composite. Both phones are current. |
+| [09-onboarding.png](09-onboarding.png) | First-run onboarding, five phones | v1 | Pending owner approval |
+| [10-transaction-detail.png](10-transaction-detail.png) | Transaction detail | v1 | Pending owner approval |
+| [11-split.png](11-split.png) | Split sheet | v1 | Pending owner approval |
+| [12-unpaid.png](12-unpaid.png) | Unpaid invoices | v1 | Pending owner approval |
+| [13-notifications.png](13-notifications.png) | The two notifications, on the lock screen | v1 | Pending owner approval |
+| [overview-5.png](overview-5.png) | Board of detail, split, unpaid, and Home v3 | v1 | Pending owner approval. All four phones are pending. |
 
 What each file shows, and how it behaves, is in [screens.md](../screens.md).
 
@@ -43,6 +50,6 @@ python3 gen.py
 bash render.sh
 ```
 
-`render.sh` with no arguments renders every name, including `03-review-v2`, `08-upload-results-v2`, and `overview-4`. Pass names to render a subset (`bash render.sh 03-review-v2`). Phone pages are captured at 794×920 CSS pixels. The overview boards are 2274×1100, 1358×1100, and 916×1100 (`overview-3` and `overview-4`). Device scale is 2.
+`render.sh` with no arguments renders every name, including `09-onboarding`, `10-transaction-detail`, `11-split`, `12-unpaid`, `13-notifications`, `01-home-v3`, and `overview-5`. Pass names to render a subset (`bash render.sh 01-home-v3`). Phone pages are captured at 794×920 CSS pixels. Boards: `overview` 2274×1100, `overview-2` 1358×1100, `overview-3` and `overview-4` and `13-notifications` 916×1100, `09-onboarding` 2274×1180, `overview-5` 1800×1100. Device scale is 2.
 
 `gen.py` is the generator that produced this set. `render.sh` writes into the parent `wireframes/` directory so the script runs from this repo. The copy it was adapted from wrote PNGs into `/workspace/wireframes-pnl`.

@@ -54,6 +54,8 @@ List rows show a radio, the code (overhead has none), the name (one line, ellips
 
 ## Split mode
 
+A dedicated sheet is drawn on [11-split](../screens.md#11-split) and is pending owner approval. Until that approval, this section is the rule, including one category for every line.
+
 Title `פצל בין פרויקטים`. The amount at the top is the parent net.
 
 | Control | Hebrew | Rule |

@@ -2,6 +2,17 @@
 
 ## 2026-09-26
 
+Wireframes for onboarding, transaction detail, split, unpaid invoices, notifications, and Home v3. All of these are **pending owner approval**.
+
+- [01-home-v3.png](module-1-project-pnl/wireframes/01-home-v3.png) supersedes `01-home-v2`. Three periods (`החודש`, `חודש קודם`, `מתחילת השנה`). Comparison arrows where color means good or bad, not the arrow direction. A quiet unpaid line under the review banner (`3 חשבוניות לא שולמו · ₪23,400`).
+- [09-onboarding.png](module-1-project-pnl/wireframes/09-onboarding.png): SMS sign-in, then company details (1/4), Hapoalim export and upload (2/4), proposed projects (3/4), install and the two notifications (4/4).
+- [10-transaction-detail.png](module-1-project-pnl/wireframes/10-transaction-detail.png), [11-split.png](module-1-project-pnl/wireframes/11-split.png), [12-unpaid.png](module-1-project-pnl/wireframes/12-unpaid.png), [13-notifications.png](module-1-project-pnl/wireframes/13-notifications.png).
+- [overview-5.png](module-1-project-pnl/wireframes/overview-5.png) shows detail, split, unpaid, and Home v3.
+- `wireframes/source/gen.py` is the generator for this set. `render.sh` also renders the new names, and still writes PNGs into `wireframes/`.
+- [screens.md](module-1-project-pnl/screens.md) replaces the placeholders with purpose, elements, interactions, states, edge cases, and acceptance criteria taken from these images. Differences that are not yet decisions: a category on each split line, what `מחק` removes, what Home's `☰` opens, and the business-type list on onboarding (two options on the image, three in the Settings draft).
+
+## 2026-09-26
+
 Decisions [0015](decisions/0015-installable-mobile-web-app.md) through [0020](decisions/0020-capture-from-the-phone.md), all Accepted.
 
 - **0015.** This phase is an installable mobile web app. No desktop version, and no native iOS or Android app. Onboarding explains the Hapoalim export onto the phone and includes an install step, which is what makes iPhone notifications possible.

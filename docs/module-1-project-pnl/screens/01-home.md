@@ -1,6 +1,6 @@
 # Home
 
-**Status:** Approved. Build [01-home-v2](../wireframes/01-home-v2.png). The three-project [01-home](../screens.md#01-home) wireframe is superseded.
+**Status:** Behavior approved. The image to review is [01-home-v3](../screens.md#01-home-v3), pending owner approval. [01-home-v2](../screens.md#01-home-v2) and the three-project [01-home](../screens.md#01-home) are superseded.
 **Product:** Flow. Hebrew, right to left, mobile first.
 **Numbers:** [calculations](../calculations.md). High-confidence rows are already approved before they reach this screen ([0011](../../decisions/0011-auto-approve-high-confidence.md)).
 
@@ -12,7 +12,7 @@ Answer "is the company making money in this period?" Company tiles include every
 
 | From | How |
 | --- | --- |
-| App open | Home is the first screen after the local store is ready. |
+| App open | After onboarding, Home is the first screen. The first launch is [onboarding](../screens.md#09-onboarding), which is pending owner approval. |
 | Bottom nav | `בית` |
 | Upload results, review empty, project back | When those flows return to the company summary. |
 
@@ -22,19 +22,20 @@ There is one user, the owner. No other home exists.
 
 | Tap | Goes to |
 | --- | --- |
-| `החודש` / `חודש קודם` / `מתחילת השנה` | Stays on Home. Recomputes every figure for that period, including the comparison arrows on this month and last month. [0019](../../decisions/0019-home-periods-and-comparison.md). The current PNG still shows only two segments and no arrows. |
+| `החודש` / `חודש קודם` / `מתחילת השנה` | Stays on Home. Recomputes every figure for that period, including the comparison arrows on this month and last month. [0019](../../decisions/0019-home-periods-and-comparison.md). Drawn on [01-home-v3](../screens.md#01-home-v3). |
 | `לפי פעילות` / `הפסד קודם` | Stays on Home. Rebuilds the top 5 only. Tiles do not change. |
 | A project row | That project's screen, project to date. |
 | `עוד N פרויקטים` | Projects list. |
 | Overhead row | Overhead screen, which reuses the project layout with no client, no budget card, and no finish action. |
 | Pending banner | Review queue. |
+| `{n} חשבוניות לא שולמו` | [Unpaid invoices](../screens.md#12-unpaid). Hidden when `n` is 0. The amount is the unpaid net and is not part of the tiles. |
 | Center `+` | Add sheet. |
 | `☰` | Settings. The screen behind that button is [draft](../settings.md) and is not approved. |
 | `פרויקטים` / `לאישור` / `הגדרות` | Those tabs. |
 
 ## Elements and fields
 
-Greeting `שלום, {first name}`. The name is the owner's given name from the company profile. Until Settings is approved, the proof of concept uses the name captured at signup. Signup fields are not specified beyond that one string.
+Greeting `שלום, {first name}`. The example is `יוסי`. Onboarding as drawn does not ask for this name. Where it is captured is [open](../../open-questions.md#owners-given-name).
 
 Subtitle `סיכום החברה · {active project count} פרויקטים פעילים · {period label}`. Active means status `active`, not "had cash this month". The period label is the month name and year for this month and for last month, and the year alone for year to date.
 
@@ -45,6 +46,7 @@ Subtitle `סיכום החברה · {active project count} פרויקטים פע�
 | Expenses tile | `הוצאות` | Company expenses for the period. Whole shekels, neutral color. Same arrow. |
 | Profit tile | `רווח/הפסד` | Company profit. Whole shekels. Green if > 0, red with `−` if < 0, `₪0` if 0. This tile is visually emphasized. Same arrow. |
 | Banner | `{n} פריטים ממתינים לאישור` | `n` = suggested rows. Hidden when `n` is 0. Badge on `לאישור` shows the same `n`, hidden at 0. |
+| Unpaid line | `{n} חשבוניות לא שולמו · {amount}` | Count and net of unpaid invoices. Under the banner, quieter than the banner. Hidden when `n` is 0. Not included in the tiles. [01-home-v3](../screens.md#01-home-v3). |
 | Section | `פרויקטים · 5 המובילים` | When fewer than 5 projects have lines in the period, the title is `פרויקטים` and the "5" is omitted. |
 | Sort | `לפי פעילות`, `הפסד קודם` | [Activity and losses first](../calculations.md#overhead). |
 | Project row | Project name, profit, bar | Profit is the project's counting lines for the Home period. Bar: gray = expenses, green = profit, red = the loss portion, on one shared scale across the visible rows. Name is one line, ellipsis if needed. |
@@ -61,7 +63,7 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 
 **Normal.** Tiles, top 5, collapsed row when needed, overhead, no banner.
 
-**Partial.** Same as normal, plus the pending banner. Tiles do not include suggested rows. The banner is the only "not final" signal.
+**Partial.** Same as normal, plus the pending banner when suggested rows exist, and the unpaid line when unpaid invoices exist. Tiles do not include suggested rows or unpaid documents.
 
 **Error.** If refresh fails and cached figures exist, keep them and show `לא הצלחנו לרענן` with `נסו שוב`. If the first load fails, the empty skeleton is replaced by that message and the same retry. No tiles of invented zeros.
 
@@ -88,7 +90,8 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 - [ ] Company income, expenses, and profit equal the sums in [calculations](../calculations.md), including projects that are not on screen, and including overhead.
 - [ ] Amounts are whole shekels, net of VAT. Losses use a red Unicode minus.
 - [ ] `החודש` is the calendar month, `חודש קודם` is the previous calendar month, and `מתחילת השנה` is 1 January through today, `Asia/Jerusalem`.
-- [ ] This month and last month show the comparison arrow on income, expenses, and profit. Year to date shows no arrow until that baseline is [decided](../../open-questions.md#year-to-date-comparison).
+- [ ] This month and last month show the comparison arrow on income, expenses, and profit. Color follows whether the change helps. Year to date shows no arrow until that baseline is [decided](../../open-questions.md#year-to-date-comparison).
+- [ ] The unpaid line shows the count and net, opens the unpaid list, and is absent from the tiles.
 - [ ] Suggested rows are absent from the tiles and present in the banner count.
 - [ ] Top 5 follows activity or losses-first. Overhead stays the last row. The collapsed row is the rest.
 - [ ] With no projects and no transactions, the only emphasized action is `+ פרויקט חדש`.

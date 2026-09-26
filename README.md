@@ -53,4 +53,4 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |
 
-The current screen set is the v2 Home and the v2 change sheet, plus project, review, add, projects list, categories, and upload results. The earlier Home and change sheet are kept and marked superseded.
+The approved screen set is project, review, add, the projects list, the v2 change sheet, categories, and upload results. Home v3 (three periods and comparison arrows) and the onboarding, transaction detail, split, unpaid, and notification wireframes are in the repo and pending owner approval. Earlier Home and change-sheet images are kept and marked superseded.
