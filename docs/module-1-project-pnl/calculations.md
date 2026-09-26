@@ -1,6 +1,6 @@
 # Flow — Calculations
 
-Exact definitions for Module 1. Screen specs use these rules and do not invent a second formula. Decisions in force: cash basis ([0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md)), net of VAT ([0001](../decisions/0001-management-tool-alongside-accounting.md)), auto-approve ([0011](../decisions/0011-auto-approve-high-confidence.md)), overhead in the company total ([0009](../decisions/0009-scalable-pickers.md)).
+Exact definitions for Module 1. Screen specs use these rules and do not invent a second formula. Decisions in force: cash basis ([0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md)), net of VAT ([0001](../decisions/0001-management-tool-alongside-accounting.md)), auto-approve ([0011](../decisions/0011-auto-approve-high-confidence.md)), overhead in the company total ([0009](../decisions/0009-scalable-pickers.md)), shared costs versus overhead ([0021](../decisions/0021-shared-costs-and-overhead.md)).
 
 The calendar is `Asia/Jerusalem`. A "date" is a calendar date in that zone, never a UTC day that slips across midnight.
 
@@ -101,7 +101,7 @@ Color is whether the change helps: income up and profit up are green; income dow
 
 ## Overhead
 
-Overhead (`הוצאות כלליות`) is a bucket, not a project the owner creates or deletes. Company figures are the sum of every project plus overhead. A project figure never includes overhead.
+Overhead (`הוצאות כלליות`) is a bucket, not a project the owner creates or deletes. Stored company figures are the sum of every project plus overhead. A stored project figure does not include overhead. [0021](../decisions/0021-shared-costs-and-overhead.md) does not move overhead onto projects. It adds a view, defined under [Overhead share](#overhead-share).
 
 Home always paints overhead as its own row under the projects, including when the top 5 are sorted by losses. Overhead is not eligible for the top 5. If overhead's profit for the period is 0 and the company has no projects and no transactions, Home uses the empty state and hides the row.
 
@@ -109,7 +109,7 @@ Hiding a project from the top 5 does not remove it from the company tiles. The c
 
 **Activity** for "top 5 this month" is the sum of the absolute value of `signed_net_agorot` of counting lines on that project in the selected Home period. Ties break by most recent cash date, then by project name.
 
-**Losses first** (`הפסד קודם`) ranks projects by profit ascending (largest loss first). A project with no counting lines in the period is listed after projects that have lines. Overhead stays pinned at the bottom either way.
+**Losses first** (`הפסד קודם`) ranks projects by the profit the screen is showing, ascending (largest loss first). With the after-overhead view on, that is profit after the overhead share. A project with no counting lines in the period is listed after projects that have lines. Overhead stays pinned at the bottom either way. Activity ignores the view: it is cash movement, not profit.
 
 If fewer than five projects have any lines in the period, Home lists those projects and hides the collapsed row. Finished projects with no lines in the period stay out of the list and out of the picker. Their older lines still sit in year-to-date and in project-to-date reports.
 
@@ -130,13 +130,54 @@ A VAT-exempt line has `vat_agorot = 0` and counts at its net. Extracted VAT is k
 
 ## Splits
 
-The owner splits one cash amount across projects by amount or by percent. Category is the one chosen on the change sheet, copied to every line.
+The owner splits one cash amount across projects by amount or by percent, or across every active project. Category is the one chosen on the sheet, copied to every line. [0021](../decisions/0021-shared-costs-and-overhead.md).
 
 - Amount mode: each line's net agorot is entered. Save is blocked until the lines sum to the parent `signed_net_agorot` exactly.
-- Percent mode: each line's percent is entered, one decimal. Flow converts to agorot by the largest-remainder method so the lines still sum exactly to the parent. Save is blocked until the percents sum to 100.0.
+- Percent mode: each line's percent is entered, one decimal. Flow converts to agorot by [largest remainder](#largest-remainder) so the lines still sum exactly to the parent. Save is blocked until the percents sum to 100.0.
+- Across all active projects. Three methods. Active means status `active`. Finished projects and overhead are not targets. A project with a computed share of zero is omitted; the lines that remain still sum to the parent.
+  - **Equal.** Weight 1 for each active project. Unavailable when there are no active projects. One active project receives the whole payment.
+  - **Income share.** Weight is that project's income in the calendar month of the payment's cash date (`Asia/Jerusalem`). A project with income 0 gets nothing. Unavailable when the active projects' combined income in that month is 0.
+  - **Manual.** The owner enters percents or shekels, same remainder rules as amount and percent mode. At least two lines.
 - VAT uses the same largest-remainder method on `vat_agorot`.
-- At least two lines. A line's bucket is a project or overhead. No line is left unassigned.
-- A split does not write a supplier rule. The remember toggle is off and disabled, because a rule maps a supplier to one project.
+- A hand-built manual split does not turn on `לזכור לספק הזה`. That toggle stays off. A separate control, off until the owner enables it, saves a split rule ("split like this every month").
+  - Equal: the rule stores the method. The next payment uses whoever is active that day.
+  - Income share: the rule stores the method. Each later payment uses the calendar month of that payment. It is not frozen to the month the rule was saved.
+  - Manual: the rule stores each chosen project's share of this payment as a weight in agorot (the absolute line nets). A later payment of a different size uses those weights and largest remainder. A finished project named in the rule still receives its share. If a named project is gone, the rule does not run and the row waits in review.
+- A split rule replaces a one-project rule for that payee, and a one-project rule replaces a split rule. The next payment is auto-approved already split, unless the method is unavailable for that month, in which case the row waits in review and nothing is guessed into equal shares.
+
+### Largest remainder
+
+Used for percent splits, equal splits, income-share splits, VAT on a split, and the [overhead share](#overhead-share).
+
+Given a signed total `T` in agorot and positive integer weights `w_i` with `W = sum w_i`:
+
+1. Participants with weight 0 get 0 and are not in the steps below.
+2. If `W` is 0, there is no allocation.
+3. Let `A = |T|`. For each participant, `quota_i = A × w_i / W` (rational). `base_i = floor(quota_i)`. `frac_i = quota_i − base_i`.
+4. `left = A − sum base_i`. Give one extra agora to the `left` participants with the largest `frac_i`. Ties break by project code ascending.
+5. If `T` is negative, negate every share. If `T` is 0, every share is 0.
+
+The shares then sum exactly to `T`.
+
+### Overhead share
+
+View only. Stored transactions, the overhead bucket, and the company income, expenses, and profit do not change. [0021](../decisions/0021-shared-costs-and-overhead.md).
+
+The period is the one selected on that screen. On Home that is this month, last month, or year to date. On the project screen it is project to date, meaning every counting line on every project and on overhead, any date. The project screen does not gain the Home period switch.
+
+Let `H` be overhead profit in that period (income − expenses on the overhead bucket). Let `I_p` be project `p`'s income in that period. Let `I = sum I_p` over projects, not including overhead's own income.
+
+- If `I` is 0, allocation is unavailable. The after-overhead view is not shown. The screen says so. It does not pretend every share is zero.
+- Otherwise each project's share `s_p` is `H` allocated by largest remainder with weights `I_p`. A project with `I_p = 0` has `s_p = 0` and cannot receive a leftover agora.
+- Displayed profit after overhead = the project's own profit + `s_p`.
+- Sum of `s_p` equals `H` exactly, in agorot.
+- Displayed margin uses that displayed profit and the project's own income. Income, own expenses, category bars, and the budget card stay on stored project figures.
+- Company tiles, including comparison arrows, stay the stored company totals.
+- On Home, with the view on, the overhead row displays ₪0 and a note that this view has spread it. The row still opens the overhead screen, which shows the stored bucket. Displayed project profits then sum to company profit.
+- The overhead screen itself has no toggle.
+- Home and the project screen share one preference. Whether it starts on is [open](../open-questions.md#after-overhead-by-default).
+
+Losses-first and the collapsed-row profit use the displayed profit. Activity does not.
 
 ## Refunds and credit notes
 
@@ -152,7 +193,7 @@ Order for a new Hapoalim row that is not a transfer and not a duplicate of a row
    - One unpaid invoice for the same normalized supplier whose remaining net equals the payment net. Remaining net starts as the invoice net and falls as payments are linked.
    - Or the payment net equals the sum of all unpaid invoices for that supplier, and there are two or more. Link every one of them.
    - Two different invoices that each equal the payment, a partial payment, or any other combination: not high confidence. The row goes to review with the candidate invoices listed. The owner can link one invoice (including a partial payment) or tick several whose remainders sum exactly to the payment.
-2. **Supplier rule.** If no invoice link won, and a rule exists for the normalized counterparty, auto-approve onto that rule's project and category.
+2. **Supplier rule.** If no invoice link won, and a rule exists for the normalized counterparty, auto-approve. A one-project rule uses that project and category. A split rule writes the lines from [Splits](#splits) and auto-approves them. If that split method is unavailable for this payment, the rule does not run and the row is suggested.
 3. **Otherwise** the row is suggested. A client deposit whose counterparty matches exactly one active project's client is suggested onto that project, but it is not auto-approved unless a rule or a unique invoice link says so. If the client matches several projects, or none, the row is suggested with no project selected. Save from review is blocked until a project or overhead is chosen. Flow does not put an unknown client deposit on overhead by itself.
 
 A partial payment links the cash that arrived. That cash counts once it is approved. The invoice's unpaid remainder stays out of P&L and stays on the unpaid list.

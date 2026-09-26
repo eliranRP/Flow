@@ -2,6 +2,17 @@
 
 ## 2026-09-26
 
+Decision [0021](decisions/0021-shared-costs-and-overhead.md), Accepted. Shared project costs are split. True overhead stays overhead.
+
+- The split sheet can target every active project: equal, by that period's income share, or manual percent or shekels. The owner can save "split like this every month". The next payment from that payee arrives already split. Income-share rules recalculate each month. Equal uses whoever is active when the payment arrives.
+- Office rent, the accountant, insurance, and the rest are not split into transactions. Home and the project screen get a view-only toggle, profit after overhead share, by each project's income share in the selected period. Stored lines and company totals stay as they are.
+- Shares use largest remainder so they sum exactly. A project with no income gets none. If every project has no income, the allocation is unavailable and the after-overhead view is not shown.
+- The Rule entity now includes a split rule, one per payee, replacing a one-project rule and replaced by one.
+- Wireframes `11-split-v2`, `01-home-v4`, and `02-project-v2` are marked coming. They have no image.
+- Open: should the after-overhead toggle be on by default?
+
+## 2026-09-26
+
 Wireframes for onboarding, transaction detail, split, unpaid invoices, notifications, and Home v3. All of these are **pending owner approval**.
 
 - [01-home-v3.png](module-1-project-pnl/wireframes/01-home-v3.png) supersedes `01-home-v2`. Three periods (`החודש`, `חודש קודם`, `מתחילת השנה`). Comparison arrows where color means good or bad, not the arrow direction. A quiet unpaid line under the review banner (`3 חשבוניות לא שולמו · ₪23,400`).

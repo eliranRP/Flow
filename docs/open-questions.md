@@ -91,7 +91,7 @@ Open: how many incoming payments, over what period, make a payer "recurring."
 
 ## Category on each split line
 
-[11-split](module-1-project-pnl/screens.md#11-split), pending owner approval, draws a category on each line and the annotation says it can differ from the invoice. [Splits](module-1-project-pnl/calculations.md#splits) still copy one category onto every line. A split still does not write a supplier rule.
+[11-split](module-1-project-pnl/screens.md#11-split), pending owner approval, draws a category on each line and the annotation says it can differ from the invoice. [Splits](module-1-project-pnl/calculations.md#splits) still copy one category onto every line. A hand-built split does not turn on the one-project remember toggle. A recurring split rule is a separate control ([0021](decisions/0021-shared-costs-and-overhead.md)).
 
 Open, until that sheet is approved: may two lines of one payment use two categories?
 
@@ -106,3 +106,9 @@ Open: after confirm, is the bank row, the invoice, or both removed, and does the
 Home greets `שלום, {first name}`. The example is `יוסי`. Onboarding as drawn asks for a phone number and company details, not a person's name.
 
 Open: where that given name is captured.
+
+## After overhead by default
+
+[0021](decisions/0021-shared-costs-and-overhead.md) puts a view-only toggle on Home and the project screen: profit after each project's income share of overhead. Stored lines and company totals do not change. The toggle is one preference on both screens.
+
+Open: should `רווח אחרי חלק מהתקורה` be on by default?
