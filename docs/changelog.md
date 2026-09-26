@@ -2,6 +2,16 @@
 
 ## 2026-09-26
 
+Decision [0023](decisions/0023-violet-coloured-top-band.md), Accepted. Visual direction: violet with a coloured top band.
+
+- Light-mode accent `#7B3FE4`. Home has a solid violet band with rounded bottom corners: wordmark, greeting, hero profit, and the income and expense line. Text on the band is white, with a light-lilac secondary. The page below is `#FFFFFF`.
+- The accent is also on the `+` button, the active tab, the tinted pending card, and the period pill. The profit delta is a small white pill, red `▼` or green `▲`.
+- Font is Rubik: hero and titles 600, body 500, hints 400, wordmark 700.
+- Rejected: styles A, B, and C; Mercury-like P1 Graphite, P2 Cobalt, and P3 Petrol (too busy, IBM Plex too stiff); D1–D3 (Periwinkle too Mercury-like, Assistant and Varela Round too thin); muted palettes Clay, Navy & Sand, Ocean, Indigo, Ink & Lime, and Honey; bright palettes Azure, Coral, Fuchsia, Aqua, Tangerine, and Emerald; faint off-white tinted backgrounds.
+- The P1, P2, and P3 boards in [design](module-1-project-pnl/design/README.md) are superseded. The files stay. A light and dark design system, and hi-fi screens, are not in the repo yet.
+
+## 2026-09-26
+
 The UI direction moves to a Mercury-inspired Home. Styles A, B, and C are superseded. Their files stay. The palette is still pending. Every number is example data.
 
 - [ui-mercury-p1.png](module-1-project-pnl/design/ui-mercury-p1.png), [ui-mercury-p2.png](module-1-project-pnl/design/ui-mercury-p2.png), and [ui-mercury-p3.png](module-1-project-pnl/design/ui-mercury-p3.png) are Graphite, Cobalt, and Petrol. [ui-mercury-overview.png](module-1-project-pnl/design/ui-mercury-overview.png) shows all three. [ui-refs.png](module-1-project-pnl/design/ui-refs.png) records the reference fonts.
