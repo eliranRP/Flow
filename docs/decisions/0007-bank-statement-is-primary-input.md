@@ -3,6 +3,8 @@
 **Date:** 2026-09-26
 **Status:** Accepted
 
+[0012](0012-bank-hapoalim-first.md) limits proof-of-concept statement import to Bank Hapoalim (`בנק הפועלים`). This record stays Accepted for cash basis: a statement row counts, and an unpaid invoice does not.
+
 ## Context
 
 Under cash basis, the moment money counts is the payment, not the invoice. Contractors still photograph invoices, because the invoice is what they have in their hand and what the accountant will ask for. Treating the invoice as the P&L entry would pull unpaid bills into profit and would double-count once the bank row arrives.

@@ -37,3 +37,7 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used |
 | [0009](0009-scalable-pickers.md) | 2026-09-26 | Accepted | Pickers and Home stay usable with many projects |
 | [0010](0010-docs-are-the-source-of-truth.md) | 2026-09-26 | Accepted | These docs, including decision records, are the source of truth |
+| [0011](0011-auto-approve-high-confidence.md) | 2026-09-26 | Accepted | Auto-approve high-confidence items; they skip the review queue |
+| [0012](0012-bank-hapoalim-first.md) | 2026-09-26 | Accepted | Proof of concept imports Bank Hapoalim statements only |
+| [0013](0013-single-user-owner.md) | 2026-09-26 | Accepted | Single user: the business owner; no roles yet |
+| [0014](0014-optional-project-budget.md) | 2026-09-26 | Accepted | Project budget stays optional |

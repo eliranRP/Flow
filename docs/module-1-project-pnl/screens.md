@@ -83,7 +83,7 @@ Answer "is this job profitable?" for one project, from the day it started, and s
 
 - Back button, title `וילה רעננה`, subtitle `לקוח: משפ׳ כהן · מתחילת הפרויקט`, and a `⋯` menu.
 - Three tiles: `הכנסות` ₪900,000, `הוצאות` ₪720,000, `רווח · 20%` ₪180,000. Margin is profit divided by income (180,000 / 900,000).
-- Budget card `הוצאות מול תקציב`: ₪720,000 / ₪1,000,000, a bar filled to 72%, caption `72% נוצל · אופציונלי`. The card exists because this example has a budget. Budget is optional; see [open questions](../open-questions.md).
+- Budget card `הוצאות מול תקציב`: ₪720,000 / ₪1,000,000, a bar filled to 72%, caption `72% נוצל · אופציונלי`. The card is on this screen because the example job has a budget. [0014](../decisions/0014-optional-project-budget.md): budget is optional, and this card appears only when a budget is set.
 - `לפי קטגוריה`: one bar per expense category, scaled to the largest bar. The example sums to the expenses tile: `חומרים` ₪300,000, `קבלני משנה` ₪220,000, `עבודה` ₪120,000, `ציוד והשכרה` ₪40,000, `הובלה` ₪20,000, `ביטוח` ₪10,000, `אחר` ₪10,000.
 - `תנועות אחרונות` with an "all" chevron (`הכל`). Three example rows, source mark plus signed amount:
   - Invoice, `טמבור בע"מ`, `חומרים · 22/09`, −₪12,000
@@ -115,7 +115,7 @@ Fields, component states, empty states, loading and error states, and edge cases
 
 ### Purpose
 
-Confirm what the product is not sure about. The owner approves or corrects one item, and the queue advances. High-confidence rows can be cleared in bulk instead of one by one.
+Confirm what the product is not sure about. The owner approves or corrects one item, and the queue advances. [0011](../decisions/0011-auto-approve-high-confidence.md): a bank row matched to an invoice, or a row covered by a supplier rule, never reaches this queue. It is auto-approved, listed in a short summary, and can be reopened. The `אשר הכל` button on this wireframe is the earlier sketch of that bulk step.
 
 ### Main elements
 
@@ -138,7 +138,7 @@ Confirm what the product is not sure about. The owner approves or corrects one i
 
 - `אישור` accepts the chips, marks the transaction approved, and brings the next card up.
 - `שינוי`, or tapping a chip, opens the change sheet ([06-change-sheet-v2](#06-change-sheet-v2)).
-- `אשר הכל` approves the high-confidence items in this batch (the example says 4) without opening each card.
+- `אשר הכל` is drawn on the wireframe as a bulk confirm for four high-confidence items. Under [0011](../decisions/0011-auto-approve-high-confidence.md) those items are already approved before this screen, so the proof of concept does not depend on this tap. The summary they land in is not wireframed yet.
 - `דלג` parks the card and moves on. The item stays suggested and out of reports.
 - The thumbnail opens the document larger. That viewer is not wireframed.
 - The dimmed "next" row is a preview, not a second set of actions.
@@ -149,7 +149,7 @@ Confirm what the product is not sure about. The owner approves or corrects one i
 
 ### Detailed spec: TODO
 
-Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: an empty queue, a card that is a bank row with no thumbnail, a duplicate invoice, and which items appear as cards versus only inside `אשר הכל`. The wireframe shows both a one-at-a-time card and a bulk action for four high-confidence items; the exact split is the open auto-approve question plus this spec pass.
+Fields, component states, empty states, loading and error states, and edge cases for this screen are not specified yet. In particular: an empty queue, a card that is a bank row with no thumbnail, a duplicate invoice, and the auto-approve summary (not drawn here) from which the owner reopens an item.
 
 <a id="04-add"></a>
 
@@ -176,7 +176,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 ### Key interactions
 
 - `צלם חשבונית` opens the camera or a PDF picker. After extraction, the document enters matching and, if it is not high confidence, the review queue.
-- `העלה דוח בנק/אשראי` picks an Excel or CSV file and then shows [upload results](#08-upload-results).
+- `העלה דוח בנק/אשראי` picks an Excel or CSV file and then shows [upload results](#08-upload-results). In the proof of concept that file is a Bank Hapoalim (`בנק הפועלים`) statement. [0012](../decisions/0012-bank-hapoalim-first.md). The label still mentions credit (`אשראי`); credit-card company files are later.
 - `הזנה ידנית` is the cash and cheque fallback. The form itself is not wireframed.
 - `ביטול`, or tapping the scrim, closes the sheet and leaves the data unchanged.
 
@@ -337,7 +337,7 @@ Fields, component states, empty states, loading and error states, and edge cases
 
 ### Purpose
 
-Show what a bank or credit-card file became, and send the owner only to the rows that need a decision. This is the screen after `העלה דוח בנק/אשראי`.
+Show what a statement file became, and send the owner only to the rows that need a decision. This is the screen after `העלה דוח בנק/אשראי`. The proof of concept parses a Bank Hapoalim (`בנק הפועלים`) file. [0012](../decisions/0012-bank-hapoalim-first.md).
 
 ### Main elements
 
@@ -354,12 +354,12 @@ Show what a bank or credit-card file became, and send the owner only to the rows
 - Link `הצג את כל 42 השורות`.
 - Bottom nav is present and no tab is marked active.
 
-The file name is an example, not a decision about which bank to support first.
+The file name `לאומי_ספטמבר.xlsx` is example art from before [0012](../decisions/0012-bank-hapoalim-first.md). The bank to support is Hapoalim, not Leumi.
 
 ### Key interactions
 
-- `לאשר 7 פריטים` opens the review queue at the unmatched rows from this file.
-- `אשר את כל המסווגים (33)` approves the high-confidence rows (matched invoices and learned rules) in one tap. They then count in P&L.
+- `לאשר 7 פריטים` opens the review queue at the unmatched rows from this file. Those seven are the low-confidence rows.
+- `אשר את כל המסווגים (33)` is drawn as a manual confirm of the 18 invoice matches plus the 15 rule matches. Under [0011](../decisions/0011-auto-approve-high-confidence.md) those 33 are auto-approved and skip the queue. This screen's job for them is a short summary, with a way to reopen any row. The summary layout is not a separate wireframe yet. The 2 transfers stay removed.
 - The unpaid-invoice note opens the invoices that still have no payment. They stay out of P&L until a match or a cash "mark paid".
 - `הצג את כל 42 השורות` opens the imported rows, including the removed transfers. That list is not wireframed.
 - Close returns without forcing a decision. Unapproved rows stay suggested and stay in the pending count.

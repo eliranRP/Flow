@@ -22,18 +22,18 @@ The owner is on site most of the day, so the product is a phone UI: bottom navig
 ## How data gets in
 
 1. A photo or PDF of an expense invoice. The product reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate.
-2. A bank or credit-card statement (Excel or CSV). Each row becomes a transaction. Transfers between the company's own accounts are removed.
+2. A Bank Hapoalim (`בנק הפועלים`) statement (Excel or CSV). Each row becomes a transaction. Transfers between the company's own accounts are removed. Other banks, and credit-card company files, come after the proof of concept.
 3. Manual entry, for cash and cheques.
 
-Suggestions follow a fixed order: link a bank row to an existing invoice (amount, date, supplier), then apply a learned supplier rule, then an AI guess. A deposit from a client is suggested onto that client's project. A high-confidence match (an invoice or a learned rule) is pre-approved and can be cleared with "Approve all". Everything else waits in the review queue. Only approved transactions appear in reports. A pending-count banner stays visible while the numbers can still move.
+Suggestions follow a fixed order: link a bank row to an existing invoice (amount, date, supplier), then apply a learned supplier rule, then an AI guess. A deposit from a client is suggested onto that client's project. A high-confidence match (an invoice or a learned rule) is auto-approved, skips the review queue, and appears in a short summary the owner can reopen and change. Everything else waits in the review queue. Only approved transactions appear in reports. A pending-count banner stays visible while the numbers can still move.
 
 Correcting a suggestion can become a rule ("remember for this supplier" is on by default): supplier X goes to project Y and category materials, and the next invoice from that supplier is classified the same way.
 
 ## Proof of concept
 
-In scope: company and project P&L, the three intake paths, review and rules, a flat category list, project and category pickers that still work with many jobs, and an Excel export for the accountant.
+In scope: company and project P&L for a single user (the owner), the three intake paths with Bank Hapoalim as the statement format, review and rules, auto-approve for high-confidence rows, a flat category list, optional project budgets, project and category pickers that still work with many jobs, and an Excel export for the accountant.
 
-Out of scope: replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant.
+Out of scope: replacing the accountant's books, VAT filing, payroll, invoicing, Morning or iCount, open banking, other banks' statement files, credit-card company files, roles and permissions, multi-currency, progress billing and retention, and category sub-groups. A Hashavshevet-compatible export can follow the Excel export. Official double-entry books and the balance sheet stay with the accountant.
 
 Default expense categories, preloaded: `חומרים` (materials), `קבלני משנה` (subcontractors), `עבודה` (labor), `ציוד והשכרה` (equipment and rental), `הובלה` (transport), `ביטוח` (insurance), `אחר` (other). Income categories: `תקבול מלקוח` (payment from a client), `הכנסה אחרת` (other income).
 
@@ -46,7 +46,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 | [Module 1 spec](docs/module-1-project-pnl/spec.md) | Product behavior, data model, scope, success metrics |
 | [Screens](docs/module-1-project-pnl/screens.md) | One section per wireframe: purpose, elements, interactions |
 | [Wireframes](docs/module-1-project-pnl/wireframes/README.md) | PNG files, version, and approved / superseded status |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0010 and the record format |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0014 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |
