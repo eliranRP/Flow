@@ -2,6 +2,17 @@
 
 ## 2026-09-26
 
+Wireframes for shared costs and the after-overhead view. All pending owner approval. Every number is example data.
+
+- [11-split-v2.png](module-1-project-pnl/wireframes/11-split-v2.png) supersedes `11-split`. Method control: equal, by income (drawn selected), or manual percent or amount. One tap for every active project. The remainder must reach ₪0 and 100%. `פצל ככה כל חודש` is the recurring split rule.
+- [01-home-v4.png](module-1-project-pnl/wireframes/01-home-v4.png) supersedes `01-home-v3`. The after-overhead switch is on. Each project row shows profit after its share, plus a before · share subline, and the bars are hidden. The overhead row is grey and struck through as allocated in this view. Company tiles stay ₪1,310,000 / ₪1,110,000 / ₪200,000.
+- [02-project-v2.png](module-1-project-pnl/wireframes/02-project-v2.png) supersedes `02-project`. The same switch, plus a before / share / after card. The share is company overhead times this project's share of company income since the project started. The ₪40,000 share is an example for that window, not the September Home share.
+- [overview-6.png](module-1-project-pnl/wireframes/overview-6.png) shows those three phones.
+- Overhead shares round to ₪100. The rounding difference goes to one project so the shares add up exactly to overhead. In the September example that ₪100 sits on `שיפוץ דירה ת"א`.
+- `wireframes/source/gen.py` and `render.sh` include this batch. Older PNGs are kept.
+
+## 2026-09-26
+
 Decision [0021](decisions/0021-shared-costs-and-overhead.md), Accepted. Shared project costs are split. True overhead stays overhead.
 
 - The split sheet can target every active project: equal, by that period's income share, or manual percent or shekels. The owner can save "split like this every month". The next payment from that payee arrives already split. Income-share rules recalculate each month. Equal uses whoever is active when the payment arrives.

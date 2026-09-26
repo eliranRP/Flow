@@ -1,6 +1,6 @@
 # Home
 
-**Status:** Behavior approved through [01-home-v3](../screens.md#01-home-v3), which is pending owner approval. [01-home-v4](../screens.md#01-home-v4) is coming and is not drawn. [01-home-v2](../screens.md#01-home-v2) and the three-project [01-home](../screens.md#01-home) are superseded.
+**Status:** The image to review is [01-home-v4](../screens.md#01-home-v4), pending owner approval. It supersedes [01-home-v3](../screens.md#01-home-v3). [01-home-v2](../screens.md#01-home-v2) and the three-project [01-home](../screens.md#01-home) stay superseded.
 **Product:** Flow. Hebrew, right to left, mobile first.
 **Numbers:** [calculations](../calculations.md). High-confidence rows are already approved before they reach this screen ([0011](../../decisions/0011-auto-approve-high-confidence.md)).
 
@@ -31,7 +31,7 @@ There is one user, the owner. No other home exists.
 | `{n} חשבוניות לא שולמו` | [Unpaid invoices](../screens.md#12-unpaid). Hidden when `n` is 0. The amount is the unpaid net and is not part of the tiles. |
 | Center `+` | Add sheet. |
 | `☰` | Settings. The screen behind that button is [draft](../settings.md) and is not approved. |
-| `רווח אחרי חלק מהתקורה` | View only. Coming on [01-home-v4](../screens.md#01-home-v4). Not on the current image. See [overhead share](../calculations.md#overhead-share). |
+| `רווח אחרי חלק מהתקורה` | View only. Drawn on [01-home-v4](../screens.md#01-home-v4), pending owner approval. On: each project row shows profit after its share, plus a before · share subline, and the bars are hidden. The overhead row is grey and struck through as allocated in this view. Company tiles stay. See [overhead share](../calculations.md#overhead-share). |
 | `פרויקטים` / `לאישור` / `הגדרות` | Those tabs. |
 
 ## Elements and fields
@@ -75,7 +75,7 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 - **0 projects.** Empty state above. Company profit is `₪0`.
 - **Fewer than five projects with activity.** List them all. No collapsed row. Overhead still shows once any transaction exists.
 - **All projects profitable.** Losses-first still sorts by profit ascending, so the smallest profit is first. No red rows.
-- **Overhead versus a project.** Stored job profit does not include `הוצאות כלליות`. Company tiles always do. The overhead row is not a sixth project in the top 5. With the after-overhead view on, a project row shows profit plus its share, and the overhead row displays ₪0 because the view has spread it. Transactions stay on overhead. Company tiles stay put.
+- **Overhead versus a project.** Stored job profit does not include `הוצאות כלליות`. Company tiles always do. The overhead row is not a sixth project in the top 5. With the after-overhead view on, a project row shows profit plus its share, and the overhead row is grey and struck through, with the stored amount still readable. Transactions stay on overhead. Company tiles stay put.
 - **Finished project.** Hidden from the picker and from Home unless it has counting lines in the selected period (a late payment). It stays in year-to-date and in its own project screen.
 - **Very long Hebrew names.** One line and ellipsis on the row. The project screen shows the full name, wrapping up to three lines.
 - **Moving a transaction after approval.** The next time Home is shown, tiles and rows use the new bucket. The past period changes. Flow does not keep a second "original" total on Home.
@@ -93,7 +93,7 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 - [ ] `החודש` is the calendar month, `חודש קודם` is the previous calendar month, and `מתחילת השנה` is 1 January through today, `Asia/Jerusalem`.
 - [ ] This month and last month show the comparison arrow on income, expenses, and profit. Color follows whether the change helps. Year to date shows no arrow until that baseline is [decided](../../open-questions.md#year-to-date-comparison).
 - [ ] The unpaid line shows the count and net, opens the unpaid list, and is absent from the tiles.
-- [ ] The after-overhead toggle does not change company tiles or stored lines. It is absent until [01-home-v4](../screens.md#01-home-v4). When that view is on, project-row profits use [overhead share](../calculations.md#overhead-share), and a period with no project income shows the allocation as unavailable.
+- [ ] The after-overhead toggle does not change company tiles or stored lines. On [01-home-v4](../screens.md#01-home-v4) the on state hides the bars, shows a before · share subline, and strikes through the overhead row. Shares follow the ₪100 rule. A period with no project income shows the allocation as unavailable.
 - [ ] Suggested rows are absent from the tiles and present in the banner count.
 - [ ] Top 5 follows activity or losses-first. Overhead stays the last row. The collapsed row is the rest.
 - [ ] With no projects and no transactions, the only emphasized action is `+ פרויקט חדש`.

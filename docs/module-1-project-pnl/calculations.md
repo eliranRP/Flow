@@ -147,7 +147,7 @@ The owner splits one cash amount across projects by amount or by percent, or acr
 
 ### Largest remainder
 
-Used for percent splits, equal splits, income-share splits, VAT on a split, and the [overhead share](#overhead-share).
+Used for percent splits, equal splits, income-share splits of a payment, and VAT on a split. The overhead view uses the [₪100 rule](#overhead-share) instead.
 
 Given a signed total `T` in agorot and positive integer weights `w_i` with `W = sum w_i`:
 
@@ -168,12 +168,27 @@ The period is the one selected on that screen. On Home that is this month, last 
 Let `H` be overhead profit in that period (income − expenses on the overhead bucket). Let `I_p` be project `p`'s income in that period. Let `I = sum I_p` over projects, not including overhead's own income.
 
 - If `I` is 0, allocation is unavailable. The after-overhead view is not shown. The screen says so. It does not pretend every share is zero.
-- Otherwise each project's share `s_p` is `H` allocated by largest remainder with weights `I_p`. A project with `I_p = 0` has `s_p = 0` and cannot receive a leftover agora.
+- Otherwise each exact share is `H × I_p / I`. A project with `I_p = 0` has share 0.
+- Round every other exact share to the nearest ₪100 (10,000 agorot), half away from zero. A zero-income project stays ₪0. It is not rounded up to ₪100.
+- The rounded shares can miss `H`. The difference `H − (sum of rounded shares)` is added to one project, so the shares then equal `H` exactly. That project is the one whose exact share was reduced the most by rounding (largest `exact − rounded`). If nobody was reduced and a difference remains, it goes to the project with the largest income. Ties break by project code ascending. A zero-income project does not receive this difference.
+- After that, only the project that absorbed the difference may be off a multiple of ₪100. Everyone else is on a multiple of ₪100, or ₪0.
 - Displayed profit after overhead = the project's own profit + `s_p`.
-- Sum of `s_p` equals `H` exactly, in agorot.
 - Displayed margin uses that displayed profit and the project's own income. Income, own expenses, category bars, and the budget card stay on stored project figures.
 - Company tiles, including comparison arrows, stay the stored company totals.
-- On Home, with the view on, the overhead row displays ₪0 and a note that this view has spread it. The row still opens the overhead screen, which shows the stored bucket. Displayed project profits then sum to company profit.
+- On Home, with the view on, the overhead row is grey and struck through, with the stored overhead amount still readable, and a note that this view has spread it. The row still opens the overhead screen, which shows the stored bucket. Displayed project profits then sum to company profit. The struck row is not added on top.
+
+Example data, September 2026, this month, overhead profit −₪60,000, company project income ₪1,310,000. Nearest ₪100, then the ₪100 shortfall on `שיפוץ דירה ת"א` (its exact share was reduced the most):
+
+| Project | Exact cost share | After ₪100 rounding, then the difference |
+| --- | --- | --- |
+| בניין מגורים חולון | ₪13,740.46 | ₪13,700 |
+| וילה רעננה | ₪8,244.27 | ₪8,200 |
+| מגדל משרדים פ"ת | ₪11,450.38 | ₪11,500 |
+| בית פרטי כפר סבא | ₪5,496.18 | ₪5,500 |
+| שיפוץ דירה ת"א | ₪2,748.09 | ₪2,800 |
+| Other 12 | ₪18,320.61 | ₪18,300 |
+
+Those six shares sum to ₪60,000. They are the figures on [01-home-v4](screens.md#01-home-v4). The ₪40,000 on [02-project-v2](screens.md#02-project-v2) is a different example, for project to date, not this September split.
 - The overhead screen itself has no toggle.
 - Home and the project screen share one preference. Whether it starts on is [open](../open-questions.md#after-overhead-by-default).
 
