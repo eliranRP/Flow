@@ -42,6 +42,7 @@ where c.name = 'הקצאה';
 select throws_ok(
   $$set constraints all immediate$$,
   '23514',
+  NULL,
   'a partial allocation does not pass'
 );
 
@@ -56,7 +57,7 @@ insert into public.allocations (company_id, transaction_id, project_id, share_bp
 select c.id, t.id, p.id, 10000, 10000
 from public.companies c
 join public.transactions t on t.company_id = c.id and t.idempotency_key = 'alloc-2'
-join public.projects p on p.company_id = c.id and p.name = 'פרויקט א'
+join public.projects p on p.company_id = c.id and p.name = 'פרויקט ב'
 where c.name = 'הקצאה';
 
 select lives_ok($$set constraints all immediate$$, 'balanced shares pass');
@@ -66,6 +67,7 @@ select throws_ok(
     set transaction_id = (select id from public.transactions where idempotency_key = 'alloc-2')
     where share_bp = 6000$$,
   '23514',
+  NULL,
   'moving an allocation checks the old and the new transaction'
 );
 

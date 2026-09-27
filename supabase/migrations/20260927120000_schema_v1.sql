@@ -542,6 +542,13 @@ begin
     cid := coalesce(new.company_id, old.company_id);
     eid := coalesce(new.id, old.id);
   end if;
+  -- A company DELETE cascades to children and then to audit_log. An AFTER
+  -- DELETE row that still points at that company fails the FK (23503) and
+  -- rolls the delete back. Skip the audit once the company row is gone,
+  -- including the companies DELETE itself.
+  if tg_op = 'DELETE' and not exists (select 1 from public.companies where id = cid) then
+    return old;
+  end if;
   insert into public.audit_log (company_id, actor_id, action, entity, entity_id)
   values (cid, auth.uid(), lower(tg_op), tg_table_name, eid);
   return coalesce(new, old);
@@ -706,7 +713,11 @@ create policy audit_log_select on public.audit_log
 
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all sequences in schema public from anon, authenticated;
-revoke all on all routines in schema public from anon, authenticated;
+revoke all on all routines in schema public from anon, authenticated, public;
+
+-- PUBLIC's built-in default is EXECUTE on every new function, and anon
+-- inherits PUBLIC. A per-schema revoke from anon does not remove that grant.
+alter default privileges for role postgres revoke execute on functions from public;
 
 alter default privileges in schema public revoke all on tables from anon;
 alter default privileges in schema public revoke all on sequences from anon;
