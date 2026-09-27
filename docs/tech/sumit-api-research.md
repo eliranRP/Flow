@@ -455,7 +455,7 @@ Prices are before VAT, from the live pricing iframe on 2026-09-26 [S3]:
 - **Credits** are already negative. Sum directly.
 - **Expenses (verified):** they come back in the same CRM call (child folder "חשבוניות ותשלומים לספקים"; also type 15 in `documents/list`) with **negative** amounts, supplier, supplier invoice number, date and budget section.
   - Cash out = paid expense types (15 חשבונית ותשלום, 17 תיעוד תשלום, and their credits). Supplier invoices (16) are payables.
-  - **VAT:** `WithoutVAT` can equal gross (it did for API-created expenses). If `VATRate` is missing and the tenant is VAT-registered, show expenses gross and flag "VAT unknown". Don't guess the 18 % split, because many expenses (salaries, insurance, abroad) carry no VAT.
+  - **VAT:** `WithoutVAT` can equal gross (it did for API-created expenses). If `VATRate` is missing and the tenant is VAT-registered, show expenses gross and flag "VAT unknown". Don't guess the 18 % split, because many expenses (salaries, insurance, abroad) carry no VAT. **Amended by [0043](../decisions/0043-assumed-vat-on-expenses.md):** that display recommendation is withdrawn. An expense with no split assumes 18% unless the supplier is VAT-exempt.
   - Category needs `getdetails` (lazy).
   - Keep manual/CSV expense entry for tenants who don't use full expense management.
 - **Project assignment:**
