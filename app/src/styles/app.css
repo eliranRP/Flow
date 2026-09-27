@@ -1,38 +1,171 @@
 @import "tailwindcss";
+@import "@fontsource/rubik/hebrew-400.css";
+@import "@fontsource/rubik/hebrew-500.css";
+@import "@fontsource/rubik/hebrew-600.css";
+@import "@fontsource/rubik/hebrew-700.css";
+@import "@fontsource/rubik/latin-400.css";
+@import "@fontsource/rubik/latin-500.css";
+@import "@fontsource/rubik/latin-600.css";
+@import "@fontsource/rubik/latin-700.css";
 @import "../../../design/system/implementation-tokens.css";
 
 /*
-  Map the design tokens into Tailwind v4 utilities.
-  `inline` keeps the utilities pointing at the CSS variables, so light and
-  dark (prefers-color-scheme, or data-theme on <html>) stay in one place:
-  design/system/implementation-tokens.css.
+  Tailwind must not redeclare the implementation tokens under the same names
+  (`--color-bg: var(--color-bg)` is a cycle). Aliases below follow the token
+  file, including light and dark, and @theme points at the aliases.
 */
+:root {
+  --token-bg: var(--color-bg);
+  --token-surface: var(--color-surface);
+  --token-raised: var(--color-raised);
+  --token-tint: var(--color-tint);
+  --token-tint-strong: var(--color-tint-strong);
+  --token-tint-pressed: var(--color-tint-pressed);
+  --token-line: var(--color-line);
+  --token-control-off: var(--color-control-off);
+  --token-control-border: var(--color-control-border);
+  --token-text: var(--color-text);
+  --token-text-secondary: var(--color-text-secondary);
+  --token-text-muted: var(--color-text-muted);
+  --token-accent: var(--color-accent);
+  --token-accent-pressed: var(--color-accent-pressed);
+  --token-accent-text: var(--color-accent-text);
+  --token-on-accent: var(--color-on-accent);
+  --token-logo: var(--color-logo);
+  --token-band: var(--color-band);
+  --token-on-band: var(--color-on-band);
+  --token-on-band-secondary: var(--color-on-band-secondary);
+  --token-band-chip: var(--color-band-chip);
+  --token-band-pill: var(--color-band-pill);
+  --token-good: var(--color-good);
+  --token-bad: var(--color-bad);
+  --token-warning: var(--color-warning);
+  --token-error: var(--color-error);
+  --token-scrim: var(--color-scrim);
+  --token-toast-bg: var(--color-toast-bg);
+  --token-toast-text: var(--color-toast-text);
+  --token-toast-bad: var(--color-toast-bad);
+  --token-seg-on: var(--color-seg-on);
+  --token-disabled-bg: var(--color-disabled-bg);
+  --token-disabled-text: var(--color-disabled-text);
+  --token-skeleton: var(--color-skeleton);
+  --token-skeleton-shine: var(--color-skeleton-shine);
+  --token-knob: var(--color-knob);
+  --token-bad-tint: var(--color-bad-tint);
+  --token-badge-bg: var(--color-badge-bg);
+  --token-badge-text: var(--color-badge-text);
+  --token-focus: var(--color-focus);
+  --token-focus-on-band: var(--color-focus-on-band);
+  --token-gsi-bg: var(--color-gsi-bg);
+  --token-gsi-border: var(--color-gsi-border);
+  --token-gsi-text: var(--color-gsi-text);
+  --token-radius-chip: var(--radius-chip);
+  --token-radius-input: var(--radius-input);
+  --token-radius-button: var(--radius-button);
+  --token-radius-card: var(--radius-card);
+  --token-radius-sheet: var(--radius-sheet);
+  --token-radius-band: var(--radius-band);
+  --token-radius-fab: var(--radius-fab);
+}
+
 @theme inline {
-  --font-sans: "Rubik", system-ui, sans-serif;
-  --color-bg: var(--color-bg);
-  --color-surface: var(--color-surface);
-  --color-raised: var(--color-raised);
-  --color-tint: var(--color-tint);
-  --color-tint-strong: var(--color-tint-strong);
-  --color-line: var(--color-line);
-  --color-text: var(--color-text);
-  --color-text-secondary: var(--color-text-secondary);
-  --color-text-muted: var(--color-text-muted);
-  --color-accent: var(--color-accent);
-  --color-accent-text: var(--color-accent-text);
-  --color-on-accent: var(--color-on-accent);
-  --color-logo: var(--color-logo);
-  --color-band: var(--color-band);
-  --color-on-band: var(--color-on-band);
-  --color-on-band-secondary: var(--color-on-band-secondary);
-  --color-good: var(--color-good);
-  --color-bad: var(--color-bad);
-  --color-gsi-bg: var(--color-gsi-bg);
-  --color-gsi-border: var(--color-gsi-border);
-  --color-gsi-text: var(--color-gsi-text);
-  --radius-band: 28px;
-  --radius-card: 16px;
-  --radius-button: 14px;
+  --font-sans: var(--font-family);
+  --color-bg: var(--token-bg);
+  --color-surface: var(--token-surface);
+  --color-raised: var(--token-raised);
+  --color-tint: var(--token-tint);
+  --color-tint-strong: var(--token-tint-strong);
+  --color-tint-pressed: var(--token-tint-pressed);
+  --color-line: var(--token-line);
+  --color-control-off: var(--token-control-off);
+  --color-control-border: var(--token-control-border);
+  --color-text: var(--token-text);
+  --color-text-secondary: var(--token-text-secondary);
+  --color-text-muted: var(--token-text-muted);
+  --color-accent: var(--token-accent);
+  --color-accent-pressed: var(--token-accent-pressed);
+  --color-accent-text: var(--token-accent-text);
+  --color-on-accent: var(--token-on-accent);
+  --color-logo: var(--token-logo);
+  --color-band: var(--token-band);
+  --color-on-band: var(--token-on-band);
+  --color-on-band-secondary: var(--token-on-band-secondary);
+  --color-band-chip: var(--token-band-chip);
+  --color-band-pill: var(--token-band-pill);
+  --color-good: var(--token-good);
+  --color-bad: var(--token-bad);
+  --color-warning: var(--token-warning);
+  --color-error: var(--token-error);
+  --color-scrim: var(--token-scrim);
+  --color-toast-bg: var(--token-toast-bg);
+  --color-toast-text: var(--token-toast-text);
+  --color-toast-bad: var(--token-toast-bad);
+  --color-seg-on: var(--token-seg-on);
+  --color-disabled-bg: var(--token-disabled-bg);
+  --color-disabled-text: var(--token-disabled-text);
+  --color-skeleton: var(--token-skeleton);
+  --color-skeleton-shine: var(--token-skeleton-shine);
+  --color-knob: var(--token-knob);
+  --color-bad-tint: var(--token-bad-tint);
+  --color-badge-bg: var(--token-badge-bg);
+  --color-badge-text: var(--token-badge-text);
+  --color-focus: var(--token-focus);
+  --color-focus-on-band: var(--token-focus-on-band);
+  --color-gsi-bg: var(--token-gsi-bg);
+  --color-gsi-border: var(--token-gsi-border);
+  --color-gsi-text: var(--token-gsi-text);
+  --radius-chip: var(--token-radius-chip);
+  --radius-input: var(--token-radius-input);
+  --radius-button: var(--token-radius-button);
+  --radius-card: var(--token-radius-card);
+  --radius-sheet: var(--token-radius-sheet);
+  --radius-band: var(--token-radius-band);
+  --radius-fab: var(--token-radius-fab);
+  --text-hero: var(--type-hero-size);
+  --text-hero--line-height: var(--type-hero-line);
+  --text-hero--font-weight: var(--type-hero-weight);
+  --text-display: var(--type-display-size);
+  --text-display--line-height: var(--type-display-line);
+  --text-display--font-weight: var(--type-display-weight);
+  --text-title-1: var(--type-title-1-size);
+  --text-title-1--line-height: var(--type-title-1-line);
+  --text-title-1--font-weight: var(--type-title-1-weight);
+  --text-title-2: var(--type-title-2-size);
+  --text-title-2--line-height: var(--type-title-2-line);
+  --text-title-2--font-weight: var(--type-title-2-weight);
+  --text-title-3: var(--type-title-3-size);
+  --text-title-3--line-height: var(--type-title-3-line);
+  --text-title-3--font-weight: var(--type-title-3-weight);
+  --text-body: var(--type-body-size);
+  --text-body--line-height: var(--type-body-line);
+  --text-body--font-weight: var(--type-body-weight);
+  --text-label: var(--type-label-size);
+  --text-label--line-height: var(--type-label-line);
+  --text-label--font-weight: var(--type-label-weight);
+  --text-hint: var(--type-hint-size);
+  --text-hint--line-height: var(--type-hint-line);
+  --text-hint--font-weight: var(--type-hint-weight);
+  --text-micro: var(--type-micro-size);
+  --text-micro--line-height: var(--type-micro-line);
+  --text-micro--font-weight: var(--type-micro-weight);
+  --text-wordmark: var(--type-wordmark-size);
+  --text-wordmark--line-height: var(--type-wordmark-line);
+  --text-wordmark--font-weight: var(--type-wordmark-weight);
+  /* Guide §7.24: the sign-in wordmark is 44px. The in-app wordmark stays 22px. */
+  --text-signin: 2.75rem;
+  --text-signin--line-height: 1.2;
+  --text-signin--font-weight: 700;
+  --tracking-hero: -0.02em;
+  --tracking-wordmark: -0.01em;
+  --spacing-side: var(--space-side);
+  --spacing-card: var(--space-card-inset);
+  --spacing-section: var(--space-section);
+  --spacing-touch: var(--touch-min);
+  --spacing-control: var(--control-height);
+  --spacing-fab: var(--fab-size);
+  --spacing-tabbar: var(--tabbar-height);
+  --container-content: var(--content-max);
+  --opacity-gsi: 0.38;
 }
 
 html,
@@ -45,7 +178,7 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: var(--font-sans);
+  font-family: var(--font-family);
   font-weight: 500;
   font-variant-numeric: tabular-nums lining-nums;
 }
@@ -53,4 +186,74 @@ body {
 button,
 a {
   font-family: inherit;
+}
+
+.band-pad {
+  padding-top: max(var(--space-8), env(safe-area-inset-top));
+}
+
+.screen-pad {
+  padding-top: max(var(--space-6), env(safe-area-inset-top));
+}
+
+.gsi-button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px rgb(31 31 31 / 12%);
+}
+
+.gsi-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.skeleton-bar {
+  border-radius: var(--radius-chip);
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton) 0%,
+    var(--color-skeleton-shine) 50%,
+    var(--color-skeleton) 100%
+  );
+  background-size: 200% 100%;
+  animation: flow-shimmer var(--dur-shimmer) linear infinite;
+}
+
+.skeleton-bar-band {
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--color-on-band) 25%, transparent);
+}
+
+@keyframes flow-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+  }
+}
+
+.gsi-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-chip);
+  border: 2px solid var(--color-gsi-border);
+  border-top-color: var(--color-gsi-text);
+  animation: flow-spin var(--dur-shimmer) linear infinite;
+}
+
+@keyframes flow-spin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsi-spinner {
+    animation: none;
+  }
 }

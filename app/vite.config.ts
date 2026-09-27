@@ -35,7 +35,7 @@ export default defineConfig({
     spaFallback(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "icon.svg"],
+      includeAssets: ["favicon.svg", "icons/apple-touch-icon.png"],
       workbox: {
         navigateFallback: "/index.html",
       },
@@ -46,16 +46,15 @@ export default defineConfig({
         lang: "he",
         dir: "rtl",
         display: "standalone",
+        orientation: "portrait",
         background_color: "#FFFFFF",
         theme_color: "#7B3FE4",
         start_url: "/",
         icons: [
-          {
-            src: "icon.svg",
-            sizes: "any",
-            type: "image/svg+xml",
-            purpose: "any",
-          },
+          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "icons/maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
     }),

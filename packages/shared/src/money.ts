@@ -1,8 +1,5 @@
-/** Standard Israeli VAT, in basis points. Decision 0043. */
+/** Standard Israeli VAT, in basis points. Decision 0043. The only rate constant. */
 export const STANDARD_VAT_RATE_BP = 1800;
-
-const VAT_DENOMINATOR = 118n;
-const VAT_NUMERATOR = 100n;
 
 /**
  * Half-to-even division of a non-negative integer.
@@ -23,28 +20,92 @@ export function divHalfEven(numerator: bigint, denominator: bigint): bigint {
   return quotient % 2n === 0n ? quotient : quotient + 1n;
 }
 
-/** Shekels (possibly fractional in a source file) to integer agorot. */
-export function shekelsToAgorot(shekels: number): bigint {
-  if (!Number.isFinite(shekels)) {
+function numberToDecimal(value: number): string {
+  if (!Number.isFinite(value)) {
     throw new Error("shekels must be finite");
   }
-  return BigInt(Math.round(shekels * 100));
+  const text = Object.is(value, -0) ? "0" : value.toString();
+  if (!/[eE]/.test(text)) return text;
+  return value.toFixed(12).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+/**
+ * Parse a decimal string to an integer at `scale` digits, half-to-even.
+ * Scale 2 is agorot. Scale 4 turns a fraction such as 0.18 into 1800 bp.
+ */
+export function parseDecimalHalfEven(text: string, scale: number): bigint {
+  const trimmed = text.trim();
+  const negative = trimmed.startsWith("-");
+  const body = negative || trimmed.startsWith("+") ? trimmed.slice(1) : trimmed;
+  if (!/^\d+(\.\d+)?$/.test(body)) {
+    throw new Error(`invalid decimal: ${text}`);
+  }
+  const [whole = "0", frac = ""] = body.split(".");
+  const digits = (frac + "0".repeat(scale + 1)).slice(0, scale + 1);
+  const kept = digits.slice(0, scale);
+  const guard = digits[scale] ?? "0";
+  const rest = frac.slice(scale + 1);
+  const factor = 10n ** BigInt(scale);
+  let scaled = BigInt(whole) * factor + BigInt(kept.length === 0 ? "0" : kept);
+  const guardDigit = Number(guard);
+  const more = /[1-9]/.test(rest);
+  const tie = guardDigit === 5 && !more;
+  const roundUp = guardDigit > 5 || (guardDigit === 5 && more) || (tie && scaled % 2n === 1n);
+  if (roundUp) scaled += 1n;
+  return negative ? -scaled : scaled;
+}
+
+/** Shekels, as a decimal string or a JSON number, to integer agorot. */
+export function shekelsToAgorot(shekels: number | string): bigint {
+  const text = typeof shekels === "string" ? shekels : numberToDecimal(shekels);
+  return parseDecimalHalfEven(text, 2);
+}
+
+/** A VAT fraction such as 0.18 to basis points (1800). */
+export function rateFractionToBp(rate: number): number {
+  const bp = parseDecimalHalfEven(numberToDecimal(rate), 4);
+  if (bp < 0n || bp > 10000n) {
+    throw new Error("VAT rate is out of range");
+  }
+  return Number(bp);
 }
 
 export function agorotToShekels(agorot: bigint): number {
   return Number(agorot) / 100;
 }
 
+/** Nearest whole shekel, half-to-even. Display rounding lives here, not in the totals. */
+export function wholeShekels(agorot: bigint): number {
+  const negative = agorot < 0n;
+  const abs = negative ? -agorot : agorot;
+  const shekels = divHalfEven(abs, 100n);
+  return Number(negative ? -shekels : shekels);
+}
+
+/**
+ * ₪ before the digits, thousands commas, whole shekels, Unicode minus.
+ * Summaries do not show agorot. Decision 0016 and the implementation guide §6.4.
+ */
+export function formatIls(agorot: bigint): string {
+  const negative = agorot < 0n;
+  const shekels = wholeShekels(negative ? -agorot : agorot);
+  const digits = shekels.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${negative ? "−" : ""}₪${digits}`;
+}
+
 /**
  * Net of VAT in agorot.
- * Exempt suppliers keep the gross amount. Everyone else uses
- * net = gross / 1.18, rounded half-to-even to the agora (decision 0043).
- * The sign of `grossAgorot` is preserved.
+ * `rateBp` 0 keeps the gross amount (VAT-exempt). 1800 is net = gross / 1.18.
+ * The sign of `grossAgorot` is preserved. Decision 0043.
  */
-export function netFromGrossAgorot(grossAgorot: bigint, vatExempt: boolean): bigint {
+export function netFromGrossAgorot(grossAgorot: bigint, rateBp: number): bigint {
+  if (!Number.isInteger(rateBp) || rateBp < 0 || rateBp > 10000) {
+    throw new Error("rateBp must be an integer from 0 to 10000");
+  }
+  if (rateBp === 0) return grossAgorot;
   const negative = grossAgorot < 0n;
   const abs = negative ? -grossAgorot : grossAgorot;
-  const net = vatExempt ? abs : divHalfEven(abs * VAT_NUMERATOR, VAT_DENOMINATOR);
+  const net = divHalfEven(abs * 10000n, BigInt(10000 + rateBp));
   return negative ? -net : net;
 }
 
@@ -55,7 +116,7 @@ export function vatFromGrossAndNet(grossAgorot: bigint, netAgorot: bigint): bigi
 /**
  * Split `total` across `weights` in integer units. Remainders go to the
  * largest fractional parts, then to the earliest index, so the parts sum
- * back to `total`.
+ * back to `total`. The sign of `total` is preserved.
  */
 export function allocateByWeights(total: bigint, weights: readonly number[]): bigint[] {
   if (weights.length === 0) return [];
@@ -83,7 +144,8 @@ export function allocateByWeights(total: bigint, weights: readonly number[]): bi
     });
   for (const entry of ranked) {
     if (leftover === 0n) break;
-    base[entry.index] = (base[entry.index] ?? 0n) + 1n;
+    const current = base[entry.index] ?? 0n;
+    base[entry.index] = current + 1n;
     leftover -= 1n;
   }
   assigned = base.reduce((sumAgorot, part) => sumAgorot + part, 0n);
