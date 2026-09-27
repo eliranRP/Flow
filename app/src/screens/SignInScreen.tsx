@@ -101,9 +101,9 @@ export function SignInScreen() {
 
         {notice ? (
           <p className="signin-help">
-            <a className="t-label text-text-secondary underline" href="#help">
+            <Link to="/help" className="t-label text-text-secondary underline">
               צריך עזרה בכניסה?
-            </a>
+            </Link>
           </p>
         ) : null}
 

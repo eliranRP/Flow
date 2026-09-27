@@ -34,64 +34,6 @@ const uuid = z.uuid();
 const agorot = z.number().int();
 const timestamptz = z.iso.datetime({ offset: true });
 
-export const companySchema = z.object({
-  id: uuid,
-  ownerId: uuid,
-  name: z.string().min(1),
-  taxId: z.string().nullable(),
-  vatRateBp: z.number().int().min(0).max(10000),
-  isDemo: z.boolean(),
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
-
-export const projectSchema = z.object({
-  id: uuid,
-  companyId: uuid,
-  name: z.string().min(1),
-  status: projectStatusSchema,
-  stateLabel: z.string().nullable(),
-  budgetAgorot: agorot.nullable(),
-  sumitBudgetSectionId: z.number().int().nullable(),
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
-
-export const customerSchema = z.object({
-  id: uuid,
-  companyId: uuid,
-  name: z.string().min(1),
-  companyNumber: z.string().nullable(),
-  sumitExternalId: z.number().int().nullable(),
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
-
-export const supplierSchema = z.object({
-  id: uuid,
-  companyId: uuid,
-  name: z.string().min(1),
-  companyNumber: z.string().nullable(),
-  vatExempt: z.boolean(),
-  rememberedProjectId: uuid.nullable(),
-  rememberedCategoryId: uuid.nullable(),
-  sumitExternalId: z.number().int().nullable(),
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
-
-export const categorySchema = z.object({
-  id: uuid,
-  companyId: uuid,
-  name: z.string().min(1),
-  kind: categoryKindSchema,
-  sortOrder: z.number().int(),
-  isDefault: z.boolean(),
-  hidden: z.boolean(),
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
-
 const transactionShape = {
   id: uuid,
   companyId: uuid,
@@ -123,32 +65,6 @@ export const transactionInsertSchema = z
   .refine((row) => row.amountGross === row.amountNet + row.vatAmount, {
     message: "amount_gross must equal amount_net + vat_amount",
   });
-
-export const transactionSchema = z.object(transactionShape).refine(
-  (row) => row.amountGross === row.amountNet + row.vatAmount,
-  { message: "amount_gross must equal amount_net + vat_amount" },
-);
-
-export const allocationSchema = z.object({
-  id: uuid,
-  companyId: uuid,
-  transactionId: uuid,
-  projectId: uuid,
-  shareBp: z.number().int().min(1).max(10000),
-  amountNet: agorot,
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
-
-export const splitRuleSchema = z.object({
-  id: uuid,
-  companyId: uuid,
-  supplierId: uuid.nullable(),
-  method: splitMethodSchema,
-  label: z.string().min(1),
-  createdAt: timestamptz,
-  updatedAt: timestamptz,
-});
 
 /**
  * What the browser may know about a SUMIT connection.

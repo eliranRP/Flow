@@ -168,6 +168,30 @@
   --opacity-gsi: 0.38;
 }
 
+/*
+  Component sizes from the implementation guide. They are not new layout steps.
+  §3.2 band padding, §3.3 grab handle, §4 tab slots and row padding, §7.24 sign-in.
+*/
+:root {
+  --band-pad-bottom: var(--radius-band);
+  --band-label-gap: 2px;
+  --tab-slot: 64px;
+  --tab-icon-gap: 3px;
+  --empty-icon: 80px;
+  --empty-line: 300px;
+  --label-gap: 6px;
+  --grab-width: 40px;
+  --grab-height: 5px;
+  --grab-radius: 3px;
+  --row-pad: 14px;
+  --note-icon-nudge: 2px;
+  --note-body-gap: 2px;
+  --signin-brand-pad: 5.5rem;
+  --gsi-press: 12%;
+  --gsi-disabled: 38%;
+  --gsi-ink: 31 31 31;
+}
+
 html,
 body,
 #root {
@@ -217,7 +241,7 @@ a {
   color: var(--color-on-band);
   border-radius: 0 0 var(--radius-band) var(--radius-band);
   padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: 1.75rem;
+  padding-bottom: var(--band-pad-bottom);
 }
 
 .band-row {
@@ -233,7 +257,7 @@ a {
 }
 
 .band-label {
-  margin-top: 2px;
+  margin-top: var(--band-label-gap);
   color: var(--color-on-band-secondary);
 }
 
@@ -262,7 +286,6 @@ a {
   width: 100%;
   max-width: var(--content-max);
   height: var(--tabbar-height);
-  min-height: 60px;
   background: var(--color-surface);
   border-top: 1px solid var(--color-line);
 }
@@ -277,11 +300,11 @@ a {
 
 .tab-slot {
   display: flex;
-  width: 64px;
+  width: var(--tab-slot);
   min-height: var(--touch-min);
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: var(--tab-icon-gap);
   color: var(--color-text-muted);
   font-size: var(--type-micro-size);
   line-height: var(--type-micro-line);
@@ -352,8 +375,8 @@ a {
 
 .empty-icon {
   display: grid;
-  width: 80px;
-  height: 80px;
+  width: var(--empty-icon);
+  height: var(--empty-icon);
   place-items: center;
   margin-bottom: var(--space-5);
   border-radius: var(--radius-chip);
@@ -362,8 +385,8 @@ a {
 }
 
 .empty-line {
-  max-width: 300px;
-  margin-top: 6px;
+  max-width: var(--empty-line);
+  margin-top: var(--label-gap);
 }
 
 .empty-action {
@@ -389,36 +412,33 @@ a {
   background: var(--color-tint-pressed);
 }
 
-.sheet-layer {
+.sheet-scrim {
   position: fixed;
   inset: 0;
   z-index: 30;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.sheet-scrim {
-  position: absolute;
-  inset: 0;
   border: 0;
   background: var(--color-scrim);
 }
 
 .sheet-panel {
-  position: relative;
+  position: fixed;
+  z-index: 31;
+  inset-inline: 0;
+  bottom: 0;
   width: 100%;
   max-width: var(--content-max);
+  margin-inline: auto;
   padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
+  outline: none;
 }
 
 .sheet-grab {
-  width: 40px;
-  height: 5px;
+  width: var(--grab-width);
+  height: var(--grab-height);
   margin: 0 auto var(--space-3);
-  border-radius: 3px;
+  border-radius: var(--grab-radius);
   background: var(--color-control-off);
 }
 
@@ -433,14 +453,14 @@ a {
   display: flex;
   gap: var(--space-3);
   align-items: flex-start;
-  padding: 14px var(--space-4);
+  padding: var(--row-pad) var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-tint);
 }
 
 .note-icon {
   display: grid;
-  padding-top: 2px;
+  padding-top: var(--note-icon-nudge);
   color: var(--color-accent-text);
 }
 
@@ -456,7 +476,7 @@ a {
 }
 
 .note-body {
-  margin-top: 2px;
+  margin-top: var(--note-body-gap);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line);
   font-weight: var(--type-hint-weight);
@@ -475,11 +495,11 @@ a {
 }
 
 .signin-brand {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 5.5rem);
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--signin-brand-pad));
 }
 
 .signin-tagline {
-  margin-top: 6px;
+  margin-top: var(--label-gap);
   font-size: var(--type-title-3-size);
   line-height: var(--type-title-3-line);
   font-weight: var(--type-body-weight);
@@ -531,62 +551,71 @@ a {
 }
 
 .gsi-button:active:not(:disabled) {
-  box-shadow: inset 0 0 0 999px rgb(31 31 31 / 12%);
+  box-shadow: inset 0 0 0 999px rgb(var(--gsi-ink) / var(--gsi-press));
 }
 
 .gsi-dis:disabled {
-  border-color: rgb(31 31 31 / 12%);
-  background: rgb(255 255 255 / 38%);
-  color: rgb(31 31 31 / 38%);
+  border-color: rgb(var(--gsi-ink) / var(--gsi-press));
+  background: rgb(255 255 255 / var(--gsi-disabled));
+  color: rgb(var(--gsi-ink) / var(--gsi-disabled));
   opacity: 1;
 }
 
 .gsi-mark {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   flex: none;
 }
 
 .gsi-mark-dim {
-  opacity: 0.38;
+  opacity: var(--gsi-disabled);
 }
 
-.skeleton-bar {
+.skeleton-bar,
+.skeleton-bar-band {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-chip);
-  background: linear-gradient(
-    90deg,
-    var(--color-skeleton) 0%,
-    var(--color-skeleton-shine) 50%,
-    var(--color-skeleton) 100%
-  );
-  background-size: 200% 100%;
-  animation: flow-shimmer var(--dur-shimmer) linear infinite;
+  background: var(--color-skeleton);
 }
 
 .skeleton-bar-band {
-  border-radius: var(--radius-chip);
-  background: color-mix(in srgb, var(--color-on-band) 25%, transparent);
+  background: var(--color-skeleton-band);
+}
+
+.skeleton-bar::after,
+.skeleton-bar-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-skeleton-shine), transparent);
+  animation: flow-shimmer var(--dur-shimmer) linear infinite;
+}
+
+.skeleton-bar-band::after {
+  background: linear-gradient(90deg, transparent, var(--color-skeleton-band-shine), transparent);
 }
 
 @keyframes flow-shimmer {
   from {
-    background-position: 100% 0;
+    transform: translateX(100%);
   }
   to {
-    background-position: -100% 0;
+    transform: translateX(-100%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-bar {
+  .skeleton-bar::after,
+  .skeleton-bar-band::after {
     animation: none;
   }
 }
 
 .gsi-spinner {
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   border-radius: var(--radius-chip);
   border: 2px solid var(--color-gsi-border);
   border-top-color: var(--color-gsi-text);
