@@ -24,7 +24,8 @@ test("add is a sheet and transaction detail has no tab bar", async ({ page }) =>
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toBeVisible();
+  // Vaul hides the page behind the sheet from assistive tech. The bar is still on screen.
+  await expect(page.locator('nav[aria-label="ניווט ראשי"]')).toBeVisible();
   await page.goto("/transactions/1?preview=1");
   await expect(page.getByRole("heading", { name: "פרטי תנועה" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(0);

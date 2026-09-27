@@ -4,7 +4,8 @@
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... SEED_OWNER_USER_ID=... pnpm seed:demo
  *
  * Idempotent on (company, source, external id). Does not print secrets.
- * Does not call SUMIT. The documents are the committed fixture.
+ * Creates the company with is_demo = true, or updates one that is already demo.
+ * Refuses to write into a real company. Does not call SUMIT.
  */
 
 import { readFileSync } from "node:fs";
@@ -82,10 +83,16 @@ function specItem(spec: Record<string, unknown> | undefined): string {
 async function main() {
   const { data: existing, error: existingError } = await supabase
     .from("companies")
-    .select("id")
+    .select("id, is_demo")
     .eq("owner_id", ownerId)
     .maybeSingle();
   if (existingError) throw existingError;
+
+  if (existing && !existing.is_demo) {
+    throw new Error(
+      "seed-demo will not write into a real company. The owner's company is not marked is_demo.",
+    );
+  }
 
   let companyId = existing?.id;
   if (!companyId) {
@@ -304,7 +311,8 @@ async function main() {
       const shares = shareBp(keys.map((key) => days[key] ?? 0));
       for (let index = 0; index < keys.length; index += 1) {
         const key = keys[index];
-        if (!key) continue;
+        const share = shares[index];
+        if (!key || share == null) continue;
         const project = projectId.get(key);
         if (!project) continue;
         const { error } = await supabase.from("split_rule_targets").upsert(
@@ -313,7 +321,7 @@ async function main() {
             rule_id: rule.id,
             project_id: project,
             month: `${month}-01`,
-            share_bp: shares[index],
+            share_bp: share,
           },
           { onConflict: "rule_id,project_id,month" },
         );

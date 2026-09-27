@@ -12,6 +12,7 @@ export default defineConfig(
       "docs/**",
       "supabase/**",
       "packages/shared/fixtures/**",
+      "packages/shared/src/database.types.ts",
       "playwright-report/**",
       "test-results/**",
     ],

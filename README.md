@@ -43,7 +43,7 @@ Success, for the proof of concept: a first project P&L within 15 minutes of sign
 
 ## Run locally
 
-Requirements: Node.js 22, pnpm 10, and the [Supabase CLI](https://supabase.com/docs/guides/cli) when you want to apply migrations. Docker is required for `supabase start` and the pgTAP job.
+Requirements: Node.js 22, pnpm 10, and the [Supabase CLI](https://supabase.com/docs/guides/cli) when you want to apply migrations. Docker is required for `supabase start`. The pgTAP suite can also run without Docker.
 
 ```bash
 pnpm install
@@ -59,12 +59,19 @@ The dev server listens on port 43123. Signed-out visitors go to the sign-in scre
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm db:test          # pgTAP. Needs Docker. CI pins Supabase CLI 2.118.0 and runs supabase db start first.
+pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
+pnpm db:test:local    # same suite with pg_prove on a local Postgres 17. No Docker. See scripts/pgtap-local.sh.
 pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID
 pnpm latency          # times get_home() against SUPABASE_URL
 ```
 
-`pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script writes that same company for the signed-in owner. It is idempotent on `(company, source, external id)`.
+`pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script creates that company with `is_demo = true`, or updates one that is already marked demo. It refuses to write into a real company. It is idempotent on `(company, source, external id)`.
+
+`packages/shared/src/database.types.ts` is generated from that local database:
+
+```bash
+supabase gen types typescript --db-url "$DATABASE_URL" --schema public > packages/shared/src/database.types.ts
+```
 
 ## Documentation
 

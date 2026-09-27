@@ -42,6 +42,15 @@ export function App() {
               />
             }
           />
+          <Route
+            path="/help"
+            element={
+              <LegalScreen
+                title="עזרה בכניסה"
+                body="אם החלון של Google נסגר, אפשר לנסות שוב. אם אין חיבור, בדקו את הרשת ואז לחצו שוב על המשך עם Google. לא צריך סיסמה."
+              />
+            }
+          />
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>
               <Route path="onboarding" element={<PageTitle title="פרטי העסק" />} />

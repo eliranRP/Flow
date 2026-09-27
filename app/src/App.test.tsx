@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
@@ -45,10 +45,21 @@ describe("App", () => {
     expect(screen.getByText("טוען…")).toBeInTheDocument();
   });
 
-  it("opens Add as a sheet and keeps the tab bar", () => {
+  it("opens Add as a sheet and keeps the tab bar", async () => {
     renderAt("/add?preview=1");
-    expect(screen.getByRole("dialog", { name: "הוספה" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "ניווט ראשי" })).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "הוספה" });
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "ניווט ראשי", hidden: true })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+  });
+
+  it("closes the add sheet on Escape", () => {
+    renderAt("/add?preview=1");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
   });
 
   it("leaves the tab bar off transaction detail", () => {
