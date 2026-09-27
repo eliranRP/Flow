@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { usePreviewMode } from "../preview";
 import { supabase, supabaseConfigured } from "../lib/supabase";
 
 export function HomeScreen() {
+  const preview = usePreviewMode();
   const session = useQuery({
     queryKey: ["session"],
-    enabled: supabaseConfigured && supabase != null,
+    enabled: !preview && supabaseConfigured && supabase != null,
     queryFn: async () => {
       if (!supabase) return null;
       const { data, error } = await supabase.auth.getSession();
@@ -15,7 +17,7 @@ export function HomeScreen() {
 
   const home = useQuery({
     queryKey: ["home", session.data?.user.id],
-    enabled: session.data != null && supabase != null,
+    enabled: !preview && session.data != null && supabase != null,
     queryFn: async () => {
       if (!supabase) return null;
       const { data, error } = await supabase.rpc("get_home");

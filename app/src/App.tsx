@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
+import { usePreviewMode } from "./preview";
 import { HomeScreen } from "./screens/HomeScreen";
 import { PlaceholderScreen } from "./screens/PlaceholderScreen";
 import { SignInScreen } from "./screens/SignInScreen";
@@ -14,6 +15,7 @@ export function App() {
       <Routes>
         <Route path="/sign-in" element={<SignInScreen />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/preview" element={<Navigate to="/?preview=1" replace />} />
         <Route element={<Shell />}>
           <Route index element={<HomeScreen />} />
           <Route path="projects" element={<PlaceholderScreen title="פרויקטים" note="רשימת הפרויקטים. יצירה ועריכה יגיעו בשלב הבא." />} />
@@ -35,22 +37,29 @@ export function App() {
 }
 
 function Shell() {
+  const preview = usePreviewMode();
+  const search = preview ? "?preview=1" : "";
   return (
     <div className="flex min-h-dvh flex-col">
+      {preview ? (
+        <p className="bg-tint px-6 py-2 text-center text-[13px] font-semibold text-accent-text">
+          תצוגת הדגמה · demo · אין כאן נתונים אמיתיים
+        </p>
+      ) : null}
       <div className="flex-1 pb-24">
         <Outlet />
       </div>
       <nav className="fixed inset-x-0 bottom-0 mx-auto flex h-[calc(52px+env(safe-area-inset-bottom))] w-full max-w-[480px] border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]">
-        <NavLink to="/" end className={tabClass}>
+        <NavLink to={`/${search}`} end className={tabClass}>
           בית
         </NavLink>
-        <NavLink to="/review" className={tabClass}>
+        <NavLink to={`/review${search}`} className={tabClass}>
           תור
         </NavLink>
-        <NavLink to="/projects" className={tabClass}>
+        <NavLink to={`/projects${search}`} className={tabClass}>
           פרויקטים
         </NavLink>
-        <NavLink to="/settings" className={tabClass}>
+        <NavLink to={`/settings${search}`} className={tabClass}>
           הגדרות
         </NavLink>
       </nav>
