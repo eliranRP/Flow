@@ -1,22 +1,34 @@
 import { homeSummarySchema } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { EmptyState } from "../components/EmptyState";
-import { OfflineIcon, UploadIcon } from "../components/icons";
+import { ChartIcon, OfflineIcon } from "../components/icons";
 import { HomeSkeleton } from "../components/Skeleton";
 import { Wordmark } from "../components/Wordmark";
+import { homeGreeting, profitBandLabel } from "../home-label";
 import { getSupabase } from "../lib/supabase";
-import { usePreviewMode } from "../preview";
+import { useHomePreview, usePreviewSearch } from "../preview";
+
+function readOwnerName(metadata: unknown): string | null {
+  if (typeof metadata !== "object" || metadata === null) return null;
+  const fullName = "full_name" in metadata ? metadata.full_name : undefined;
+  const name = "name" in metadata ? metadata.name : undefined;
+  const raw = fullName ?? name;
+  return typeof raw === "string" ? raw : null;
+}
 
 export function HomeScreen() {
-  const preview = usePreviewMode();
-  const { status } = useAuth();
+  const preview = useHomePreview();
+  const search = usePreviewSearch();
+  const navigate = useNavigate();
+  const { status, session } = useAuth();
   const supabase = getSupabase();
+  const previewing = preview !== "off";
 
   const home = useQuery({
     queryKey: ["home"],
-    enabled: !preview && status === "authed" && supabase != null,
+    enabled: !previewing && status === "authed" && supabase != null,
     queryFn: async () => {
       if (!supabase) return null;
       const { data, error } = await supabase.rpc("get_home");
@@ -25,22 +37,26 @@ export function HomeScreen() {
     },
   });
 
-  const loading = !preview && (status === "loading" || home.isLoading);
-  const failed = !preview && home.isError;
-  const showExample = preview || home.data?.is_demo === true;
+  const loading = preview === "loading" || (!previewing && (status === "loading" || home.isLoading));
+  const failed = preview === "error" || (!previewing && home.isError);
+  const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
+  // Phase 0 does not wire the P&L yet, so the band stays the first-run placeholder.
+  const label = profitBandLabel(false);
 
-  if (loading) return <HomeSkeleton />;
+  if (loading) return <HomeSkeleton previewing={previewing} />;
 
   return (
-    <div>
-      <header className="band-pad rounded-b-band bg-band px-side pb-10 text-on-band">
-        <Wordmark tone="on-band" />
-        <p className="mt-8 text-title-2">כאן יופיע הרווח הנקי של העסק</p>
+    <div className="flex min-h-full flex-1 flex-col">
+      <header className="band">
+        <div className="band-row">
+          <Wordmark tone="on-band" />
+        </div>
+        <div className="band-hero">
+          <p className="t-title-2">{greeting}</p>
+          <h1 className="band-label t-label">{label}</h1>
+        </div>
+        {previewing ? <p className="preview-banner t-hint">מצב תצוגה</p> : null}
       </header>
-
-      {showExample ? (
-        <p className="px-side pt-4 text-hint text-text-muted">נתוני דוגמה · Example data</p>
-      ) : null}
 
       {failed ? (
         <EmptyState
@@ -50,8 +66,14 @@ export function HomeScreen() {
           action={
             <button
               type="button"
-              onClick={() => void home.refetch()}
-              className="inline-flex h-touch items-center rounded-chip bg-tint px-4 text-label text-accent-text"
+              className="btn-sec"
+              onClick={() => {
+                if (previewing) {
+                  void navigate("/?preview=1");
+                  return;
+                }
+                void home.refetch();
+              }}
             >
               ניסיון חוזר
             </button>
@@ -59,15 +81,12 @@ export function HomeScreen() {
         />
       ) : (
         <EmptyState
-          icon={<UploadIcon />}
+          icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה."
+          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
           action={
-            <Link
-              to={preview ? "/add?preview=1" : "/add"}
-              className="inline-flex h-touch items-center rounded-chip bg-tint px-4 text-label text-accent-text"
-            >
-              העלאת דוח בנק
+            <Link to={`/settings${search}`} className="btn-sec">
+              חיבור SUMIT
             </Link>
           }
         />
