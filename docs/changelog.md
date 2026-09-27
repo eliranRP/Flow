@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-27
+
+Decision [0043](decisions/0043-assumed-vat-on-expenses.md), Accepted. It amends [0041](decisions/0041-amounts-before-vat.md) for expenses.
+
+- SUMIT expenses created via `addexpense` arrive with no VAT split. Showing them gross would overstate every expense by 18%.
+- An expense with no split, and a bank-statement line with no supplier match, assumes the standard rate. The rate is a configurable constant, currently 18%. net = gross / 1.18, unless the supplier is VAT-exempt, in which case net = gross.
+- The VAT-exempt flag is supplier memory. Toggling it recomputes past amounts. `vat_status='assumed'`. A subtle hint may appear on the detail screen. Home has no warning banner.
+- Documents that carry a VAT split keep the source values.
+- The demo client's Rule A is the implementation target: net = gross / 1.18 for VAT-registered suppliers, gross for the exempt insurer `ביטוח המגן`.
+
 ## 2026-09-26
 
 Google sign-in screens replace the SMS code screens, under [0033](decisions/0033-google-sign-in.md). The design update is byte-for-byte: 120 files checked against the update manifest (9 added, 111 changed), and the eight `er-03-sms-wrong` and `er-04-sms-expired` files are removed. `09a` is "המשך עם Google". `er-03-google-cancelled` and `er-04-google-failed` replace the code errors. Settings shows the connected Google account. The implementation guide keeps the Tailwind note from [0040](decisions/0040-tailwind-v4.md) and adds §7.24.

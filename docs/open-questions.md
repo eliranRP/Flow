@@ -2,7 +2,7 @@
 
 These are not decisions. When one is settled, add a numbered decision record, point the question at it, and update the [changelog](changelog.md).
 
-Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), Google account sign-in ([0033](decisions/0033-google-sign-in.md), which supersedes [0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)), Home's big number staying company net profit when that switch is on ([0032](decisions/0032-home-hero-stays-company-net-profit.md)), and not writing project tags back to SUMIT ([0036](decisions/0036-sumit-read-only.md)). Amounts before VAT, with a missing split flagged "VAT unknown", are [0041](decisions/0041-amounts-before-vat.md). SUMIT as the primary source for income and expenses, with Hapoalim as a complement, is [0042](decisions/0042-sumit-primary-income-and-expenses.md). The per-screen spec for the eight approved screens is written.
+Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), Google account sign-in ([0033](decisions/0033-google-sign-in.md), which supersedes [0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)), Home's big number staying company net profit when that switch is on ([0032](decisions/0032-home-hero-stays-company-net-profit.md)), and not writing project tags back to SUMIT ([0036](decisions/0036-sumit-read-only.md)). Amounts before VAT are [0041](decisions/0041-amounts-before-vat.md). An expense with no VAT split assumes 18% unless the supplier is VAT-exempt ([0043](decisions/0043-assumed-vat-on-expenses.md)). SUMIT as the primary source for income and expenses, with Hapoalim as a complement, is [0042](decisions/0042-sumit-primary-income-and-expenses.md). The per-screen spec for the eight approved screens is written.
 
 ## Settings screen
 
@@ -75,7 +75,7 @@ Resolved by [0036](decisions/0036-sumit-read-only.md). Flow does not write proje
 
 Expenses created through the SUMIT API have no VAT split ([research](tech/sumit-api-research.md)). Expenses entered on the SUMIT website, or by OCR, were not checked.
 
-Open: what VAT split do those website and OCR expenses carry? If a document has no split, [0041](decisions/0041-amounts-before-vat.md) shows the gross amount flagged "VAT unknown".
+Open: what VAT split do those website and OCR expenses carry? If a document has no split, [0043](decisions/0043-assumed-vat-on-expenses.md) assumes 18% unless the supplier is marked VAT-exempt.
 
 ## Stability of the undocumented CRM field names
 
@@ -167,13 +167,13 @@ Resolved by [0039](decisions/0039-pilot-defaults.md). The pilot accepts the `sup
 
 Open: use a `workers.dev` address for the pilot, or buy a domain before inviting customers?
 
-## VAT on bank-only income
+## VAT on bank-only lines
 
-Resolved by [0041](decisions/0041-amounts-before-vat.md). Where the source has no VAT split, show the gross amount flagged "VAT unknown". Do not derive a split at the standard rate.
+Resolved by [0043](decisions/0043-assumed-vat-on-expenses.md), which amends [0041](decisions/0041-amounts-before-vat.md). A bank-statement line with no supplier match uses the standard rate (currently 18%): net = gross / 1.18. A supplier later marked VAT-exempt counts at gross.
 
-## Unknown-VAT expenses
+## Expenses with no VAT split
 
-Resolved by [0041](decisions/0041-amounts-before-vat.md). Show the gross amount flagged "VAT unknown". Do not hold the row for a review question instead of that flag.
+Resolved by [0043](decisions/0043-assumed-vat-on-expenses.md), which amends [0041](decisions/0041-amounts-before-vat.md). Do not show the gross amount flagged "VAT unknown", and do not ask in review. Assume 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt, in which case net = gross. The flag is supplier memory. The detail screen may hint; Home does not banner it.
 
 ## Cheque date
 
