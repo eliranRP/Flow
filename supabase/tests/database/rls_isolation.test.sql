@@ -1,50 +1,70 @@
--- A second authenticated user cannot read or write another company's rows.
--- Runs under `supabase test db`, which installs the `tests` helpers.
+-- Owner isolation, anon denial, and same-company foreign keys.
+-- Helpers come from supabase/tests/helpers.sql, loaded on `supabase db start`.
 
 begin;
 
-select plan(16);
+select no_plan();
 
 select tests.create_supabase_user('owner_a');
 select tests.create_supabase_user('owner_b');
 
-select tests.authenticate_as('owner_a');
+insert into public.companies (owner_id, name, tax_id)
+values (tests.get_supabase_uid('owner_a'), 'אלפא שיפוצים', '500000001');
 
-insert into public.companies (name, tax_id)
-values ('אלפא שיפוצים', '500000001');
-
-create temp table flow_ids as
-select id as company_id
-from public.companies
-where name = 'אלפא שיפוצים';
-
-select is(
-  (select count(*)::int from public.categories),
-  9,
-  'a new company seeds 7 expense categories and 2 income categories'
-);
-
-select is(
-  (select count(*)::int from public.categories where kind = 'expense' and is_default),
-  7,
-  'seven default expense categories'
-);
+create temp table flow_a as
+select
+  c.id as company_id,
+  c.owner_id,
+  (select p.id from public.projects p where p.company_id = c.id limit 1) as project_id,
+  (select id from public.customers where company_id = c.id limit 1) as customer_id,
+  (select id from public.suppliers where company_id = c.id limit 1) as supplier_id,
+  (select id from public.categories where company_id = c.id limit 1) as category_id,
+  (select id from public.transactions where company_id = c.id limit 1) as transaction_id
+from public.companies c
+where c.name = 'אלפא שיפוצים';
 
 insert into public.projects (company_id, name, state_label)
-select company_id, 'שיפוץ הרצל 12', 'פעיל'
-from flow_ids;
+select company_id, 'שיפוץ הרצל 12', 'פעיל' from flow_a;
+
+update flow_a set project_id = (select id from public.projects where name = 'שיפוץ הרצל 12');
+
+insert into public.customers (company_id, name)
+select company_id, 'לקוח א' from flow_a;
+update flow_a set customer_id = (select id from public.customers where name = 'לקוח א');
+
+insert into public.suppliers (company_id, name)
+select company_id, 'ספק א' from flow_a;
+update flow_a set supplier_id = (select id from public.suppliers where name = 'ספק א');
 
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
-  doc_date, cash_date, source, external_id, idempotency_key, description
+  doc_date, cash_date, source, external_id, idempotency_key,
+  project_id, description
 )
 select
   company_id, 'expense', 'expense', 'project',
-  2596000, 2200000, 396000, 'assumed',
+  -2596000, -2200000, -396000, 'assumed',
   '2026-04-12', '2026-04-12', 'sumit', '2389941435', 'sumit:2389941435',
-  'בלוקים'
-from flow_ids;
+  project_id, 'בלוקים'
+from flow_a;
+update flow_a set transaction_id = (
+  select id from public.transactions where idempotency_key = 'sumit:2389941435'
+);
+
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select company_id, transaction_id, project_id, 10000, -2200000 from flow_a;
+
+insert into public.split_rules (company_id, supplier_id, method, label)
+select company_id, supplier_id, 'worker_days', 'ימי עבודה' from flow_a;
+
+insert into public.split_rule_targets (company_id, rule_id, project_id, month, share_bp)
+select a.company_id, r.id, a.project_id, '2026-04-01', 10000
+from flow_a a
+join public.split_rules r on r.company_id = a.company_id;
+
+insert into public.review_queue (company_id, transaction_id, reason)
+select company_id, transaction_id, 'ניחוש' from flow_a;
 
 insert into public.sumit_connections (
   company_id, sumit_company_id,
@@ -55,117 +75,295 @@ select
   '\x0011'::bytea, '\x00112233445566778899aabb'::bytea,
   '\x00ff'::bytea, '\xff00112233445566778899aa'::bytea,
   'SUMIT_KEK_v1'
-from flow_ids;
+from flow_a;
 
-insert into public.audit_log (company_id, actor_id, action, entity)
-select company_id, auth.uid(), 'seed', 'company'
-from flow_ids;
+grant all on flow_a to authenticated, anon;
 
 select is(
-  (select count(*)::int from public.projects),
+  (select count(*)::int from public.categories),
+  9,
+  'a new company seeds 7 expense categories and 2 income categories'
+);
+
+select tests.authenticate_as('owner_a');
+
+select is((select count(*)::int from public.companies), 1, 'owner can read their company');
+select is((select count(*)::int from public.projects), 1, 'owner can read their project');
+select is((select count(*)::int from public.categories), 9, 'owner can read categories');
+select is((select count(*)::int from public.transactions), 1, 'owner can read transactions');
+select is(
+  (select connected from public.sumit_connection_status),
+  true,
+  'owner can see the SUMIT connection status'
+);
+select throws_ok(
+  $$select key_ciphertext from public.sumit_connections$$,
+  '42501',
+  'owner cannot read SUMIT ciphertext'
+);
+select throws_ok(
+  $$insert into public.sumit_connections (
+      company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version
+    )
+    select company_id, '\x01'::bytea, '\x0201'::bytea, '\x03'::bytea, '\x0401'::bytea, 'SUMIT_KEK_v1'
+    from flow_a$$,
+  '42501',
+  'owner cannot write a SUMIT connection'
+);
+select throws_ok(
+  $$insert into public.audit_log (company_id, actor_id, action, entity)
+    select company_id, owner_id, 'tamper', 'company' from flow_a$$,
+  '42501',
+  'owner cannot forge an audit row'
+);
+
+update public.companies set name = 'אלפא אחרי';
+
+select is(
+  (select count(*)::int from public.audit_log where action = 'update' and entity = 'companies'),
   1,
-  'owner can read their project'
+  'updating the company writes an audit row'
 );
 
 select tests.authenticate_as('owner_b');
 
-select is(
-  (select count(*)::int from public.companies),
-  0,
-  'second user cannot read the company'
-);
+select is((select count(*)::int from public.companies), 0, 'second user cannot read the company');
+select is((select count(*)::int from public.categories), 0, 'second user cannot read categories');
+select is((select count(*)::int from public.projects), 0, 'second user cannot read projects');
+select is((select count(*)::int from public.customers), 0, 'second user cannot read customers');
+select is((select count(*)::int from public.suppliers), 0, 'second user cannot read suppliers');
+select is((select count(*)::int from public.transactions), 0, 'second user cannot read transactions');
+select is((select count(*)::int from public.allocations), 0, 'second user cannot read allocations');
+select is((select count(*)::int from public.split_rules), 0, 'second user cannot read split rules');
+select is((select count(*)::int from public.split_rule_targets), 0, 'second user cannot read split targets');
+select is((select count(*)::int from public.overhead), 0, 'second user cannot read overhead');
+select is((select count(*)::int from public.review_queue), 0, 'second user cannot read the review queue');
+select is((select count(*)::int from public.sumit_connections), 0, 'second user cannot read SUMIT rows');
+select is((select count(*)::int from public.sumit_connection_status), 0, 'second user cannot read SUMIT status');
+select is((select count(*)::int from public.audit_log), 0, 'second user cannot read the audit log');
 
 select is(
-  (select count(*)::int from public.projects),
-  0,
-  'second user cannot read projects'
-);
-
-select is(
-  (select count(*)::int from public.categories),
-  0,
-  'second user cannot read categories'
-);
-
-select is(
-  (select count(*)::int from public.transactions),
-  0,
-  'second user cannot read transactions'
-);
-
-select is(
-  (select count(*)::int from public.sumit_connections),
-  0,
-  'second user cannot read SUMIT ciphertext'
-);
-
-select is(
-  (select count(*)::int from public.audit_log),
-  0,
-  'second user cannot read the audit log'
-);
-
-select is(
-  (
-    with updated as (
-      update public.companies set name = 'נגנב' returning id
-    )
-    select count(*)::int from updated
-  ),
+  (select count(*)::int from (update public.companies set name = 'נגנב' returning 1) s),
   0,
   'second user cannot update the company'
+);
+select is(
+  (select count(*)::int from (update public.projects set name = 'נגנב' returning 1) s),
+  0,
+  'second user cannot update projects'
+);
+select is(
+  (select count(*)::int from (update public.transactions set description = 'נגנב' returning 1) s),
+  0,
+  'second user cannot update transactions'
+);
+select is(
+  (select count(*)::int from (update public.customers set name = 'נגנב' returning 1) s),
+  0,
+  'second user cannot update customers'
+);
+select is(
+  (select count(*)::int from (update public.suppliers set name = 'נגנב' returning 1) s),
+  0,
+  'second user cannot update suppliers'
+);
+select is(
+  (select count(*)::int from (update public.categories set hidden = true returning 1) s),
+  0,
+  'second user cannot update categories'
+);
+select is(
+  (select count(*)::int from (update public.allocations set share_bp = 1 returning 1) s),
+  0,
+  'second user cannot update allocations'
+);
+select is(
+  (select count(*)::int from (update public.split_rules set label = 'נגנב' returning 1) s),
+  0,
+  'second user cannot update split rules'
+);
+select is(
+  (select count(*)::int from (update public.split_rule_targets set share_bp = 1 returning 1) s),
+  0,
+  'second user cannot update split targets'
+);
+select is(
+  (select count(*)::int from (update public.overhead set updated_at = now() returning 1) s),
+  0,
+  'second user cannot update overhead'
+);
+select is(
+  (select count(*)::int from (update public.review_queue set reason = 'נגנב' returning 1) s),
+  0,
+  'second user cannot update the review queue'
+);
+select is(
+  (select count(*)::int from (delete from public.projects returning 1) s),
+  0,
+  'second user cannot delete projects'
+);
+select is(
+  (select count(*)::int from (delete from public.transactions returning 1) s),
+  0,
+  'second user cannot delete transactions'
+);
+select is(
+  (select count(*)::int from (delete from public.companies returning 1) s),
+  0,
+  'second user cannot delete the company'
 );
 
 select throws_ok(
   $$insert into public.projects (company_id, name)
-    select company_id, 'פרויקט גנוב' from flow_ids$$,
+    select company_id, 'פרויקט גנוב' from flow_a$$,
   '42501',
-  'second user cannot insert a project'
+  'second user cannot insert a project into the other company'
 );
-
 select throws_ok(
   $$insert into public.transactions (
       company_id, direction, doc_kind,
       amount_gross, amount_net, vat_amount, vat_status,
       doc_date, source, idempotency_key, description
     )
-    select company_id, 'expense', 'expense',
-      100, 100, 0, 'unknown',
+    select company_id, 'expense', 'expense', 100, 100, 0, 'unknown',
       '2026-09-01', 'manual', 'stolen', 'גנוב'
-    from flow_ids$$,
+    from flow_a$$,
   '42501',
   'second user cannot insert a transaction'
 );
-
 select throws_ok(
-  $$insert into public.sumit_connections (
-      company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version
-    )
-    select company_id, '\x01'::bytea, '\x02'::bytea, '\x03'::bytea, '\x04'::bytea, 'SUMIT_KEK_v1'
-    from flow_ids$$,
+  $$insert into public.customers (company_id, name)
+    select company_id, 'לקוח גנוב' from flow_a$$,
   '42501',
-  'second user cannot write a SUMIT connection'
+  'second user cannot insert a customer'
 );
-
+select throws_ok(
+  $$insert into public.suppliers (company_id, name)
+    select company_id, 'ספק גנוב' from flow_a$$,
+  '42501',
+  'second user cannot insert a supplier'
+);
+select throws_ok(
+  $$insert into public.categories (company_id, name, kind, sort_order)
+    select company_id, 'גנוב', 'expense', 99 from flow_a$$,
+  '42501',
+  'second user cannot insert a category'
+);
+select throws_ok(
+  $$insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+    select company_id, transaction_id, project_id, 10000, 1 from flow_a$$,
+  '42501',
+  'second user cannot insert an allocation'
+);
+select throws_ok(
+  $$insert into public.split_rules (company_id, method, label)
+    select company_id, 'manual', 'גנוב' from flow_a$$,
+  '42501',
+  'second user cannot insert a split rule'
+);
+select throws_ok(
+  $$insert into public.review_queue (company_id, reason)
+    select company_id, 'גנוב' from flow_a$$,
+  '42501',
+  'second user cannot insert a review row'
+);
 select throws_ok(
   $$insert into public.audit_log (company_id, actor_id, action, entity)
-    select company_id, auth.uid(), 'tamper', 'company' from flow_ids$$,
+    select company_id, auth.uid(), 'tamper', 'company' from flow_a$$,
   '42501',
   'second user cannot append to the audit log'
 );
 
-select tests.authenticate_as('owner_a');
+insert into public.companies (name) values ('בטא');
 
-select is(
-  (select name from public.companies),
-  'אלפא שיפוצים',
-  'the company name is unchanged after the other user tried to write'
+select throws_ok(
+  $$insert into public.companies (name, owner_id)
+    select 'גנוב', owner_id from flow_a$$,
+  '42501',
+  'cannot create a company owned by someone else'
 );
 
-select is(
-  (select count(*)::int from public.projects),
-  1,
-  'the original project is still the only one'
+insert into public.projects (company_id, name)
+select id, 'פרויקט של ב' from public.companies where name = 'בטא';
+
+select throws_ok(
+  $$update public.projects
+    set company_id = (select company_id from flow_a)
+    where name = 'פרויקט של ב'$$,
+  '42501',
+  'cannot move a project into another company'
+);
+
+select throws_ok(
+  $$insert into public.overhead (company_id, transaction_id)
+    select c.id, a.transaction_id
+    from public.companies c
+    cross join flow_a a
+    where c.name = 'בטא'$$,
+  '23503',
+  'cross-tenant overhead foreign key fails'
+);
+select throws_ok(
+  $$insert into public.suppliers (company_id, name, remembered_project_id)
+    select c.id, 'ספק זר', a.project_id
+    from public.companies c
+    cross join flow_a a
+    where c.name = 'בטא'$$,
+  '23503',
+  'cross-tenant remembered project fails'
+);
+select throws_ok(
+  $$insert into public.transactions (
+      company_id, direction, doc_kind,
+      amount_gross, amount_net, vat_amount, vat_status,
+      doc_date, source, idempotency_key, project_id, description
+    )
+    select c.id, 'expense', 'expense', 100, 100, 0, 'unknown',
+      '2026-09-01', 'manual', 'cross-fk', a.project_id, 'זר'
+    from public.companies c
+    cross join flow_a a
+    where c.name = 'בטא'$$,
+  '23503',
+  'cross-tenant transaction project fails'
+);
+
+select tests.authenticate_as('owner_a');
+
+insert into public.overhead (company_id, transaction_id)
+select company_id, transaction_id from flow_a;
+
+select is((select count(*)::int from public.overhead), 1, 'owner can still mark their transaction as overhead');
+select is((select name from public.companies), 'אלפא אחרי', 'the company name survived the other user');
+
+select tests.authenticate_as('owner_b');
+select is((select count(*)::int from public.overhead), 0, 'second user still cannot see that overhead row');
+
+select tests.clear_authentication();
+
+select throws_ok(
+  $$select * from public.companies$$,
+  '42501',
+  'anon cannot read companies'
+);
+select throws_ok(
+  $$select * from public.transactions$$,
+  '42501',
+  'anon cannot read transactions'
+);
+select throws_ok(
+  $$select * from public.sumit_connections$$,
+  '42501',
+  'anon cannot read SUMIT connections'
+);
+select throws_ok(
+  $$select public.get_home()$$,
+  '42501',
+  'anon cannot call get_home'
+);
+select throws_ok(
+  $$select private.current_company_id()$$,
+  '42501',
+  'anon cannot call private.current_company_id'
 );
 
 select * from finish();
