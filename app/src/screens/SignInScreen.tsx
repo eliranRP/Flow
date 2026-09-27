@@ -24,6 +24,15 @@ export function SignInScreen() {
   const ready = getSupabase() != null;
 
   useEffect(() => {
+    if (!ready) console.error("Sign-in is unavailable because Supabase is not configured.");
+  }, [ready]);
+
+  useEffect(() => {
+    const error = params.get("error");
+    if (error) console.error("Sign-in error", error);
+  }, [params]);
+
+  useEffect(() => {
     function onPageShow(event: PageTransitionEvent) {
       if (event.persisted) setPending(false);
     }
@@ -40,6 +49,7 @@ export function SignInScreen() {
   async function continueWithGoogle() {
     const supabase = getSupabase();
     if (!supabase) {
+      console.error("Sign-in is unavailable because Supabase is not configured.");
       setLocalNotice("failed");
       return;
     }
@@ -53,19 +63,20 @@ export function SignInScreen() {
       },
     });
     if (error) {
+      console.error("Google sign-in failed", error.message);
       setPending(false);
       setLocalNotice("failed");
     }
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-content flex-col bg-bg px-side pb-10">
-      <div className="flex flex-1 flex-col justify-center pb-16">
+    <main className="signin">
+      <div className="signin-brand">
         <Wordmark size="signin" />
-        <p className="mt-4 max-w-xs text-title-2 text-text">הרווח וההפסד של העסק, בלי אקסלים</p>
+        <p className="signin-tagline">הרווח וההפסד של העסק, בלי אקסלים</p>
       </div>
 
-      <section className="flex flex-col gap-4">
+      <section className="signin-sheet">
         {notice === "cancelled" ? (
           <Note title="הכניסה לא הושלמה" body="החלון של Google נסגר. אפשר לנסות שוב." />
         ) : null}
@@ -73,35 +84,38 @@ export function SignInScreen() {
           <Note
             tone="bad"
             title="לא הצלחנו להתחבר"
-            body={ready ? "בדקו את החיבור ונסו שוב." : "הכניסה לא זמינה כרגע. נסו שוב מאוחר יותר."}
+            body="אולי אין חיבור לאינטרנט, או ש-Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב."
           />
         ) : null}
 
-        <h1 className="text-title-2">כניסה או הרשמה</h1>
-        <p className="text-label text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
+        <h1 className="t-title-2 signin-heading">כניסה או הרשמה</h1>
+        <p className="t-label text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
 
-        <GoogleButton
-          pending={pending}
-          disabled={!ready}
-          onClick={() => void continueWithGoogle()}
-        />
+        <div className="signin-button">
+          <GoogleButton
+            pending={pending}
+            disabled={!ready}
+            onClick={() => void continueWithGoogle()}
+          />
+        </div>
 
-        {notice === "failed" ? (
-          <p className="text-center text-hint text-text-muted">
-            <a className="underline" href="#help">
+        {notice ? (
+          <p className="signin-help">
+            <a className="t-label text-text-secondary underline" href="#help">
               צריך עזרה בכניסה?
             </a>
           </p>
         ) : null}
 
-        <p className="text-hint leading-relaxed text-text-muted">
-          נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.{" "}
+        <p className="signin-privacy t-hint">
+          נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
+          <br />
           <Link to="/terms" className="underline">
-            תנאי השימוש
+            תנאי שימוש
           </Link>
           {" · "}
           <Link to="/privacy" className="underline">
-            מדיניות הפרטיות
+            מדיניות פרטיות
           </Link>
         </p>
       </section>

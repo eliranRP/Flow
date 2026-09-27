@@ -7,13 +7,14 @@ type EmptyStateProps = {
   action?: ReactNode;
 };
 
+/** Centred empty or error block: 80px tint circle, 22/600 title, one secondary line. */
 export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center px-side py-section text-center">
-      <div className="text-text-muted">{icon}</div>
-      <h1 className="mt-4 text-title-3">{title}</h1>
-      <p className="mt-2 max-w-xs text-hint text-text-secondary">{body}</p>
-      {action ? <div className="mt-6">{action}</div> : null}
+    <div className="empty-state">
+      <div className="empty-icon">{icon}</div>
+      <p className="t-title-2">{title}</p>
+      <p className="empty-line t-label text-text-secondary">{body}</p>
+      {action ? <div className="empty-action">{action}</div> : null}
     </div>
   );
 }

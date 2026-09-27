@@ -1,86 +1,126 @@
-type IconProps = { className?: string };
+import type { ReactNode } from "react";
 
-export function HomeIcon({ className }: IconProps) {
+type IconProps = {
+  size?: number;
+  stroke?: number;
+};
+
+function Svg({ size = 24, stroke = 1.9, children }: IconProps & { children: ReactNode }) {
   return (
-    <svg className={className} width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={stroke}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
     </svg>
   );
 }
 
-export function ProjectsIcon({ className }: IconProps) {
+/** Paths from design/src/flow.py, the 24-grid set the mockups use. */
+export function HomeIcon(props: IconProps) {
   return (
-    <svg className={className} width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="4" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      <rect x="13" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      <rect x="4" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      <rect x="13" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.75" />
-    </svg>
+    <Svg {...props}>
+      <path d="M3 10.5 12 3l9 7.5V20a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 20z" />
+    </Svg>
   );
 }
 
-export function ReviewIcon({ className }: IconProps) {
+export function ProjectsIcon(props: IconProps) {
   return (
-    <svg className={className} width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M6 5h12a1 1 0 0 1 1 1v14l-3-2H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      <path d="m8.5 12 2.2 2.2 4.3-4.4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-    </svg>
+    <Svg {...props}>
+      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" />
+    </Svg>
   );
 }
 
-export function SettingsIcon({ className }: IconProps) {
+export function ReviewIcon(props: IconProps) {
   return (
-    <svg className={className} width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      <path
-        d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-    </svg>
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12.5 2.7 2.7L16.5 9.5" />
+    </Svg>
   );
 }
 
-export function UploadIcon() {
+export function SettingsIcon(props: IconProps) {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 16V6m0 0-3.5 3.5M12 6l3.5 3.5M5 18.5h14"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <Svg {...props}>
+      <line x1="4" y1="21" x2="4" y2="14" />
+      <line x1="4" y1="10" x2="4" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12" y2="3" />
+      <line x1="20" y1="21" x2="20" y2="16" />
+      <line x1="20" y1="12" x2="20" y2="3" />
+      <line x1="1" y1="14" x2="7" y2="14" />
+      <line x1="9" y1="8" x2="15" y2="8" />
+      <line x1="17" y1="16" x2="23" y2="16" />
+    </Svg>
   );
 }
 
-export function OfflineIcon() {
+export function PlusIcon(props: IconProps) {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M4 9a12 12 0 0 1 16 0M7 12.5a8 8 0 0 1 10 0M12 19h.01"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-      <path d="M5 5l14 14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-    </svg>
+    <Svg size={24} stroke={2.4} {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </Svg>
+  );
+}
+
+export function BackIcon(props: IconProps) {
+  return (
+    <Svg stroke={2} {...props}>
+      <polyline points="9 18 15 12 9 6" />
+    </Svg>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <Svg stroke={2} {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </Svg>
+  );
+}
+
+export function ChartIcon(props: IconProps) {
+  return (
+    <Svg size={36} stroke={1.6} {...props}>
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </Svg>
+  );
+}
+
+export function OfflineIcon(props: IconProps) {
+  return (
+    <Svg size={36} stroke={1.6} {...props}>
+      <line x1="2" y1="2" x2="22" y2="22" />
+      <path d="M16.7 11.1A11 11 0 0 1 19 12.6" />
+      <path d="M5 12.6a11 11 0 0 1 5.2-2.4" />
+      <path d="M10.7 5.1A16 16 0 0 1 22.6 9" />
+      <path d="M1.4 9a16 16 0 0 1 4.7-2.9" />
+      <path d="M8.5 16.1a6 6 0 0 1 7 0" />
+      <circle cx="12" cy="20" r=".6" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+export function InfoIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg size={size} stroke={2}>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="16" x2="12" y2="11.5" />
+      <circle cx="12" cy="8" r=".6" fill="currentColor" stroke="none" />
+    </Svg>
   );
 }
