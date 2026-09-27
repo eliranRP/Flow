@@ -13,32 +13,44 @@ import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import {
   allocateByWeights,
-  normalizeSumitDocument,
+  demoDataSchema,
+  demoKindToDocKind,
+  rateFractionToBp,
   shareBp,
-  type DemoData,
+  normalizeSumitDocument,
+  type Database,
 } from "@flow/shared";
 import { loadLocalEnv } from "./env.ts";
 
 loadLocalEnv();
 
-const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ownerId = process.env.SEED_OWNER_USER_ID;
-
-if (!url || !serviceKey || !ownerId) {
-  console.error(
-    "Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SEED_OWNER_USER_ID. See .env.example.",
-  );
-  process.exit(1);
+function requireEnv(name: string, value: string | undefined): string {
+  if (!value) {
+    console.error(
+      "Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SEED_OWNER_USER_ID. See .env.example.",
+    );
+    throw new Error(`missing ${name}`);
+  }
+  return value;
 }
+
+const url = requireEnv(
+  "SUPABASE_URL",
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+);
+const serviceKey = requireEnv(
+  "SUPABASE_SERVICE_ROLE_KEY",
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+const ownerId = requireEnv("SEED_OWNER_USER_ID", process.env.SEED_OWNER_USER_ID);
 
 const fixture = join(
   dirname(fileURLToPath(import.meta.url)),
   "../packages/shared/fixtures/demo-data.json",
 );
-const demo = JSON.parse(readFileSync(fixture, "utf8")) as DemoData;
+const demo = demoDataSchema.parse(JSON.parse(readFileSync(fixture, "utf8")));
 
-const supabase = createClient(url, serviceKey, {
+const supabase = createClient<Database>(url, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
@@ -58,21 +70,14 @@ const categoryByItem: Record<string, string> = {
   "טלפון ותקשורת": "אחר",
 };
 
-function abs(value: bigint): bigint {
-  return value < 0n ? -value : value;
-}
-
 function num(value: bigint): number {
   return Number(value);
 }
 
-const docKind = {
-  inv: "invoice",
-  rec: "receipt",
-  invrec: "invoice_receipt",
-  cred: "credit",
-  exp: "expense",
-} as const;
+function specItem(spec: Record<string, unknown> | undefined): string {
+  const item = spec?.item;
+  return typeof item === "string" ? item : "";
+}
 
 async function main() {
   const { data: existing, error: existingError } = await supabase
@@ -82,7 +87,7 @@ async function main() {
     .maybeSingle();
   if (existingError) throw existingError;
 
-  let companyId = existing?.id as string | undefined;
+  let companyId = existing?.id;
   if (!companyId) {
     const { data, error } = await supabase
       .from("companies")
@@ -90,12 +95,13 @@ async function main() {
         owner_id: ownerId,
         name: demo.company.name,
         tax_id: null,
-        vat_rate_bp: 1800,
+        vat_rate_bp: rateFractionToBp(demo.company.vat_rate),
+        is_demo: true,
       })
       .select("id")
       .single();
     if (error) throw error;
-    companyId = data.id as string;
+    companyId = data.id;
   }
 
   const { data: categories, error: categoryError } = await supabase
@@ -104,8 +110,8 @@ async function main() {
     .eq("company_id", companyId);
   if (categoryError) throw categoryError;
   const categoryId = new Map<string, string>();
-  for (const category of categories ?? []) {
-    categoryId.set(`${category.kind}:${category.name}`, category.id as string);
+  for (const category of categories) {
+    categoryId.set(`${category.kind}:${category.name}`, category.id);
   }
 
   const projectId = new Map<string, string>();
@@ -126,7 +132,7 @@ async function main() {
       .select("id")
       .single();
     if (error) throw error;
-    projectId.set(key, data.id as string);
+    projectId.set(key, data.id);
   }
 
   const customerId = new Map<number, string>();
@@ -145,7 +151,7 @@ async function main() {
       .select("id")
       .single();
     if (error) throw error;
-    if (customer.sumit_id != null) customerId.set(customer.sumit_id, data.id as string);
+    if (customer.sumit_id != null) customerId.set(customer.sumit_id, data.id);
   }
 
   const supplierId = new Map<string, string>();
@@ -157,7 +163,7 @@ async function main() {
           company_id: companyId,
           name: supplier.name,
           company_number: supplier.company_number,
-          vat_exempt: supplier.vat_able === false,
+          vat_exempt: !supplier.vat_able,
           sumit_external_id: supplier.sumit_id,
         },
         { onConflict: "company_id,name" },
@@ -165,19 +171,19 @@ async function main() {
       .select("id")
       .single();
     if (error) throw error;
-    supplierId.set(key, data.id as string);
+    supplierId.set(key, data.id);
   }
 
   let transactions = 0;
-  const sharedTxnByMonth = new Map<string, { id: string; net: bigint }>();
+  const sharedTxns: { id: string; month: string; net: bigint }[] = [];
 
   for (const document of demo.documents) {
     const line = normalizeSumitDocument(document.sumit, demo);
     const expense = line.kind === "exp";
-    const gross = expense ? abs(line.grossAgorot) : line.grossAgorot;
-    const net = expense ? abs(line.netAgorot) : line.netAgorot;
+    const gross = line.grossAgorot;
+    const net = line.netAgorot;
     const vat = gross - net;
-    const item = document.spec && "item" in document.spec ? String(document.spec.item ?? "") : "";
+    const item = specItem(document.spec);
     const categoryName = categoryByItem[item];
     const category =
       categoryName == null
@@ -196,7 +202,7 @@ async function main() {
         {
           company_id: companyId,
           direction: expense ? "expense" : "income",
-          doc_kind: docKind[line.kind],
+          doc_kind: demoKindToDocKind[line.kind],
           pnl_role: line.role,
           amount_gross: num(gross),
           amount_net: num(net),
@@ -206,7 +212,7 @@ async function main() {
           cash_date: line.kind === "inv" || line.kind === "cred" ? null : line.date,
           source: "sumit",
           external_id: String(line.sumitId),
-          idempotency_key: `sumit:${line.sumitId}`,
+          idempotency_key: `sumit:${String(line.sumitId)}`,
           project_id: project,
           customer_id: customer,
           supplier_id: supplier,
@@ -244,34 +250,36 @@ async function main() {
     }
 
     if (line.role === "shared") {
-      sharedTxnByMonth.set(line.month, { id: data.id as string, net: abs(line.netAgorot) });
+      sharedTxns.push({ id: data.id, month: line.month, net: line.netAgorot });
     }
   }
 
-  for (const [month, days] of Object.entries(demo.shared_alloc_worker_days)) {
-    const shared = sharedTxnByMonth.get(month);
-    if (!shared) continue;
+  for (const shared of sharedTxns) {
+    const days = demo.shared_alloc_worker_days[shared.month];
+    if (!days) continue;
     const keys = Object.keys(days);
     const weights = keys.map((key) => days[key] ?? 0);
     const shares = shareBp(weights);
     const amounts = allocateByWeights(shared.net, weights);
-    for (let index = 0; index < keys.length; index += 1) {
-      const key = keys[index];
-      if (!key) continue;
+    const rows = keys.flatMap((key, index) => {
       const project = projectId.get(key);
-      if (!project) continue;
-      const { error } = await supabase.from("allocations").upsert(
+      const share = shares[index];
+      if (!project || share == null) return [];
+      return [
         {
           company_id: companyId,
           transaction_id: shared.id,
           project_id: project,
-          share_bp: shares[index],
+          share_bp: share,
           amount_net: num(amounts[index] ?? 0n),
         },
-        { onConflict: "transaction_id,project_id" },
-      );
-      if (error) throw error;
-    }
+      ];
+    });
+    if (rows.length === 0) continue;
+    const { error } = await supabase.from("allocations").upsert(rows, {
+      onConflict: "transaction_id,project_id",
+    });
+    if (error) throw error;
   }
 
   const workers = supplierId.get("workers");

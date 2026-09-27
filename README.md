@@ -53,13 +53,13 @@ cp .env.example .env
 pnpm dev
 ```
 
-The dev server listens on port 43123. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). Migrations are not applied from this repo's automation; review them, then run `supabase link` and `supabase db push` yourself.
+The dev server listens on port 43123. Signed-out visitors go to the sign-in screen. `/?preview=1` opens Home in demo mode without a session. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). Migrations are not applied from this repo's automation; review them, then run `supabase link` and `supabase db push` yourself.
 
 ```bash
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm db:test          # pgTAP, needs Docker and the Supabase CLI
+pnpm db:test          # pgTAP. Needs Docker. CI pins Supabase CLI 2.118.0 and runs supabase db start first.
 pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID
 pnpm latency          # times get_home() against SUPABASE_URL
 ```

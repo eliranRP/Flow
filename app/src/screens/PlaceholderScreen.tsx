@@ -1,14 +1,40 @@
 import { Link } from "react-router-dom";
+import { Wordmark } from "../components/Wordmark";
+import { usePreviewMode } from "../preview";
 
-export function PlaceholderScreen({ title, note }: { title: string; note: string }) {
+export function PlaceholderScreen({
+  title,
+  note,
+  showBack = false,
+}: {
+  title: string;
+  note: string;
+  showBack?: boolean;
+}) {
+  const preview = usePreviewMode();
+  const home = preview ? "/?preview=1" : "/";
   return (
-    <div className="px-6 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <p className="text-[13px] text-text-muted">Flow</p>
-      <h1 className="mt-2 text-[28px] font-semibold">{title}</h1>
-      <p className="mt-3 text-[15px] font-normal leading-relaxed text-text-secondary">{note}</p>
-      <Link to="/" className="mt-6 inline-block text-accent-text">
-        חזרה לבית
-      </Link>
+    <div className="screen-pad px-side pb-8">
+      <Wordmark />
+      <h1 className="mt-2 text-title-1">{title}</h1>
+      <p className="mt-3 text-label text-text-secondary">{note}</p>
+      {showBack ? (
+        <Link to={home} className="mt-6 inline-flex h-touch items-center text-label text-accent-text">
+          חזרה לבית
+        </Link>
+      ) : null}
     </div>
+  );
+}
+
+export function LegalScreen({ title, body }: { title: string; body: string }) {
+  return (
+    <main className="mx-auto min-h-dvh max-w-content bg-bg px-side py-10">
+      <h1 className="text-title-1">{title}</h1>
+      <p className="mt-4 text-label text-text-secondary">{body}</p>
+      <Link to="/sign-in" className="mt-8 inline-flex h-touch items-center text-label text-accent-text">
+        חזרה לכניסה
+      </Link>
+    </main>
   );
 }

@@ -2,40 +2,50 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { pnlFromDemo, type DemoData } from "./pnl.ts";
+import { z } from "zod";
+import { wholeShekels } from "./money.ts";
+import { demoDataSchema, pnlFromDemo, type DemoData } from "./pnl.ts";
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), "../fixtures");
 
-interface ExpectedProject {
-  name: string;
-  invoiced_income: number;
-  cash_income: number;
-  direct_costs: number;
-  shared_alloc: number;
-  gross_profit_invoiced: number;
-  gross_profit_cash: number;
-  profit_after_alloc_invoiced: number;
-  profit_after_alloc_cash: number;
-  open_receivable_gross: number;
-}
+const expectedProjectSchema = z.object({
+  name: z.string(),
+  invoiced_income: z.number(),
+  cash_income: z.number(),
+  direct_costs: z.number(),
+  shared_alloc: z.number(),
+  gross_profit_invoiced: z.number(),
+  gross_profit_cash: z.number(),
+  profit_after_alloc_invoiced: z.number(),
+  profit_after_alloc_cash: z.number(),
+  open_receivable_gross: z.number(),
+});
 
-interface ExpectedPnl {
-  projects: Record<string, ExpectedProject>;
-  company: {
-    invoiced_income: number;
-    cash_income: number;
-    direct: number;
-    shared: number;
-    overhead: number;
-    net_profit_invoiced: number;
-    net_profit_cash: number;
-    open_receivables_gross: number;
-  };
-  monthly_expenses_net: Record<string, number>;
-}
+const expectedPnlSchema = z.object({
+  projects: z.record(z.string(), expectedProjectSchema),
+  company: z.object({
+    invoiced_income: z.number(),
+    cash_income: z.number(),
+    direct: z.number(),
+    shared: z.number(),
+    overhead: z.number(),
+    net_profit_invoiced: z.number(),
+    net_profit_cash: z.number(),
+    open_receivables_gross: z.number(),
+  }),
+  monthly_expenses_net: z.record(z.string(), z.number()),
+});
 
-const demo = JSON.parse(readFileSync(join(fixtures, "demo-data.json"), "utf8")) as DemoData;
-const expected = JSON.parse(readFileSync(join(fixtures, "expected-pnl.json"), "utf8")) as ExpectedPnl;
+const demo = demoDataSchema.parse(
+  JSON.parse(readFileSync(join(fixtures, "demo-data.json"), "utf8")),
+);
+const expected = expectedPnlSchema.parse(
+  JSON.parse(readFileSync(join(fixtures, "expected-pnl.json"), "utf8")),
+);
+
+function shekels(agorot: bigint): number {
+  return wholeShekels(agorot);
+}
 
 describe("demo client Rule A", () => {
   const pnl = pnlFromDemo(demo);
@@ -52,33 +62,37 @@ describe("demo client Rule A", () => {
       const actual = pnl.projects[key];
       expect(actual, key).toBeDefined();
       expect(actual?.name).toBe(target.name);
-      expect(actual?.invoicedIncome).toBe(target.invoiced_income);
-      expect(actual?.cashIncome).toBe(target.cash_income);
-      expect(actual?.directCosts).toBe(target.direct_costs);
-      expect(actual?.sharedAlloc).toBe(target.shared_alloc);
-      expect(actual?.grossProfitInvoiced).toBe(target.gross_profit_invoiced);
-      expect(actual?.grossProfitCash).toBe(target.gross_profit_cash);
-      expect(actual?.profitAfterAllocInvoiced).toBe(target.profit_after_alloc_invoiced);
-      expect(actual?.profitAfterAllocCash).toBe(target.profit_after_alloc_cash);
-      expect(actual?.openReceivableGross).toBe(target.open_receivable_gross);
+      expect(shekels(actual?.invoicedIncome ?? 0n)).toBe(target.invoiced_income);
+      expect(shekels(actual?.cashIncome ?? 0n)).toBe(target.cash_income);
+      expect(shekels(actual?.directCosts ?? 0n)).toBe(target.direct_costs);
+      expect(shekels(actual?.sharedAlloc ?? 0n)).toBe(target.shared_alloc);
+      expect(shekels(actual?.grossProfitInvoiced ?? 0n)).toBe(target.gross_profit_invoiced);
+      expect(shekels(actual?.grossProfitCash ?? 0n)).toBe(target.gross_profit_cash);
+      expect(shekels(actual?.profitAfterAllocInvoiced ?? 0n)).toBe(target.profit_after_alloc_invoiced);
+      expect(shekels(actual?.profitAfterAllocCash ?? 0n)).toBe(target.profit_after_alloc_cash);
+      expect(shekels(actual?.openReceivableGross ?? 0n)).toBe(target.open_receivable_gross);
     }
   });
 
   it("matches the company P&L, including net profit 37,700 / −76,300", () => {
-    expect(pnl.company.invoicedIncome).toBe(expected.company.invoiced_income);
-    expect(pnl.company.cashIncome).toBe(expected.company.cash_income);
-    expect(pnl.company.direct).toBe(expected.company.direct);
-    expect(pnl.company.shared).toBe(expected.company.shared);
-    expect(pnl.company.overhead).toBe(expected.company.overhead);
-    expect(pnl.company.netProfitInvoiced).toBe(expected.company.net_profit_invoiced);
-    expect(pnl.company.netProfitCash).toBe(expected.company.net_profit_cash);
-    expect(pnl.company.openReceivablesGross).toBe(expected.company.open_receivables_gross);
-    expect(pnl.company.netProfitInvoiced).toBe(37700);
-    expect(pnl.company.netProfitCash).toBe(-76300);
+    expect(shekels(pnl.company.invoicedIncome)).toBe(expected.company.invoiced_income);
+    expect(shekels(pnl.company.cashIncome)).toBe(expected.company.cash_income);
+    expect(shekels(pnl.company.direct)).toBe(expected.company.direct);
+    expect(shekels(pnl.company.shared)).toBe(expected.company.shared);
+    expect(shekels(pnl.company.overhead)).toBe(expected.company.overhead);
+    expect(shekels(pnl.company.netProfitInvoiced)).toBe(expected.company.net_profit_invoiced);
+    expect(shekels(pnl.company.netProfitCash)).toBe(expected.company.net_profit_cash);
+    expect(shekels(pnl.company.openReceivablesGross)).toBe(expected.company.open_receivables_gross);
+    expect(shekels(pnl.company.netProfitInvoiced)).toBe(37700);
+    expect(shekels(pnl.company.netProfitCash)).toBe(-76300);
   });
 
   it("matches monthly expense nets", () => {
-    expect(pnl.monthlyExpensesNet).toEqual(expected.monthly_expenses_net);
+    const rounded: Record<string, number> = {};
+    for (const [month, amount] of Object.entries(pnl.monthlyExpensesNet)) {
+      rounded[month] = shekels(amount);
+    }
+    expect(rounded).toEqual(expected.monthly_expenses_net);
   });
 
   it("marks SUMIT expenses with no VAT split as assumed, and the insurer as exempt", () => {
@@ -92,3 +106,45 @@ describe("demo client Rule A", () => {
     expect(materials?.grossAgorot).toBe(-2_596_000n);
   });
 });
+
+describe("non-exact VAT amounts", () => {
+  it("rounds the net to agorot instead of throwing", () => {
+    const odd: DemoData = {
+      company: { name: "בדיקה", company_id: 1, vat_rate: 0.18 },
+      projects: { p: { name: "פרויקט", budget_section_id: 1 } },
+      customers: {},
+      suppliers: {
+        s: { name: "ספק", company_number: null, vat_able: true, sumit_id: 9 },
+      },
+      shared_alloc_worker_days: {},
+      documents: [
+        {
+          sumit: {
+            key: "ODD",
+            sumit_id: 1,
+            kind: "exp",
+            date: "2026-04-01",
+            gross: -10.01,
+            wo: -10.01,
+            vat: null,
+            bud: 1,
+            orig: null,
+            cust: 9,
+            cust_name: "ספק",
+            number: null,
+            desc: "חומר",
+          },
+        },
+      ],
+    };
+    const pnl = pnlFromDemo(demoDataSchema.parse(odd));
+    const line = pnl.lines[0];
+    expect(line?.vatStatus).toBe("assumed");
+    expect(line?.netAgorot).toBe(netExpected());
+    expect(pnl.company.direct).toBe(-(line?.netAgorot ?? 0n));
+  });
+});
+
+function netExpected(): bigint {
+  return -848n;
+}
