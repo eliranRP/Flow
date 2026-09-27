@@ -172,11 +172,15 @@ function buildIndex(demo: DemoData): DemoIndex {
 
 function linkedRateBp(invoice: DemoSumitDoc | undefined, companyRateBp: number): number {
   if (!invoice || invoice.gross === 0) return companyRateBp;
+  // Prefer the percent stored on the document. 0 is a real rate
+  // (exempt customer, Eilat, export), not a missing split.
+  if (invoice.vat != null) return rateFractionToBp(invoice.vat / 100);
   const gross = shekelsToAgorot(invoice.gross);
   const net = shekelsToAgorot(invoice.wo);
   const absGross = gross < 0n ? -gross : gross;
   const absNet = net < 0n ? -net : net;
-  if (absNet === 0n || absGross === absNet) return companyRateBp;
+  if (absNet === 0n) return companyRateBp;
+  if (absGross === absNet) return 0;
   const bp = Number(divHalfEven((absGross - absNet) * 10000n, absNet));
   if (bp < 0 || bp > 10000) return companyRateBp;
   return bp;
@@ -187,9 +191,11 @@ function linkedRateBp(invoice: DemoSumitDoc | undefined, companyRateBp: number):
  * Signs from the source are kept: a cost or a credit stays negative.
  * Income documents that carry WithoutVAT keep it (`source`).
  * A receipt has no VAT of its own. Its cash net uses the linked invoice's
- * VAT rate (`doc.orig`), or the company rate when there is no split.
+ * VAT rate (`doc.orig`), including 0%. The company rate is only the fallback
+ * when that invoice is missing or has no amount.
  * An expense with no VAT split assumes the company rate (`assumed`), unless
- * the supplier is VAT-exempt (`derived`, net = gross). Decision 0043.
+ * the supplier is VAT-exempt (`derived`, net = gross). An explicit `vat: 0`
+ * with gross equal to net is also exempt, not a missing split. Decision 0043.
  */
 export function normalizeSumitDocument(
   doc: DemoSumitDoc,
@@ -204,10 +210,18 @@ export function normalizeSumitDocument(
   if (doc.kind === "exp") {
     const supplier = doc.cust == null ? undefined : index.suppliers.get(doc.cust);
     const vatExempt = supplier?.vatExempt === true;
+    // vat null: SUMIT sent no split, so the company rate is assumed.
+    // vat 0 with gross == net: an explicit exempt line, not a missing split.
+    // any other vat that differs from net: the source already split it.
+    const explicitZero = doc.vat === 0 && sourceNetAgorot === grossAgorot;
     const hasSourceSplit = doc.vat != null && sourceNetAgorot !== grossAgorot;
-    const rateBp = vatExempt ? 0 : index.companyRateBp;
+    const rateBp = vatExempt || explicitZero ? 0 : index.companyRateBp;
     const netAgorot = hasSourceSplit ? sourceNetAgorot : netFromGrossAgorot(grossAgorot, rateBp);
-    const vatStatus: VatStatus = hasSourceSplit ? "source" : vatExempt ? "derived" : "assumed";
+    const vatStatus: VatStatus = hasSourceSplit
+      ? "source"
+      : vatExempt || explicitZero
+        ? "derived"
+        : "assumed";
     const role = expenseRole(doc.desc);
     if (role === "project" && projectKey == null) {
       throw new Error(`Project expense ${doc.key} has no budget section`);
