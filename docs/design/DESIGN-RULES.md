@@ -317,7 +317,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.24.
 - Steps: period pill opens 16. Pending card opens Review. A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
-- Success: the summary. Empty first run offers "העלאת דוח בנק".
+- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור SUMIT", and the line says the profit appears once SUMIT is connected.
 - Error: skeleton while loading. Offline with or without cache (`ld-08`, `ld-09`).
 
 ### 02 Project
