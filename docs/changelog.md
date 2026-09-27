@@ -2,6 +2,8 @@
 
 ## 2026-09-27
 
+[DESIGN-RULES.md](design/DESIGN-RULES.md) is the reviewer reference for design and UX. It compiles the design decisions, the token tables, the implementation-guide rules, and a per-screen index of the approved mockups. The mockup files stay in `design/`.
+
 Phase 0 lands the application skeleton on branch `phase-0`: pnpm workspaces (`app/`, `supabase/`, `packages/shared`), schema v1 with owner-scoped RLS, the Rule A P&L checked against the Flow Test demo client, a demo seed script, and a Home latency script. No keys are in the repo. Migrations are applied to the hosted project by hand after review.
 
 Decision [0043](decisions/0043-assumed-vat-on-expenses.md), Accepted. It amends [0041](decisions/0041-amounts-before-vat.md) for expenses.
