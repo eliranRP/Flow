@@ -1,0 +1,201 @@
+{
+ "projects": {
+  "herzl": {
+   "name": "שיפוץ הרצל 12",
+   "budget_id": 2389921121,
+   "invoiced_income": 135000.0,
+   "cash_income": 83000.0,
+   "direct_costs": 76000.0,
+   "direct_costs_raw_sumit": 89680.0,
+   "gross_profit_invoiced": 59000.0,
+   "gross_profit_cash": 7000.0,
+   "shared_alloc": 16800.0,
+   "profit_after_alloc_invoiced": 42200.0,
+   "profit_after_alloc_cash": -9800.0,
+   "open_receivable_gross": 61360.0
+  },
+  "cohen": {
+   "name": "פרגולה בית כהן",
+   "budget_id": 2389921016,
+   "invoiced_income": 32000.0,
+   "cash_income": 20000.0,
+   "direct_costs": 24300.0,
+   "direct_costs_raw_sumit": 28674.0,
+   "gross_profit_invoiced": 7700.0,
+   "gross_profit_cash": -4300.0,
+   "shared_alloc": 4800.0,
+   "profit_after_alloc_invoiced": 2900.0,
+   "profit_after_alloc_cash": -9100.0,
+   "open_receivable_gross": 14160.0
+  },
+  "levi": {
+   "name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+   "budget_id": 2389941140,
+   "invoiced_income": 55000.0,
+   "cash_income": 40000.0,
+   "direct_costs": 41500.0,
+   "direct_costs_raw_sumit": 48970.0,
+   "gross_profit_invoiced": 13500.0,
+   "gross_profit_cash": -1500.0,
+   "shared_alloc": 9600.0,
+   "profit_after_alloc_invoiced": 3900.0,
+   "profit_after_alloc_cash": -11100.0,
+   "open_receivable_gross": 17700.0
+  },
+  "mizrahi": {
+   "name": "שיפוץ דירה ביאליק 8 חולון",
+   "budget_id": 2389941141,
+   "invoiced_income": 145000.0,
+   "cash_income": 145000.0,
+   "direct_costs": 69500.0,
+   "direct_costs_raw_sumit": 82010.0,
+   "gross_profit_invoiced": 75500.0,
+   "gross_profit_cash": 75500.0,
+   "shared_alloc": 44800.0,
+   "profit_after_alloc_invoiced": 30700.0,
+   "profit_after_alloc_cash": 30700.0,
+   "open_receivable_gross": 0.0
+  },
+  "avraham": {
+   "name": "תוספת בנייה - אברהם מודיעין",
+   "budget_id": 2389941069,
+   "invoiced_income": 25000.0,
+   "cash_income": 0.0,
+   "direct_costs": 8400.0,
+   "direct_costs_raw_sumit": 9912.0,
+   "gross_profit_invoiced": 16600.0,
+   "gross_profit_cash": -8400.0,
+   "shared_alloc": 1600.0,
+   "profit_after_alloc_invoiced": 15000.0,
+   "profit_after_alloc_cash": -10000.0,
+   "open_receivable_gross": 29500.0
+  },
+  "techline": {
+   "name": "שיפוץ משרדים טק-ליין פתח תקווה",
+   "budget_id": 2389941142,
+   "invoiced_income": 80000.0,
+   "cash_income": 70000.0,
+   "direct_costs": 91000.0,
+   "direct_costs_raw_sumit": 107380.0,
+   "gross_profit_invoiced": -11000.0,
+   "gross_profit_cash": -21000.0,
+   "shared_alloc": 18400.0,
+   "profit_after_alloc_invoiced": -29400.0,
+   "profit_after_alloc_cash": -39400.0,
+   "open_receivable_gross": 11800.0
+  }
+ },
+ "company": {
+  "invoiced_income": 472000.0,
+  "cash_income": 358000.0,
+  "direct": 310700.0,
+  "shared": 96000.0,
+  "overhead": 27600.0,
+  "net_profit_invoiced": 37700.0,
+  "net_profit_cash": -76300.0,
+  "open_receivables_gross": 134520.0
+ },
+ "open_invoices": [
+  {
+   "key": "H-INV-B",
+   "number": 20003,
+   "project": "herzl",
+   "open_gross": 17700.0
+  },
+  {
+   "key": "H-INV-C",
+   "number": 20004,
+   "project": "herzl",
+   "open_gross": 35400.0
+  },
+  {
+   "key": "C-INV-A",
+   "number": 20005,
+   "project": "cohen",
+   "open_gross": 14160.0
+  },
+  {
+   "key": "L-INV-B",
+   "number": 20007,
+   "project": "levi",
+   "open_gross": 17700.0
+  },
+  {
+   "key": "A-INV-A",
+   "number": 20010,
+   "project": "avraham",
+   "open_gross": 29500.0
+  },
+  {
+   "key": "T-INV-B",
+   "number": 20012,
+   "project": "techline",
+   "open_gross": 11800.0
+  },
+  {
+   "key": "X-INV2",
+   "number": 20001,
+   "project": "herzl",
+   "open_gross": 8260.0
+  }
+ ],
+ "monthly_expenses_net": {
+  "2026-04": 47600.0,
+  "2026-05": 33500.0,
+  "2026-06": 75000.0,
+  "2026-07": 116700.0,
+  "2026-08": 97200.0,
+  "2026-09": 64300.0
+ },
+ "rule_b": {
+  "projects": {
+   "herzl": {
+    "direct_raw": 89680.0,
+    "shared_alloc_raw": 19824.0,
+    "profit_after_alloc_invoiced": 25496.0,
+    "profit_after_alloc_cash": -26504.0
+   },
+   "cohen": {
+    "direct_raw": 28674.0,
+    "shared_alloc_raw": 5664.0,
+    "profit_after_alloc_invoiced": -2338.0,
+    "profit_after_alloc_cash": -14338.0
+   },
+   "levi": {
+    "direct_raw": 48970.0,
+    "shared_alloc_raw": 11328.0,
+    "profit_after_alloc_invoiced": -5298.0,
+    "profit_after_alloc_cash": -20298.0
+   },
+   "mizrahi": {
+    "direct_raw": 82010.0,
+    "shared_alloc_raw": 52864.0,
+    "profit_after_alloc_invoiced": 10126.0,
+    "profit_after_alloc_cash": 10126.0
+   },
+   "avraham": {
+    "direct_raw": 9912.0,
+    "shared_alloc_raw": 1888.0,
+    "profit_after_alloc_invoiced": 13200.0,
+    "profit_after_alloc_cash": -11800.0
+   },
+   "techline": {
+    "direct_raw": 107380.0,
+    "shared_alloc_raw": 21712.0,
+    "profit_after_alloc_invoiced": -49092.0,
+    "profit_after_alloc_cash": -59092.0
+   }
+  },
+  "shared_raw": 113280.0,
+  "overhead_raw": 30840.0,
+  "net_profit_invoiced": -38746.0,
+  "net_profit_cash": -152746.0
+ },
+ "overhead_breakdown": {
+  "לוי את שות' - רואי חשבון": 6000.0,
+  "ביטוח המגן בע\"מ": 9600.0,
+  "דרך ליסינג בע\"מ": 9600.0,
+  "דלק הצפון בע\"מ": 1800.0,
+  "תקשורת פלוס בע\"מ": 600.0
+ }
+}

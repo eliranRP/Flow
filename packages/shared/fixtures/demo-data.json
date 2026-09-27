@@ -1,0 +1,2950 @@
+{
+ "company": {
+  "name": "Flow Test",
+  "company_id": 2389917160,
+  "vat_rate": 0.18,
+  "snapshot": "2026-09-26"
+ },
+ "projects": {
+  "herzl": {
+   "name": "שיפוץ הרצל 12",
+   "state": "פעיל - שיפוץ",
+   "story": "שיפוץ דירה + לובי בבניין ברחוב הרצל 12, רמת גן. הלקוח העיקרי יזמות הגליל; ד.ל. נכסים (חברת הניהול) הזמינה תוספות בלובי.",
+   "budget_section_id": 2389921121,
+   "customers": [
+    "galil",
+    "dl"
+   ]
+  },
+  "cohen": {
+   "name": "פרגולה בית כהן",
+   "state": "פעיל - פרגולה/דק",
+   "story": "פרגולת אלומיניום + דק עץ בחצר, בית פרטי בכפר סבא.",
+   "budget_section_id": 2389921016,
+   "customers": [
+    "cohen"
+   ]
+  },
+  "levi": {
+   "name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+   "state": "פעיל - שיפוץ",
+   "story": "החלפת מטבח ושני חדרי רחצה, דירה ברעננה.",
+   "budget_section_id": 2389941140,
+   "customers": [
+    "levi"
+   ]
+  },
+  "mizrahi": {
+   "name": "שיפוץ דירה ביאליק 8 חולון",
+   "state": "הסתיים",
+   "story": "שיפוץ כללי של דירת 4 חדרים. הסתיים באוגוסט, התקבל תשלום סופי.",
+   "budget_section_id": 2389941141,
+   "customers": [
+    "mizrahi"
+   ]
+  },
+  "avraham": {
+   "name": "תוספת בנייה - אברהם מודיעין",
+   "state": "התחיל עכשיו",
+   "story": "תוספת חדר + ממ\"ד. התחיל בספטמבר, יצאה חשבונית מקדמה שטרם שולמה.",
+   "budget_section_id": 2389941069,
+   "customers": [
+    "avraham"
+   ]
+  },
+  "techline": {
+   "name": "שיפוץ משרדים טק-ליין פתח תקווה",
+   "state": "פעיל - בהפסד",
+   "story": "שיפוץ משרדים במחיר סגור (85,000 נטו). חריגה בעלויות קבלן משנה ומחיצות אלומיניום + זיכוי פיצוי על איחור => הפסד.",
+   "budget_section_id": 2389941142,
+   "customers": [
+    "techline"
+   ]
+  }
+ },
+ "customers": {
+  "galil": {
+   "name": "יזמות הגליל בע\"מ",
+   "company_number": null,
+   "sumit_id": 2389918411
+  },
+  "dl": {
+   "name": "ד.ל. נכסים בע\"מ",
+   "company_number": null,
+   "sumit_id": 2389918427
+  },
+  "cohen": {
+   "name": "משפחת כהן",
+   "company_number": null,
+   "sumit_id": 2389918418
+  },
+  "levi": {
+   "name": "משפחת לוי",
+   "company_number": null,
+   "sumit_id": 2389941191
+  },
+  "mizrahi": {
+   "name": "רונית ואבי מזרחי",
+   "company_number": null,
+   "sumit_id": 2389941202
+  },
+  "avraham": {
+   "name": "משפחת אברהם",
+   "company_number": null,
+   "sumit_id": 2389940793
+  },
+  "techline": {
+   "name": "טק-ליין מערכות בע\"מ",
+   "company_number": "515223907",
+   "sumit_id": 2389941340
+  }
+ },
+ "suppliers": {
+  "materials": {
+   "name": "חומרי בניין השרון בע\"מ",
+   "company_number": "516000003",
+   "vat_able": true,
+   "sumit_id": 2389921125
+  },
+  "elec": {
+   "name": "אבי חשמלאי",
+   "company_number": null,
+   "vat_able": true,
+   "sumit_id": 2389921255
+  },
+  "plumb": {
+   "name": "י.ש. אינסטלציה ושיפוצים",
+   "company_number": "030123459",
+   "vat_able": true,
+   "sumit_id": 2389941363
+  },
+  "alu": {
+   "name": "אלומיניום הדר בע\"מ",
+   "company_number": "514778125",
+   "vat_able": true,
+   "sumit_id": 2389941389
+  },
+  "crane": {
+   "name": "מנופי המרכז בע\"מ",
+   "company_number": "513890202",
+   "vat_able": true,
+   "sumit_id": 2389941401
+  },
+  "sub": {
+   "name": "ש.ב. קבלנות משנה בע\"מ",
+   "company_number": "512900119",
+   "vat_able": true,
+   "sumit_id": 2389941380
+  },
+  "wood": {
+   "name": "עץ ופרגולות הגליל",
+   "company_number": "514112234",
+   "vat_able": true,
+   "sumit_id": 2389941476
+  },
+  "workers": {
+   "name": "כוח אדם מקצועי א.ר. בע\"מ",
+   "company_number": "515333441",
+   "vat_able": true,
+   "sumit_id": 2389941576
+  },
+  "acct": {
+   "name": "לוי את שות' - רואי חשבון",
+   "company_number": "514321876",
+   "vat_able": true,
+   "sumit_id": 2389940786
+  },
+  "insur": {
+   "name": "ביטוח המגן בע\"מ",
+   "company_number": "513445569",
+   "vat_able": false,
+   "sumit_id": 2389941708
+  },
+  "lease": {
+   "name": "דרך ליסינג בע\"מ",
+   "company_number": "512556671",
+   "vat_able": true,
+   "sumit_id": 2389941819
+  },
+  "fuel": {
+   "name": "דלק הצפון בע\"מ",
+   "company_number": "514667781",
+   "vat_able": true,
+   "sumit_id": 2389941723
+  },
+  "phone": {
+   "name": "תקשורת פלוס בע\"מ",
+   "company_number": "515778892",
+   "vat_able": true,
+   "sumit_id": 2389941842
+  }
+ },
+ "shared_alloc_worker_days": {
+  "2026-04": {
+   "mizrahi": 40
+  },
+  "2026-05": {
+   "mizrahi": 40
+  },
+  "2026-06": {
+   "mizrahi": 24,
+   "herzl": 8,
+   "techline": 8
+  },
+  "2026-07": {
+   "mizrahi": 8,
+   "herzl": 12,
+   "techline": 12,
+   "levi": 8
+  },
+  "2026-08": {
+   "herzl": 12,
+   "techline": 14,
+   "levi": 8,
+   "cohen": 6
+  },
+  "2026-09": {
+   "herzl": 10,
+   "techline": 12,
+   "levi": 8,
+   "cohen": 6,
+   "avraham": 4
+  }
+ },
+ "documents": [
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-INV-A",
+    "kind": "inv",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-26",
+    "net": 45000,
+    "item": "חשבון חלקי 1 - הריסה, בנייה וטיח"
+   },
+   "sumit": {
+    "key": "H-INV-A",
+    "sumit_id": 2389941095,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 53100.0,
+    "wo": 45000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 20002,
+    "desc": "פרויקט: שיפוץ הרצל 12 - חשבון חלקי 1 - הריסה, בנייה וטיח"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-REC-A",
+    "kind": "rec",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-26",
+    "orig": "H-INV-A",
+    "gross": 53100.0,
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-H-A"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-REC-A",
+    "sumit_id": 2389941166,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 53100.0,
+    "wo": 53100.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": 2389941095,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 30001,
+    "desc": "פרויקט: שיפוץ הרצל 12 - תשלום עבור חשבון חלקי 1 - הריסה, בנייה וטיח"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-INV-B",
+    "kind": "inv",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-26",
+    "net": 40000,
+    "item": "חשבון חלקי 2 - חשמל, אינסטלציה וריצוף"
+   },
+   "sumit": {
+    "key": "H-INV-B",
+    "sumit_id": 2389941172,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 47200.0,
+    "wo": 40000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 20003,
+    "desc": "פרויקט: שיפוץ הרצל 12 - חשבון חלקי 2 - חשמל, אינסטלציה וריצוף"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-REC-B",
+    "kind": "rec",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-26",
+    "orig": "H-INV-B",
+    "gross": 29500.0,
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "5101",
+      "DueDate": "2026-10-10"
+     }
+    },
+    "note": "תשלום חלקי"
+   },
+   "sumit": {
+    "key": "H-REC-B",
+    "sumit_id": 2389941177,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 29500.0,
+    "wo": 29500.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": 2389941172,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 30002,
+    "desc": "פרויקט: שיפוץ הרצל 12 - תשלום עבור חשבון חלקי 2 - חשמל, אינסטלציה וריצוף (תשלום חלקי)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-INV-C",
+    "kind": "inv",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-26",
+    "net": 30000,
+    "item": "חשבון חלקי 3 - גמרים ולובי",
+    "note": "פתוחה - טרם שולמה"
+   },
+   "sumit": {
+    "key": "H-INV-C",
+    "sumit_id": 2389941181,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 35400.0,
+    "wo": 30000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 20004,
+    "desc": "פרויקט: שיפוץ הרצל 12 - חשבון חלקי 3 - גמרים ולובי"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "C-INV-A",
+    "kind": "inv",
+    "proj": "cohen",
+    "cust": "cohen",
+    "date": "2026-09-26",
+    "net": 24000,
+    "item": "התקנת פרגולת אלומיניום ודק עץ"
+   },
+   "sumit": {
+    "key": "C-INV-A",
+    "sumit_id": 2389941186,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 28320.0,
+    "wo": 24000.0,
+    "vat": 18.0,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389918418,
+    "cust_name": "משפחת כהן",
+    "number": 20005,
+    "desc": "פרויקט: פרגולה בית כהן - התקנת פרגולת אלומיניום ודק עץ"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "C-REC-A",
+    "kind": "rec",
+    "proj": "cohen",
+    "cust": "cohen",
+    "date": "2026-09-26",
+    "orig": "C-INV-A",
+    "gross": 14160.0,
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "3301",
+      "DueDate": "2026-10-01"
+     }
+    },
+    "note": "תשלום חלקי"
+   },
+   "sumit": {
+    "key": "C-REC-A",
+    "sumit_id": 2389941310,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 14160.0,
+    "wo": 14160.0,
+    "vat": 18.0,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": 2389941186,
+    "cust": 2389918418,
+    "cust_name": "משפחת כהן",
+    "number": 30003,
+    "desc": "פרויקט: פרגולה בית כהן - תשלום עבור התקנת פרגולת אלומיניום ודק עץ (תשלום חלקי)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-INV-A",
+    "kind": "inv",
+    "proj": "levi",
+    "cust": "levi",
+    "date": "2026-09-26",
+    "net": 30000,
+    "item": "מקדמה - שיפוץ מטבח ואמבטיה"
+   },
+   "sumit": {
+    "key": "L-INV-A",
+    "sumit_id": 2389941192,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 35400.0,
+    "wo": 30000.0,
+    "vat": 18.0,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": null,
+    "cust": 2389941191,
+    "cust_name": "משפחת לוי",
+    "number": 20006,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - מקדמה - שיפוץ מטבח ואמבטיה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-REC-A",
+    "kind": "rec",
+    "proj": "levi",
+    "cust": "levi",
+    "date": "2026-09-26",
+    "orig": "L-INV-A",
+    "gross": 35400.0,
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-L-A"
+     }
+    }
+   },
+   "sumit": {
+    "key": "L-REC-A",
+    "sumit_id": 2389941197,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 35400.0,
+    "wo": 35400.0,
+    "vat": 18.0,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": 2389941192,
+    "cust": 2389941191,
+    "cust_name": "משפחת לוי",
+    "number": 30004,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - תשלום עבור מקדמה - שיפוץ מטבח ואמבטיה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-INV-B",
+    "kind": "inv",
+    "proj": "levi",
+    "cust": "levi",
+    "date": "2026-09-26",
+    "net": 25000,
+    "item": "חשבון חלקי 2 - אינסטלציה וחיפוי"
+   },
+   "sumit": {
+    "key": "L-INV-B",
+    "sumit_id": 2389941315,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 29500.0,
+    "wo": 25000.0,
+    "vat": 18.0,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": null,
+    "cust": 2389941191,
+    "cust_name": "משפחת לוי",
+    "number": 20007,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - חשבון חלקי 2 - אינסטלציה וחיפוי"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-REC-B",
+    "kind": "rec",
+    "proj": "levi",
+    "cust": "levi",
+    "date": "2026-09-26",
+    "orig": "L-INV-B",
+    "gross": 11800.0,
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-L-B"
+     }
+    },
+    "note": "תשלום חלקי"
+   },
+   "sumit": {
+    "key": "L-REC-B",
+    "sumit_id": 2389941320,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 11800.0,
+    "wo": 11800.0,
+    "vat": 18.0,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": 2389941315,
+    "cust": 2389941191,
+    "cust_name": "משפחת לוי",
+    "number": 30005,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - תשלום עבור חשבון חלקי 2 - אינסטלציה וחיפוי (תשלום חלקי)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-INV-A",
+    "kind": "inv",
+    "proj": "mizrahi",
+    "cust": "mizrahi",
+    "date": "2026-09-26",
+    "net": 60000,
+    "item": "חשבון חלקי 1 - שלד וטיח"
+   },
+   "sumit": {
+    "key": "M-INV-A",
+    "sumit_id": 2389941203,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 70800.0,
+    "wo": 60000.0,
+    "vat": 18.0,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389941202,
+    "cust_name": "רונית ואבי מזרחי",
+    "number": 20008,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - חשבון חלקי 1 - שלד וטיח"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-REC-A",
+    "kind": "rec",
+    "proj": "mizrahi",
+    "cust": "mizrahi",
+    "date": "2026-09-26",
+    "orig": "M-INV-A",
+    "gross": 70800.0,
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-M-A"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-REC-A",
+    "sumit_id": 2389941324,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 70800.0,
+    "wo": 70800.0,
+    "vat": 18.0,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": 2389941203,
+    "cust": 2389941202,
+    "cust_name": "רונית ואבי מזרחי",
+    "number": 30006,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - תשלום עבור חשבון חלקי 1 - שלד וטיח"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-INV-B",
+    "kind": "inv",
+    "proj": "mizrahi",
+    "cust": "mizrahi",
+    "date": "2026-09-26",
+    "net": 55000,
+    "item": "חשבון חלקי 2 - מערכות וריצוף"
+   },
+   "sumit": {
+    "key": "M-INV-B",
+    "sumit_id": 2389941328,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 64900.0,
+    "wo": 55000.0,
+    "vat": 18.0,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389941202,
+    "cust_name": "רונית ואבי מזרחי",
+    "number": 20009,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - חשבון חלקי 2 - מערכות וריצוף"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-REC-B",
+    "kind": "rec",
+    "proj": "mizrahi",
+    "cust": "mizrahi",
+    "date": "2026-09-26",
+    "orig": "M-INV-B",
+    "gross": 64900.0,
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "7701",
+      "DueDate": "2026-09-30"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-REC-B",
+    "sumit_id": 2389941411,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 64900.0,
+    "wo": 64900.0,
+    "vat": 18.0,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": 2389941328,
+    "cust": 2389941202,
+    "cust_name": "רונית ואבי מזרחי",
+    "number": 30007,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - תשלום עבור חשבון חלקי 2 - מערכות וריצוף"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-INVREC-FINAL",
+    "kind": "invrec",
+    "proj": "mizrahi",
+    "cust": "mizrahi",
+    "date": "2026-09-26",
+    "net": 30000,
+    "item": "חשבון סופי - גמרים ומסירה",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-M-FINAL"
+     }
+    },
+    "note": "תשלום סופי"
+   },
+   "sumit": {
+    "key": "M-INVREC-FINAL",
+    "sumit_id": 2389941415,
+    "kind": "invrec",
+    "date": "2026-09-26",
+    "gross": 35400.0,
+    "wo": 30000.0,
+    "vat": 18.0,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389941202,
+    "cust_name": "רונית ואבי מזרחי",
+    "number": 10004,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - חשבון סופי - גמרים ומסירה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "A-INV-A",
+    "kind": "inv",
+    "proj": "avraham",
+    "cust": "avraham",
+    "date": "2026-09-26",
+    "net": 25000,
+    "item": "מקדמה - תוספת בנייה",
+    "note": "פתוחה - טרם שולמה"
+   },
+   "sumit": {
+    "key": "A-INV-A",
+    "sumit_id": 2389941333,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 29500.0,
+    "wo": 25000.0,
+    "vat": 18.0,
+    "bud": 2389941069,
+    "bud_name": "תוספת בנייה - אברהם מודיעין",
+    "orig": null,
+    "cust": 2389940793,
+    "cust_name": "משפחת אברהם",
+    "number": 20010,
+    "desc": "פרויקט: תוספת בנייה - אברהם מודיעין - מקדמה - תוספת בנייה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-INV-A",
+    "kind": "inv",
+    "proj": "techline",
+    "cust": "techline",
+    "date": "2026-09-26",
+    "net": 40000,
+    "item": "חשבון חלקי 1 - פירוק ומחיצות"
+   },
+   "sumit": {
+    "key": "T-INV-A",
+    "sumit_id": 2389941341,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 47200.0,
+    "wo": 40000.0,
+    "vat": 18.0,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389941340,
+    "cust_name": "טק-ליין מערכות בע\"מ",
+    "number": 20011,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - חשבון חלקי 1 - פירוק ומחיצות"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-REC-A",
+    "kind": "rec",
+    "proj": "techline",
+    "cust": "techline",
+    "date": "2026-09-26",
+    "orig": "T-INV-A",
+    "gross": 47200.0,
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-T-A"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-REC-A",
+    "sumit_id": 2389941346,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 47200.0,
+    "wo": 47200.0,
+    "vat": 18.0,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": 2389941341,
+    "cust": 2389941340,
+    "cust_name": "טק-ליין מערכות בע\"מ",
+    "number": 30008,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - תשלום עבור חשבון חלקי 1 - פירוק ומחיצות"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-INV-B",
+    "kind": "inv",
+    "proj": "techline",
+    "cust": "techline",
+    "date": "2026-09-26",
+    "net": 45000,
+    "item": "חשבון חלקי 2 - חשמל, תקשורת וגמרים"
+   },
+   "sumit": {
+    "key": "T-INV-B",
+    "sumit_id": 2389941350,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 53100.0,
+    "wo": 45000.0,
+    "vat": 18.0,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389941340,
+    "cust_name": "טק-ליין מערכות בע\"מ",
+    "number": 20012,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - חשבון חלקי 2 - חשמל, תקשורת וגמרים"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-CRED-B",
+    "kind": "cred",
+    "proj": "techline",
+    "cust": "techline",
+    "date": "2026-09-26",
+    "orig": "T-INV-B",
+    "net": 5000,
+    "item": "זיכוי - פיצוי על איחור במסירה"
+   },
+   "sumit": {
+    "key": "T-CRED-B",
+    "sumit_id": 2389941430,
+    "kind": "cred",
+    "date": "2026-09-26",
+    "gross": -5900.0,
+    "wo": -5000.0,
+    "vat": 18.0,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": 2389941350,
+    "cust": 2389941340,
+    "cust_name": "טק-ליין מערכות בע\"מ",
+    "number": 2001,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - זיכוי - פיצוי על איחור במסירה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-REC-B",
+    "kind": "rec",
+    "proj": "techline",
+    "cust": "techline",
+    "date": "2026-09-26",
+    "orig": "T-INV-B",
+    "gross": 35400.0,
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-T-B"
+     }
+    },
+    "note": "תשלום חלקי"
+   },
+   "sumit": {
+    "key": "T-REC-B",
+    "sumit_id": 2389941355,
+    "kind": "rec",
+    "date": "2026-09-26",
+    "gross": 35400.0,
+    "wo": 35400.0,
+    "vat": 18.0,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": 2389941350,
+    "cust": 2389941340,
+    "cust_name": "טק-ליין מערכות בע\"מ",
+    "number": 30009,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - תשלום עבור חשבון חלקי 2 - חשמל, תקשורת וגמרים (תשלום חלקי)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-EXP-1",
+    "proj": "mizrahi",
+    "sup": "materials",
+    "date": "2026-04-12",
+    "net": 22000,
+    "item": "חומרי בניין",
+    "desc": "בלוקים, מלט, טיח וריצוף",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0412"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-EXP-1",
+    "sumit_id": 2389941435,
+    "kind": "exp",
+    "date": "2026-04-12",
+    "gross": -25960.0,
+    "wo": -25960.0,
+    "vat": null,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70004,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - בלוקים, מלט, טיח וריצוף"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-EXP-2",
+    "proj": "mizrahi",
+    "sup": "plumb",
+    "date": "2026-05-10",
+    "net": 9500,
+    "item": "אינסטלציה",
+    "desc": "החלפת צנרת ונקודות מים",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "901",
+      "DueDate": "2026-05-31"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-EXP-2",
+    "sumit_id": 2389941361,
+    "kind": "exp",
+    "date": "2026-05-10",
+    "gross": -11210.0,
+    "wo": -11210.0,
+    "vat": null,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389941363,
+    "cust_name": "י.ש. אינסטלציה ושיפוצים",
+    "number": 70005,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - החלפת צנרת ונקודות מים"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-EXP-3",
+    "proj": "mizrahi",
+    "sup": "elec",
+    "date": "2026-05-24",
+    "net": 8000,
+    "item": "חשמל",
+    "desc": "לוח חשמל ונקודות",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0524"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-EXP-3",
+    "sumit_id": 2389941370,
+    "kind": "exp",
+    "date": "2026-05-24",
+    "gross": -9440.0,
+    "wo": -9440.0,
+    "vat": null,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389921255,
+    "cust_name": "אבי חשמלאי",
+    "number": 70006,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - לוח חשמל ונקודות"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-EXP-4",
+    "proj": "mizrahi",
+    "sup": "sub",
+    "date": "2026-06-15",
+    "net": 18000,
+    "item": "קבלני משנה",
+    "desc": "ריצוף וחיפוי - קבלן משנה",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "902",
+      "DueDate": "2026-07-15"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-EXP-4",
+    "sumit_id": 2389941378,
+    "kind": "exp",
+    "date": "2026-06-15",
+    "gross": -21240.0,
+    "wo": -21240.0,
+    "vat": null,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389941380,
+    "cust_name": "ש.ב. קבלנות משנה בע\"מ",
+    "number": 70007,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - ריצוף וחיפוי - קבלן משנה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "M-EXP-5",
+    "proj": "mizrahi",
+    "sup": "alu",
+    "date": "2026-07-08",
+    "net": 12000,
+    "item": "אלומיניום",
+    "desc": "חלונות ותריסים",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0708"
+     }
+    }
+   },
+   "sumit": {
+    "key": "M-EXP-5",
+    "sumit_id": 2389941387,
+    "kind": "exp",
+    "date": "2026-07-08",
+    "gross": -14160.0,
+    "wo": -14160.0,
+    "vat": null,
+    "bud": 2389941141,
+    "bud_name": "שיפוץ דירה ביאליק 8 חולון",
+    "orig": null,
+    "cust": 2389941389,
+    "cust_name": "אלומיניום הדר בע\"מ",
+    "number": 70008,
+    "desc": "פרויקט: שיפוץ דירה ביאליק 8 חולון - חלונות ותריסים"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-EXP-1",
+    "proj": "herzl",
+    "sup": "materials",
+    "date": "2026-06-20",
+    "net": 16000,
+    "item": "חומרי בניין",
+    "desc": "חומרי שלד וטיח",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-EXP-1",
+    "sumit_id": 2389941445,
+    "kind": "exp",
+    "date": "2026-06-20",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70009,
+    "desc": "פרויקט: שיפוץ הרצל 12 - חומרי שלד וטיח"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-EXP-2",
+    "proj": "herzl",
+    "sup": "crane",
+    "date": "2026-06-28",
+    "net": 3500,
+    "item": "השכרת ציוד ומנופים",
+    "desc": "מנוף להרמת חומרים לקומה 4",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0628"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-EXP-2",
+    "sumit_id": 2389941399,
+    "kind": "exp",
+    "date": "2026-06-28",
+    "gross": -4130.0,
+    "wo": -4130.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389941401,
+    "cust_name": "מנופי המרכז בע\"מ",
+    "number": 70010,
+    "desc": "פרויקט: שיפוץ הרצל 12 - מנוף להרמת חומרים לקומה 4"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-EXP-3",
+    "proj": "herzl",
+    "sup": "sub",
+    "date": "2026-07-20",
+    "net": 22000,
+    "item": "קבלני משנה",
+    "desc": "גבס ומחיצות - קבלן משנה",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "903",
+      "DueDate": "2026-08-20"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-EXP-3",
+    "sumit_id": 2389941511,
+    "kind": "exp",
+    "date": "2026-07-20",
+    "gross": -25960.0,
+    "wo": -25960.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389941380,
+    "cust_name": "ש.ב. קבלנות משנה בע\"מ",
+    "number": 70011,
+    "desc": "פרויקט: שיפוץ הרצל 12 - גבס ומחיצות - קבלן משנה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-EXP-4",
+    "proj": "herzl",
+    "sup": "elec",
+    "date": "2026-08-05",
+    "net": 11000,
+    "item": "חשמל",
+    "desc": "תשתית חשמל ותאורה",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0805"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-EXP-4",
+    "sumit_id": 2389941524,
+    "kind": "exp",
+    "date": "2026-08-05",
+    "gross": -12980.0,
+    "wo": -12980.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389921255,
+    "cust_name": "אבי חשמלאי",
+    "number": 70012,
+    "desc": "פרויקט: שיפוץ הרצל 12 - תשתית חשמל ותאורה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-EXP-5",
+    "proj": "herzl",
+    "sup": "plumb",
+    "date": "2026-08-18",
+    "net": 9000,
+    "item": "אינסטלציה",
+    "desc": "אינסטלציה ומערכת ביוב",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0818"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-EXP-5",
+    "sumit_id": 2389941452,
+    "kind": "exp",
+    "date": "2026-08-18",
+    "gross": -10620.0,
+    "wo": -10620.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389941363,
+    "cust_name": "י.ש. אינסטלציה ושיפוצים",
+    "number": 70013,
+    "desc": "פרויקט: שיפוץ הרצל 12 - אינסטלציה ומערכת ביוב"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "H-EXP-6",
+    "proj": "herzl",
+    "sup": "materials",
+    "date": "2026-09-08",
+    "net": 12000,
+    "item": "חומרי בניין",
+    "desc": "קרמיקה וכלים סניטריים",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "H-EXP-6",
+    "sumit_id": 2389941533,
+    "kind": "exp",
+    "date": "2026-09-08",
+    "gross": -14160.0,
+    "wo": -14160.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70014,
+    "desc": "פרויקט: שיפוץ הרצל 12 - קרמיקה וכלים סניטריים"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "C-EXP-1",
+    "proj": "cohen",
+    "sup": "alu",
+    "date": "2026-08-12",
+    "net": 8000,
+    "item": "אלומיניום",
+    "desc": "קורות ופרופילים לפרגולה",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0812"
+     }
+    }
+   },
+   "sumit": {
+    "key": "C-EXP-1",
+    "sumit_id": 2389941540,
+    "kind": "exp",
+    "date": "2026-08-12",
+    "gross": -9440.0,
+    "wo": -9440.0,
+    "vat": null,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389941389,
+    "cust_name": "אלומיניום הדר בע\"מ",
+    "number": 70015,
+    "desc": "פרויקט: פרגולה בית כהן - קורות ופרופילים לפרגולה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "C-EXP-2",
+    "proj": "cohen",
+    "sup": "wood",
+    "date": "2026-08-26",
+    "net": 12500,
+    "item": "עץ ופרגולות",
+    "desc": "דק עץ איפאה",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "904",
+      "DueDate": "2026-09-26"
+     }
+    }
+   },
+   "sumit": {
+    "key": "C-EXP-2",
+    "sumit_id": 2389941474,
+    "kind": "exp",
+    "date": "2026-08-26",
+    "gross": -14750.0,
+    "wo": -14750.0,
+    "vat": null,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389941476,
+    "cust_name": "עץ ופרגולות הגליל",
+    "number": 70016,
+    "desc": "פרויקט: פרגולה בית כהן - דק עץ איפאה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "C-EXP-3",
+    "proj": "cohen",
+    "sup": "crane",
+    "date": "2026-09-03",
+    "net": 2800,
+    "item": "השכרת ציוד ומנופים",
+    "desc": "מנוף להתקנת קורות",
+    "pay": {
+     "Details_Cash": {}
+    }
+   },
+   "sumit": {
+    "key": "C-EXP-3",
+    "sumit_id": 2389941483,
+    "kind": "exp",
+    "date": "2026-09-03",
+    "gross": -3304.0,
+    "wo": -3304.0,
+    "vat": null,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389941401,
+    "cust_name": "מנופי המרכז בע\"מ",
+    "number": 70017,
+    "desc": "פרויקט: פרגולה בית כהן - מנוף להתקנת קורות"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-EXP-1",
+    "proj": "levi",
+    "sup": "materials",
+    "date": "2026-07-22",
+    "net": 14000,
+    "item": "חומרי בניין",
+    "desc": "ארונות מטבח ושיש",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0722"
+     }
+    }
+   },
+   "sumit": {
+    "key": "L-EXP-1",
+    "sumit_id": 2389941547,
+    "kind": "exp",
+    "date": "2026-07-22",
+    "gross": -16520.0,
+    "wo": -16520.0,
+    "vat": null,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70018,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - ארונות מטבח ושיש"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-EXP-2",
+    "proj": "levi",
+    "sup": "plumb",
+    "date": "2026-08-10",
+    "net": 12000,
+    "item": "אינסטלציה",
+    "desc": "אינסטלציה למטבח ושני חדרי רחצה",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0810"
+     }
+    }
+   },
+   "sumit": {
+    "key": "L-EXP-2",
+    "sumit_id": 2389941490,
+    "kind": "exp",
+    "date": "2026-08-10",
+    "gross": -14160.0,
+    "wo": -14160.0,
+    "vat": null,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": null,
+    "cust": 2389941363,
+    "cust_name": "י.ש. אינסטלציה ושיפוצים",
+    "number": 70019,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - אינסטלציה למטבח ושני חדרי רחצה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-EXP-3",
+    "proj": "levi",
+    "sup": "elec",
+    "date": "2026-08-30",
+    "net": 6500,
+    "item": "חשמל",
+    "desc": "נקודות חשמל למטבח",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "L-EXP-3",
+    "sumit_id": 2389941497,
+    "kind": "exp",
+    "date": "2026-08-30",
+    "gross": -7670.0,
+    "wo": -7670.0,
+    "vat": null,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": null,
+    "cust": 2389921255,
+    "cust_name": "אבי חשמלאי",
+    "number": 70020,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - נקודות חשמל למטבח"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "L-EXP-4",
+    "proj": "levi",
+    "sup": "sub",
+    "date": "2026-09-14",
+    "net": 9000,
+    "item": "קבלני משנה",
+    "desc": "חיפוי קרמיקה - קבלן משנה",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "905",
+      "DueDate": "2026-10-14"
+     }
+    }
+   },
+   "sumit": {
+    "key": "L-EXP-4",
+    "sumit_id": 2389941504,
+    "kind": "exp",
+    "date": "2026-09-14",
+    "gross": -10620.0,
+    "wo": -10620.0,
+    "vat": null,
+    "bud": 2389941140,
+    "bud_name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "orig": null,
+    "cust": 2389941380,
+    "cust_name": "ש.ב. קבלנות משנה בע\"מ",
+    "number": 70021,
+    "desc": "פרויקט: שיפוץ מטבח ואמבטיה - לוי רעננה - חיפוי קרמיקה - קבלן משנה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "A-EXP-1",
+    "proj": "avraham",
+    "sup": "materials",
+    "date": "2026-09-10",
+    "net": 6000,
+    "item": "חומרי בניין",
+    "desc": "ברזל ובטון ליסודות",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0910"
+     }
+    }
+   },
+   "sumit": {
+    "key": "A-EXP-1",
+    "sumit_id": 2389941611,
+    "kind": "exp",
+    "date": "2026-09-10",
+    "gross": -7080.0,
+    "wo": -7080.0,
+    "vat": null,
+    "bud": 2389941069,
+    "bud_name": "תוספת בנייה - אברהם מודיעין",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70022,
+    "desc": "פרויקט: תוספת בנייה - אברהם מודיעין - ברזל ובטון ליסודות"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "A-EXP-2",
+    "proj": "avraham",
+    "sup": "crane",
+    "date": "2026-09-15",
+    "net": 2400,
+    "item": "השכרת ציוד ומנופים",
+    "desc": "השכרת מיני מחפר",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "A-EXP-2",
+    "sumit_id": 2389941618,
+    "kind": "exp",
+    "date": "2026-09-15",
+    "gross": -2832.0,
+    "wo": -2832.0,
+    "vat": null,
+    "bud": 2389941069,
+    "bud_name": "תוספת בנייה - אברהם מודיעין",
+    "orig": null,
+    "cust": 2389941401,
+    "cust_name": "מנופי המרכז בע\"מ",
+    "number": 70023,
+    "desc": "פרויקט: תוספת בנייה - אברהם מודיעין - השכרת מיני מחפר"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-EXP-1",
+    "proj": "techline",
+    "sup": "materials",
+    "date": "2026-06-10",
+    "net": 20000,
+    "item": "חומרי בניין",
+    "desc": "חומרי גמר למשרדים",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0610"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-EXP-1",
+    "sumit_id": 2389941627,
+    "kind": "exp",
+    "date": "2026-06-10",
+    "gross": -23600.0,
+    "wo": -23600.0,
+    "vat": null,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70024,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - חומרי גמר למשרדים"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-EXP-2",
+    "proj": "techline",
+    "sup": "alu",
+    "date": "2026-07-05",
+    "net": 18000,
+    "item": "אלומיניום",
+    "desc": "מחיצות זכוכית ואלומיניום",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0705"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-EXP-2",
+    "sumit_id": 2389941634,
+    "kind": "exp",
+    "date": "2026-07-05",
+    "gross": -21240.0,
+    "wo": -21240.0,
+    "vat": null,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389941389,
+    "cust_name": "אלומיניום הדר בע\"מ",
+    "number": 70025,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - מחיצות זכוכית ואלומיניום"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-EXP-3",
+    "proj": "techline",
+    "sup": "sub",
+    "date": "2026-07-28",
+    "net": 30000,
+    "item": "קבלני משנה",
+    "desc": "תקרה אקוסטית וגבס - קבלן משנה",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "906",
+      "DueDate": "2026-08-28"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-EXP-3",
+    "sumit_id": 2389941554,
+    "kind": "exp",
+    "date": "2026-07-28",
+    "gross": -35400.0,
+    "wo": -35400.0,
+    "vat": null,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389941380,
+    "cust_name": "ש.ב. קבלנות משנה בע\"מ",
+    "number": 70026,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - תקרה אקוסטית וגבס - קבלן משנה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-EXP-4",
+    "proj": "techline",
+    "sup": "elec",
+    "date": "2026-08-15",
+    "net": 14000,
+    "item": "חשמל",
+    "desc": "חשמל, תקשורת ותאורה",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0815"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-EXP-4",
+    "sumit_id": 2389941641,
+    "kind": "exp",
+    "date": "2026-08-15",
+    "gross": -16520.0,
+    "wo": -16520.0,
+    "vat": null,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389921255,
+    "cust_name": "אבי חשמלאי",
+    "number": 70027,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - חשמל, תקשורת ותאורה"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-EXP-5",
+    "proj": "techline",
+    "sup": "crane",
+    "date": "2026-08-22",
+    "net": 3500,
+    "item": "השכרת ציוד ומנופים",
+    "desc": "במה הידראולית",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-EXP-5",
+    "sumit_id": 2389941650,
+    "kind": "exp",
+    "date": "2026-08-22",
+    "gross": -4130.0,
+    "wo": -4130.0,
+    "vat": null,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389941401,
+    "cust_name": "מנופי המרכז בע\"מ",
+    "number": 70028,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - במה הידראולית"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "T-EXP-6",
+    "proj": "techline",
+    "sup": "plumb",
+    "date": "2026-09-05",
+    "net": 5500,
+    "item": "אינסטלציה",
+    "desc": "מטבחון ושירותים",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-S-0905"
+     }
+    }
+   },
+   "sumit": {
+    "key": "T-EXP-6",
+    "sumit_id": 2389941657,
+    "kind": "exp",
+    "date": "2026-09-05",
+    "gross": -6490.0,
+    "wo": -6490.0,
+    "vat": null,
+    "bud": 2389941142,
+    "bud_name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "orig": null,
+    "cust": 2389941363,
+    "cust_name": "י.ש. אינסטלציה ושיפוצים",
+    "number": 70029,
+    "desc": "פרויקט: שיפוץ משרדים טק-ליין פתח תקווה - מטבחון ושירותים"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "W-EXP-4",
+    "proj": null,
+    "sup": "workers",
+    "date": "2026-04-28",
+    "net": 16000,
+    "item": "כוח אדם - עובדי שטח",
+    "desc": "עלות משותפת: עובדי שטח - אפריל 2026 (לחלוקה בין פרויקטים)",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-W-04"
+     }
+    }
+   },
+   "sumit": {
+    "key": "W-EXP-4",
+    "sumit_id": 2389941574,
+    "kind": "exp",
+    "date": "2026-04-28",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941576,
+    "cust_name": "כוח אדם מקצועי א.ר. בע\"מ",
+    "number": 70030,
+    "desc": "עלות משותפת: עובדי שטח - אפריל 2026 (לחלוקה בין פרויקטים)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "W-EXP-5",
+    "proj": null,
+    "sup": "workers",
+    "date": "2026-05-28",
+    "net": 16000,
+    "item": "כוח אדם - עובדי שטח",
+    "desc": "עלות משותפת: עובדי שטח - מאי 2026 (לחלוקה בין פרויקטים)",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-W-05"
+     }
+    }
+   },
+   "sumit": {
+    "key": "W-EXP-5",
+    "sumit_id": 2389941583,
+    "kind": "exp",
+    "date": "2026-05-28",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941576,
+    "cust_name": "כוח אדם מקצועי א.ר. בע\"מ",
+    "number": 70031,
+    "desc": "עלות משותפת: עובדי שטח - מאי 2026 (לחלוקה בין פרויקטים)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "W-EXP-6",
+    "proj": null,
+    "sup": "workers",
+    "date": "2026-06-28",
+    "net": 16000,
+    "item": "כוח אדם - עובדי שטח",
+    "desc": "עלות משותפת: עובדי שטח - יוני 2026 (לחלוקה בין פרויקטים)",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-W-06"
+     }
+    }
+   },
+   "sumit": {
+    "key": "W-EXP-6",
+    "sumit_id": 2389941664,
+    "kind": "exp",
+    "date": "2026-06-28",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941576,
+    "cust_name": "כוח אדם מקצועי א.ר. בע\"מ",
+    "number": 70032,
+    "desc": "עלות משותפת: עובדי שטח - יוני 2026 (לחלוקה בין פרויקטים)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "W-EXP-7",
+    "proj": null,
+    "sup": "workers",
+    "date": "2026-07-28",
+    "net": 16000,
+    "item": "כוח אדם - עובדי שטח",
+    "desc": "עלות משותפת: עובדי שטח - יולי 2026 (לחלוקה בין פרויקטים)",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-W-07"
+     }
+    }
+   },
+   "sumit": {
+    "key": "W-EXP-7",
+    "sumit_id": 2389941671,
+    "kind": "exp",
+    "date": "2026-07-28",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941576,
+    "cust_name": "כוח אדם מקצועי א.ר. בע\"מ",
+    "number": 70033,
+    "desc": "עלות משותפת: עובדי שטח - יולי 2026 (לחלוקה בין פרויקטים)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "W-EXP-8",
+    "proj": null,
+    "sup": "workers",
+    "date": "2026-08-28",
+    "net": 16000,
+    "item": "כוח אדם - עובדי שטח",
+    "desc": "עלות משותפת: עובדי שטח - אוגוסט 2026 (לחלוקה בין פרויקטים)",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-W-08"
+     }
+    }
+   },
+   "sumit": {
+    "key": "W-EXP-8",
+    "sumit_id": 2389941590,
+    "kind": "exp",
+    "date": "2026-08-28",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941576,
+    "cust_name": "כוח אדם מקצועי א.ר. בע\"מ",
+    "number": 70034,
+    "desc": "עלות משותפת: עובדי שטח - אוגוסט 2026 (לחלוקה בין פרויקטים)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "W-EXP-9",
+    "proj": null,
+    "sup": "workers",
+    "date": "2026-09-28",
+    "net": 16000,
+    "item": "כוח אדם - עובדי שטח",
+    "desc": "עלות משותפת: עובדי שטח - ספטמבר 2026 (לחלוקה בין פרויקטים)",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-W-09"
+     }
+    }
+   },
+   "sumit": {
+    "key": "W-EXP-9",
+    "sumit_id": 2389941678,
+    "kind": "exp",
+    "date": "2026-09-28",
+    "gross": -18880.0,
+    "wo": -18880.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941576,
+    "cust_name": "כוח אדם מקצועי א.ר. בע\"מ",
+    "number": 70035,
+    "desc": "עלות משותפת: עובדי שטח - ספטמבר 2026 (לחלוקה בין פרויקטים)"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-ACCT-7",
+    "proj": null,
+    "sup": "acct",
+    "date": "2026-07-30",
+    "net": 1500,
+    "item": "הנהלת חשבונות",
+    "desc": "תקורה: ראיית חשבון - יולי 2026",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-A-07"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-ACCT-7",
+    "sumit_id": 2389941687,
+    "kind": "exp",
+    "date": "2026-07-30",
+    "gross": -1770.0,
+    "wo": -1770.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389940786,
+    "cust_name": "לוי את שות' - רואי חשבון",
+    "number": 70036,
+    "desc": "תקורה: ראיית חשבון - יולי 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-ACCT-8",
+    "proj": null,
+    "sup": "acct",
+    "date": "2026-08-30",
+    "net": 1500,
+    "item": "הנהלת חשבונות",
+    "desc": "תקורה: ראיית חשבון - אוגוסט 2026",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-A-08"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-ACCT-8",
+    "sumit_id": 2389941694,
+    "kind": "exp",
+    "date": "2026-08-30",
+    "gross": -1770.0,
+    "wo": -1770.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389940786,
+    "cust_name": "לוי את שות' - רואי חשבון",
+    "number": 70037,
+    "desc": "תקורה: ראיית חשבון - אוגוסט 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-ACCT-9",
+    "proj": null,
+    "sup": "acct",
+    "date": "2026-09-25",
+    "net": 1500,
+    "item": "הנהלת חשבונות",
+    "desc": "תקורה: ראיית חשבון - ספטמבר 2026",
+    "pay": {
+     "Details_BankTransfer": {
+      "BankNumber": 12,
+      "BranchNumber": 600,
+      "AccountNumber": "123456",
+      "Reference": "TRF-A-09"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-ACCT-9",
+    "sumit_id": 2389941703,
+    "kind": "exp",
+    "date": "2026-09-25",
+    "gross": -1770.0,
+    "wo": -1770.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389940786,
+    "cust_name": "לוי את שות' - רואי חשבון",
+    "number": 70038,
+    "desc": "תקורה: ראיית חשבון - ספטמבר 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-INS",
+    "proj": null,
+    "sup": "insur",
+    "date": "2026-04-01",
+    "net": 9600,
+    "item": "ביטוח",
+    "desc": "תקורה: ביטוח קבלנים וצד ג' - פוליסה שנתית",
+    "pay": {
+     "Details_Cheque": {
+      "BankNumber": 10,
+      "BranchNumber": 800,
+      "AccountNumber": "987654",
+      "ChequeNumber": "907",
+      "DueDate": "2026-04-15"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-INS",
+    "sumit_id": 2389941706,
+    "kind": "exp",
+    "date": "2026-04-01",
+    "gross": -9600.0,
+    "wo": -9600.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941708,
+    "cust_name": "ביטוח המגן בע\"מ",
+    "number": 70039,
+    "desc": "תקורה: ביטוח קבלנים וצד ג' - פוליסה שנתית"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-LEASE-7",
+    "proj": null,
+    "sup": "lease",
+    "date": "2026-07-01",
+    "net": 3200,
+    "item": "רכב - ליסינג",
+    "desc": "תקורה: ליסינג טנדר - יולי 2026",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-LEASE-7",
+    "sumit_id": 2389941817,
+    "kind": "exp",
+    "date": "2026-07-01",
+    "gross": -3776.0,
+    "wo": -3776.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941819,
+    "cust_name": "דרך ליסינג בע\"מ",
+    "number": 70040,
+    "desc": "תקורה: ליסינג טנדר - יולי 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-LEASE-8",
+    "proj": null,
+    "sup": "lease",
+    "date": "2026-08-01",
+    "net": 3200,
+    "item": "רכב - ליסינג",
+    "desc": "תקורה: ליסינג טנדר - אוגוסט 2026",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-LEASE-8",
+    "sumit_id": 2389941826,
+    "kind": "exp",
+    "date": "2026-08-01",
+    "gross": -3776.0,
+    "wo": -3776.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941819,
+    "cust_name": "דרך ליסינג בע\"מ",
+    "number": 70041,
+    "desc": "תקורה: ליסינג טנדר - אוגוסט 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-LEASE-9",
+    "proj": null,
+    "sup": "lease",
+    "date": "2026-09-01",
+    "net": 3200,
+    "item": "רכב - ליסינג",
+    "desc": "תקורה: ליסינג טנדר - ספטמבר 2026",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-LEASE-9",
+    "sumit_id": 2389941833,
+    "kind": "exp",
+    "date": "2026-09-01",
+    "gross": -3776.0,
+    "wo": -3776.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941819,
+    "cust_name": "דרך ליסינג בע\"מ",
+    "number": 70042,
+    "desc": "תקורה: ליסינג טנדר - ספטמבר 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-FUEL-9",
+    "proj": null,
+    "sup": "fuel",
+    "date": "2026-09-20",
+    "net": 1800,
+    "item": "דלק",
+    "desc": "תקורה: דלק - ספטמבר 2026",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-FUEL-9",
+    "sumit_id": 2389941721,
+    "kind": "exp",
+    "date": "2026-09-20",
+    "gross": -2124.0,
+    "wo": -2124.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941723,
+    "cust_name": "דלק הצפון בע\"מ",
+    "number": 70043,
+    "desc": "תקורה: דלק - ספטמבר 2026"
+   }
+  },
+  {
+   "source": "created",
+   "spec": {
+    "key": "O-PHONE-9",
+    "proj": null,
+    "sup": "phone",
+    "date": "2026-09-12",
+    "net": 600,
+    "item": "טלפון ותקשורת",
+    "desc": "תקורה: טלפונים ואינטרנט משרד - ספטמבר 2026",
+    "pay": {
+     "Details_CreditCard": {
+      "CardBrand": "Visa",
+      "Last4Digits": "4242"
+     }
+    }
+   },
+   "sumit": {
+    "key": "O-PHONE-9",
+    "sumit_id": 2389941840,
+    "kind": "exp",
+    "date": "2026-09-12",
+    "gross": -708.0,
+    "wo": -708.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389941842,
+    "cust_name": "תקשורת פלוס בע\"מ",
+    "number": 70044,
+    "desc": "תקורה: טלפונים ואינטרנט משרד - ספטמבר 2026"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-INV1",
+    "id": 2389918613,
+    "kind": "inv",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-24",
+    "net": 10000,
+    "num": 20000
+   },
+   "sumit": {
+    "key": "X-INV1",
+    "sumit_id": 2389918613,
+    "kind": "inv",
+    "date": "2026-09-24",
+    "gross": 11800.0,
+    "wo": 10000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 20000,
+    "desc": "פרויקט: שיפוץ הרצל 12"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-REC1",
+    "id": 2389918621,
+    "kind": "rec",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-25",
+    "gross": 11800,
+    "orig": "X-INV1",
+    "num": 30000
+   },
+   "sumit": {
+    "key": "X-REC1",
+    "sumit_id": 2389918621,
+    "kind": "rec",
+    "date": "2026-09-25",
+    "gross": 11800.0,
+    "wo": 11800.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": 2389918613,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 30000,
+    "desc": "פרויקט: שיפוץ הרצל 12 - תשלום חשבונית 20000"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-INV2",
+    "id": 2389918428,
+    "kind": "inv",
+    "proj": "herzl",
+    "cust": "dl",
+    "date": "2026-09-26",
+    "net": 8000,
+    "num": 20001,
+    "note": "תוספות לובי - פתוחה"
+   },
+   "sumit": {
+    "key": "X-INV2",
+    "sumit_id": 2389918428,
+    "kind": "inv",
+    "date": "2026-09-26",
+    "gross": 9440.0,
+    "wo": 8000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389918427,
+    "cust_name": "ד.ל. נכסים בע\"מ",
+    "number": 20001,
+    "desc": "פרויקט: שיפוץ הרצל 12 - תוספות"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-CRED1",
+    "id": 2389918625,
+    "kind": "cred",
+    "proj": "herzl",
+    "cust": "dl",
+    "date": "2026-09-26",
+    "net": 1000,
+    "orig": "X-INV2",
+    "num": 2000
+   },
+   "sumit": {
+    "key": "X-CRED1",
+    "sumit_id": 2389918625,
+    "kind": "cred",
+    "date": "2026-09-26",
+    "gross": -1180.0,
+    "wo": -1000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": 2389918428,
+    "cust": 2389918427,
+    "cust_name": "ד.ל. נכסים בע\"מ",
+    "number": 2000,
+    "desc": "זיכוי חלקי לחשבונית - הנחה"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-INVREC1",
+    "id": 2389918419,
+    "kind": "invrec",
+    "proj": "cohen",
+    "cust": "cohen",
+    "date": "2026-09-25",
+    "net": 5000,
+    "num": 10000
+   },
+   "sumit": {
+    "key": "X-INVREC1",
+    "sumit_id": 2389918419,
+    "kind": "invrec",
+    "date": "2026-09-25",
+    "gross": 5900.0,
+    "wo": 5000.0,
+    "vat": 18.0,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389918418,
+    "cust_name": "משפחת כהן",
+    "number": 10000,
+    "desc": "פרויקט: פרגולה בית כהן"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-INVREC2",
+    "id": 2389921349,
+    "kind": "invrec",
+    "proj": "cohen",
+    "cust": "cohen",
+    "date": "2026-09-26",
+    "net": 2000,
+    "num": 10001
+   },
+   "sumit": {
+    "key": "X-INVREC2",
+    "sumit_id": 2389921349,
+    "kind": "invrec",
+    "date": "2026-09-26",
+    "gross": 2360.0,
+    "wo": 2000.0,
+    "vat": 18.0,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389918418,
+    "cust_name": "משפחת כהן",
+    "number": 10001,
+    "desc": "מקדמה/תשלום פרויקט"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-INVREC3",
+    "id": 2389921357,
+    "kind": "invrec",
+    "proj": "cohen",
+    "cust": "cohen",
+    "date": "2026-09-26",
+    "net": 1000,
+    "num": 10002
+   },
+   "sumit": {
+    "key": "X-INVREC3",
+    "sumit_id": 2389921357,
+    "kind": "invrec",
+    "date": "2026-09-26",
+    "gross": 1180.0,
+    "wo": 1000.0,
+    "vat": 18.0,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389918418,
+    "cust_name": "משפחת כהן",
+    "number": 10002,
+    "desc": "מקדמה/תשלום פרויקט"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-INVREC4",
+    "id": 2389921274,
+    "kind": "invrec",
+    "proj": "herzl",
+    "cust": "galil",
+    "date": "2026-09-26",
+    "net": 3000,
+    "num": 10003
+   },
+   "sumit": {
+    "key": "X-INVREC4",
+    "sumit_id": 2389921274,
+    "kind": "invrec",
+    "date": "2026-09-26",
+    "gross": 3540.0,
+    "wo": 3000.0,
+    "vat": 18.0,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389918411,
+    "cust_name": "יזמות הגליל בע\"מ",
+    "number": 10003,
+    "desc": "מקדמה/תשלום פרויקט"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-EXP1",
+    "id": 2389921123,
+    "kind": "exp",
+    "proj": "herzl",
+    "sup": "materials",
+    "date": "2026-09-25",
+    "gross": 2360,
+    "num": 70000
+   },
+   "sumit": {
+    "key": "X-EXP1",
+    "sumit_id": 2389921123,
+    "kind": "exp",
+    "date": "2026-09-25",
+    "gross": -2360.0,
+    "wo": -2360.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70000,
+    "desc": "פרויקט: שיפוץ הרצל 12 - מלט וברזל"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-EXP2",
+    "id": 2389921236,
+    "kind": "exp",
+    "proj": "herzl",
+    "sup": "materials",
+    "date": "2026-09-26",
+    "gross": 590,
+    "num": 70001
+   },
+   "sumit": {
+    "key": "X-EXP2",
+    "sumit_id": 2389921236,
+    "kind": "exp",
+    "date": "2026-09-26",
+    "gross": -590.0,
+    "wo": -590.0,
+    "vat": null,
+    "bud": 2389921121,
+    "bud_name": "שיפוץ הרצל 12",
+    "orig": null,
+    "cust": 2389921125,
+    "cust_name": "חומרי בניין השרון בע\"מ",
+    "number": 70001,
+    "desc": "פרויקט: שיפוץ הרצל 12 - דבק קרמיקה"
+   }
+  },
+  {
+   "source": "pre-existing",
+   "spec": {
+    "key": "X-EXP3",
+    "id": 2389921253,
+    "kind": "exp",
+    "proj": "cohen",
+    "sup": "elec",
+    "date": "2026-09-26",
+    "gross": 1180,
+    "num": 70002
+   },
+   "sumit": {
+    "key": "X-EXP3",
+    "sumit_id": 2389921253,
+    "kind": "exp",
+    "date": "2026-09-26",
+    "gross": -1180.0,
+    "wo": -1180.0,
+    "vat": null,
+    "bud": 2389921016,
+    "bud_name": "פרגולה בית כהן",
+    "orig": null,
+    "cust": 2389921255,
+    "cust_name": "אבי חשמלאי",
+    "number": 70002,
+    "desc": "פרויקט: פרגולה בית כהן - חשמל"
+   }
+  },
+  {
+   "source": "created (backdating probe)",
+   "spec": {
+    "key": "O-ACCT-6",
+    "id": 2389940784,
+    "kind": "exp",
+    "proj": null,
+    "sup": "acct",
+    "date": "2026-06-30",
+    "gross": 1770,
+    "num": 70003,
+    "note": "backdating probe, part of dataset"
+   },
+   "sumit": {
+    "key": "O-ACCT-6",
+    "sumit_id": 2389940784,
+    "kind": "exp",
+    "date": "2026-06-30",
+    "gross": -1770.0,
+    "wo": -1770.0,
+    "vat": null,
+    "bud": null,
+    "bud_name": null,
+    "orig": null,
+    "cust": 2389940786,
+    "cust_name": "לוי את שות' - רואי חשבון",
+    "number": 70003,
+    "desc": "תקורה: ראיית חשבון - יוני 2026"
+   }
+  }
+ ],
+ "verify": {
+  "total_in_crm": 75,
+  "problems": []
+ },
+ "expected_pnl": {
+  "projects": {
+   "herzl": {
+    "name": "שיפוץ הרצל 12",
+    "budget_id": 2389921121,
+    "invoiced_income": 135000.0,
+    "cash_income": 83000.0,
+    "direct_costs": 76000.0,
+    "direct_costs_raw_sumit": 89680.0,
+    "gross_profit_invoiced": 59000.0,
+    "gross_profit_cash": 7000.0,
+    "shared_alloc": 16800.0,
+    "profit_after_alloc_invoiced": 42200.0,
+    "profit_after_alloc_cash": -9800.0,
+    "open_receivable_gross": 61360.0
+   },
+   "cohen": {
+    "name": "פרגולה בית כהן",
+    "budget_id": 2389921016,
+    "invoiced_income": 32000.0,
+    "cash_income": 20000.0,
+    "direct_costs": 24300.0,
+    "direct_costs_raw_sumit": 28674.0,
+    "gross_profit_invoiced": 7700.0,
+    "gross_profit_cash": -4300.0,
+    "shared_alloc": 4800.0,
+    "profit_after_alloc_invoiced": 2900.0,
+    "profit_after_alloc_cash": -9100.0,
+    "open_receivable_gross": 14160.0
+   },
+   "levi": {
+    "name": "שיפוץ מטבח ואמבטיה - לוי רעננה",
+    "budget_id": 2389941140,
+    "invoiced_income": 55000.0,
+    "cash_income": 40000.0,
+    "direct_costs": 41500.0,
+    "direct_costs_raw_sumit": 48970.0,
+    "gross_profit_invoiced": 13500.0,
+    "gross_profit_cash": -1500.0,
+    "shared_alloc": 9600.0,
+    "profit_after_alloc_invoiced": 3900.0,
+    "profit_after_alloc_cash": -11100.0,
+    "open_receivable_gross": 17700.0
+   },
+   "mizrahi": {
+    "name": "שיפוץ דירה ביאליק 8 חולון",
+    "budget_id": 2389941141,
+    "invoiced_income": 145000.0,
+    "cash_income": 145000.0,
+    "direct_costs": 69500.0,
+    "direct_costs_raw_sumit": 82010.0,
+    "gross_profit_invoiced": 75500.0,
+    "gross_profit_cash": 75500.0,
+    "shared_alloc": 44800.0,
+    "profit_after_alloc_invoiced": 30700.0,
+    "profit_after_alloc_cash": 30700.0,
+    "open_receivable_gross": 0.0
+   },
+   "avraham": {
+    "name": "תוספת בנייה - אברהם מודיעין",
+    "budget_id": 2389941069,
+    "invoiced_income": 25000.0,
+    "cash_income": 0.0,
+    "direct_costs": 8400.0,
+    "direct_costs_raw_sumit": 9912.0,
+    "gross_profit_invoiced": 16600.0,
+    "gross_profit_cash": -8400.0,
+    "shared_alloc": 1600.0,
+    "profit_after_alloc_invoiced": 15000.0,
+    "profit_after_alloc_cash": -10000.0,
+    "open_receivable_gross": 29500.0
+   },
+   "techline": {
+    "name": "שיפוץ משרדים טק-ליין פתח תקווה",
+    "budget_id": 2389941142,
+    "invoiced_income": 80000.0,
+    "cash_income": 70000.0,
+    "direct_costs": 91000.0,
+    "direct_costs_raw_sumit": 107380.0,
+    "gross_profit_invoiced": -11000.0,
+    "gross_profit_cash": -21000.0,
+    "shared_alloc": 18400.0,
+    "profit_after_alloc_invoiced": -29400.0,
+    "profit_after_alloc_cash": -39400.0,
+    "open_receivable_gross": 11800.0
+   }
+  },
+  "company": {
+   "invoiced_income": 472000.0,
+   "cash_income": 358000.0,
+   "direct": 310700.0,
+   "shared": 96000.0,
+   "overhead": 27600.0,
+   "net_profit_invoiced": 37700.0,
+   "net_profit_cash": -76300.0,
+   "open_receivables_gross": 134520.0
+  },
+  "open_invoices": [
+   {
+    "key": "H-INV-B",
+    "number": 20003,
+    "project": "herzl",
+    "open_gross": 17700.0
+   },
+   {
+    "key": "H-INV-C",
+    "number": 20004,
+    "project": "herzl",
+    "open_gross": 35400.0
+   },
+   {
+    "key": "C-INV-A",
+    "number": 20005,
+    "project": "cohen",
+    "open_gross": 14160.0
+   },
+   {
+    "key": "L-INV-B",
+    "number": 20007,
+    "project": "levi",
+    "open_gross": 17700.0
+   },
+   {
+    "key": "A-INV-A",
+    "number": 20010,
+    "project": "avraham",
+    "open_gross": 29500.0
+   },
+   {
+    "key": "T-INV-B",
+    "number": 20012,
+    "project": "techline",
+    "open_gross": 11800.0
+   },
+   {
+    "key": "X-INV2",
+    "number": 20001,
+    "project": "herzl",
+    "open_gross": 8260.0
+   }
+  ],
+  "monthly_expenses_net": {
+   "2026-04": 47600.0,
+   "2026-05": 33500.0,
+   "2026-06": 75000.0,
+   "2026-07": 116700.0,
+   "2026-08": 97200.0,
+   "2026-09": 64300.0
+  },
+  "rule_b": {
+   "projects": {
+    "herzl": {
+     "direct_raw": 89680.0,
+     "shared_alloc_raw": 19824.0,
+     "profit_after_alloc_invoiced": 25496.0,
+     "profit_after_alloc_cash": -26504.0
+    },
+    "cohen": {
+     "direct_raw": 28674.0,
+     "shared_alloc_raw": 5664.0,
+     "profit_after_alloc_invoiced": -2338.0,
+     "profit_after_alloc_cash": -14338.0
+    },
+    "levi": {
+     "direct_raw": 48970.0,
+     "shared_alloc_raw": 11328.0,
+     "profit_after_alloc_invoiced": -5298.0,
+     "profit_after_alloc_cash": -20298.0
+    },
+    "mizrahi": {
+     "direct_raw": 82010.0,
+     "shared_alloc_raw": 52864.0,
+     "profit_after_alloc_invoiced": 10126.0,
+     "profit_after_alloc_cash": 10126.0
+    },
+    "avraham": {
+     "direct_raw": 9912.0,
+     "shared_alloc_raw": 1888.0,
+     "profit_after_alloc_invoiced": 13200.0,
+     "profit_after_alloc_cash": -11800.0
+    },
+    "techline": {
+     "direct_raw": 107380.0,
+     "shared_alloc_raw": 21712.0,
+     "profit_after_alloc_invoiced": -49092.0,
+     "profit_after_alloc_cash": -59092.0
+    }
+   },
+   "shared_raw": 113280.0,
+   "overhead_raw": 30840.0,
+   "net_profit_invoiced": -38746.0,
+   "net_profit_cash": -152746.0
+  },
+  "overhead_breakdown": {
+   "לוי את שות' - רואי חשבון": 6000.0,
+   "ביטוח המגן בע\"מ": 9600.0,
+   "דרך ליסינג בע\"מ": 9600.0,
+   "דלק הצפון בע\"מ": 1800.0,
+   "תקשורת פלוס בע\"מ": 600.0
+  }
+ },
+ "folders": {
+  "documents": "2375135516",
+  "tax_invoices": "2375135542",
+  "receipts": "2375135537",
+  "invoice_receipts": "2375135543",
+  "credit_invoices": "2375135528",
+  "supplier_expenses": "2375135546",
+  "budget_sections": "2389920591",
+  "expense_items": "2375135502",
+  "suppliers": "2375133707",
+  "customers": "2375133706"
+ }
+}
