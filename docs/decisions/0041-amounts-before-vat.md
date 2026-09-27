@@ -15,10 +15,12 @@ VAT is stored per document. It is excluded from profit.
 
 Where a source has no VAT split, show the gross amount flagged "VAT unknown".
 
+[0043](0043-assumed-vat-on-expenses.md) amends that last sentence for expenses, and for a bank-statement line with no supplier match. Those use the standard rate (currently 18%) unless the supplier is VAT-exempt. Income documents that carry a VAT split are unchanged.
+
 ## Alternatives rejected
 
 Deriving VAT at the standard rate when the source has no split. Asking in review, for large items, instead of showing the flagged gross amount.
 
 ## Consequences
 
-The open questions on bank-only income and on unknown-VAT expenses are answered by this record. Whether a SUMIT website or OCR expense actually carries a split is still a data question. If it does not, this record is how it is shown.
+The open questions on bank-only income and on unknown-VAT expenses were first answered here. [0043](0043-assumed-vat-on-expenses.md) replaces the expense answer, and the answer for a bank line with no supplier match. Whether a SUMIT website or OCR expense actually carries a split is still a data question. If it does not, 0043 is how it is shown.

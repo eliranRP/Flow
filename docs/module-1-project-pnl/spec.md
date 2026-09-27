@@ -2,7 +2,7 @@
 
 Proof-of-concept specification for Flow. Screen fields, states, and edge cases are in the files linked from [screens.md](screens.md). Exact totals are in [calculations.md](calculations.md). Settings is a [draft](settings.md) and is not approved. Open items are listed in [open questions](../open-questions.md).
 
-Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0042](../decisions/0042-sumit-primary-income-and-expenses.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
+Decisions that this spec follows: [0001](../decisions/0001-management-tool-alongside-accounting.md) through [0009](../decisions/0009-scalable-pickers.md), and [0011](../decisions/0011-auto-approve-high-confidence.md) through [0043](../decisions/0043-assumed-vat-on-expenses.md), except [0017](../decisions/0017-sms-sign-in.md), which is superseded by [0033](../decisions/0033-google-sign-in.md).
 
 ## Goal
 
@@ -49,7 +49,7 @@ Amounts on screen are **net of VAT**. VAT is stored and shown separately. The ow
 
 Version 1 is cash basis. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 
-A Bank Hapoalim (`בנק הפועלים`) statement remains a complement: cash matching, and anything not already in SUMIT ([0042](../decisions/0042-sumit-primary-income-and-expenses.md)). SUMIT, the expense module and the documents, is the primary source for income and expenses. The pull is read-only ([0036](../decisions/0036-sumit-read-only.md)). An invoice with no matching payment stays unpaid and out of P&L until it is paid ([0007](../decisions/0007-bank-statement-is-primary-input.md)). Amounts on the P&L are before VAT; a source with no VAT split is shown gross and flagged "VAT unknown" ([0041](../decisions/0041-amounts-before-vat.md)).
+A Bank Hapoalim (`בנק הפועלים`) statement remains a complement: cash matching, and anything not already in SUMIT ([0042](../decisions/0042-sumit-primary-income-and-expenses.md)). SUMIT, the expense module and the documents, is the primary source for income and expenses. The pull is read-only ([0036](../decisions/0036-sumit-read-only.md)). An invoice with no matching payment stays unpaid and out of P&L until it is paid ([0007](../decisions/0007-bank-statement-is-primary-input.md)). Amounts on the P&L are before VAT ([0041](../decisions/0041-amounts-before-vat.md)). An expense, or a bank line with no supplier match, that has no VAT split assumes the standard rate (currently 18%) unless the supplier is VAT-exempt ([0043](../decisions/0043-assumed-vat-on-expenses.md)).
 
 An invoice with no matching payment is **unpaid**. It stays out of P&L until a later statement row matches it, or the owner marks it paid. Unpaid invoices remain visible so the owner can see what is still open.
 

@@ -126,6 +126,8 @@ Budget is optional ([0014](../decisions/0014-optional-project-budget.md)). The c
 
 Tiles, profit, category bars, and budget-used are net of VAT. VAT is displayed beside a single transaction and is included in the accountant export. VAT is never added into profit.
 
+A document that carries a VAT split uses that split ([0041](../decisions/0041-amounts-before-vat.md)). An expense, or a bank line with no supplier match, that has no split assumes the standard rate, a configurable constant currently 18%: net = gross / 1.18, unless the supplier is marked VAT-exempt, in which case net = gross ([0043](../decisions/0043-assumed-vat-on-expenses.md)). That assumption is `vat_status='assumed'`. The demo target is Rule A: net = gross / 1.18 for a VAT-registered supplier, and gross for the exempt insurer `ביטוח המגן`.
+
 A VAT-exempt line has `vat_agorot = 0` and counts at its net. Extracted VAT is kept even when the company is `עוסק פטור`: the supplier still charged VAT. Manual entry defaults VAT to 0 when the company status is exempt, and to the computed amount when the company charges VAT.
 
 ## Splits

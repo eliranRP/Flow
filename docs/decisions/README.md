@@ -67,5 +67,6 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0038](0038-stack.md) | 2026-09-26 | Accepted | TypeScript, React, Vite, and Supabase Edge Functions |
 | [0039](0039-pilot-defaults.md) | 2026-09-26 | Accepted | Pilot defaults: supabase.co on the Google screen, photos in Storage, Pro trigger as in 0037 |
 | [0040](0040-tailwind-v4.md) | 2026-09-26 | Accepted | Styling is Tailwind CSS v4, mapped from the design tokens. Replaces the plain-CSS line in 0038 |
-| [0041](0041-amounts-before-vat.md) | 2026-09-26 | Accepted | P&L amounts are before VAT; a missing split is shown gross and flagged VAT unknown |
+| [0041](0041-amounts-before-vat.md) | 2026-09-26 | Accepted | P&L amounts are before VAT. 0043 amends the missing-split rule for expenses |
 | [0042](0042-sumit-primary-income-and-expenses.md) | 2026-09-26 | Accepted | SUMIT is the primary source for income and expenses; Hapoalim complements it |
+| [0043](0043-assumed-vat-on-expenses.md) | 2026-09-27 | Accepted | Expenses with no VAT split assume 18%, unless the supplier is VAT-exempt |

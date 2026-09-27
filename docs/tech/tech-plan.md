@@ -317,13 +317,13 @@ SUMIT child folder names are resolved per company (SUMIT §9) and mapped to Flow
 - **Income vs expense:** `txn.direction` comes from the document family (sales vs supplier folder) or the bank sign. SUMIT returns expenses as **negative** amounts (verified), so Flow stores the absolute value on `txn` with `direction='out'` and keeps signs only for credits.
 - **Cash basis:** profit for a period = Σ `payment.net` (approved txns, `pnl_kind` income) − Σ `payment.net` (expense), for `pay_date` in the period, after allocations. Unpaid invoices and payables are shown separately ("לא נכלל ברווח", screens 08 and 12).
 - **Linked receipts (no double counting):** a receipt pointing at an invoice is a payment of that invoice, never a second income. Open balance = invoice gross − Σ linked receipts − Σ linked credits. **`IsClosed` isn't used**, because it isn't reliable (verified).
-- **VAT and "before VAT":**
-  - **Invoice-type documents:** net = `Accounting_DisplayCompanyValueWithoutVAT`, with `vat_status='known'`.
+- **VAT and "before VAT"** ([0041](../decisions/0041-amounts-before-vat.md), amended by [0043](../decisions/0043-assumed-vat-on-expenses.md)):
+  - **Invoice-type documents that carry a split:** net = `Accounting_DisplayCompanyValueWithoutVAT`, with `vat_status='source'`.
   - **Receipts** carry no VAT. A payment's net = payment gross × (invoice net ÷ invoice gross), in integer arithmetic with banker's rounding to the agora. A standalone receipt in a VAT-registered company gets net = gross ÷ (1 + rate), with `vat_status='derived'`.
-  - **`osek_patur`:** net = gross, with `vat_status='exempt'`.
-  - **Expenses with no VAT rate** (e.g. API-created expenses, verified) and **bank-only expenses:** show **gross** with `vat_status='unknown'` and a small "מע״מ לא ידוע" marker on the transaction. **Don't guess 18%**, because salaries, insurance and foreign suppliers carry none. Supplier memory can learn a rate from matched invoices or photos, which turns later items to `derived`.
-  - **Bank-only income** in a VAT-registered company is derived at the standard rate (domestic sales). This needs owner confirmation (Q6).
-  - **Home figures** use net where known and gross where unknown. The snapshot counts unknown-VAT gross so the UI can add an honest hint when it's material (> 5% of expenses).
+  - **`osek_patur` company, or a supplier marked VAT-exempt:** net = gross. A VAT-exempt supplier (insurance, `עוסק פטור`) is a flag on supplier memory, set once by the owner, toggled later, and past amounts recompute.
+  - **Expenses with no VAT split** (SUMIT `addexpense` and any other expense source) **and bank-statement lines with no supplier match:** assume the standard Israeli VAT rate. The rate is a configurable constant, currently 18%, not hard-coded. net = gross / 1.18, stored in agorot with the same banker's rounding as other derived nets. `vat_status='assumed'`. The detail screen may show a subtle hint so the owner can correct it. Home has no warning banner.
+  - **`vat_status` values:** `source`, `derived`, `unknown`, `assumed`. `assumed` is the 0043 default. `unknown` is no longer the display for an expense that simply lacks a split.
+  - **Home figures** use the net from the rules above, including assumed nets. Do not add a "VAT unknown" banner on Home.
 - **Credit notes:** credits are already negative in SUMIT, so sum them directly. A credit linked to an unpaid invoice reduces the open balance. A credit on a paid invoice has no cash effect until the refund (credit receipt or bank debit).
 - **Cheques:** the default cash date is the receipt date. With `getdetails`, `Details_Cheque.DueDate` can be used for post-dated cheques (setting off in M1; Q8).
 - **Non-P&L money:** transfers between own accounts, VAT payments to מע"מ, income tax / ביטוח לאומי, loans and owner withdrawals become `pnl_kind='non_pnl'`. They're excluded from profit and counted in the upload results ("2 transfers between your own accounts removed").
@@ -828,7 +828,7 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 | R10 | **Cost jump to $25/mo at Pro** vs the original $5 cap | Certain / budget | Owner decision; trigger tied to revenue (first paying customer) |
 | R11 | **Undocumented SUMIT CRM fields** change | Medium / sync breaks | Nightly drift check + `documents/list` fallback |
 | R12 | **Customer's SUMIT plan** (Free has no API; triggers need Growth; budgets need Advanced) | High / reach | Bank + photo + manual work without SUMIT |
-| R13 | **Unknown VAT on expenses** | High / accuracy | `vat_status`, learned supplier VAT, photo OCR, honest marker |
+| R13 | **Assumed VAT on expenses** that arrive with no split | Medium / accuracy | `vat_status='assumed'` at the configurable 18% rate, VAT-exempt supplier memory, a subtle hint on the detail screen, no Home banner ([0043](../decisions/0043-assumed-vat-on-expenses.md)) |
 | R14 | **Card settlement lines** double count | Medium / accuracy | `card_settlement` classification |
 | R15 | **Hapoalim format variance** | Medium / upload fails | Header detection, sample library |
 | R16 | **Storing full-access SUMIT keys** | Low / severe | Envelope encryption with the KEK outside the DB, dedicated key, no plaintext in dumps |
@@ -844,8 +844,8 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 3. **Q3: Photo storage.** Keep invoice photos in Supabase Storage (1 GB on Free fills in ~4 months at 50 companies; not an issue on Pro's 100 GB), or put them in Cloudflare R2 (10 GB free) to delay the Pro move?
 4. **Q4: Custom domain for Supabase Auth.** Pay $10/mo on Pro so the Google consent screen shows Flow's domain instead of `*.supabase.co`?
 5. **Q5: App domain.** `workers.dev` for the pilot; buy a domain (`.com` ≈ $10.46–11.17/yr, or `.co.il`) before inviting customers?
-6. **Q6: VAT on bank-only income.** Derive at the standard rate (recommended), or show gross until matched?
-7. **Q7: Unknown-VAT expenses.** Show gross with a marker (recommended), or ask in review for large items?
+6. **Q6: VAT on bank-only lines.** Decided by [0043](../decisions/0043-assumed-vat-on-expenses.md): a bank-statement line with no supplier match uses the same 18% default (net = gross / 1.18), unless the supplier is later marked VAT-exempt.
+7. **Q7: Expenses with no VAT split.** Decided by [0043](../decisions/0043-assumed-vat-on-expenses.md). Do not show them gross with a "VAT unknown" marker, and do not ask in review. Assume 18% (`vat_status='assumed'`), or net = gross when the supplier is VAT-exempt. The demo client's Rule A is the target: net = gross / 1.18 for VAT-registered suppliers, gross for the exempt insurer `ביטוח המגן`.
 8. **Q8: Cheques.** Receipt date (default) or cheque due date?
 9. **Q9: Auto-approve.** 90% thresholds and a ₪5,000 new-supplier limit? Off in the first week?
 10. **Q10: Nudge days.** Skip Saturdays and Jewish holidays?
