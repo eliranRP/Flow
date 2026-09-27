@@ -26,7 +26,7 @@ enabled = true
 
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed.sql", "./tests/helpers.sql"]
 
 [realtime]
 enabled = false
