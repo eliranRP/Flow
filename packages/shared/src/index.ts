@@ -18,7 +18,6 @@ export {
   docKindSchema,
   homeSummarySchema,
   sumitConnectionStatusSchema,
-  transactionInsertSchema,
   vatStatusSchema,
 } from "./schemas.ts";
 export type {
@@ -27,7 +26,6 @@ export type {
   HomeSummary,
   PnlRole,
   SumitConnectionStatus,
-  TransactionInsert,
   VatStatus,
 } from "./schemas.ts";
 export {
@@ -44,4 +42,5 @@ export type {
   NormalizedLine,
   ProjectPnl,
 } from "./pnl.ts";
-export type { Database, Json } from "./database.types.ts";
+export type { Json } from "./database.types.ts";
+export type { Database } from "./database.ts";
