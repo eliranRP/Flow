@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(4);
+select plan(6);
 
 do $users$
 begin
@@ -22,6 +22,32 @@ select is(
   public.sumit_status() ? 'next_attempt_at',
   true,
   'status includes the retry clock'
+);
+
+reset role;
+insert into public.sumit_connections (
+  company_id, sumit_company_id,
+  key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version,
+  next_attempt_at
+)
+select id, 100, '\x01'::bytea, '\x0201'::bytea, '\x03'::bytea, '\x0401'::bytea, '1', '2',
+  '2099-01-01 10:00:00+00'
+from public.companies
+where name = 'סטטוס'
+order by created_at desc
+limit 1;
+
+select tests.authenticate_as('status_owner');
+select is(
+  (public.sumit_status() ->> 'next_attempt_at')::timestamptz,
+  '2099-01-01 10:00:00+00'::timestamptz,
+  'the owner reads the retry clock'
+);
+select throws_ok(
+  $$select key_ciphertext from public.sumit_connections$$,
+  '42501',
+  null,
+  'the owner still cannot read the key'
 );
 
 select * from finish();

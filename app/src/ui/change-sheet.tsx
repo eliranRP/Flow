@@ -47,6 +47,8 @@ type Shared = {
   saving?: boolean;
   /** A split already has its projects. The sheet changes the category only. */
   categoryOnly?: boolean;
+  /** False when this save closes no review item. The button then reads שמירה. */
+  approves?: boolean;
   onSplit: () => void;
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
@@ -274,7 +276,7 @@ export function ChangeAssignment(props: Props) {
   );
   const action = view === "summary" ? (
     <Button full iconEnd={<CheckIcon />} busy={props.saving} onClick={props.onSave}>
-      שמירה ואישור
+      {props.approves === false ? "שמירה" : "שמירה ואישור"}
     </Button>
   ) : undefined;
   const showRemember = !income && props.remember != null && props.onRemember != null;

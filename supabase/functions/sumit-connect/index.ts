@@ -38,20 +38,16 @@ Deno.serve(async (req) => {
 
     const kekVersion = Deno.env.get("SUMIT_KEK_VERSION") || "1";
     const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "2");
-    const saved = await admin.from("sumit_connections").upsert(
-      {
-        company_id: company.data.id,
-        sumit_company_id: companyId,
-        key_ciphertext: sealed.keyCiphertext,
-        key_nonce: sealed.keyNonce,
-        dek_ciphertext: sealed.dekCiphertext,
-        dek_nonce: sealed.dekNonce,
-        kek_version: sealed.kekVersion,
-        envelope_version: sealed.envelopeVersion,
-        last_error: null,
-      },
-      { onConflict: "company_id" },
-    );
+    const saved = await admin.rpc("replace_sumit_connection", {
+      p_company: company.data.id,
+      p_sumit_company_id: companyId,
+      p_key_ciphertext: sealed.keyCiphertext,
+      p_key_nonce: sealed.keyNonce,
+      p_dek_ciphertext: sealed.dekCiphertext,
+      p_dek_nonce: sealed.dekNonce,
+      p_kek_version: sealed.kekVersion,
+      p_envelope_version: sealed.envelopeVersion,
+    });
     if (saved.error) return json({ error: "could not store the connection" }, 500);
     return json({ connected: true, sumit_company_id: companyId });
   } catch (error) {

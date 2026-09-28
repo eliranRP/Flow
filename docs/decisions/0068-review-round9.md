@@ -1,0 +1,29 @@
+# Review round 9: shared labels, a real category approval, and a clean SUMIT switch
+
+**Date:** 2026-09-28
+**Status:** Accepted
+
+## Context
+
+The review of `104d307` asked for three blocking fixes and four should-fix items, plus the nits in that review. The focus-ring fix from the previous pass stays. `sumit_status` already grants `next_attempt_at` to the owner. This round keeps that grant and proves the owner can read the clock. Hosted Supabase has only Phase 0 migrations, so the in-place edit of `20260929120000` stays this once. Migrations are append-only from `20260929150000` on.
+
+## Decision
+
+1. A shared row with no allocations reads "עלות משותפת · טרם פוצלה" and opens Split. One allocation reads that project's name. Two or more read "מפוצל · N פרויקטים". This amends [0067](0067-review-round8.md) point 1.
+2. `set_transaction_category` closes an open `missing_category` item as `changed` and stores its id on the undo row. `undo_reassign` reopens it. An open `unallocated_shared` item stays open. The save button reads "שמירה" when the save closes no review item, and "שמירה ואישור" when it does.
+3. `sumit_status` stays security invoker. `authenticated` may select `next_attempt_at`. The ciphertext columns stay unreadable. pgTAP calls `sumit_status` as the owner and checks the clock.
+4. Every connect resets `reject_attempts`, `next_attempt_at`, and `last_sync_at`. When the SUMIT company id changes, `replace_sumit_connection` retires `source = 'sumit'` rows and skips their open review items in the same transaction. A manual row stays. Disconnect still keeps the books. The runbook says Flow Test 2 can use a fresh Flow company or rely on that wipe.
+5. `classifySumitStatus` is the only classifier the sync calls. The unused backoff helpers are deleted. A billing message, an English or Hebrew key error, and a neutral Hebrew message that only contains "מזהה" are table-tested. Bare "מזהה" and "permission" stay `sumit_rejected`. The wait is still computed in SQL, and the hold path stays covered by pgTAP.
+6. `ScreenHeader` has `layout="stacked"`: the bar, then a `t-title-1` title, then the subtitle. Split uses it. `title` is required unless `barOnly`. The focus-title rule from [0067](0067-review-round8.md) point 12 still applies.
+7. The production bundle guard rejects `2393153301`, `2379562633`, `114000`, and the Flow Test 2 fixture sentence, in `dist` and in Edge Function sources. The story-only `draft:` branch is removed from the screen modules, and the guard rejects `draft:` as well as `new-`.
+8. A split income row says "הכנסות", the income of the selected period. This amends [0065](0065-review-round5.md) point 31. The overhead hint no longer says "בתקופה": the share uses all project income, not the selected period.
+9. A toast over a sheet scrolls the remember row into view. It does not jump the sheet to the bottom. Install's close uses `location.key === "default"` instead of `window.history.state.idx`. The retry hint says "מחר" when the Israel date differs, and the disabled refresh enables itself when that time passes.
+10. `design/system/design-system.md` diffs as text. Images under `design/` stay binary.
+
+## Alternatives rejected
+
+Making `sumit_status` security definer after the column grant already lets the owner read the clock. Refusing a SUMIT company change instead of retiring the previous ledger. Keeping the dead backoff helpers so the old unit tests would still pass. Leaving "הכנסות החודש" and "בתקופה" until a later round. Editing `20260929120000` again.
+
+## Consequences
+
+`pnpm db:test` covers the owner status clock, the missing-category close and undo, the unallocated item that stays open, the connect reset, and the ledger wipe. The live SUMIT check against Flow Test 2 creates no documents.

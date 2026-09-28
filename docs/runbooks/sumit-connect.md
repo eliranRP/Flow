@@ -16,6 +16,10 @@ Apply, in order, on the hosted SQL editor or with `supabase db push`:
 8. `supabase/migrations/20260929010000_review_round5.sql`
 9. `supabase/migrations/20260929120000_review_round7.sql`
 10. `supabase/migrations/20260929130000_review_round8.sql`
+11. `supabase/migrations/20260929140000_sumit_status_next_attempt_grant.sql`
+12. `supabase/migrations/20260929150000_review_0068.sql`
+
+Migrations are append-only from `20260929150000` on. Hosted Supabase had only the Phase 0 migration when `20260929120000` was edited in place, so that one edit stays. Do not edit a migration after it has been applied. Add a new file.
 
 `pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job runs every five minutes (`*/5 * * * *`), not once a day. It is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. Create the secret once, store it in both places, then migrate — or migrate first and call `select private.schedule_drain();` after the Vault rows exist. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`. A billing or limit rejection sets `sumit_rejected` and waits 5 minutes, then 15 minutes, 1 hour, 6 hours, and at most 24 hours. A bad key or company id sets `sumit_auth` and stops until the owner reconnects. Manual refresh respects the same wait.
 
@@ -40,6 +44,8 @@ Each Google user has their own Flow company. Both can point at SUMIT CompanyID *
 - `eliranazulay@gmail.com` signs in with Google. Onboarding asks for the business name and VAT mode (עוסק מורשה). Then the same SUMIT form.
 
 The key is not returned to the browser. ניתוק deletes the ciphertext and leaves the ledger.
+
+Connecting again always clears `reject_attempts`, `next_attempt_at`, and `last_sync_at`. If the SUMIT company id changes, the same transaction retires the previous company's `source = 'sumit'` rows and closes their open review items, so Home does not mix two companies. A manual row stays. Flow Test 2 (`2393153301`) can use a fresh Flow company, or an existing one: the switch does the wipe. Disconnect still keeps the books.
 
 There is no SQL seed for the Flow Test documents. `pnpm seed:demo` refuses to run. The sync writes the rows. Do not insert `demo-data.json` into the hosted database.
 

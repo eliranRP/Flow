@@ -20,4 +20,21 @@ describe("ScreenHeader", () => {
     expect(title).toHaveClass("ui-focus-title");
     expectTarget(screen.getByRole("link", { name: "חזרה" }));
   });
+
+  it("stacks the title under the bar", () => {
+    render(
+      <MemoryRouter>
+        <ScreenHeader
+          layout="stacked"
+          title="פיצול בין פרויקטים"
+          subtitle="מלט"
+          subtitleClassName="ui-split-context"
+        />
+      </MemoryRouter>,
+    );
+    const title = screen.getByRole("heading", { name: "פיצול בין פרויקטים" });
+    expect(title).toHaveClass("t-title-1");
+    expect(title.closest("header")).toHaveClass("ui-page-stacked");
+    expect(screen.getByText("מלט")).toHaveClass("ui-split-context");
+  });
 });

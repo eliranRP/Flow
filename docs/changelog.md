@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+Decision [0068](decisions/0068-review-round9.md), Accepted. An unsplit shared cost reads "עלות משותפת · טרם פוצלה", one share reads the project name, and two or more read "מפוצל · N פרויקטים". Saving a category closes an open missing category and leaves an unallocated split open. Connect resets the SUMIT backoff, and a different company id retires that company's ledger first. Migrations are append-only from here. This amends [0067](decisions/0067-review-round8.md).
+
 A screen or sheet title focused for a screen reader never draws a focus ring. The ring stays on keyboard focus of real controls. This amends [0067](decisions/0067-review-round8.md) point 10.
 
 The production bundle scan also rejects company `2393153301`. `SUMIT_NO_DOCUMENTS=1` runs the live check as connect, two syncs, and the saved split, without creating a SUMIT document. `sumit_status` can read `next_attempt_at`, so Settings loads for the owner.
