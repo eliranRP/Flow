@@ -48,8 +48,8 @@ export function SignInPrivacy({ children }: { children: ReactNode }) {
 
 export function HelpMail({ email }: { email: string }) {
   return (
-    <p className="mt-4">
-      <TextLink className="help-mail t-label text-accent-text underline" href={`mailto:${email}`}>
+    <p className="page-pad mt-4">
+      <TextLink href={`mailto:${email}`} chevron={false}>
         {email}
       </TextLink>
     </p>
@@ -58,8 +58,10 @@ export function HelpMail({ email }: { email: string }) {
 
 export function HelpBack({ to = "/sign-in" }: { to?: string }) {
   return (
-    <TextLink to={to} className="help-back t-label">
-      חזרה
-    </TextLink>
+    <p className="page-pad">
+      <TextLink to={to} tone="quiet" chevron={false}>
+        חזרה
+      </TextLink>
+    </p>
   );
 }

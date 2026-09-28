@@ -162,6 +162,41 @@ export function BankIcon(props: IconProps) {
   );
 }
 
+export function ChevronIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Svg size={size} stroke={2}>
+      <polyline points="15 18 9 12 15 6" />
+    </Svg>
+  );
+}
+
+export function InboxIcon(props: IconProps) {
+  return (
+    <Svg size={22} {...props}>
+      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+      <path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z" />
+    </Svg>
+  );
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </Svg>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2} {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Svg>
+  );
+}
+
 export function TrashIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>

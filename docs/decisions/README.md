@@ -73,9 +73,11 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0044](0044-phase-0-shell-calls.md) | 2026-09-27 | Accepted | Phase 0 shell: preview banner, es-01 copy, type scale, placeholders, review states |
 | [0045](0045-phase-0-design-gaps.md) | 2026-09-28 | Accepted | Phase 0 design gaps: help, load errors, greeting, period pill, Add hint, tab-bar floor |
 | [0046](0046-public-anon-key.md) | 2026-09-28 | Accepted | The public anon key is committed in app/.env.production. The service role is never in the client or the repo |
-| [0047](0047-onboarding-and-period.md) | 2026-09-28 | Accepted | First Google sign-in creates one company. The period sheet and the invoice basis are in this slice |
+| [0047](0047-onboarding-and-period.md) | 2026-09-28 | Accepted | First Google sign-in creates one company. The period sheet is in this slice. 0060 keeps the invoiced basis only |
 | [0048](0048-sumit-key-envelope.md) | 2026-09-28 | Accepted | The SUMIT key is AES-GCM sealed. The client never receives it |
 | [0049](0049-sumit-refresh.md) | 2026-09-28 | Accepted | SUMIT refresh is a button plus a daily cron row. Read-only allowlist |
 | [0050](0050-demo-splits-and-review.md) | 2026-09-28 | Accepted | Demo site-worker days are a split rule. SUMIT rows stay in the P&L while queued |
 | [0057](0057-component-library.md) | 2026-09-28 | Accepted | Screens are assembled from `app/src/ui`. The gallery route is replaced by 0058. 0051–0056 stay on the remainder branch |
 | [0058](0058-storybook.md) | 2026-09-28 | Accepted | Storybook 8 replaces `/dev/components`. Dev dependency only. The library rule in 0057 stays |
+| [0059](0059-live-sumit-only.md) | 2026-09-28 | Accepted | Signed-in books come from the live SUMIT import. The golden JSON is the test answer key only |
+| [0060](0060-library-review-calls.md) | 2026-09-28 | Accepted | Avatar and Card go. Invoiced basis only. Over-budget is the danger bar plus a text line |

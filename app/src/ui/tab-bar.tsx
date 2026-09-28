@@ -19,11 +19,15 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
     <nav className="tabbar" aria-label={label}>
       <div className="tabbar-slots">
         <NavLink to={`/${search}`} end className={slot}>
-          <HomeIcon />
+          <span className="tab-icon">
+            <HomeIcon />
+          </span>
           בית
         </NavLink>
         <NavLink to={`/projects${search}`} className={slot}>
-          <ProjectsIcon />
+          <span className="tab-icon">
+            <ProjectsIcon />
+          </span>
           פרויקטים
         </NavLink>
         <NavLink
@@ -42,12 +46,16 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
           className={slot}
           aria-label={reviewCount > 0 ? `לאישור, ${badge} ממתינים` : undefined}
         >
-          <ReviewIcon />
+          <span className="tab-icon">
+            <ReviewIcon />
+            {reviewCount > 0 ? <span className="count-badge">{badge}</span> : null}
+          </span>
           לאישור
-          {reviewCount > 0 ? <span className="count-badge">{badge}</span> : null}
         </NavLink>
         <NavLink to={`/settings${search}`} className={slot}>
-          <SettingsIcon />
+          <span className="tab-icon">
+            <SettingsIcon />
+          </span>
           הגדרות
         </NavLink>
       </div>

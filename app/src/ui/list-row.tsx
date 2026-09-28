@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { BigNumber } from "./big-number";
 import { cx } from "./cx";
 import { BankIcon, DocumentIcon } from "./icons";
-import { StatusPill } from "./chip";
 
 type Common = {
   title: string;
@@ -15,8 +14,7 @@ type Common = {
 export type ListRowProps =
   | (Common & { variant: "project"; agorot: bigint; loss?: boolean })
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
-  | (Common & { variant: "review"; agorot: bigint; status?: string })
-  | (Common & { variant: "supplier"; vatExempt?: boolean });
+  | (Common & { variant: "item" });
 
 export function ListRow(props: ListRowProps) {
   const body = (
@@ -28,26 +26,25 @@ export function ListRow(props: ListRowProps) {
         <span className="ui-row-text">
           <span className="ui-row-title">{props.title}</span>
           {props.hint ? <span className="ui-row-hint">{props.hint}</span> : null}
-          {props.variant === "supplier" && props.vatExempt ? <StatusPill>פטור ממע״מ</StatusPill> : null}
-          {props.variant === "review" && props.status ? <StatusPill>{props.status}</StatusPill> : null}
         </span>
       </span>
-      {props.variant === "supplier" ? null : <RowAmount {...props} />}
+      {props.variant === "item" ? null : <RowAmount {...props} />}
       {props.action}
     </>
   );
+  const className = props.variant === "project" ? "ui-row ui-row-project ui-hit" : "ui-row ui-hit";
   if (props.href) {
     return (
-      <Link to={props.href} className="ui-row ui-hit">
+      <Link to={props.href} className={className}>
         {body}
       </Link>
     );
   }
-  return <div className="ui-row">{body}</div>;
+  return <div className={className}>{body}</div>;
 }
 
 function RowAmount(props: ListRowProps) {
-  if (props.variant === "supplier") return null;
+  if (props.variant === "item") return null;
   if (props.variant === "transaction") {
     const abs = props.agorot < 0n ? -props.agorot : props.agorot;
     const text = props.sign === "out" ? `−` : `+`;
@@ -58,7 +55,7 @@ function RowAmount(props: ListRowProps) {
       </span>
     );
   }
-  return <BigNumber agorot={props.agorot} size="list" loss={props.variant === "project" && props.loss === true} />;
+  return <BigNumber agorot={props.agorot} size="list" loss={props.loss === true} />;
 }
 
 export function List({ children }: { children: ReactNode }) {

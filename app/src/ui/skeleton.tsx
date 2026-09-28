@@ -1,5 +1,5 @@
 import { cx } from "./cx";
-import { BandHero, SectionHead } from "./layout";
+import { BandHero } from "./layout";
 import { TopBand } from "./top-band";
 
 const rowKeys = ["a", "b", "c"] as const;
@@ -10,27 +10,27 @@ export function Skeleton({ width = "md", tone = "surface" }: { width?: SkeletonW
   return <span className={cx("skeleton-bar", tone === "band" && "skeleton-bar-band", `skeleton-w-${width}`)} />;
 }
 
-export function Loader({ label = "טוען…" }: { label?: string }) {
-  return (
-    <p className="ui-hit" role="status" aria-busy="true">
-      <span className="ui-spinner" aria-hidden="true" /> {label}
-    </p>
-  );
-}
-
-/** Loading Home: real band chrome, generic bars for the figures and the project rows. */
+/** Loading Home matches the band: greeting, label, figure, change, income and expenses, then the pending card and three rows. */
 export function HomeSkeleton({ previewing = false }: { previewing?: boolean }) {
   return (
     <div className="flex min-h-full flex-1 flex-col" aria-busy="true">
-      <p className="sr-only">טוען…</p>
+      <p className="sr-only" role="status">טוען…</p>
       <TopBand preview={previewing}>
         <BandHero>
           <Skeleton tone="band" width="md" />
+          <Skeleton tone="band" width="sm" />
           <Skeleton tone="band" width="lg" />
           <Skeleton tone="band" width="sm" />
+          <span className="flex gap-6">
+            <Skeleton tone="band" width="md" />
+            <Skeleton tone="band" width="md" />
+          </span>
         </BandHero>
       </TopBand>
-      <SectionHead title="פרויקטים מובילים" />
+      <div className="page-pad">
+        <Skeleton width="lg" />
+      </div>
+      <h2 className="t-title-3 page-pad">פרויקטים מובילים</h2>
       <div className="project-list">
         {rowKeys.map((key) => (
           <div className="ui-skel-row" key={key}>

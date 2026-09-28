@@ -20,7 +20,11 @@ export function Chip({ kind = "choice", pressed = false, children, onClick }: Ch
       disabled={kind === "disabled"}
       onClick={onClick}
     >
-      {resolved === "suggested" ? <span aria-hidden="true">✦</span> : null}
+      {resolved === "suggested" ? (
+        <span className="ui-chip-spark" aria-hidden="true">
+          ✦
+        </span>
+      ) : null}
       {resolved === "selected" ? <span aria-hidden="true">✓</span> : null}
       {children}
     </button>

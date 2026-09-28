@@ -8,10 +8,14 @@ function pixels(raw: string): number {
   return Number.parseFloat(raw);
 }
 
-/** jsdom leaves custom properties unresolved on used values, so read the token. */
+/** jsdom leaves custom properties unresolved on used values, so read the token. Logical sizes count too. */
 export function expectTarget(el: HTMLElement, min = 44) {
   const style = getComputedStyle(el);
-  const value = Math.max(pixels(style.minHeight) || 0, pixels(style.height) || 0);
+  const logical = Math.max(
+    pixels(style.getPropertyValue("min-block-size")) || 0,
+    pixels(style.getPropertyValue("block-size")) || 0,
+  );
+  const value = Math.max(pixels(style.minHeight) || 0, pixels(style.height) || 0, logical);
   expect(value).toBeGreaterThanOrEqual(min);
 }
 

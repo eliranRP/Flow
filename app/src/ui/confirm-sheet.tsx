@@ -1,5 +1,4 @@
 import { Button } from "./button";
-import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
 
 type ConfirmSheetProps = {
@@ -28,17 +27,17 @@ export function ConfirmSheet({
       {item ? <p className="t-label text-text-secondary">{item}</p> : null}
       <p className="t-hint text-text-secondary">{consequence}</p>
       <Button
-        variant={destructive ? "danger" : "primary"}
+        variant={destructive ? "danger-tint" : "primary"}
         full
         onClick={() => {
           onConfirm();
         }}
       >
-        {destructive ? <TrashIcon /> : null}
         {confirmLabel}
       </Button>
       <Button
         variant="ghost"
+        quiet
         full
         onClick={() => {
           onOpenChange(false);

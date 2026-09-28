@@ -12,7 +12,7 @@ import {
   type UnpaidRow,
 } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, createElement, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
 import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
@@ -26,12 +26,19 @@ interface BooksContextValue {
 
 const BooksContext = createContext<BooksContextValue | null>(null);
 
+function invoiced(period: PeriodChoice): PeriodChoice {
+  return period.basis === "invoiced" ? period : { ...period, basis: "invoiced" };
+}
+
 export function BooksProvider({ children }: { children: ReactNode }) {
-  const [period, setPeriod] = useState<PeriodChoice>(thisMonth());
+  const [period, setPeriodState] = useState<PeriodChoice>(() => invoiced(thisMonth()));
+  const setPeriod = useCallback((next: PeriodChoice) => {
+    setPeriodState(invoiced(next));
+  }, []);
   const [overheadOn, setOverheadOn] = useState(false);
   const value = useMemo(
     () => ({ period, setPeriod, overheadOn, setOverheadOn }),
-    [period, overheadOn],
+    [period, overheadOn, setPeriod],
   );
   return createElement(BooksContext.Provider, { value }, children);
 }

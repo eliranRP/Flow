@@ -1,24 +1,28 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cx } from "./cx";
-import { InfoIcon } from "./icons";
+import { ChevronIcon, InboxIcon, InfoIcon } from "./icons";
 
 type BannerProps = {
   title: ReactNode;
   hint?: ReactNode;
   to?: string;
-  count?: number;
-  tone?: "accent" | "quiet";
 };
 
-export function Banner({ title, hint, to, count, tone = "accent" }: BannerProps) {
-  const className = cx("ui-banner", "ui-hit", tone === "quiet" && "ui-banner-quiet");
+/** The one tinted pending card. Hide it when there is nothing to show. */
+export function Banner({ title, hint, to }: BannerProps) {
+  const className = cx("ui-banner", "ui-hit");
   const body = (
     <>
-      {count != null && count > 0 ? <span className="count-badge">{count > 99 ? "99+" : count}</span> : null}
-      <span>
+      <span className="ui-banner-icon">
+        <InboxIcon />
+      </span>
+      <span className="ui-row-text">
         <span className="ui-row-title">{title}</span>
-        {hint ? <span className="ui-row-hint block">{hint}</span> : null}
+        {hint ? <span className="ui-row-hint">{hint}</span> : null}
+      </span>
+      <span className="ui-banner-chevron">
+        <ChevronIcon />
       </span>
     </>
   );
@@ -41,7 +45,7 @@ type NoticeProps = {
 
 export function Notice({ title, body, tone = "neutral", extra }: NoticeProps) {
   return (
-    <div className="note ui-notice" role="status">
+    <div className="ui-notice" role="status">
       <span className={tone === "bad" ? "note-icon note-icon-bad" : "note-icon"}>
         <InfoIcon />
       </span>

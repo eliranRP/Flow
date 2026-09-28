@@ -485,7 +485,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   margin-top: var(--note-body-gap);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line);
-  font-weight: var(--type-hint-weight);
+  font-weight: var(--type-label-weight);
   color: var(--color-text-secondary);
 }
 
@@ -692,11 +692,22 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .band-period {
-  min-height: var(--touch-min);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
   padding-inline: var(--space-3);
-  border-radius: 999px;
+  border-radius: var(--radius-chip);
   background: var(--color-band-pill);
   color: var(--color-text);
+}
+
+.page .t-title-1 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .project-list {

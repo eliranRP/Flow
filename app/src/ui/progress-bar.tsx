@@ -23,18 +23,24 @@ export function ProgressBar({ value, max = 100, label }: ProgressBarProps) {
 type BudgetBarProps = {
   spentAgorot: bigint;
   budgetAgorot: bigint;
-  label: string;
+  label?: string;
 };
 
-export function BudgetBar({ spentAgorot, budgetAgorot, label }: BudgetBarProps) {
+/** Decision 0060: the bar stops at 100% in the danger colour. The overage is a line of text. */
+export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: BudgetBarProps) {
   const over = budgetAgorot > 0n && spentAgorot > budgetAgorot;
   const ratio = budgetAgorot <= 0n ? 0 : Number(spentAgorot) / Number(budgetAgorot);
   const width = Math.min(100, Math.max(0, Math.round(ratio * 100)));
+  const overage = over ? spentAgorot - budgetAgorot : 0n;
   return (
     <div>
-      <p className="ui-field-label">
-        {label}
-        {over ? " · מעל התקציב" : ""}
+      <p className="flex items-baseline justify-between gap-3">
+        <span className="t-title-3">{label}</span>
+        <span className="t-hint">
+          <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
+          {" מתוך "}
+          <bdi dir="ltr">{formatAmount(budgetAgorot)}</bdi>
+        </span>
       </p>
       <div
         className="ui-bar"
@@ -46,11 +52,12 @@ export function BudgetBar({ spentAgorot, budgetAgorot, label }: BudgetBarProps) 
       >
         <div className="ui-bar-fill" data-over={over ? "true" : "false"} style={{ width: `${String(width)}%` }} />
       </div>
-      <p className="ui-row-hint">
-        <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
-        {" / "}
-        <bdi dir="ltr">{formatAmount(budgetAgorot)}</bdi>
-      </p>
+      <p className="ui-row-hint">נוצלו {String(width)}% מהתקציב</p>
+      {over ? (
+        <p className="ui-overage t-hint">
+          מעל התקציב ב־<bdi dir="ltr">{formatAmount(overage)}</bdi>
+        </p>
+      ) : null}
     </div>
   );
 }

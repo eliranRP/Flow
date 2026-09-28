@@ -1,4 +1,4 @@
-import { allocateByWeights, formatIls, homeSummarySchema, type Dashboard, type ProjectRow } from "@flow/shared";
+import { formatIls, homeSummarySchema, type Dashboard, type ProjectRow } from "@flow/shared";
 import { onlineManager, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -6,20 +6,19 @@ import { useAuth } from "../auth";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
+import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { ChartIcon } from "../ui/icons";
 import { BandHero, SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
-import { PeriodPicker } from "../ui/period-picker";
-import { SegmentedControl } from "../ui/segmented-control";
+import { PeriodPicker, RangeSheet } from "../ui/period-picker";
 import { HomeSkeleton } from "../ui/skeleton";
-import { Stat, StatGrid } from "../ui/stat";
-import { Toggle } from "../ui/toggle";
+import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { homeGreeting, profitBandLabel } from "../home-label";
 import { getSupabase } from "../lib/supabase";
-import { allTime, lastMonth, thisMonth, yearToDate } from "../period";
+import { allTime, comparisonWords, customRange, heroProfitLabel, lastMonth, periodHint, thisMonth, yearToDate, type PeriodChoice } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 
@@ -35,12 +34,9 @@ function ag(value: number): bigint {
   return BigInt(Math.trunc(value));
 }
 
-function changeLabel(current: number, previous: number | null, helpsWhenUp: boolean): { text: string; good: boolean } | null {
+function changePercent(current: number, previous: number | null): number | null {
   if (previous == null || previous === 0) return null;
-  const pct = Math.round(((current - previous) / Math.abs(previous)) * 100);
-  if (pct === 0) return null;
-  const up = pct > 0;
-  return { text: `${up ? "▲" : "▼"} ${String(Math.abs(pct))}%`, good: helpsWhenUp ? up : !up };
+  return Math.round(((current - previous) / Math.abs(previous)) * 100);
 }
 
 export function HomeScreen() {
@@ -125,7 +121,7 @@ export function HomeScreen() {
           title="עוד אין נתונים"
           body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
           action={
-            <Button variant="secondary" to={`/settings${search}`}>
+            <Button variant="pill" to={`/settings${search}`}>
               חיבור SUMIT
             </Button>
           }
@@ -142,16 +138,8 @@ export function HomeScreen() {
       search={search}
       unpaidNet={unpaid.data?.reduce((sum, row) => sum + row.open_net_agorot, 0) ?? 0}
       unpaidCount={unpaid.data?.length ?? 0}
-      periodLabel={books.period.label}
-      basis={books.period.basis}
-      overheadOn={books.overheadOn}
-      onOverhead={books.setOverheadOn}
-      onPeriod={(choice) => {
-        books.setPeriod({ ...choice, basis: books.period.basis });
-      }}
-      onBasis={(basis) => {
-        books.setPeriod({ ...books.period, basis });
-      }}
+      period={books.period}
+      onPeriod={books.setPeriod}
     />
   );
 }
@@ -160,19 +148,15 @@ function hasBooks(data: Dashboard): boolean {
   return data.projects.length > 0 || data.income_agorot !== 0 || data.expense_agorot !== 0;
 }
 
-function HomeBooks({
+export function HomeBooks({
   data,
   greeting,
   previewing,
   search,
   unpaidNet,
   unpaidCount,
-  periodLabel,
-  basis,
-  overheadOn,
-  onOverhead,
+  period,
   onPeriod,
-  onBasis,
 }: {
   data: Dashboard;
   greeting: string;
@@ -180,24 +164,26 @@ function HomeBooks({
   search: string;
   unpaidNet: number;
   unpaidCount: number;
-  periodLabel: string;
-  basis: "cash" | "invoiced";
-  overheadOn: boolean;
-  onOverhead: (on: boolean) => void;
-  onPeriod: (choice: ReturnType<typeof thisMonth>) => void;
-  onBasis: (basis: "cash" | "invoiced") => void;
+  period: PeriodChoice;
+  onPeriod: (choice: PeriodChoice) => void;
 }) {
   const [sheet, setSheet] = useState(false);
-  const rows = [...data.projects].sort(
-    (a, b) => Math.abs(b.income_agorot) + Math.abs(b.direct_agorot) - (Math.abs(a.income_agorot) + Math.abs(a.direct_agorot)),
-  );
-  const top = rows.slice(0, 5);
-  const rest = rows.slice(5);
-  const restProfit = rest.reduce((sum, row) => sum + row.profit_agorot, 0);
-  const shares = overheadShares(data, overheadOn);
-  const incomeChange = changeLabel(data.income_agorot, data.prev_income_agorot, true);
-  const expenseChange = changeLabel(data.expense_agorot, data.prev_expense_agorot, false);
-  const profitChange = changeLabel(data.net_profit_agorot, data.prev_net_agorot, true);
+  const [range, setRange] = useState(false);
+  const leading = [...data.projects].sort((a, b) => b.profit_agorot - a.profit_agorot).slice(0, 3);
+  const percent = changePercent(data.net_profit_agorot, data.prev_net_agorot);
+  const comparison = comparisonWords(period);
+  const pending = data.review_count;
+  const showCard = pending > 0 || unpaidCount > 0;
+  const cardTo = pending > 0 ? `/review${search}` : `/unpaid${search}`;
+  const cardTitle = pending > 0 ? `${String(pending)} פריטים ממתינים לאישור` : `${String(unpaidCount)} חשבוניות לא שולמו`;
+  const cardHint =
+    pending > 0 && unpaidCount > 0
+      ? `${String(unpaidCount)} חשבוניות לא שולמו · ${formatIls(ag(unpaidNet))}`
+      : pending === 0
+        ? "לא נכלל ברווח"
+        : undefined;
+
+  const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -205,134 +191,84 @@ function HomeBooks({
         preview={previewing}
         trailing={
           <PeriodPicker
-            pill={periodLabel}
+            pill={period.label}
             open={sheet}
             onOpenChange={setSheet}
-            options={[
-              { label: "החודש", onSelect: () => { onPeriod(thisMonth()); } },
-              { label: "חודש קודם", onSelect: () => { onPeriod(lastMonth()); } },
-              { label: "מתחילת השנה", onSelect: () => { onPeriod(yearToDate()); } },
-              { label: "כל התקופה", onSelect: () => { onPeriod(allTime(basis)); } },
-            ]}
-            footer={
-              <SegmentedControl
-                label="בסיס"
-                value={basis}
-                onChange={onBasis}
-                options={[
-                  { value: "cash", label: "מזומן" },
-                  { value: "invoiced", label: "חשבוניות" },
-                ]}
-              />
-            }
+            onCustom={() => {
+              setRange(true);
+            }}
+            options={choices.map((choice) => ({
+              label: choice.label,
+              hint: periodHint(choice),
+              selected: choice.label === period.label,
+              onSelect: () => {
+                onPeriod(choice);
+              },
+            }))}
           />
         }
       >
         <BandHero>
           <p className="t-title-2">{greeting}</p>
-          <p className="band-label t-label">
-            {basis === "cash" ? "רווח נקי במזומן" : "רווח נקי לפי חשבוניות"} · {data.name}
-          </p>
+          <p className="band-label t-label">{heroProfitLabel(period)}</p>
           <h1 className="t-hero">
             <BigNumber agorot={ag(data.net_profit_agorot)} />
           </h1>
+          {comparison && percent != null ? <ChangePill percent={percent} comparison={comparison} onBand /> : null}
+          <div className="band-figures">
+            <span>
+              הכנסות
+              <bdi dir="ltr">{formatIls(ag(data.income_agorot))}</bdi>
+            </span>
+            <span>
+              הוצאות
+              <bdi dir="ltr">{formatIls(ag(data.expense_agorot))}</bdi>
+            </span>
+          </div>
         </BandHero>
       </TopBand>
 
-      <StatGrid>
-        <Stat label="הכנסות" amount={ag(data.income_agorot)} change={incomeChange} />
-        <Stat label="הוצאות" amount={ag(data.expense_agorot)} change={expenseChange} />
-        <Stat label="רווח/הפסד" amount={ag(data.net_profit_agorot)} change={profitChange} emphasis />
-      </StatGrid>
+      {showCard ? <Banner to={cardTo} title={cardTitle} hint={cardHint} /> : null}
 
-      {data.review_count > 0 ? (
-        <Banner to={`/review${search}`} count={data.review_count} title={`${String(data.review_count)} פריטים ממתינים לאישור`} />
-      ) : null}
-
-      {unpaidCount > 0 ? (
-        <Banner
-          tone="quiet"
-          to={`/unpaid${search}`}
-          title={
-            <>
-              {String(unpaidCount)} חשבוניות לא שולמו · <bdi dir="ltr">{formatIls(ag(unpaidNet))}</bdi>
-              <span className="t-hint"> לא נכלל ברווח</span>
-            </>
-          }
-        />
-      ) : null}
-
-      <SectionHead title="פרויקטים">
-        <Toggle label="רווח אחרי חלק מהתקורה" checked={overheadOn} onChange={onOverhead} />
-      </SectionHead>
-      {overheadOn && shares == null ? (
-        <p className="t-hint page-pad">אין הכנסות בתקופה, אז אי אפשר לחלק את התקורה.</p>
-      ) : null}
+      <SectionHead title="פרויקטים מובילים" />
       <ul className="project-list">
-        {top.map((project) => (
-          <ProjectLine key={project.id} project={project} search={search} share={shares?.get(project.id) ?? null} overheadOn={overheadOn} />
-        ))}
-        {rest.length > 0 ? (
-          <li>
-            <ListRow
-              variant="project"
-              title={`עוד ${String(rest.length)} פרויקטים`}
-              agorot={ag(restProfit)}
-              loss={restProfit < 0}
-              href={`/projects${search}`}
-            />
+        {leading.map((project) => (
+          <li key={project.id}>
+            <ProjectLine project={project} search={search} />
           </li>
-        ) : null}
-        <li className={overheadOn ? "overhead-struck" : "overhead-row"}>
-          <ListRow
-            variant="project"
-            title={`הוצאות כלליות · תקורה${overheadOn ? " · חולק לפרויקטים בתצוגה הזו" : ""}`}
-            agorot={ag(-data.overhead_agorot)}
-            loss={data.overhead_agorot > 0}
-          />
-        </li>
+        ))}
       </ul>
+      <p className="page-pad">
+        <TextLink to={`/projects${search}`} tone="quiet">
+          לכל הפרויקטים
+        </TextLink>
+      </p>
+      <RangeSheet
+        open={range}
+        onOpenChange={setRange}
+        onApply={(from, to) => {
+          onPeriod(customRange(from, to));
+        }}
+      />
     </div>
   );
 }
 
-function ProjectLine({
-  project,
-  search,
-  share,
-  overheadOn,
-}: {
-  project: ProjectRow;
-  search: string;
-  share: number | null;
-  overheadOn: boolean;
-}) {
-  const shown = overheadOn && share != null ? project.profit_before_shared_agorot - share : project.profit_agorot;
-  const hint = overheadOn && share != null
-    ? `לפני ${formatIls(ag(project.profit_before_shared_agorot))} · חלק ${formatIls(ag(share))}`
-    : undefined;
+function ProjectLine({ project, search }: { project: ProjectRow; search: string }) {
   return (
-    <li>
-      <ListRow
-        variant="project"
-        title={project.name}
-        hint={hint}
-        agorot={ag(shown)}
-        loss={shown < 0}
-        href={`/projects/${project.id}${search}`}
-      />
-    </li>
+    <ListRow
+      variant="project"
+      title={project.name}
+      hint={marginHint(project)}
+      agorot={ag(project.profit_agorot)}
+      loss={project.profit_agorot < 0}
+      href={`/projects/${project.id}${search}`}
+    />
   );
 }
 
-function overheadShares(data: Dashboard, on: boolean): Map<string, number> | null {
-  if (!on) return null;
-  const weights = data.projects.map((project) => Math.max(0, Math.trunc(project.income_agorot)));
-  if (weights.every((weight) => weight === 0)) return null;
-  const parts = allocateByWeights(ag(data.overhead_agorot), weights);
-  const map = new Map<string, number>();
-  data.projects.forEach((project, index) => {
-    map.set(project.id, Number(parts[index] ?? 0n));
-  });
-  return map;
+function marginHint(project: ProjectRow): string | undefined {
+  if (project.income_agorot <= 0) return undefined;
+  const pct = Math.round((project.profit_agorot / project.income_agorot) * 100);
+  return pct < 0 ? `רווחיות −${String(Math.abs(pct))}%` : `רווחיות ${String(pct)}%`;
 }

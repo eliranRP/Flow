@@ -99,7 +99,7 @@ export function SignInScreen() {
 
         {notice === "failed" ? (
           <SignInHelp>
-            <TextLink to="/help" className="t-label text-text-secondary underline">
+            <TextLink to="/help" tone="quiet" chevron={false}>
               צריך עזרה בכניסה?
             </TextLink>
           </SignInHelp>
@@ -108,11 +108,11 @@ export function SignInScreen() {
         <SignInPrivacy>
           נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
           <br />
-          <TextLink to="/terms" className="underline">
+          <TextLink to="/terms" chevron={false}>
             תנאי שימוש
           </TextLink>
           {" · "}
-          <TextLink to="/privacy" className="underline">
+          <TextLink to="/privacy" chevron={false}>
             מדיניות פרטיות
           </TextLink>
         </SignInPrivacy>

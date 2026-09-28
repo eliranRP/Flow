@@ -41,6 +41,20 @@ export function formatDisplay(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
+/** Category and day, without the year. Transaction hints use this. */
+export function formatDayMonth(iso: string): string {
+  const month = iso.slice(5, 7);
+  const day = iso.slice(8, 10);
+  if (!/^\d{2}$/.test(month) || !/^\d{2}$/.test(day)) return iso;
+  return `${day}/${month}`;
+}
+
+export function shiftDays(iso: string, days: number): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) + days));
+  return `${String(date.getUTCFullYear())}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
 export function dayLabel(iso: string): string {
   const [year, month, day] = iso.split("-");
   if (!year || !month || !day) return iso;
