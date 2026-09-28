@@ -244,7 +244,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await page.getByLabel("מספר חברה").fill(String(sumitCompanyId));
   await page.getByLabel("מפתח API").fill(sumitKey);
   await page.getByRole("button", { name: "חיבור" }).click();
-  await expect(page.getByText("SUMIT מחובר")).toBeVisible();
+  await expect(page.getByText("SUMIT מחובר. המפתח נשאר בשרת.")).toBeVisible();
 
   await sync(page);
   await markInsuranceExempt(token);
