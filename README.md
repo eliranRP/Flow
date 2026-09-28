@@ -67,7 +67,7 @@ pnpm latency          # times get_home() against SUPABASE_URL
 
 Production builds read `app/.env.production` ([0046](docs/decisions/0046-public-anon-key.md)): the hosted URL and the public anon key. Do not put a service-role key in that file or anywhere else in git.
 
-After the phase-1 migration is applied, the first Google sign-in opens the company form and calls `create_company`. A user who already has a company skips it. Connecting SUMIT and checking the golden numbers is [docs/runbooks/sumit-connect.md](docs/runbooks/sumit-connect.md). Until that migration is on the hosted project, the SQL below is the fallback.
+After the phase-1 migration is applied, the first Google sign-in opens the company form and calls `create_company`. A user who already has a company skips it. Connecting SUMIT and checking the golden numbers is [docs/runbooks/sumit-connect.md](docs/runbooks/sumit-connect.md). The claim hook, snapshots, export, and Web Push are [docs/runbooks/phase-remainder.md](docs/runbooks/phase-remainder.md). Until that migration is on the hosted project, the SQL below is the fallback.
 
 Demo company, from this repo. The service-role key is only in the environment of this command. It is not a file you commit. `SEED_OWNER_USER_ID` is that auth user id. The script creates the company with `is_demo = true`, or updates one that is already demo, and refuses a real company.
 
