@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Recreate a local Postgres 17 database and run the pgTAP suite with pg_prove.
+# Order matches CI: migration first (including the global function revoke),
+# then helpers.sql creates pgTAP and grants execute to the test roles.
 # There is no Docker here. CI keeps using `supabase db start` and `supabase test db`.
 set -euo pipefail
 
@@ -24,4 +26,4 @@ psql_q -f supabase/migrations/20260927120000_schema_v1.sql
 psql_q -f supabase/seed.sql
 psql_q -f supabase/tests/helpers.sql
 
-sudo -u postgres pg_prove --ext .sql -d "$db" supabase/tests/database
+sudo -u postgres pg_prove --verbose --ext .sql -d "$db" supabase/tests/database
