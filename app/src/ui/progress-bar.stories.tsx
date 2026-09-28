@@ -11,6 +11,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Thin: Story = {
+  args: { value: 1, max: 7, label: "התקדמות התור", variant: "thin" },
+  render: (args) => (
+    <ProgressBar
+      {...args}
+      caption={
+        <span>
+          <bdi dir="ltr">1</bdi> מתוך <bdi dir="ltr">7</bdi>
+        </span>
+      }
+    />
+  ),
+};
 export const Empty: Story = { args: { value: 0, label: "התקדמות" } };
 export const Mid: Story = { args: { value: 42, label: "התקדמות" } };
 export const Full: Story = { args: { value: 100, label: "התקדמות" } };

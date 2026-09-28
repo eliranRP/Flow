@@ -10,10 +10,10 @@ export function Skeleton({
   hero = false,
 }: {
   width?: SkeletonWidth;
-  tone?: "surface" | "ui-band";
+  tone?: "surface" | "band";
   hero?: boolean;
 }) {
-  return <span className={cx("ui-skeleton-bar", tone === "ui-band" && "ui-skeleton-bar-band", hero ? "ui-skeleton-hero" : `skeleton-w-${width}`)} />;
+  return <span className={cx("ui-skeleton-bar", tone === "band" && "ui-skeleton-bar-band", hero ? "ui-skeleton-hero" : `ui-skeleton-w-${width}`)} />;
 }
 
 export function ListSkeleton() {

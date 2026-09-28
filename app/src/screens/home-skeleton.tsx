@@ -14,13 +14,13 @@ export function HomeSkeleton({ preview = false }: { preview?: boolean }) {
       <TopBand preview={preview} trailing={<span className="ui-skel-pill" />}>
         <BandHero>
           <div className="ui-skel-band">
-            <Skeleton tone="ui-band" width="sm" />
-            <Skeleton tone="ui-band" width="md" />
-            <Skeleton tone="ui-band" hero />
-            <Skeleton tone="ui-band" width="sm" />
+            <Skeleton tone="band" width="sm" />
+            <Skeleton tone="band" width="md" />
+            <Skeleton tone="band" hero />
+            <Skeleton tone="band" width="sm" />
             <span className="ui-skel-figures">
-              <Skeleton tone="ui-band" width="md" />
-              <Skeleton tone="ui-band" width="md" />
+              <Skeleton tone="band" width="md" />
+              <Skeleton tone="band" width="md" />
             </span>
           </div>
         </BandHero>

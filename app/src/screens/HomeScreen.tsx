@@ -1,5 +1,5 @@
-import { formatIls, homeSummarySchema, roundedProfitAgorot, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
-import { onlineManager, useQuery } from "@tanstack/react-query";
+import { formatIls, roundedProfitAgorot, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
+import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -17,7 +17,6 @@ import { HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { homeGreeting, profitBandLabel } from "../home-label";
-import { getSupabase } from "../lib/supabase";
 import {
   allTime,
   comparisonWords,
@@ -56,22 +55,10 @@ export function HomeScreen() {
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const { status, session } = useAuth();
-  const supabase = getSupabase();
   const previewing = preview !== "off";
   const books = useBooks();
   const dashboard = useDashboardQuery();
   const unpaid = useUnpaidQuery();
-
-  const home = useQuery({
-    queryKey: ["home"],
-    enabled: !previewing && status === "authed" && supabase != null,
-    queryFn: async () => {
-      if (!supabase) return null;
-      const { data, error } = await supabase.rpc("get_home");
-      if (error) throw error;
-      return homeSummarySchema.parse(data);
-    },
-  });
 
   const phase = screenPhase(preview, dashboard);
   const showBooks = phase.kind === "ready" && dashboard.data != null && hasBooks(dashboard.data);
@@ -99,7 +86,6 @@ export function HomeScreen() {
       void navigate("/?preview=1");
       return;
     }
-    void home.refetch();
     void dashboard.refetch();
     void unpaid.refetch();
   }
@@ -124,10 +110,10 @@ export function HomeScreen() {
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה."
+          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר"
           action={
-            <Button variant="pill" to={`/add${search}`}>
-              העלאת דוח בנק
+            <Button variant="pill" to={`/settings${search}`}>
+              חיבור SUMIT
             </Button>
           }
         />

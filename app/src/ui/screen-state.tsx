@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ScreenPhase } from "../query-phase";
+import type { ScreenPhase } from "./screen-phase";
 import { ErrorState } from "./error-state";
 import { ScreenHeader } from "./screen-header";
 import { ListSkeleton } from "./skeleton";

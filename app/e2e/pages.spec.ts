@@ -25,7 +25,7 @@ for (const [path, heading] of pages) {
   });
 }
 
-test("demo add sheet has income and expense", async ({ page }) => {
+test("add sheet is a title until income and expense can be entered", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();

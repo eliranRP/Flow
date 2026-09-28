@@ -1,7 +1,7 @@
 # Review undo returns the item to the queue
 
 **Date:** 2026-09-28
-**Status:** Accepted
+**Status:** Accepted. The undo sentence below is amended by [0063](0063-owner-ledger.md).
 
 ## Context
 
@@ -9,7 +9,7 @@ Approving a review item has to wait for `resolve_review` before the screen says 
 
 ## Decision
 
-`reopen_review` sets that queue row back to `open` and clears `resolved_at`. The transaction's project, category, and allocation stay as the approval left them. The undo toast says the item is back in the queue and that the saved assignment remains. A later change or approval updates the assignment again through `resolve_review`.
+`reopen_review` sets that queue row back to `open` and clears `resolved_at`. [0063](0063-owner-ledger.md) amends the rest of this paragraph: undo restores the project, category, role, and allocations from the snapshot `resolve_review` stored. The toast says the previous assignment was restored.
 
 ## Alternatives rejected
 

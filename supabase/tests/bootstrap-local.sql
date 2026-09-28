@@ -64,8 +64,24 @@ as $$
   )::uuid
 $$;
 
+-- Matches the Supabase helper. The JWT role is not the Postgres role.
+create or replace function auth.role()
+returns text
+language sql
+stable
+as $$
+  select case
+    when coalesce(current_setting('request.jwt.claim.role', true), '') <> ''
+      then current_setting('request.jwt.claim.role', true)
+    when coalesce(current_setting('request.jwt.claims', true), '') <> ''
+      then current_setting('request.jwt.claims', true)::jsonb ->> 'role'
+    else null
+  end
+$$;
+
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to public, anon, authenticated, service_role;
+grant execute on function auth.role() to public, anon, authenticated, service_role;
 
 grant usage on schema extensions to public, anon, authenticated, service_role;
 

@@ -1,21 +1,32 @@
+import type { ReactNode } from "react";
 import { formatAmount } from "./big-number";
 
 type ProgressBarProps = {
   value: number;
   max?: number;
   label: string;
+  variant?: "bar" | "thin";
+  caption?: ReactNode;
 };
 
-export function ProgressBar({ value, max = 100, label }: ProgressBarProps) {
+export function ProgressBar({ value, max = 100, label, variant = "bar", caption }: ProgressBarProps) {
   const safeMax = max <= 0 ? 1 : max;
   const ratio = Math.min(1, Math.max(0, value / safeMax));
   const percent = Math.round(ratio * 100);
   return (
     <div>
-      <p className="ui-meter-label t-hint">{label}</p>
-      <div className="ui-bar" role="meter" aria-label={label} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+      {variant === "bar" ? <p className="ui-meter-label t-hint">{label}</p> : null}
+      <div
+        className={variant === "thin" ? "ui-bar ui-bar-thin" : "ui-bar"}
+        role="meter"
+        aria-label={label}
+        aria-valuenow={variant === "thin" ? value : percent}
+        aria-valuemin={0}
+        aria-valuemax={variant === "thin" ? safeMax : 100}
+      >
         <div className="ui-bar-fill" style={{ width: `${String(percent)}%` }} />
       </div>
+      {caption}
     </div>
   );
 }
@@ -62,7 +73,7 @@ export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: B
         <div className="ui-bar-fill" data-over={over ? "true" : "false"} style={{ width: `${String(width)}%` }} />
       </div>
       <p className="ui-row-hint">
-        <bdi dir="ltr">{`נוצלו ${String(used)}%`}</bdi> מהתקציב
+        נוצלו <bdi dir="ltr">{String(used)}%</bdi> מהתקציב
       </p>
       {over ? (
         <p className="ui-overage t-hint">

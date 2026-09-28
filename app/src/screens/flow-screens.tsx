@@ -1,5 +1,6 @@
-import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type ProjectDetail, type ReviewRow, type UnpaidRow } from "@flow/shared";
-import { useState, type SubmitEvent } from "react";
+import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type ProjectDetail, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { FunctionsHttpError } from "@supabase/supabase-js";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
@@ -21,6 +22,37 @@ import {
   useUnpaidQuery,
 } from "../use-books";
 import { assertNoError, useWrite } from "../use-write";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isJsonReader(value: unknown): value is { json: () => Promise<unknown> } {
+  return isRecord(value) && typeof value.json === "function";
+}
+
+async function edgeErrorCode(error: unknown): Promise<string> {
+  if (!(error instanceof FunctionsHttpError)) {
+    return error instanceof Error ? error.message : "connect_failed";
+  }
+  const context: unknown = Reflect.get(error, "context");
+  if (!isJsonReader(context)) return "connect_failed";
+  try {
+    const payload: unknown = await context.json();
+    if (isRecord(payload) && typeof payload.error === "string") return payload.error;
+  } catch {
+    return "connect_failed";
+  }
+  return "connect_failed";
+}
+
+async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<string, unknown>): Promise<unknown> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  const response = await supabase.functions.invoke<unknown>(name, { body });
+  if (response.error) throw new Error(await edgeErrorCode(response.error));
+  return response.data;
+}
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -28,10 +60,10 @@ import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { BackIcon, CameraIcon, DocumentIcon, ProjectsIcon, ReviewIcon, SearchIcon, TrashIcon } from "../ui/icons";
-import { BandHero, FormError, Section } from "../ui/layout";
+import { BandHero, FigureLine, FormError, Section, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField } from "../ui/money-field";
-import { BudgetBar } from "../ui/progress-bar";
+import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { ReviewCard } from "../ui/review-card";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -112,7 +144,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <EmptyState
         icon={<ProjectsIcon />}
         title="עוד אין פרויקטים"
-        body="פרויקטים נפתחים מעצמם כשמזהים לקוח חוזר בדוח הבנק. אפשר גם לפתוח ידנית."
+        body="פרויקטים מגיעים מ-SUMIT, ואפשר גם לפתוח אחד כאן."
         action={<Button variant="pill" onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
       />
       <Sheet open={open} onOpenChange={setOpen} title="פרויקט">
@@ -177,7 +209,7 @@ function ProjectsBody({
         <EmptyState
           icon={<SearchIcon />}
           title={`לא מצאנו ״${needle}״`}
-          body="אפשר לחפש לפי שם הפרויקט, הלקוח או הקוד (P-12). גם פרויקטים שהסתיימו נכללים."
+          body="החיפוש הוא לפי שם הפרויקט. גם פרויקטים שהסתיימו נכללים."
           action={<Button variant="pill" onClick={() => { setQuery(""); }}>ניקוי החיפוש</Button>}
         />
       ) : (
@@ -197,9 +229,9 @@ function ProjectsBody({
       )}
       {!expanded && needle === "" && (restActive > 0 || finished.length > 0) ? (
         <p className="ui-page-pad">
-          <button type="button" className="ui-text-link ui-text-link-quiet" onClick={() => { setExpanded(true); }}>
-            <bdi dir="ltr">{`עוד ${String(restActive)} פעילים · ${String(finished.length)} הסתיימו`}</bdi>
-          </button>
+          <TextLink tone="quiet" onClick={() => { setExpanded(true); }}>
+            עוד <bdi dir="ltr">{String(restActive)}</bdi> פעילים · <bdi dir="ltr">{String(finished.length)}</bdi> הסתיימו
+          </TextLink>
         </p>
       ) : null}
       <Sheet open={open} onOpenChange={setOpen} title="פרויקט">
@@ -224,10 +256,10 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
       if (!supabase) throw new Error("supabase");
       const agorot = budget.trim() === "" ? null : Number(shekelsToAgorot(budget));
       assertNoError(await supabase.rpc("upsert_project", {
-        p_id: (projectId ?? null) as unknown as string,
         p_name: name,
-        p_budget_agorot: (agorot ?? null) as unknown as number,
         p_status: "active",
+        ...(projectId ? { p_id: projectId } : {}),
+        ...(agorot == null ? {} : { p_budget_agorot: agorot }),
       }));
     },
   });
@@ -285,11 +317,13 @@ export function ProjectDetailScreen({ sample }: { sample?: NonNullable<ProjectDe
         </div>
       ) : null}
       <div className="ui-page-pad ui-stack">
-        <p>הכנסות <BigNumber agorot={project.income_agorot} /></p>
-        <p>עלויות ישירות <BigNumber agorot={project.direct_agorot} /></p>
-        <p>חלק משותף <BigNumber agorot={project.shared_agorot} /></p>
+        <FigureLine label="הכנסות" value={formatIls(project.income_agorot)} />
+        <FigureLine label="עלויות ישירות" value={formatIls(project.direct_agorot)} />
+        <FigureLine label="חלק משותף" value={formatIls(project.shared_agorot)} />
       </div>
-      <h2 className="t-title-3 ui-page-pad">קטגוריות</h2>
+      <div className="ui-page-pad">
+        <SectionHead title="קטגוריות" />
+      </div>
       {project.categories.length === 0 ? <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p> : (
         <List>
           {project.categories.map((category) => (
@@ -297,7 +331,9 @@ export function ProjectDetailScreen({ sample }: { sample?: NonNullable<ProjectDe
           ))}
         </List>
       )}
-      <h2 className="t-title-3 ui-page-pad">תנועות</h2>
+      <div className="ui-page-pad">
+        <SectionHead title="תנועות" />
+      </div>
       {project.transactions.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין עדיין תנועות" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
       ) : (
@@ -310,7 +346,7 @@ export function ProjectDetailScreen({ sample }: { sample?: NonNullable<ProjectDe
               hint={`${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`}
               agorot={txn.amount_net}
               sign={txn.direction === "income" ? "in" : "out"}
-              source="invoice"
+              source={txn.source === "hapoalim" ? "bank" : "invoice"}
               href={`/transactions/${txn.id}${search}`}
             />
           ))}
@@ -379,7 +415,7 @@ function ArchiveButton({
       assertNoError(await supabase.rpc("upsert_project", {
         p_id: projectId,
         p_name: name,
-        p_budget_agorot: (budget == null ? null : Number(budget)) as unknown as number,
+        ...(budget == null ? {} : { p_budget_agorot: Number(budget) }),
         p_status: finished ? "active" : "finished",
       }));
     },
@@ -467,8 +503,6 @@ export function ReviewQueue({
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: row.id,
         p_action: "skipped",
-        p_project_id: null as unknown as string,
-        p_category_id: null as unknown as string,
       }));
     },
   });
@@ -478,29 +512,30 @@ export function ReviewQueue({
   const suggestion = reviewSuggestion(row);
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="רק מה שה-AI לא היה בטוח בו" />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
       <div className="ui-review-meter">
-        <div
-          className="ui-bar ui-bar-thin"
-          role="meter"
-          aria-label="התקדמות התור"
-          aria-valuenow={1}
-          aria-valuemin={1}
-          aria-valuemax={rows.length}
-        >
-          <div className="ui-bar-fill" style={{ width: `${String(Math.round((1 / rows.length) * 100))}%` }} />
-        </div>
-        <span className="t-hint"><bdi dir="ltr">{`1 מתוך ${String(rows.length)}`}</bdi></span>
+        <ProgressBar
+          variant="thin"
+          label="התקדמות התור"
+          value={1}
+          max={rows.length}
+          caption={
+            <span className="t-hint">
+              <bdi dir="ltr">1</bdi> מתוך <bdi dir="ltr">{String(rows.length)}</bdi>
+            </span>
+          }
+        />
       </div>
       {auto > 0 ? (
         <p className="ui-review-note">
-          <span aria-hidden="true">✓</span>
-          <span><bdi dir="ltr">{String(auto)}</bdi> תנועות אושרו אוטומטית היום</span>
+          <span>
+            <bdi dir="ltr">{String(auto)}</bdi> תנועות שויכו היום בלי להמתין בתור
+          </span>
         </p>
       ) : null}
       <ReviewCard
         supplier={row.supplier_name ?? row.description}
-        sourceLine={`חשבונית מצולמת · ${invoiceDate(row.doc_date)}`}
+        sourceLine={`${docKindLabel(row.doc_kind)} · ${invoiceDate(row.doc_date)}`}
         netAgorot={row.amount_net}
         vatLine={reviewVatLine(row.vat_agorot)}
         suggestion={suggestion}
@@ -551,26 +586,29 @@ function reviewVatLine(vat: bigint | undefined): string {
   return `לפני מע״מ · מע״מ ${formatIls(shown)}`;
 }
 
+function docKindLabel(kind: string | undefined): string {
+  if (kind === "invoice") return "חשבונית";
+  if (kind === "receipt") return "קבלה";
+  if (kind === "invoice_receipt") return "חשבונית מס קבלה";
+  if (kind === "credit") return "זיכוי";
+  if (kind === "expense") return "הוצאה";
+  return "מסמך";
+}
+
+function vatStatusLabel(status: string): string {
+  if (status === "source") return "לפי המסמך";
+  if (status === "derived") return "חושב";
+  if (status === "assumed") return "מע״מ משוער 18%";
+  return "לא ידוע";
+}
+
 function reviewSuggestion(row: ReviewRow) {
   if (!row.project_name && !row.category_name) return undefined;
-  const confidence = row.confidence == null ? "" : ` ${String(row.confidence)}%`;
-  return (
-    <div className="ui-review-ai">
-      <p className="t-hint">הצעת AI</p>
-      {row.project_name ? (
-        <p className="ui-review-line">
-          <span className="t-label">פרויקט</span>
-          <span>{row.project_name}{confidence ? <span className="t-hint"><bdi dir="ltr">{confidence.trim()}</bdi></span> : null}</span>
-        </p>
-      ) : null}
-      {row.category_name ? (
-        <p className="ui-review-line">
-          <span className="t-label">קטגוריה</span>
-          <span>{row.category_name}{row.confidence == null ? null : <span className="t-hint"> <bdi dir="ltr">{`${String(row.confidence)}%`}</bdi></span>}</span>
-        </p>
-      ) : null}
-    </div>
-  );
+  return {
+    ...(row.project_name ? { project: row.project_name } : {}),
+    ...(row.category_name ? { category: row.category_name } : {}),
+    ...(row.confidence == null ? {} : { confidence: row.confidence }),
+  };
 }
 
 async function reopenReview(
@@ -583,9 +621,8 @@ async function reopenReview(
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
     await invalidate(["review", "dashboard"]);
-    toast.show({ message: "הפריט חזר לתור. השיוך שנשמר נשאר." });
-  } catch (error) {
-    console.error("reopen_review", error);
+    toast.show({ message: "הפריט חזר לתור, והשיוך הקודם שוחזר." });
+  } catch {
     toast.show({
       tone: "bad",
       message: "לא הצלחנו לבטל.",
@@ -600,7 +637,7 @@ async function reopenReview(
 function ReviewEmpty({ search }: { search: string }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="רק מה שה-AI לא היה בטוח בו" />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
       <EmptyState
         icon={<ReviewIcon />}
         title="הכל מאושר"
@@ -614,7 +651,7 @@ function ReviewEmpty({ search }: { search: string }) {
 export function ChangeForm({
   sample,
 }: {
-  sample?: { projects: Array<{ id: string; name: string }>; categories: Array<{ id: string; name: string; hidden: boolean }> };
+  sample?: { projects: Array<{ id: string; name: string }>; categories: Array<{ id: string; name: string; hidden: boolean; kind?: string }> };
 } = {}) {
   const search = usePreviewSearch();
   const preview = useHomePreview();
@@ -675,7 +712,7 @@ export function ChangeForm({
             value={categoryId}
             required
             onChange={(event) => { setCategoryId(event.target.value); }}
-            options={[{ value: "", label: "בחירה" }, ...categoryOptions.filter((category) => !category.hidden).map((category) => ({ value: category.id, label: category.name }))]}
+            options={[{ value: "", label: "בחירה" }, ...categoryOptions.filter((category) => !category.hidden && category.kind !== "income").map((category) => ({ value: category.id, label: category.name }))]}
           />
           <Button type="submit" busy={save.isPending}>אישור</Button>
         </form>
@@ -728,15 +765,15 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   );
 }
 
-export function TransactionScreen() {
+export function TransactionScreen({ sample }: { sample?: NonNullable<TransactionDetail> } = {}) {
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
-  const detail = useTransactionQuery(transactionId);
-  const phase = screenPhase(preview, detail);
+  const detail = useTransactionQuery(sample ? "" : transactionId);
+  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const remove = useWrite({
     failure: "לא הצלחנו למחוק.",
     keys: ["dashboard", "txn", "unpaid", "review"],
@@ -746,22 +783,23 @@ export function TransactionScreen() {
     },
     run: async () => {
       const supabase = getSupabase();
-      if (!supabase || !detail.data) throw new Error("supabase");
-      assertNoError(await supabase.rpc("delete_transaction", { p_id: detail.data.id }));
+      const current = sample ?? detail.data;
+      if (!supabase || !current) throw new Error("supabase");
+      assertNoError(await supabase.rpc("delete_transaction", { p_id: current.id }));
     },
   });
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
     return <ScreenState title="פרטי תנועה" backTo={`/${search}`} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
-  if (!detail.data) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={`/${search}`} />;
-  const txn = detail.data;
+  const txn = sample ?? detail.data;
+  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={`/${search}`} />;
   return (
     <div>
       <ScreenHeader title="פרטי תנועה" backTo={`/${search}`} />
       <p className="t-display ui-page-pad"><BigNumber agorot={txn.amount_net} presentation="detail" /></p>
       <p className="ui-page-pad">{txn.description}</p>
       <p className="t-hint ui-page-pad">{formatDayMonth(txn.doc_date)} · {txn.project_name ?? "בלי פרויקט"} · {txn.category_name ?? "בלי קטגוריה"}</p>
-      <p className="t-hint ui-page-pad">לפני מע״מ. מע״מ <bdi dir="ltr">{formatIls(txn.vat_amount, { agorot: true })}</bdi> · {txn.vat_status === "assumed" ? "מע״מ משוער 18%" : txn.vat_status}</p>
+      <p className="t-hint ui-page-pad">לפני מע״מ. מע״מ <bdi dir="ltr">{formatIls(txn.vat_amount, { agorot: true })}</bdi> · {vatStatusLabel(txn.vat_status)}</p>
       <p className="t-hint ui-page-pad">{txn.supplier_name ?? txn.customer_name ?? ""}</p>
       <div className="ui-stack ui-page-pad">
         <Button variant="secondary" to={`/transactions/${txn.id}/split${search}`}>פיצול</Button>
@@ -789,18 +827,29 @@ export function TransactionScreen() {
   );
 }
 
-export function SplitScreen() {
+export function SplitScreen({ sampleProjects }: { sampleProjects?: Array<{ id: string; name: string }> } = {}) {
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const toast = useToast();
-  const dashboard = useDashboardQuery();
-  const phase = screenPhase(preview, dashboard);
-  const projects = dashboard.data?.projects ?? [];
+  const dashboard = useDashboardQuery(sampleProjects == null);
+  const txn = useTransactionQuery(sampleProjects ? "" : transactionId);
+  const phase = sampleProjects ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
+  const projects = sampleProjects ?? dashboard.data?.projects ?? [];
   const [shares, setShares] = useState<Record<string, string>>({});
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (seeded || !txn.data?.allocations) return;
+    const next: Record<string, string> = {};
+    for (const row of txn.data.allocations) {
+      next[row.project_id] = String(row.share_bp / 100);
+    }
+    setShares(next);
+    setSeeded(true);
+  }, [seeded, txn.data]);
   const total = Object.values(shares).reduce((sum, value) => sum + (Number(value) || 0), 0);
   const save = useWrite({
-    failure: "החלקים צריכים להסתכם ב-100%.",
+    failure: (error) => (error.message.includes("10000") ? "החלקים צריכים להסתכם ב-100%." : "לא הצלחנו לשמור את הפיצול."),
     success: "הפיצול נשמר",
     keys: ["dashboard", "txn", "project"],
     run: async () => {
@@ -862,53 +911,24 @@ export function SettingsScreen({
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const phase = sample ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, status));
   const connect = useWrite({
-    failure: "החיבור נכשל. בדקו את המזהה ואת המפתח.",
+    failure: (error) => hebrewSumitError(error.message) ?? "החיבור נכשל. בדקו את המזהה ואת המפתח.",
     success: "SUMIT מחובר. המפתח נשאר בשרת.",
     keys: ["sumit", "dashboard"],
     onSuccess: () => { setApiKey(""); },
     run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      const base = import.meta.env.VITE_SUPABASE_URL as string;
-      if (!token || !base) throw new Error("unauthorized");
-      const response = await fetch(`${base}/functions/v1/sumit-connect`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${token}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ companyId: Number(companyId), apiKey }),
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "connect_failed");
-      }
+      await invokeEdge("sumit-connect", { companyId: Number(companyId), apiKey });
       setApiKey("");
     },
   });
   const refresh = useWrite({
-    failure: "הרענון נכשל.",
+    failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
     success: "הרענון הסתיים.",
     keys: ["sumit", "dashboard", "unpaid", "review", "project"],
     run: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("supabase");
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      const base = import.meta.env.VITE_SUPABASE_URL as string;
-      const response = await fetch(`${base}/functions/v1/sumit-sync`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${token ?? ""}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ force: true }),
-      });
-      if (!response.ok) throw new Error("sync_failed");
+      const data = await invokeEdge("sumit-sync", { force: true });
+      if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
+        throw new Error("sync_skipped");
+      }
     },
   });
   const disconnect = useWrite({
@@ -1062,8 +1082,12 @@ export function CategoriesScreen({ sample }: { sample?: CategoryRow[] } = {}) {
       assertNoError(await supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }));
     },
   });
-  const fromName = rows.find((category) => category.id === mergeFrom)?.name ?? "";
-  const intoName = rows.find((category) => category.id === mergeInto)?.name ?? "";
+  const fromRow = rows.find((category) => category.id === mergeFrom);
+  const intoRow = rows.find((category) => category.id === mergeInto);
+  const fromName = fromRow?.name ?? "";
+  const intoName = intoRow?.name ?? "";
+  const fromOptions = rows.filter((category) => intoRow == null || category.kind === intoRow.kind);
+  const intoOptions = rows.filter((category) => !category.hidden && (fromRow == null || category.kind === fromRow.kind));
   return (
     <ScreenState
       title="קטגוריות"
@@ -1108,13 +1132,13 @@ export function CategoriesScreen({ sample }: { sample?: CategoryRow[] } = {}) {
           label="מקטגוריה"
           value={mergeFrom}
           onChange={(event) => { setMergeFrom(event.target.value); }}
-          options={[{ value: "", label: "בחירה" }, ...rows.map((category) => ({ value: category.id, label: category.name }))]}
+          options={[{ value: "", label: "בחירה" }, ...fromOptions.map((category) => ({ value: category.id, label: category.name }))]}
         />
         <SelectField
           label="אל"
           value={mergeInto}
           onChange={(event) => { setMergeInto(event.target.value); }}
-          options={[{ value: "", label: "בחירה" }, ...rows.filter((category) => !category.hidden).map((category) => ({ value: category.id, label: category.name }))]}
+          options={[{ value: "", label: "בחירה" }, ...intoOptions.map((category) => ({ value: category.id, label: category.name }))]}
         />
         <Button type="submit">מיזוג</Button>
       </form>
@@ -1139,6 +1163,7 @@ export function CategoriesScreen({ sample }: { sample?: CategoryRow[] } = {}) {
         item={`${fromName} ← ${intoName}`}
         consequence="התנועות עוברות אל היעד. אי אפשר להפריד אחר כך."
         confirmLabel="מיזוג"
+        destructive
         busy={merge.isPending}
         onConfirm={() => {
           if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
@@ -1155,7 +1180,7 @@ export function NotificationsScreen() {
     <div>
       <ScreenHeader
         title="התראות"
-        subtitle="שתי הודעות, שעון ישראל. סיכום ביום ראשון ב-08:00, ותזכורת לאישור ב-18:00 רק כשיש תור."
+        subtitle="אין עדיין התראות."
         backTo={`/settings${search}`}
       />
       <p className="t-hint ui-page-pad">בשלב הזה ההודעות לא נשלחות. אין שירות בתשלום ואין Push.</p>

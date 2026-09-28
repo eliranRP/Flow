@@ -21,6 +21,6 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "אישור" })).toHaveClass("ui-btn-primary");
     expect(screen.getByRole("button", { name: "מחיקה" })).toHaveClass("ui-btn-danger");
     expectThemePaint(screen.getByRole("button", { name: "אישור" }), "backgroundColor");
-    expectThemePaint(screen.getByRole("button", { name: "מחיקה" }), "backgroundColor");
+    expectThemePaint(screen.getByRole("button", { name: "מחיקה" }), "color");
   });
 });

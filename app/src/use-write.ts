@@ -12,7 +12,7 @@ export function useWrite(options: {
   run: () => Promise<void>;
   keys: string[];
   success?: string;
-  failure: string;
+  failure: string | ((error: Error) => string);
   onSuccess?: () => void;
 }) {
   const toast = useToast();
@@ -25,10 +25,11 @@ export function useWrite(options: {
       if (options.success) toast.show({ message: options.success });
       options.onSuccess?.();
     },
-    onError: () => {
+    onError: (error) => {
+      const failure = error instanceof Error ? error : new Error("failed");
       toast.show({
         tone: "bad",
-        message: options.failure,
+        message: typeof options.failure === "function" ? options.failure(failure) : options.failure,
         action: "ניסיון חוזר",
         onAction: () => {
           retry.current();

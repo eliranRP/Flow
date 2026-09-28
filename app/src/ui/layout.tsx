@@ -35,6 +35,14 @@ export function FormError({ children }: { children: ReactNode }) {
   );
 }
 
+export function FigureLine({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="ui-figure">
+      <span>{label}</span> <bdi dir="ltr">{value}</bdi>
+    </p>
+  );
+}
+
 export function SectionHead({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="ui-section-head">

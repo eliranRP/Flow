@@ -20,18 +20,38 @@ function isLink(props: IconButtonProps): props is AsLink {
   return typeof props.to === "string";
 }
 
+function assignRef(ref: Ref<HTMLButtonElement | HTMLAnchorElement> | null, node: HTMLButtonElement | HTMLAnchorElement | null) {
+  if (typeof ref === "function") ref(node);
+  else if (ref) ref.current = node;
+}
+
 export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, IconButtonProps>(function IconButton(props, ref) {
   const className = cx("ui-icon-btn", props.onBand && "ui-icon-btn-on-band", props.className);
   if (isLink(props)) {
     return (
-      <Link ref={ref as Ref<HTMLAnchorElement>} to={props.to} aria-label={props.label} className={className}>
+      <Link
+        ref={(node) => {
+          assignRef(ref, node);
+        }}
+        to={props.to}
+        aria-label={props.label}
+        className={className}
+      >
         {props.children}
       </Link>
     );
   }
   const { label, children, onBand: _onBand, className: _className, type = "button", ...rest } = props;
   return (
-    <button ref={ref as Ref<HTMLButtonElement>} type={type} className={className} aria-label={label} {...rest}>
+    <button
+      ref={(node) => {
+        assignRef(ref, node);
+      }}
+      type={type}
+      className={className}
+      aria-label={label}
+      {...rest}
+    >
       {children}
     </button>
   );

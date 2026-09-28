@@ -24,7 +24,7 @@ describe("TabBar", () => {
         <TabBar reviewCount={100} />
       </MemoryRouter>,
     );
-    const badge = document.querySelector(".count-badge bdi");
+    const badge = document.querySelector(".ui-count-badge bdi");
     expect(badge).toHaveAttribute("dir", "ltr");
     expect(badge).toHaveTextContent("99+");
   });

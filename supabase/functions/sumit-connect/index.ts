@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
     if (company.error || !company.data) return json({ error: "no company" }, 400);
 
-    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), "1");
+    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), "2", company.data.id);
     const saved = await admin.from("sumit_connections").upsert(
       {
         company_id: company.data.id,

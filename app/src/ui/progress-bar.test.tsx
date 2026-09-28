@@ -14,7 +14,7 @@ describe("ProgressBar", () => {
     );
     expect(screen.getByRole("meter", { name: "התקדמות" })).toHaveAttribute("aria-valuenow", "40");
     expect(screen.getByRole("meter", { name: "חריגה, מעל התקציב" })).toBeInTheDocument();
-    expect(screen.getByText(/נוצלו 120%/)).toBeInTheDocument();
+    expect(document.body.textContent.replace(/\s+/g, " ")).toMatch(/נוצלו 120%/);
     expect(screen.getByText(/מעל התקציב/)).toBeInTheDocument();
     const over = document.querySelector('.ui-bar-fill[data-over="true"]');
     expect(over).toBeInstanceOf(HTMLElement);
@@ -29,8 +29,9 @@ describe("ProgressBar", () => {
     expect(budgetUsedPercent(10_000_000n, 10_000_000n)).toBe(100);
     expect(budgetUsedPercent(12_000_000n, 10_000_000n)).toBe(120);
     render(<BudgetBar label="כמעט" spentAgorot={12_345_678_900n} budgetAgorot={12_346_678_900n} />);
-    expect(screen.getByText(/נוצלו 99%/)).toBeInTheDocument();
-    expect(screen.queryByText(/נוצלו 100%/)).not.toBeInTheDocument();
+    const text = document.body.textContent.replace(/\s+/g, " ");
+    expect(text).toMatch(/נוצלו 99%/);
+    expect(text).not.toMatch(/נוצלו 100%/);
     const fill = document.querySelector(".ui-bar-fill");
     if (fill instanceof HTMLElement) expect(fill.style.width).toBe("99%");
   });

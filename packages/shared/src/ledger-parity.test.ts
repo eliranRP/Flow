@@ -66,4 +66,17 @@ describe("SUMIT envelope", () => {
     expect(sealed.dekCiphertext.startsWith("\\x")).toBe(true);
     await expect(openApiKey(sealed, kek)).resolves.toBe(secret);
   });
+
+  it("binds version 2 to the company and still opens a version 1 seal", async () => {
+    const kek = decodeKek(Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64"));
+    const secret = "unit-test-key-not-a-real-sumit-secret";
+    const company = "11111111-1111-1111-1111-111111111111";
+    const sealed = await sealApiKey(secret, kek, "2", company);
+    await expect(openApiKey(sealed, kek, company)).resolves.toBe(secret);
+    await expect(openApiKey(sealed, kek, "22222222-2222-2222-2222-222222222222")).rejects.toThrow();
+    await expect(openApiKey(sealed, kek)).rejects.toThrow();
+    const legacy = await sealApiKey(secret, kek, "1");
+    await expect(openApiKey(legacy, kek)).resolves.toBe(secret);
+    await expect(openApiKey(legacy, kek, company)).resolves.toBe(secret);
+  });
 });

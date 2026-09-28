@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+Decision [0063](decisions/0063-owner-ledger.md), Accepted. It amends [0059](decisions/0059-live-sumit-only.md) and the undo sentence in [0061](decisions/0061-review-undo.md). Sync no longer writes Flow Test weights, categories, or VAT exemptions. Shared costs stay unallocated until the owner enters a split. Ledger writes go through security-definer RPCs. A re-sync updates only the columns SUMIT owns. Undo restores the assignment from before approval.
+
 Decision [0062](decisions/0062-audit-layout-calls.md), Accepted. Fixed-height controls stay one line and ellipsize, with the full text in `title` and `aria-label`. Empty states use a `title-3` title, a muted 15px body, and the 36px pill. A sheet title is one line. ChangePill shows a neutral `0%`, and a change that rounds to zero shows `<1%` in the real direction. The preview loading band keeps `מצב תצוגה`. Enabled controls use `cursor: pointer`.
 
 A period pill, chip, or status pill stays on one line. Long text ellipsizes and the chevron stays visible, clear of the wordmark. The closed period story is the band and the white on-band pill. A budget title clamps to two lines, the amounts sit on the next line without breaking a number, and the used percent is floored so 99.9% is not shown as 100%.

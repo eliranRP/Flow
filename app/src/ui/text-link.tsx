@@ -8,12 +8,13 @@ type TextLinkProps = {
   className?: string;
   to?: string;
   href?: string;
+  onClick?: () => void;
   tone?: "accent" | "quiet";
   size?: "label" | "hint";
   chevron?: boolean;
 };
 
-export function TextLink({ children, className, to, href, tone = "accent", size = "label", chevron = true }: TextLinkProps) {
+export function TextLink({ children, className, to, href, onClick, tone = "accent", size = "label", chevron = true }: TextLinkProps) {
   const classes = cx("ui-text-link", tone === "quiet" && "ui-text-link-quiet", size === "hint" && "ui-text-link-hint", className);
   const body = (
     <>
@@ -26,6 +27,13 @@ export function TextLink({ children, className, to, href, tone = "accent", size 
       <Link to={to} className={classes}>
         {body}
       </Link>
+    );
+  }
+  if (onClick) {
+    return (
+      <button type="button" className={classes} onClick={onClick}>
+        {body}
+      </button>
     );
   }
   return (

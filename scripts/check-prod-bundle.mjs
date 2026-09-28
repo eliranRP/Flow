@@ -27,6 +27,16 @@ const modulePatterns = [
  * @param {{ modules: string[], files: { name: string, body: string }[] }} input
  * @returns {string[]}
  */
+const sourceMarkers = [
+  ["flow-test", (body) => body.includes("flow-test")],
+  ["2389917160", (body) => body.includes("2389917160")],
+  ["FLOW_TEST_", (body) => body.includes("FLOW_TEST_")],
+  ["fixtures/", (body) => body.includes("fixtures/") || body.includes("fixtures\\")],
+  ["expected-pnl", (body) => body.includes("expected-pnl")],
+  ["demo-data", (body) => body.includes("demo-data")],
+  ["fixture sentence", (body) => body.includes(fixtureSentence)],
+];
+
 export function violations(input) {
   const found = [];
   for (const id of input.modules) {
@@ -43,6 +53,36 @@ export function violations(input) {
     }
   }
   return found;
+}
+
+/** Edge Function sources. Fixed Flow Test data must not ship in the runtime. */
+export function sourceViolations(files) {
+  const found = [];
+  for (const file of files) {
+    for (const [name, hit] of sourceMarkers) {
+      if (hit(file.body)) found.push(`${file.name} contains ${name}`);
+    }
+  }
+  return found;
+}
+
+function scanTree(dir, pattern) {
+  /** @type {{ name: string, body: string }[]} */
+  const files = [];
+  if (!existsSync(dir)) return files;
+  const walk = (current) => {
+    for (const name of readdirSync(current)) {
+      const full = path.join(current, name);
+      if (statSync(full).isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!pattern.test(name)) continue;
+      files.push({ name: path.relative(root, full), body: readFileSync(full, "utf8") });
+    }
+  };
+  walk(dir);
+  return files;
 }
 
 function scanDist(dist) {
@@ -79,7 +119,10 @@ export function checkProductionBundle() {
     problems.push("bundle-graph.json is not a list of module ids");
     return problems;
   }
-  return violations({ modules, files: scanDist(dist) });
+  return [
+    ...violations({ modules, files: scanDist(dist) }),
+    ...sourceViolations(scanTree(path.join(root, "supabase/functions"), /\.(ts|tsx|js|mjs)$/)),
+  ];
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
