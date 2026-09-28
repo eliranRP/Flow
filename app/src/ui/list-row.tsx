@@ -63,7 +63,7 @@ export function ListRow(props: ListRowProps) {
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
         <span className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
-          <span className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag && "ui-row-title-with-tag")}>
+          <span className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}>
             {props.tag ? <span className="ui-row-title-text">{props.title}</span> : props.title}
             {props.tag}
           </span>
