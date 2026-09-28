@@ -42,5 +42,23 @@ export type {
   NormalizedLine,
   ProjectPnl,
 } from "./pnl.ts";
+export {
+  basisSchema,
+  categoryRowSchema,
+  dashboardSchema,
+  projectRowSchema,
+  reviewRowSchema,
+  sumitStatusSchema,
+  unpaidRowSchema,
+} from "./dashboard.ts";
+export type {
+  Basis,
+  CategoryRow,
+  Dashboard,
+  ProjectRow,
+  ReviewRow,
+  SumitStatus,
+  UnpaidRow,
+} from "./dashboard.ts";
 export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";
