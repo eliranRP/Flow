@@ -1291,9 +1291,10 @@ a.ui-row,
   color: var(--color-text-muted);
 }
 
-.ui-skel-band {
+.ui-skel-stack {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: var(--space-3);
   min-inline-size: 0;
   max-inline-size: 100%;
@@ -1302,7 +1303,8 @@ a.ui-row,
 .ui-skel-figures {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  column-gap: var(--space-6);
+  row-gap: var(--space-3);
   min-inline-size: 0;
   max-inline-size: 100%;
 }
@@ -1339,11 +1341,14 @@ a.ui-row,
   color: var(--color-on-band-secondary);
 }
 
+.ui-band:has(.ui-preview-banner) {
+  padding-bottom: 0;
+}
+
 .ui-preview-banner {
-  position: absolute;
-  inset-inline: 0;
-  bottom: var(--space-2);
   margin: 0;
+  padding-top: var(--band-pad-bottom);
+  padding-bottom: var(--band-pad-bottom);
   text-align: center;
   color: var(--color-on-band-secondary);
   pointer-events: none;

@@ -35,6 +35,7 @@ The code review of `413b60d` passed the security rule. Four controls still prete
 24. The period sheet pads with tokens, scrolls inside the 56px cap, and keeps "כל התקופה" on screen. Library components do not set a native `title` attribute. `aria-label` stays. This amends the `title` sentence in [0062](0062-audit-layout-calls.md).
 25. The review-count badge sits on the icon's top corner, with a surface ring, and is not clipped. Counts above 99 render as 99+.
 26. Toast, notice, form error, and empty copy use an icon and isolated RTL text. The error mark is an SVG, not a "!" character.
+27. A loading band uses the same side gutter as the loaded band (`--space-side`). Home loading stacks greeting, label, figure, change pill, and the sub-line with `--space-3` between rows. Project loading uses that same stack. "מצב תצוגה" sits in the band's bottom padding (`--band-pad-bottom`) instead of on top of the bars.
 
 ## Alternatives rejected
 

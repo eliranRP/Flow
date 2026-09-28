@@ -323,12 +323,14 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
         }
       >
         <BandHero>
-          <Skeleton tone="band" className="ui-skel-label" />
-          <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
-          <span className="ui-skel-figures">
-            <Skeleton tone="band" className="ui-skel-figure" />
-            <Skeleton tone="band" className="ui-skel-figure" />
-          </span>
+          <div className="ui-skel-stack">
+            <Skeleton tone="band" className="ui-skel-label" />
+            <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
+            <span className="ui-skel-figures">
+              <Skeleton tone="band" className="ui-skel-figure" />
+              <Skeleton tone="band" className="ui-skel-figure" />
+            </span>
+          </div>
         </BandHero>
       </TopBand>
       <div className="ui-page-pad ui-stack">
