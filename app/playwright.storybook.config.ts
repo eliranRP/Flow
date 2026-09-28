@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 /** Serves the built Storybook (`pnpm build-storybook`) and opens every story in the manager. */
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /storybook-static\.spec\.ts/,
+  testMatch: /storybook-(static|layout)\.spec\.ts/,
   timeout: 30_000,
   use: {
     ...devices["Desktop Chrome"],

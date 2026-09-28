@@ -25,46 +25,65 @@ const sizeClass = {
   list: "t-title-3",
 } as const;
 
+export function heroStepClass(size: "hero" | "display" | "list" | undefined, step: number): string {
+  if (size !== "hero") return size ? sizeClass[size] : "";
+  if (step >= 2) return "t-title-1";
+  if (step === 1) return "t-display";
+  return "t-hero";
+}
+
 export function heroTypeClass(size: "hero" | "display" | "list" | undefined, stepDown: boolean): string {
-  if (size === "hero") return stepDown ? "t-display" : "t-hero";
-  return size ? sizeClass[size] : "";
+  return heroStepClass(size, stepDown ? 1 : 0);
 }
 
 export function BigNumber({ agorot, presentation = "summary", size, loss = false }: BigNumberProps) {
   const ref = useRef<HTMLElement>(null);
-  const [stepDown, setStepDown] = useState(false);
+  const [step, setStep] = useState(0);
   const text = formatAmount(agorot, presentation);
   useLayoutEffect(() => {
     if (size !== "hero") return;
     const node = ref.current;
-    const column = node?.closest(".ui-band-hero");
-    if (!node || !(column instanceof HTMLElement)) return;
+    if (!node) return;
+    const column = node.closest(".ui-band-hero") ?? node.parentElement;
+    if (!(column instanceof HTMLElement)) return;
     const probe = document.createElement("bdi");
     probe.className = "ui-num t-hero";
     probe.textContent = text;
     probe.setAttribute("aria-hidden", "true");
-    probe.style.position = "absolute";
-    probe.style.visibility = "hidden";
-    probe.style.pointerEvents = "none";
     probe.style.whiteSpace = "nowrap";
     probe.style.inlineSize = "max-content";
-    column.appendChild(probe);
+    const host = document.createElement("div");
+    host.style.position = "fixed";
+    host.style.top = "0";
+    host.style.insetInlineStart = "0";
+    host.style.width = "0";
+    host.style.height = "0";
+    host.style.overflow = "hidden";
+    host.style.visibility = "hidden";
+    host.appendChild(probe);
+    document.body.appendChild(host);
     const measure = () => {
       const style = getComputedStyle(column);
       const pad = (Number.parseFloat(style.paddingInlineStart) || 0) + (Number.parseFloat(style.paddingInlineEnd) || 0);
       const content = column.clientWidth - pad;
-      setStepDown(probe.getBoundingClientRect().width > content);
+      const widthOf = (typeClass: string) => {
+        probe.className = `ui-num ${typeClass}`;
+        return probe.getBoundingClientRect().width;
+      };
+      if (widthOf("t-hero") <= content) setStep(0);
+      else if (widthOf("t-display") <= content) setStep(1);
+      else setStep(2);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(column);
     return () => {
       observer.disconnect();
-      probe.remove();
+      host.remove();
     };
   }, [size, text]);
   return (
-    <bdi ref={ref} dir="ltr" className={["ui-num", heroTypeClass(size, stepDown), loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
+    <bdi ref={ref} dir="ltr" className={["ui-num", heroStepClass(size, step), loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
       {text}
     </bdi>
   );

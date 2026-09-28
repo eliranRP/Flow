@@ -26,22 +26,30 @@ type BudgetBarProps = {
   label?: string;
 };
 
+/**
+ * Floors the used percent. 99.9% stays 99, and 100 appears only when the budget
+ * is actually fully used. Over budget keeps the real percent (120 stays 120).
+ */
+export function budgetUsedPercent(spentAgorot: bigint, budgetAgorot: bigint): number {
+  if (budgetAgorot <= 0n || spentAgorot <= 0n) return 0;
+  const percent = Number((spentAgorot * 100n) / budgetAgorot);
+  if (spentAgorot >= budgetAgorot) return Math.max(100, percent);
+  return percent;
+}
+
 /** Decision 0060: the bar stops at 100% in the danger colour. The overage is a line of text. */
 export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: BudgetBarProps) {
   const over = budgetAgorot > 0n && spentAgorot > budgetAgorot;
-  const ratio = budgetAgorot <= 0n ? 0 : Number(spentAgorot) / Number(budgetAgorot);
-  const used = Math.max(0, Math.round(ratio * 100));
+  const used = budgetUsedPercent(spentAgorot, budgetAgorot);
   const width = Math.min(100, used);
   const overage = over ? spentAgorot - budgetAgorot : 0n;
   return (
-    <div>
-      <p className="ui-budget-head">
-        <span className="t-title-3">{label}</span>
-        <span className="t-hint">
-          <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
-          {" מתוך "}
-          <bdi dir="ltr">{formatAmount(budgetAgorot)}</bdi>
-        </span>
+    <div className="ui-budget">
+      <p className="ui-budget-title t-title-3">{label}</p>
+      <p className="ui-budget-amounts t-hint">
+        <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
+        <span>מתוך</span>
+        <bdi dir="ltr">{formatAmount(budgetAgorot)}</bdi>
       </p>
       <div
         className="ui-bar"

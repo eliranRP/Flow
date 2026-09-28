@@ -25,8 +25,8 @@ export function Chip({ kind = "choice", pressed = false, children, onClick }: Ch
           ✦
         </span>
       ) : null}
-      {resolved === "selected" ? <span aria-hidden="true">✓</span> : null}
-      {children}
+      {resolved === "selected" ? <span className="ui-chip-mark" aria-hidden="true">✓</span> : null}
+      <span className="ui-chip-label">{children}</span>
     </button>
   );
 }
@@ -35,7 +35,7 @@ export function StatusPill({ children }: { children: ReactNode }) {
   return (
     <span className="ui-status">
       <span aria-hidden="true">✓</span>
-      <span>{children}</span>
+      <span className="ui-chip-label">{children}</span>
     </span>
   );
 }

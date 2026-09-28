@@ -22,6 +22,7 @@ describe("PeriodPicker", () => {
     render(<Harness />);
     const pill = screen.getByRole("button", { name: "כל התקופה" });
     expectTarget(pill);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(pill);
     expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
     expectTarget(screen.getByRole("radio", { name: "החודש" }));

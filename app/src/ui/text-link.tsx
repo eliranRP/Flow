@@ -17,7 +17,7 @@ export function TextLink({ children, className, to, href, tone = "accent", size 
   const classes = cx("ui-text-link", tone === "quiet" && "ui-text-link-quiet", size === "hint" && "ui-text-link-hint", className);
   const body = (
     <>
-      {children}
+      <span className="ui-text-link-label">{children}</span>
       {chevron ? <ChevronIcon size={16} /> : null}
     </>
   );

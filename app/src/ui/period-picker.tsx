@@ -44,7 +44,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
           onOpenChange(true);
         }}
       >
-        {pill}
+        <span className="ui-period-label">{pill}</span>
         <span className="ui-period-chevron" aria-hidden="true">
           <ChevronDownIcon />
         </span>
@@ -52,6 +52,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
       <Sheet
         open={open}
         onOpenChange={onOpenChange}
+        modal={false}
         title="תקופה"
         onClosed={() => {
           if (!custom.current) return;

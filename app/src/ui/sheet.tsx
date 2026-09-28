@@ -71,7 +71,7 @@ export function Sheet({
       }}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className="ui-sheet-scrim" />
+        {modal ? <Drawer.Overlay className="ui-sheet-scrim" /> : null}
         <Drawer.Content
           className="ui-sheet-panel"
           aria-describedby={undefined}
