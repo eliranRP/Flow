@@ -375,7 +375,7 @@ export const SettingsBackoff: Story = {
           connected: true,
           companyId: 1001,
           lastError: "sumit_rejected",
-          nextAttemptAt: "2026-09-28T18:30:00.000Z",
+          nextAttemptAt: "2099-01-01T10:00:00.000Z",
           email: "ops@nromomentum.com",
         }}
       />
