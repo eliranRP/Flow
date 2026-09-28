@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+Branch `cursor/phase-remainder-58c2` adds the rest of the books platform that the slice left open: the access-token company claim, dirty-month snapshots, the SUMIT call cap and drift check, the accountant CSV, Hebrew date pickers, confirm sheets, the offline op queue, and Web Push with VAPID. Decisions [0051](decisions/0051-company-claim.md) through [0056](decisions/0056-home-bundle.md). Deploy notes are in [docs/runbooks/phase-remainder.md](runbooks/phase-remainder.md).
+
 Branch `phase-1-slice` replaces the title-only screens with a working books slice. Onboarding calls `create_company`. Settings stores the SUMIT key in an Edge Function under AES-GCM ([0048](decisions/0048-sumit-key-envelope.md)). `sumit-sync` imports documents read-only and writes the ledger. Home, projects, review, add, unpaid, splits, and settings read `get_dashboard` and the other RPCs. `?preview=demo` shows the Flow Test fixture without a session. Decisions [0047](decisions/0047-onboarding-and-period.md), [0049](decisions/0049-sumit-refresh.md), and [0050](decisions/0050-demo-splits-and-review.md). The hosted project does not have this migration until it is applied by hand. [docs/runbooks/sumit-connect.md](runbooks/sumit-connect.md).
 
 Decision [0046](decisions/0046-public-anon-key.md), Accepted. The hosted flow-pilot URL and the legacy anon JWT are committed in `app/.env.production`. The service-role key stays out of the repo and out of the client.

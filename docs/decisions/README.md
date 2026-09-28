@@ -77,3 +77,9 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0048](0048-sumit-key-envelope.md) | 2026-09-28 | Accepted | The SUMIT key is AES-GCM sealed. The client never receives it |
 | [0049](0049-sumit-refresh.md) | 2026-09-28 | Accepted | SUMIT refresh is a button plus a daily cron row. Read-only allowlist |
 | [0050](0050-demo-splits-and-review.md) | 2026-09-28 | Accepted | Demo site-worker days are a split rule. SUMIT rows stay in the P&L while queued |
+| [0051](0051-company-claim.md) | 2026-09-28 | Accepted | The JWT company claim comes from membership. RLS stays on the owner |
+| [0052](0052-ios-pwa-sign-in.md) | 2026-09-28 | Accepted | Installed iOS sign-in keeps the redirect, with a Safari fallback page |
+| [0053](0053-sumit-drift-and-hook.md) | 2026-09-28 | Accepted | Schema drift stops the import. The inbound SUMIT hook stays off |
+| [0054](0054-snapshots-and-refresh.md) | 2026-09-28 | Accepted | Dirty months refresh before Home. SUMIT calls have a monthly cap |
+| [0055](0055-notification-copy.md) | 2026-09-28 | Accepted | The Sunday alert is the largest loss. The nudge is one minute per item |
+| [0056](0056-home-bundle.md) | 2026-09-28 | Accepted | The Home gzip ceiling is 260 KB until supabase-js can leave the shell |
