@@ -1,12 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { EmptyState } from "../components/EmptyState";
 import { Money } from "../components/Money";
 import { BackIcon, CameraIcon, DocumentIcon } from "../components/icons";
 import { usePreviewSearch } from "../preview";
+import { withSheetBackground } from "../sheet-background";
 
 /** Template A+band. The empty project shows ₪0, isolated as a number. */
 export function ProjectScreen() {
   const search = usePreviewSearch();
+  const location = useLocation();
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="band">
@@ -28,7 +30,7 @@ export function ProjectScreen() {
         title="אין עדיין תנועות"
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
         action={
-          <Link to={`/add${search}`} className="btn-sec">
+          <Link to={`/add${search}`} state={withSheetBackground(location)} className="btn-sec">
             <CameraIcon />
             צילום חשבונית
           </Link>
