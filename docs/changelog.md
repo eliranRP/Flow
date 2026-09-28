@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-28
+
+Decision [0045](decisions/0045-phase-0-design-gaps.md), Accepted. It records the Phase 0 design gaps left after the review of `fd355ad`. `/help` is a plain title, one line, and a mailto to ops@nromomentum.com. A non-offline load failure uses "לא הצלחנו לטעון את הנתונים" and is reachable with `?preview=error-server`. A missing name greets with "שלום". The Phase 0 band has no period pill. The Add sheet is a title and one hint. The tab bar's 8px floor is `--tabbar-min-inset`.
+
 ## 2026-09-27
 
 Decision [0044](decisions/0044-phase-0-shell-calls.md), Accepted. It records the Phase 0 shell calls from the UI review: the preview banner is Hebrew only and does not push the band, the first-run empty state asks to connect SUMIT, 17px text uses the type scale, placeholders are a plain title, and Home loading, empty, and error can be opened with `?preview=`.
