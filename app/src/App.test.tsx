@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
 import { HELP_EMAIL } from "./config";
@@ -52,6 +52,18 @@ describe("App", () => {
     expect(document.querySelector(".ui-band")).toBeNull();
   });
 
+  it("sizes the project loading band to the loaded project lines", () => {
+    renderAt("/projects/a?preview=loading");
+    expect(document.querySelector(".ui-project-skel")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-project-title")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-project-period")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-project-label")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-project-num")).not.toBeNull();
+    expect(document.querySelectorAll(".ui-project-skel .ui-skel-project-figure")).toHaveLength(2);
+    expect(document.querySelector(".ui-project-skel .ui-band-figures")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-stack")).toBeNull();
+  });
+
   it("shows the ld-01 loading skeleton from preview=loading", () => {
     renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
@@ -59,6 +71,8 @@ describe("App", () => {
     expect(document.querySelector(".ui-band")).not.toBeNull();
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(document.querySelectorAll(".ui-project-list .ui-row")).toHaveLength(3);
+    expect(document.querySelector(".ui-project-skel")).toBeNull();
+    expect(document.querySelector(".ui-skel-stack")).not.toBeNull();
   });
 
   it("opens Add as a sheet over Home and keeps the tab bar", async () => {
@@ -146,6 +160,28 @@ describe("App", () => {
     expect(back).not.toHaveClass("ui-icon-btn");
     expect(back.closest(".ui-page-pad")).not.toBeNull();
     expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".ui-page-pad")).not.toBeNull();
+  });
+
+  it("replaces a direct install visit so Back does not return to it", async () => {
+    window.history.replaceState({}, "", "/start");
+    window.history.pushState({}, "", "/install?preview=1");
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/settings");
+    });
+    window.history.back();
+    await waitFor(() => {
+      expect(window.location.pathname).not.toBe("/install");
+    });
+    window.history.replaceState({}, "", "/");
   });
 
   it("sends a signed-out visitor to sign-in", async () => {

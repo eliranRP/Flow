@@ -22,7 +22,10 @@ export function hebrewSumitError(code: string | null | undefined): string | null
 }
 
 /** Israel clock for a future retry. A past or empty time stays silent. The next Israel date says מחר. */
-export function retryClock(iso: string | null | undefined, now = Date.now()): string | null {
+export function retryClockParts(
+  iso: string | null | undefined,
+  now = Date.now(),
+): { clock: string; tomorrow: boolean } | null {
   if (!iso) return null;
   const at = Date.parse(iso);
   if (!Number.isFinite(at) || at <= now) return null;
@@ -39,6 +42,11 @@ export function retryClock(iso: string | null | undefined, now = Date.now()): st
     month: "2-digit",
     day: "2-digit",
   });
-  const tomorrow = day.format(new Date(at)) !== day.format(new Date(now));
-  return tomorrow ? `אפשר לנסות שוב מחר ב-${clock}` : `אפשר לנסות שוב ב-${clock}`;
+  return { clock, tomorrow: day.format(new Date(at)) !== day.format(new Date(now)) };
+}
+
+export function retryClock(iso: string | null | undefined, now = Date.now()): string | null {
+  const parts = retryClockParts(iso, now);
+  if (!parts) return null;
+  return parts.tomorrow ? `אפשר לנסות שוב מחר ב-${parts.clock}` : `אפשר לנסות שוב ב-${parts.clock}`;
 }

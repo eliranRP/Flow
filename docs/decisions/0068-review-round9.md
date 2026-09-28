@@ -27,3 +27,13 @@ Making `sumit_status` security definer after the column grant already lets the o
 ## Consequences
 
 `pnpm db:test` covers the owner status clock, the missing-category close and undo, the unallocated item that stays open, the connect reset, and the ledger wipe. The live SUMIT check against Flow Test 2 creates no documents.
+
+## Addendum
+
+The design review of r12 asked for a readable retry time and a project loading band that matches the loaded band. This addendum is UI only. No migration, no Edge Function, and no SUMIT call.
+
+The Settings hint "אפשר לנסות שוב ב-HH:MM" sits in the hint colour at full opacity. The row's title and icon stay at 45%. A disabled row still has no chevron, which is [0066](0066-review-round7.md) point 6. The clock is in `<bdi dir="ltr">`. A direct visit to `/install` replaces itself with Settings, so Back does not return to Install. A visit that already has history still goes back one step.
+
+The Project Detail loading band uses its own boxes for the name, the period line, the profit line, the figure, and the income and expense row. Those boxes follow the loaded band, including the wrap of the figure row at 320. Home still uses `.ui-skel-stack`. The Home trim in [0067](0067-review-round8.md) point 9 is unchanged.
+
+Skipped, because the copy and the placement are still open: the auth row does not repeat "חיבור מחדש" on the refresh row, and the backoff screen keeps both the red status line and the grey clock. `design/system/design-system.md` already diffs as text. The shared-cost labels from point 1 already cover zero and one allocations.

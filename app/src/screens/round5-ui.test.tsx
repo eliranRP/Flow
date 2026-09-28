@@ -357,8 +357,18 @@ describe("notification switches", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
-    expect(screen.getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+    const heldButton = screen.getByRole("button", { name: /רענון עכשיו/ });
+    expect(heldButton).toBeDisabled();
+    expect(heldButton).toHaveClass("ui-row-clear-hint");
+    expect(heldButton.querySelector(".ui-row-chevron")).toBeNull();
+    expect(getComputedStyle(heldButton).opacity).toBe("1");
+    expect(getComputedStyle(heldButton.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
+    expect(getComputedStyle(heldButton.querySelector(".ui-row-icon") as Element).opacity).toBe("0.45");
+    const hint = screen.getByText(/אפשר לנסות שוב ב-/);
+    expect(hint.closest("button")).toBe(heldButton);
+    expect(hint.querySelector("bdi")).toHaveAttribute("dir", "ltr");
+    expect(getComputedStyle(hint).opacity).toBe("1");
+    expect(getComputedStyle(hint).color).toBe(getComputedStyle(screen.getByText("עוסק מורשה")).color);
     unmount();
 
     vi.useFakeTimers();
@@ -386,7 +396,9 @@ describe("notification switches", () => {
       );
       expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
       act(() => { vi.advanceTimersByTime(5_100); });
-      expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeEnabled();
+      const released = screen.getByRole("button", { name: /רענון עכשיו/ });
+      expect(released).toBeEnabled();
+      expect(released.querySelector(".ui-row-chevron")).not.toBeNull();
       held.unmount();
     } finally {
       vi.useRealTimers();
@@ -414,7 +426,11 @@ describe("notification switches", () => {
     );
     expect(screen.getByText("החיבור ל-SUMIT נכשל. צריך לחבר מחדש.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
+    const authRefresh = screen.getByRole("button", { name: /רענון עכשיו/ });
+    expect(authRefresh).toBeDisabled();
+    expect(authRefresh).not.toHaveClass("ui-row-clear-hint");
+    expect(authRefresh.querySelector(".ui-row-chevron")).toBeNull();
+    expect(getComputedStyle(authRefresh).opacity).toBe("0.45");
   });
 });
 
