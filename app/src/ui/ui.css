@@ -1377,6 +1377,15 @@ a.ui-row,
   opacity: 0.45;
 }
 
+/* The retry time is information, so it stays at the hint colour. Only the control fades. */
+.ui-row.ui-row-clear-hint:disabled {
+  opacity: 1;
+}
+
+.ui-row.ui-row-clear-hint:disabled :is(.ui-row-title, .ui-row-icon, .ui-row-chevron) {
+  opacity: 0.45;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ui-spinner {
     animation: none;
@@ -1944,6 +1953,42 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-skel-delta-a { inline-size: var(--skel-sm); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
 .ui-skel-delta-b { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
 .ui-skel-figure { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+
+/* Project loading only. Home keeps .ui-skel-stack. These boxes match the loaded project band. */
+.ui-project-skel {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.ui-skel-project-title {
+  inline-size: var(--skel-md);
+  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line));
+}
+
+.ui-skel-project-period {
+  inline-size: var(--skel-lg);
+  block-size: calc(var(--type-label-size) * var(--type-label-line));
+}
+
+.ui-skel-project-label {
+  inline-size: var(--skel-md);
+  block-size: calc(var(--type-label-size) * var(--type-label-line));
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.ui-skel-project-num {
+  inline-size: var(--skel-lg);
+  block-size: calc(var(--type-display-size) * var(--type-display-line));
+  border-radius: var(--radius-input);
+}
+
+.ui-skel-project-figure {
+  inline-size: var(--skel-md);
+  block-size: calc(var(--type-label-size) * var(--type-label-line));
+}
 .ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
 
 .ui-row-stack {

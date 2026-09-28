@@ -164,7 +164,7 @@ function InstallRoute() {
           void navigate(-1);
           return;
         }
-        void navigate(`/settings${search}`);
+        void navigate(`/settings${search}`, { replace: true });
       }}
     />
   );

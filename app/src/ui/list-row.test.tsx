@@ -53,4 +53,25 @@ describe("ListRow", () => {
     expect(container.querySelector(".ui-row-chevron")).toBeNull();
     expect(screen.getByRole("button", { name: "חשבונית ותשלום" })).toHaveAttribute("aria-expanded", "true");
   });
+
+  it("hides the chevron on a disabled row and keeps a clear hint at full opacity", () => {
+    render(
+      <MemoryRouter>
+        <ListRow
+          variant="button"
+          title="רענון עכשיו"
+          hint={<>אפשר לנסות שוב ב-<bdi dir="ltr">12:00</bdi></>}
+          chevron
+          disabled
+          clearHint
+          onClick={() => undefined}
+        />
+      </MemoryRouter>,
+    );
+    const button = screen.getByRole("button", { name: /רענון עכשיו/ });
+    expect(button).toBeDisabled();
+    expect(button.querySelector(".ui-row-chevron")).toBeNull();
+    expect(button).toHaveClass("ui-row-clear-hint");
+    expect(getComputedStyle(button.querySelector(".ui-row-hint") as Element).opacity).toBe("1");
+  });
 });

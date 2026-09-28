@@ -31,7 +31,7 @@ export type ListRowProps =
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
   | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> })
+  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
@@ -48,7 +48,8 @@ export function ListRow(props: ListRowProps) {
       </div>
     );
   }
-  const showChevron = props.chevron === true && props.variant !== "static";
+  const rowDisabled = (props.variant === "button" || props.variant === "danger") && props.disabled === true;
+  const showChevron = props.chevron === true && props.variant !== "static" && !rowDisabled;
   const icon =
     props.icon ??
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
@@ -89,7 +90,7 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className="ui-row ui-hit"
+        className={cx("ui-row", "ui-hit", props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
         disabled={props.disabled === true}
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
