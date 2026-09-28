@@ -6,6 +6,20 @@
 -- Do not load this file on the hosted project. `supabase db push --include-seed`
 -- and `supabase db reset --linked` would install tests.create_supabase_user,
 -- a definer that inserts into auth.users. The tests schema is not in api.schemas.
+--
+-- Load this after the migration. The migration revokes default EXECUTE from
+-- PUBLIC with no schema limit, and `supabase test db` creates pgTAP only
+-- after that. Creating the extension here, then granting it, is what lets
+-- anon and authenticated call is() and throws_ok().
+
+set client_min_messages to warning;
+
+create schema if not exists extensions;
+
+create extension if not exists pgtap with schema extensions;
+
+grant usage on schema extensions to anon, authenticated, service_role;
+grant execute on all functions in schema extensions to anon, authenticated;
 
 create schema if not exists tests;
 
