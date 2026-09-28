@@ -17,6 +17,11 @@ export function usePreviewMode(): boolean {
   return useHomePreview() !== "off";
 }
 
+/** Offline and server load previews draw no band. Home and the status bar share this. */
+export function previewHidesBand(preview: HomePreview): boolean {
+  return preview === "error" || preview === "error-server";
+}
+
 /** Keeps the current preview flag on in-app links. Empty when signed in for real. */
 export function usePreviewSearch(): string {
   const [params] = useSearchParams();

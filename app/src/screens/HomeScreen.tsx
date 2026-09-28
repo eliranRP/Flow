@@ -1,5 +1,5 @@
 import { homeSummarySchema } from "@flow/shared";
-import { useQuery } from "@tanstack/react-query";
+import { onlineManager, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -9,7 +9,7 @@ import { HomeSkeleton } from "../components/Skeleton";
 import { Wordmark } from "../components/Wordmark";
 import { homeGreeting, profitBandLabel } from "../home-label";
 import { getSupabase } from "../lib/supabase";
-import { useHomePreview, usePreviewSearch } from "../preview";
+import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 
 function readOwnerName(metadata: unknown): string | null {
   if (typeof metadata !== "object" || metadata === null) return null;
@@ -39,9 +39,10 @@ export function HomeScreen() {
   });
 
   const loading = preview === "loading" || (!previewing && (status === "loading" || home.isLoading));
-  const offline = preview === "error" || (!previewing && home.isError && !navigator.onLine);
-  const serverFailed = preview === "error-server" || (!previewing && home.isError && navigator.onLine);
-  const failed = offline || serverFailed;
+  const liveOffline = !previewing && (home.isPaused || (home.isError && !onlineManager.isOnline()));
+  const liveServer = !previewing && home.isError && !home.isPaused && onlineManager.isOnline();
+  const offline = preview === "error" || liveOffline;
+  const failed = previewHidesBand(preview) || liveOffline || liveServer;
   const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
   // Phase 0 does not wire the P&L yet, so the band stays the first-run placeholder.
   const label = profitBandLabel(false);

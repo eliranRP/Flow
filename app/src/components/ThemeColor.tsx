@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { previewHidesBand, useHomePreview } from "../preview";
 
 function isBandRoute(pathname: string): boolean {
   if (pathname === "/") return true;
@@ -12,14 +13,13 @@ function readToken(name: string): string {
 
 /** Home and Project keep the band colour in the status bar. Every other route uses the page background. */
 export function ThemeColor() {
-  const { pathname, search } = useLocation();
+  const { pathname } = useLocation();
+  const preview = useHomePreview();
   useEffect(() => {
     const apply = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (!meta) return;
-      const preview = new URLSearchParams(search).get("preview");
-      const errorHidesBand = preview === "error" || preview === "error-server";
-      const bandOff = errorHidesBand || document.documentElement.dataset.band === "off";
+      const bandOff = previewHidesBand(preview) || document.documentElement.dataset.band === "off";
       const value = isBandRoute(pathname) && !bandOff ? readToken("--color-band") : readToken("--color-bg");
       if (value) meta.setAttribute("content", value);
     };
@@ -33,6 +33,6 @@ export function ThemeColor() {
       media.removeEventListener("change", apply);
       observer.disconnect();
     };
-  }, [pathname, search]);
+  }, [pathname, preview]);
   return null;
 }
