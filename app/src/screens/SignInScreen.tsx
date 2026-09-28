@@ -90,6 +90,7 @@ export function SignInScreen() {
 
         <h1 className="t-title-2 signin-heading">כניסה או הרשמה</h1>
         <p className="t-label text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
+        <p className="t-hint">אחרי הוספה למסך הבית מתחברים פעם אחת מתוך האייקון. אם Google נפתח בדפדפן, חוזרים לאפליקציה.</p>
 
         <div className="signin-button">
           <GoogleButton
@@ -116,6 +117,10 @@ export function SignInScreen() {
           {" · "}
           <Link to="/privacy" className="underline">
             מדיניות פרטיות
+          </Link>
+          {" · "}
+          <Link to="/auth/opened-in-safari" className="underline">
+            נפתח בדפדפן?
           </Link>
         </p>
       </section>

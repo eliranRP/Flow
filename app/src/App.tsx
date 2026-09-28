@@ -7,6 +7,7 @@ import { PageTitle } from "./components/PageTitle";
 import { HomeSkeleton } from "./components/Skeleton";
 import { TabBar } from "./components/TabBar";
 import { ThemeColor } from "./components/ThemeColor";
+import { offlineQueue } from "./lib/offline-queue";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
@@ -42,14 +43,42 @@ export function App() {
   );
 }
 
+function OfflineReplay() {
+  const [waiting, setWaiting] = useState(false);
+  useEffect(() => {
+    const replay = () => {
+      const supabase = getSupabase();
+      if (!supabase || !navigator.onLine) {
+        void offlineQueue.pending().then((count) => { setWaiting(count > 0); });
+        return;
+      }
+      void offlineQueue.replay(async (op) => {
+        const { error } = await supabase.rpc("apply_queued_op", {
+          p_client_op_id: op.clientOpId,
+          p_name: op.name,
+          p_args: op.args as never,
+        });
+        if (error) throw error;
+      }).then(() => offlineQueue.pending()).then((count) => { setWaiting(count > 0); });
+    };
+    window.addEventListener("online", replay);
+    replay();
+    return () => { window.removeEventListener("online", replay); };
+  }, []);
+  if (!waiting) return null;
+  return <p className="undo-toast" role="status">יישלח כשהחיבור יחזור</p>;
+}
+
 function AppRoutes() {
   const location = useLocation();
   const background = readSheetBackground(location.state);
   return (
     <>
+      <OfflineReplay />
       <Routes location={background ?? location}>
           <Route path="/sign-in" element={<SignInScreen />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/auth/opened-in-safari" element={<SafariFallback />} />
           <Route path="/preview" element={<Navigate to="/?preview=1" replace />} />
           <Route
             path="/terms"
@@ -148,6 +177,20 @@ function FullScreen() {
     <div className="safe-bottom min-h-dvh">
       <Outlet />
     </div>
+  );
+}
+
+function SafariFallback() {
+  return (
+    <main className="page safe-bottom min-h-dvh">
+      <h1 className="t-title-1">חזרו לאפליקציה Flow</h1>
+      <p className="t-label mt-4 text-text-secondary">
+        Google נפתח בדפדפן. סוגרים את החלון ופותחים את Flow מהאייקון במסך הבית, ואז מתחברים שם פעם אחת.
+      </p>
+      <Link to="/sign-in" className="help-back t-label">
+        מסך הכניסה
+      </Link>
+    </main>
   );
 }
 
