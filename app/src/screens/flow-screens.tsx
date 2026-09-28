@@ -64,7 +64,7 @@ import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { BackIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, GoogleIcon, LogoutIcon, MoreIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
+import { BandFigures, BandHero, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
 import { MoneyField } from "../ui/money-field";
@@ -1339,6 +1339,12 @@ export function TransactionScreen({
 }
 
 type SplitProject = { id: string; name: string; incomeAgorot?: bigint };
+type SplitMethod = "equal" | "income" | "manual";
+
+function sharePercent(bp: number): string {
+  const whole = bp / 100;
+  return Number.isInteger(whole) ? `${String(whole)}%` : `${whole.toFixed(1)}%`;
+}
 
 function evenShares(projects: SplitProject[]): Record<string, number> {
   if (projects.length === 0) return {};
@@ -1374,10 +1380,17 @@ export function SplitScreen({
   sampleProjects,
   sampleAmount,
   sampleContext,
+  sampleMethod,
+  sampleShares,
+  example,
 }: {
   sampleProjects?: SplitProject[];
   sampleAmount?: bigint;
   sampleContext?: string;
+  sampleMethod?: SplitMethod;
+  /** Manual percents, as typed. Stories use this to open partly filled. */
+  sampleShares?: Record<string, string>;
+  example?: ReactNode;
 } = {}) {
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
@@ -1391,9 +1404,11 @@ export function SplitScreen({
     name: project.name,
     incomeAgorot: project.income_agorot,
   }));
-  const [method, setMethod] = useState<"equal" | "income" | "manual">("income");
-  const [manual, setManual] = useState<Record<string, string>>({});
+  const [method, setMethod] = useState<SplitMethod>(sampleMethod ?? "income");
+  const [manual, setManual] = useState<Record<string, string>>(sampleShares ?? {});
   const [seeded, setSeeded] = useState(false);
+  const remainRef = useRef<HTMLDivElement>(null);
+  const [scrolledUnder, setScrolledUnder] = useState(false);
   useEffect(() => {
     if (seeded || !txn.data?.allocations) return;
     const next: Record<string, string> = {};
@@ -1402,6 +1417,17 @@ export function SplitScreen({
     setMethod("manual");
     setSeeded(true);
   }, [seeded, txn.data]);
+  useEffect(() => {
+    const node = remainRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setScrolledUnder(entry ? !entry.isIntersecting : false);
+    }, { rootMargin: "0px 0px -88px 0px" });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [phase.kind, projects.length]);
   const amount = sampleAmount ?? absAgorot(txn.data?.amount_net ?? 0n);
   const context = sampleContext ?? txn.data?.description ?? "התנועה";
   const shares = method === "manual"
@@ -1436,25 +1462,33 @@ export function SplitScreen({
     );
   }
   const incomeMissing = method === "income" && projects.every((project) => (project.incomeAgorot ?? 0n) <= 0n);
+  const balanced = left === 0;
+  const remainder = amount * BigInt(Math.abs(left)) / 10000n;
   return (
     <form
-      className="flex min-h-full flex-1 flex-col"
+      className="ui-split"
       onSubmit={(event) => {
         event.preventDefault();
-        if (sampleProjects) return;
+        if (sampleProjects || !balanced) return;
         if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
         save.mutate();
       }}
     >
-      <ScreenHeader
-        title="פיצול בין פרויקטים"
-        subtitle={context}
-        leading={<IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>}
-      />
-      <p className="t-title-2 ui-page-pad"><BigNumber agorot={amount} /></p>
-      <div className="ui-page-pad">
+      <div className="ui-split-top">
+        <IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>
+        {example}
+      </div>
+      <header className="ui-split-head">
+        <h1 className="t-title-1">פיצול בין פרויקטים</h1>
+        <p className="ui-split-context t-label">{context}</p>
+        <p className="ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>
+      </header>
+      <div className="ui-page-pad ui-split-method">
         <SegmentedControl
           label="אופן הפיצול"
+          showLabel={false}
+          radius="input"
+          wrap
           value={method}
           onChange={setMethod}
           options={[
@@ -1464,11 +1498,14 @@ export function SplitScreen({
           ]}
         />
       </div>
-      <div className="ui-page-pad">
-        <Chip pressed>כל הפרויקטים הפעילים · <bdi dir="ltr">{String(projects.length)}</bdi></Chip>
+      <div className="ui-page-pad ui-split-scope">
+        <span className="ui-chip ui-chip-scope">
+          <CheckIcon size={16} />
+          <span className="ui-chip-label">כל הפרויקטים הפעילים · <bdi className="ui-num">{String(projects.length)}</bdi></span>
+        </span>
       </div>
-      {incomeMissing ? <p className="ui-page-pad t-hint">אין עדיין משקלות הכנסה, אז החלוקה שווה.</p> : null}
-      <List>
+      {incomeMissing ? <p className="ui-page-pad ui-split-note t-hint">אין עדיין משקלות הכנסה, אז החלוקה שווה.</p> : null}
+      <List className="ui-split-list">
         {projects.map((project) => {
           const bp = shares[project.id] ?? 0;
           const part = amount * BigInt(bp) / 10000n;
@@ -1477,49 +1514,40 @@ export function SplitScreen({
               key={project.id}
               variant="static"
               title={project.name}
-              hint={method === "manual" ? undefined : project.incomeAgorot != null ? <>הכנסות <bdi dir="ltr">{formatIls(project.incomeAgorot)}</bdi></> : undefined}
-              meta={
-                <span>
-                  <bdi dir="ltr">{formatIls(part)}</bdi>
-                  {" · "}
-                  <bdi dir="ltr">{`${String(bp / 100)}%`}</bdi>
+              hint={method === "income" ? <>הכנסות החודש <bdi className="ui-num" dir="ltr">{formatIls(project.incomeAgorot ?? 0n)}</bdi></> : undefined}
+              meta={method === "manual" ? (
+                <input
+                  className="ui-split-input"
+                  dir="ltr"
+                  inputMode="decimal"
+                  aria-label={`אחוז, ${project.name}`}
+                  value={manual[project.id] ?? ""}
+                  placeholder="0"
+                  onChange={(event) => { setManual({ ...manual, [project.id]: event.target.value }); }}
+                />
+              ) : (
+                <span className="ui-split-share">
+                  <bdi className="ui-num ui-split-figure" dir="ltr">{formatIls(part)}</bdi>
+                  <bdi className="ui-num t-hint" dir="ltr">{sharePercent(bp)}</bdi>
                 </span>
-              }
+              )}
             />
           );
         })}
       </List>
-      {method === "manual" ? (
-        <div className="ui-stack ui-page-pad">
-          {projects.map((project) => (
-            <TextField
-              key={project.id}
-              label={`${project.name} באחוזים`}
-              inputMode="decimal"
-              value={manual[project.id] ?? ""}
-              placeholder="0"
-              onChange={(event) => { setManual({ ...manual, [project.id]: event.target.value }); }}
-            />
-          ))}
-        </div>
-      ) : null}
-      <div className="ui-page-pad">
-        <FigureLine
-          label="נותר לשייך"
-          value={`${formatIls(amount * BigInt(Math.abs(left)) / 10000n)} · ${String(Math.abs(left) / 100)}%`}
-        />
+      <div className="ui-page-pad ui-split-remain" ref={remainRef}>
+        <span className="t-label">נותר לשייך</span>
+        {balanced ? (
+          <span className="ui-split-done">
+            <bdi className="ui-num" dir="ltr">{`100% · ${formatIls(0n)}`}</bdi>
+            <CheckIcon size={16} />
+          </span>
+        ) : (
+          <bdi className="ui-num" dir="ltr">{formatIls(remainder)}</bdi>
+        )}
       </div>
-      <div className="ui-page-pad">
-        <Toggle
-          label="לפצל כך כל חודש"
-          hint="כלל חודשי יגיע בהמשך"
-          checked={false}
-          disabled
-          onChange={() => undefined}
-        />
-      </div>
-      <div className="ui-page-pad">
-        <Button type="submit" busy={save.isPending}>שמירת פיצול</Button>
+      <div className={scrolledUnder ? "ui-split-cta ui-split-cta-under" : "ui-split-cta"}>
+        <Button type="submit" full disabled={!balanced} busy={save.isPending}>שמירת פיצול</Button>
       </div>
     </form>
   );
