@@ -53,7 +53,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-The dev server listens on port 43123. Signed-out visitors go to the sign-in screen. `/?preview=1` opens Home in demo mode without a session. `?preview=loading`, `?preview=empty`, `?preview=error`, and `?preview=error-server` show those Home states. Sign-in help writes to `HELP_EMAIL` in `app/src/config.ts`. The help page and its test import that constant. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). Migrations are not applied from this repo's automation; review them, then run `supabase link` and `supabase db push` yourself.
+The dev server listens on port 43123. Signed-out visitors go to the sign-in screen. A `preview` query skips sign-in. `/?preview=1` and `?preview=empty` open the first-run empty Home. `?preview=loading`, `?preview=error`, and `?preview=error-server` show those Home states. That preview is not the seeded Flow Test company. Sign-in help writes to `HELP_EMAIL` in `app/src/config.ts`. The help page and its test import that constant. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). Migrations are not applied from this repo's automation; review them, then run `supabase link` and `supabase db push` yourself. What the code does today is in [Phase 0](docs/tech/phase-0.md).
 
 ```bash
 pnpm typecheck
@@ -108,7 +108,8 @@ The migration revokes the default `EXECUTE` privilege from `PUBLIC` for every fu
 | [UI directions](docs/module-1-project-pnl/design/README.md) | Superseded exploration (styles A/B/C, then Mercury). Not the approved system |
 | [Approved design](design/README.md) | V1 Violet package: screens, states, system, and logo. [Implementation guide](design/system/implementation-guide.md) is mandatory. [Logo](design/logo/LOGO.md) |
 | [Technical plan](docs/tech/tech-plan.md) | Supabase pilot. The Cloudflare version is superseded |
-| [Decisions](docs/decisions/README.md) | Decision records 0001–0043 and the record format |
+| [Phase 0](docs/tech/phase-0.md) | What the code implements today: shell, schema, Rule A |
+| [Decisions](docs/decisions/README.md) | Decision records 0001–0046 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |

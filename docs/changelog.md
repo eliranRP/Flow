@@ -2,6 +2,10 @@
 
 ## 2026-09-28
 
+[Phase 0](tech/phase-0.md) describes the code that landed with the phase-0 merge: the route table and preview states, the `get_home()` stub, the Rule A P&L in `packages/shared`, schema grants, and the demo seed. [CONTRIBUTING.md](../CONTRIBUTING.md) points at that guide. The [technical plan](tech/tech-plan.md) stays the target. Rounding in code is half-to-even; [calculations.md](module-1-project-pnl/calculations.md) still says half away from zero.
+
+## 2026-09-28
+
 Decision [0046](decisions/0046-public-anon-key.md), Accepted. The hosted flow-pilot URL and the legacy anon JWT are committed in `app/.env.production`. The service-role key stays out of the repo and out of the client.
 
 Decision [0045](decisions/0045-phase-0-design-gaps.md), Accepted. It records the Phase 0 design gaps left after the review of `fd355ad`. `/help` is a plain title, one line, and a mailto to ops@nromomentum.com. A non-offline load failure uses "לא הצלחנו לטעון את הנתונים" and is reachable with `?preview=error-server`. A missing name greets with "שלום". The Phase 0 band has no period pill. The Add sheet is a title and one hint. The tab bar's 8px floor is `--tabbar-min-inset`.

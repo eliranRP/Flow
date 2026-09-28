@@ -2,6 +2,8 @@
 
 *Version 2.0 · 26 Sep 2026 · English working document for the build team. The product UI is Hebrew-only.*
 
+**As built:** Phase 0 is in the tree and is documented in [phase-0.md](phase-0.md). This plan remains the target. `get_home()` currently returns a company stub with `net_profit_agorot` fixed at 0. Edge Functions, queues, SUMIT sync, and the period P&L are not implemented yet.
+
 > **What changed in v2:** the owner decided to build the pilot on **Supabase Free** and move to **Supabase Pro ($25/mo)** as Flow grows. This version redesigns the backend on Supabase (Postgres + RLS, Auth, Storage, Edge Functions, Cron, Queues).
 > - It corrects v1's statement about free-project pausing (§1.2).
 > - It adds a free off-site backup pipeline (§8).
