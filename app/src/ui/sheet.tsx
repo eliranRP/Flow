@@ -30,7 +30,7 @@ export function SheetSurface({
   footClassName?: string;
 }) {
   const heading = drawer ? (
-    <Drawer.Title ref={titleRef} tabIndex={-1} className="t-title-2">
+    <Drawer.Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2">
       {title}
     </Drawer.Title>
   ) : (
@@ -125,7 +125,7 @@ export function Sheet({
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            titleRef.current?.focus();
+            titleRef.current?.focus({ preventScroll: true });
           }}
           onEscapeKeyDown={(event) => {
             if (!onEscape) return;

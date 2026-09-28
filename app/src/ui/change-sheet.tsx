@@ -145,7 +145,7 @@ export function ChangeAssignment(props: Props) {
 
   useEffect(() => {
     if (view !== "summary") {
-      titleRef.current?.focus();
+      titleRef.current?.focus({ preventScroll: true });
       return;
     }
     const which = pendingFocus.current;

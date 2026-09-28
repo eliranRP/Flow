@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FocusTitle } from "./focus-title";
 import { IconButton } from "./icon-button";
 import { BackIcon } from "./icons";
 
@@ -40,7 +41,9 @@ export function ScreenHeader({
       {kicker ? <p className="t-hint">{kicker}</p> : null}
       <div className="ui-page-title-row">
         {start}
-        {barOnly ? null : <h1 className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</h1>}
+        {barOnly ? null : (
+          <FocusTitle className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</FocusTitle>
+        )}
         {trailing ?? action}
       </div>
       {subtitle ? <p className={subtitleClassName ? `t-label mt-4 text-text-secondary ${subtitleClassName}` : "t-label mt-4 text-text-secondary"}>{subtitle}</p> : null}

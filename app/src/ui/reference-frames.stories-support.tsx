@@ -1,4 +1,5 @@
 import { Button } from "./button";
+import { FocusTitle } from "./focus-title";
 import { IconButton } from "./icon-button";
 import { Skeleton } from "./skeleton";
 import {
@@ -26,7 +27,7 @@ export function InvoiceReadingFrame() {
     <div className="ui-ref">
       <ReferenceTop />
       <header className="ui-ref-copy">
-        <h1 className="t-title-1">קוראים את החשבונית</h1>
+        <FocusTitle className="t-title-1">קוראים את החשבונית</FocusTitle>
         <p className="t-label">ספק, סכום, מע״מ ותאריך – עוד כמה שניות</p>
       </header>
       <div className="ui-ref-icon">

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FocusTitle } from "./focus-title";
 import { TextLink } from "./text-link";
 
 export function BandHero({ children }: { children: ReactNode }) {
@@ -69,7 +70,7 @@ export function SignInPanel({ children }: { children: ReactNode }) {
 }
 
 export function SignInHeading({ children }: { children: ReactNode }) {
-  return <h1 className="t-title-2 ui-signin-heading">{children}</h1>;
+  return <FocusTitle className="t-title-2 ui-signin-heading">{children}</FocusTitle>;
 }
 
 export function SignInActions({ children }: { children: ReactNode }) {

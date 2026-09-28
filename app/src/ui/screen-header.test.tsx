@@ -15,7 +15,9 @@ describe("ScreenHeader", () => {
         </>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: "עזרה" })).toBeInTheDocument();
+    const title = screen.getByRole("heading", { name: "עזרה" });
+    expect(title).toHaveAttribute("tabindex", "-1");
+    expect(title).toHaveClass("ui-focus-title");
     expectTarget(screen.getByRole("link", { name: "חזרה" }));
   });
 });

@@ -68,6 +68,7 @@ import { BackIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIc
 import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
+import { FocusTitle } from "../ui/focus-title";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { ReviewCard } from "../ui/review-card";
@@ -419,7 +420,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
         trailing={<ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>
-          <h1 className="t-title-2">{project.name}</h1>
+          <FocusTitle className="t-title-2">{project.name}</FocusTitle>
           <p className="t-label">{project.state_label ?? (project.status === "finished" ? "הסתיים" : "פעיל")}</p>
           <p className="ui-band-label t-label">
             רווח
@@ -523,7 +524,7 @@ function LegacyEmptyProject() {
         }
       >
         <BandHero>
-          <h1 className="t-title-2">פרויקט</h1>
+          <FocusTitle className="t-title-2">פרויקט</FocusTitle>
           <p className="ui-band-label t-label">רווח</p>
           <p className="t-display"><BigNumber agorot={0n} /></p>
         </BandHero>
@@ -1556,7 +1557,7 @@ export function SplitScreen({
         trailing={example}
       />
       <div className="ui-split-title">
-        <h1 className="t-title-1">פיצול בין פרויקטים</h1>
+        <FocusTitle className="t-title-1">פיצול בין פרויקטים</FocusTitle>
         <p className="ui-split-context t-label">{context}</p>
       </div>
       <p className="ui-page-pad ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>

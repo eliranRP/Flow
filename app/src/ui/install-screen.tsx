@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { FocusTitle } from "./focus-title";
 import { AppIcon, ChevronDownIcon, ChevronUpIcon, CloseIcon, DownloadIcon, HomeIcon, ShareIcon, SquarePlusIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { Button } from "./button";
@@ -27,13 +28,8 @@ export function InstallScreen({
   onInstall?: () => void;
 }) {
   const toast = useToast();
-  const titleRef = useRef<HTMLHeadingElement>(null);
   const android = mode === "android-prompt" || mode === "android-steps";
   const shareHint = mode === "ipad" ? "כפתור השיתוף נמצא למעלה" : "כפתור השיתוף נמצא למטה";
-
-  useEffect(() => {
-    titleRef.current?.focus({ preventScroll: true });
-  }, []);
 
   async function install() {
     if (onInstall) {
@@ -63,9 +59,9 @@ export function InstallScreen({
         </div>
         <header className="ui-install-hero">
           <AppIcon />
-          <h1 ref={titleRef} className="t-title-1" tabIndex={-1}>
+          <FocusTitle className="t-title-1">
             {android ? <>התקנת <bdi dir="ltr">Flow</bdi></> : "הוספה למסך הבית"}
-          </h1>
+          </FocusTitle>
           <p className="ui-install-sub">
             {mode === "iphone-other"
               ? "ההתקנה באייפון עובדת רק מספארי."

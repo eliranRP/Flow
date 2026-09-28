@@ -224,6 +224,12 @@ a {
   outline-offset: 2px;
 }
 
+/* A title focused for a screen reader is not a control, so it never draws a ring. */
+.ui-focus-title:focus,
+.ui-focus-title:focus-visible {
+  outline: none;
+}
+
 .below-tabbar {
   padding-bottom: calc(var(--tabbar-height) + var(--space-4));
 }
