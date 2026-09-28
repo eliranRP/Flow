@@ -80,7 +80,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!toast) return;
     const body = document.querySelector("[data-vaul-drawer][data-state='open'] .ui-sheet-body");
-    if (body instanceof HTMLElement) body.scrollTo({ top: body.scrollHeight });
+    const remember = body?.querySelector(".ui-switch-row");
+    if (!(body instanceof HTMLElement) || !(remember instanceof HTMLElement)) return;
+    const hidden = remember.getBoundingClientRect().bottom - body.getBoundingClientRect().bottom;
+    if (hidden > 0) body.scrollBy({ top: hidden + 8 });
   }, [toast]);
 
   return (

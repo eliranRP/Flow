@@ -21,16 +21,24 @@ export function hebrewSumitError(code: string | null | undefined): string | null
   return SUMIT_ERRORS[code] ?? "החיבור נכשל. נסו שוב.";
 }
 
-/** Israel clock for a future retry. A past or empty time stays silent. */
+/** Israel clock for a future retry. A past or empty time stays silent. The next Israel date says מחר. */
 export function retryClock(iso: string | null | undefined, now = Date.now()): string | null {
   if (!iso) return null;
   const at = Date.parse(iso);
   if (!Number.isFinite(at) || at <= now) return null;
+  const zone = "Asia/Jerusalem";
   const clock = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
   }).format(new Date(at));
-  return `אפשר לנסות שוב ב-${clock}`;
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const tomorrow = day.format(new Date(at)) !== day.format(new Date(now));
+  return tomorrow ? `אפשר לנסות שוב מחר ב-${clock}` : `אפשר לנסות שוב ב-${clock}`;
 }

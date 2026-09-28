@@ -7,7 +7,7 @@ export function overheadHint(
 ): string {
   if (!on) return "כבוי · מציג רווח לפני כלליות";
   if (detail.scope === "company") return "דלוק · כל פרויקט מציג רווח אחרי חלקו בכלליות";
-  if (!detail.available) return "דלוק · אין הכנסות בפרויקטים בתקופה, אז אי אפשר לחלק את הכלליות";
+  if (!detail.available) return "דלוק · אין הכנסות בפרויקטים, אז אי אפשר לחלק את הכלליות";
   return `דלוק · החלק בכלליות הוא ${formatIls(detail.shareAgorot ?? 0n)}`;
 }
 

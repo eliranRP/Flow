@@ -2129,6 +2129,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   min-width: 0;
 }
 
+.ui-page-stacked .t-title-1 {
+  margin: 0;
+}
+
 .ui-banner .ui-row-title,
 .ui-banner .ui-row-hint {
   white-space: normal;
@@ -2343,14 +2347,6 @@ body:has(.ui-toast):has([data-vaul-drawer][data-state="open"]) [data-vaul-drawer
 .ui-split {
   min-height: 100dvh;
   padding-block-end: calc(var(--control-height) + var(--space-4) + var(--space-4) + var(--safe-bottom));
-}
-
-.ui-split-title {
-  padding-inline: var(--space-side);
-}
-
-.ui-split-title .t-title-1 {
-  margin: 0;
 }
 
 .ui-split-context {

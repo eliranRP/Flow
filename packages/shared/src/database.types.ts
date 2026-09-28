@@ -452,6 +452,9 @@ isOneToOne: true
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"replace_sumit_connection":
+{ Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number }; Returns: undefined
+                           },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean }; Returns: undefined
                            },

@@ -3,3 +3,4 @@
 design/* -text -filter -diff -merge
 design/** -text -filter -diff -merge
 design/**/*.css text diff
+design/**/*.md text diff

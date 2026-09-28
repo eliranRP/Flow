@@ -941,11 +941,6 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   });
 
   async function createProject(name: string): Promise<ChangeChoice> {
-    if (sample) {
-      const created = { id: `draft:${name}`, name, status: "active" as const };
-      setExtraProjects((list) => [...list, created]);
-      return created;
-    }
     if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
@@ -1127,6 +1122,18 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   );
 }
 
+function splitProjectLabel(
+  txn: { allocations?: Array<{ project_name?: string | null }> },
+  splitRow: boolean,
+  fallback: string,
+): string {
+  if (!splitRow) return fallback;
+  const rows = txn.allocations ?? [];
+  if (rows.length === 0) return "עלות משותפת · טרם פוצלה";
+  if (rows.length === 1) return rows[0]?.project_name || "פרויקט";
+  return `מפוצל · ${String(rows.length)} פרויקטים`;
+}
+
 export function TransactionScreen({
   sample,
   sampleProjects,
@@ -1253,11 +1260,11 @@ export function TransactionScreen({
     return <ScreenState title="פרטי תנועה" backTo={`/${search}`} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
   if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={`/${search}`} />;
-  const allocationCount = txn.allocations?.length ?? 0;
-  const splitRow = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || allocationCount > 1;
-  const shownProject = splitRow
-    ? `מפוצל · ${String(allocationCount)} פרויקטים`
-    : projectName || txn.project_name || "בלי פרויקט";
+  const splitRow = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
+  const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
+  const saveApproves = splitRow
+    ? txn.review_status === "open" && txn.review_reason === "missing_category"
+    : txn.review_status === "open";
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
   const changeProjects = withChoice(
@@ -1342,6 +1349,7 @@ export function TransactionScreen({
         onProjectId={setProjectId}
         onCategoryId={setCategoryId}
         categoryOnly={splitRow}
+        approves={saveApproves}
         saving={splitRow ? setCategory.isPending : reassign.isPending}
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
         onSave={() => {
@@ -1365,11 +1373,6 @@ export function TransactionScreen({
           void navigate(`/transactions/${txn.id}/split${search}`);
         }}
         onCreateProject={async (name) => {
-          if (sample) {
-            const created = { id: `draft:${name}`, name, status: "active" as const };
-            setExtraProjects((list) => [...list, created]);
-            return created;
-          }
           if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
           const supabase = getSupabase();
           if (!supabase) throw new Error("supabase");
@@ -1552,14 +1555,13 @@ export function SplitScreen({
       }}
     >
       <ScreenHeader
-        barOnly
+        layout="stacked"
+        title="פיצול בין פרויקטים"
+        subtitle={context}
+        subtitleClassName="ui-split-context"
         leading={<IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>}
         trailing={example}
       />
-      <div className="ui-split-title">
-        <FocusTitle className="t-title-1">פיצול בין פרויקטים</FocusTitle>
-        <p className="ui-split-context t-label">{context}</p>
-      </div>
       <p className="ui-page-pad ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>
       <div className="ui-page-pad ui-split-method">
         <SegmentedControl
@@ -1591,7 +1593,7 @@ export function SplitScreen({
               key={project.id}
               variant="static"
               title={project.name}
-              hint={method === "income" ? <>הכנסות החודש <bdi className="ui-num" dir="ltr">{formatIls(project.incomeAgorot ?? 0n)}</bdi></> : undefined}
+              hint={method === "income" ? <>הכנסות <bdi className="ui-num" dir="ltr">{formatIls(project.incomeAgorot ?? 0n)}</bdi></> : undefined}
               meta={method === "manual" ? (
                 <PercentField
                   hideLabel
@@ -1652,7 +1654,17 @@ export function SettingsScreen({
   const [connectOpen, setConnectOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [overheadOn, setOverheadOn] = useState(false);
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const wantedOverhead = useRef(false);
+  const retrySource = sample ? sample.nextAttemptAt : status.data?.next_attempt_at;
+  useEffect(() => {
+    if (!retrySource) return;
+    const at = Date.parse(retrySource);
+    const wait = at - Date.now();
+    if (!Number.isFinite(wait) || wait <= 0) return;
+    const id = window.setTimeout(() => { setClockNow(Date.now()); }, wait + 25);
+    return () => { window.clearTimeout(id); };
+  }, [retrySource]);
   useEffect(() => {
     if (sample) return;
     if (dashboard.data) setOverheadOn(dashboard.data.after_overhead === true);
@@ -1730,7 +1742,7 @@ export function SettingsScreen({
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
   const lastError = hebrewSumitError(rawError);
-  const retryHint = rawError === "sumit_auth" ? null : retryClock(sample ? sample.nextAttemptAt : status.data?.next_attempt_at);
+  const retryHint = rawError === "sumit_auth" ? null : retryClock(retrySource, clockNow);
   const refreshHeld = rawError === "sumit_auth" || retryHint != null;
   const email = sample ? sample.email : session?.user.email;
   const projectCount = sample?.projectCount ?? dashboard.data?.projects.length;
