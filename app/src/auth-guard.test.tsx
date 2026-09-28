@@ -43,7 +43,7 @@ const session = {
     user_metadata: { full_name: "דנה" },
     created_at: "2026-09-27T00:00:00Z",
   },
-} as Session;
+} satisfies Session;
 
 function emit(event: string, next: Session | null) {
   for (const handler of auth.handlers) handler(event, next);
