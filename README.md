@@ -62,6 +62,7 @@ pnpm test
 pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
 pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17. Migration first, then pgTAP. No Docker.
 pnpm check:bundle     # after pnpm build: the client graph and dist import no fixture JSON
+pnpm build-storybook && pnpm test:storybook:smoke   # every static story opens with no console error
 pnpm test:e2e:live    # local Supabase plus the live SUMIT test company. See the SUMIT runbook.
 pnpm latency          # times get_home() against SUPABASE_URL
 ```

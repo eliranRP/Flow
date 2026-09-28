@@ -18,6 +18,7 @@
     "storybook": "pnpm --filter @flow/app storybook",
     "build-storybook": "pnpm --filter @flow/app build-storybook",
     "test:storybook": "pnpm --filter @flow/app test:storybook",
+    "test:storybook:smoke": "pnpm --filter @flow/app test:storybook:smoke",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "latency": "tsx scripts/latency.ts",
     "db:start": "supabase start",
