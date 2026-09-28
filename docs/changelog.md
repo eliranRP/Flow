@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+A screen or sheet title focused for a screen reader never draws a focus ring. The ring stays on keyboard focus of real controls. This amends [0067](decisions/0067-review-round8.md) point 10.
+
 The production bundle scan also rejects company `2393153301`. `SUMIT_NO_DOCUMENTS=1` runs the live check as connect, two syncs, and the saved split, without creating a SUMIT document. `sumit_status` can read `next_attempt_at`, so Settings loads for the owner.
 
 Decision [0067](decisions/0067-review-round8.md), Accepted. A shared cost shows "מפוצל · N פרויקטים" and changes category through `set_transaction_category` without dropping its shares. A bad SUMIT key is `sumit_auth`, with "החיבור ל-SUMIT נכשל. צריך לחבר מחדש." and no backoff. Billing stays `sumit_rejected`. Refresh waits until `next_attempt_at`, and the attempt counter increments in one update. Install no longer promises notifications. A leftover `hapoalim` source raises instead of being relabelled. The hosted bundle drops "Example data" and `new-` ids. Split's title is its own row. This amends [0066](decisions/0066-review-round7.md) points 1, 3, 4, and 11. The live SUMIT check was not run: a new test company is being seeded.

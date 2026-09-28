@@ -586,6 +586,57 @@ test("split stays calm and pins the save button", async ({ page }) => {
   expect(name).toBe("2");
 });
 
+test("a title focused on open draws no ring", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
+  const stories = Object.values(index.entries).filter(
+    (story) => story.type === "story" && story.id.startsWith("screens-routes--"),
+  );
+  expect(stories.length).toBeGreaterThan(10);
+  const failures: string[] = [];
+  for (const story of stories) {
+    await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
+    await page.locator("#storybook-root").waitFor();
+    await page.waitForFunction(() => {
+      const titles = document.querySelectorAll(".ui-focus-title");
+      if (titles.length === 0) return true;
+      const focused = document.activeElement;
+      return focused instanceof HTMLElement && focused.classList.contains("ui-focus-title");
+    });
+    const problem = await page.evaluate(() => {
+      const titles = [...document.querySelectorAll<HTMLElement>(".ui-focus-title")];
+      if (titles.length === 0) return "";
+      const focused = document.activeElement;
+      if (!(focused instanceof HTMLElement) || !focused.classList.contains("ui-focus-title")) {
+        return "title is not focused";
+      }
+      for (const title of titles) {
+        const style = getComputedStyle(title);
+        if (style.outlineStyle !== "none") {
+          return `outline ${style.outlineWidth} ${style.outlineStyle} ${style.outlineColor}`;
+        }
+        if (title.tabIndex !== -1) return "title is in the tab order";
+      }
+      return "";
+    });
+    if (problem) failures.push(`${story.id}: ${problem}`);
+  }
+  expect(failures).toEqual([]);
+
+  await page.goto("/iframe.html?id=screens-routes--install-iphone&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "הוספה למסך הבית" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const control = await page.evaluate(() => {
+    const node = document.activeElement;
+    if (!(node instanceof HTMLElement)) return { title: true, outline: "none" };
+    const style = getComputedStyle(node);
+    return { title: node.classList.contains("ui-focus-title"), outline: style.outlineStyle };
+  });
+  expect(control.title).toBe(false);
+  expect(control.outline).not.toBe("none");
+});
+
 test("hebrew counts keep their reading order around the numbers", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-bidicounts--reading-order&viewMode=story", { waitUntil: "domcontentloaded" });
