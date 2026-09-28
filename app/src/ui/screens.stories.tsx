@@ -17,7 +17,17 @@ import {
   UnpaidScreen,
 } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
+import {
+  InstallAndroidFrame,
+  InstallIphoneFrame,
+  InvoiceReadingFrame,
+  NotificationsLockFrame,
+  OfflineCachedFrame,
+  PullToRefreshFrame,
+  UploadProcessingFrame,
+} from "./reference-frames";
 import { StoryRoute } from "./story-route";
+import { TabBar } from "./tab-bar";
 
 const sampleDashboard: Dashboard = {
   company_id: "story",
@@ -143,8 +153,7 @@ type Story = StoryObj<typeof meta>;
 export const HomeEmpty: Story = {
   render: () => (
     <StoryRoute entry="/?preview=empty" tabs>
-      <ExampleBar />
-      <HomeScreen />
+      <HomeScreen example={exampleOnBand} />
     </StoryRoute>
   ),
 };
@@ -152,8 +161,7 @@ export const HomeEmpty: Story = {
 export const HomeLoading: Story = {
   render: () => (
     <StoryRoute entry="/?preview=loading" tabs>
-      <ExampleBar />
-      <HomeScreen />
+      <HomeScreen example={exampleOnBand} />
     </StoryRoute>
   ),
 };
@@ -394,8 +402,8 @@ export const HomeLongHero: Story = {
 export const ProjectDetail: Story = {
   render: () => (
     <StoryRoute entry="/projects/a" tabs>
-      <ExampleBar />
       <ProjectDetailScreen
+        example={exampleOnBand}
         sample={{
           id: "a",
           name: "וילה רעננה",
@@ -439,6 +447,7 @@ export const AddSheet: Story = {
 export const ReviewLoading: Story = {
   render: () => (
     <StoryRoute entry="/review?preview=loading" tabs>
+      <ExampleBar />
       <ReviewScreen />
     </StoryRoute>
   ),
@@ -447,6 +456,7 @@ export const ReviewLoading: Story = {
 export const ReviewError: Story = {
   render: () => (
     <StoryRoute entry="/review?preview=error" tabs>
+      <ExampleBar />
       <ReviewScreen />
     </StoryRoute>
   ),
@@ -455,8 +465,7 @@ export const ReviewError: Story = {
 export const ProjectDetailLoading: Story = {
   render: () => (
     <StoryRoute entry="/projects/a?preview=loading" tabs>
-      <ExampleBar />
-      <ProjectDetailScreen />
+      <ProjectDetailScreen example={exampleOnBand} />
     </StoryRoute>
   ),
 };
@@ -495,7 +504,7 @@ export const Transaction: Story = {
       <TransactionScreen
         sample={{
           id: "t1",
-          description: "חשבונית חשמל",
+          description: "חשבונית חומרים",
           direction: "expense",
           doc_date: "2026-09-21",
           amount_gross: -1_003_000n,
@@ -504,9 +513,9 @@ export const Transaction: Story = {
           vat_status: "source",
           doc_kind: "invoice",
           source: "sumit",
-          project_name: "וילה רעננה",
+          project_name: "בניין מגורים חולון",
           category_name: "חומרים",
-          supplier_name: "חברת החשמל",
+          supplier_name: "חומרי בניין השרון בע״מ",
           customer_name: null,
         }}
       />
@@ -518,7 +527,16 @@ export const Split: Story = {
   render: () => (
     <StoryRoute entry="/transactions/t1/split">
       <ExampleBar />
-      <SplitScreen sampleProjects={[{ id: "a", name: "וילה רעננה" }, { id: "b", name: "הרצל" }]} />
+      <SplitScreen
+        sampleContext="משכורת עובדי שטח · ספטמבר · עבודה"
+        sampleAmount={3_600_000n}
+        sampleProjects={[
+          { id: "a", name: "בניין מגורים חולון", incomeAgorot: 20_000_000n },
+          { id: "b", name: "מגדל משרדים פ\"ת", incomeAgorot: 15_000_000n },
+          { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
+          { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
+        ]}
+      />
     </StoryRoute>
   ),
 };
@@ -535,8 +553,8 @@ export const ChangeSheet: Story = {
           recentId: "villa",
           categoryId: "c1",
           projects: [
-            { id: "holon", name: "בניין מגורים חולון" },
-            { id: "villa", name: "וילה רעננה" },
+            { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
+            { id: "villa", name: "וילה רעננה", code: "P-02" },
             { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-14", hint: "היום" },
             { id: "p21", name: "בית פרטי כפר סבא", code: "P-21", hint: "לפני 3 ימים" },
             { id: "p03", name: "שיפוץ דירה ת\"א", code: "P-03", hint: "לפני שבוע" },
@@ -549,6 +567,79 @@ export const ChangeSheet: Story = {
           ],
         }}
       />
+    </StoryRoute>
+  ),
+};
+
+export const InstallAndroid: Story = {
+  render: () => (
+    <StoryRoute entry="/">
+      <ExampleBar />
+      <InstallAndroidFrame />
+    </StoryRoute>
+  ),
+};
+
+export const InstallIphone: Story = {
+  render: () => (
+    <StoryRoute entry="/">
+      <ExampleBar />
+      <InstallIphoneFrame />
+    </StoryRoute>
+  ),
+};
+
+export const UploadProcessing: Story = {
+  render: () => (
+    <StoryRoute entry="/">
+      <ExampleBar />
+      <UploadProcessingFrame />
+    </StoryRoute>
+  ),
+};
+
+export const InvoiceReading: Story = {
+  render: () => (
+    <StoryRoute entry="/">
+      <ExampleBar />
+      <InvoiceReadingFrame />
+    </StoryRoute>
+  ),
+};
+
+export const PullToRefresh: Story = {
+  render: () => (
+    <StoryRoute entry="/" tabs>
+      <ExampleBar />
+      <PullToRefreshFrame />
+    </StoryRoute>
+  ),
+};
+
+export const OfflineCached: Story = {
+  render: () => (
+    <StoryRoute entry="/" tabs>
+      <ExampleBar />
+      <OfflineCachedFrame />
+    </StoryRoute>
+  ),
+};
+
+export const NotificationsLock: Story = {
+  render: () => (
+    <StoryRoute entry="/">
+      <ExampleBar />
+      <NotificationsLockFrame />
+    </StoryRoute>
+  ),
+};
+
+export const FabPressed: Story = {
+  render: () => (
+    <StoryRoute entry="/">
+      <div className="flex min-h-dvh flex-1 flex-col justify-end">
+        <TabBar fabPressed />
+      </div>
     </StoryRoute>
   ),
 };

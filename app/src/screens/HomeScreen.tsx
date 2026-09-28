@@ -50,7 +50,7 @@ function changePercent(current: bigint, previous: bigint | null): number | null 
   return ((currentShekels - previousShekels) / Math.abs(previousShekels)) * 100;
 }
 
-export function HomeScreen() {
+export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const navigate = useNavigate();
@@ -90,7 +90,7 @@ export function HomeScreen() {
     void unpaid.refetch();
   }
 
-  if (loading) return <HomeSkeleton preview={previewing} />;
+  if (loading) return <HomeSkeleton preview={previewing} example={example} />;
 
   if (failed) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
@@ -99,7 +99,7 @@ export function HomeScreen() {
   if (!showBooks) {
     return (
       <div className="flex min-h-full min-w-0 flex-1 flex-col">
-        <TopBand preview={previewing}>
+        <TopBand preview={previewing} example={example}>
           <BandHero>
             <div className="ui-greet">
               <p className="t-label">{greeting}</p>
@@ -110,7 +110,7 @@ export function HomeScreen() {
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר"
+          body="מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה."
           action={
             <Button variant="pill" to={`/settings${search}`}>
               חיבור SUMIT

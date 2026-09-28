@@ -36,6 +36,8 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
   }
 
   return (
+    <div className="ui-field">
+      <span className="ui-field-label">{label}</span>
     <div className="ui-seg" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
       {options.map((option, optionIndex) => {
         const selected = value === option.value;
@@ -60,6 +62,7 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
           </button>
         );
       })}
+    </div>
     </div>
   );
 }

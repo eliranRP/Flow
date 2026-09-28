@@ -141,7 +141,22 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title="טווח מותאם">
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="טווח מותאם"
+      action={
+        <Button
+          full
+          onClick={() => {
+            onApply(from, to);
+            onOpenChange(false);
+          }}
+        >
+          {rangeLengthLabel(inclusiveDays(from, to))}
+        </Button>
+      }
+    >
       <div className="flex flex-wrap gap-2">
         <Chip
           pressed={from === spans.month.from && to === spans.month.to}
@@ -195,15 +210,6 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
         </IconButton>
       </div>
       <MonthGrid label="טווח מותאם" year={cursor.year} month={cursor.month} today={today} range={{ from, to }} onPick={pick} />
-      <Button
-        full
-        onClick={() => {
-          onApply(from, to);
-          onOpenChange(false);
-        }}
-      >
-        {rangeLengthLabel(inclusiveDays(from, to))}
-      </Button>
     </Sheet>
   );
 }

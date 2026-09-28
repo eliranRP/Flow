@@ -22,7 +22,7 @@ export function tabSection(pathname: string): Section | null {
   return null;
 }
 
-export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBarProps) {
+export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPressed = false }: TabBarProps & { fabPressed?: boolean }) {
   const search = usePreviewSearch();
   const location = useLocation();
   const section = tabSection(location.pathname);
@@ -49,7 +49,7 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
           aria-label="הוספה"
           className={`${slot} ui-tab-slot-fab`}
         >
-          <span className="ui-fab">
+          <span className={fabPressed ? "ui-fab ui-fab-pressed" : "ui-fab"}>
             <PlusIcon />
           </span>
         </Link>

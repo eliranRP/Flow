@@ -17,12 +17,13 @@ export function ErrorState({ offline, onRetry }: ErrorStateProps) {
         body={offline ? "בדקו את החיבור ונסו שוב. שום דבר לא נמחק." : "נסו שוב בעוד רגע"}
         action={
           <Button
-            variant="primary"
+            variant="pill"
+            className="ui-btn-retry"
+            icon={<RefreshIcon />}
             onClick={() => {
               onRetry();
             }}
           >
-            <RefreshIcon />
             ניסיון חוזר
           </Button>
         }
