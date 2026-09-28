@@ -15,3 +15,4 @@ export const Down: Story = { args: { percent: -10, comparison: "מחודש שע�
 export const Up: Story = { args: { percent: 12, comparison: "מחודש שעבר" } };
 export const OnBand: Story = { args: { percent: -10, comparison: "מחודש שעבר", onBand: true } };
 export const Flat: Story = { args: { percent: 0, comparison: "מחודש שעבר" } };
+export const Tiny: Story = { args: { percent: 0.2, comparison: "מחודש שעבר" } };

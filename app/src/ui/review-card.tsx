@@ -19,8 +19,10 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
         <span className="ui-review-tile" aria-hidden="true">
           <DocumentIcon size={24} />
         </span>
-        <div>
-          <h2 className="t-title-3">{supplier}</h2>
+        <div className="ui-review-copy">
+          <h2 className="ui-review-supplier t-title-3" title={supplier}>
+            {supplier}
+          </h2>
           <p className="t-hint">{sourceLine}</p>
         </div>
       </div>

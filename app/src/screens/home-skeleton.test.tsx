@@ -15,4 +15,9 @@ describe("HomeSkeleton", () => {
     expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
     expect(document.querySelector(".ui-skel-card")).not.toBeNull();
   });
+
+  it("keeps the preview label on a preview load", () => {
+    render(<HomeSkeleton preview />);
+    expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
+  });
 });

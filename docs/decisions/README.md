@@ -82,3 +82,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0059](0059-live-sumit-only.md) | 2026-09-28 | Accepted | Signed-in books come from the live SUMIT import. The golden JSON is the test answer key only |
 | [0060](0060-library-review-calls.md) | 2026-09-28 | Accepted | Avatar and Card go. Invoiced basis only. Over-budget is the danger bar plus a text line |
 | [0061](0061-review-undo.md) | 2026-09-28 | Accepted | Undo puts a review item back on the queue and leaves the assignment |
+| [0062](0062-audit-layout-calls.md) | 2026-09-28 | Accepted | Fixed-height controls ellipsize. Empty states use the small pill. A 0% change stays visible |

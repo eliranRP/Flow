@@ -19,7 +19,7 @@ export const Default: Story = {
     title: "עוד אין נתונים",
     body: "הרווח יופיע כאן אחרי ש-SUMIT מחובר.",
     action: (
-      <Button variant="secondary" to="/settings">
+      <Button variant="pill" to="/settings">
         חיבור SUMIT
       </Button>
     ),
@@ -38,7 +38,7 @@ export const LongHebrew: Story = {
     title: longHebrew,
     body: longHebrew,
     action: (
-      <Button variant="secondary" to="/settings">
+      <Button variant="pill" to="/settings">
         {longHebrew}
       </Button>
     ),

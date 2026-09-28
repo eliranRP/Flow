@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Wordmark } from "./wordmark";
 
 type TopBandProps = {
-  children: ReactNode;
+  children?: ReactNode;
   trailing?: ReactNode;
   preview?: boolean;
 };

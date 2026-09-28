@@ -56,6 +56,7 @@ describe("App", () => {
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
     expect(document.querySelector(".ui-band")).not.toBeNull();
+    expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(document.querySelectorAll(".ui-project-list .ui-row")).toHaveLength(3);
   });
 

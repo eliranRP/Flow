@@ -14,7 +14,9 @@ type StoryIndex = {
 const widths = [390, 320];
 
 function isStressStory(story: StoryEntry): boolean {
-  return story.type === "story" && (story.name === "Long Hebrew" || story.name === "Large Amount");
+  if (story.type !== "story") return false;
+  if (story.name === "Long Hebrew" || story.name === "Large Amount") return true;
+  return story.name === "List Of Rows" || story.name === "Home Books Month" || story.name === "Home Loading";
 }
 
 async function layoutProblems(page: Page): Promise<string[]> {
@@ -54,7 +56,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (!separated) problems.push("period pill overlaps the wordmark");
     }
 
-    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn");
+    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-btn-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
     for (const node of singleLine) {
       if (!(node instanceof HTMLElement)) continue;
       const style = getComputedStyle(node);
@@ -91,6 +93,28 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (Number.isFinite(line) && amount.scrollHeight > line * 1.6) problems.push("an amount wraps onto a second line");
     }
 
+    const sheetTitle = document.querySelector(".ui-sheet-head .t-title-2");
+    if (sheetTitle instanceof HTMLElement) {
+      const line = Number.parseFloat(getComputedStyle(sheetTitle).lineHeight);
+      if (Number.isFinite(line) && sheetTitle.getBoundingClientRect().height > line * 1.4) {
+        problems.push("sheet title is more than 1 line");
+      }
+    }
+    const emptyTitle = document.querySelector(".ui-empty-title");
+    if (emptyTitle instanceof HTMLElement) {
+      const line = Number.parseFloat(getComputedStyle(emptyTitle).lineHeight);
+      if (Number.isFinite(line) && emptyTitle.getBoundingClientRect().height > line * 2.4) {
+        problems.push("empty title is more than 2 lines");
+      }
+    }
+    const emptyLine = document.querySelector(".ui-empty-line");
+    if (emptyLine instanceof HTMLElement) {
+      const line = Number.parseFloat(getComputedStyle(emptyLine).lineHeight);
+      if (Number.isFinite(line) && emptyLine.getBoundingClientRect().height > line * 3.4) {
+        problems.push("empty line is more than 3 lines");
+      }
+    }
+
     const bandLabel = document.querySelector(".ui-band-label");
     const band = document.querySelector(".ui-band");
     if (bandLabel instanceof HTMLElement && band instanceof HTMLElement) {
@@ -110,7 +134,7 @@ test("the closed period picker is only the band and the on-band pill", async ({ 
   await page.locator(".ui-band-period").waitFor();
   await expect(page.locator("[role=dialog]")).toHaveCount(0);
   await expect(page.locator("[data-vaul-overlay]")).toHaveCount(0);
-  await expect(page.locator(".ui-band-label")).toHaveText("תקופה");
+  await expect(page.locator(".ui-band-label")).toHaveCount(0);
   const paint = await page.locator(".ui-band-period").evaluate((el) => {
     const style = getComputedStyle(el);
     return { background: style.backgroundColor, color: style.color };

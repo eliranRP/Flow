@@ -12,6 +12,8 @@ type Common = {
   icon?: ReactNode;
   children: ReactNode;
   className?: string;
+  title?: string;
+  "aria-label"?: string;
 };
 
 type AsButton = Common &
@@ -23,6 +25,10 @@ export type ButtonProps = AsButton | AsLink;
 
 function isLink(props: ButtonProps): props is AsLink {
   return typeof props.to === "string";
+}
+
+function labelText(children: ReactNode): string | undefined {
+  return typeof children === "string" && children !== "" ? children : undefined;
 }
 
 const variantClass: Record<ButtonVariant, string> = {
@@ -43,6 +49,7 @@ export function Button(props: ButtonProps) {
     props.full && "ui-btn-full",
     props.className,
   );
+  const label = labelText(props.children);
   const body = (
     <>
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
@@ -50,12 +57,18 @@ export function Button(props: ButtonProps) {
       <span className={variant === "pill" ? "ui-pill-label" : "ui-btn-label"}>{props.children}</span>
     </>
   );
+  const named = {
+    title: props.title ?? label,
+    "aria-label": props["aria-label"] ?? label,
+  };
   if (isLink(props)) {
     return (
       <Link
         to={props.to}
         state={props.state}
         className={classes}
+        title={named.title}
+        aria-label={named["aria-label"]}
         aria-disabled={props.busy || undefined}
         aria-busy={props.busy || undefined}
         onClick={(event) => {
@@ -66,12 +79,14 @@ export function Button(props: ButtonProps) {
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, to: _to, onClick, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, to: _to, title: _title, "aria-label": _aria, onClick, ...rest } = props;
   return (
     <button
       type={type}
       className={classes}
       disabled={disabled}
+      title={named.title}
+      aria-label={named["aria-label"]}
       aria-disabled={disabled || busy || undefined}
       aria-busy={busy || undefined}
       onClick={(event) => {

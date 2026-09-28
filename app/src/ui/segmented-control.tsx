@@ -17,11 +17,13 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
           className="ui-seg-btn"
           role="radio"
           aria-checked={value === option.value}
+          title={option.label}
+          aria-label={option.label}
           onClick={() => {
             onChange(option.value);
           }}
         >
-          {option.label}
+          <span className="ui-seg-label">{option.label}</span>
         </button>
       ))}
     </div>
