@@ -75,22 +75,33 @@ export interface Envelope {
   keyNonce: string;
   dekCiphertext: string;
   dekNonce: string;
+  /** KEK rotation id. Not the envelope format. */
   kekVersion: string;
+  /** AES-GCM format. "2" binds companyId. Omitted seals treat kekVersion "2" as format 2. */
+  envelopeVersion?: string;
+}
+
+function envelopeFormat(kekVersion: string, envelopeVersion?: string): string {
+  if (envelopeVersion != null && envelopeVersion !== "") return envelopeVersion;
+  return kekVersion === "2" ? "2" : "1";
 }
 
 /**
  * Encrypt an API key under a fresh DEK, and the DEK under the KEK.
- * Version "1" has no additional data. Version "2" binds companyId so the
- * ciphertext cannot be moved to another tenant. Decision 0063.
+ * Format "1" has no additional data. Format "2" binds companyId so the
+ * ciphertext cannot be moved to another tenant. Decision 0063 and 0064.
+ * The 4-argument form still treats kekVersion "2" as format 2.
  */
 export async function sealApiKey(
   apiKey: string,
   kek: Uint8Array,
   kekVersion: string,
   companyId?: string,
+  envelopeVersion?: string,
 ): Promise<Envelope> {
-  const aad = kekVersion === "2" ? te.encode(companyId ?? "") : undefined;
-  if (kekVersion === "2" && !companyId) throw new Error("version 2 seals bind a company");
+  const format = envelopeFormat(kekVersion, envelopeVersion);
+  const aad = format === "2" ? te.encode(companyId ?? "") : undefined;
+  if (format === "2" && !companyId) throw new Error("version 2 seals bind a company");
   const dek = crypto.getRandomValues(new Uint8Array(32));
   const sealedKey = await aesGcmEncrypt(dek, te.encode(apiKey), aad);
   const sealedDek = await aesGcmEncrypt(kek, dek, aad);
@@ -100,11 +111,13 @@ export async function sealApiKey(
     dekCiphertext: bytesToHex(sealedDek.ciphertext),
     dekNonce: bytesToHex(sealedDek.nonce),
     kekVersion,
+    envelopeVersion: format,
   };
 }
 
 export async function openApiKey(envelope: Envelope, kek: Uint8Array, companyId?: string): Promise<string> {
-  const aad = envelope.kekVersion === "2" ? te.encode(companyId ?? "") : undefined;
+  const format = envelopeFormat(envelope.kekVersion, envelope.envelopeVersion);
+  const aad = format === "2" ? te.encode(companyId ?? "") : undefined;
   const dek = await aesGcmDecrypt(kek, hexToBytes(envelope.dekCiphertext), hexToBytes(envelope.dekNonce), aad);
   const plain = await aesGcmDecrypt(dek, hexToBytes(envelope.keyCiphertext), hexToBytes(envelope.keyNonce), aad);
   return td.decode(plain);

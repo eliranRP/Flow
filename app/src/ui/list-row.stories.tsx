@@ -4,7 +4,7 @@ import { largeAgorot, longHebrew, padded } from "./story-support";
 
 /** Agorot is a decimal string so story args stay JSON-serializable. */
 type RowArgs = {
-  variant: "project" | "transaction" | "item";
+  variant: "project" | "transaction" | "item" | "static" | "button" | "danger" | "selectable";
   title: string;
   hint?: string;
   href?: string;
@@ -12,10 +12,15 @@ type RowArgs = {
   loss?: boolean;
   sign?: "in" | "out";
   source?: "invoice" | "bank";
+  selected?: boolean;
 };
 
-function RowView({ variant, title, hint, href, agorot = "0", loss, sign = "in", source = "invoice" }: RowArgs) {
+function RowView({ variant, title, hint, href, agorot = "0", loss, sign = "in", source = "invoice", selected = false }: RowArgs) {
   if (variant === "item") return <ListRow variant="item" title={title} hint={hint} href={href} />;
+  if (variant === "static") return <ListRow variant="static" title={title} hint={hint} />;
+  if (variant === "button") return <ListRow variant="button" title={title} hint={hint} onClick={() => undefined} />;
+  if (variant === "danger") return <ListRow variant="danger" title={title} hint={hint} onClick={() => undefined} />;
+  if (variant === "selectable") return <ListRow variant="selectable" title={title} hint={hint} selected={selected} onSelect={() => undefined} />;
   if (variant === "transaction") {
     return <ListRow variant="transaction" title={title} hint={hint} href={href} agorot={BigInt(agorot)} sign={sign} source={source} />;
   }
@@ -42,6 +47,18 @@ export const TransactionOut: Story = {
 };
 export const Item: Story = {
   args: { variant: "item", title: "ביטוח המגן", hint: "ספק · פטור ממע״מ" },
+};
+export const Static: Story = {
+  args: { variant: "static", title: "אלפא בנייה", hint: "עוסק מורשה" },
+};
+export const ButtonRow: Story = {
+  args: { variant: "button", title: "חיבור SUMIT", hint: "מספר חברה ומפתח API" },
+};
+export const Danger: Story = {
+  args: { variant: "danger", title: "התנתקות" },
+};
+export const Selectable: Story = {
+  args: { variant: "selectable", title: "וילה רעננה", hint: "פעיל", selected: true },
 };
 export const EmptyHint: Story = {
   args: { variant: "project", title: "פרויקט בלי תנועות", agorot: "0" },

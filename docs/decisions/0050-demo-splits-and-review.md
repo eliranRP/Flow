@@ -1,24 +1,26 @@
-# Flow Test splits are rules, and a SUMIT row stays in the P&L while it waits
+# A SUMIT row stays in the P&L while it waits
 
 **Date:** 2026-09-28
-**Status:** Accepted. [0063](0063-owner-ledger.md) removes the Edge Function copy of the worker-day table. The table stays in the fixture.
+**Status:** Accepted. [0063](0063-owner-ledger.md) removed the Edge Function copy of the worker-day table. The table stays in the fixture for the parity test. [0064](0064-review-round4.md) records that this amends [0006](0006-confirm-not-type.md) for SUMIT rows already in the books.
 
 ## Context
 
-The golden P&L needs the site-worker split (`shared_alloc_worker_days` in the demo fixture). SUMIT's document list does not include the expense-item name, so Flow cannot copy the fixture's item→category map off the wire. [0006](0006-confirm-not-type.md) says only an approved row enters a report. Waiting for that approval would hide every uncategorised expense and miss the golden totals.
+[0006](0006-confirm-not-type.md) says a row enters a report only after the owner confirms it. SUMIT documents are already the books. Holding them out of profit until Review would hide the contractor's invoices and miss the totals the owner expects to see.
+
+The golden P&L still needs the site-worker split (`shared_alloc_worker_days` in the demo fixture). That table is an answer key for the parity test. Sync does not copy it, and it does not special-case any SUMIT company.
 
 ## Decision
 
-For SUMIT company 2389917160 only, sync copies the worker-day table onto `split_rules` / `split_rule_targets` (method `worker_days`, supplier כוח אדם מקצועי א.ר. בע"מ) and splits each shared expense with those weights. The same company maps known supplier names to the default categories. ביטוח המגן בע"מ is VAT-exempt.
+A SUMIT document is written into the ledger as soon as a complete sync accepts it. It counts in `company_pnl` while an expense with no category sits on the review queue. Approving or changing the row sets the project and category. Skipping leaves the amounts as they are and closes the card. Income is given the default income category at sync and does not enter the queue. [0064](0064-review-round4.md).
 
-Any other supplier is stored with no category and an open review row (`missing_category` or `missing_project`). The row still counts in `company_pnl`. Approving or changing it sets the project and category. Skipping leaves the amounts as they are and closes the card.
+The worker-day weights are not applied by sync. The owner enters a shared-cost split with `save_split`. The parity test still checks the fixture's results.
 
-This is the smallest reading of the list API that still matches [0043](0043-assumed-vat-on-expenses.md) and the golden file.
+This amends [0006](0006-confirm-not-type.md) only for SUMIT rows that are already in the books. A manual row still waits for confirmation before it is part of the report.
 
 ## Alternatives rejected
 
-Calling `getdetails` for every expense to read the item name. Holding SUMIT rows out of profit until a person approves them. Guessing a category other than the demo map.
+Holding every SUMIT row out of profit until a person approves it. Copying the fixture's worker-day table inside the Edge Function.
 
 ## Consequences
 
-A contractor who is not Flow Test will see a review card per uncategorised expense, and Home will already include the money. The worker-day table lives in the fixture. [0063](0063-owner-ledger.md) deleted the Edge Function copy. The ledger parity test still checks the fixture's results.
+Home already includes SUMIT money that is still on the review queue. The worker-day table lives in the fixture. Sync never writes it.

@@ -22,7 +22,7 @@ export const On: Story = { args: { label: "לזכור לספק הזה", hint: "�
 export const Disabled: Story = { args: { label: "סיכום שבועי", hint: "ההודעות לא נשלחות", disabled: true } };
 export const Focus: Story = {
   args: { label: "רווח אחרי חלק בכלליות", hint: "ברירת מחדל בבית ובפרויקט", checked: true },
-  play: async ({ canvasElement }) => {
+  play: ({ canvasElement }) => {
     canvasElement.querySelector("input")?.focus();
   },
 };

@@ -4,6 +4,9 @@
   --size-period: 32px;
   --size-search: 46px;
   --size-switch: 46px;
+  --switch-track-h: 28px;
+  --switch-knob: 22px;
+  --switch-inset: 3px;
   --radius-check: 7px;
   --radius-segment: 9px;
   --field-pad: 14px;
@@ -1752,7 +1755,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   position: relative;
   display: block;
   width: var(--size-switch);
-  height: 28px;
+  height: var(--switch-track-h);
   flex: none;
   border-radius: var(--radius-chip);
   background: var(--color-control-border);
@@ -1760,10 +1763,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-switch i {
   position: absolute;
-  top: 3px;
-  inset-inline-start: 3px;
-  width: 22px;
-  height: 22px;
+  top: var(--switch-inset);
+  inset-inline-start: var(--switch-inset);
+  width: var(--switch-knob);
+  height: var(--switch-knob);
   border-radius: var(--radius-chip);
   background: var(--color-surface);
 }
@@ -1782,7 +1785,16 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-switch-row input:checked + .ui-switch i {
   inset-inline-start: auto;
-  inset-inline-end: 3px;
+  inset-inline-end: var(--switch-inset);
+}
+
+.ui-switch-row:has(input:disabled) {
+  color: var(--color-text-muted);
+}
+
+.ui-switch-row input:disabled + .ui-switch {
+  opacity: 0.45;
+  background: var(--color-disabled-bg);
 }
 
 .ui-switch-row input:focus-visible + .ui-switch {
@@ -1790,7 +1802,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   outline-offset: 2px;
 }
 
-.ui-switch-row:active .ui-switch {
+.ui-switch-row:active:not(:has(input:disabled)) .ui-switch {
   background: var(--color-tint-pressed);
 }
 

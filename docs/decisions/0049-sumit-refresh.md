@@ -1,7 +1,7 @@
 # SUMIT refresh is a button, with an optional daily marker
 
 **Date:** 2026-09-28
-**Status:** Accepted
+**Status:** Accepted. [0064](0064-review-round4.md) schedules the drain with `pg_net` when that extension is installed. The daily marker in this record stays.
 
 ## Context
 

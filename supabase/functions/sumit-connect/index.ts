@@ -36,7 +36,8 @@ Deno.serve(async (req) => {
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
     if (company.error || !company.data) return json({ error: "no company" }, 400);
 
-    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), "2", company.data.id);
+    const kekVersion = Deno.env.get("SUMIT_KEK_VERSION") || "1";
+    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "2");
     const saved = await admin.from("sumit_connections").upsert(
       {
         company_id: company.data.id,
@@ -46,6 +47,7 @@ Deno.serve(async (req) => {
         dek_ciphertext: sealed.dekCiphertext,
         dek_nonce: sealed.dekNonce,
         kek_version: sealed.kekVersion,
+        envelope_version: sealed.envelopeVersion,
         last_error: null,
       },
       { onConflict: "company_id" },

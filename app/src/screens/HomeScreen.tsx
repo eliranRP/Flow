@@ -128,7 +128,7 @@ export function HomeScreen() {
       greeting={greeting}
       previewing={previewing}
       search={search}
-      unpaidNet={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + row.open_net_agorot, 0n) : 0n}
+      unpaidGross={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + row.open_gross_agorot, 0n) : 0n}
       unpaidCount={unpaidPhase.kind === "ready" ? (unpaid.data?.length ?? 0) : 0}
       unpaidPhase={unpaidPhase.kind}
       onUnpaidRetry={() => {
@@ -149,7 +149,7 @@ export function HomeBooks({
   greeting,
   previewing,
   search,
-  unpaidNet,
+  unpaidGross,
   unpaidCount,
   unpaidPhase = "ready",
   onUnpaidRetry,
@@ -161,7 +161,7 @@ export function HomeBooks({
   greeting: string;
   previewing: boolean;
   search: string;
-  unpaidNet: bigint;
+  unpaidGross: bigint;
   unpaidCount: number;
   unpaidPhase?: "loading" | "error" | "empty" | "ready";
   onUnpaidRetry?: () => void;
@@ -184,8 +184,10 @@ export function HomeBooks({
   const unpaidReady = unpaidPhase === "ready";
   const showCard = pending > 0 || (unpaidReady && unpaidCount > 0);
   const cardTo = pending > 0 ? `/review${search}` : `/unpaid${search}`;
-  const cardTitle = pending > 0 ? `${String(pending)} פריטים ממתינים לאישור` : `${String(unpaidCount)} חשבוניות לא שולמו`;
-  const cardHint = unpaidHint(pending, unpaidCount, unpaidNet, unpaidReady);
+  const cardTitle = pending > 0
+    ? <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>
+    : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות לא שולמו</>;
+  const cardHint = unpaidHint(pending, unpaidCount, unpaidGross, unpaidReady);
 
   const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
 
@@ -263,9 +265,9 @@ export function HomeBooks({
   );
 }
 
-function unpaidHint(pending: number, unpaidCount: number, unpaidNet: bigint, ready: boolean): ReactNode {
+function unpaidHint(pending: number, unpaidCount: number, unpaidGross: bigint, ready: boolean): ReactNode {
   if (!ready || unpaidCount === 0) return undefined;
-  const amount = <bdi dir="ltr">{formatIls(unpaidNet)}</bdi>;
+  const amount = <bdi dir="ltr">{formatIls(unpaidGross)}</bdi>;
   if (pending > 0) return <>{String(unpaidCount)} חשבוניות לא שולמו · {amount}</>;
   return <>{amount} · טרם נגבה</>;
 }
@@ -283,8 +285,13 @@ function ProjectLine({ project, search }: { project: ProjectRow; search: string 
   );
 }
 
-function marginHint(project: ProjectRow): string | undefined {
+function marginHint(project: ProjectRow): ReactNode | undefined {
   if (project.income_agorot <= 0n) return undefined;
   const pct = Number((project.profit_agorot * 100n) / project.income_agorot);
-  return pct < 0 ? `רווחיות −${String(Math.abs(pct))}%` : `רווחיות ${String(pct)}%`;
+  const shown = pct < 0 ? `−${String(Math.abs(pct))}%` : `${String(pct)}%`;
+  return (
+    <>
+      רווחיות <bdi dir="ltr">{shown}</bdi>
+    </>
+  );
 }

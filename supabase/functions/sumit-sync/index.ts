@@ -39,8 +39,9 @@ Deno.serve(async (req) => {
           .from("sumit_refresh_requests")
           .update({ claimed_at: new Date().toISOString() })
           .eq("id", row.id)
-          .is("claimed_at", null);
-        if (claim.error) continue;
+          .is("claimed_at", null)
+          .select("id");
+        if (claim.error || claim.data == null || claim.data.length === 0) continue;
         try {
           results.push(await syncCompany(admin, row.company_id as string, decodeKek(kekSecret), false));
         } catch (error) {
@@ -92,7 +93,7 @@ async function syncCompany(
 ): Promise<{ ok: boolean; documents: number; skipped?: boolean }> {
   const connection = await admin
     .from("sumit_connections")
-    .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, last_sync_at")
+    .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, last_sync_at")
     .eq("company_id", companyId)
     .maybeSingle();
   if (connection.error || !connection.data) throw new Error("SUMIT is not connected");
@@ -107,6 +108,7 @@ async function syncCompany(
     dekCiphertext: String(row.dek_ciphertext),
     dekNonce: String(row.dek_nonce),
     kekVersion: String(row.kek_version),
+    ...(row.envelope_version == null ? {} : { envelopeVersion: String(row.envelope_version) }),
   };
   if (!envelope.keyCiphertext.startsWith("\\x")) {
     envelope.keyCiphertext = bytesPrefix(row.key_ciphertext);
@@ -119,10 +121,15 @@ async function syncCompany(
   try {
     const documents = await listDocuments(sumitCompanyId, apiKey);
     await writeLedger(admin, companyId, documents);
-    await admin
+    const stamped = await admin.from("sumit_connections").select("last_error").eq("company_id", companyId).maybeSingle();
+    if (stamped.error) throw new Error("could not read the sync stamp");
+    const sweepError = typeof stamped.data?.last_error === "string" && stamped.data.last_error.startsWith("sync_sweep");
+    const updated = await admin
       .from("sumit_connections")
-      .update({ last_sync_at: new Date().toISOString(), last_error: null })
-      .eq("company_id", companyId);
+      .update(sweepError ? { last_sync_at: new Date().toISOString() } : { last_sync_at: new Date().toISOString(), last_error: null })
+      .eq("company_id", companyId)
+      .select("company_id");
+    if (updated.error || updated.data == null || updated.data.length === 0) throw new Error("could not stamp the sync");
     return { ok: true, documents: documents.length };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
@@ -204,6 +211,7 @@ async function listDocuments(companyId: number, apiKey: string): Promise<SumitDo
   const folder = findFolder(folders, "מסמכים");
   if (folder == null) throw new Error("SUMIT documents folder was not found");
   const docs: SumitDoc[] = [];
+  let dropped = 0;
   let start = 0;
   for (let page = 0; page < PAGE_CAP; page += 1) {
     const payload = await sumitCall(LIST_ENTITIES, credentials, {
@@ -218,13 +226,18 @@ async function listDocuments(companyId: number, apiKey: string): Promise<SumitDo
       if (!entity || typeof entity !== "object") continue;
       const mapped = mapCrmEntity(entity as Record<string, unknown>);
       if (mapped) docs.push(mapped);
+      else dropped += 1;
     }
     const hasNext = Boolean(
       data && typeof data === "object" && "HasNextPage" in data && (data as { HasNextPage?: boolean }).HasNextPage,
     );
-    if (!hasNext || entities.length === 0) return docs;
+    if (!hasNext || entities.length === 0) {
+      if (dropped > 0) console.error("sumit-sync dropped entities", dropped);
+      return docs;
+    }
     start += entities.length;
   }
+  if (dropped > 0) console.error("sumit-sync dropped entities", dropped);
   throw new Error("sync_page_cap");
 }
 

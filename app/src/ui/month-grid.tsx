@@ -16,16 +16,16 @@ export function MonthGrid({ label, year, month, today, value, range, onPick }: M
   const cells = monthCells(year, month);
   const monthKey = String(month + 1).padStart(2, "0");
   return (
-    <div className="ui-cal" role="grid" aria-label={label}>
-      <div className="ui-cal-row" role="row">
+    <div className="ui-cal" role="group" aria-label={label}>
+      <div className="ui-cal-row">
         {WEEKDAY_HEADS.map((head) => (
-          <span key={head} className="ui-cal-head" role="columnheader">
+          <span key={head} className="ui-cal-head">
             {head}
           </span>
         ))}
       </div>
       {weeksOf(cells).map((week) => (
-        <div key={week.join("-")} className="ui-cal-row" role="row">
+        <div key={week.join("-")} className="ui-cal-row">
           {week.map((iso) => {
             if (iso.slice(5, 7) !== monthKey) return <span key={iso} className="ui-day" />;
             const future = iso > today;
@@ -35,7 +35,6 @@ export function MonthGrid({ label, year, month, today, value, range, onPick }: M
               <button
                 key={iso}
                 type="button"
-                role="gridcell"
                 className={cx("ui-day", inRange && "ui-day-range", edge && "ui-day-edge")}
                 aria-label={dayLabel(iso)}
                 aria-selected={edge}

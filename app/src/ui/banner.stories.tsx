@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner, Notice } from "./banner";
+import { ReviewIcon } from "./icons";
 import { longHebrew, padded } from "./story-support";
+import { TextLink } from "./text-link";
 
 const meta = {
   title: "Components/Banner",
@@ -39,6 +41,10 @@ export const UnpaidOnly: Story = {
 };
 export const LongHebrew: Story = {
   args: { title: longHebrew, hint: longHebrew, to: "/review" },
+};
+export const WithAction: Story = {
+  args: { title: "3 תנועות שויכו היום בלי להמתין בתור" },
+  render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">צפייה</TextLink>} />,
 };
 export const NoticeNeutral: Story = {
   args: { title: "מצב תצוגה" },

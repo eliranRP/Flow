@@ -22,4 +22,22 @@ describe("ListRow", () => {
     expect(screen.getByText("ספק · פטור ממע״מ")).toBeInTheDocument();
     expect(screen.getByText("₪12,000")).toBeInTheDocument();
   });
+
+  it("renders static, button, danger, and selectable rows", () => {
+    render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="static" title="אלפא" hint="עוסק מורשה" />
+          <ListRow variant="button" title="חיבור SUMIT" onClick={() => undefined} />
+          <ListRow variant="danger" title="התנתקות" busy onClick={() => undefined} />
+          <ListRow variant="selectable" title="וילה" selected onSelect={() => undefined} />
+        </>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("אלפא").closest(".ui-row")?.tagName).toBe("DIV");
+    expect(screen.getByText("אלפא").closest(".ui-row")).not.toHaveClass("ui-hit");
+    expect(screen.getByRole("button", { name: "חיבור SUMIT" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "התנתקות" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: "וילה" })).toHaveAttribute("aria-pressed", "true");
+  });
 });

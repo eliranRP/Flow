@@ -47,8 +47,8 @@ describe("RangeSheet", () => {
         }}
       />,
     );
-    fireEvent.click(screen.getByRole("gridcell", { name: dayLabel(from) }));
-    fireEvent.click(screen.getByRole("gridcell", { name: dayLabel(to) }));
+    fireEvent.click(screen.getByRole("button", { name: dayLabel(from) }));
+    fireEvent.click(screen.getByRole("button", { name: dayLabel(to) }));
     expect(screen.getByText(formatDisplay(from))).toBeInTheDocument();
     expect(screen.getByText(formatDisplay(to))).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "הצגת 3 ימים" }));

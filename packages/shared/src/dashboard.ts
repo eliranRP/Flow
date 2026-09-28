@@ -44,6 +44,7 @@ export const dashboardSchema = z.object({
   active_projects: z.number(),
   review_count: z.number(),
   projects: z.array(projectRowSchema),
+  after_overhead: z.boolean().optional(),
 });
 
 export const unpaidRowSchema = z.object({
@@ -102,6 +103,10 @@ export const projectDetailSchema = z
     direct_agorot: agorotSchema,
     shared_agorot: agorotSchema,
     profit_agorot: agorotSchema,
+    after_overhead: z.boolean().optional(),
+    overhead_share_agorot: agorotSchema.optional(),
+    profit_after_overhead_agorot: agorotSchema.optional(),
+    overhead_weighted: z.boolean().optional(),
     categories: z.array(
       z.object({
         id: z.string().nullable(),

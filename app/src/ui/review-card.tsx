@@ -33,7 +33,7 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
         </div>
       </div>
       <p className="t-display">
-        <bdi dir="ltr">{formatAmount(shown)}</bdi>
+        <bdi dir="ltr">{formatAmount(shown, "detail")}</bdi>
       </p>
       <p className="t-hint">{vatLine}</p>
       {showSuggestion ? (
