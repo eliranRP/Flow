@@ -115,6 +115,33 @@ export function OfflineIcon(props: IconProps) {
   );
 }
 
+export function RefreshIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2} {...props}>
+      <polyline points="21 4 21 10 15 10" />
+      <path d="M20 15a8.5 8.5 0 1 1-1.9-8.9L21 10" />
+    </Svg>
+  );
+}
+
+export function DocumentIcon(props: IconProps) {
+  return (
+    <Svg size={36} stroke={1.6} {...props}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </Svg>
+  );
+}
+
+export function CameraIcon(props: IconProps) {
+  return (
+    <Svg size={20} stroke={2} {...props}>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </Svg>
+  );
+}
+
 export function InfoIcon({ size = 20 }: { size?: number }) {
   return (
     <Svg size={size} stroke={2}>

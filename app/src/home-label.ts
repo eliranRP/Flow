@@ -7,6 +7,6 @@ export function profitBandLabel(hasFigures: boolean, now = new Date()): string {
 
 export function homeGreeting(name: string | null | undefined): string {
   const trimmed = name?.trim();
-  if (!trimmed) return "שלום, …";
+  if (!trimmed) return "שלום";
   return `שלום, ${trimmed}`;
 }
