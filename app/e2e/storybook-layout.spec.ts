@@ -194,12 +194,20 @@ test("hebrew counts keep their reading order around the numbers", async ({ page 
     return parts.sort((left, right) => right.x - left.x).map((part) => part.text);
   });
   expect(order.slice(0, 3)).toEqual(["עוד", "4", "פעילים"]);
-  const used = await page.getByText("נוצלו").evaluate((node) => {
-    const host = node.parentElement;
-    if (!host) return [];
-    const word = node.getBoundingClientRect();
-    const number = host.querySelector("bdi")?.getBoundingClientRect();
-    if (!number) return [];
+  const used = await page.locator(".ui-row-hint").evaluate((node) => {
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    let word: DOMRect | null = null;
+    let number: DOMRect | null = null;
+    while (walker.nextNode()) {
+      const text = walker.currentNode.textContent?.trim() ?? "";
+      if (text === "") continue;
+      const range = document.createRange();
+      range.selectNodeContents(walker.currentNode);
+      const box = range.getBoundingClientRect();
+      if (text.startsWith("נוצלו")) word = box;
+      if (text.includes("%")) number = box;
+    }
+    if (!word || !number) return [];
     return [word.right > number.right, number.left < word.left];
   });
   expect(used).toEqual([true, true]);

@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(36);
+select plan(37);
 
 do $users$
 begin
@@ -304,6 +304,11 @@ select lives_ok(
     (select id from public.projects where name = 'פרויקט ב')
   ),
   'the owner can split a shared cost'
+);
+
+select lives_ok(
+  'set constraints all immediate',
+  'the deferred share check can lock the transaction after the owner call returns'
 );
 
 select is(
