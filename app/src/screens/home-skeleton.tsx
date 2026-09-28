@@ -31,24 +31,24 @@ export function HomeSkeleton({ preview = false, example }: { preview?: boolean; 
           />
         }
       >
-        <div className="ui-skel-band">
-          <span className="ui-greet">
-            <Skeleton tone="band" className="ui-skel-greet-a" />
-            <Skeleton tone="band" className="ui-skel-greet-b" />
-          </span>
-          <BandHero>
+        <BandHero>
+          <div className="ui-skel-stack">
+            <span className="ui-greet">
+              <Skeleton tone="band" className="ui-skel-greet-a" />
+              <Skeleton tone="band" className="ui-skel-greet-b" />
+            </span>
             <Skeleton tone="band" className="ui-skel-label" />
             <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
             <span className="ui-skel-delta">
               <Skeleton tone="band" className="ui-skel-delta-a" />
               <Skeleton tone="band" className="ui-skel-delta-b" />
             </span>
-          </BandHero>
-          <span className="ui-skel-figures">
-            <Skeleton tone="band" className="ui-skel-figure" />
-            <Skeleton tone="band" className="ui-skel-figure" />
-          </span>
-        </div>
+            <span className="ui-skel-figures">
+              <Skeleton tone="band" className="ui-skel-figure" />
+              <Skeleton tone="band" className="ui-skel-figure" />
+            </span>
+          </div>
+        </BandHero>
       </TopBand>
       <div className="ui-skel-card">
         <Skeleton className="ui-skel-dot" />
