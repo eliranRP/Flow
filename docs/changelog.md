@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+The books screens are compositions of the library from [0057](decisions/0057-component-library.md). Route sheets use `Sheet` and `IconButton`. One `ScreenHeader` covers every title. Loading Home is generic `Skeleton` bars inside `TopBand`. The unused `.stat`, `.card`, `.field`, `.seg`, and `.btn` rules are gone, and controls use the `ui-*` classes only. Storybook's screen stories render the real route components. Onboarding, the SUMIT connect call, the import, and the golden P&L check are unchanged.
+
 Decision [0058](decisions/0058-storybook.md), Accepted. Storybook 8 replaces the `/dev/components` gallery. It is a dev dependency (`@storybook/react-vite`), with RTL, Rubik, the token CSS, a light/dark toolbar, and a 390px viewport. `pnpm storybook` and `pnpm build-storybook`. Accessibility runs in CI with `pnpm test:storybook`. The library rule in [0057](decisions/0057-component-library.md) is unchanged.
 
 Decision [0057](decisions/0057-component-library.md), Accepted. Shared UI lives in `app/src/ui`. Home, sign-in, help, and the load errors are compositions of that library. The other books screens move onto it next. Numbers 0051–0056 are reserved on the remainder branch.

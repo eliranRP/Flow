@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { GoogleButton } from "../ui/google-button";
 import { Notice } from "../ui/banner";
+import { GoogleButton } from "../ui/google-button";
+import { SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInHelp, SignInPanel, SignInPrivacy, SignInTagline } from "../ui/layout";
+import { TextLink } from "../ui/text-link";
 import { Wordmark } from "../ui/wordmark";
 import { getSupabase } from "../lib/supabase";
 
@@ -70,13 +72,13 @@ export function SignInScreen() {
   }
 
   return (
-    <main className="signin">
-      <div className="signin-brand">
+    <SignInFrame>
+      <SignInBrand>
         <Wordmark size="signin" />
-        <p className="signin-tagline">הרווח וההפסד של העסק, בלי אקסלים</p>
-      </div>
+        <SignInTagline>הרווח וההפסד של העסק, בלי אקסלים</SignInTagline>
+      </SignInBrand>
 
-      <section className="signin-sheet">
+      <SignInPanel>
         {notice === "cancelled" ? (
           <Notice title="הכניסה לא הושלמה" body="החלון של Google נסגר. אפשר לנסות שוב." />
         ) : null}
@@ -88,37 +90,33 @@ export function SignInScreen() {
           />
         ) : null}
 
-        <h1 className="t-title-2 signin-heading">כניסה או הרשמה</h1>
+        <SignInHeading>כניסה או הרשמה</SignInHeading>
         <p className="t-label text-text-secondary">בלי סיסמה – עם חשבון Google שכבר יש לך</p>
 
-        <div className="signin-button">
-          <GoogleButton
-            pending={pending}
-            disabled={!ready}
-            onClick={() => void continueWithGoogle()}
-          />
-        </div>
+        <SignInActions>
+          <GoogleButton pending={pending} disabled={!ready} onClick={() => void continueWithGoogle()} />
+        </SignInActions>
 
         {notice === "failed" ? (
-          <p className="signin-help">
-            <Link to="/help" className="t-label text-text-secondary underline">
+          <SignInHelp>
+            <TextLink to="/help" className="t-label text-text-secondary underline">
               צריך עזרה בכניסה?
-            </Link>
-          </p>
+            </TextLink>
+          </SignInHelp>
         ) : null}
 
-        <p className="signin-privacy t-hint">
+        <SignInPrivacy>
           נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
           <br />
-          <Link to="/terms" className="underline">
+          <TextLink to="/terms" className="underline">
             תנאי שימוש
-          </Link>
+          </TextLink>
           {" · "}
-          <Link to="/privacy" className="underline">
+          <TextLink to="/privacy" className="underline">
             מדיניות פרטיות
-          </Link>
-        </p>
-      </section>
-    </main>
+          </TextLink>
+        </SignInPrivacy>
+      </SignInPanel>
+    </SignInFrame>
   );
 }

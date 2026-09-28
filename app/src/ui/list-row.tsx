@@ -9,6 +9,7 @@ type Common = {
   title: string;
   hint?: string;
   href?: string;
+  action?: ReactNode;
 };
 
 export type ListRowProps =
@@ -32,6 +33,7 @@ export function ListRow(props: ListRowProps) {
         </span>
       </span>
       {props.variant === "supplier" ? null : <RowAmount {...props} />}
+      {props.action}
     </>
   );
   if (props.href) {

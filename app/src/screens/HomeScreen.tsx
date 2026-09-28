@@ -1,17 +1,20 @@
 import { allocateByWeights, formatIls, homeSummarySchema, type Dashboard, type ProjectRow } from "@flow/shared";
 import { onlineManager, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
-import { ChartIcon } from "../ui/icons";
-import { HomeSkeleton } from "../ui/skeleton";
+import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
+import { ChartIcon } from "../ui/icons";
+import { BandHero, SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
 import { SegmentedControl } from "../ui/segmented-control";
+import { HomeSkeleton } from "../ui/skeleton";
+import { Stat, StatGrid } from "../ui/stat";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { homeGreeting, profitBandLabel } from "../home-label";
@@ -112,10 +115,10 @@ export function HomeScreen() {
     return (
       <div className="flex min-h-full flex-1 flex-col">
         <TopBand preview={previewing}>
-          <div className="band-hero">
+          <BandHero>
             <p className="t-title-2">{greeting}</p>
             <h1 className="band-label t-label">{profitBandLabel(false)}</h1>
-          </div>
+          </BandHero>
         </TopBand>
         <EmptyState
           icon={<ChartIcon />}
@@ -225,7 +228,7 @@ function HomeBooks({
           />
         }
       >
-        <div className="band-hero">
+        <BandHero>
           <p className="t-title-2">{greeting}</p>
           <p className="band-label t-label">
             {basis === "cash" ? "רווח נקי במזומן" : "רווח נקי לפי חשבוניות"} · {data.name}
@@ -233,33 +236,35 @@ function HomeBooks({
           <h1 className="t-hero">
             <BigNumber agorot={ag(data.net_profit_agorot)} />
           </h1>
-        </div>
+        </BandHero>
       </TopBand>
 
-      <div className="stat-grid">
-        <Stat label="הכנסות" amount={data.income_agorot} change={incomeChange} />
-        <Stat label="הוצאות" amount={data.expense_agorot} change={expenseChange} />
-        <Stat label="רווח/הפסד" amount={data.net_profit_agorot} change={profitChange} emphasis />
-      </div>
+      <StatGrid>
+        <Stat label="הכנסות" amount={ag(data.income_agorot)} change={incomeChange} />
+        <Stat label="הוצאות" amount={ag(data.expense_agorot)} change={expenseChange} />
+        <Stat label="רווח/הפסד" amount={ag(data.net_profit_agorot)} change={profitChange} emphasis />
+      </StatGrid>
 
       {data.review_count > 0 ? (
-        <Link to={`/review${search}`} className="pending-banner">
-          <span className="count-badge">{data.review_count}</span>
-          {data.review_count} פריטים ממתינים לאישור
-        </Link>
+        <Banner to={`/review${search}`} count={data.review_count} title={`${String(data.review_count)} פריטים ממתינים לאישור`} />
       ) : null}
 
       {unpaidCount > 0 ? (
-        <Link to={`/unpaid${search}`} className="quiet-line">
-          {unpaidCount} חשבוניות לא שולמו · <bdi dir="ltr">{formatIls(ag(unpaidNet))}</bdi>
-          <span className="t-hint"> לא נכלל ברווח</span>
-        </Link>
+        <Banner
+          tone="quiet"
+          to={`/unpaid${search}`}
+          title={
+            <>
+              {String(unpaidCount)} חשבוניות לא שולמו · <bdi dir="ltr">{formatIls(ag(unpaidNet))}</bdi>
+              <span className="t-hint"> לא נכלל ברווח</span>
+            </>
+          }
+        />
       ) : null}
 
-      <div className="section-head">
-        <h2 className="t-title-3">פרויקטים</h2>
+      <SectionHead title="פרויקטים">
         <Toggle label="רווח אחרי חלק מהתקורה" checked={overheadOn} onChange={onOverhead} />
-      </div>
+      </SectionHead>
       {overheadOn && shares == null ? (
         <p className="t-hint page-pad">אין הכנסות בתקופה, אז אי אפשר לחלק את התקורה.</p>
       ) : null}
@@ -287,28 +292,6 @@ function HomeBooks({
           />
         </li>
       </ul>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  amount,
-  change,
-  emphasis = false,
-}: {
-  label: string;
-  amount: number;
-  change: { text: string; good: boolean } | null;
-  emphasis?: boolean;
-}) {
-  return (
-    <div className={emphasis ? "stat stat-em" : "stat"}>
-      <p className="t-hint">{label}</p>
-      <p className="t-title-3">
-        <BigNumber agorot={ag(amount)} />
-      </p>
-      {change ? <p className={change.good ? "delta good" : "delta bad"}>{change.text}</p> : null}
     </div>
   );
 }

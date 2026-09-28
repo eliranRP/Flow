@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
-import { Drawer } from "vaul";
-import { CloseIcon } from "./icons";
+import { Sheet } from "./sheet";
 
 /**
- * Vaul traps focus, closes on Escape, scrim, and swipe.
  * The sheet is a real route (`/add`, `/review/change`). Opening it pushes
  * history. Closing plays the exit animation, then pops that entry, so the
  * screen underneath is the one that opened the sheet.
@@ -23,7 +21,6 @@ export function RouteSheet({
   children?: ReactNode;
 }) {
   const navigate = useNavigate();
-  const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
@@ -48,38 +45,17 @@ export function RouteSheet({
   }
 
   return (
-    <Drawer.Root
+    <Sheet
       open={open}
-      dismissible
+      title={title}
+      hint={hint}
       onOpenChange={(next) => {
         if (!next) setOpen(false);
       }}
-      onAnimationEnd={(stillOpen) => {
-        if (!stillOpen) leave();
-      }}
+      onClosed={leave}
     >
-      <Drawer.Portal>
-        <Drawer.Overlay className="sheet-scrim" />
-        <Drawer.Content
-          className="sheet-panel"
-          aria-describedby={undefined}
-          onOpenAutoFocus={(event) => {
-            event.preventDefault();
-            closeRef.current?.focus();
-          }}
-        >
-          <div className="sheet-grab" />
-          <div className="sheet-head">
-            <Drawer.Title className="t-title-2">{title}</Drawer.Title>
-            <Drawer.Close ref={closeRef} className="icon-btn ui-icon-btn" aria-label="סגירה">
-              <CloseIcon />
-            </Drawer.Close>
-          </div>
-          {hint ? <p className="sheet-hint t-label">{hint}</p> : null}
-          {children}
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+      {children}
+    </Sheet>
   );
 }
 

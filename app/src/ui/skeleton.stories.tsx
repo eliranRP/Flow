@@ -11,7 +11,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Bar: Story = { args: { className: "home-skel-row" } };
+export const Bar: Story = { args: { width: "md" } };
 export const Loading: Story = { args: {}, render: () => <Loader /> };
 export const LoadingLong: Story = { args: {}, render: () => <Loader label="טוען את התנועות של החודש, כולל חשבוניות שעוד לא שולמו…" /> };
 export const Home: Story = { args: {}, render: () => <HomeSkeleton /> };

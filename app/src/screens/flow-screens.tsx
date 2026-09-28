@@ -1,17 +1,12 @@
 import { formatIls, shekelsToAgorot } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type SubmitEvent } from "react";
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { EmptyState } from "../components/EmptyState";
-import { Money } from "../components/Money";
-import { PageTitle } from "../components/PageTitle";
-import { Sheet } from "../components/Sheet";
-import { BackIcon, CameraIcon, DocumentIcon } from "../components/icons";
-import { withSheetBackground } from "../sheet-background";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
+import { withSheetBackground } from "../sheet-background";
 import {
   useCategoriesQuery,
   useDashboardQuery,
@@ -20,17 +15,41 @@ import {
   useSumitStatusQuery,
   useUnpaidQuery,
 } from "../use-books";
+import { Banner } from "../ui/banner";
+import { BigNumber } from "../ui/big-number";
+import { Button } from "../ui/button";
+import { Card, Section } from "../ui/card";
+import { ConfirmSheet } from "../ui/confirm-sheet";
+import { DatePicker } from "../ui/date-picker";
+import { EmptyState } from "../ui/empty-state";
+import { IconButton } from "../ui/icon-button";
+import { BackIcon, CameraIcon, DocumentIcon } from "../ui/icons";
+import { BandHero } from "../ui/layout";
+import { List, ListRow } from "../ui/list-row";
+import { MoneyField } from "../ui/money-field";
+import { BudgetBar } from "../ui/progress-bar";
+import { ScreenHeader } from "../ui/screen-header";
+import { SegmentedControl } from "../ui/segmented-control";
+import { SelectField } from "../ui/select-field";
+import { Sheet } from "../ui/sheet";
+import { RouteSheet } from "../ui/route-sheet";
+import { Loader } from "../ui/skeleton";
+import { Stat, StatGrid } from "../ui/stat";
+import { TextField } from "../ui/text-field";
+import { TextLink } from "../ui/text-link";
+import { Toggle } from "../ui/toggle";
+import { TopBand } from "../ui/top-band";
 
 function ag(value: number): bigint {
   return BigInt(Math.trunc(value));
 }
 
-function ScreenMessage({ title, body }: { title: string; body: string }) {
+function ScreenMessage({ title, body, loading = false }: { title: string; body: string; loading?: boolean }) {
   return (
-    <div className="page">
-      <h1 className="t-title-1">{title}</h1>
-      <p className="t-label text-text-secondary">{body}</p>
-    </div>
+    <>
+      <ScreenHeader title={title} />
+      {loading ? <Loader label={body} /> : <p className="t-label page-pad text-text-secondary">{body}</p>}
+    </>
   );
 }
 
@@ -38,7 +57,7 @@ export function OnboardingScreen() {
   const navigate = useNavigate();
   const preview = useHomePreview();
   const [name, setName] = useState("");
-  const [vat, setVat] = useState(true);
+  const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -56,7 +75,7 @@ export function OnboardingScreen() {
     setPending(true);
     const { error: rpcError } = await supabase.rpc("create_company", {
       p_name: name.trim(),
-      p_vat_registered: vat,
+      p_vat_registered: vat === "registered",
     });
     setPending(false);
     if (rpcError) {
@@ -67,21 +86,21 @@ export function OnboardingScreen() {
   }
 
   return (
-    <main className="page">
-      <h1 className="t-title-1">פרטי העסק</h1>
-      <p className="t-label text-text-secondary">השם שיופיע בבית, ומצב המע״מ.</p>
-      <form className="stack" onSubmit={(event) => { void submit(event); }}>
-        <label className="field">
-          שם העסק
-          <input value={name} onChange={(event) => { setName(event.target.value); }} required minLength={2} />
-        </label>
-        <fieldset className="choice-col">
-          <legend className="t-label">מצב מע״מ</legend>
-          <label><input type="radio" name="vat" checked={vat} onChange={() => { setVat(true); }} /> עוסק מורשה, 18%</label>
-          <label><input type="radio" name="vat" checked={!vat} onChange={() => { setVat(false); }} /> עוסק פטור</label>
-        </fieldset>
+    <main>
+      <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית, ומצב המע״מ." />
+      <form className="stack page-pad" onSubmit={(event) => { void submit(event); }}>
+        <TextField label="שם העסק" value={name} onChange={(event) => { setName(event.target.value); }} required minLength={2} />
+        <SegmentedControl
+          label="מצב מע״מ"
+          value={vat}
+          onChange={setVat}
+          options={[
+            { value: "registered", label: "עוסק מורשה, 18%" },
+            { value: "exempt", label: "עוסק פטור" },
+          ]}
+        />
         {error ? <p className="form-error">{error}</p> : null}
-        <button type="submit" className="btn-pri" disabled={pending}>המשך</button>
+        <Button type="submit" busy={pending}>המשך</Button>
       </form>
     </main>
   );
@@ -92,36 +111,36 @@ export function ProjectsScreen() {
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery();
   const [open, setOpen] = useState(false);
-  if (preview === "empty") {
-    return <PageTitle title="פרויקטים" />;
-  }
-  if (dashboard.isLoading) return <ScreenMessage title="פרויקטים" body="טוען…" />;
+  if (preview === "empty") return <ScreenHeader title="פרויקטים" />;
+  if (dashboard.isLoading) return <ScreenMessage title="פרויקטים" body="טוען…" loading />;
   if (dashboard.isError || !dashboard.data) return <ScreenMessage title="פרויקטים" body="לא הצלחנו לטעון את הפרויקטים." />;
   const projects = dashboard.data.projects;
   return (
-    <div className="page">
-      <div className="section-head">
-        <h1 className="t-title-1">פרויקטים</h1>
-        <button type="button" className="btn-sec" onClick={() => { setOpen(true); }}>פרויקט חדש</button>
+    <div>
+      <ScreenHeader title="פרויקטים" />
+      <div className="page-pad">
+        <Button variant="secondary" onClick={() => { setOpen(true); }}>פרויקט חדש</Button>
       </div>
       {projects.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין עדיין פרויקטים" body="פרויקט נוצר מסעיף תקציב ב-SUMIT, או מכאן." />
       ) : (
-        <ul className="project-list">
+        <List>
           {projects.map((project) => (
-            <li key={project.id}>
-              <Link to={`/projects/${project.id}${search}`} className="project-line">
-                <span>
-                  {project.name}
-                  <span className="t-hint block">{project.status === "finished" ? "הסתיים" : "פעיל"}</span>
-                </span>
-                <Money agorot={ag(project.profit_agorot)} />
-              </Link>
-            </li>
+            <ListRow
+              key={project.id}
+              variant="project"
+              title={project.name}
+              hint={project.status === "finished" ? "הסתיים" : "פעיל"}
+              agorot={ag(project.profit_agorot)}
+              loss={project.profit_agorot < 0}
+              href={`/projects/${project.id}${search}`}
+            />
           ))}
-        </ul>
+        </List>
       )}
-      {open ? <ProjectForm onClose={() => { setOpen(false); }} /> : null}
+      <Sheet open={open} onOpenChange={setOpen} title="פרויקט">
+        <ProjectForm onClose={() => { setOpen(false); }} />
+      </Sheet>
     </div>
   );
 }
@@ -157,13 +176,12 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
   }
 
   return (
-    <form className="stack card" onSubmit={(event) => { void submit(event); }}>
-      <h2 className="t-title-3">פרויקט</h2>
-      <label className="field">שם<input value={name} onChange={(event) => { setName(event.target.value); }} required /></label>
-      <label className="field">תקציב בשקלים, או ריק<input value={budget} onChange={(event) => { setBudget(event.target.value); }} inputMode="decimal" /></label>
+    <form className="stack" onSubmit={(event) => { void submit(event); }}>
+      <TextField label="שם" value={name} onChange={(event) => { setName(event.target.value); }} required />
+      <MoneyField label="תקציב בשקלים, או ריק" value={budget} onChange={(event) => { setBudget(event.target.value); }} />
       {error ? <p className="form-error">{error}</p> : null}
-      <button type="submit" className="btn-pri">שמירה</button>
-      <button type="button" className="btn-sec" onClick={onClose}>ביטול</button>
+      <Button type="submit">שמירה</Button>
+      <Button variant="secondary" onClick={onClose}>ביטול</Button>
     </form>
   );
 }
@@ -200,73 +218,66 @@ export function ProjectDetailScreen() {
     },
   });
 
-  if (preview !== "off" && preview !== "demo") {
-    return <LegacyEmptyProject />;
-  }
-  if (detail.isLoading) return <ScreenMessage title="פרויקט" body="טוען…" />;
+  if (preview !== "off" && preview !== "demo") return <LegacyEmptyProject />;
+  if (detail.isLoading) return <ScreenMessage title="פרויקט" body="טוען…" loading />;
   if (!detail.data) {
-    return (
-      <div className="page">
-        <Link to={`/projects${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-        <h1 className="t-title-1">פרויקט</h1>
-        <p className="t-label">הפרויקט לא נמצא.</p>
-      </div>
-    );
+    return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
   const project = detail.data;
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="band">
-        <div className="band-row">
-          <Link to={`/projects${search}`} aria-label="חזרה" className="icon-btn icon-btn-on-band"><BackIcon /></Link>
-        </div>
-        <div className="band-hero">
+      <TopBand
+        trailing={
+          <IconButton label="חזרה" to={`/projects${search}`} onBand>
+            <BackIcon />
+          </IconButton>
+        }
+      >
+        <BandHero>
           <h1 className="t-title-2">{project.name}</h1>
           <p className="band-label t-label">{project.state_label ?? (project.status === "finished" ? "הסתיים" : "פעיל")}</p>
-          <p className="t-display"><Money agorot={ag(project.profit_agorot)} /></p>
-        </div>
-      </header>
+          <p className="t-display"><BigNumber agorot={ag(project.profit_agorot)} /></p>
+        </BandHero>
+      </TopBand>
       {project.budget_agorot != null ? (
-        <p className="page-pad t-label">תקציב <Money agorot={ag(project.budget_agorot)} /></p>
+        <div className="page-pad">
+          <BudgetBar label="תקציב" spentAgorot={ag(Math.abs(project.direct_agorot))} budgetAgorot={ag(project.budget_agorot)} />
+        </div>
       ) : null}
-      <div className="stat-grid">
-        <div className="stat"><p className="t-hint">הכנסות</p><Money agorot={ag(project.income_agorot)} /></div>
-        <div className="stat"><p className="t-hint">עלויות ישירות</p><Money agorot={ag(project.direct_agorot)} /></div>
-        <div className="stat"><p className="t-hint">חלק משותף</p><Money agorot={ag(project.shared_agorot)} /></div>
-      </div>
+      <StatGrid>
+        <Stat label="הכנסות" amount={ag(project.income_agorot)} />
+        <Stat label="עלויות ישירות" amount={ag(project.direct_agorot)} />
+        <Stat label="חלק משותף" amount={ag(project.shared_agorot)} />
+      </StatGrid>
       <h2 className="t-title-3 page-pad">קטגוריות</h2>
       {project.categories.length === 0 ? <p className="page-pad t-hint">אין עדיין הוצאות מסווגות.</p> : (
-        <ul className="project-list">
+        <List>
           {project.categories.map((category) => (
-            <li key={category.id} className="project-line">
-              <span>{category.name}</span>
-              <Money agorot={ag(category.amount_agorot)} />
-            </li>
+            <ListRow key={category.id} variant="project" title={category.name} agorot={ag(category.amount_agorot)} loss={category.amount_agorot < 0} />
           ))}
-        </ul>
+        </List>
       )}
       <h2 className="t-title-3 page-pad">תנועות</h2>
       {project.transactions.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין עדיין תנועות" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
       ) : (
-        <ul className="project-list">
+        <List>
           {project.transactions.map((txn) => (
-            <li key={txn.id}>
-              <Link to={`/transactions/${txn.id}${search}`} className="project-line">
-                <span>{txn.description}<span className="t-hint block">{txn.doc_date}{txn.category ? ` · ${txn.category}` : ""}</span></span>
-                <Money agorot={ag(txn.amount_net)} />
-              </Link>
-            </li>
+            <ListRow
+              key={txn.id}
+              variant="transaction"
+              title={txn.description}
+              hint={`${txn.doc_date}${txn.category ? ` · ${txn.category}` : ""}`}
+              agorot={ag(txn.amount_net)}
+              sign={txn.direction === "income" ? "in" : "out"}
+              source="invoice"
+              href={`/transactions/${txn.id}${search}`}
+            />
           ))}
-        </ul>
+        </List>
       )}
       {preview === "off" ? (
-        <ArchiveButton
-          projectId={project.id}
-          name={project.name}
-          budget={project.budget_agorot ?? null}
-          finished={project.status === "finished"}
-        />
+        <ArchiveButton projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />
       ) : null}
     </div>
   );
@@ -277,25 +288,28 @@ function LegacyEmptyProject() {
   const location = useLocation();
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="band">
-        <div className="band-row">
-          <Link to={`/projects${search}`} aria-label="חזרה" className="icon-btn icon-btn-on-band"><BackIcon /></Link>
-        </div>
-        <div className="band-hero">
+      <TopBand
+        trailing={
+          <IconButton label="חזרה" to={`/projects${search}`} onBand>
+            <BackIcon />
+          </IconButton>
+        }
+      >
+        <BandHero>
           <h1 className="t-title-2">פרויקט</h1>
           <p className="band-label t-label">רווח</p>
-          <p className="t-display"><Money agorot={0n} /></p>
-        </div>
-      </header>
+          <p className="t-display"><BigNumber agorot={0n} /></p>
+        </BandHero>
+      </TopBand>
       <EmptyState
         icon={<DocumentIcon />}
         title="אין עדיין תנועות"
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
         action={
-          <Link to={`/add${search}`} state={withSheetBackground(location)} className="btn-sec">
+          <Button variant="secondary" to={`/add${search}`} state={withSheetBackground(location)}>
             <CameraIcon />
             צילום חשבונית
-          </Link>
+          </Button>
         }
       />
     </div>
@@ -315,16 +329,18 @@ function ArchiveButton({
 }) {
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
-  if (!confirm) {
-    return <button type="button" className="btn-sec page-pad" onClick={() => { setConfirm(true); }}>{finished ? "החזרה לפעיל" : "סיום הפרויקט"}</button>;
-  }
   return (
-    <div className="card page-pad">
-      <p>פרויקט לא נמחק. אפשר להחזיר אותו אחר כך.</p>
-      <button
-        type="button"
-        className="btn-bad"
-        onClick={() => {
+    <div className="page-pad">
+      <Button variant="secondary" onClick={() => { setConfirm(true); }}>{finished ? "החזרה לפעיל" : "סיום הפרויקט"}</Button>
+      <ConfirmSheet
+        open={confirm}
+        onOpenChange={setConfirm}
+        title={finished ? "החזרה לפעיל" : "סיום הפרויקט"}
+        item={name}
+        consequence="פרויקט לא נמחק. אפשר להחזיר אותו אחר כך."
+        confirmLabel="אישור"
+        destructive={!finished}
+        onConfirm={() => {
           const supabase = getSupabase();
           if (!supabase) return;
           void supabase.rpc("upsert_project", {
@@ -335,9 +351,7 @@ function ArchiveButton({
           }).then(() => invalidate());
           setConfirm(false);
         }}
-      >
-        אישור
-      </button>
+      />
     </div>
   );
 }
@@ -347,29 +361,27 @@ export function ReviewScreen() {
   const search = usePreviewSearch();
   const review = useReviewQuery();
   const invalidate = useInvalidateBooks();
-  if (preview === "empty") return <PageTitle title="לאישור" />;
-  if (review.isLoading) return <ScreenMessage title="לאישור" body="טוען…" />;
+  if (preview === "empty") return <ScreenHeader title="לאישור" />;
+  if (review.isLoading) return <ScreenMessage title="לאישור" body="טוען…" loading />;
   if (review.isError) return <ScreenMessage title="לאישור" body="לא הצלחנו לטעון את התור." />;
   const rows = review.data ?? [];
   return (
-    <div className="page">
-      <h1 className="t-title-1">לאישור</h1>
+    <div>
+      <ScreenHeader title="לאישור" />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין פריטים לאישור" body="כשחסר פרויקט או קטגוריה, הפריט מופיע כאן. הרווח כבר כולל את מה שירד מ-SUMIT." />
       ) : (
-        <ul className="stack">
+        <div className="stack">
           {rows.map((row) => (
-            <li key={row.id} className="card">
-              <p className="t-title-3">{row.description}</p>
-              <p className="t-hint">{row.supplier_name ?? "בלי ספק"} · {row.doc_date}</p>
-              <p><Money agorot={ag(row.amount_net)} /></p>
+            <Card key={row.id}>
+              <ListRow variant="review" title={row.description} hint={`${row.supplier_name ?? "בלי ספק"} · ${row.doc_date}`} agorot={ag(row.amount_net)} status="ממתין" />
               <div className="choice-col">
-                <Link className="btn-sec" to={`/review/change${search}${search ? "&" : "?"}item=${row.id}`}>שינוי</Link>
-                <button type="button" className="btn-sec" onClick={() => { void skip(row.id, invalidate, preview); }}>דילוג</button>
+                <Button variant="secondary" to={`/review/change${search}${search ? "&" : "?"}item=${row.id}`}>שינוי</Button>
+                <Button variant="secondary" onClick={() => { void skip(row.id, invalidate, preview); }}>דילוג</Button>
               </div>
-            </li>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
@@ -421,28 +433,26 @@ export function ChangeForm() {
   }
 
   return (
-    <Sheet title="שינוי שיוך" closeTo={`/review${search}`}>
+    <RouteSheet title="שינוי שיוך" closeTo={`/review${search}`}>
       <form className="stack" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        <label className="field">פרויקט
-          <select value={projectId} onChange={(event) => { setProjectId(event.target.value); }} required>
-            <option value="">בחירה</option>
-            {(dashboard.data?.projects ?? []).map((project) => (
-              <option key={project.id} value={project.id}>{project.name}</option>
-            ))}
-          </select>
-        </label>
-        <label className="field">קטגוריה
-          <select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); }} required>
-            <option value="">בחירה</option>
-            {(categories.data ?? []).filter((category) => !category.hidden).map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="פרויקט"
+          value={projectId}
+          required
+          onChange={(event) => { setProjectId(event.target.value); }}
+          options={[{ value: "", label: "בחירה" }, ...(dashboard.data?.projects ?? []).map((project) => ({ value: project.id, label: project.name }))]}
+        />
+        <SelectField
+          label="קטגוריה"
+          value={categoryId}
+          required
+          onChange={(event) => { setCategoryId(event.target.value); }}
+          options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).filter((category) => !category.hidden).map((category) => ({ value: category.id, label: category.name }))]}
+        />
         {error ? <p className="form-error">{error}</p> : null}
-        <button type="submit" className="btn-pri">אישור</button>
+        <Button type="submit">אישור</Button>
       </form>
-    </Sheet>
+    </RouteSheet>
   );
 }
 
@@ -455,7 +465,7 @@ export function AddForm() {
   const [direction, setDirection] = useState<"income" | "expense">("expense");
   const [kind, setKind] = useState<"payment" | "invoice">("payment");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -464,6 +474,10 @@ export function AddForm() {
 
   async function save(event: SubmitEvent) {
     event.preventDefault();
+    if (!date) {
+      setError("בדקו סכום, תאריך ופרויקט.");
+      return;
+    }
     if (preview !== "off") {
       setError("במצב תצוגה הרשומה לא נשמרת.");
       return;
@@ -492,41 +506,54 @@ export function AddForm() {
   }
 
   return (
-    <Sheet title="הוספה" closeTo={`/${search}`} returnFocusRef={addTriggerRef}>
+    <RouteSheet title="הוספה" closeTo={`/${search}`} returnFocusRef={addTriggerRef}>
       <form className="stack" onSubmit={(event) => { void save(event); }}>
-        <div className="seg" role="group" aria-label="סוג">
-          <button type="button" aria-pressed={direction === "income"} onClick={() => { setDirection("income"); }}>הכנסה</button>
-          <button type="button" aria-pressed={direction === "expense"} onClick={() => { setDirection("expense"); }}>הוצאה</button>
-        </div>
+        <SegmentedControl
+          label="סוג"
+          value={direction}
+          onChange={setDirection}
+          options={[
+            { value: "income", label: "הכנסה" },
+            { value: "expense", label: "הוצאה" },
+          ]}
+        />
         {direction === "income" ? (
-          <div className="seg" role="group" aria-label="מסמך">
-            <button type="button" aria-pressed={kind === "payment"} onClick={() => { setKind("payment"); }}>תקבול</button>
-            <button type="button" aria-pressed={kind === "invoice"} onClick={() => { setKind("invoice"); }}>חשבונית שלא שולמה</button>
-          </div>
+          <SegmentedControl
+            label="מסמך"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: "payment", label: "תקבול" },
+              { value: "invoice", label: "חשבונית שלא שולמה" },
+            ]}
+          />
         ) : (
-          <label className="field"><input type="checkbox" checked={exempt} onChange={(event) => { setExempt(event.target.checked); }} /> הספק פטור ממע״מ</label>
+          <Toggle label="הספק פטור ממע״מ" checked={exempt} onChange={setExempt} />
         )}
-        <label className="field">סכום בשקלים<input value={amount} onChange={(event) => { setAmount(event.target.value); }} inputMode="decimal" required /></label>
-        <label className="field">תאריך<input type="date" value={date} onChange={(event) => { setDate(event.target.value); }} required /></label>
-        <label className="field">תיאור<input value={description} onChange={(event) => { setDescription(event.target.value); }} /></label>
-        <label className="field">פרויקט
-          <select value={projectId} onChange={(event) => { setProjectId(event.target.value); }}>
-            <option value="">בלי פרויקט, זו תקורה</option>
-            {(dashboard.data?.projects ?? []).map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-          </select>
-        </label>
-        <label className="field">קטגוריה
-          <select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); }}>
-            <option value="">בלי קטגוריה</option>
-            {(categories.data ?? []).filter((category) => category.kind === (direction === "income" ? "income" : "expense") && !category.hidden).map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
-            ))}
-          </select>
-        </label>
+        <MoneyField label="סכום בשקלים" value={amount} onChange={(event) => { setAmount(event.target.value); }} required />
+        <DatePicker label="תאריך" value={date} onChange={setDate} />
+        <TextField label="תיאור" value={description} onChange={(event) => { setDescription(event.target.value); }} />
+        <SelectField
+          label="פרויקט"
+          value={projectId}
+          onChange={(event) => { setProjectId(event.target.value); }}
+          options={[{ value: "", label: "בלי פרויקט, זו תקורה" }, ...(dashboard.data?.projects ?? []).map((project) => ({ value: project.id, label: project.name }))]}
+        />
+        <SelectField
+          label="קטגוריה"
+          value={categoryId}
+          onChange={(event) => { setCategoryId(event.target.value); }}
+          options={[
+            { value: "", label: "בלי קטגוריה" },
+            ...(categories.data ?? [])
+              .filter((category) => category.kind === (direction === "income" ? "income" : "expense") && !category.hidden)
+              .map((category) => ({ value: category.id, label: category.name })),
+          ]}
+        />
         {error ? <p className="form-error">{error}</p> : null}
-        <button type="submit" className="btn-pri">שמירה</button>
+        <Button type="submit">שמירה</Button>
       </form>
-    </Sheet>
+    </RouteSheet>
   );
 }
 
@@ -534,24 +561,31 @@ export function UnpaidScreen() {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const unpaid = useUnpaidQuery();
-  if (preview === "empty") return <PageTitle title="חשבוניות פתוחות" backTo={`/${search}`} />;
-  if (unpaid.isLoading) return <ScreenMessage title="חשבוניות פתוחות" body="טוען…" />;
+  if (preview === "empty") return <ScreenHeader title="חשבוניות פתוחות" backTo={`/${search}`} />;
+  if (unpaid.isLoading) return <ScreenMessage title="חשבוניות פתוחות" body="טוען…" loading />;
   const rows = unpaid.data ?? [];
   const gross = rows.reduce((sum, row) => sum + row.open_gross_agorot, 0);
   return (
-    <div className="page">
-      <Link to={`/${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-      <h1 className="t-title-1">חשבוניות פתוחות</h1>
-      <p className="t-label">לא נכלל ברווח. סכום פתוח כולל מע״מ <bdi dir="ltr">{formatIls(ag(gross))}</bdi>.</p>
+    <div>
+      <ScreenHeader
+        title="חשבוניות פתוחות"
+        subtitle={`לא נכלל ברווח. סכום פתוח כולל מע״מ ${formatIls(ag(gross))}.`}
+        backTo={`/${search}`}
+      />
       {rows.length === 0 ? <EmptyState icon={<DocumentIcon />} title="אין חשבוניות פתוחות" body="כל החשבוניות כוסו בקבלה או בזיכוי." /> : (
-        <ul className="project-list">
+        <List>
           {rows.map((row) => (
-            <li key={row.id} className="project-line">
-              <span>{row.customer_name ?? row.description}<span className="t-hint block">{row.project_name} · {row.doc_date}</span></span>
-              <Money agorot={ag(row.open_gross_agorot)} />
-            </li>
+            <ListRow
+              key={row.id}
+              variant="transaction"
+              title={row.customer_name ?? row.description}
+              hint={`${row.project_name ?? ""} · ${row.doc_date}`}
+              agorot={ag(row.open_gross_agorot)}
+              sign="in"
+              source="invoice"
+            />
           ))}
-        </ul>
+        </List>
       )}
     </div>
   );
@@ -594,51 +628,44 @@ export function TransactionScreen() {
     },
   });
   if (preview !== "off" && preview !== "demo") {
-    return (
-      <div className="page">
-        <Link to={`/${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-        <h1 className="t-title-1">פרטי תנועה</h1>
-      </div>
-    );
+    return <ScreenHeader title="פרטי תנועה" backTo={`/${search}`} />;
   }
-  if (detail.isLoading) return <ScreenMessage title="פרטי תנועה" body="טוען…" />;
+  if (detail.isLoading) return <ScreenMessage title="פרטי תנועה" body="טוען…" loading />;
   if (!detail.data) return <ScreenMessage title="פרטי תנועה" body="התנועה לא נמצאה." />;
   const txn = detail.data;
   return (
-    <div className="page">
-      <Link to={`/${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-      <h1 className="t-title-1">פרטי תנועה</h1>
-      <p className="t-display"><Money agorot={ag(txn.amount_net)} /></p>
-      <p>{txn.description}</p>
-      <p className="t-hint">{txn.doc_date} · {txn.project_name ?? "בלי פרויקט"} · {txn.category_name ?? "בלי קטגוריה"}</p>
-      <p className="t-hint">לפני מע״מ. מע״מ <bdi dir="ltr">{formatIls(ag(txn.vat_amount))}</bdi> · {txn.vat_status === "assumed" ? "מע״מ משוער 18%" : txn.vat_status}</p>
-      <p className="t-hint">{txn.supplier_name ?? txn.customer_name ?? ""}</p>
-      <Link className="btn-sec" to={`/transactions/${txn.id}/split${search}`}>פיצול</Link>
-      {txn.source === "manual" ? (
-        <button type="button" className="btn-bad" onClick={() => { setConfirm(true); }}>מחיקה</button>
-      ) : (
-        <p className="t-hint">תנועה מ-SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
-      )}
-      {confirm ? (
-        <div className="card" role="dialog" aria-label="אישור מחיקה">
-          <p>למחוק את הרשומה הידנית? אי אפשר לשחזר.</p>
-          <button
-            type="button"
-            className="btn-bad"
-            onClick={() => {
-              const supabase = getSupabase();
-              if (!supabase) return;
-              void supabase.rpc("delete_transaction", { p_id: txn.id }).then(async () => {
-                await invalidate();
-                void navigate(`/${search}`);
-              });
-            }}
-          >
-            מחיקה
-          </button>
-          <button type="button" className="btn-sec" onClick={() => { setConfirm(false); }}>ביטול</button>
-        </div>
-      ) : null}
+    <div>
+      <ScreenHeader title="פרטי תנועה" backTo={`/${search}`} />
+      <p className="t-display page-pad"><BigNumber agorot={ag(txn.amount_net)} /></p>
+      <p className="page-pad">{txn.description}</p>
+      <p className="t-hint page-pad">{txn.doc_date} · {txn.project_name ?? "בלי פרויקט"} · {txn.category_name ?? "בלי קטגוריה"}</p>
+      <p className="t-hint page-pad">לפני מע״מ. מע״מ <bdi dir="ltr">{formatIls(ag(txn.vat_amount))}</bdi> · {txn.vat_status === "assumed" ? "מע״מ משוער 18%" : txn.vat_status}</p>
+      <p className="t-hint page-pad">{txn.supplier_name ?? txn.customer_name ?? ""}</p>
+      <div className="stack page-pad">
+        <Button variant="secondary" to={`/transactions/${txn.id}/split${search}`}>פיצול</Button>
+        {txn.source === "manual" ? (
+          <Button variant="danger" onClick={() => { setConfirm(true); }}>מחיקה</Button>
+        ) : (
+          <p className="t-hint">תנועה מ-SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
+        )}
+      </div>
+      <ConfirmSheet
+        open={confirm}
+        onOpenChange={setConfirm}
+        title="מחיקת רשומה"
+        item={txn.description}
+        consequence="למחוק את הרשומה הידנית? אי אפשר לשחזר."
+        confirmLabel="מחיקה"
+        destructive
+        onConfirm={() => {
+          const supabase = getSupabase();
+          if (!supabase) return;
+          void supabase.rpc("delete_transaction", { p_id: txn.id }).then(async () => {
+            await invalidate();
+            void navigate(`/${search}`);
+          });
+        }}
+      />
     </div>
   );
 }
@@ -678,24 +705,21 @@ export function SplitScreen() {
   }
 
   return (
-    <div className="page">
-      <Link to={`/transactions/${transactionId}${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-      <h1 className="t-title-1">פיצול</h1>
-      <p className="t-label">החלקים מסתכמים ב-100%. עכשיו {total.toFixed(0)}%.</p>
-      <form className="stack" onSubmit={(event) => { void save(event); }}>
+    <div>
+      <ScreenHeader title="פיצול" subtitle={`החלקים מסתכמים ב-100%. עכשיו ${total.toFixed(0)}%.`} backTo={`/transactions/${transactionId}${search}`} />
+      <form className="stack page-pad" onSubmit={(event) => { void save(event); }}>
         {projects.map((project) => (
-          <label key={project.id} className="field">
-            {project.name}
-            <input
-              inputMode="decimal"
-              value={shares[project.id] ?? ""}
-              onChange={(event) => { setShares({ ...shares, [project.id]: event.target.value }); }}
-              placeholder="0"
-            />
-          </label>
+          <TextField
+            key={project.id}
+            label={project.name}
+            inputMode="decimal"
+            value={shares[project.id] ?? ""}
+            placeholder="0"
+            onChange={(event) => { setShares({ ...shares, [project.id]: event.target.value }); }}
+          />
         ))}
         {error ? <p className="form-error">{error}</p> : null}
-        <button type="submit" className="btn-pri">שמירת הפיצול</button>
+        <Button type="submit">שמירת הפיצול</Button>
       </form>
     </div>
   );
@@ -711,7 +735,7 @@ export function SettingsScreen() {
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  if (preview === "empty") return <PageTitle title="הגדרות" />;
+  if (preview === "empty") return <ScreenHeader title="הגדרות" />;
 
   async function connect(event: SubmitEvent) {
     event.preventDefault();
@@ -780,46 +804,42 @@ export function SettingsScreen() {
 
   const connected = status.data?.connected === true;
   return (
-    <div className="page">
-      <h1 className="t-title-1">הגדרות</h1>
-      <section className="card">
-        <h2 className="t-title-3">העסק</h2>
+    <div>
+      <ScreenHeader title="הגדרות" />
+      <Section title="העסק">
         <p>{dashboard.data?.name ?? "עדיין בלי עסק"}</p>
         <p className="t-hint">{dashboard.data?.vat_registered === false ? "עוסק פטור" : "עוסק מורשה"}</p>
-      </section>
-      <section className="card">
-        <h2 className="t-title-3">חשבון Google</h2>
+      </Section>
+      <Section title="חשבון Google">
         <p>{session?.user.email ?? (preview === "demo" ? "eliranazulay@gmail.com" : "לא מחובר")}</p>
         {preview === "off" ? (
-          <button
-            type="button"
-            className="btn-sec"
+          <Button
+            variant="secondary"
             onClick={() => {
               const supabase = getSupabase();
               void supabase?.auth.signOut();
             }}
           >
             יציאה
-          </button>
+          </Button>
         ) : null}
-      </section>
-      <section className="card">
-        <h2 className="t-title-3">SUMIT</h2>
+      </Section>
+      <Section title="SUMIT">
         <p>{connected ? `מחובר לחברה ${String(status.data?.sumit_company_id ?? "")}` : "לא מחובר"}</p>
         {status.data?.last_error ? <p className="form-error">{status.data.last_error}</p> : null}
         <form className="stack" onSubmit={(event) => { void connect(event); }}>
-          <label className="field">CompanyID<input value={companyId} onChange={(event) => { setCompanyId(event.target.value); }} inputMode="numeric" /></label>
-          <label className="field">מפתח API<input type="password" value={apiKey} onChange={(event) => { setApiKey(event.target.value); }} autoComplete="off" /></label>
-          <button type="submit" className="btn-pri">חיבור</button>
+          <TextField label="CompanyID" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
+          <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
+          <Button type="submit">חיבור</Button>
         </form>
-        <button type="button" className="btn-sec" onClick={() => { void refresh(); }}>רענון עכשיו</button>
-        {connected ? <button type="button" className="btn-bad" onClick={() => { void disconnect(); }}>ניתוק</button> : null}
-        {message ? <p className="t-hint">{message}</p> : null}
-      </section>
-      <nav className="stack">
-        <Link to={`/settings/categories${search}`}>קטגוריות</Link>
-        <Link to={`/projects${search}`}>פרויקטים</Link>
-        <Link to={`/notifications${search}`}>התראות</Link>
+        <Button variant="secondary" onClick={() => { void refresh(); }}>רענון עכשיו</Button>
+        {connected ? <Button variant="danger" onClick={() => { void disconnect(); }}>ניתוק</Button> : null}
+        {message ? <Banner title={message} /> : null}
+      </Section>
+      <nav className="stack page-pad">
+        <TextLink to={`/settings/categories${search}`}>קטגוריות</TextLink>
+        <TextLink to={`/projects${search}`}>פרויקטים</TextLink>
+        <TextLink to={`/notifications${search}`}>התראות</TextLink>
       </nav>
     </div>
   );
@@ -832,55 +852,60 @@ export function CategoriesScreen() {
   const invalidate = useInvalidateBooks();
   const [mergeFrom, setMergeFrom] = useState("");
   const [mergeInto, setMergeInto] = useState("");
-  if (preview === "empty") return <PageTitle title="קטגוריות" backTo={`/settings${search}`} />;
+  if (preview === "empty") return <ScreenHeader title="קטגוריות" backTo={`/settings${search}`} />;
   return (
-    <div className="page">
-      <Link to={`/settings${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-      <h1 className="t-title-1">קטגוריות</h1>
-      <ul className="stack">
+    <div>
+      <ScreenHeader title="קטגוריות" backTo={`/settings${search}`} />
+      <List>
         {(categories.data ?? []).map((category) => (
-          <li key={category.id} className="project-line">
-            <span>{category.name}<span className="t-hint block">{category.kind === "income" ? "הכנסה" : "הוצאה"}{category.hidden ? " · מוסתרת" : ""}</span></span>
-            <button
-              type="button"
-              className="btn-sec"
-              onClick={() => {
-                if (preview !== "off") return;
-                const supabase = getSupabase();
-                if (!supabase) return;
-                void supabase.rpc("set_category_hidden", { p_id: category.id, p_hidden: !category.hidden }).then(() => invalidate());
-              }}
-            >
-              {category.hidden ? "הצגה" : "הסתרה"}
-            </button>
-          </li>
+          <ListRow
+            key={category.id}
+            variant="supplier"
+            title={category.name}
+            hint={`${category.kind === "income" ? "הכנסה" : "הוצאה"}${category.hidden ? " · מוסתרת" : ""}`}
+            action={
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (preview !== "off") return;
+                  const supabase = getSupabase();
+                  if (!supabase) return;
+                  void supabase.rpc("set_category_hidden", { p_id: category.id, p_hidden: !category.hidden }).then(() => invalidate());
+                }}
+              >
+                {category.hidden ? "הצגה" : "הסתרה"}
+              </Button>
+            }
+          />
         ))}
-      </ul>
-      <form
-        className="stack card"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (preview !== "off") return;
-          const supabase = getSupabase();
-          if (!supabase) return;
-          void supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }).then(() => invalidate());
-        }}
-      >
-        <h2 className="t-title-3">מיזוג</h2>
-        <label className="field">מקטגוריה
-          <select value={mergeFrom} onChange={(event) => { setMergeFrom(event.target.value); }}>
-            <option value="">בחירה</option>
-            {(categories.data ?? []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select>
-        </label>
-        <label className="field">אל
-          <select value={mergeInto} onChange={(event) => { setMergeInto(event.target.value); }}>
-            <option value="">בחירה</option>
-            {(categories.data ?? []).filter((category) => !category.hidden).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select>
-        </label>
-        <button type="submit" className="btn-bad">מיזוג והסתרה</button>
-      </form>
+      </List>
+      <Card>
+        <form
+          className="stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (preview !== "off") return;
+            const supabase = getSupabase();
+            if (!supabase) return;
+            void supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }).then(() => invalidate());
+          }}
+        >
+          <h2 className="t-title-3">מיזוג</h2>
+          <SelectField
+            label="מקטגוריה"
+            value={mergeFrom}
+            onChange={(event) => { setMergeFrom(event.target.value); }}
+            options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).map((category) => ({ value: category.id, label: category.name }))]}
+          />
+          <SelectField
+            label="אל"
+            value={mergeInto}
+            onChange={(event) => { setMergeInto(event.target.value); }}
+            options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).filter((category) => !category.hidden).map((category) => ({ value: category.id, label: category.name }))]}
+          />
+          <Button type="submit" variant="danger">מיזוג והסתרה</Button>
+        </form>
+      </Card>
     </div>
   );
 }
@@ -888,12 +913,13 @@ export function CategoriesScreen() {
 export function NotificationsScreen() {
   const search = usePreviewSearch();
   return (
-    <div className="page">
-      <Link to={`/settings${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
-      <h1 className="t-title-1">התראות</h1>
-      <p className="t-label">שתי הודעות, שעון ישראל. סיכום ביום ראשון ב-08:00, ותזכורת לאישור ב-18:00 רק כשיש תור.</p>
-      <p className="t-hint">בשלב הזה ההודעות לא נשלחות. אין שירות בתשלום ואין Push.</p>
+    <div>
+      <ScreenHeader
+        title="התראות"
+        subtitle="שתי הודעות, שעון ישראל. סיכום ביום ראשון ב-08:00, ותזכורת לאישור ב-18:00 רק כשיש תור."
+        backTo={`/settings${search}`}
+      />
+      <p className="t-hint page-pad">בשלב הזה ההודעות לא נשלחות. אין שירות בתשלום ואין Push.</p>
     </div>
   );
 }
-

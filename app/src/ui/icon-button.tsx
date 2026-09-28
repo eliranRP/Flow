@@ -1,21 +1,38 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { cx } from "./cx";
 
-type IconButtonProps = {
+type Common = {
   label: string;
   children: ReactNode;
   onBand?: boolean;
-} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "aria-label">;
+  className?: string;
+};
 
-export function IconButton({ label, children, onBand = false, className, type = "button", ...rest }: IconButtonProps) {
+type AsButton = Common &
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "aria-label" | "className"> & { to?: undefined };
+
+type AsLink = Common & { to: string };
+
+export type IconButtonProps = AsButton | AsLink;
+
+function isLink(props: IconButtonProps): props is AsLink {
+  return typeof props.to === "string";
+}
+
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(props, ref) {
+  const className = cx("ui-icon-btn", props.onBand && "ui-icon-btn-on-band", props.className);
+  if (isLink(props)) {
+    return (
+      <Link to={props.to} aria-label={props.label} className={className}>
+        {props.children}
+      </Link>
+    );
+  }
+  const { label, children, onBand: _onBand, className: _className, type = "button", ...rest } = props;
   return (
-    <button
-      type={type}
-      className={cx("icon-btn", "ui-icon-btn", onBand && "icon-btn-on-band", className)}
-      aria-label={label}
-      {...rest}
-    >
+    <button ref={ref} type={type} className={className} aria-label={label} {...rest}>
       {children}
     </button>
   );
-}
+});

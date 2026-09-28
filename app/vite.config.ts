@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => {
   const storybook = Boolean(process.env.VITEST) || lifecycle.includes("storybook");
 
   return {
+    optimizeDeps: {
+      include: ["@tanstack/react-query", "@supabase/supabase-js"],
+    },
     base: "/",
     envDir: path.resolve(__dirname, ".."),
     server: {
