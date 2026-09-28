@@ -1,9 +1,10 @@
 import { homeSummarySchema } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { EmptyState } from "../components/EmptyState";
-import { ChartIcon, OfflineIcon } from "../components/icons";
+import { ChartIcon, InfoIcon, OfflineIcon, RefreshIcon } from "../components/icons";
 import { HomeSkeleton } from "../components/Skeleton";
 import { Wordmark } from "../components/Wordmark";
 import { homeGreeting, profitBandLabel } from "../home-label";
@@ -38,12 +39,49 @@ export function HomeScreen() {
   });
 
   const loading = preview === "loading" || (!previewing && (status === "loading" || home.isLoading));
-  const failed = preview === "error" || (!previewing && home.isError);
+  const offline = preview === "error" || (!previewing && home.isError && navigator.onLine === false);
+  const serverFailed =
+    preview === "error-server" || (!previewing && home.isError && navigator.onLine !== false);
+  const failed = offline || serverFailed;
   const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
   // Phase 0 does not wire the P&L yet, so the band stays the first-run placeholder.
   const label = profitBandLabel(false);
 
+  useEffect(() => {
+    if (!failed) return;
+    document.documentElement.dataset.band = "off";
+    return () => {
+      delete document.documentElement.dataset.band;
+    };
+  }, [failed]);
+
+  function retry() {
+    if (previewing) {
+      void navigate("/?preview=1");
+      return;
+    }
+    void home.refetch();
+  }
+
   if (loading) return <HomeSkeleton previewing={previewing} />;
+
+  if (failed) {
+    return (
+      <div className="flex min-h-full flex-1 flex-col">
+        <EmptyState
+          icon={offline ? <OfflineIcon /> : <InfoIcon size={36} />}
+          title={offline ? "אין חיבור לאינטרנט" : "לא הצלחנו לטעון את הנתונים"}
+          body={offline ? "בדקו את החיבור ונסו שוב. שום דבר לא נמחק." : "נסו שוב בעוד רגע"}
+          action={
+            <button type="button" className="btn-pri" onClick={retry}>
+              <RefreshIcon />
+              ניסיון חוזר
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -58,39 +96,16 @@ export function HomeScreen() {
         {previewing ? <p className="preview-banner t-hint">מצב תצוגה</p> : null}
       </header>
 
-      {failed ? (
-        <EmptyState
-          icon={<OfflineIcon />}
-          title="לא הצלחנו לטעון"
-          body="בדקו את החיבור ונסו שוב. שום דבר לא נמחק."
-          action={
-            <button
-              type="button"
-              className="btn-sec"
-              onClick={() => {
-                if (previewing) {
-                  void navigate("/?preview=1");
-                  return;
-                }
-                void home.refetch();
-              }}
-            >
-              ניסיון חוזר
-            </button>
-          }
-        />
-      ) : (
-        <EmptyState
-          icon={<ChartIcon />}
-          title="עוד אין נתונים"
-          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
-          action={
-            <Link to={`/settings${search}`} className="btn-sec">
-              חיבור SUMIT
-            </Link>
-          }
-        />
-      )}
+      <EmptyState
+        icon={<ChartIcon />}
+        title="עוד אין נתונים"
+        body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
+        action={
+          <Link to={`/settings${search}`} className="btn-sec">
+            חיבור SUMIT
+          </Link>
+        }
+      />
     </div>
   );
 }

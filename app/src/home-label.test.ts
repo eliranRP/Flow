@@ -12,9 +12,9 @@ describe("profitBandLabel", () => {
 });
 
 describe("homeGreeting", () => {
-  it("uses an ellipsis until the owner name is known", () => {
-    expect(homeGreeting(null)).toBe("שלום, …");
-    expect(homeGreeting("  ")).toBe("שלום, …");
+  it("greets without a name as שלום, and with a comma once the name is known", () => {
+    expect(homeGreeting(null)).toBe("שלום");
+    expect(homeGreeting("  ")).toBe("שלום");
     expect(homeGreeting("אלירן")).toBe("שלום, אלירן");
   });
 });
