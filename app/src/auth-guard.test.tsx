@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
@@ -62,6 +62,7 @@ function renderAt(path: string) {
 
 afterEach(() => {
   auth.handlers.length = 0;
+  onlineManager.setOnline(true);
 });
 
 describe("auth guard when Supabase is configured", () => {
@@ -91,5 +92,16 @@ describe("auth guard when Supabase is configured", () => {
       emit("SIGNED_OUT", null);
     });
     expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
+  });
+
+  it("shows the offline screen when the home query is paused", async () => {
+    onlineManager.setOnline(false);
+    renderAt("/");
+    act(() => {
+      emit("INITIAL_SESSION", session);
+    });
+    expect(await screen.findByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+    expect(screen.queryByText("עוד אין נתונים")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "חיבור SUMIT" })).not.toBeInTheDocument();
   });
 });
