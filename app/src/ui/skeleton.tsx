@@ -4,8 +4,16 @@ const rowKeys = ["a", "b", "c"] as const;
 
 type SkeletonWidth = "sm" | "md" | "lg";
 
-export function Skeleton({ width = "md", tone = "surface" }: { width?: SkeletonWidth; tone?: "surface" | "ui-band" }) {
-  return <span className={cx("ui-skeleton-bar", tone === "ui-band" && "ui-skeleton-bar-band", `skeleton-w-${width}`)} />;
+export function Skeleton({
+  width = "md",
+  tone = "surface",
+  hero = false,
+}: {
+  width?: SkeletonWidth;
+  tone?: "surface" | "ui-band";
+  hero?: boolean;
+}) {
+  return <span className={cx("ui-skeleton-bar", tone === "ui-band" && "ui-skeleton-bar-band", hero ? "ui-skeleton-hero" : `skeleton-w-${width}`)} />;
 }
 
 export function ListSkeleton() {

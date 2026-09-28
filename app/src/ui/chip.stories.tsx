@@ -31,7 +31,7 @@ export const Suggested: Story = { args: { kind: "suggested", children: "חומר
 export const ChoiceOff: Story = { args: { kind: "choice", children: "עבודה" }, render: () => <Choice /> };
 export const Selected: Story = { args: { kind: "selected", pressed: true, children: "נבחר" } };
 export const Disabled: Story = { args: { kind: "disabled", children: "לא זמין" } };
-export const Status: Story = { args: { children: "ממתין" }, render: () => <StatusPill>ממתין</StatusPill> };
+export const Status: Story = { args: { children: "שולם" }, render: () => <StatusPill>שולם</StatusPill> };
 export const LongHebrew: Story = { args: { kind: "choice", children: longHebrew } };
 export const All: Story = {
   args: { children: "חומרים" },
@@ -41,7 +41,7 @@ export const All: Story = {
       <Chip kind="choice">בחירה</Chip>
       <Chip kind="selected" pressed>נבחר</Chip>
       <Chip kind="disabled">כבוי</Chip>
-      <StatusPill>פטור ממע״מ</StatusPill>
+      <StatusPill>מאושר</StatusPill>
     </Stack>
   ),
 };

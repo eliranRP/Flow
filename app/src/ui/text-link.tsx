@@ -9,11 +9,12 @@ type TextLinkProps = {
   to?: string;
   href?: string;
   tone?: "accent" | "quiet";
+  size?: "label" | "hint";
   chevron?: boolean;
 };
 
-export function TextLink({ children, className, to, href, tone = "accent", chevron = true }: TextLinkProps) {
-  const classes = cx("ui-text-link", tone === "quiet" && "ui-text-link-quiet", className);
+export function TextLink({ children, className, to, href, tone = "accent", size = "label", chevron = true }: TextLinkProps) {
+  const classes = cx("ui-text-link", tone === "quiet" && "ui-text-link-quiet", size === "hint" && "ui-text-link-hint", className);
   const body = (
     <>
       {children}

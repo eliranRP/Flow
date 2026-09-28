@@ -77,6 +77,14 @@ const sampleCategories: CategoryRow[] = [
   { id: "c2", name: "עבודה", kind: "expense", hidden: true, is_default: true },
 ];
 
+const exampleLabel = "נתוני דוגמה · Example data";
+
+function ExampleBar() {
+  return <p className="ui-example-bar t-hint">{exampleLabel}</p>;
+}
+
+const exampleOnBand = <span className="ui-example t-hint">{exampleLabel}</span>;
+
 const meta = {
   title: "Screens/Routes",
   parameters: { flowRouter: false },
@@ -160,7 +168,6 @@ export const ReviewEmpty: Story = {
 export const HomeBooksMonth: Story = {
   render: () => (
     <StoryRoute entry="/" tabs reviewCount={7}>
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
       <HomeBooks
         data={sampleDashboard}
         greeting="שלום, אלירן"
@@ -170,6 +177,7 @@ export const HomeBooksMonth: Story = {
         unpaidCount={3}
         period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
         onPeriod={() => undefined}
+        example={exampleOnBand}
       />
     </StoryRoute>
   ),
@@ -178,7 +186,7 @@ export const HomeBooksMonth: Story = {
 export const ReviewCardQueue: Story = {
   render: () => (
     <StoryRoute entry="/review" tabs reviewCount={1}>
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
     </StoryRoute>
   ),
@@ -195,7 +203,7 @@ export const SignInCancelled: Story = {
 export const ProjectsList: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <ProjectsScreen sample={sampleDashboard} />
     </StoryRoute>
   ),
@@ -220,7 +228,7 @@ export const ProjectsError: Story = {
 export const UnpaidList: Story = {
   render: () => (
     <StoryRoute entry="/unpaid">
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <UnpaidScreen sample={sampleUnpaid} />
     </StoryRoute>
   ),
@@ -253,7 +261,7 @@ export const SettingsEmpty: Story = {
 export const SettingsConnected: Story = {
   render: () => (
     <StoryRoute entry="/settings">
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <SettingsScreen sample={{ name: "Flow Test", vatRegistered: true, connected: true, companyId: 1001, lastError: "sync_failed" }} />
     </StoryRoute>
   ),
@@ -262,7 +270,7 @@ export const SettingsConnected: Story = {
 export const CategoriesList: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories">
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <CategoriesScreen sample={sampleCategories} />
     </StoryRoute>
   ),
@@ -279,7 +287,6 @@ export const Onboarding: Story = {
 export const HomeLongHero: Story = {
   render: () => (
     <StoryRoute entry="/" tabs>
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
       <HomeBooks
         data={{ ...sampleDashboard, income_agorot: 12_345_678_900n, expense_agorot: 0n, net_profit_agorot: 12_345_678_900n }}
         greeting="שלום, אלירן"
@@ -289,6 +296,7 @@ export const HomeLongHero: Story = {
         unpaidCount={0}
         period={{ kind: "all", from: null, to: null }}
         onPeriod={() => undefined}
+        example={exampleOnBand}
       />
     </StoryRoute>
   ),
@@ -297,7 +305,7 @@ export const HomeLongHero: Story = {
 export const ProjectDetail: Story = {
   render: () => (
     <StoryRoute entry="/projects/a">
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <ProjectDetailScreen
         sample={{
           id: "a",
@@ -328,7 +336,7 @@ export const AddSheet: Story = {
 export const ChangeSheet: Story = {
   render: () => (
     <StoryRoute entry="/review/change?item=r1">
-      <p className="ui-page-pad t-hint">נתוני דוגמה · Example data</p>
+      <ExampleBar />
       <ChangeForm
         sample={{
           projects: [{ id: "a", name: "וילה רעננה" }],

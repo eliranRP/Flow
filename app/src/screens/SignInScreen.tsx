@@ -108,11 +108,11 @@ export function SignInScreen() {
         <SignInPrivacy>
           נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
           <br />
-          <TextLink to="/terms" chevron={false}>
+          <TextLink to="/terms" size="hint" chevron={false}>
             תנאי שימוש
           </TextLink>
           {" · "}
-          <TextLink to="/privacy" chevron={false}>
+          <TextLink to="/privacy" size="hint" chevron={false}>
             מדיניות פרטיות
           </TextLink>
         </SignInPrivacy>

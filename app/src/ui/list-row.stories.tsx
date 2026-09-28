@@ -15,7 +15,7 @@ export const Project: Story = {
   args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: -2_940_000n, loss: true, href: "/projects/tek" },
 };
 export const TransactionIn: Story = {
-  args: { variant: "transaction", title: "קבלה 1042", hint: "12/09/2026", agorot: 1_800_000n, sign: "in", source: "invoice" },
+  args: { variant: "transaction", title: "קבלה 1042", hint: "חומרים · 12/09", agorot: 1_800_000n, sign: "in", source: "invoice" },
 };
 export const TransactionOut: Story = {
   args: { variant: "transaction", title: "העברה", hint: "בנק", agorot: 450_000n, sign: "out", source: "bank" },

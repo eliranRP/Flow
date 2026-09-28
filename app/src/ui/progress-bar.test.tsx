@@ -14,7 +14,11 @@ describe("ProgressBar", () => {
     );
     expect(screen.getByRole("meter", { name: "התקדמות" })).toHaveAttribute("aria-valuenow", "40");
     expect(screen.getByRole("meter", { name: "חריגה, מעל התקציב" })).toBeInTheDocument();
+    expect(screen.getByText(/נוצלו 120%/)).toBeInTheDocument();
     expect(screen.getByText(/מעל התקציב/)).toBeInTheDocument();
+    const over = document.querySelector('.ui-bar-fill[data-over="true"]');
+    expect(over).toBeInstanceOf(HTMLElement);
+    if (over instanceof HTMLElement) expect(over.style.width).toBe("100%");
     const fill = document.querySelector(".ui-bar-fill");
     expect(fill).not.toBeNull();
     if (fill instanceof HTMLElement) expectThemePaint(fill, "backgroundColor");

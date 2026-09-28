@@ -12,7 +12,7 @@ import {
   shiftMonth,
   yearSpan,
 } from "./date-math";
-import { CalendarIcon, ChevronIcon } from "./icons";
+import { CalendarIcon, ChevronDownIcon, ChevronIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { MonthGrid } from "./month-grid";
 import { RadioRow } from "./radio-row";
@@ -45,7 +45,9 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
         }}
       >
         {pill}
-        <span aria-hidden="true"> ▾</span>
+        <span className="ui-period-chevron" aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
       </button>
       <Sheet
         open={open}

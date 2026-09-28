@@ -56,7 +56,7 @@ describe("App", () => {
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
     expect(document.querySelector(".ui-band")).not.toBeNull();
-    expect(document.querySelectorAll(".ui-skel-row")).toHaveLength(3);
+    expect(document.querySelectorAll(".ui-project-list .ui-row")).toHaveLength(3);
   });
 
   it("opens Add as a sheet over Home and keeps the tab bar", async () => {
