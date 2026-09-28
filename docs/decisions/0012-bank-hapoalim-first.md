@@ -1,7 +1,8 @@
 # Bank Hapoalim is the first statement format
 
 **Date:** 2026-09-26
-**Status:** Accepted
+**Status:** Superseded
+**Superseded by:** [0065](0065-review-round5.md) point 40. Bank transactions come only through the SUMIT sync. There is no Hapoalim import.
 
 ## Context
 

@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** Accepted
+**Amended by:** [0065](0065-review-round5.md) point 40. The pull does replace the Hapoalim upload. The read-only rule is unchanged.
 
 ## Context
 

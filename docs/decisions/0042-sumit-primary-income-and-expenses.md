@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** Accepted
+**Amended by:** [0065](0065-review-round5.md) point 40. The Hapoalim upload in this record is dropped. Bank lines come from the SUMIT sync. SUMIT remains the source for income and expenses.
 
 ## Context
 

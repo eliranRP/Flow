@@ -2,6 +2,7 @@
 
 **Date:** 2026-09-26
 **Status:** Accepted
+**Amended by:** [0065](0065-review-round5.md) point 40. SheetJS is not loaded. There is no bank-file parser.
 
 ## Context
 

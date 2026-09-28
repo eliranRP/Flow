@@ -1011,7 +1011,7 @@ export function AddForm() {
       closeTo={`/${search}`}
       returnFocusRef={addTriggerRef}
     >
-      <p className="t-hint">הצילום, הייבוא וההזנה הידנית יגיעו בהמשך.</p>
+      <p className="t-hint">הצילום וההזנה הידנית יגיעו בהמשך.</p>
       <div className="ui-add-rows">
         <ListRow
           variant="button"
@@ -1026,7 +1026,7 @@ export function AddForm() {
           variant="button"
           disabled
           title="העלאת דוח בנק"
-          hint="קובץ Excel מאפליקציית פועלים"
+          hint={<>תנועות הבנק מגיעות מ-<bdi dir="ltr">SUMIT</bdi></>}
           icon={<BankIcon size={26} />}
           chevron
           onClick={() => undefined}

@@ -2,8 +2,9 @@
 
 **Date:** 2026-09-26
 **Status:** Accepted
+**Amended by:** [0065](0065-review-round5.md) point 40. The Hapoalim file import is dropped. Bank lines come from the SUMIT sync. Cash basis is unchanged: an unpaid invoice stays out of profit.
 
-[0012](0012-bank-hapoalim-first.md) limits proof-of-concept statement import to Bank Hapoalim (`בנק הפועלים`). This record stays Accepted for cash basis: a statement row counts, and an unpaid invoice does not.
+[0012](0012-bank-hapoalim-first.md) is superseded. This record stays Accepted for cash basis: a payment counts, and an unpaid invoice does not.
 
 ## Context
 

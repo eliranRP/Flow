@@ -28,6 +28,8 @@ The order matches [14-settings](screens.md#14-settings).
 
 ### Bank Hapoalim
 
+Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing below stays for history. Do not build a Hapoalim account or an upload from Settings.
+
 `בנק הפועלים`. Connected account, example `••4521`. Last statement date, example `דוח אחרון 30/09/2026`. `העלה דוח` opens the statement upload.
 
 Flow uses saved account numbers to drop own-account transfers: a row whose counterparty account equals another saved account on this company is removed and does not enter P&L. Other banks are not accepted ([0012](../decisions/0012-bank-hapoalim-first.md)).

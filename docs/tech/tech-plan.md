@@ -9,7 +9,7 @@
 > - Appendix B lists every change.
 > - Product logic carries over from v1 unchanged: cash-basis ledger, VAT rules, SUMIT read-only sync, bank matching, AI tagging, and Gemini choice and cost.
 
-**What Module 1 is:** a Hebrew-only, RTL, mobile-first installable web app (PWA) with one owner user per company, for Israeli contractors. It shows cash-basis profit and loss for the company and for each project, alongside the accountant's books. Data comes from SUMIT (read-only), Bank Hapoalim Excel statements, invoice photos and manual entry. AI tagging assigns project and category.
+**What Module 1 is:** a Hebrew-only, RTL, mobile-first installable web app (PWA) with one owner user per company, for Israeli contractors. It shows cash-basis profit and loss for the company and for each project, alongside the accountant's books. Data comes from SUMIT (read-only), including bank lines, plus invoice photos and manual entry. There is no Bank Hapoalim file import ([0065](../decisions/0065-review-round5.md) point 40). AI tagging assigns project and category, and stays off until a Gemini key is configured.
 
 **Inputs:**
 - Design spec: `design/` in this repo (`design/system/implementation-guide.md`, `design/system/design-system.md`, `design/system/design-tokens.json`, `design/system/implementation-tokens.css`).
@@ -19,7 +19,7 @@
 - Google sign-in.
 - Home usable within 2 s.
 - SUMIT is read-only (decision 0036).
-- Hapoalim upload stays alongside SUMIT.
+- Bank lines come from the SUMIT sync. There is no Hapoalim upload ([0065](../decisions/0065-review-round5.md) point 40).
 - High-confidence AI tags are auto-approved; the rest go to a review queue.
 - 7 default expense categories (hide/merge, never delete).
 - Split rules: equal, income share or manual %, optionally recurring.
@@ -114,19 +114,19 @@
 ### 1.4 Recommended architecture
 
 ```
- Phone: PWA (React + Vite + TS, React Router, TanStack Query + IndexedDB persist, vite-plugin-pwa SW, supabase-js, SheetJS lazy)
+ Phone: PWA (React + Vite + TS, React Router, TanStack Query + IndexedDB persist, vite-plugin-pwa SW, supabase-js)
    │  static shell from Cloudflare edge (free, unlimited)          │ JWT (RLS)
    ▼                                                               ▼
  Cloudflare Workers static assets                       Supabase project (Frankfurt, eu-central-1)
                                                           ├─ Auth (Google provider, PKCE; custom access-token hook adds company_id)
-                                                          ├─ PostgREST: RPCs get_home(), approve_item(), import_bank_lines()…
+                                                          ├─ PostgREST: RPCs get_home(), approve_item()…
                                                           ├─ Postgres: ledger tables + RLS; agg/snapshot tables; triggers mark dirty months
                                                           ├─ pg_cron: every minute → refresh_dirty() (SQL); dispatch due jobs → pgmq
                                                           │           → pg_net POST to Edge Function "worker" only when queue non-empty
-                                                          ├─ Queues (pgmq): sumit_sync, ai_tag, bank_match, push_send
+                                                          ├─ Queues (pgmq): sumit_sync, ai_tag, push_send
                                                           ├─ Edge Functions (Deno, pinned eu-central-1): sumit-connect, worker, photo-extract
                                                           │           secrets: SUMIT_KEK_v1, GEMINI_API_KEY, VAPID keys
-                                                          └─ Storage: private buckets bank-files/, invoice-photos/ (RLS by company folder)
+                                                          └─ Storage: private bucket invoice-photos/ (RLS by company folder)
  External: SUMIT API (read-only allowlist) · Gemini API (paid) · Web Push (FCM/APNs via VAPID)
  GitHub Actions (private repo): nightly pg_dump → age-encrypt → Cloudflare R2; daily health check; monthly restore test
 ```
@@ -151,21 +151,21 @@
 | Styling | **Tailwind CSS v4**. Tokens in `design/system/implementation-tokens.css` mapped into `@theme` (colours including light/dark, spacing, radii, type scale, shadows). Only token-based values; no arbitrary values unless justified. RTL via logical utilities (`ms-`/`me-`/`ps-`/`pe-`, `start`/`end`) and `dir="rtl"` at the root. Dark mode uses the same token set. **Self-hosted Rubik** (Hebrew subset, woff2). [0040](../decisions/0040-tailwind-v4.md) | **No ready-made component kit** with its own look. Vaul stays for sheets |
 | Bottom sheets | **Vaul** | Add/change/split/period/confirm sheets (04, 06, 11, 16, 20–23) |
 | Dates / money | **date-fns** with the `he` locale; **`Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' })`** for shekels | Money stays integer agorot until display |
-| Files on the phone | **SheetJS** (lazy, upload route only) for the Hapoalim Excel; **browser-image-compression** for invoice photos | Both are loaded only on their screens |
+| Files on the phone | **browser-image-compression** for invoice photos, loaded only on that screen | No statement parser. SheetJS is not a build task ([0065](../decisions/0065-review-round5.md) point 40) |
 | Validation | **Zod**, shared schemas between the PWA and Edge Functions (`shared/`) | Zod 4.x |
 | Database | **Supabase Postgres + RLS**; migrations via the **Supabase CLI**; **generated DB types** (`supabase gen types typescript`) used by the PWA and functions | |
 | Auth / files | **Supabase Auth (Google)**; **Storage** private buckets with per-company folders | |
-| Server code | **Edge Functions (Deno / TypeScript)** for SUMIT sync, AI tagging, bank processing and push | |
+| Server code | **Edge Functions (Deno / TypeScript)** for SUMIT sync, AI tagging and push | |
 | Jobs | **pg_cron + Postgres queue** (`pgmq`, with a `skip locked` job-table fallback) + `pg_net` wake-up | |
 | Secrets | **Envelope encryption** for SUMIT keys (KEK as an Edge Function secret) | §7 |
-| AI | **`@google/genai` SDK** (Gemini 3.1 Flash-Lite, paid tier) | |
+| AI | **`@google/genai` SDK** (Gemini 3.1 Flash-Lite, paid tier) | Off until `GEMINI_API_KEY` is set. Hard cap $3. The key is not in the repo |
 | Push | **`web-push`** npm package for VAPID sending | **To verify in Deno** (it relies on Node crypto APIs); if it doesn't run, use a Deno-native Web Push library (P7-1) |
 | Tests | **Vitest** (units, shared logic, functions), **Playwright** (Hebrew RTL mobile flows, Android/iOS viewports), **pgTAP** (RLS isolation, RPC rules) | |
 | Hosting | PWA as static files on Cloudflare Workers static assets (§1.3); backend on Supabase | |
 
 **Bundle-budget note:** with React, React DOM, React Router, TanStack Query and supabase-js together on the Home route, 120 KB gzip is tight. Rough published sizes suggest roughly 90–120 KB for these combined **(unverified; measured in P0-5)**. Mitigations:
 - Keep Home's own code small.
-- Load Vaul, date-fns, SheetJS and browser-image-compression only on the routes that use them.
+- Load Vaul, date-fns and browser-image-compression only on the routes that use them.
 - Import supabase-js sub-clients where possible.
 - Enforce the budget in CI (P7-4).
 
@@ -417,17 +417,7 @@ The logic is unchanged from v1. Only the mechanics are Supabase-specific now.
 
 ### 3.2 Bank Hapoalim Excel upload
 
-1. **Parse on the phone** (unchanged): SheetJS, lazy-loaded. Header detection by Hebrew column names; running-balance check; **er-01** for non-Poalim files; integer agorot. Parsing on the phone gives instant validation feedback and keeps the upload small.
-2. **Upload the original file** to Storage: `bank-files/<company_id>/<upload_id>.xlsx`, a private bucket. The RLS insert policy requires `(storage.foldername(name))[1] = auth.jwt()->>'company_id'`. The 50 MB Free upload limit is far above a statement's size (https://supabase.com/pricing).
-3. **Insert the rows** with RPC `import_bank_lines(upload_id, rows jsonb)` (`security invoker`, so RLS applies). It validates types and ranges, computes `line_hash` in SQL (`digest()` from pgcrypto), and does `insert … on conflict (company_id, line_hash) do nothing`. It returns new / duplicate counts, then enqueues `bank_match`.
-4. **Classify and match** in the `worker` Edge Function (TypeScript, shared tests), same rules as v1:
-   - internal transfers, card settlements and tax payments → `non_pnl`;
-   - matching to SUMIT, photo and manual items by exact amount + date window + name similarity (`pg_trgm` candidates fetched in one query) + reference;
-   - one-to-one assignment; ambiguity → `possible_duplicate` review;
-   - unmatched lines → bank-only `txn` + tagging;
-   - recurring payer → auto-open a project.
-5. **Finish:** `refresh_company_months` for the affected months; write the counters to `bank_upload` (screen 08); send a push if the user has left the screen (ld-05 "continue in background").
-6. **Retention:** a daily cron deletes bank files older than 90 days from Storage via the Storage API (in an Edge Function). The parsed lines stay.
+Dropped. [0065](../decisions/0065-review-round5.md) point 40. SUMIT already pulls the bank data, so bank transactions come only through the SUMIT sync. There is no parser, no `import_bank_lines` RPC, no `bank-files` bucket, and no screen 08, 09c, or ld-05.
 
 ### 3.3 Notifications
 
@@ -523,9 +513,10 @@ The logic is unchanged from v1. Only the mechanics are Supabase-specific now.
 | One-time backfill per new company (~850 LLM items for 12 months) | 0.68M in + 0.085M out | **≈ $0.30** (≈ $0.05 with 2.5-flash-lite Batch) |
 
 **Guardrails:**
+- Tagging stays off until `GEMINI_API_KEY` is configured. The key is not in the repo, and this plan does not add a client call.
+- The hard spending cap is **$3**. Do not call Gemini until that cap is set on the Google Cloud billing account and the key has been provided.
 - A per-company monthly token budget (e.g. 3× expected). Past it, items go to review without an LLM suggestion.
 - A global daily spend alarm.
-- A hard spending cap in Google Cloud billing.
 
 ---
 
@@ -584,7 +575,7 @@ The logic is unchanged from v1. Only the mechanics are Supabase-specific now.
 | First visit | Usable < 2.0 s |
 
 **How:**
-1. **Static shell from Cloudflare's edge**, precached by the service worker (vite-plugin-pwa / Workbox): Home route ≤ 120 KB gzip JS/CSS as a target (§1.4.1), Rubik woff2 Hebrew subset preloaded, other routes lazy-loaded (SheetJS, pickers, upload, split). A repeat open touches no network before first paint.
+1. **Static shell from Cloudflare's edge**, precached by the service worker (vite-plugin-pwa / Workbox): Home route ≤ 120 KB gzip JS/CSS as a target (§1.4.1), Rubik woff2 Hebrew subset preloaded, other routes lazy-loaded (pickers, split). A repeat open touches no network before first paint. There is no statement-upload route to lazy-load.
 2. **Paint cached data first.** The last `home_snapshot` payloads (3 periods) live in the TanStack Query cache persisted to IndexedDB, and render immediately. The skeleton shows only if nothing is cached after 300 ms (design rule).
 3. **One network call for fresh data:**
    - `supabase.rpc('get_home', { known_versions })` makes a single PostgREST request to Frankfurt. It reads 3 rows from `home_snapshot` by primary key, returns `{unchanged:true}` per period when the version matches (a tiny response that also saves egress), and includes the pending count and last-sync time.
@@ -720,28 +711,19 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 
 ### Phase 4: Bank Hapoalim upload
 
-| ID | Task | Size | Δ vs v1 | Dep | Acceptance |
-|---|---|---|---|---|---|
-| P4-1 | Collect 2–3 anonymised Poalim exports; format spec | S | = | — | Column map + samples in the repo |
-| P4-2 | Phone parser (SheetJS lazy), header detection, balance check, er-01 | M | = | P4-1, P0-5 | Parses all samples; rejects others |
-| P4-3 | Storage upload (private bucket, folder RLS) + RPC `import_bank_lines` with `on conflict` dedupe | S | ↓ (Storage + SQL replace an upload API, M) | P4-2, P1-6 | Same file twice → 0 new rows |
-| P4-4 | Classification (transfers, cards, tax, own accounts) | M | = | P4-3 | 100% on the samples |
-| P4-5 | Matching engine in `worker` (`pg_trgm` candidates, one-to-one, ambiguity → review) | L | = | P4-3, P3-7 | No double income on the test set |
-| P4-6 | Recurring-customer project auto-open | S | = | P4-5 | Project + review item created |
-| P4-7 | Processing screen (ld-05) + results (08) + onboarding 09c | M | = | P4-5 | Counters match the data |
-| P4-8 | Retention cron: delete bank files after 90 days | S | + | P4-3 | Old files removed; lines kept |
+Dropped. [0065](../decisions/0065-review-round5.md) point 40. P4-1 through P4-8 are not build tasks. The 68-task total further down is the v2 inventory from before this drop. Those eight tasks are out of the build. Bank lines come from the SUMIT sync in Phase 3.
 
 ### Phase 5: AI tagging, review queue, supplier memory, invoice photos
 
 | ID | Task | Size | Δ vs v1 | Dep | Acceptance |
 |---|---|---|---|---|---|
 | P5-1 | Rules engine (steps 1–7) + Hebrew normaliser + category dictionary | M | = | P2-4 | Unit tests per rule |
-| P5-2 | Evaluation set (150 items + 30 photos) + model bake-off | M | = | P4-1 | Report; model chosen |
+| P5-2 | Evaluation set (150 items + 30 photos) + model bake-off | M | = | P3-7 | Report; model chosen. Stays off until the Gemini key and the $3 cap are in place |
 | P5-3 | LLM tagging in `worker` via `@google/genai` (batches of 20, JSON schema, token budget, spend alarms) | M | = | P5-1, P5-2, P0-7 | Budgets enforced |
 | P5-4 | Calibration + auto-approve policy + daily stats | M | = | P5-3 | No LLM auto-approve before 50 reviews |
 | P5-5 | Review queue (03) + change sheet (06) with "remember" + es-03 | M | = | P5-4 | Approve/change/skip; counts update |
 | P5-6 | Supplier memory (fixed / learned / demote) | M | = | P5-5 | 3 approvals → learned rule applies |
-| P5-7 | Invoice photo: compress on the phone (browser-image-compression), Storage upload, `photo_extract` queue, Gemini vision, er-02, ld-06, match | L | = | P5-3, P4-5 | 95% field accuracy on the evaluation photos |
+| P5-7 | Invoice photo: compress on the phone (browser-image-compression), Storage upload, `photo_extract` queue, Gemini vision, er-02, ld-06, match | L | = | P5-3, P3-7 | 95% field accuracy on the evaluation photos |
 
 ### Phase 6: Splits, overhead, unpaid, settings, export
 
@@ -751,7 +733,7 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 | P6-2 | Recurring split rules + monthly income-share recompute in `refresh_company_months` | M | = | P6-1, P2-5 | Applies to new matching items |
 | P6-3 | Overhead share view (18/19), default off | S | = | P2-5 | Home big number unchanged |
 | P6-4 | Unpaid screen (12) + es-05 | S | = | P2-4 | Shows "לא נכלל ברווח" |
-| P6-5 | Settings (14): company, Google account, bank, SUMIT, categories, projects, rules, notification times, auto-approve, overhead default, logout | M | = | P3-4, P5-4 | All settings persist |
+| P6-5 | Settings (14): company, Google account, SUMIT, categories, projects, rules, notification times, auto-approve, overhead default, logout | M | = | P3-4, P5-4 | All settings persist. No Hapoalim account row |
 | P6-6 | Export for the accountant (Excel/CSV, Hebrew headers, net + VAT columns) | M | = | P2-4 | Opens correctly in Excel |
 | P6-7 | Date pickers (15a–c), confirm sheets (20–23) polish | S | = | P0-5 | Matches the design |
 
@@ -772,7 +754,7 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 | ID | Task | Size | Δ vs v1 | Dep | Acceptance |
 |---|---|---|---|---|---|
 | P8-1 | Nightly dump workflow: `backup_reader` role, pooler connection, CLI dump (roles/schema/data) + manifest, zstd + age, R2 upload, lifecycle rules, failure alerts | M | + | P0-3 | 7 consecutive nightly dumps in R2; alert fires on a forced failure |
-| P8-2 | Weekly Storage → R2 encrypted sync | S | + | P8-1, P4-3 | New photos appear in R2 within a week |
+| P8-2 | Weekly Storage → R2 encrypted sync | S | + | P8-1, P5-7 | New photos appear in R2 within a week |
 | P8-3 | `health()` RPC + daily health-check workflow | S | + | P0-7 | Alert on a simulated stuck queue |
 | P8-4 | Monthly restore-test workflow + quarterly drill runbook (KEK, Vault key, tombstones) | M | + | P8-1 | Restore passes row counts + P&L checksums; RTO recorded |
 | P8-5 | Usage monitoring + Pro-trigger alerts (DB size, egress, dump size, storage, Edge invocations) | S | ↓ (was D1/Queues monitoring, S) | P8-3 | Warn email at the §1.6 thresholds |
@@ -787,7 +769,7 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 
 **Smaller:**
 - Auth: P1-2 and P1-4, from M to S each.
-- Bank file storage: P4-3, M to S.
+- Bank file storage was P4-3. That task is dropped with the rest of Phase 4.
 - SUMIT paging: P3-5, M to S.
 - The CPU gate: P0-6 now measures latency and size rather than working around a 10 ms limit.
 - Design-wide: the "stay under 10 ms" constraints are gone.
@@ -800,7 +782,7 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 - Backups and restore: P8-1, P8-2, P8-4.
 - Health check: P8-3.
 - Pro runbook: P8-6.
-- Retention cron: P4-8.
+- Retention cron P4-8 is dropped with Phase 4. There is no bank-file bucket to expire.
 
 **Net:** roughly 1 week **more** than v1. Built-in auth and storage save about 1 week; RLS, job plumbing, the backup/restore pipeline and ops tasks add about 2.
 
@@ -830,7 +812,7 @@ Supabase Free has **no automatic backups**. Supabase itself recommends that free
 | R12 | **Customer's SUMIT plan** (Free has no API; triggers need Growth; budgets need Advanced) | High / reach | Bank + photo + manual work without SUMIT |
 | R13 | **Assumed VAT on expenses** that arrive with no split | Medium / accuracy | `vat_status='assumed'` at the configurable 18% rate, VAT-exempt supplier memory, a subtle hint on the detail screen, no Home banner ([0043](../decisions/0043-assumed-vat-on-expenses.md)) |
 | R14 | **Card settlement lines** double count | Medium / accuracy | `card_settlement` classification |
-| R15 | **Hapoalim format variance** | Medium / upload fails | Header detection, sample library |
+| R15 | **Hapoalim format variance** | Dropped | No statement upload. [0065](../decisions/0065-review-round5.md) point 40 |
 | R16 | **Storing full-access SUMIT keys** | Low / severe | Envelope encryption with the KEK outside the DB, dedicated key, no plaintext in dumps |
 | R17 | **LLM misclassification** auto-approved | Medium / trust | Calibration, no LLM auto-approve in the first days |
 | R18 | **Cash-basis semantics** differ from the accountant's expectations | Medium / trust | Accountant review before the pilot |

@@ -1,6 +1,6 @@
 # Upload results
 
-**Status:** Approved. Wireframe [08-upload-results-v2](../wireframes/08-upload-results-v2.png). [08-upload-results](../wireframes/08-upload-results.png) is superseded.
+**Status:** Not a build task. [0065](../../decisions/0065-review-round5.md) point 40. The wireframe [08-upload-results-v2](../wireframes/08-upload-results-v2.png) stays for history. [08-upload-results](../wireframes/08-upload-results.png) is superseded. Do not build this screen.
 **Decisions:** [0011](../../decisions/0011-auto-approve-high-confidence.md) auto-approves unique invoice matches and supplier rules. [0012](../../decisions/0012-bank-hapoalim-first.md) accepts Bank Hapoalim only. The approved wireframe uses `הפועלים_ספטמבר.xlsx` and has no secondary approve button.
 
 This screen is also the short summary of what was auto-approved for a statement batch.

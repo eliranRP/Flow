@@ -41,7 +41,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0041](../decisions/0041-amounts-before-vat.md) | P&L amounts are before VAT. VAT is stored beside the amount and kept out of profit. |
 | [0043](../decisions/0043-assumed-vat-on-expenses.md) | An expense with no VAT split assumes 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt (`net = gross`). A subtle hint may appear on the detail screen. Home has no warning banner. |
 
-Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md): SUMIT is the primary source, Hapoalim complements it).
+Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md) and [0065](../decisions/0065-review-round5.md) point 40: SUMIT is the source, and there is no Hapoalim import).
 
 ---
 
@@ -200,7 +200,7 @@ Every control has pressed, disabled, focus, and selected or busy where it applie
 | Empty state | icon, title, one line, at most one button | No emoji. Positive wording when the work is done |
 | Skeleton | bars shaped like the content, shimmer 1.4s | Known chrome stays real. `ld-01`…`ld-03` |
 | Busy button | same size, spinner + verb ("מאשר…") | Other actions on that screen go disabled. `ld-04` |
-| Processing | progress, step list, "המשך ברקע" | Bank `ld-05`, invoice `ld-06` |
+| Processing | progress, step list, "המשך ברקע" | Invoice `ld-06`. Bank `ld-05` is not a build task ([0065](../decisions/0065-review-round5.md) point 40) |
 | Pull to refresh | spinner over live content | `ld-07` |
 | Offline | full screen if nothing is cached (`ld-08`); tinted notice if cached (`ld-09`) | "ניסיון חוזר" |
 | Toast | inverts per mode, 4 seconds, undo | `role="status"` |
@@ -376,10 +376,12 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 ### 08 Upload results
 
+Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mockups stay for history.
+
 - Mockups: [08-upload-results-light.png](../../design/screens/08-upload-results-light.png), [08-upload-results-dark.png](../../design/screens/08-upload-results-dark.png).
-- Entry: end of a bank import (`ld-05`).
+- Entry: end of a bank import (`ld-05`). That path is not built.
 - Steps: summary counts. ✕ closes the task. Guide §13, template A with ✕.
-- Error: stay on `er-01` if the file was rejected before this screen.
+- Error: stay on `er-01` if the file was rejected before this screen. That error is not a build task either.
 
 ### 09 Onboarding
 
@@ -389,7 +391,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
   - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
   - Success: a new account goes to 09b. A returning account goes to Home.
 - 09b company: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). Back from step 2. Progress "שלב X מתוך 4".
-- 09c bank report: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). How to get the Hapoalim file onto the phone. [0015](../decisions/0015-installable-mobile-web-app.md).
+- 09c bank report: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
 - 09d projects: [09d-onboarding-light.png](../../design/screens/09d-onboarding-light.png).
 - 09e install and notifications: [09e-onboarding-light.png](../../design/screens/09e-onboarding-light.png). [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md).
 - Each of 09b–09e has a `-dark.png`. Cancel on a step is back. One primary per step. A ghost "דלג לעכשיו" may sit under it. Guide §3.4.
@@ -487,7 +489,7 @@ Every file has `-light.png` and `-dark.png`. [0026](../decisions/0026-empty-load
 | ld-02 | `design/states/ld-02-project-skeleton` | Project loading |
 | ld-03 | `design/states/ld-03-list-skeleton` | List loading |
 | ld-04 | `design/states/ld-04-button-loading` | Primary button busy |
-| ld-05 | `design/states/ld-05-upload-processing` | Bank file processing |
+| ld-05 | `design/states/ld-05-upload-processing` | Not a build task. Bank file processing was dropped ([0065](../decisions/0065-review-round5.md) point 40) |
 | ld-06 | `design/states/ld-06-invoice-reading` | Invoice photo reading |
 | ld-07 | `design/states/ld-07-pull-to-refresh` | Pull to refresh |
 | ld-08 | `design/states/ld-08-offline` | Offline, nothing cached |
