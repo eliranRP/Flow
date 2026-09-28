@@ -35,5 +35,7 @@ jobs:
         with:
           version: 2.118.0
       - run: supabase db start
-      - run: supabase test db
+      # Only the pgTAP files. bootstrap-local.sql and helpers.sql live beside them
+      # and are not tests: helpers is seeded, and bootstrap is for Postgres without Docker.
+      - run: supabase test db supabase/tests/database
       - run: bash scripts/check-db-types.sh
