@@ -168,6 +168,7 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
 test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
   const cases = [
     ["screens-routes--change-sheet", "שינוי שיוך"],
+    ["screens-routes--change-project-picker", "בחירת פרויקט"],
     ["components-periodpicker--range", "טווח מותאם"],
   ] as const;
   const viewports = [
@@ -191,6 +192,22 @@ test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
       }).toPass();
     }
   }
+});
+
+test("change sheet picks a project and a category, then offers save", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--change-sheet&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "פרויקט: בניין מגורים חולון, שינוי" }).click();
+  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
+  await page.getByRole("radio", { name: "וילה רעננה" }).click();
+  await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "פרויקט: וילה רעננה, שינוי" })).toBeVisible();
+  await page.getByRole("button", { name: "קטגוריה: חומרים, שינוי" }).click();
+  await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
+  await page.getByRole("radio", { name: "הובלה" }).click();
+  await expect(page.getByRole("button", { name: "קטגוריה: הובלה, שינוי" })).toBeVisible();
+  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
 });
 
 test("the whole-period option stays inside the sheet and nothing uses a native title", async ({ page }) => {

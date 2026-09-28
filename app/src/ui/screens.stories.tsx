@@ -664,34 +664,140 @@ export const SplitLongHebrew: Story = {
   ),
 };
 
-export const ChangeSheet: Story = {
-  parameters: { viewport: { defaultViewport: "flow390-short" } },
-  render: () => (
-    <StoryRoute entry="/review/change?item=r1">
+const changeProjects = [
+  { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
+  { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-08", recent: "היום" },
+  { id: "villa", name: "וילה רעננה", code: "P-02", recent: "אתמול" },
+  { id: "p21", name: "בית פרטי כפר סבא", code: "P-21", recent: "לפני 3 ימים" },
+  { id: "p03", name: "שיפוץ דירה ת\"א", code: "P-03", recent: "לפני שבוע" },
+  { id: "p17", name: "גן יבנה – תוספת קומה", code: "P-17" },
+];
+
+const changeCategories = [
+  { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
+  { id: "c2", name: "ציוד והשכרה", hidden: false, kind: "expense" },
+  { id: "c3", name: "הובלה", hidden: false, kind: "expense" },
+  { id: "c4", name: "עבודה", hidden: false, kind: "expense" },
+];
+
+function ChangeStory({
+  entry = "/review/change?item=r1",
+  projectId = "holon",
+  categoryId = "c1",
+  suggestionId = "holon",
+  suggestionCategoryId = "c1",
+  supplier = "חומרי בניין השרון",
+  projects = changeProjects,
+  categories = changeCategories,
+  initialQuery,
+  loading,
+  saveError,
+}: {
+  entry?: string;
+  projectId?: string;
+  categoryId?: string;
+  suggestionId?: string;
+  suggestionCategoryId?: string;
+  supplier?: string;
+  projects?: typeof changeProjects;
+  categories?: typeof changeCategories;
+  initialQuery?: string;
+  loading?: boolean;
+  saveError?: boolean;
+} = {}) {
+  return (
+    <StoryRoute entry={entry}>
       <ExampleBar />
       <ChangeForm
         sample={{
-          supplier: "חומרי בניין השרון",
+          supplier,
           amount: "₪8,500",
-          suggestionId: "holon",
-          recentId: "villa",
-          categoryId: "c1",
-          projects: [
-            { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
-            { id: "villa", name: "וילה רעננה", code: "P-02" },
-            { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-08", hint: "היום" },
-            { id: "p21", name: "בית פרטי כפר סבא", code: "P-21", hint: "לפני 3 ימים" },
-            { id: "p03", name: "שיפוץ דירה ת\"א", code: "P-03", hint: "לפני שבוע" },
-          ],
-          categories: [
-            { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
-            { id: "c2", name: "ציוד והשכרה", hidden: false, kind: "expense" },
-            { id: "c3", name: "הובלה", hidden: false, kind: "expense" },
-            { id: "c4", name: "עבודה", hidden: false, kind: "expense" },
-          ],
+          suggestionId,
+          suggestionCategoryId,
+          projectId,
+          categoryId,
+          projects,
+          categories,
+          ...(initialQuery != null ? { initialQuery } : {}),
+          ...(loading ? { loading } : {}),
+          ...(saveError ? { saveError } : {}),
         }}
       />
     </StoryRoute>
+  );
+}
+
+export const ChangeSheet: Story = {
+  name: "Summary (suggested)",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory />,
+};
+
+export const ChangeSummaryChanged: Story = {
+  name: "Summary (changed)",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory projectId="villa" categoryId="c3" suggestionCategoryId="c1" />,
+};
+
+export const ChangeProjectPicker: Story = {
+  name: "Project picker",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" />,
+};
+
+export const ChangeProjectSearching: Story = {
+  name: "Project picker searching",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" initialQuery="ויל" />,
+};
+
+export const ChangeProjectEmpty: Story = {
+  name: "Project picker no results",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" initialQuery="קסם" />,
+};
+
+export const ChangeProjectLoading: Story = {
+  name: "Project picker loading",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=project" loading />,
+};
+
+export const ChangeCategoryPicker: Story = {
+  name: "Category picker",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
+};
+
+export const ChangeSaveError: Story = {
+  name: "Save error",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory saveError />,
+};
+
+export const ChangeLongHebrew: Story = {
+  name: "Long Hebrew",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => (
+    <ChangeStory
+      supplier="חומרי בניין השרון בע״מ סניף פתח תקווה"
+      projectId="long"
+      suggestionId="long"
+      categoryId="long-cat"
+      suggestionCategoryId="long-cat"
+      projects={[
+        {
+          id: "long",
+          name: "בניין מגורים חולון עם שם ארוך מאוד שלא נחתך באמצע המילה ברוחב צר",
+          code: "P-14",
+        },
+        ...changeProjects,
+      ]}
+      categories={[
+        { id: "long-cat", name: "חומרי בניין וציוד כבד להשכרה כולל הובלה ופריקה באתר", hidden: false, kind: "expense" },
+        ...changeCategories,
+      ]}
+    />
   ),
 };
 

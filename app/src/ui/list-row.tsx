@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { Link } from "react-router-dom";
 import { BigNumber } from "./big-number";
 import { cx } from "./cx";
@@ -20,6 +20,10 @@ type Common = {
   /** Hidden categories use a muted name. */
   muted?: boolean;
   meta?: ReactNode;
+  /** Small tint after the title. The change sheet uses "הצעה". */
+  tag?: ReactNode;
+  /** Replaces the accessible name. Summary rows say "פרויקט: X, שינוי". */
+  label?: string;
 };
 
 export type ListRowProps =
@@ -27,7 +31,7 @@ export type ListRowProps =
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
   | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean })
+  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
@@ -61,6 +65,7 @@ export function ListRow(props: ListRowProps) {
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
           <span className={cx("ui-row-title", props.muted && "ui-row-title-muted")}>
             {props.title}
+            {props.tag}
           </span>
           {props.hint ? <span className="ui-row-hint">{props.hint}</span> : null}
         </span>
@@ -82,11 +87,13 @@ export function ListRow(props: ListRowProps) {
   if (props.variant === "button") {
     return (
       <button
+        ref={props.buttonRef}
         type="button"
         className="ui-row ui-hit"
         disabled={props.disabled === true}
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
+        aria-label={props.label}
         onClick={props.onClick}
       >
         {body}

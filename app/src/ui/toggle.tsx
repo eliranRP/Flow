@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
+
 type ToggleProps = {
   label: string;
-  hint?: string;
+  hint?: ReactNode;
   checked: boolean;
   disabled?: boolean;
   onChange: (checked: boolean) => void;

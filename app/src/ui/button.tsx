@@ -10,6 +10,8 @@ type Common = {
   full?: boolean;
   quiet?: boolean;
   icon?: ReactNode;
+  /** Sits at the inline end, after the label. */
+  iconEnd?: ReactNode;
   children: ReactNode;
   className?: string;
   title?: string;
@@ -55,6 +57,7 @@ export function Button(props: ButtonProps) {
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
       {props.icon}
       <span className={variant === "pill" ? "ui-pill-label" : "ui-btn-label"}>{props.children}</span>
+      {props.iconEnd}
     </>
   );
   const named = {
@@ -77,7 +80,7 @@ export function Button(props: ButtonProps) {
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, to: _to, title: _title, "aria-label": _aria, onClick, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, to: _to, title: _title, "aria-label": _aria, onClick, ...rest } = props;
   return (
     <button
       type={type}
