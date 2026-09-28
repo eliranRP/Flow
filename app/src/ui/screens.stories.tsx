@@ -363,6 +363,45 @@ export const SettingsError: Story = {
   ),
 };
 
+export const SettingsBackoff: Story = {
+  name: "Backoff",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          name: "א.ב. בנייה ושיפוצים בע״מ",
+          vatRegistered: true,
+          connected: true,
+          companyId: 1001,
+          lastError: "sumit_rejected",
+          nextAttemptAt: "2026-09-28T18:30:00.000Z",
+          email: "ops@nromomentum.com",
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAuth: Story = {
+  name: "Auth",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          name: "א.ב. בנייה ושיפוצים בע״מ",
+          vatRegistered: true,
+          connected: true,
+          companyId: 1001,
+          lastError: "sumit_auth",
+          email: "ops@nromomentum.com",
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const CategoriesList: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories" tabs>
@@ -588,6 +627,48 @@ export const Transaction: Story = {
           { id: "c1", name: "חומרים" },
           { id: "c2", name: "ציוד והשכרה" },
           { id: "c3", name: "הובלה" },
+        ]}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const TransactionShared: Story = {
+  name: "Shared",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "משכורת עובדי שטח",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -3_600_000n,
+          amount_net: -3_600_000n,
+          vat_amount: 0n,
+          vat_status: "unknown",
+          doc_kind: "expense",
+          source: "sumit",
+          pnl_role: "shared",
+          project_id: null,
+          project_name: null,
+          category_id: "c1",
+          category_name: "עבודה",
+          supplier_name: "עובדי שטח",
+          customer_name: null,
+          review_status: null,
+          paid: true,
+          open_gross_agorot: null,
+          allocations: [
+            { project_id: "a", project_name: "חולון", share_bp: 4000, amount_net: -1_440_000n },
+            { project_id: "b", project_name: "פתח תקווה", share_bp: 3500, amount_net: -1_260_000n },
+            { project_id: "c", project_name: "רעננה", share_bp: 2500, amount_net: -900_000n },
+          ],
+        }}
+        sampleCategories={[
+          { id: "c1", name: "עבודה" },
+          { id: "c2", name: "הובלה" },
         ]}
       />
     </StoryRoute>
