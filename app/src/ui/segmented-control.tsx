@@ -52,7 +52,6 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
             role="radio"
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
-            title={option.label}
             aria-label={option.label}
             onClick={() => {
               onChange(option.value);

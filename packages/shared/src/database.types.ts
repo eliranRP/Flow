@@ -150,15 +150,40 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"review_queue": {
+                },"reassign_undo": {
                   Row: {
-                    "company_id": string,"created_at": string,"doc_fingerprint": string | null,"id": string,"prior_allocations": Json | null,"prior_category_id": string | null,"prior_pnl_role": Database["public"]['Enums']["pnl_role"] | null,"prior_project_id": string | null,"prior_remembered_category_id": string | null,"prior_user_assigned": boolean | null,"reason": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["review_status"],"transaction_id": string | null,"updated_at": string
+                    "company_id": string,"created_at": string,"id": string,"prior_allocations": NonNullable<Json>,"prior_category_id": string | null,"prior_pnl_role": Database["public"]['Enums']["pnl_role"] | null,"prior_project_id": string | null,"prior_review_id": string | null,"prior_user_assigned": boolean,"transaction_id": string,"undone_at": string | null
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"prior_allocations"?: Json | null,"prior_category_id"?: string | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"id"?: string,"prior_allocations": NonNullable<Json>,"prior_category_id"?: string | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_review_id"?: string | null,"prior_user_assigned": boolean,"transaction_id": string,"undone_at"?: string | null
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"prior_allocations"?: Json | null,"prior_category_id"?: string | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"id"?: string,"prior_allocations"?: NonNullable<Json>,"prior_category_id"?: string | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_review_id"?: string | null,"prior_user_assigned"?: boolean,"transaction_id"?: string,"undone_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reassign_undo_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "reassign_undo_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"review_queue": {
+                  Row: {
+                    "company_id": string,"created_at": string,"doc_fingerprint": string | null,"id": string,"prior_allocations": Json | null,"prior_category_id": string | null,"prior_pnl_role": Database["public"]['Enums']["pnl_role"] | null,"prior_project_id": string | null,"prior_remembered_category_id": string | null,"prior_user_assigned": boolean | null,"reason": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["review_status"],"transaction_id": string | null,"updated_at": string,"written_remembered_category_id": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"prior_allocations"?: Json | null,"prior_category_id"?: string | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string,"written_remembered_category_id"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"doc_fingerprint"?: string | null,"id"?: string,"prior_allocations"?: Json | null,"prior_category_id"?: string | null,"prior_pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"prior_project_id"?: string | null,"prior_remembered_category_id"?: string | null,"prior_user_assigned"?: boolean | null,"reason"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["review_status"],"transaction_id"?: string | null,"updated_at"?: string,"written_remembered_category_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -371,6 +396,9 @@ isOneToOne: true
             "company_pnl":
 { Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json
                            },
+"create_category":
+{ Args: { "p_kind": string,"p_name": string }; Returns: string
+                           },
 "create_company":
 { Args: { "p_name": string,"p_vat_registered": boolean }; Returns: string
                            },
@@ -410,6 +438,9 @@ isOneToOne: true
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
                            },
+"reassign_transaction":
+{ Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
+                           },
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
@@ -428,11 +459,17 @@ isOneToOne: true
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
                            },
+"stamp_sumit_sync":
+{ Args: { "p_company": string }; Returns: undefined
+                           },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
+                           },
+"undo_reassign":
+{ Args: { "p_id": string }; Returns: undefined
                            },
 "upsert_project":
 { Args: { "p_budget_agorot"?: number,"p_id"?: string,"p_name"?: string,"p_status"?: string }; Returns: string

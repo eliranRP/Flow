@@ -19,7 +19,6 @@ export function Chip({ kind = "choice", pressed = false, children, onClick }: Ch
       className={cx("ui-chip", `ui-chip-${resolved}`)}
       aria-pressed={pressed}
       aria-label={label}
-      title={label}
       disabled={kind === "disabled"}
       onClick={onClick}
     >

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BigNumber } from "./big-number";
 import { cx } from "./cx";
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
+import { Skeleton } from "./skeleton";
 
 type Common = {
   title: string;
@@ -24,11 +25,24 @@ export type ListRowProps =
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
   | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick: () => void; busy?: boolean })
+  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean })
+  | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
 export function ListRow(props: ListRowProps) {
+  if (props.variant === "skeleton") {
+    return (
+      <div className="ui-row" aria-hidden="true">
+        <span className="ui-skel-copy">
+          <Skeleton width="md" />
+          <Skeleton width="sm" />
+        </span>
+        <Skeleton width="sm" />
+      </div>
+    );
+  }
+  const showChevron = props.chevron === true && props.variant !== "static";
   const icon =
     props.icon ??
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
@@ -43,7 +57,7 @@ export function ListRow(props: ListRowProps) {
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
         <span className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
-          <span className="ui-row-title" title={props.title}>
+          <span className="ui-row-title">
             {props.title}
           </span>
           {props.hint ? <span className="ui-row-hint">{props.hint}</span> : null}
@@ -52,7 +66,7 @@ export function ListRow(props: ListRowProps) {
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
       {props.actionBelow ? null : props.action}
-      {props.chevron ? (
+      {showChevron ? (
         <span className="ui-row-chevron" aria-hidden="true">
           <ChevronIcon />
         </span>
@@ -65,7 +79,13 @@ export function ListRow(props: ListRowProps) {
   }
   if (props.variant === "button") {
     return (
-      <button type="button" className="ui-row ui-hit" aria-busy={props.busy === true} onClick={props.onClick}>
+      <button
+        type="button"
+        className="ui-row ui-hit"
+        aria-busy={props.busy === true}
+        aria-expanded={props.expanded}
+        onClick={props.onClick}
+      >
         {body}
       </button>
     );
@@ -102,7 +122,7 @@ export function ListRow(props: ListRowProps) {
   return withAction(props, row);
 }
 
-function withAction(props: ListRowProps, row: ReactNode) {
+function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {
   if (!props.actionBelow || props.action == null) return row;
   return (
     <div className="ui-row-stack">

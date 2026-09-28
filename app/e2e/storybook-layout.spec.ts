@@ -193,6 +193,27 @@ test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
   }
 });
 
+test("the whole-period option stays inside the sheet and nothing uses a native title", async ({ page }) => {
+  const viewports = [
+    { width: 320, height: 693 },
+    { width: 390, height: 844 },
+  ] as const;
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto("/iframe.html?id=components-periodpicker--open&viewMode=story", { waitUntil: "domcontentloaded" });
+    const option = page.getByRole("radio", { name: "כל התקופה" });
+    await expect(option).toBeVisible();
+    await expect(async () => {
+      const box = await option.boundingBox();
+      expect(box, `כל התקופה at ${String(viewport.width)}`).not.toBeNull();
+      if (!box) return;
+      expect(box.y, `option top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height, `option bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
+    }).toPass();
+    expect(await page.locator("#storybook-root [title]").count()).toBe(0);
+  }
+});
+
 test("a segmented control is hit 4px outside its drawn box", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-segmentedcontrol--expenses&viewMode=story", { waitUntil: "domcontentloaded" });

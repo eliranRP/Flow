@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { AlertIcon, CheckIcon } from "./icons";
 
 type ToastInput = {
   message: string;
@@ -99,11 +100,11 @@ type ToastProps = {
 
 export function Toast({ children, action, onAction, tone = "ok" }: ToastProps) {
   return (
-    <div className="ui-toast" role="status">
-      <span className={tone === "bad" ? "ui-toast-bad" : undefined} aria-hidden="true">
-        {tone === "bad" ? "!" : "✓"}
+    <div className="ui-toast" role="status" dir="rtl">
+      <span className={tone === "bad" ? "ui-toast-mark ui-toast-bad" : "ui-toast-mark"} aria-hidden="true">
+        {tone === "bad" ? <AlertIcon size={18} /> : <CheckIcon size={18} />}
       </span>
-      <span>{children}</span>
+      <span className="ui-toast-text" dir="rtl">{children}</span>
       {action && onAction ? (
         <button type="button" onClick={onAction}>
           {action}

@@ -121,15 +121,8 @@ async function syncCompany(
   try {
     const documents = await listDocuments(sumitCompanyId, apiKey);
     await writeLedger(admin, companyId, documents);
-    const stamped = await admin.from("sumit_connections").select("last_error").eq("company_id", companyId).maybeSingle();
-    if (stamped.error) throw new Error("could not read the sync stamp");
-    const sweepError = typeof stamped.data?.last_error === "string" && stamped.data.last_error.startsWith("sync_sweep");
-    const updated = await admin
-      .from("sumit_connections")
-      .update(sweepError ? { last_sync_at: new Date().toISOString() } : { last_sync_at: new Date().toISOString(), last_error: null })
-      .eq("company_id", companyId)
-      .select("company_id");
-    if (updated.error || updated.data == null || updated.data.length === 0) throw new Error("could not stamp the sync");
+    const stamped = await admin.rpc("stamp_sumit_sync", { p_company: companyId });
+    if (stamped.error) throw new Error("could not stamp the sync");
     return { ok: true, documents: documents.length };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";

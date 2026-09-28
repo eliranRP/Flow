@@ -13,6 +13,13 @@
   --seg-gap: 3px;
   --badge-size: 17px;
   --badge-nudge: 6px;
+  --badge-ring: 2px;
+  --sheet-gap: 56px;
+  --bar-h: 8px;
+  --spinner: 18px;
+  --icon-check: 24px;
+  --empty-measure: 280px;
+  --figure-gap: 6px;
   --day-mark: var(--space-10);
   --skel-block: 12px;
   --skel-block-lg: 14px;
@@ -386,6 +393,11 @@ a.ui-row,
   overflow-x: hidden;
   overflow-y: auto;
   overflow-wrap: anywhere;
+  padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
+
+[data-vaul-drawer].ui-sheet-panel {
+  max-height: calc(100dvh - var(--sheet-gap)) !important;
 }
 
 .ui-sheet-foot {
@@ -631,7 +643,7 @@ a.ui-row,
 }
 
 .ui-bar {
-  height: 8px;
+  height: var(--bar-h);
   overflow: hidden;
   border-radius: var(--radius-chip);
   background: var(--color-tint);
@@ -751,8 +763,9 @@ a.ui-row,
 
 .ui-count-badge {
   position: absolute;
-  inset-block-start: calc(var(--space-1) * -1);
-  inset-inline-end: calc(var(--badge-nudge) * -1);
+  z-index: 1;
+  inset-block-start: calc(var(--badge-nudge) * -1);
+  inset-inline-start: calc(100% - var(--badge-nudge));
   display: inline-grid;
   min-inline-size: var(--badge-size);
   block-size: var(--badge-size);
@@ -763,6 +776,7 @@ a.ui-row,
   color: var(--color-badge-text);
   font-size: var(--type-micro-size);
   line-height: var(--badge-size);
+  box-shadow: 0 0 0 var(--badge-ring) var(--color-surface);
 }
 
 .ui-delta-good {
@@ -822,8 +836,8 @@ a.ui-row,
 
 .ui-spinner {
   display: inline-block;
-  inline-size: 18px;
-  block-size: 18px;
+  inline-size: var(--spinner);
+  block-size: var(--spinner);
   border: 2px solid currentColor;
   border-inline-end-color: transparent;
   border-radius: var(--radius-chip);
@@ -981,8 +995,8 @@ a.ui-row,
 
 .ui-check {
   display: grid;
-  inline-size: 24px;
-  block-size: 24px;
+  inline-size: var(--icon-check);
+  block-size: var(--icon-check);
   flex: none;
   place-items: center;
   border: var(--stroke-strong) solid var(--color-control-border);
@@ -1026,6 +1040,7 @@ a.ui-row,
 
 .ui-toast {
   display: flex;
+  direction: rtl;
   align-items: center;
   gap: var(--space-2);
   border-radius: var(--radius-button);
@@ -1048,12 +1063,26 @@ a.ui-row,
   opacity: 0.72;
 }
 
+.ui-toast-mark {
+  display: inline-flex;
+  flex: none;
+}
+
+.ui-toast-text,
+.ui-notice-title,
+.ui-notice-body,
+.ui-form-error,
+.ui-empty-title,
+.ui-empty-line {
+  unicode-bidi: isolate;
+}
+
 .ui-toast-bad {
   color: var(--color-toast-bad);
 }
 
 .ui-bar-thin {
-  height: 6px;
+  height: var(--figure-gap);
   flex: 1;
 }
 
@@ -1159,7 +1188,7 @@ a.ui-row,
   display: flex;
   flex-wrap: wrap;
   column-gap: var(--space-6);
-  row-gap: 4px;
+  row-gap: var(--space-1);
   min-inline-size: 0;
   max-inline-size: 100%;
   padding-top: var(--space-5);
@@ -1174,7 +1203,7 @@ a.ui-row,
 .ui-band-figures bdi {
   color: var(--color-on-band);
   font-weight: 500;
-  margin-inline-start: 6px;
+  margin-inline-start: var(--figure-gap);
 }
 
 @media (hover: hover) {
@@ -1356,9 +1385,7 @@ a.ui-row,
   flex-direction: column;
   align-items: center;
   gap: var(--tab-icon-gap);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
   color: var(--color-text-muted);
   font-size: var(--type-micro-size);
   line-height: var(--type-micro-line);
@@ -1424,7 +1451,7 @@ a.ui-row,
 }
 
 .ui-empty-title {
-  max-inline-size: min(100%, 280px);
+  max-inline-size: min(100%, var(--empty-measure));
   margin: 0;
   display: -webkit-box;
   overflow: hidden;
@@ -1433,7 +1460,7 @@ a.ui-row,
 }
 
 .ui-empty-line {
-  max-inline-size: min(100%, 280px);
+  max-inline-size: min(100%, var(--empty-measure));
   margin-top: var(--label-gap);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line);
@@ -1468,7 +1495,8 @@ a.ui-row,
   bottom: 0;
   width: 100%;
   max-width: var(--content-max);
-  max-block-size: calc(100dvh - 56px);
+  max-block-size: calc(100dvh - var(--sheet-gap));
+  max-height: calc(100dvh - var(--sheet-gap));
   margin-inline: auto;
   overflow: hidden;
   padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));

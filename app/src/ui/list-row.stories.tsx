@@ -36,6 +36,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const Skeleton: Story = {
+  args: { variant: "item", title: "טוען" },
+  render: () => (
+    <List>
+      <ListRow variant="skeleton" />
+      <ListRow variant="skeleton" />
+    </List>
+  ),
+};
+
 export const Project: Story = {
   args: { variant: "project", title: "טק-ליין", hint: "שיפוץ", agorot: "-2940000", loss: true, href: "/projects/tek" },
 };

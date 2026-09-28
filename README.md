@@ -64,6 +64,7 @@ pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17.
 pnpm check:bundle     # after pnpm build: the client graph and dist import no fixture JSON
 pnpm build-storybook && pnpm test:storybook:smoke   # every static story opens with no console error
 pnpm test:e2e:live    # local Supabase plus the live SUMIT test company. See the SUMIT runbook.
+pnpm --filter @flow/app exec playwright test -c playwright.drain.config.ts   # local drain. Needs CRON_SECRET in supabase/.env.
 pnpm latency          # times get_home() against SUPABASE_URL
 ```
 

@@ -25,7 +25,7 @@ import {
   OfflineCachedFrame,
   PullToRefreshFrame,
   UploadProcessingFrame,
-} from "./reference-frames";
+} from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
 import { TabBar } from "./tab-bar";
 
@@ -513,11 +513,25 @@ export const Transaction: Story = {
           vat_status: "source",
           doc_kind: "invoice",
           source: "sumit",
+          project_id: "holon",
           project_name: "בניין מגורים חולון",
+          category_id: "c1",
           category_name: "חומרים",
           supplier_name: "חומרי בניין השרון בע״מ",
           customer_name: null,
+          review_status: "approved",
+          paid: true,
+          open_gross_agorot: null,
         }}
+        sampleProjects={[
+          { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
+          { id: "villa", name: "וילה רעננה", code: "P-02" },
+        ]}
+        sampleCategories={[
+          { id: "c1", name: "חומרים" },
+          { id: "c2", name: "ציוד והשכרה" },
+          { id: "c3", name: "הובלה" },
+        ]}
       />
     </StoryRoute>
   ),

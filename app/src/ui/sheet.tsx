@@ -24,11 +24,11 @@ export function SheetSurface({
   titleRef?: RefObject<HTMLHeadingElement | null>;
 }) {
   const heading = drawer ? (
-    <Drawer.Title ref={titleRef} tabIndex={-1} className="t-title-2" title={title}>
+    <Drawer.Title ref={titleRef} tabIndex={-1} className="t-title-2">
       {title}
     </Drawer.Title>
   ) : (
-    <h2 className="t-title-2" title={title}>
+    <h2 className="t-title-2">
       {title}
     </h2>
   );

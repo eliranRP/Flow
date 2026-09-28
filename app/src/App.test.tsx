@@ -23,7 +23,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
     expect(screen.getByText("שלום")).toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה.")).toBeInTheDocument();
+    expect(screen.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();

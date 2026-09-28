@@ -20,7 +20,7 @@ export function Banner({ title, hint, to, action, icon }: BannerProps) {
     <>
       <span className="ui-banner-icon">{icon ?? <InboxIcon />}</span>
       <span className="ui-row-text">
-        <span className="ui-row-title" title={typeof title === "string" ? title : undefined}>
+        <span className="ui-row-title" dir="rtl">
           {title}
         </span>
         {hint ? <span className="ui-row-hint">{hint}</span> : null}
@@ -57,8 +57,8 @@ export function Notice({ title, body, tone = "neutral", extra }: NoticeProps) {
         <InfoIcon />
       </span>
       <div>
-        <p className="ui-notice-title">{title}</p>
-        <p className="ui-notice-body">{body}</p>
+        <p className="ui-notice-title" dir="rtl">{title}</p>
+        <p className="ui-notice-body" dir="rtl">{body}</p>
         {extra}
       </div>
     </div>

@@ -22,3 +22,5 @@ Storing the key in the browser, or in a tracked env file. Using the service-role
 ## Consequences
 
 Rotating the KEK means re-wrapping every connection. A lost KEK makes the stored keys unreadable; the owner pastes the SUMIT key again.
+
+Sync opens every row with the one `SUMIT_KEK`. `kek_version` is stored on the seal and is not read when the key is opened. Rotation is recorded and is not supported until a later decision re-wraps each row. [0065](0065-review-round5.md).
