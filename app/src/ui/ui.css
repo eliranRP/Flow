@@ -876,7 +876,7 @@ a.ui-row,
   align-items: center;
   gap: 2px;
   max-width: 100%;
-  min-width: 0;
+  min-width: var(--touch-min);
   min-height: var(--touch-min);
   color: var(--color-accent-text);
   font-size: var(--type-label-size);

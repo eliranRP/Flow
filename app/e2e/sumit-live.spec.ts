@@ -139,7 +139,9 @@ async function ownerRest(token: string, path: string, init?: RequestInit): Promi
       accept: "application/json",
     },
   });
-  const body: unknown = await response.json();
+  const text = await response.text();
+  let body: unknown = null;
+  if (text) body = JSON.parse(text) as unknown;
   if (!response.ok) {
     const message = isRecord(body) && typeof body.message === "string" ? body.message : "owner request failed";
     throw new Error(message);
