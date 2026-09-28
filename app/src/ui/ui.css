@@ -22,8 +22,8 @@
   --radius-note: 9px;
   --doc-tile-w: 84px;
   --doc-tile-h: 100px;
-  --invoice-w: 150px;
-  --invoice-h: 196px;
+  --invoice-w: 188px;
+  --invoice-h: 248px;
   --lock-time: 5.5rem;
   --sheet-foot-h: calc(var(--control-height) + var(--space-3) + var(--space-4) + env(safe-area-inset-bottom, 0px));
   --sheet-gap: 56px;
@@ -1362,7 +1362,7 @@ a.ui-row,
   .ui-btn-ghost:hover,
   .ui-text-link:hover,
   .ui-banner:hover {
-    background: var(--color-tint);
+    background: var(--surface-hover);
   }
 }
 
@@ -1455,7 +1455,8 @@ a.ui-row,
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-3);
+  /* Four gaps, each 2px under the token, so a loading Home band matches the loaded band. */
+  gap: calc(var(--space-3) - 2px);
   min-inline-size: 0;
   max-inline-size: 100%;
 }
@@ -1990,6 +1991,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-split-remain {
+  margin-top: var(--space-6);
   border-top: 1px solid var(--color-line);
   padding-top: var(--space-3);
 }
@@ -2153,6 +2155,16 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 html[data-keyboard] .ui-sheet-head .t-title-2:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-install-hero .t-title-1:focus,
+.ui-install-hero .t-title-1:focus-visible {
+  outline: none;
+}
+
+html[data-keyboard] .ui-install-hero .t-title-1:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
@@ -2335,6 +2347,10 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
   bottom: calc(var(--sheet-foot-h) + var(--space-3));
 }
 
+body:has(.ui-toast):has([data-vaul-drawer][data-state="open"]) [data-vaul-drawer][data-state="open"] .ui-sheet-body {
+  padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px) + 3.5rem + var(--space-3));
+}
+
 .ui-day-range {
   background: var(--color-tint);
 }
@@ -2349,18 +2365,12 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
   padding-block-end: calc(var(--control-height) + var(--space-4) + var(--space-4) + var(--safe-bottom));
 }
 
-.ui-split-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-block-size: var(--topbar-height);
-  margin-top: var(--safe-top);
-  padding-inline: var(--space-3);
+.ui-split-title {
+  padding-inline: var(--space-side);
 }
 
-.ui-split-head {
-  padding-inline: var(--space-side);
+.ui-split-title .t-title-1 {
+  margin: 0;
 }
 
 .ui-split-context {
@@ -2428,24 +2438,6 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
   font-weight: var(--type-title-3-weight);
 }
 
-.ui-split-input {
-  box-sizing: border-box;
-  flex: none;
-  inline-size: 4.5rem;
-  min-block-size: var(--touch-min);
-  padding-inline: var(--space-2);
-  border: 1px solid var(--color-control-border);
-  border-radius: var(--radius-input);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--type-body-size);
-  font-variant-numeric: tabular-nums lining-nums;
-}
-
-.ui-split-remain {
-  margin-top: var(--space-6);
-}
-
 .ui-split-remain .ui-figure {
   display: flex;
   align-items: center;
@@ -2466,13 +2458,6 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
 .ui-split-list .ui-percent-control {
   block-size: var(--touch-min);
   height: var(--touch-min);
-}
-
-.ui-split-done {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-good);
 }
 
 .ui-split-cta {
@@ -2688,7 +2673,7 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
 .ui-ref-icon {
   display: flex;
   justify-content: center;
-  margin-top: var(--space-6);
+  margin-top: 40px;
 }
 
 .ui-app-icon {
@@ -2936,29 +2921,6 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
   color: var(--color-accent-text);
 }
 
-.ui-step-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-block-size: var(--touch-min);
-}
-
-.ui-step-mark {
-  display: grid;
-  inline-size: var(--touch-min);
-  block-size: var(--touch-min);
-  flex: none;
-  place-items: center;
-  color: var(--color-accent-text);
-}
-
-.ui-step-wait {
-  inline-size: var(--spinner);
-  block-size: var(--spinner);
-  border: 2px solid var(--color-control-border);
-  border-radius: var(--radius-chip);
-}
-
 .ui-note-row {
   display: flex;
   align-items: flex-start;
@@ -2972,6 +2934,7 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
 }
 
 .ui-invoice-sheet {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   inline-size: var(--invoice-w);
@@ -2983,6 +2946,14 @@ body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
   border-radius: var(--radius-input);
   background: var(--color-surface);
   overflow: hidden;
+}
+
+.ui-invoice-scan {
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-start: 42%;
+  block-size: 2px;
+  background: var(--color-accent);
 }
 
 .ui-invoice-sheet .ui-skeleton-bar {

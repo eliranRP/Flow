@@ -45,6 +45,8 @@ type Shared = {
   onRemember?: (value: boolean) => void;
   onSave: () => void;
   saving?: boolean;
+  /** A split already has its projects. The sheet changes the category only. */
+  categoryOnly?: boolean;
   onSplit: () => void;
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
@@ -287,7 +289,7 @@ export function ChangeAssignment(props: Props) {
             {props.amount !== "" ? <bdi className="ui-num" dir="ltr">{props.amount}</bdi> : null}
           </p>
           <div className="ui-change-rows">
-            {income ? null : (
+            {income || props.categoryOnly ? null : (
               <ListRow
                 variant="button"
                 buttonRef={projectBtn}

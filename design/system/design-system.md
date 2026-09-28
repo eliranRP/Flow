@@ -16,6 +16,7 @@ Tokens live in `design-tokens.json`. The boards are `ds-1…ds-6` (light and dar
 | Page | bg | #FFFFFF | #15111E |
 | Card, tab bar | surface | #FFFFFF | #1E1929 |
 | Tinted fill (pending card, pills, secondary button) | tint | #F3ECFE | #2A2045 |
+| Hover surface (rows, chips, ghost buttons, text links, banners) | surface-hover | rgba(20, 16, 32, 0.06) | rgba(255, 255, 255, 0.08) |
 | Tinted fill, pressed | tint-pressed | #E7DAFD | #382A5E |
 | Hairline | line | #EEE8FA | #2E2740 |
 | Main text and figures | text | #1D1728 | #F1EDF8 |

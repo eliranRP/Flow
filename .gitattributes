@@ -2,3 +2,4 @@
 # no LFS pointer rewrite, no text diff normalisation.
 design/* -text -filter -diff -merge
 design/** -text -filter -diff -merge
+design/**/*.css text diff

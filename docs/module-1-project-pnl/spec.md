@@ -64,7 +64,7 @@ Three paths, all opened from the center **+** button (`הוספה`).
 | Path | Label | What happens |
 | --- | --- | --- |
 | Invoice photo or file | `צלם חשבונית` | One photo, several photos in a row, or a PDF or image already on the phone. Flow reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate. It keeps the Israel invoice allocation number (`חשבונית ישראל`) when the document has one. The document waits to be linked to a payment. Android can also share an image or PDF into the installed app. iPhone cannot. [0020](../decisions/0020-capture-from-the-phone.md). |
-| Bank lines | SUMIT sync | Bank transactions arrive with the SUMIT pull. The add sheet still shows a disabled "העלאת דוח בנק" row. That row does not upload a file. |
+| Bank lines | SUMIT sync | Bank transactions arrive with the SUMIT pull. The add sheet has no bank row ([0066](../decisions/0066-review-round7.md)). |
 | Manual entry | `הזנה ידנית` | Fallback for cash and cheques: amount, project, and category. This is the path that marks money as paid when there will never be a bank line. |
 
 There is no statement parser. Screen 08, onboarding step 09c, and ld-05 are not build tasks ([0065](../decisions/0065-review-round5.md) point 40). [0012](../decisions/0012-bank-hapoalim-first.md) is superseded.

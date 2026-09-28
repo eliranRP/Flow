@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import { assertSumitUrl, deriveLine, mapCrmEntity, type SumitDoc } from "../_shared/ledger.ts";
+import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -11,12 +12,14 @@ declare const Deno: {
 const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
 const PAGE_CAP = 20;
-const BACKOFF_MS = [5 * 60_000, 15 * 60_000, 60 * 60_000, 6 * 60 * 60_000, 24 * 60 * 60_000];
 const te = new TextEncoder();
 
-function backoffDelay(attempts: number): number {
-  const index = Math.min(BACKOFF_MS.length, Math.max(1, attempts)) - 1;
-  return BACKOFF_MS[index] ?? BACKOFF_MS[BACKOFF_MS.length - 1] ?? 24 * 60 * 60_000;
+class SyncHold extends Error {
+  readonly retryAt: string;
+  constructor(retryAt: string) {
+    super("sumit_rejected");
+    this.retryAt = retryAt;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -33,25 +36,10 @@ Deno.serve(async (req) => {
     const cron = req.headers.get("x-flow-cron");
     const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
     if (cron && cronSecret && constantTimeEqual(cron, cronSecret)) {
-      const due = await admin
-        .from("sumit_refresh_requests")
-        .select("id, company_id")
-        .is("claimed_at", null)
-        .limit(20);
+      const due = await admin.rpc("list_due_refresh_requests", { p_limit: 20 });
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
-      const companyIds = [...new Set((due.data ?? []).map((row) => row.company_id as string))];
-      const waiting = companyIds.length === 0
-        ? { data: [] as Array<{ company_id: string; next_attempt_at: string | null }>, error: null }
-        : await admin.from("sumit_connections").select("company_id, next_attempt_at").in("company_id", companyIds);
-      if (waiting.error) return json({ error: "could not read the refresh queue" }, 500);
-      const blocked = new Set(
-        (waiting.data ?? [])
-          .filter((row) => row.next_attempt_at != null && Date.parse(row.next_attempt_at) > Date.now())
-          .map((row) => row.company_id),
-      );
       const results = [];
-      for (const row of due.data ?? []) {
-        if (blocked.has(row.company_id as string)) continue;
+      for (const row of (due.data ?? []) as Array<{ id: number; company_id: string }>) {
         const claim = await admin
           .from("sumit_refresh_requests")
           .update({ claimed_at: new Date().toISOString() })
@@ -60,11 +48,11 @@ Deno.serve(async (req) => {
           .select("id");
         if (claim.error || claim.data == null || claim.data.length === 0) continue;
         try {
-          results.push(await syncCompany(admin, row.company_id as string, decodeKek(kekSecret), false));
+          results.push(await syncCompany(admin, row.company_id, decodeKek(kekSecret), false));
         } catch (error) {
           await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
           const message = error instanceof Error ? error.message : "sync failed";
-          if (message !== "sumit_rejected") {
+          if (message !== "sumit_rejected" && message !== "sumit_auth") {
             const code = message === "sync_page_cap" ? "sync_page_cap" : "sync_failed";
             await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", row.company_id);
           }
@@ -87,11 +75,14 @@ Deno.serve(async (req) => {
     const result = await syncCompany(admin, company.data.id, decodeKek(kekSecret), body.force === true);
     return json(result);
   } catch (error) {
+    if (error instanceof SyncHold) {
+      return json({ error: "sumit_rejected", retry_at: error.retryAt }, 429);
+    }
     const message = error instanceof Error ? error.message : "sync failed";
     console.error("sumit-sync", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));
-    const known = message === "sync_failed" || message === "sync_page_cap" || message === "sumit_rejected" || message === "SUMIT is not connected" || message === "unauthorized" || message === "no company";
+    const known = message === "sync_failed" || message === "sync_page_cap" || message === "sumit_rejected" || message === "sumit_auth" || message === "SUMIT is not connected" || message === "unauthorized" || message === "no company";
     const code = known ? message : "sync_failed";
-    return json({ error: code }, 500);
+    return json({ error: code }, message === "sumit_rejected" ? 429 : 500);
   }
 });
 
@@ -114,11 +105,15 @@ async function syncCompany(
 ): Promise<{ ok: boolean; documents: number; skipped?: boolean }> {
   const connection = await admin
     .from("sumit_connections")
-    .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, last_sync_at")
+    .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, last_sync_at, last_error, next_attempt_at")
     .eq("company_id", companyId)
     .maybeSingle();
   if (connection.error || !connection.data) throw new Error("SUMIT is not connected");
   const row = connection.data;
+  if (row.last_error === "sumit_auth") throw new Error("sumit_auth");
+  if (typeof row.next_attempt_at === "string" && Date.parse(row.next_attempt_at) > Date.now()) {
+    throw new SyncHold(row.next_attempt_at);
+  }
   const last = row.last_sync_at ? Date.parse(row.last_sync_at as string) : 0;
   const minGap = force ? 60_000 : 6 * 60 * 60 * 1000;
   if (last && Date.now() - last < minGap) return { ok: true, documents: 0, skipped: true };
@@ -150,15 +145,14 @@ async function syncCompany(
     const message = error instanceof Error ? error.message : "sync failed";
     const safe = apiKey === "" ? message : message.replaceAll(apiKey, "[redacted]");
     console.error("sumit sync failed", safe.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]").slice(0, 400));
-    const code = message === "sync_page_cap" ? "sync_page_cap" : message === "sumit_rejected" ? "sumit_rejected" : "sync_failed";
-    if (code === "sumit_rejected") {
-      const current = await admin.from("sumit_connections").select("reject_attempts").eq("company_id", companyId).maybeSingle();
-      const attempts = Number(current.data?.reject_attempts ?? 0) + 1;
-      await admin.from("sumit_connections").update({
-        last_error: "sumit_rejected",
-        reject_attempts: attempts,
-        next_attempt_at: new Date(Date.now() + backoffDelay(attempts)).toISOString(),
-      }).eq("company_id", companyId);
+    const code = message === "sync_page_cap"
+      ? "sync_page_cap"
+      : message === "sumit_rejected" || message === "sumit_auth"
+        ? message
+        : "sync_failed";
+    if (code === "sumit_rejected" || code === "sumit_auth") {
+      const noted = await admin.rpc("note_sumit_rejection", { p_company: companyId, p_code: code });
+      if (noted.error) throw new Error("sync_failed");
     } else {
       await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", companyId);
     }
@@ -197,9 +191,9 @@ async function sumitCall(
   if (!parsed || typeof parsed !== "object") throw new Error("SUMIT returned an empty body");
   const record = parsed as Record<string, unknown>;
   if (record.Status !== 0) {
-    const userMessage = typeof record.UserErrorMessage === "string" ? record.UserErrorMessage : "SUMIT rejected the call";
+    const userMessage = typeof record.UserErrorMessage === "string" ? record.UserErrorMessage : "";
     console.error("sumit rejected", userMessage.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]").slice(0, 200));
-    throw new Error("sumit_rejected");
+    throw new Error(classifySumitStatus(userMessage));
   }
   return record;
 }

@@ -2,7 +2,18 @@
 -- Shared costs stay on Split. SUMIT rejections back off. The drain can be scheduled again.
 -- txn_source loses hapoalim: bank lines come from SUMIT.
 
-update public.transactions set source = 'sumit' where source::text = 'hapoalim';
+-- A leftover hapoalim row is not a SUMIT document. Relabelling it would let a later sweep treat it as one.
+do $$
+begin
+  if exists (
+    select 1
+    from public.transactions
+    where source::text = 'hapoalim'
+  ) then
+    raise exception 'hapoalim rows remain; refuse to relabel them as sumit';
+  end if;
+end
+$$;
 
 alter table public.transactions alter column source type text using source::text;
 drop type public.txn_source;

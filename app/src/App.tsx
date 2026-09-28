@@ -160,7 +160,12 @@ function InstallRoute() {
     <InstallScreen
       mode={detectInstallMode()}
       onDismiss={() => {
-        void navigate(-1);
+        const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+        if (idx > 0) {
+          void navigate(-1);
+          return;
+        }
+        void navigate(`/settings${search}`);
       }}
     />
   );

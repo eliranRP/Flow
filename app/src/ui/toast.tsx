@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { CheckIcon, InfoIcon } from "./icons";
 
 type ToastInput = {
@@ -76,6 +76,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     if (!toast) return;
     arm(remaining.current);
   }
+
+  useEffect(() => {
+    if (!toast) return;
+    const body = document.querySelector("[data-vaul-drawer][data-state='open'] .ui-sheet-body");
+    if (body instanceof HTMLElement) body.scrollTo({ top: body.scrollHeight });
+  }, [toast]);
 
   return (
     <ToastContext.Provider value={{ show }}>

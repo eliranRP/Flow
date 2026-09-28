@@ -330,6 +330,231 @@ describe("notification switches", () => {
       expect(toggle).not.toBeChecked();
     }
     expect(screen.getAllByText("לא פעיל").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText("אפליקציה")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
+  });
+
+  it("disables refresh until the retry time and asks to reconnect after a bad key", () => {
+    const later = new Date(Date.now() + 60 * 60_000).toISOString();
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: true,
+                  companyId: 1001,
+                  lastError: "sumit_rejected",
+                  nextAttemptAt: later,
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
+    expect(screen.getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+    unmount();
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: true,
+                  companyId: 1001,
+                  lastError: "sumit_auth",
+                  nextAttemptAt: null,
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("החיבור ל-SUMIT נכשל. צריך לחבר מחדש.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
+  });
+});
+
+describe("shared transaction category", () => {
+  it("names the split, saves the category, and keeps the shares on undo", async () => {
+    rpc.calls.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_transaction") {
+        return Promise.resolve({
+          data: {
+            ...expense,
+            amount_gross: -1_180_000,
+            amount_net: -1_000_000,
+            vat_amount: -180_000,
+            project_id: null,
+            project_name: null,
+            pnl_role: "shared",
+            allocations: [
+              { project_id: "p1", project_name: "חולון", share_bp: 6000, amount_net: -600_000 },
+              { project_id: "p2", project_name: "וילה", share_bp: 4000, amount_net: -400_000 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: "c",
+            name: "אלפא",
+            vat_registered: true,
+            basis: "invoiced",
+            from: "2026-09-01",
+            to: "2026-09-28",
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 2,
+            review_count: 0,
+            projects: [project("p1", "חולון"), project("p2", "וילה")],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
+            { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+          ],
+          error: null,
+        });
+      }
+      if (name === "set_transaction_category") return Promise.resolve({ data: "undo-9", error: null });
+      if (name === "undo_reassign") return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/transactions/tx"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /מפוצל · 2 פרויקטים/ }));
+    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+  });
+
+  it("saves a shared category without calling reassign", async () => {
+    rpc.calls.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_transaction") {
+        return Promise.resolve({
+          data: {
+            ...expense,
+            amount_gross: -1_180_000,
+            amount_net: -1_000_000,
+            vat_amount: -180_000,
+            project_id: null,
+            project_name: null,
+            pnl_role: "shared",
+            allocations: [
+              { project_id: "p1", project_name: "חולון", share_bp: 6000, amount_net: -600_000 },
+              { project_id: "p2", project_name: "וילה", share_bp: 4000, amount_net: -400_000 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: "c",
+            name: "אלפא",
+            vat_registered: true,
+            basis: "invoiced",
+            from: "2026-09-01",
+            to: "2026-09-28",
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 2,
+            review_count: 0,
+            projects: [project("p1", "חולון"), project("p2", "וילה")],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
+            { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+          ],
+          error: null,
+        });
+      }
+      if (name === "set_transaction_category") return Promise.resolve({ data: "undo-9", error: null });
+      if (name === "undo_reassign") return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/transactions/tx"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "שמירה ואישור" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "set_transaction_category")).toBe(true);
+    });
+    expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
+    expect(rpc.calls.find((call) => call.name === "set_transaction_category")?.args).toEqual({
+      p_id: "tx",
+      p_category_id: "c2",
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-9")).toBe(true);
+    });
   });
 });
 

@@ -11,7 +11,7 @@ import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { withSheetBackground } from "../sheet-background";
-import { hebrewSumitError } from "../sumit-copy";
+import { hebrewSumitError, retryClock } from "../sumit-copy";
 import { isStandalone } from "../ui/install-prompt";
 import {
   useBooks,
@@ -121,7 +121,7 @@ export function OnboardingScreen() {
     <main className="ui-onboard">
       <div className="ui-progress-row">
         <ProgressBar
-          variant="thin"
+          variant="slim"
           value={step}
           max={steps}
           label={`שלב ${String(step)} מתוך ${String(steps)}`}
@@ -941,7 +941,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
 
   async function createProject(name: string): Promise<ChangeChoice> {
     if (sample) {
-      const created = { id: `new-${name}`, name, status: "active" as const };
+      const created = { id: `draft:${name}`, name, status: "active" as const };
       setExtraProjects((list) => [...list, created]);
       return created;
     }
@@ -1218,11 +1218,45 @@ export function TransactionScreen({
       undoId.current = typeof saved.data === "string" ? saved.data : null;
     },
   });
+  const setCategory = useWrite({
+    failure: CHANGE_SAVE_FAILURE,
+    keys: ["txn", "dashboard", "project", "review"],
+    onSuccess: () => {
+      setChangeOpen(false);
+      const id = undoId.current;
+      if (sample) return;
+      toast.show({
+        message: "השיוך נשמר",
+        ...(id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+      });
+    },
+    run: async () => {
+      const current = sample ?? detail.data;
+      if (!current) throw new Error("supabase");
+      const nextCategory = (sampleCategories ?? []).find((category) => category.id === categoryId);
+      if (sample) {
+        if (nextCategory) setCategoryName(nextCategory.name);
+        return;
+      }
+      const supabase = getSupabase();
+      if (!supabase || categoryId === "") throw new Error("supabase");
+      const saved = await supabase.rpc("set_transaction_category", {
+        p_id: current.id,
+        p_category_id: categoryId,
+      });
+      assertNoError(saved);
+      undoId.current = typeof saved.data === "string" ? saved.data : null;
+    },
+  });
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
     return <ScreenState title="פרטי תנועה" backTo={`/${search}`} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
   if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={`/${search}`} />;
-  const shownProject = projectName || txn.project_name || "בלי פרויקט";
+  const allocationCount = txn.allocations?.length ?? 0;
+  const splitRow = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || allocationCount > 1;
+  const shownProject = splitRow
+    ? `מפוצל · ${String(allocationCount)} פרויקטים`
+    : projectName || txn.project_name || "בלי פרויקט";
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
   const changeProjects = withChoice(
@@ -1266,7 +1300,7 @@ export function TransactionScreen({
       </div>
       <List>
         <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
-          if (txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared") {
+          if (splitRow) {
             void navigate(`/transactions/${txn.id}/split${search}`);
             return;
           }
@@ -1306,13 +1340,17 @@ export function TransactionScreen({
         categoryId={categoryId}
         onProjectId={setProjectId}
         onCategoryId={setCategoryId}
-        saving={reassign.isPending}
+        categoryOnly={splitRow}
+        saving={splitRow ? setCategory.isPending : reassign.isPending}
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
         onSave={() => {
           if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
-          if (txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared") {
-            setChangeOpen(false);
-            void navigate(`/transactions/${txn.id}/split${search}`);
+          if (splitRow) {
+            if (categoryId === "") {
+              toast.show({ tone: "bad", message: "בחרו קטגוריה." });
+              return;
+            }
+            setCategory.mutate();
             return;
           }
           if (txn.direction === "income" ? categoryId === "" : projectId === "" || categoryId === "") {
@@ -1327,7 +1365,7 @@ export function TransactionScreen({
         }}
         onCreateProject={async (name) => {
           if (sample) {
-            const created = { id: `new-${name}`, name, status: "active" as const };
+            const created = { id: `draft:${name}`, name, status: "active" as const };
             setExtraProjects((list) => [...list, created]);
             return created;
           }
@@ -1513,13 +1551,14 @@ export function SplitScreen({
       }}
     >
       <ScreenHeader
-        size="compact"
-        title="פיצול בין פרויקטים"
-        subtitle={context}
-        subtitleClassName="ui-split-context"
+        barOnly
         leading={<IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>}
         trailing={example}
       />
+      <div className="ui-split-title">
+        <h1 className="t-title-1">פיצול בין פרויקטים</h1>
+        <p className="ui-split-context t-label">{context}</p>
+      </div>
       <p className="ui-page-pad ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>
       <div className="ui-page-pad ui-split-method">
         <SegmentedControl
@@ -1588,6 +1627,7 @@ type SettingsSample = {
   connected: boolean;
   companyId: number | null;
   lastError: string | null;
+  nextAttemptAt?: string | null;
   email?: string | null;
   projectCount?: number;
   expenseCategories?: number;
@@ -1687,7 +1727,10 @@ export function SettingsScreen({
   const businessName = sample ? sample.name : dashboard.data?.name;
   const vatRegistered = sample ? sample.vatRegistered : dashboard.data?.vat_registered !== false;
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
-  const lastError = hebrewSumitError(sample ? sample.lastError : status.data?.last_error);
+  const rawError = sample ? sample.lastError : status.data?.last_error;
+  const lastError = hebrewSumitError(rawError);
+  const retryHint = rawError === "sumit_auth" ? null : retryClock(sample ? sample.nextAttemptAt : status.data?.next_attempt_at);
+  const refreshHeld = rawError === "sumit_auth" || retryHint != null;
   const email = sample ? sample.email : session?.user.email;
   const projectCount = sample?.projectCount ?? dashboard.data?.projects.length;
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
@@ -1723,10 +1766,13 @@ export function SettingsScreen({
           <ListRow
             variant="button"
             title="רענון עכשיו"
+            hint={retryHint ?? undefined}
             icon={<RefreshIcon />}
             chevron
             busy={refresh.isPending}
+            disabled={refreshHeld}
             onClick={() => {
+              if (refreshHeld) return;
               if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
               refresh.mutate();
             }}
@@ -1737,6 +1783,11 @@ export function SettingsScreen({
         ) : null}
       </List>
       {lastError && !emptyAccount ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
+      {rawError === "sumit_auth" && !emptyAccount ? (
+        <div className="ui-page-pad">
+          <Button variant="secondary" onClick={() => { setConnectOpen(true); }}>חיבור מחדש</Button>
+        </div>
+      ) : null}
       <Sheet open={connectOpen} onOpenChange={setConnectOpen} title="חיבור SUMIT">
         <form
           className="ui-stack"
@@ -1782,9 +1833,6 @@ export function SettingsScreen({
       <SectionHead title="סיווג" />
       <List>
         <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
-        {isStandalone() ? null : (
-          <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
-        )}
         <ListRow variant="item" href={`/projects${search}`} title="פרויקטים" hint={projectCount == null ? undefined : `${String(projectCount)} פעילים`} icon={<ProjectsIcon />} chevron />
       </List>
       <SectionHead title="התראות" />
@@ -1825,6 +1873,14 @@ export function SettingsScreen({
         ) : null}
       </List>
       </>
+      )}
+      {isStandalone() ? null : (
+        <>
+          <SectionHead title="אפליקציה" />
+          <List>
+            <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+          </List>
+        </>
       )}
       <p className="ui-poc t-hint"><bdi dir="ltr">Flow · POC 0.1</bdi></p>
     </div>

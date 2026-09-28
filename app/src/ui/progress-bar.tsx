@@ -5,7 +5,7 @@ type ProgressBarProps = {
   value: number;
   max?: number;
   label: string;
-  variant?: "bar" | "thin";
+  variant?: "bar" | "thin" | "slim";
   caption?: ReactNode;
 };
 
@@ -15,17 +15,17 @@ export function ProgressBar({ value, max = 100, label, variant = "bar", caption 
   const percent = Math.round(ratio * 100);
   const bar = (
     <div
-      className={variant === "thin" ? "ui-bar ui-bar-thin" : "ui-bar"}
+      className={variant === "thin" ? "ui-bar ui-bar-thin" : variant === "slim" ? "ui-bar ui-bar-slim" : "ui-bar"}
       role="meter"
       aria-label={label}
-      aria-valuenow={variant === "thin" ? value : percent}
+      aria-valuenow={variant === "bar" ? percent : value}
       aria-valuemin={0}
-      aria-valuemax={variant === "thin" ? safeMax : 100}
+      aria-valuemax={variant === "bar" ? 100 : safeMax}
     >
       <div className="ui-bar-fill" style={{ width: `${String(percent)}%` }} />
     </div>
   );
-  if (variant === "thin") {
+  if (variant === "thin" || variant === "slim") {
     return (
       <div className="ui-meter-row">
         {bar}
