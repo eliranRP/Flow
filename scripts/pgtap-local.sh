@@ -22,7 +22,9 @@ psql_q() {
 
 psql_q -f supabase/tests/bootstrap-local.sql
 psql_q -c "alter database \"${db}\" set search_path to public, extensions"
-psql_q -f supabase/migrations/20260927120000_schema_v1.sql
+for migration in supabase/migrations/*.sql; do
+  psql_q -f "$migration"
+done
 psql_q -f supabase/seed.sql
 psql_q -f supabase/tests/helpers.sql
 

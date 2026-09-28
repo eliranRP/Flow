@@ -76,13 +76,13 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "created_at": string,"id": string,"is_demo": boolean,"name": string,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number
+                    "created_at": string,"id": string,"is_demo": boolean,"name": string,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "created_at"?: string,"id"?: string,"is_demo"?: boolean,"name": string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number
+                    "created_at"?: string,"id"?: string,"is_demo"?: boolean,"name": string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"is_demo"?: boolean,"name"?: string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number
+                    "created_at"?: string,"id"?: string,"is_demo"?: boolean,"name"?: string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
                     
@@ -233,19 +233,38 @@ isOneToOne: false
                   ]
                 },"sumit_connections": {
                   Row: {
-                    "company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"sumit_company_id": number | null,"updated_at": string
+                    "company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"sumit_company_id"?: number | null,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"sumit_company_id"?: number | null,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
       foreignKeyName: "sumit_connections_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: true
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sumit_refresh_requests": {
+                  Row: {
+                    "claimed_at": string | null,"company_id": string,"id": number,"requested_at": string
+                  }
+                  Insert: {
+                    "claimed_at"?: string | null,"company_id": string,"id"?: never,"requested_at"?: string
+                  }
+                  Update: {
+                    "claimed_at"?: string | null,"company_id"?: string,"id"?: never,"requested_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sumit_refresh_requests_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     }
@@ -329,13 +348,13 @@ isOneToOne: false
           Views: {
             "sumit_connection_status": {
                   Row: {
-                    "company_id": string | null,"connected": boolean | null,"sumit_company_id": number | null
+                    "company_id": string | null,"connected": boolean | null,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null
                   }
                   Insert: {
-                           "company_id"?: string | null,"connected"?: never,"sumit_company_id"?: number | null
+                           "company_id"?: string | null,"connected"?: never,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null
                          }
                         Update: {
-                           "company_id"?: string | null,"connected"?: never,"sumit_company_id"?: number | null
+                           "company_id"?: string | null,"connected"?: never,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null
                          }
                         Relationships: [
                     {
@@ -349,8 +368,65 @@ isOneToOne: true
                 }
           }
           Functions: {
-            "get_home":
+            "company_pnl":
+{ Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json
+                           },
+"create_company":
+{ Args: { "p_name": string,"p_vat_registered": boolean }; Returns: string
+                           },
+"create_manual_entry":
+{ Args: { "p_category_id": string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id": string,"p_vat_exempt": boolean }; Returns: string
+                           },
+"delete_transaction":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"disconnect_sumit":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"get_dashboard":
+{ Args: { "p_basis"?: string,"p_from"?: string,"p_to"?: string }; Returns: Json
+                           },
+"get_home":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"get_project":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"get_transaction":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"list_categories":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"list_review":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"list_unpaid":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"map_budget_section":
+{ Args: { "p_name": string,"p_project_id": string,"p_section_id": number }; Returns: string
+                           },
+"merge_category":
+{ Args: { "p_from": string,"p_into": string }; Returns: undefined
+                           },
+"resolve_review":
+{ Args: { "p_action": string,"p_category_id": string,"p_id": string,"p_project_id": string }; Returns: undefined
+                           },
+"save_split":
+{ Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
+                           },
+"set_category_hidden":
+{ Args: { "p_hidden": boolean,"p_id": string }; Returns: undefined
+                           },
+"sumit_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"sync_review_queue":
+{ Args: { "p_company_id": string }; Returns: number
+                           },
+"upsert_project":
+{ Args: { "p_budget_agorot": number,"p_id": string,"p_name": string,"p_status": string }; Returns: string
                            }
           }
           Enums: {
