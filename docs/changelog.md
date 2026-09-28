@@ -2,7 +2,9 @@
 
 ## 2026-09-28
 
-Decision [0057](decisions/0057-component-library.md), Accepted. Shared UI lives in `app/src/ui`, with a gallery at `/dev/components` that is not in the tab bar. Home, sign-in, help, and the load errors are compositions of that library. The other books screens move onto it next. Numbers 0051–0056 are reserved on the remainder branch.
+Decision [0058](decisions/0058-storybook.md), Accepted. Storybook 8 replaces the `/dev/components` gallery. It is a dev dependency (`@storybook/react-vite`), with RTL, Rubik, the token CSS, a light/dark toolbar, and a 390px viewport. `pnpm storybook` and `pnpm build-storybook`. Accessibility runs in CI with `pnpm test:storybook`. The library rule in [0057](decisions/0057-component-library.md) is unchanged.
+
+Decision [0057](decisions/0057-component-library.md), Accepted. Shared UI lives in `app/src/ui`. Home, sign-in, help, and the load errors are compositions of that library. The other books screens move onto it next. Numbers 0051–0056 are reserved on the remainder branch.
 
 Branch `phase-1-slice` replaces the title-only screens with a working books slice. Onboarding calls `create_company`. Settings stores the SUMIT key in an Edge Function under AES-GCM ([0048](decisions/0048-sumit-key-envelope.md)). `sumit-sync` imports documents read-only and writes the ledger. Home, projects, review, add, unpaid, splits, and settings read `get_dashboard` and the other RPCs. `?preview=demo` shows the Flow Test fixture without a session. Decisions [0047](decisions/0047-onboarding-and-period.md), [0049](decisions/0049-sumit-refresh.md), and [0050](decisions/0050-demo-splits-and-review.md). The hosted project does not have this migration until it is applied by hand. [docs/runbooks/sumit-connect.md](runbooks/sumit-connect.md).
 

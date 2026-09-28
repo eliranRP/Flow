@@ -24,6 +24,7 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm --filter @flow/app exec playwright install --with-deps chromium
+      - run: pnpm test:storybook
       - run: pnpm test:e2e
 
   pgtap:

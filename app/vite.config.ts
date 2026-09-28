@@ -26,22 +26,28 @@ export default defineConfig(({ mode }) => {
     if (!process.env[key]) process.env[key] = value;
   }
 
+  const lifecycle = process.env.npm_lifecycle_event ?? "";
+  const storybook = Boolean(process.env.VITEST) || lifecycle.includes("storybook");
+
   return {
-  base: "/",
-  envDir: path.resolve(__dirname, ".."),
-  server: {
-    host: "0.0.0.0",
-    port: 43123,
-    strictPort: true,
-    fs: {
-      allow: [path.resolve(__dirname, "..")],
+    base: "/",
+    envDir: path.resolve(__dirname, ".."),
+    server: {
+      host: "0.0.0.0",
+      // Storybook and the story tests must not take the app's port.
+      ...(storybook ? { strictPort: false } : { port: 43123, strictPort: true }),
+      fs: {
+        allow: [path.resolve(__dirname, "..")],
+      },
     },
-  },
-  plugins: [
-    react(),
-    tailwindcss(),
-    spaFallback(),
-    VitePWA({
+    plugins: [
+      react(),
+      tailwindcss(),
+      ...(storybook
+        ? []
+        : [
+            spaFallback(),
+            VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png"],
       workbox: {
@@ -65,7 +71,8 @@ export default defineConfig(({ mode }) => {
           { src: "icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
-    }),
-  ],
-};
+      }),
+          ]),
+    ],
+  };
 });

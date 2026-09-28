@@ -1,19 +1,21 @@
 # Component library
 
-The shared controls are in `app/src/ui`. Screens import them. Decision [0057](../decisions/0057-component-library.md).
+The shared controls are in `app/src/ui`. Screens import them. Decision [0057](../decisions/0057-component-library.md). Review is Storybook. Decision [0058](../decisions/0058-storybook.md).
 
-## Gallery
+## Storybook
 
 ```bash
-pnpm dev
+pnpm storybook
+pnpm build-storybook
+pnpm test:storybook
 ```
 
-Open [http://127.0.0.1:43123/dev/components](http://127.0.0.1:43123/dev/components). The page is not in the tab bar.
+`pnpm storybook` listens on port 6006. The toolbar switches בהיר and כהה. Both set `data-theme` on `<html>`. The default viewport is 390×844.
 
-בהיר forces light. כהה forces dark. Both set `data-theme` on `<html>`.
+`pnpm build-storybook` writes `app/storybook-static`. That folder is gitignored. A checkpoint zips it to `storybook-static.zip` so a reviewer can open `index.html` locally without installing the repo.
 
-Capture at 390×844. The page is long, so a full-page shot is the review image.
+Stories are dev-only. They are not imported by the app entry, and the Storybook packages are dev dependencies.
 
 ## What a screen may do
 
-Compose components and call data hooks. If a control is missing, extend `app/src/ui` and add a specimen on the gallery. Do not copy a button, row, sheet, or empty state into a screen.
+Compose components and call data hooks. If a control is missing, extend `app/src/ui` and add a stories file. Do not copy a button, row, sheet, or empty state into a screen.

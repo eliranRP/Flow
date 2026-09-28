@@ -53,32 +53,38 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
           </IconButton>
         </div>
         <div className="ui-cal" role="grid" aria-label={label}>
-          {["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"].map((head) => (
-            <span key={head} className="ui-cal-head">
-              {head}
-            </span>
+          <div className="ui-cal-row" role="row">
+            {["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"].map((head) => (
+              <span key={head} className="ui-cal-head" role="columnheader">
+                {head}
+              </span>
+            ))}
+          </div>
+          {weeksOf(cells).map((week) => (
+            <div key={week.join("-")} className="ui-cal-row" role="row">
+              {week.map((iso) => {
+                const outside = iso.slice(5, 7) !== String(cursor.month + 1).padStart(2, "0");
+                const future = iso > today;
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    role="gridcell"
+                    className={outside ? "ui-day ui-day-outside" : "ui-day"}
+                    aria-label={dayLabel(iso)}
+                    aria-selected={iso === value}
+                    aria-current={iso === today ? "date" : undefined}
+                    disabled={future}
+                    onClick={() => {
+                      pick(iso);
+                    }}
+                  >
+                    {Number(iso.slice(8, 10))}
+                  </button>
+                );
+              })}
+            </div>
           ))}
-          {cells.map((iso) => {
-            const outside = iso.slice(5, 7) !== String(cursor.month + 1).padStart(2, "0");
-            const future = iso > today;
-            return (
-              <button
-                key={iso}
-                type="button"
-                role="gridcell"
-                className={outside ? "ui-day ui-day-outside" : "ui-day"}
-                aria-label={dayLabel(iso)}
-                aria-selected={iso === value}
-                aria-current={iso === today ? "date" : undefined}
-                disabled={future}
-                onClick={() => {
-                  pick(iso);
-                }}
-              >
-                {Number(iso.slice(8, 10))}
-              </button>
-            );
-          })}
         </div>
         <Button
           variant="primary"
@@ -92,6 +98,14 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
       </Sheet>
     </>
   );
+}
+
+function weeksOf(cells: string[]): string[][] {
+  const weeks: string[][] = [];
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7));
+  }
+  return weeks;
 }
 
 function parseCursor(iso: string): { year: number; month: number } {

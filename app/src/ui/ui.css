@@ -473,28 +473,19 @@
 }
 
 .ui-cal {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-cal-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0;
 }
 
 .ui-cal-head {
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
   text-align: center;
-}
-
-.ui-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-section);
-  padding: var(--space-6) var(--space-side) var(--space-10);
-}
-
-.ui-gallery-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 .ui-text-link {
