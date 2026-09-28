@@ -13,6 +13,9 @@
     "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @flow/app test:e2e",
+    "storybook": "pnpm --filter @flow/app storybook",
+    "build-storybook": "pnpm --filter @flow/app build-storybook",
+    "test:storybook": "pnpm --filter @flow/app test:storybook",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "latency": "tsx scripts/latency.ts",
     "db:start": "supabase start",
@@ -23,6 +26,13 @@
   },
   "dependencies": {
     "@flow/shared": "workspace:*"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "vite": "7"
+      }
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

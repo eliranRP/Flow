@@ -77,4 +77,5 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0048](0048-sumit-key-envelope.md) | 2026-09-28 | Accepted | The SUMIT key is AES-GCM sealed. The client never receives it |
 | [0049](0049-sumit-refresh.md) | 2026-09-28 | Accepted | SUMIT refresh is a button plus a daily cron row. Read-only allowlist |
 | [0050](0050-demo-splits-and-review.md) | 2026-09-28 | Accepted | Demo site-worker days are a split rule. SUMIT rows stay in the P&L while queued |
-| [0057](0057-component-library.md) | 2026-09-28 | Accepted | Screens are assembled from `app/src/ui`. The gallery is `/dev/components`, outside the tab bar. 0051–0056 stay on the remainder branch |
+| [0057](0057-component-library.md) | 2026-09-28 | Accepted | Screens are assembled from `app/src/ui`. The gallery route is replaced by 0058. 0051–0056 stay on the remainder branch |
+| [0058](0058-storybook.md) | 2026-09-28 | Accepted | Storybook 8 replaces `/dev/components`. Dev dependency only. The library rule in 0057 stays |

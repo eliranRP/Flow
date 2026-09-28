@@ -3,7 +3,6 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react
 import { homeSummarySchema } from "@flow/shared";
 import { AuthProvider, useAuth } from "./auth";
 import { HELP_EMAIL } from "./config";
-import { ComponentsGallery } from "./ui/gallery";
 import { PageTitle, ScreenHeader } from "./ui/screen-header";
 import { HomeSkeleton } from "./ui/skeleton";
 import { TabBar } from "./ui/tab-bar";
@@ -50,7 +49,6 @@ function AppRoutes() {
   return (
     <>
       <Routes location={background ?? location}>
-          <Route path="/dev/components" element={<ComponentsGallery />} />
           <Route path="/sign-in" element={<SignInScreen />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/preview" element={<Navigate to="/?preview=1" replace />} />
