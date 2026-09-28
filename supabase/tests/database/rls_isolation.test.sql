@@ -5,8 +5,12 @@ begin;
 
 select plan(83);
 
-select tests.create_supabase_user('owner_a');
-select tests.create_supabase_user('owner_b');
+do $users$
+begin
+  perform tests.create_supabase_user('owner_a');
+  perform tests.create_supabase_user('owner_b');
+end
+$users$;
 
 insert into public.companies (owner_id, name, tax_id)
 values (tests.get_supabase_uid('owner_a'), 'אלפא שיפוצים', '500000001');

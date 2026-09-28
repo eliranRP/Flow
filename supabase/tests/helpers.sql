@@ -9,8 +9,8 @@
 --
 -- Load this after the migration. The migration revokes default EXECUTE from
 -- PUBLIC with no schema limit, and `supabase test db` creates pgTAP only
--- after that. Creating the extension here, then granting it, is what lets
--- anon and authenticated call is() and throws_ok().
+-- after that. Creating the extension here, then granting execute on pgTAP's
+-- own functions, is what lets anon and authenticated call is() and throws_ok().
 
 set client_min_messages to warning;
 
@@ -19,7 +19,23 @@ create schema if not exists extensions;
 create extension if not exists pgtap with schema extensions;
 
 grant usage on schema extensions to anon, authenticated, service_role;
-grant execute on all functions in schema extensions to anon, authenticated;
+
+-- Only pgTAP. Other extensions in this schema stay ungranted.
+do $pgtap_grant$
+declare
+  fn regprocedure;
+begin
+  for fn in
+    select p.oid::regprocedure
+    from pg_proc p
+    join pg_depend d on d.objid = p.oid and d.deptype = 'e'
+    join pg_extension e on e.oid = d.refobjid
+    where e.extname = 'pgtap'
+  loop
+    execute format('grant execute on function %s to anon, authenticated', fn);
+  end loop;
+end
+$pgtap_grant$;
 
 create schema if not exists tests;
 
