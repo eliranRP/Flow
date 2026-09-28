@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const goldenValues = ["37700", "134520", "2389917160"];
+const goldenValues = ["37700", "134520", "2389917160", "2393153301"];
 const fixtureSentence =
   "שיפוץ דירה + לובי בבניין ברחוב הרצל 12, רמת גן. הלקוח העיקרי יזמות הגליל; ד.ל. נכסים (חברת הניהול) הזמינה תוספות בלובי.";
 
@@ -30,6 +30,7 @@ const modulePatterns = [
 const sourceMarkers = [
   ["flow-test", (body) => body.includes("flow-test")],
   ["2389917160", (body) => body.includes("2389917160")],
+  ["2393153301", (body) => body.includes("2393153301")],
   ["FLOW_TEST_", (body) => body.includes("FLOW_TEST_")],
   ["fixtures/", (body) => body.includes("fixtures/") || body.includes("fixtures\\")],
   ["expected-pnl", (body) => body.includes("expected-pnl")],

@@ -109,6 +109,8 @@ SUMIT_API_KEY="$SUMIT_API_KEY" \
 pnpm test:e2e:live
 ```
 
+Flow Test 2 is company `2393153301`. Set `SUMIT_NO_DOCUMENTS=1` for that company so the check connects, syncs twice, and confirms the saved split without creating a document. Document creates spend the monthly action budget.
+
 Local email login is off, so the test signs a session with `JWT_SECRET` from `supabase status -o env`. It creates an owner, fills פרטי העסק, pastes the CompanyID and key, runs רענון עכשיו, marks ביטוח המגן VAT-exempt with `set_supplier_settings`, then checks Home (כל התקופה, חשבוניות, 37,700), Projects (שיפוץ הרצל 12), and Unpaid (134,520). It enters one shared split with `save_split`. It creates one invoice in SUMIT, waits out the one-minute force gap, refreshes, and expects that description on Unpaid and the split still in place. It then creates a credit, links it to that invoice, and checks the totals and the split again. `pg_cron` inserts refresh markers. When `pg_net` is installed and Vault `cron_secret` is set, `flow-sumit-drain` POSTs `sumit-sync` with `x-flow-cron` every five minutes. The local check is `pnpm --filter @flow/app exec playwright test -c playwright.drain.config.ts` with `CRON_SECRET` in `supabase/.env`. Unset `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` before the hosted `pnpm build`, or the local values stay baked into `app/dist`.
 
 ## 6. Hosted deploy

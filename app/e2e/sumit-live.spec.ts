@@ -259,6 +259,18 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await page.goto("/unpaid");
   await expect(page.getByText("134,520")).toBeVisible();
 
+  if (process.env.SUMIT_NO_DOCUMENTS === "1") {
+    await page.waitForTimeout(61_000);
+    await page.goto("/settings");
+    await sync(page);
+    await showInvoicedAllTime(page);
+    await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
+    await page.goto("/unpaid");
+    await expect(page.getByText("134,520")).toBeVisible();
+    await expectSplitSurvived(token, splitId);
+    return;
+  }
+
   try {
     const created = await sumit("/accounting/documents/create/", {
       Details: {
