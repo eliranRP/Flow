@@ -447,36 +447,71 @@ test("a segmented control is hit 4px outside its drawn box", async ({ page }) =>
 
 test("the categories hidden link wraps on the end side and does not truncate", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--categories-hidden-collapsed&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: /מוסתרות/ })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByText("עבודה")).toHaveCount(0);
+  await expect(page.getByText("סוג")).toHaveCount(0);
+  const track = await page.locator(".ui-seg").evaluate((node) => getComputedStyle(node).borderRadius);
+  expect(track).toBe("12px");
+
+  await page.goto("/iframe.html?id=screens-routes--categories-none-hidden&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "קטגוריה חדשה" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /מוסתרות/ })).toHaveCount(0);
+
   await page.goto("/iframe.html?id=screens-routes--categories-long-hebrew&viewMode=story", { waitUntil: "domcontentloaded" });
   const foot = page.locator(".ui-cat-foot");
   const add = foot.getByRole("button", { name: "קטגוריה חדשה" });
   const hidden = foot.getByRole("button", { name: /מוסתרות/ });
   await expect(hidden).toBeVisible();
-  const boxes = await Promise.all([add.boundingBox(), hidden.boundingBox(), foot.boundingBox()]);
-  const [addBox, hiddenBox, footBox] = boxes;
-  expect(addBox).not.toBeNull();
-  expect(hiddenBox).not.toBeNull();
-  expect(footBox).not.toBeNull();
-  if (!addBox || !hiddenBox || !footBox) return;
-  expect(hiddenBox.y).toBeGreaterThanOrEqual(addBox.y + addBox.height - 1);
-  const padEnd = await foot.evaluate((node) => Number.parseFloat(getComputedStyle(node).paddingLeft));
-  expect(Math.abs(hiddenBox.x - (footBox.x + padEnd))).toBeLessThan(2);
-  const label = await hidden.locator(".ui-text-link-label").evaluate((node) => {
-    const style = getComputedStyle(node);
+  const placed = await foot.evaluate((node) => {
+    const buttons = [...node.querySelectorAll("button")];
+    const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
+    const start = buttons.find((button) => !button.classList.contains("ui-cat-foot-end"));
+    if (!(end instanceof HTMLElement) || !(start instanceof HTMLElement)) return null;
+    const label = end.querySelector(".ui-text-link-label");
+    if (!(label instanceof HTMLElement)) return null;
+    const style = getComputedStyle(label);
+    const footBox = node.getBoundingClientRect();
+    const pad = Number.parseFloat(getComputedStyle(node).paddingLeft);
+    const endBox = end.getBoundingClientRect();
     return {
-      overflow: style.textOverflow,
-      whiteSpace: style.whiteSpace,
-      fits: node.scrollWidth <= node.clientWidth + 1,
+      ellipsis: style.textOverflow === "ellipsis" || style.whiteSpace === "nowrap",
+      fits: label.scrollWidth <= label.clientWidth + 1,
+      onEnd: Math.abs(endBox.x - (footBox.x + pad)) < 2,
+      inside: endBox.x >= footBox.x - 1 && endBox.right <= footBox.right + 1,
     };
   });
-  expect(label.overflow).not.toBe("ellipsis");
-  expect(label.whiteSpace).not.toBe("nowrap");
-  expect(label.fits).toBe(true);
+  expect(placed).toEqual({ ellipsis: false, fits: true, onEnd: true, inside: true });
+
+  await hidden.locator(".ui-text-link-label").evaluate((node) => {
+    node.textContent = "מוסתרות ארוכות מאוד שאי אפשר לקטוע באמצע השורה";
+  });
+  const wrapped = await foot.evaluate((node) => {
+    const buttons = [...node.querySelectorAll("button")];
+    const end = buttons.find((button) => button.classList.contains("ui-cat-foot-end"));
+    const start = buttons.find((button) => !button.classList.contains("ui-cat-foot-end"));
+    if (!(end instanceof HTMLElement) || !(start instanceof HTMLElement)) return null;
+    const label = end.querySelector(".ui-text-link-label");
+    if (!(label instanceof HTMLElement)) return null;
+    const footBox = node.getBoundingClientRect();
+    const pad = Number.parseFloat(getComputedStyle(node).paddingLeft);
+    const endBox = end.getBoundingClientRect();
+    const startBox = start.getBoundingClientRect();
+    return {
+      ownLine: endBox.y >= startBox.y + startBox.height - 1,
+      onEnd: Math.abs(endBox.x - (footBox.x + pad)) < 2,
+      fits: label.scrollWidth <= label.clientWidth + 1,
+      ellipsis: getComputedStyle(label).textOverflow === "ellipsis",
+    };
+  });
+  expect(wrapped).toEqual({ ownLine: true, onEnd: true, fits: true, ellipsis: false });
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/iframe.html?id=screens-routes--categories-hidden-expanded&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("עבודה")).toBeVisible();
   const turn = page.locator(".ui-cat-foot .ui-chevron-turn");
   await expect(turn).toHaveAttribute("data-open", "true");
+  await expect(page.getByRole("button", { name: /מוסתרות/ })).toHaveAttribute("aria-expanded", "true");
   const motion = await turn.evaluate((node) => {
     const style = getComputedStyle(node);
     return { duration: style.transitionDuration, transform: style.transform };
