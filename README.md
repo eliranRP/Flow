@@ -2,7 +2,7 @@
 
 Flow is a mobile-first way for Israeli project-based businesses to see project profit and loss: income, expenses, and the bottom line. The proof of concept is for owners of small and mid-size construction contractors. The same model is meant to fit any project-based business after that.
 
-This repository is the product home. It holds documentation and design artifacts only. There is no application code yet.
+This repository is the product home: the Hebrew PWA (`app/`), the Supabase schema (`supabase/`), and the shared P&L module (`packages/shared`). Product decisions and the approved design stay under `docs/` and `design/`.
 
 Amounts are in shekels (₪), shown net of VAT, with VAT tracked beside them. This phase is Hebrew only, right to left. The owner signs in with a Google account (Gmail), on an installable phone web app. There is no desktop version in this phase. The owner confirms what the product suggests instead of typing a classification for every shekel.
 
@@ -40,6 +40,41 @@ Out of scope: a desktop site, native iOS or Android apps, another language at la
 Default expense categories, preloaded: `חומרים` (materials), `קבלני משנה` (subcontractors), `עבודה` (labor), `ציוד והשכרה` (equipment and rental), `הובלה` (transport), `ביטוח` (insurance), `אחר` (other). Income categories: `תקבול מלקוח` (payment from a client), `הכנסה אחרת` (other income).
 
 Success, for the proof of concept: a first project P&L within 15 minutes of signup; at least 80% of AI suggestions accepted unchanged after the first month; a daily review under 5 minutes; no transaction left untagged.
+
+## Run locally
+
+Requirements: Node.js 22, pnpm 10, and the [Supabase CLI](https://supabase.com/docs/guides/cli) when you want to apply migrations. Docker is required for `supabase start`. The pgTAP suite can also run without Docker.
+
+```bash
+pnpm install
+cp .env.example .env
+# Fill VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from the Supabase dashboard.
+# Do not commit .env. Do not put the service-role key in the PWA.
+pnpm dev
+```
+
+The dev server listens on port 43123. Signed-out visitors go to the sign-in screen. `/?preview=1` opens Home in demo mode without a session. `?preview=loading`, `?preview=empty`, `?preview=error`, and `?preview=error-server` show those Home states. Sign-in help writes to `HELP_EMAIL` in `app/src/config.ts`. The help page and its test import that constant. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). Migrations are not applied from this repo's automation; review them, then run `supabase link` and `supabase db push` yourself.
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
+pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17. Migration first, then pgTAP. No Docker.
+pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID
+pnpm latency          # times get_home() against SUPABASE_URL
+```
+
+`pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script creates that company with `is_demo = true`, or updates one that is already marked demo. It refuses to write into a real company. It is idempotent on `(company, source, external id)`.
+
+`packages/shared/src/database.types.ts` is untouched output of Supabase CLI 2.118.0 (`--schema public`). That CLI generates types in-process and does not pass a PostgREST version, so `--local` and `--db-url` both omit `__InternalSupabase`. The PostgREST tag for this CLI is `flow-postgrest-version` in `supabase/config.toml` (16.3). `scripts/check-db-types.sh` passes it as `--postgrest-version` once the CLI accepts the flag, which keeps a local `--db-url` check byte-identical to CI's `--local`. CI runs that diff after `supabase test db`. The app imports `Database` from `@flow/shared`, which omits SUMIT ciphertext columns.
+
+```bash
+supabase gen types typescript --db-url "$DATABASE_URL" --schema public > packages/shared/src/database.types.ts
+DATABASE_URL=postgresql://postgres@127.0.0.1:5432/flow_pgtap pnpm db:types:check
+```
+
+The migration revokes the default `EXECUTE` privilege from `PUBLIC` for every future function, with no schema limit. A function added later is not callable until the migration grants it. Each new function in `public` or `private` needs `grant execute on function ... to authenticated`, and to `service_role` when the server should call it.
 
 ## Documentation
 
