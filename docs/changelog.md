@@ -2,7 +2,9 @@
 
 ## 2026-09-28
 
-A period pill, chip, or status pill stays on one line. Long text ellipsizes and the chevron stays visible, clear of the wordmark. The closed period story is the band and the white on-band pill, with the תקופה label inside the band. A budget title clamps to two lines, the amounts sit on the next line without breaking a number, and the used percent is floored so 99.9% is not shown as 100%.
+Decision [0062](decisions/0062-audit-layout-calls.md), Accepted. Fixed-height controls stay one line and ellipsize, with the full text in `title` and `aria-label`. Empty states use a `title-3` title, a muted 15px body, and the 36px pill. A sheet title is one line. ChangePill shows a neutral `0%`, and a change that rounds to zero shows `<1%` in the real direction. The preview loading band keeps `מצב תצוגה`. Enabled controls use `cursor: pointer`.
+
+A period pill, chip, or status pill stays on one line. Long text ellipsizes and the chevron stays visible, clear of the wordmark. The closed period story is the band and the white on-band pill. A budget title clamps to two lines, the amounts sit on the next line without breaking a number, and the used percent is floored so 99.9% is not shown as 100%.
 
 Disabled controls use one shared `cursor: not-allowed` rule. A busy control uses `cursor: progress`. The disabled element keeps pointer events so the cursor stays visible. Decision [0061](decisions/0061-review-undo.md).
 

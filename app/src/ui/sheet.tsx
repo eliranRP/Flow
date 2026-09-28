@@ -19,9 +19,13 @@ export function SheetSurface({
   closeRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const heading = drawer ? (
-    <Drawer.Title className="t-title-2">{title}</Drawer.Title>
+    <Drawer.Title className="t-title-2" title={title}>
+      {title}
+    </Drawer.Title>
   ) : (
-    <h2 className="t-title-2">{title}</h2>
+    <h2 className="t-title-2" title={title}>
+      {title}
+    </h2>
   );
   return (
     <div className="ui-sheet-surface">

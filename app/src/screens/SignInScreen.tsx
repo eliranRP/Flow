@@ -26,10 +26,6 @@ export function SignInScreen() {
   const ready = getSupabase() != null;
 
   useEffect(() => {
-    if (!ready) console.error("Sign-in is unavailable because Supabase is not configured.");
-  }, [ready]);
-
-  useEffect(() => {
     function onPageShow(event: PageTransitionEvent) {
       if (event.persisted) setPending(false);
     }
@@ -46,7 +42,6 @@ export function SignInScreen() {
   async function continueWithGoogle() {
     const supabase = getSupabase();
     if (!supabase) {
-      console.error("Sign-in is unavailable because Supabase is not configured.");
       setLocalNotice("failed");
       return;
     }
@@ -60,7 +55,6 @@ export function SignInScreen() {
       },
     });
     if (error) {
-      console.error("Google sign-in failed", error.message);
       setPending(false);
       setLocalNotice("failed");
     }

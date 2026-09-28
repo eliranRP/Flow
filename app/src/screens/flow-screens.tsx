@@ -107,7 +107,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard);
   const data = sample ?? dashboard.data;
   const empty = (
-    <>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader title="פרויקטים" />
       <EmptyState
         icon={<ProjectsIcon />}
@@ -118,7 +118,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <Sheet open={open} onOpenChange={setOpen} title="פרויקט">
         <ProjectForm onClose={() => { setOpen(false); }} />
       </Sheet>
-    </>
+    </div>
   );
   if (phase.kind === "empty" || (phase.kind === "ready" && (data?.projects.length ?? 0) === 0)) return empty;
   return (
@@ -599,7 +599,7 @@ async function reopenReview(
 
 function ReviewEmpty({ search }: { search: string }) {
   return (
-    <div>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader title="לאישור" subtitle="רק מה שה-AI לא היה בטוח בו" />
       <EmptyState
         icon={<ReviewIcon />}

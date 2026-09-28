@@ -7,7 +7,7 @@ describe("EmptyState", () => {
   it("shows an icon, a title, one line, and at most one action", () => {
     expectRtl();
     render(<EmptyState icon={<span>◌</span>} title="עוד אין נתונים" body="הרווח יופיע כאן." action={<button type="button">חיבור</button>} />);
-    expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
+    expect(screen.getByText("עוד אין נתונים")).toHaveClass("t-title-3");
     expect(screen.getByText("הרווח יופיע כאן.")).toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });

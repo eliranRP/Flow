@@ -22,5 +22,6 @@ describe("Chip", () => {
     expectThemePaint(choice, "color");
     expect(screen.getByRole("button", { name: "מוסתר" })).toBeDisabled();
     expect(screen.getByText("שולם").tagName).toBe("SPAN");
+    expect(screen.getByText("שולם").closest(".ui-status")?.textContent).not.toContain("✓");
   });
 });

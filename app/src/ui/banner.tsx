@@ -18,7 +18,9 @@ export function Banner({ title, hint, to }: BannerProps) {
         <InboxIcon />
       </span>
       <span className="ui-row-text">
-        <span className="ui-row-title">{title}</span>
+        <span className="ui-row-title" title={typeof title === "string" ? title : undefined}>
+          {title}
+        </span>
         {hint ? <span className="ui-row-hint">{hint}</span> : null}
       </span>
       <span className="ui-banner-chevron">

@@ -24,7 +24,9 @@ export function ListRow(props: ListRowProps) {
           <span className="ui-row-icon">{props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} />}</span>
         ) : null}
         <span className="ui-row-text">
-          <span className="ui-row-title">{props.title}</span>
+          <span className="ui-row-title" title={props.title}>
+            {props.title}
+          </span>
           {props.hint ? <span className="ui-row-hint">{props.hint}</span> : null}
         </span>
       </span>

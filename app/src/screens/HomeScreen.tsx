@@ -48,7 +48,7 @@ function changePercent(current: bigint, previous: bigint | null): number | null 
   const currentShekels = wholeShekels(current);
   const previousShekels = wholeShekels(previous);
   if (previousShekels === 0) return null;
-  return Math.round(((currentShekels - previousShekels) / Math.abs(previousShekels)) * 100);
+  return ((currentShekels - previousShekels) / Math.abs(previousShekels)) * 100;
 }
 
 export function HomeScreen() {
@@ -104,7 +104,7 @@ export function HomeScreen() {
     void unpaid.refetch();
   }
 
-  if (loading) return <HomeSkeleton />;
+  if (loading) return <HomeSkeleton preview={previewing} />;
 
   if (failed) {
     return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
@@ -112,7 +112,7 @@ export function HomeScreen() {
 
   if (!showBooks) {
     return (
-      <div className="flex min-h-full flex-1 flex-col">
+      <div className="flex min-h-full min-w-0 flex-1 flex-col">
         <TopBand preview={previewing}>
           <BandHero>
             <div className="ui-greet">
@@ -204,7 +204,7 @@ export function HomeBooks({
   const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <TopBand
         preview={previewing}
         trailing={

@@ -8,7 +8,9 @@ type CheckboxProps = {
 export function Checkbox({ label, checked, onChange, disabled = false }: CheckboxProps) {
   return (
     <label className="ui-toggle">
-      <span>{label}</span>
+      <span className="ui-toggle-label" title={label}>
+        {label}
+      </span>
       <input
         type="checkbox"
         className="sr-only"

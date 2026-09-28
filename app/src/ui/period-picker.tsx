@@ -40,6 +40,8 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
       <button
         type="button"
         className="ui-band-period ui-hit"
+        title={pill}
+        aria-label={pill}
         onClick={() => {
           onOpenChange(true);
         }}

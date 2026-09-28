@@ -48,7 +48,11 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
         >
           <span className="tab-icon">
             <ReviewIcon />
-            {reviewCount > 0 ? <span className="count-badge">{badge}</span> : null}
+            {reviewCount > 0 ? (
+              <span className="count-badge">
+                <bdi dir="ltr">{badge}</bdi>
+              </span>
+            ) : null}
           </span>
           לאישור
         </NavLink>

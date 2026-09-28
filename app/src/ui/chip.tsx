@@ -12,11 +12,14 @@ type ChipProps = {
 
 export function Chip({ kind = "choice", pressed = false, children, onClick }: ChipProps) {
   const resolved = pressed ? "selected" : kind;
+  const label = typeof children === "string" ? children : undefined;
   return (
     <button
       type="button"
       className={cx("ui-chip", `ui-chip-${resolved}`)}
       aria-pressed={pressed}
+      aria-label={label}
+      title={label}
       disabled={kind === "disabled"}
       onClick={onClick}
     >
@@ -31,10 +34,10 @@ export function Chip({ kind = "choice", pressed = false, children, onClick }: Ch
   );
 }
 
+/** A done, read-only status. No checkmark: the word is the status. */
 export function StatusPill({ children }: { children: ReactNode }) {
   return (
     <span className="ui-status">
-      <span aria-hidden="true">✓</span>
       <span className="ui-chip-label">{children}</span>
     </span>
   );

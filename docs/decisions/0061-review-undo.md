@@ -37,7 +37,7 @@ Toggle and DatePicker leave the library until a shipped screen needs them. Range
 
 `נתוני דוגמה · Example data` is a Storybook sample label. The running app does not render it.
 
-The home loading skeleton is the home route, composed from Skeleton bars inside TopBand, and it does not show `מצב תצוגה`.
+The home loading skeleton is the home route, composed from Skeleton bars inside TopBand. A signed-in load does not show `מצב תצוגה`. [0062](0062-audit-layout-calls.md) keeps that label on a preview load.
 
 The rest of that review follows the implementation guide. The greeting is `t-label` and the example tag sits on that row in Storybook only. The pending card has 24px above it. Project rows are hairlines with 14px padding and no extra gap. The over-budget sentence states the real percent (the bar fill still stops at 100%). The checkbox focus ring is on the box, not the hidden input. Sign-in legal links are underlined hint text.
 

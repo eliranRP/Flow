@@ -17,4 +17,15 @@ describe("TabBar", () => {
     expect(names).toEqual(["בית", "פרויקטים", "הוספה", "לאישור, 7 ממתינים", "הגדרות"]);
     expectTarget(screen.getByRole("link", { name: "הוספה" }));
   });
+
+  it("keeps 99+ in an ltr isolate", () => {
+    render(
+      <MemoryRouter>
+        <TabBar reviewCount={100} />
+      </MemoryRouter>,
+    );
+    const badge = document.querySelector(".count-badge bdi");
+    expect(badge).toHaveAttribute("dir", "ltr");
+    expect(badge).toHaveTextContent("99+");
+  });
 });
