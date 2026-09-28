@@ -30,11 +30,6 @@ export function SignInScreen() {
   }, [ready]);
 
   useEffect(() => {
-    const error = params.get("error");
-    if (error) console.error("Sign-in error", error);
-  }, [params]);
-
-  useEffect(() => {
     function onPageShow(event: PageTransitionEvent) {
       if (event.persisted) setPending(false);
     }

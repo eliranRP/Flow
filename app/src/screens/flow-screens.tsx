@@ -99,7 +99,7 @@ export function OnboardingScreen() {
 export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const dashboard = useDashboardQuery();
+  const dashboard = useDashboardQuery(sample == null);
   const books = useBooks();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -620,8 +620,8 @@ export function ChangeForm({
   const preview = useHomePreview();
   const navigate = useNavigate();
   const toast = useToast();
-  const dashboard = useDashboardQuery();
-  const categories = useCategoriesQuery();
+  const dashboard = useDashboardQuery(sample == null);
+  const categories = useCategoriesQuery(sample == null);
   const [params] = useSearchParams();
   const item = params.get("item") ?? "";
   const [projectId, setProjectId] = useState("");
@@ -698,7 +698,7 @@ export function AddForm() {
 export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const unpaid = useUnpaidQuery();
+  const unpaid = useUnpaidQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, unpaid);
   const rows = sample ?? unpaid.data ?? [];
   const gross = rows.reduce((sum, row) => sum + row.open_gross_agorot, 0n);
@@ -855,8 +855,8 @@ export function SettingsScreen({
   const search = usePreviewSearch();
   const { session } = useAuth();
   const toast = useToast();
-  const status = useSumitStatusQuery();
-  const dashboard = useDashboardQuery();
+  const status = useSumitStatusQuery(sample == null);
+  const dashboard = useDashboardQuery(sample == null);
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [disconnectOpen, setDisconnectOpen] = useState(false);
@@ -1033,7 +1033,7 @@ export function CategoriesScreen({ sample }: { sample?: CategoryRow[] } = {}) {
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const toast = useToast();
-  const categories = useCategoriesQuery();
+  const categories = useCategoriesQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
   const rows = sample ?? categories.data ?? [];
   const [mergeFrom, setMergeFrom] = useState("");

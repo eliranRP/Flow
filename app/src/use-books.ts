@@ -55,12 +55,12 @@ function rpcArgs(period: PeriodChoice): { p_basis: "invoiced"; p_from?: string; 
   };
 }
 
-export function useDashboardQuery() {
+export function useDashboardQuery(active = true) {
   const preview = useHomePreview();
   const { period } = useBooks();
   return useQuery({
     queryKey: ["dashboard", preview, period],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<Dashboard> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -71,11 +71,11 @@ export function useDashboardQuery() {
   });
 }
 
-export function useUnpaidQuery() {
+export function useUnpaidQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["unpaid", preview],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<UnpaidRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -101,11 +101,11 @@ export function useReviewQuery() {
   });
 }
 
-export function useCategoriesQuery() {
+export function useCategoriesQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["categories", preview],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<CategoryRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -116,11 +116,11 @@ export function useCategoriesQuery() {
   });
 }
 
-export function useSumitStatusQuery() {
+export function useSumitStatusQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["sumit", preview],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<SumitStatus> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

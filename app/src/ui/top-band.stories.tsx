@@ -1,51 +1,54 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ReactNode } from "react";
 import { BigNumber } from "./big-number";
 import { BandHero } from "./layout";
 import { longHebrew, largeAgorot } from "./story-support";
 import { TopBand } from "./top-band";
 
+type BandArgs = {
+  preview?: boolean;
+  heading: string;
+  amount?: string;
+  label?: string;
+};
+
+function BandView({ preview, heading, amount, label }: BandArgs) {
+  let body: ReactNode;
+  if (label) {
+    body = <h1 className="ui-band-label t-label">{label}</h1>;
+  } else {
+    body = (
+      <h1 className="t-hero">
+        <BigNumber agorot={BigInt(amount ?? "0")} />
+      </h1>
+    );
+  }
+  return (
+    <TopBand preview={preview}>
+      <BandHero>
+        <p className="t-title-2">{heading}</p>
+        {body}
+      </BandHero>
+    </TopBand>
+  );
+}
+
 const meta = {
   title: "Components/TopBand",
-  component: TopBand,
-} satisfies Meta<typeof TopBand>;
+  component: BandView,
+} satisfies Meta<typeof BandView>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: {
-    children: (
-      <BandHero>
-        <p className="t-title-2">שלום, אלירן</p>
-        <h1 className="t-hero">
-          <BigNumber agorot={-7_630_000n} />
-        </h1>
-      </BandHero>
-    ),
-  },
+  args: { heading: "שלום, אלירן", amount: "-7630000" },
 };
 
 export const Preview: Story = {
-  args: {
-    preview: true,
-    children: (
-      <BandHero>
-        <p className="t-title-2">שלום</p>
-        <h1 className="ui-band-label t-label">כאן יופיע הרווח הנקי של העסק</h1>
-      </BandHero>
-    ),
-  },
+  args: { preview: true, heading: "שלום", label: "כאן יופיע הרווח הנקי של העסק" },
 };
 
 export const LongHebrew: Story = {
-  args: {
-    children: (
-      <BandHero>
-        <p className="t-title-2">{longHebrew}</p>
-        <h1 className="t-hero">
-          <BigNumber agorot={largeAgorot} />
-        </h1>
-      </BandHero>
-    ),
-  },
+  args: { heading: longHebrew, amount: String(largeAgorot) },
 };
