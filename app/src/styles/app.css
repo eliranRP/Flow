@@ -467,6 +467,39 @@ a {
   outline: none;
 }
 
+/*
+  §2.7. Vaul's own sheet is 500ms. These selectors outrank the rules it injects.
+  Drag release writes an inline transition; the longhands cover that too.
+  While .vaul-dragging is set the finger owns the transform, so the override stays off.
+*/
+[data-vaul-drawer][data-state="open"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
+  animation-duration: var(--dur-sheet-in);
+  animation-timing-function: var(--ease-standard);
+}
+
+[data-vaul-drawer][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
+  animation-duration: var(--dur-sheet-out);
+  animation-timing-function: var(--ease-exit);
+}
+
+[data-vaul-drawer][data-state="open"]:not(.vaul-dragging) {
+  transition-duration: var(--dur-sheet-in) !important;
+  transition-timing-function: var(--ease-standard) !important;
+}
+
+[data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
+body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
+  transition-duration: var(--dur-sheet-out) !important;
+  transition-timing-function: var(--ease-exit) !important;
+}
+
+body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
+  transition-duration: var(--dur-sheet-in) !important;
+  transition-timing-function: var(--ease-standard) !important;
+}
+
 .sheet-grab {
   width: var(--grab-width);
   height: var(--grab-height);
@@ -573,10 +606,23 @@ a {
   min-height: var(--touch-min);
 }
 
+/* The 44px target stays. The negative margin keeps the failed sign-in stack on er-04. */
+.signin-help a,
+.signin-privacy a {
+  margin-block: calc((1lh - var(--touch-min)) / 2);
+}
+
 .signin-privacy {
   margin-top: var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
+}
+
+.help-back,
+main a[href^="mailto:"] {
+  display: inline-block;
+  min-height: var(--touch-min);
+  padding-block: 11px;
 }
 
 .help-back {
@@ -780,5 +826,12 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .gsi-spinner {
     animation: none;
+  }
+
+  /* 1ms, not 0. Vaul calls leave() from onAnimationEnd, and a 0ms duration can skip that event. */
+  [data-vaul-drawer],
+  [data-vaul-overlay] {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
   }
 }

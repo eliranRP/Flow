@@ -156,11 +156,11 @@ function HelpScreen() {
       <h1 className="t-title-1">עזרה</h1>
       <p className="t-label mt-4 text-text-secondary">לעזרה בכניסה כותבים לנו.</p>
       <p className="mt-4">
-        <a className="hit-inline t-label text-accent-text underline" href={`mailto:${HELP_EMAIL}`}>
+        <a className="t-label text-accent-text underline" href={`mailto:${HELP_EMAIL}`}>
           {HELP_EMAIL}
         </a>
       </p>
-      <Link to="/sign-in" className="help-back hit-inline t-label">
+      <Link to="/sign-in" className="help-back t-label">
         חזרה
       </Link>
     </main>

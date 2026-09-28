@@ -137,9 +137,8 @@ describe("App", () => {
     expect(screen.getByText("לעזרה בכניסה כותבים לנו.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
     const back = screen.getByRole("link", { name: "חזרה" });
-    expect(back).toHaveClass("help-back", "hit-inline");
+    expect(back).toHaveClass("help-back");
     expect(back).not.toHaveClass("icon-btn");
-    expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveClass("hit-inline");
   });
 
   it("sends a signed-out visitor to sign-in", () => {
