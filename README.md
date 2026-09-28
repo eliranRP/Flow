@@ -74,6 +74,8 @@ supabase gen types typescript --db-url "$DATABASE_URL" --schema public > package
 DATABASE_URL=postgresql://postgres@127.0.0.1:5432/flow_pgtap pnpm db:types:check
 ```
 
+The migration revokes the default `EXECUTE` privilege from `PUBLIC` for every future function, with no schema limit. A function added later is not callable until the migration grants it. Each new function in `public` or `private` needs `grant execute on function ... to authenticated`, and to `service_role` when the server should call it.
+
 ## Documentation
 
 | Document | What it is |
