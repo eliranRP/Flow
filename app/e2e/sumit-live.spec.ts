@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { formatIls } from "@flow/shared";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -274,8 +275,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
     await page.waitForTimeout(61_000);
     await page.goto("/settings");
     await sync(page);
-    await page.goto("/unpaid");
-    await expect(page.getByText(probe)).toBeVisible();
+    await expectProbeListed(page, token, probe);
     await expectSplitSurvived(token, splitId);
   } finally {
     if (createdId != null) {
@@ -297,13 +297,39 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
       await sync(page);
       await showInvoicedAllTime(page);
       await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
-      await page.goto("/unpaid");
-      await expect(page.getByText("134,520")).toBeVisible();
-      await expect(page.getByText(probe)).toHaveCount(0);
+      await expectProbeAbsent(page, token, probe);
       await expectSplitSurvived(token, splitId);
     }
   }
 });
+
+async function unpaidRows(token: string): Promise<Array<Record<string, unknown>>> {
+  const body = await ownerRest(token, "rpc/list_unpaid", { method: "POST", body: "{}" });
+  return rowsOf(body);
+}
+
+function openGross(row: Record<string, unknown>): bigint {
+  const value = row.open_gross_agorot;
+  if (typeof value === "number" || typeof value === "string") return BigInt(value);
+  throw new Error("missing open_gross_agorot");
+}
+
+/** The row title is the customer. The probe lives on the document description, so the page total is the visible proof. */
+async function expectProbeListed(page: Page, token: string, probe: string): Promise<void> {
+  const rows = await unpaidRows(token);
+  expect(rows.some((row) => textField(row, "description") === probe)).toBe(true);
+  const total = rows.reduce((sum, row) => sum + openGross(row), 0n);
+  await page.goto("/unpaid");
+  await expect(page.getByText(formatIls(total).replace("₪", ""))).toBeVisible();
+}
+
+async function expectProbeAbsent(page: Page, token: string, probe: string): Promise<void> {
+  const rows = await unpaidRows(token);
+  expect(rows.some((row) => textField(row, "description") === probe)).toBe(false);
+  await page.goto("/unpaid");
+  await expect(page.getByText("134,520")).toBeVisible();
+  await expect(page.getByText(probe)).toHaveCount(0);
+}
 
 async function sync(page: Page) {
   const pending = page.waitForResponse((response) => response.url().includes("/functions/v1/sumit-sync"));
