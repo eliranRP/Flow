@@ -556,7 +556,7 @@ a {
 
 .gsi-dis:disabled {
   border-color: rgb(var(--gsi-ink) / var(--gsi-press));
-  background: rgb(255 255 255 / var(--gsi-disabled));
+  background: color-mix(in srgb, var(--color-gsi-bg) var(--gsi-disabled), transparent);
   color: rgb(var(--gsi-ink) / var(--gsi-disabled));
   opacity: 1;
 }

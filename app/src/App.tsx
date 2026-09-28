@@ -58,12 +58,16 @@ export function App() {
               <Route path="transactions/:transactionId/split" element={<SplitPage />} />
             </Route>
             <Route element={<Shell />}>
-              <Route index element={<HomeScreen />} />
+              <Route element={<HomeWithSheet />}>
+                <Route index element={null} />
+                <Route path="add" element={<AddSheet />} />
+              </Route>
               <Route path="projects" element={<PageTitle title="פרויקטים" />} />
               <Route path="projects/:projectId" element={<ProjectScreen />} />
-              <Route path="review" element={<PageTitle title="לאישור" />} />
-              <Route path="review/change" element={<ChangeSheet />} />
-              <Route path="add" element={<AddSheet />} />
+              <Route element={<ReviewWithSheet />}>
+                <Route path="review" element={null} />
+                <Route path="review/change" element={<ChangeSheet />} />
+              </Route>
               <Route path="upload" element={<PageTitle title="תוצאות הייבוא" />} />
               <Route path="unpaid" element={<UnpaidPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
@@ -84,6 +88,24 @@ function RequireAuth() {
   if (status === "loading") return <HomeSkeleton />;
   if (status !== "authed") return <Navigate to="/sign-in" replace />;
   return <Outlet />;
+}
+
+function HomeWithSheet() {
+  return (
+    <>
+      <HomeScreen />
+      <Outlet />
+    </>
+  );
+}
+
+function ReviewWithSheet() {
+  return (
+    <>
+      <PageTitle title="לאישור" />
+      <Outlet />
+    </>
+  );
 }
 
 function Shell() {
