@@ -1,11 +1,11 @@
 # Add sheet
 
 **Status:** Approved. Wireframe [04-add](../wireframes/04-add.png), drawn over Home. The sheet is the same from every tab.
-**Bank files:** Not a build task. The disabled "העלאת דוח בנק" row does not upload a file. Bank lines come from the SUMIT sync ([0065](../../decisions/0065-review-round5.md) point 40).
+**Bank files:** Not a build task. The add sheet has no bank row ([0066](../../decisions/0066-review-round7.md)). Bank lines come from the SUMIT sync.
 
 ## Purpose
 
-The single entry for new data: an invoice photo or PDF, or a manual cash/cheque line. The bank row stays on the sheet and does not upload a file. The owner does not type a classification on this sheet. Flow classifies afterwards.
+The single entry for new data: an invoice photo or PDF, or a manual cash/cheque line. There is no bank row. The owner does not type a classification on this sheet. Flow classifies afterwards.
 
 ## Entry points
 
@@ -18,7 +18,7 @@ If Home's empty state button `+ פרויקט חדש` was used, that opens the cr
 | Tap | Goes to |
 | --- | --- |
 | `צלם חשבונית` | The camera, several photos in a row, or a PDF or image from files on the phone. [0020](../../decisions/0020-capture-from-the-phone.md). |
-| `העלאת דוח בנק` | Disabled. It does not open a file picker. Bank lines come from the SUMIT sync. |
+| Bank lines | Not on this sheet. They arrive with the SUMIT sync. |
 | `הזנה ידנית` | Manual form, below. Not on the wireframe. |
 | `ביטול` or the scrim | Dismiss. |
 
@@ -29,7 +29,7 @@ Sheet title `הוספה`. Subtitle `ה-AI ישייך לפרויקט ולקטגו
 | Row | Hebrew | What it captures |
 | --- | --- | --- |
 | Invoice | `צלם חשבונית` / `מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך` | Several photos in one visit, or one PDF or image picked from the phone. Each file is its own document. Android, once Flow is installed, can share one image or PDF into this same path. iPhone cannot, and the sheet does not offer a share action. A WhatsApp or email forwarding address is after the proof of concept ([open questions](../../open-questions.md#forwarding-address)). |
-| Bank row | `העלאת דוח בנק` / `תנועות הבנק מגיעות מ-SUMIT` | Disabled. No file. |
+| Bank lines | — | Not a row. SUMIT brings them. |
 | Manual | `הזנה ידנית` / `סכום, פרויקט וקטגוריה – במקרה הצורך` | Cash or cheque. |
 | Cancel | `ביטול` | |
 
@@ -72,8 +72,8 @@ When supplier, net, and date are all present, Flow saves the document as unpaid 
 | --- | --- |
 | Camera permission denied | `אין גישה למצלמה` and `אפשר במערכת` plus the PDF picker still available. |
 | Unreadable photo (extraction threw, or the image is blank) | `לא הצלחנו לקרוא את החשבונית` and one action, `צלם שוב`. Nothing is stored as a transaction. The photo stays in the local queue so a later retry can run without reshooting, with a secondary `מחק`. |
-| Not a spreadsheet | `הקובץ אינו Excel או CSV`. Nothing imported. |
-| Empty spreadsheet | `הקובץ ריק`. Nothing imported. |
+| Not a spreadsheet | Not a build task. There is no statement import. |
+| Empty spreadsheet | Not a build task. There is no statement import. |
 
 **Offline.** The photo, PDF, and manual entry are stored on the device and the sheet confirms `נשמר בטלפון. יסונכרן כשיהיה רשת`. Manual save with project and category completes locally and counts on Home immediately (it is approved and paid). There is no statement file to parse. AI guesses that need the network stay suggested with `ממתין לרשת` on the review card. Invoice extraction that needs the network stays queued; the confirmation appears after it runs.
 

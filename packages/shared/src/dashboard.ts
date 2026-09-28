@@ -90,6 +90,7 @@ export const sumitStatusSchema = z.object({
   sumit_company_id: z.number().nullable(),
   last_sync_at: z.string().nullable(),
   last_error: z.string().nullable(),
+  next_attempt_at: z.string().nullable().optional(),
 });
 
 export const projectDetailSchema = z

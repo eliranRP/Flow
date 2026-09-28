@@ -77,9 +77,7 @@ type PercentFieldProps = {
 
 /** A percent share. The stored value is digits, the same way MoneyField stores an amount. */
 export function PercentField({ label, value, onValueChange, hideLabel = false }: PercentFieldProps) {
-  const generated = useId();
-  const fieldId = generated;
-  const shown = value;
+  const fieldId = useId();
   return (
     <div className="ui-field ui-percent-field">
       <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
@@ -92,9 +90,8 @@ export function PercentField({ label, value, onValueChange, hideLabel = false }:
             dir="ltr"
             inputMode="decimal"
             type="text"
-            value={shown}
-            size={Math.max(shown.length, 1)}
-            aria-label={label}
+            value={value}
+            size={Math.max(value.length, 1)}
             onChange={(event) => {
               onValueChange(digitsOnly(event.target.value));
             }}

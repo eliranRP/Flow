@@ -1,30 +1,27 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { AppIcon, BellIcon, ChevronDownIcon, ChevronUpIcon, CloseIcon, DownloadIcon, HomeIcon, ShareIcon, SquarePlusIcon } from "./icons";
+import { AppIcon, ChevronDownIcon, ChevronUpIcon, CloseIcon, DownloadIcon, HomeIcon, ShareIcon, SquarePlusIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { Button } from "./button";
 import { ListRow } from "./list-row";
-import { runInstallPrompt } from "./install-prompt";
+import { runInstallPrompt, type InstallMode } from "./install-prompt";
 import { useToast } from "./toast";
 
-export type InstallMode = "android-prompt" | "android-steps" | "iphone" | "iphone-other" | "ipad";
-
-const exampleLabel = "נתוני דוגמה · Example data";
+export type { InstallMode };
 
 const benefits = [
   { icon: <HomeIcon size={24} />, title: "פתיחה במגע אחד", hint: "מסך הבית, במסך מלא" },
-  { icon: <BellIcon size={24} />, title: "שתי התראות בלבד", hint: "סיכום שבועי ותזכורת לאישור" },
   { icon: <DownloadIcon size={24} />, title: "בלי חנות אפליקציות", hint: "מתעדכן לבד" },
 ];
 
 export function InstallScreen({
   mode,
-  example = false,
+  example,
   onDismiss,
   onInstall,
 }: {
   mode: InstallMode;
-  /** Stories show the mockup tag. A live offer omits it. */
-  example?: boolean;
+  /** Stories pass the mockup tag. A live offer omits it. */
+  example?: ReactNode;
   onDismiss: () => void;
   /** Replaces the saved beforeinstallprompt. Stories use this to observe the tap. */
   onInstall?: () => void;
@@ -35,7 +32,7 @@ export function InstallScreen({
   const shareHint = mode === "ipad" ? "כפתור השיתוף נמצא למעלה" : "כפתור השיתוף נמצא למטה";
 
   useEffect(() => {
-    titleRef.current?.focus();
+    titleRef.current?.focus({ preventScroll: true });
   }, []);
 
   async function install() {
@@ -62,7 +59,7 @@ export function InstallScreen({
           <IconButton label="סגירה" onClick={onDismiss}>
             <CloseIcon />
           </IconButton>
-          {example ? <span className="t-hint">{exampleLabel}</span> : null}
+          {example}
         </div>
         <header className="ui-install-hero">
           <AppIcon />

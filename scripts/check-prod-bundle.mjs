@@ -51,6 +51,8 @@ export function violations(input) {
     for (const value of goldenValues) {
       if (file.body.includes(value)) found.push(`${file.name} contains golden value ${value}`);
     }
+    if (file.body.includes("Example data")) found.push(`${file.name} contains Example data`);
+    if (file.body.includes("new-")) found.push(`${file.name} contains a story id prefix`);
   }
   return found;
 }

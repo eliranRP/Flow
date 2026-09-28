@@ -13,8 +13,9 @@ export function ScreenHeader({
   trailing,
   size = "default",
   subtitleClassName,
+  barOnly = false,
 }: {
-  title: string;
+  title?: string;
   subtitle?: string;
   backTo?: string;
   action?: ReactNode;
@@ -26,6 +27,8 @@ export function ScreenHeader({
   /** Compact is the t-title-3 used on a transaction. */
   size?: "default" | "compact";
   subtitleClassName?: string;
+  /** The close control and the example tag, with the title on the next row. */
+  barOnly?: boolean;
 }) {
   const start = leading ?? (backTo ? (
     <IconButton label="חזרה" to={backTo}>
@@ -37,7 +40,7 @@ export function ScreenHeader({
       {kicker ? <p className="t-hint">{kicker}</p> : null}
       <div className="ui-page-title-row">
         {start}
-        <h1 className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</h1>
+        {barOnly ? null : <h1 className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</h1>}
         {trailing ?? action}
       </div>
       {subtitle ? <p className={subtitleClassName ? `t-label mt-4 text-text-secondary ${subtitleClassName}` : "t-label mt-4 text-text-secondary"}>{subtitle}</p> : null}

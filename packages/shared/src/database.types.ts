@@ -426,6 +426,11 @@ isOneToOne: true
 "list_categories":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"list_due_refresh_requests":
+{ Args: { "p_limit": number }; Returns: {
+              "company_id": string,"id": number
+            }[]
+                           },
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -437,6 +442,9 @@ isOneToOne: true
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
+                           },
+"note_sumit_rejection":
+{ Args: { "p_code": string,"p_company": string }; Returns: Json
                            },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
@@ -458,6 +466,9 @@ isOneToOne: true
                            },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
+                           },
+"set_transaction_category":
+{ Args: { "p_category_id": string,"p_id": string }; Returns: string
                            },
 "stamp_sumit_sync":
 { Args: { "p_company": string }; Returns: undefined

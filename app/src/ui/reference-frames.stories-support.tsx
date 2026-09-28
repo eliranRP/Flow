@@ -31,6 +31,7 @@ export function InvoiceReadingFrame() {
       </header>
       <div className="ui-ref-icon">
         <div className="ui-invoice-sheet" aria-hidden="true">
+          <span className="ui-invoice-scan" />
           <Skeleton width="sm" />
           <Skeleton width="sm" />
           <Skeleton width="md" />
@@ -60,7 +61,7 @@ export function InvoiceReadingFrame() {
         </p>
       </div>
       <div className="ui-ref-cta">
-        <Button variant="ghost" full quiet onClick={() => undefined}>ביטול</Button>
+        <Button variant="ghost" full onClick={() => undefined}>ביטול</Button>
       </div>
     </div>
   );

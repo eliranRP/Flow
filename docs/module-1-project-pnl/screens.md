@@ -407,7 +407,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 ### Key interactions
 
 - `צלם חשבונית` takes several photos in a row, or picks a PDF or image already on the phone. [0020](../decisions/0020-capture-from-the-phone.md). The image still labels the row `מצלמה או PDF`. After extraction, the document enters matching and, if it is not high confidence, the review queue. An installed Android app can also receive an image or PDF from the system share sheet. iPhone cannot, and this sheet does not offer that.
-- `העלאת דוח בנק` stays on the sheet and does not upload a file. Bank lines come from the SUMIT sync. [0065](../decisions/0065-review-round5.md) point 40. Screen 08 is not a build task.
+- The add sheet has no bank row. Bank lines come from the SUMIT sync. [0066](../decisions/0066-review-round7.md). Screen 08 is not a build task.
 - `הזנה ידנית` is the cash and cheque fallback. The form itself is not wireframed.
 - `ביטול`, or tapping the scrim, closes the sheet and leaves the data unchanged.
 

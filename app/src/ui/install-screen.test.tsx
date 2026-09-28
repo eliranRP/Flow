@@ -6,7 +6,7 @@ import { ToastProvider } from "./toast";
 function renderInstall(mode: Parameters<typeof InstallScreen>[0]["mode"], onDismiss = () => undefined, onInstall?: () => void) {
   return render(
     <ToastProvider>
-      <InstallScreen mode={mode} example onDismiss={onDismiss} onInstall={onInstall} />
+      <InstallScreen mode={mode} onDismiss={onDismiss} onInstall={onInstall} />
     </ToastProvider>,
   );
 }

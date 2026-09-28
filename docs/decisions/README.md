@@ -87,3 +87,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0064](0064-review-round4.md) | 2026-09-28 | Accepted | Library-only screens, a saved overhead switch with a zero share, income stays out of Review |
 | [0065](0065-review-round5.md) | 2026-09-28 | Accepted | Real reassignment and categories, income-share overhead, a cron drain that requires a secret, a summary-then-picker change sheet, install screens, and no Hapoalim import |
 | [0066](0066-review-round7.md) | 2026-09-28 | Accepted | Library Split and Onboarding, a re-runnable drain, shared costs stay on Split, SUMIT backoff, and no bank row |
+| [0067](0067-review-round8.md) | 2026-09-28 | Accepted | A split keeps its category, SUMIT auth waits for a reconnect, and refresh respects the backoff |

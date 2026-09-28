@@ -1,6 +1,6 @@
 # Connect SUMIT on flow-pilot
 
-Apply the migration first, then deploy the two functions, then paste the key in the app. Do not commit the SUMIT key or the service-role key.
+Store the Vault rows before `supabase db push` when the migration should schedule the drain itself. Otherwise apply the migration, then call `select private.schedule_drain();`. Deploy the two functions, then paste the key in the app. Do not commit the SUMIT key or the service-role key.
 
 ## 1. Migration
 
@@ -15,8 +15,9 @@ Apply, in order, on the hosted SQL editor or with `supabase db push`:
 7. `supabase/migrations/20260928230000_review_round4.sql`
 8. `supabase/migrations/20260929010000_review_round5.sql`
 9. `supabase/migrations/20260929120000_review_round7.sql`
+10. `supabase/migrations/20260929130000_review_round8.sql`
 
-`pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job runs every five minutes (`*/5 * * * *`), not once a day. It is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. Create the secret once, store it in both places, then migrate — or migrate first and call `select private.schedule_drain();` after the Vault rows exist. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`. A SUMIT `Status` other than 0 sets `sumit_rejected` and waits 5 minutes, then 15 minutes, 1 hour, 6 hours, and at most 24 hours before the drain tries that company again.
+`pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job runs every five minutes (`*/5 * * * *`), not once a day. It is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. Create the secret once, store it in both places, then migrate — or migrate first and call `select private.schedule_drain();` after the Vault rows exist. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`. A billing or limit rejection sets `sumit_rejected` and waits 5 minutes, then 15 minutes, 1 hour, 6 hours, and at most 24 hours. A bad key or company id sets `sumit_auth` and stops until the owner reconnects. Manual refresh respects the same wait.
 
 ## 2. Edge Functions
 
