@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: [/sumit-live/, /storybook-static/],
+  testIgnore: [/sumit-live/, /storybook-/],
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:43123",
