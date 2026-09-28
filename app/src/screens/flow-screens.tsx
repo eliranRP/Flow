@@ -12,6 +12,7 @@ import { useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { withSheetBackground } from "../sheet-background";
 import { hebrewSumitError } from "../sumit-copy";
+import { isStandalone } from "../ui/install-prompt";
 import {
   useBooks,
   useCategoriesQuery,
@@ -59,15 +60,15 @@ import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { StatusPill } from "../ui/chip";
+import { Chip, StatusPill } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
-import { BackIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, FormError, SectionHead } from "../ui/layout";
+import { BackIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
-import { MoneyField } from "../ui/money-field";
+import { MoneyField, PercentField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { ReviewCard } from "../ui/review-card";
 import { ScreenHeader } from "../ui/screen-header";
@@ -114,13 +115,22 @@ export function OnboardingScreen() {
     save.mutate();
   }
 
+  const step = 1;
+  const steps = 1;
   return (
     <main className="ui-onboard">
       <div className="ui-progress-row">
-        <div className="ui-bar ui-bar-slim" role="meter" aria-label="שלב 1 מתוך 4" aria-valuenow={1} aria-valuemin={1} aria-valuemax={4}>
-          <div className="ui-bar-fill" style={{ width: "25%" }} />
-        </div>
-        <span className="t-hint">שלב <bdi className="ui-num" dir="ltr">1</bdi> מתוך <bdi className="ui-num" dir="ltr">4</bdi></span>
+        <ProgressBar
+          variant="thin"
+          value={step}
+          max={steps}
+          label={`שלב ${String(step)} מתוך ${String(steps)}`}
+          caption={
+            <span className="t-hint">
+              שלב <bdi className="ui-num" dir="ltr">{String(step)}</bdi> מתוך <bdi className="ui-num" dir="ltr">{String(steps)}</bdi>
+            </span>
+          }
+        />
       </div>
       <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." />
       <form className="ui-page-pad" onSubmit={submit}>
@@ -488,7 +498,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
                 hint={`${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`}
                 agorot={txn.amount_net}
                 sign={txn.direction === "income" ? "in" : "out"}
-                source={txn.source === "hapoalim" ? "bank" : "invoice"}
+                source="invoice"
                 href={`/transactions/${txn.id}${search}`}
               />
             ))}
@@ -1007,7 +1017,6 @@ export function AddForm() {
   return (
     <RouteSheet
       title="הוספה"
-      hint="ה-AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר"
       closeTo={`/${search}`}
       returnFocusRef={addTriggerRef}
     >
@@ -1019,16 +1028,6 @@ export function AddForm() {
           title="צילום חשבונית"
           hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
           icon={<CameraIcon size={26} />}
-          chevron
-          onClick={() => undefined}
-        />
-        <ListRow
-          variant="button"
-          disabled
-          title="העלאת דוח בנק"
-          hint={<>תנועות הבנק מגיעות מ-<bdi dir="ltr">SUMIT</bdi></>}
-          icon={<BankIcon size={26} />}
-          chevron
           onClick={() => undefined}
         />
         <ListRow
@@ -1037,7 +1036,6 @@ export function AddForm() {
           title="הזנה ידנית"
           hint="סכום, פרויקט וקטגוריה – רק במקרה הצורך"
           icon={<PencilIcon size={26} />}
-          chevron
           onClick={() => undefined}
         />
       </div>
@@ -1267,7 +1265,13 @@ export function TransactionScreen({
         ) : null}
       </div>
       <List>
-        <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => { setChangeOpen(true); }} />
+        <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
+          if (txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared") {
+            void navigate(`/transactions/${txn.id}/split${search}`);
+            return;
+          }
+          setChangeOpen(true);
+        }} />
         <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeOpen(true); }} />
         <ListRow
           variant="button"
@@ -1306,6 +1310,11 @@ export function TransactionScreen({
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
         onSave={() => {
           if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared") {
+            setChangeOpen(false);
+            void navigate(`/transactions/${txn.id}/split${search}`);
+            return;
+          }
           if (txn.direction === "income" ? categoryId === "" : projectId === "" || categoryId === "") {
             toast.show({ tone: "bad", message: txn.direction === "income" ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
             return;
@@ -1503,15 +1512,15 @@ export function SplitScreen({
         save.mutate();
       }}
     >
-      <div className="ui-split-top">
-        <IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>
-        {example}
-      </div>
-      <header className="ui-split-head">
-        <h1 className="t-title-1">פיצול בין פרויקטים</h1>
-        <p className="ui-split-context t-label">{context}</p>
-        <p className="ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>
-      </header>
+      <ScreenHeader
+        size="compact"
+        title="פיצול בין פרויקטים"
+        subtitle={context}
+        subtitleClassName="ui-split-context"
+        leading={<IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>}
+        trailing={example}
+      />
+      <p className="ui-page-pad ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>
       <div className="ui-page-pad ui-split-method">
         <SegmentedControl
           label="אופן הפיצול"
@@ -1528,10 +1537,9 @@ export function SplitScreen({
         />
       </div>
       <div className="ui-page-pad ui-split-scope">
-        <span className="ui-chip ui-chip-scope">
-          <CheckIcon size={16} />
-          <span className="ui-chip-label">כל הפרויקטים הפעילים · <bdi className="ui-num">{String(projects.length)}</bdi></span>
-        </span>
+        <Chip kind="selected" className="ui-chip-scope">
+          כל הפרויקטים הפעילים · <bdi className="ui-num">{String(projects.length)}</bdi>
+        </Chip>
       </div>
       {incomeMissing ? <p className="ui-page-pad ui-split-note t-hint">אין עדיין משקלות הכנסה, אז החלוקה שווה.</p> : null}
       <List className="ui-split-list">
@@ -1545,14 +1553,11 @@ export function SplitScreen({
               title={project.name}
               hint={method === "income" ? <>הכנסות החודש <bdi className="ui-num" dir="ltr">{formatIls(project.incomeAgorot ?? 0n)}</bdi></> : undefined}
               meta={method === "manual" ? (
-                <input
-                  className="ui-split-input"
-                  dir="ltr"
-                  inputMode="decimal"
-                  aria-label={`אחוז, ${project.name}`}
+                <PercentField
+                  hideLabel
+                  label={`אחוז, ${project.name}`}
                   value={manual[project.id] ?? ""}
-                  placeholder="0"
-                  onChange={(event) => { setManual({ ...manual, [project.id]: event.target.value }); }}
+                  onValueChange={(raw) => { setManual({ ...manual, [project.id]: raw }); }}
                 />
               ) : (
                 <span className="ui-split-share">
@@ -1564,16 +1569,11 @@ export function SplitScreen({
           );
         })}
       </List>
-      <div className="ui-page-pad ui-split-remain" ref={remainRef}>
-        <span className="t-label">נותר לשייך</span>
-        {balanced ? (
-          <span className="ui-split-done">
-            <bdi className="ui-num" dir="ltr">{`100% · ${formatIls(0n)}`}</bdi>
-            <CheckIcon size={16} />
-          </span>
-        ) : (
-          <bdi className="ui-num" dir="ltr">{formatIls(remainder)}</bdi>
-        )}
+      <div className={balanced ? "ui-page-pad ui-split-remain ui-split-balanced" : "ui-page-pad ui-split-remain"} ref={remainRef}>
+        <FigureLine
+          label="נותר לשייך"
+          value={balanced ? `100% · ${formatIls(0n)} ✓` : formatIls(remainder)}
+        />
       </div>
       <div className={scrolledUnder ? "ui-split-cta ui-split-cta-under" : "ui-split-cta"}>
         <Button type="submit" full disabled={!balanced} busy={save.isPending}>שמירת פיצול</Button>
@@ -1782,6 +1782,9 @@ export function SettingsScreen({
       <SectionHead title="סיווג" />
       <List>
         <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
+        {isStandalone() ? null : (
+          <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+        )}
         <ListRow variant="item" href={`/projects${search}`} title="פרויקטים" hint={projectCount == null ? undefined : `${String(projectCount)} פעילים`} icon={<ProjectsIcon />} chevron />
       </List>
       <SectionHead title="התראות" />
@@ -1842,7 +1845,7 @@ function CategoryLine({
       variant="item"
       title={category.name}
       muted={muted}
-      meta={category.count == null ? undefined : `${String(category.count)} תנועות`}
+      meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
       action={
         <IconButton
           label={`עוד, ${category.name}`}

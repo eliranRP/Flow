@@ -22,6 +22,8 @@ export type ChangeChoice = {
   /** Relative last use. Recent rows keep the order they are given. */
   recent?: string;
   status?: "active" | "finished";
+  /** Hidden categories stay out of the picker. The current row can still show. */
+  hidden?: boolean;
 };
 
 type ChangeView = "summary" | "project" | "category" | "new";
@@ -67,7 +69,10 @@ function keptState(current: { readonly state: unknown }): unknown {
 }
 
 function ordered(options: ChangeChoice[], suggestionId: string, currentId: string, query: string, kind: "project" | "category"): ChangeChoice[] {
-  const active = options.filter((option) => option.status !== "finished" || option.id === currentId || option.id === suggestionId);
+  const active = options.filter((option) => {
+    if (option.hidden && option.id !== currentId && option.id !== suggestionId) return false;
+    return option.status !== "finished" || option.id === currentId || option.id === suggestionId;
+  });
   const needle = query.trim();
   const matched = needle === ""
     ? active

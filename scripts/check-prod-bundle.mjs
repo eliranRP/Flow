@@ -96,7 +96,6 @@ function scanDist(dist) {
         continue;
       }
       if (!/\.(js|css|html|webmanifest|json)$/.test(name)) continue;
-      if (name === "bundle-graph.json") continue;
       files.push({ name: path.relative(root, full), body: readFileSync(full, "utf8") });
     }
   };
@@ -106,12 +105,12 @@ function scanDist(dist) {
 
 export function checkProductionBundle() {
   const dist = path.join(root, "app/dist");
-  const graphPath = path.join(dist, "bundle-graph.json");
+  const graphPath = path.join(root, "app/bundle-graph.json");
   /** @type {string[]} */
   const problems = [];
   if (!existsSync(dist)) problems.push("app/dist is missing. Run pnpm build before this check.");
   if (!existsSync(graphPath)) {
-    problems.push("app/dist/bundle-graph.json is missing. The production build must record its module graph.");
+    problems.push("app/bundle-graph.json is missing. The production build must record its module graph outside dist.");
     return problems;
   }
   const modules = JSON.parse(readFileSync(graphPath, "utf8"));

@@ -6,18 +6,15 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 /** Static hosts that only serve files: deep links fall back to index.html. */
-/** Module ids of the production build. check:bundle reads this file. */
+/** Module ids of the production build. Written beside dist so the host never serves it. */
 function bundleGraph(): Plugin {
   return {
     name: "flow-bundle-graph",
     apply: "build",
     generateBundle() {
       const ids = [...this.getModuleIds()].filter((id) => !id.includes("\0"));
-      this.emitFile({
-        type: "asset",
-        fileName: "bundle-graph.json",
-        source: JSON.stringify(ids),
-      });
+      const target = path.resolve(__dirname, "bundle-graph.json");
+      writeFileSync(target, JSON.stringify(ids));
     },
   };
 }

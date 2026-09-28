@@ -67,7 +67,8 @@ describe("App", () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByText("צילום חשבונית")).toBeInTheDocument();
     expect(screen.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeInTheDocument();
-    expect(screen.getByText(/תנועות הבנק מגיעות מ-/)).toBeInTheDocument();
+    expect(screen.queryByText("העלאת דוח בנק")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ה-AI ישייך/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
     expect(
       screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),

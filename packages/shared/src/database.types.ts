@@ -258,13 +258,13 @@ isOneToOne: false
                   ]
                 },"sumit_connections": {
                   Row: {
-                    "company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string | null,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null,"updated_at": string
+                    "company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string | null,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"reject_attempts": number,"sumit_company_id": number | null,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version"?: string | null,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version"?: string | null,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"reject_attempts"?: number,"sumit_company_id"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string | null,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string | null,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"reject_attempts"?: number,"sumit_company_id"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -479,7 +479,7 @@ isOneToOne: true
                            }
           }
           Enums: {
-            "category_kind": "expense"|"income","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"hapoalim"|"manual"|"photo","vat_status": "source"|"derived"|"assumed"|"unknown"
+            "category_kind": "expense"|"income","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -595,7 +595,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "category_kind": ["expense", "income"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "hapoalim", "manual", "photo"],"vat_status": ["source", "derived", "assumed", "unknown"]
+            "category_kind": ["expense", "income"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo"],"vat_status": ["source", "derived", "assumed", "unknown"]
           }
         }
 } as const

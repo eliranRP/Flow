@@ -1,6 +1,7 @@
 node_modules
 dist
 storybook-static
+app/bundle-graph.json
 .vite
 .turbo
 *.tsbuildinfo

@@ -106,6 +106,7 @@
   /* ---- colour: light (default) ---- */
   --color-bg: #FFFFFF;
   --color-surface: #FFFFFF;
+  --surface-hover: rgba(20, 16, 32, 0.06);
   --color-raised: #FFFFFF;
   --color-tint: #F3ECFE;
   --color-tint-strong: #E7DAFD;
@@ -160,6 +161,7 @@
   :root:not([data-theme="light"]) {
     --color-bg: #15111E;
     --color-surface: #1E1929;
+    --surface-hover: rgba(255, 255, 255, 0.08);
     --color-raised: #251F33;
     --color-tint: #2A2045;
     --color-tint-strong: #382A5E;
@@ -214,6 +216,7 @@
 :root[data-theme="dark"] {
   --color-bg: #15111E;
   --color-surface: #1E1929;
+  --surface-hover: rgba(255, 255, 255, 0.08);
   --color-raised: #251F33;
   --color-tint: #2A2045;
   --color-tint-strong: #382A5E;

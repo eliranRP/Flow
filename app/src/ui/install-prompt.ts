@@ -34,3 +34,18 @@ export function isStandalone(): boolean {
   const nav = navigator as Navigator & { standalone?: boolean };
   return window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
 }
+
+export type InstallMode = "android-prompt" | "android-steps" | "iphone" | "iphone-other" | "ipad";
+
+/** Picks the install instructions for this browser. A saved prompt is the one-tap Android path. */
+export function detectInstallMode(): InstallMode {
+  if (typeof navigator === "undefined") return "android-steps";
+  const ua = navigator.userAgent;
+  const ipad = /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (ipad) return "ipad";
+  if (/iPhone/.test(ua)) {
+    const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    return safari ? "iphone" : "iphone-other";
+  }
+  return hasInstallPrompt() ? "android-prompt" : "android-steps";
+}

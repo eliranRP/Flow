@@ -22,3 +22,5 @@ The same one-tap install button on iPhone. Showing the prompt on every launch, o
 ## Consequences
 
 0015 still stands, including the install step in onboarding. This prompt is a later offer, after the first successful report, and only while the app is not installed.
+
+**Amended by [0066](0066-review-round7.md).** "סגירה" sits at the inline start. The example tag sits at the inline end. Settings links to `/install` while the app is not standalone.

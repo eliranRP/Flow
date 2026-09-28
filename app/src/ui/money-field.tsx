@@ -66,3 +66,44 @@ export function MoneyField({ label, value, onValueChange, error, id, disabled = 
     </div>
   );
 }
+
+type PercentFieldProps = {
+  label: string;
+  value: string;
+  onValueChange: (raw: string) => void;
+  /** The row already names the project. The label stays for the input. */
+  hideLabel?: boolean;
+};
+
+/** A percent share. The stored value is digits, the same way MoneyField stores an amount. */
+export function PercentField({ label, value, onValueChange, hideLabel = false }: PercentFieldProps) {
+  const generated = useId();
+  const fieldId = generated;
+  const shown = value;
+  return (
+    <div className="ui-field ui-percent-field">
+      <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
+        {label}
+      </label>
+      <span className="ui-money-field ui-field-control ui-percent-control">
+        <span className="ui-money-ltr" dir="ltr">
+          <input
+            id={fieldId}
+            dir="ltr"
+            inputMode="decimal"
+            type="text"
+            value={shown}
+            size={Math.max(shown.length, 1)}
+            aria-label={label}
+            onChange={(event) => {
+              onValueChange(digitsOnly(event.target.value));
+            }}
+          />
+          <span className="ui-money-prefix" aria-hidden="true">
+            %
+          </span>
+        </span>
+      </span>
+    </div>
+  );
+}

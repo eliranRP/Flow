@@ -9,6 +9,7 @@ const pages: Array<[string, string]> = [
   ["/settings", "הגדרות"],
   ["/settings/categories", "קטגוריות"],
   ["/onboarding", "פרטי העסק"],
+  ["/install", "התקנת Flow"],
   ["/notifications", "התראות"],
   ["/transactions/1", "פרטי תנועה"],
   ["/transactions/1/split", "פיצול"],
@@ -31,7 +32,8 @@ test("add sheet follows mockup 04 and does not capture yet", async ({ page }) =>
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
   await expect(page.getByText("צילום חשבונית")).toBeVisible();
   await expect(page.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeVisible();
-  await expect(page.getByText("תנועות הבנק מגיעות מ-SUMIT")).toBeVisible();
+  await expect(page.getByText("העלאת דוח בנק")).toHaveCount(0);
+  await expect(page.getByText("ה-AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
 });
 
