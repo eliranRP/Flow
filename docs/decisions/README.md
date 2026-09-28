@@ -72,3 +72,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0043](0043-assumed-vat-on-expenses.md) | 2026-09-27 | Accepted | Expenses with no VAT split assume 18%, unless the supplier is VAT-exempt |
 | [0044](0044-phase-0-shell-calls.md) | 2026-09-27 | Accepted | Phase 0 shell: preview banner, es-01 copy, type scale, placeholders, review states |
 | [0045](0045-phase-0-design-gaps.md) | 2026-09-28 | Accepted | Phase 0 design gaps: help, load errors, greeting, period pill, Add hint, tab-bar floor |
+| [0046](0046-public-anon-key.md) | 2026-09-28 | Accepted | The public anon key is committed in app/.env.production. The service role is never in the client or the repo |
