@@ -240,7 +240,8 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await expect(page.getByText("עוד אין נתונים")).toBeVisible();
 
   await page.goto("/settings");
-  await page.getByLabel("CompanyID").fill(String(sumitCompanyId));
+  await page.getByRole("button", { name: "חיבור SUMIT" }).click();
+  await page.getByLabel("מספר חברה").fill(String(sumitCompanyId));
   await page.getByLabel("מפתח API").fill(sumitKey);
   await page.getByRole("button", { name: "חיבור" }).click();
   await expect(page.getByText("SUMIT מחובר")).toBeVisible();

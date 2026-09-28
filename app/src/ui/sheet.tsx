@@ -10,6 +10,7 @@ export function SheetSurface({
   onClose,
   drawer = false,
   closeRef,
+  titleRef,
 }: {
   title: string;
   children?: ReactNode;
@@ -17,9 +18,10 @@ export function SheetSurface({
   onClose?: () => void;
   drawer?: boolean;
   closeRef?: RefObject<HTMLButtonElement | null>;
+  titleRef?: RefObject<HTMLHeadingElement | null>;
 }) {
   const heading = drawer ? (
-    <Drawer.Title className="t-title-2" title={title}>
+    <Drawer.Title ref={titleRef} tabIndex={-1} className="t-title-2" title={title}>
       {title}
     </Drawer.Title>
   ) : (
@@ -58,12 +60,13 @@ export function Sheet({
   title: string;
   children?: ReactNode;
   hint?: string;
-  /** Period stays non-modal so the band figures remain visible while it is open. */
+  /** A modal sheet draws the scrim. Period and range both use that. */
   modal?: boolean;
   /** Fires after the close animation. Route sheets navigate then. */
   onClosed?: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   return (
     <Drawer.Root
       open={open}
@@ -81,7 +84,7 @@ export function Sheet({
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            closeRef.current?.focus();
+            titleRef.current?.focus();
           }}
         >
           <SheetSurface
@@ -89,6 +92,7 @@ export function Sheet({
             hint={hint}
             drawer
             closeRef={closeRef}
+            titleRef={titleRef}
             onClose={() => {
               onOpenChange(false);
             }}

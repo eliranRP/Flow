@@ -12,10 +12,30 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { title: "7 פריטים ממתינים לאישור", hint: "3 חשבוניות לא שולמו · ₪23,400", to: "/review" },
+  args: { title: "7 פריטים ממתינים לאישור", to: "/review" },
+  render: (args) => (
+    <Banner
+      {...args}
+      hint={
+        <>
+          3 חשבוניות לא שולמו · <bdi dir="ltr">₪23,400</bdi>
+        </>
+      }
+    />
+  ),
 };
 export const UnpaidOnly: Story = {
-  args: { title: "3 חשבוניות לא שולמו", hint: "לא נכלל ברווח", to: "/unpaid" },
+  args: { title: "3 חשבוניות לא שולמו", to: "/unpaid" },
+  render: (args) => (
+    <Banner
+      {...args}
+      hint={
+        <>
+          <bdi dir="ltr">₪23,400</bdi> · טרם נגבה
+        </>
+      }
+    />
+  ),
 };
 export const LongHebrew: Story = {
   args: { title: longHebrew, hint: longHebrew, to: "/review" },

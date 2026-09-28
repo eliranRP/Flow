@@ -54,7 +54,6 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
       <Sheet
         open={open}
         onOpenChange={onOpenChange}
-        modal={false}
         title="תקופה"
         onClosed={() => {
           if (!custom.current) return;

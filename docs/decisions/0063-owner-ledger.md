@@ -19,7 +19,18 @@
 8. `pg_cron` only inserts rows in `sumit_refresh_requests`. `sumit-sync` drains them when the request carries `x-flow-cron`. There is no `pg_net` call, and [0049](0049-sumit-refresh.md) is not an HTTP cron. A failed claim is cleared so the row can be retried. The cron secret is compared in constant time. Authenticated and anon cannot read that table.
 9. New API keys are sealed as envelope version 2, with the Flow company id as AES-GCM additional data. Version 1 seals still open. There is no rewrap tool.
 10. `company_pnl` allows `service_role` or the owner. A session that is neither is forbidden.
-11. While AI tagging is off, the review copy says "הצעה" and never "AI". The block is hidden when there is no project and no category. The source line uses SUMIT's document type. `vat_status` is Hebrew. The first-run empty state is es-01: "חיבור SUMIT" goes to `/settings`.
+11. While AI tagging is off, the review copy says "הצעה" and never "AI". The block is hidden when there is no project and no category. The source line uses SUMIT's document type. `vat_status` is Hebrew. The first-run empty state is es-01: "חיבור SUMIT" goes to `/settings`. The change sheet uses the same word on its suggestion chip, with no spark.
+
+## Design review round 3
+
+These calls amend [0061](0061-review-undo.md) where it sent Toggle out of the library, and [0060](0060-library-review-calls.md) where an unpaid hint said the invoice was outside profit.
+
+12. Toggle is a library component again: off, on, disabled, focus, and a long Hebrew label. The overhead switch, "לזכור לספק הזה", and the settings switches use it. A disabled switch shows `not-allowed` and the row is a 44px target. DatePicker stays out.
+13. The tab bar stays on Project, Unpaid, Settings, and Categories, because those mockups draw it. The active tab is the section the screen belongs to: Unpaid is בית, a project is פרויקטים, Settings and Categories are הגדרות. Sheets cover the bar. The active slot is `aria-current="page"`, and that selector paints `--color-accent-text`.
+14. PeriodPicker Open is a modal sheet with a scrim, the same way RangeSheet is. The closed story stays the band and the on-band pill.
+15. Unpaid is titled "חשבוניות שלא שולמו". The amount is unsigned, the total is shown, and each row has "סימון כשולם". The hint is "טרם נגבה", not "לא נכלל ברווח", because an open invoice is already in invoiced profit. There is no write that marks a SUMIT invoice paid. The sheet says the row leaves when a later sync shows the invoice paid. A local hide until that refresh is only a preview of that.
+16. Settings Connected shows the connected state. The connect form (מספר חברה, מפתח API, חיבור) opens from "חיבור SUMIT" when SUMIT is not connected. There is no "Google: לא מחובר" line: the email is shown when there is one, and the row is omitted when there is not. Labels are Hebrew. A failure is an error story, not the connected story. There is no Hapoalim account and no promise that a message goes out on Sunday at 08:00 or 18:00. Notification switches say the messages are not sent. The auto-approve switch stays off, labelled "לא פעיל", and does not mention AI. רענון עכשיו and ניתוק stay real.
+17. Empty, error, and loading Storybook frames carry "נתוני דוגמה · Example data". The running app does not. Category create and drag-reorder have no RPC, so the new-category sheet does not pretend a category was saved, and the grip is decoration. Hide and merge still call their RPCs. "לזכור לספק הזה" is the Toggle on the change sheet. `resolve_review` still stores the supplier category when the assignment is saved; the switch defaults on, which is what that function does.
 
 ## Alternatives rejected
 

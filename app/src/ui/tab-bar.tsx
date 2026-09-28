@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { addTriggerRef } from "../add-trigger";
 import { usePreviewSearch } from "../preview";
 import { withSheetBackground } from "../sheet-background";
@@ -11,26 +11,38 @@ type TabBarProps = {
   reviewCount?: number;
 };
 
+type Section = "home" | "projects" | "review" | "settings";
+
+/** Pushed screens keep the tab of the section they belong to. /add highlights none. */
+export function tabSection(pathname: string): Section | null {
+  if (pathname === "/" || pathname.startsWith("/unpaid")) return "home";
+  if (pathname.startsWith("/projects")) return "projects";
+  if (pathname.startsWith("/review")) return "review";
+  if (pathname.startsWith("/settings") || pathname.startsWith("/notifications")) return "settings";
+  return null;
+}
+
 export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();
+  const section = tabSection(location.pathname);
   const badge = reviewCount > 99 ? "99+" : String(reviewCount);
   return (
     <nav className="ui-tabbar" aria-label={label}>
       <div className="ui-tabbar-slots">
-        <NavLink to={`/${search}`} end className={slot}>
+        <Link to={`/${search}`} className={slot} aria-current={section === "home" ? "page" : undefined}>
           <span className="ui-tab-icon">
             <HomeIcon />
           </span>
           בית
-        </NavLink>
-        <NavLink to={`/projects${search}`} className={slot}>
+        </Link>
+        <Link to={`/projects${search}`} className={slot} aria-current={section === "projects" ? "page" : undefined}>
           <span className="ui-tab-icon">
             <ProjectsIcon />
           </span>
           פרויקטים
-        </NavLink>
-        <NavLink
+        </Link>
+        <Link
           ref={addTriggerRef}
           to={`/add${search}`}
           state={withSheetBackground(location)}
@@ -40,10 +52,11 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
           <span className="ui-fab">
             <PlusIcon />
           </span>
-        </NavLink>
-        <NavLink
+        </Link>
+        <Link
           to={`/review${search}`}
           className={slot}
+          aria-current={section === "review" ? "page" : undefined}
           aria-label={reviewCount > 0 ? `לאישור, ${badge} ממתינים` : undefined}
         >
           <span className="ui-tab-icon">
@@ -55,13 +68,13 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
             ) : null}
           </span>
           לאישור
-        </NavLink>
-        <NavLink to={`/settings${search}`} className={slot}>
+        </Link>
+        <Link to={`/settings${search}`} className={slot} aria-current={section === "settings" ? "page" : undefined}>
           <span className="ui-tab-icon">
             <SettingsIcon />
           </span>
           הגדרות
-        </NavLink>
+        </Link>
       </div>
     </nav>
   );
