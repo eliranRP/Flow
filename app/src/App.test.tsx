@@ -38,7 +38,7 @@ describe("App", () => {
     renderAt("/?preview=error");
     expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("btn-pri");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
     expect(document.querySelector(".band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
@@ -47,7 +47,7 @@ describe("App", () => {
     renderAt("/?preview=error-server");
     expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
     expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("btn-pri");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
     expect(document.querySelector(".band")).toBeNull();
   });
 
@@ -55,9 +55,8 @@ describe("App", () => {
     renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
-    expect(document.querySelectorAll(".home-skel-row")).toHaveLength(3);
-    expect(document.querySelector(".home-skel-pill")).not.toBeNull();
-    expect(document.querySelector(".home-skel-ie")).not.toBeNull();
+    expect(document.querySelector(".band")).not.toBeNull();
+    expect(document.querySelectorAll(".ui-skel-row")).toHaveLength(3);
   });
 
   it("opens Add as a sheet over Home and keeps the tab bar", async () => {
@@ -139,7 +138,7 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
     const back = screen.getByRole("link", { name: "חזרה" });
     expect(back).toHaveClass("help-back");
-    expect(back).not.toHaveClass("icon-btn");
+    expect(back).not.toHaveClass("ui-icon-btn");
     expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveClass("help-mail");
   });
 

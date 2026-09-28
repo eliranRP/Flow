@@ -2,16 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { homeSummarySchema } from "@flow/shared";
 import { AuthProvider, useAuth } from "./auth";
-import { HELP_EMAIL } from "./config";
-import { PageTitle, ScreenHeader } from "./ui/screen-header";
+import { ScreenHeader } from "./ui/screen-header";
 import { HomeSkeleton } from "./ui/skeleton";
 import { TabBar } from "./ui/tab-bar";
-import { TextLink } from "./ui/text-link";
 import { ThemeColor } from "./components/ThemeColor";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { BooksProvider } from "./use-books";
+import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
 import {
@@ -88,7 +87,7 @@ function AppRoutes() {
                 <Route path="review" element={null} />
                 <Route path="review/change" element={<ChangeForm />} />
               </Route>
-              <Route path="upload" element={<PageTitle title="תוצאות הייבוא" />} />
+              <Route path="upload" element={<ScreenHeader title="תוצאות הייבוא" />} />
               <Route path="unpaid" element={<UnpaidScreen />} />
               <Route path="notifications" element={<NotificationsScreen />} />
               <Route path="settings" element={<SettingsScreen />} />
@@ -149,22 +148,6 @@ function FullScreen() {
     <div className="safe-bottom min-h-dvh">
       <Outlet />
     </div>
-  );
-}
-
-function HelpScreen() {
-  return (
-    <main className="safe-bottom min-h-dvh">
-      <ScreenHeader title="עזרה" subtitle="לעזרה בכניסה כותבים לנו." />
-      <p className="mt-4">
-        <TextLink className="help-mail t-label text-accent-text underline" href={`mailto:${HELP_EMAIL}`}>
-          {HELP_EMAIL}
-        </TextLink>
-      </p>
-      <TextLink to="/sign-in" className="help-back t-label">
-        חזרה
-      </TextLink>
-    </main>
   );
 }
 

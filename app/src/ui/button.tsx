@@ -15,7 +15,7 @@ type Common = {
 type AsButton = Common &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className"> & { to?: undefined };
 
-type AsLink = Common & { to: string };
+type AsLink = Common & { to: string; state?: unknown };
 
 export type ButtonProps = AsButton | AsLink;
 
@@ -24,8 +24,8 @@ function isLink(props: ButtonProps): props is AsLink {
 }
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: "btn-pri",
-  secondary: "btn-sec",
+  primary: "ui-btn-primary",
+  secondary: "ui-btn-secondary",
   pill: "ui-btn-pill",
   danger: "ui-btn-danger",
   ghost: "ui-btn-ghost",
@@ -42,7 +42,7 @@ export function Button(props: ButtonProps) {
   );
   if (isLink(props)) {
     return (
-      <Link to={props.to} className={classes} aria-busy={props.busy || undefined}>
+      <Link to={props.to} state={props.state} className={classes} aria-busy={props.busy || undefined}>
         {body}
       </Link>
     );

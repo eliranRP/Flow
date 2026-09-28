@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { cx } from "./cx";
 import { InfoIcon } from "./icons";
 
 type BannerProps = {
-  title: string;
-  hint?: string;
+  title: ReactNode;
+  hint?: ReactNode;
   to?: string;
   count?: number;
+  tone?: "accent" | "quiet";
 };
 
-export function Banner({ title, hint, to, count }: BannerProps) {
+export function Banner({ title, hint, to, count, tone = "accent" }: BannerProps) {
+  const className = cx("ui-banner", "ui-hit", tone === "quiet" && "ui-banner-quiet");
   const body = (
     <>
       {count != null && count > 0 ? <span className="count-badge">{count > 99 ? "99+" : count}</span> : null}
@@ -21,12 +24,12 @@ export function Banner({ title, hint, to, count }: BannerProps) {
   );
   if (to) {
     return (
-      <Link to={to} className="ui-banner ui-hit">
+      <Link to={to} className={className}>
         {body}
       </Link>
     );
   }
-  return <div className="ui-banner">{body}</div>;
+  return <div className={className}>{body}</div>;
 }
 
 type NoticeProps = {

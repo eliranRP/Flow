@@ -7,13 +7,14 @@ const withFlow: Decorator = (Story, context) => {
   document.documentElement.lang = "he";
   document.documentElement.dir = "rtl";
   document.documentElement.dataset.theme = theme;
-  return (
-    <MemoryRouter>
-      <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text" dir="rtl" lang="he">
-        <Story />
-      </div>
-    </MemoryRouter>
+  const frame = (
+    <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text" dir="rtl" lang="he">
+      <Story />
+    </div>
   );
+  // Route stories mount the real screens inside their own MemoryRouter.
+  if (context.parameters.flowRouter === false) return frame;
+  return <MemoryRouter>{frame}</MemoryRouter>;
 };
 
 const preview: Preview = {

@@ -9,7 +9,7 @@ describe("ErrorState", () => {
     const { rerender } = render(<ErrorState offline onRetry={() => undefined} />);
     expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expectTarget(screen.getByRole("button", { name: "ניסיון חוזר" }));
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("btn-pri");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
     rerender(<ErrorState offline={false} onRetry={() => undefined} />);
     expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
   });

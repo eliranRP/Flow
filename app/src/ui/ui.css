@@ -14,7 +14,7 @@
   transition: background-color var(--dur-press);
 }
 
-.ui-btn.btn-pri {
+.ui-btn.ui-btn-primary {
   height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-accent);
@@ -22,11 +22,11 @@
   font-size: var(--type-label-size);
 }
 
-.ui-btn.btn-pri:active:not(:disabled) {
+.ui-btn.ui-btn-primary:active:not(:disabled) {
   background: var(--color-accent-pressed);
 }
 
-.ui-btn.btn-sec {
+.ui-btn.ui-btn-secondary {
   height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-tint);
@@ -34,7 +34,7 @@
   font-size: var(--type-label-size);
 }
 
-.ui-btn.btn-sec:active:not(:disabled) {
+.ui-btn.ui-btn-secondary:active:not(:disabled) {
   background: var(--color-tint-pressed);
 }
 
@@ -114,6 +114,10 @@
 
 .ui-icon-btn:active {
   background: var(--color-tint-pressed);
+}
+
+.ui-icon-btn-on-band {
+  color: var(--color-on-band);
 }
 
 .ui-hit,
@@ -416,6 +420,74 @@
 
 .ui-banner:active {
   background: var(--color-tint-pressed);
+}
+
+.ui-banner-quiet {
+  background: transparent;
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+.ui-banner-quiet:active {
+  background: var(--color-tint);
+}
+
+.count-badge {
+  display: inline-flex;
+  min-width: 1.5rem;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-badge-bg);
+  color: var(--color-badge-text);
+}
+
+.ui-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-side);
+}
+
+.ui-stat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+}
+
+.ui-stat-em {
+  background: var(--color-tint);
+}
+
+.ui-delta-good {
+  color: var(--color-good);
+}
+
+.ui-delta-bad {
+  color: var(--color-bad);
+}
+
+.skeleton-w-sm {
+  width: 72px;
+  height: 10px;
+}
+
+.skeleton-w-md {
+  width: 140px;
+  height: 14px;
+}
+
+.skeleton-w-lg {
+  width: 180px;
+  height: 28px;
+}
+
+.ui-skel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
 }
 
 .ui-notice {

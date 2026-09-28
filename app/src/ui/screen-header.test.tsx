@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { PageTitle, ScreenHeader } from "./screen-header";
+import { ScreenHeader } from "./screen-header";
 import { expectRtl, expectTarget } from "./test-support";
 
 describe("ScreenHeader", () => {
@@ -11,7 +11,7 @@ describe("ScreenHeader", () => {
       <MemoryRouter>
         <>
           <ScreenHeader title="עזרה" subtitle="לעזרה בכניסה כותבים לנו." />
-          <PageTitle title="פרויקטים" backTo="/" />
+          <ScreenHeader title="פרויקטים" backTo="/" />
         </>
       </MemoryRouter>,
     );
