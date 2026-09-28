@@ -187,6 +187,10 @@
   --note-icon-nudge: 2px;
   --note-body-gap: 2px;
   --signin-brand-pad: 5.5rem;
+  /* ld-01 skeleton lengths that are not spacing steps. Bar widths stay on the rules. */
+  --skel-greet-pad: 10px;
+  --skel-hero-pad: 28px;
+  --skel-section-pad: 30px;
   --gsi-press: 12%;
   --gsi-disabled: 38%;
   --gsi-ink: 31 31 31;
@@ -561,9 +565,11 @@ a {
   text-align: center;
 }
 
-.signin-help a {
-  display: inline-block;
-  padding-block: 13px;
+.signin-help a,
+.signin-privacy a,
+.hit-inline {
+  display: inline-flex;
+  align-items: center;
   min-height: var(--touch-min);
 }
 
@@ -573,15 +579,7 @@ a {
   color: var(--color-text-muted);
 }
 
-.signin-privacy a {
-  display: inline-block;
-  padding-block: 15px;
-  margin-block: -15px;
-  min-height: var(--touch-min);
-}
-
 .help-back {
-  display: inline-block;
   margin-top: var(--space-6);
   color: var(--color-accent-text);
   text-decoration: none;
@@ -675,18 +673,18 @@ a {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 10px var(--space-side) 0;
+  padding: var(--skel-greet-pad) var(--space-side) 0;
 }
 
 .home-skel-hero {
-  padding: 28px var(--space-side) 0;
+  padding: var(--skel-hero-pad) var(--space-side) 0;
 }
 
 .home-skel-change {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  margin-top: 14px;
+  margin-top: var(--row-pad);
 }
 
 .home-skel-ie {
@@ -698,7 +696,7 @@ a {
 .home-skel-card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--row-pad);
   margin: var(--space-6) var(--space-4) 0;
   padding: var(--space-4);
   border-radius: var(--radius-card);
@@ -712,7 +710,7 @@ a {
 }
 
 .home-skel-sec {
-  padding: 30px var(--space-side) 0;
+  padding: var(--skel-section-pad) var(--space-side) 0;
 }
 
 .home-skel-sec h2 {
@@ -748,11 +746,11 @@ a {
 .home-skel-label { width: 120px; height: 14px; }
 .home-skel-amount {
   width: 210px;
-  height: 44px;
-  margin-top: 14px;
+  height: var(--touch-min);
+  margin-top: var(--row-pad);
   border-radius: var(--radius-input);
 }
-.home-skel-pill { width: 64px; height: 22px; border-radius: 11px; }
+.home-skel-pill { width: 64px; height: 22px; }
 .home-skel-delta { width: 92px; height: 14px; margin-top: var(--space-1); }
 .home-skel-ie-bar { width: 120px; height: 14px; }
 .home-skel-card-icon { width: 22px; height: 22px; }
