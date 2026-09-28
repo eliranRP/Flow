@@ -11,5 +11,8 @@ describe("HomeSkeleton", () => {
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
     expect(screen.queryByText("מצב תצוגה")).not.toBeInTheDocument();
     expect(document.querySelector(".ui-spinner")).toBeNull();
+    expect(document.querySelector(".ui-skel-pill")).not.toBeNull();
+    expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
+    expect(document.querySelector(".ui-skel-card")).not.toBeNull();
   });
 });

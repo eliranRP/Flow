@@ -24,8 +24,10 @@ export function StoryRoute({
       <MemoryRouter initialEntries={[entry]}>
         <AuthProvider>
           <BooksProvider>
-            {children}
-            {tabs ? <TabBar reviewCount={reviewCount} /> : null}
+            <div className="flex min-h-dvh w-full flex-col">
+              <div className={tabs ? "below-tabbar flex flex-1 flex-col" : "flex flex-1 flex-col"}>{children}</div>
+              {tabs ? <TabBar reviewCount={reviewCount} /> : null}
+            </div>
           </BooksProvider>
         </AuthProvider>
       </MemoryRouter>

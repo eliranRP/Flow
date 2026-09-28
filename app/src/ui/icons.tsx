@@ -170,6 +170,14 @@ export function ChevronIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+export function ChevronDownIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size} stroke={2.25}>
+      <polyline points="6 9 12 15 18 9" />
+    </Svg>
+  );
+}
+
 export function InboxIcon(props: IconProps) {
   return (
     <Svg size={22} {...props}>

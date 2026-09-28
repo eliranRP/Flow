@@ -1,6 +1,6 @@
 import { formatIls, homeSummarySchema, roundedProfitAgorot, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
 import { onlineManager, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { Banner } from "../ui/banner";
@@ -115,7 +115,9 @@ export function HomeScreen() {
       <div className="flex min-h-full flex-1 flex-col">
         <TopBand preview={previewing}>
           <BandHero>
-            <p className="t-title-2">{greeting}</p>
+            <div className="ui-greet">
+              <p className="t-label">{greeting}</p>
+            </div>
             <h1 className="ui-band-label t-label">{profitBandLabel(false)}</h1>
           </BandHero>
         </TopBand>
@@ -167,6 +169,7 @@ export function HomeBooks({
   onUnpaidRetry,
   period,
   onPeriod,
+  example,
 }: {
   data: Dashboard;
   greeting: string;
@@ -178,6 +181,8 @@ export function HomeBooks({
   onUnpaidRetry?: () => void;
   period: PeriodChoice;
   onPeriod: (choice: PeriodChoice) => void;
+  /** Storybook sample label. The live home never passes it. */
+  example?: ReactNode;
 }) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
@@ -222,7 +227,10 @@ export function HomeBooks({
         }
       >
         <BandHero>
-          <p className="t-title-2">{greeting}</p>
+          <div className="ui-greet">
+            <p className="t-label">{greeting}</p>
+            {example}
+          </div>
           <p className="ui-band-label t-label">{heroProfitLabel(period)}</p>
           <h1>
             <BigNumber agorot={hero} size="hero" />

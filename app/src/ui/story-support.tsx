@@ -8,7 +8,7 @@ export const longHebrew =
 export const largeAgorot = 12_345_678_900n;
 
 export const padded: Decorator = (Story) => (
-  <div className="flex flex-col items-start gap-4 p-4">
+  <div className="flex w-full flex-col items-stretch gap-4 p-4">
     <Story />
   </div>
 );

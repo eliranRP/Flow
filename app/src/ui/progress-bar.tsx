@@ -12,7 +12,7 @@ export function ProgressBar({ value, max = 100, label }: ProgressBarProps) {
   const percent = Math.round(ratio * 100);
   return (
     <div>
-      <p className="ui-field-label">{label}</p>
+      <p className="ui-meter-label t-hint">{label}</p>
       <div className="ui-bar" role="meter" aria-label={label} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
         <div className="ui-bar-fill" style={{ width: `${String(percent)}%` }} />
       </div>
@@ -30,11 +30,12 @@ type BudgetBarProps = {
 export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: BudgetBarProps) {
   const over = budgetAgorot > 0n && spentAgorot > budgetAgorot;
   const ratio = budgetAgorot <= 0n ? 0 : Number(spentAgorot) / Number(budgetAgorot);
-  const width = Math.min(100, Math.max(0, Math.round(ratio * 100)));
+  const used = Math.max(0, Math.round(ratio * 100));
+  const width = Math.min(100, used);
   const overage = over ? spentAgorot - budgetAgorot : 0n;
   return (
     <div>
-      <p className="flex items-baseline justify-between gap-3">
+      <p className="ui-budget-head">
         <span className="t-title-3">{label}</span>
         <span className="t-hint">
           <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
@@ -53,7 +54,7 @@ export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: B
         <div className="ui-bar-fill" data-over={over ? "true" : "false"} style={{ width: `${String(width)}%` }} />
       </div>
       <p className="ui-row-hint">
-        <bdi dir="ltr">{`נוצלו ${String(width)}%`}</bdi> מהתקציב
+        <bdi dir="ltr">{`נוצלו ${String(used)}%`}</bdi> מהתקציב
       </p>
       {over ? (
         <p className="ui-overage t-hint">
