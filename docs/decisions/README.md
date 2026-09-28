@@ -33,12 +33,12 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0004](0004-cash-basis-for-v1.md) | 2026-09-26 | Accepted | Cash basis for v1 |
 | [0005](0005-mobile-first.md) | 2026-09-26 | Accepted | Mobile first |
 | [0006](0006-confirm-not-type.md) | 2026-09-26 | Accepted | Confirm, don't type; corrections become supplier rules |
-| [0007](0007-bank-statement-is-primary-input.md) | 2026-09-26 | Accepted | The bank statement is the primary input; unpaid invoices stay out of P&L |
+| [0007](0007-bank-statement-is-primary-input.md) | 2026-09-26 | Accepted | Cash basis: a payment counts and an unpaid invoice stays out of P&L. [0065](0065-review-round5.md) drops the file import |
 | [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used |
 | [0009](0009-scalable-pickers.md) | 2026-09-26 | Accepted | Pickers and Home stay usable with many projects |
 | [0010](0010-docs-are-the-source-of-truth.md) | 2026-09-26 | Accepted | These docs, including decision records, are the source of truth |
 | [0011](0011-auto-approve-high-confidence.md) | 2026-09-26 | Accepted | Auto-approve high-confidence items; they skip the review queue |
-| [0012](0012-bank-hapoalim-first.md) | 2026-09-26 | Accepted | Proof of concept imports Bank Hapoalim statements only |
+| [0012](0012-bank-hapoalim-first.md) | 2026-09-26 | Superseded | Proof of concept imports Bank Hapoalim statements only. Superseded by [0065](0065-review-round5.md): bank lines come from SUMIT |
 | [0013](0013-single-user-owner.md) | 2026-09-26 | Accepted | Single user: the business owner; no roles yet |
 | [0014](0014-optional-project-budget.md) | 2026-09-26 | Accepted | Project budget stays optional |
 | [0015](0015-installable-mobile-web-app.md) | 2026-09-26 | Accepted | Installable mobile web app; no desktop and no native app in this phase |
@@ -62,13 +62,13 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0033](0033-google-sign-in.md) | 2026-09-26 | Accepted | Sign in with a Google account (Gmail). Supersedes 0017 |
 | [0034](0034-cost-and-load-limits.md) | 2026-09-26 | Accepted | Running cost at most $5 a month; Home usable within 2 seconds |
 | [0035](0035-sumit-api-first.md) | 2026-09-26 | Accepted | The first data integration is the SUMIT API |
-| [0036](0036-sumit-read-only.md) | 2026-09-26 | Accepted | SUMIT integration is read-only for the proof of concept |
+| [0036](0036-sumit-read-only.md) | 2026-09-26 | Accepted | SUMIT integration is read-only. [0065](0065-review-round5.md) closes the Hapoalim question: the pull replaces the upload |
 | [0037](0037-supabase-pilot.md) | 2026-09-26 | Accepted | Pilot on Supabase Free in Frankfurt; Pro at the first customer or limit. Supersedes the D1 plan |
-| [0038](0038-stack.md) | 2026-09-26 | Accepted | TypeScript, React, Vite, and Supabase Edge Functions |
+| [0038](0038-stack.md) | 2026-09-26 | Accepted | TypeScript, React, Vite, and Supabase Edge Functions. [0065](0065-review-round5.md) drops SheetJS |
 | [0039](0039-pilot-defaults.md) | 2026-09-26 | Accepted | Pilot defaults: supabase.co on the Google screen, photos in Storage, Pro trigger as in 0037 |
 | [0040](0040-tailwind-v4.md) | 2026-09-26 | Accepted | Styling is Tailwind CSS v4, mapped from the design tokens. Replaces the plain-CSS line in 0038 |
 | [0041](0041-amounts-before-vat.md) | 2026-09-26 | Accepted | P&L amounts are before VAT. 0043 amends the missing-split rule for expenses |
-| [0042](0042-sumit-primary-income-and-expenses.md) | 2026-09-26 | Accepted | SUMIT is the primary source for income and expenses; Hapoalim complements it |
+| [0042](0042-sumit-primary-income-and-expenses.md) | 2026-09-26 | Accepted | SUMIT is the primary source for income and expenses. [0065](0065-review-round5.md) drops the Hapoalim complement |
 | [0043](0043-assumed-vat-on-expenses.md) | 2026-09-27 | Accepted | Expenses with no VAT split assume 18%, unless the supplier is VAT-exempt |
 | [0044](0044-phase-0-shell-calls.md) | 2026-09-27 | Accepted | Phase 0 shell: preview banner, es-01 copy, type scale, placeholders, review states |
 | [0045](0045-phase-0-design-gaps.md) | 2026-09-28 | Accepted | Phase 0 design gaps: help, load errors, greeting, period pill, Add hint, tab-bar floor |
@@ -85,4 +85,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0062](0062-audit-layout-calls.md) | 2026-09-28 | Accepted | Fixed-height controls ellipsize. Empty states use the small pill. A 0% change stays visible |
 | [0063](0063-owner-ledger.md) | 2026-09-28 | Accepted | Sync writes only SUMIT fields. The design review restores Toggle, the tab bar on pushed screens, and "טרם נגבה" |
 | [0064](0064-review-round4.md) | 2026-09-28 | Accepted | Library-only screens, a saved overhead switch with a zero share, income stays out of Review |
-| [0065](0065-review-round5.md) | 2026-09-28 | Accepted | Real reassignment and categories, income-share overhead, a cron drain that requires a secret, a summary-then-picker change sheet, and install screens for Android, iPhone, and iPad |
+| [0065](0065-review-round5.md) | 2026-09-28 | Accepted | Real reassignment and categories, income-share overhead, a cron drain that requires a secret, a summary-then-picker change sheet, install screens, and no Hapoalim import |

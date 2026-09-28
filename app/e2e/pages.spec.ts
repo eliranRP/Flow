@@ -30,7 +30,8 @@ test("add sheet follows mockup 04 and does not capture yet", async ({ page }) =>
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
   await expect(page.getByText("צילום חשבונית")).toBeVisible();
-  await expect(page.getByText("הצילום, הייבוא וההזנה הידנית יגיעו בהמשך.")).toBeVisible();
+  await expect(page.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeVisible();
+  await expect(page.getByText("תנועות הבנק מגיעות מ-SUMIT")).toBeVisible();
   await expect(page.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
 });
 

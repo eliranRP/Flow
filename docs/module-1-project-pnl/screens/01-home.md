@@ -80,7 +80,7 @@ All of these amounts are net of VAT. Dates are not shown on Home except the peri
 - **Very long Hebrew names.** One line and ellipsis on the row. The project screen shows the full name, wrapping up to three lines.
 - **Moving a transaction after approval.** The next time Home is shown, tiles and rows use the new bucket. The past period changes. Flow does not keep a second "original" total on Home.
 - **Duplicate statement or duplicate invoice.** Home does not move. Duplicates never create a second counting line. See [calculations](../calculations.md#duplicate-imports).
-- **Non-Hapoalim file.** Nothing is imported, so Home is unchanged. The error is on upload results.
+- **Statement file.** There is no file import ([0065](../../decisions/0065-review-round5.md) point 40). Home changes when the SUMIT sync writes a bank line.
 - **Refund.** Lowers expenses (or income, if the owner used an income category) in the period of the cash date. The row's project jumps in the activity sort because activity uses the absolute amount.
 - **Split.** Each line counts on its own project. Company profit is unchanged by the split itself.
 - **VAT-exempt line.** Counts at net. VAT of 0 does not change the tiles.

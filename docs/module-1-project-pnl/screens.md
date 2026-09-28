@@ -407,7 +407,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 ### Key interactions
 
 - `צלם חשבונית` takes several photos in a row, or picks a PDF or image already on the phone. [0020](../decisions/0020-capture-from-the-phone.md). The image still labels the row `מצלמה או PDF`. After extraction, the document enters matching and, if it is not high confidence, the review queue. An installed Android app can also receive an image or PDF from the system share sheet. iPhone cannot, and this sheet does not offer that.
-- `העלה דוח בנק/אשראי` picks an Excel or CSV file and then shows [upload results](#08-upload-results-v2). In the proof of concept that file is a Bank Hapoalim (`בנק הפועלים`) statement. [0012](../decisions/0012-bank-hapoalim-first.md). The label still mentions credit (`אשראי`); credit-card company files are later.
+- `העלאת דוח בנק` stays on the sheet and does not upload a file. Bank lines come from the SUMIT sync. [0065](../decisions/0065-review-round5.md) point 40. Screen 08 is not a build task.
 - `הזנה ידנית` is the cash and cheque fallback. The form itself is not wireframed.
 - `ביטול`, or tapping the scrim, closes the sheet and leaves the data unchanged.
 
@@ -563,7 +563,7 @@ Light category maintenance. The seven expense defaults and the two income defaul
 
 ## 08-upload-results-v2 — Statement upload results
 
-**Status:** Approved. This is the upload summary to build.
+**Status:** Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The wireframe stays for history. Bank lines come from the SUMIT sync.
 **Supersedes:** [08-upload-results](#08-upload-results).
 **File:** [wireframes/08-upload-results-v2.png](wireframes/08-upload-results-v2.png)
 
@@ -631,7 +631,7 @@ The primary button opens review for the 7. The secondary button was the manual c
 
 ### Detailed spec
 
-Do not build this screen. The spec to build is [Upload results](screens/08-upload-results.md), against [08-upload-results-v2](#08-upload-results-v2).
+Do not build this screen. Upload results is not a build task ([0065](../decisions/0065-review-round5.md) point 40).
 
 <a id="01-home"></a>
 
@@ -770,7 +770,7 @@ None. This file is a board, not a screen.
 
 ### Detailed spec
 
-Not a product screen. The change sheet and the upload results on this board are superseded. Build [Change sheet](screens/06-change-sheet.md), [Categories](screens/07-categories.md), and [Upload results](screens/08-upload-results.md) from [08-upload-results-v2](#08-upload-results-v2).
+Not a product screen. The change sheet and the upload results on this board are superseded. Build [Change sheet](screens/06-change-sheet.md) and [Categories](screens/07-categories.md). Upload results is not a build task ([0065](../decisions/0065-review-round5.md) point 40).
 
 <a id="overview-3"></a>
 
@@ -832,7 +832,7 @@ None. This file is a board, not a screen.
 
 ### Detailed spec
 
-Not a product screen. Build [Review](screens/03-review.md) and [Upload results](screens/08-upload-results.md).
+Not a product screen. Build [Review](screens/03-review.md). Upload results is not a build task ([0065](../decisions/0065-review-round5.md) point 40).
 
 <a id="09-onboarding"></a>
 
@@ -870,7 +870,7 @@ Five phones on one board.
 - `סוג העסק`: `חברה בע״מ` (selected) and `עוסק מורשה`.
 - `המשך`.
 
-**c. Hapoalim file (`העלאת דוח פועלים`), `שלב 2 מתוך 4`.** [0012](../decisions/0012-bank-hapoalim-first.md), [0015](../decisions/0015-installable-mobile-web-app.md).
+**c. Hapoalim file (`העלאת דוח פועלים`), `שלב 2 מתוך 4`.** Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing below stays for history. Do not build this step.
 
 - `מהדוח נבנה את הרווח וההפסד שלך. כך מייצאים:`
 - `1` `באפליקציית פועלים: עו״ש › תנועות` / `בוחרים טווח תאריכים`.
@@ -1310,7 +1310,7 @@ This section, plus [0018](../decisions/0018-two-notifications.md). There is no s
 
 ### Purpose
 
-The owner's screen for company details, the Hapoalim connection, the lists they edit elsewhere, and the few switches that change how Home looks or how rows are filed. Every number and name on the image is example data.
+The owner's screen for company details, the lists they edit elsewhere, and the few switches that change how Home looks or how rows are filed. The Hapoalim block on the drawing is not a build task ([0065](../decisions/0065-review-round5.md) point 40). Every number and name on the image is example data.
 
 ### Main elements
 

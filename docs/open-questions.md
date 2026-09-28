@@ -2,13 +2,13 @@
 
 These are not decisions. When one is settled, add a numbered decision record, point the question at it, and update the [changelog](changelog.md).
 
-Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), Google account sign-in ([0033](decisions/0033-google-sign-in.md), which supersedes [0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)), Home's big number staying company net profit when that switch is on ([0032](decisions/0032-home-hero-stays-company-net-profit.md)), and not writing project tags back to SUMIT ([0036](decisions/0036-sumit-read-only.md)). Amounts before VAT are [0041](decisions/0041-amounts-before-vat.md). An expense with no VAT split assumes 18% unless the supplier is VAT-exempt ([0043](decisions/0043-assumed-vat-on-expenses.md)). SUMIT as the primary source for income and expenses, with Hapoalim as a complement, is [0042](decisions/0042-sumit-primary-income-and-expenses.md). The per-screen spec for the eight approved screens is written.
+Settled earlier and removed from this list: auto-approve ([0011](decisions/0011-auto-approve-high-confidence.md)), which bank comes first ([0012](decisions/0012-bank-hapoalim-first.md)), roles ([0013](decisions/0013-single-user-owner.md)), and whether budget is required ([0014](decisions/0014-optional-project-budget.md)). Also settled, with leftovers called out below: the installable phone web app ([0015](decisions/0015-installable-mobile-web-app.md)), Hebrew only ([0016](decisions/0016-hebrew-only.md)), Google account sign-in ([0033](decisions/0033-google-sign-in.md), which supersedes [0017](decisions/0017-sms-sign-in.md)), the two notifications ([0018](decisions/0018-two-notifications.md)), Home periods ([0019](decisions/0019-home-periods-and-comparison.md)), phone capture ([0020](decisions/0020-capture-from-the-phone.md)), the after-overhead switch starting off ([0022](decisions/0022-after-overhead-starts-off.md)), Home's big number staying company net profit when that switch is on ([0032](decisions/0032-home-hero-stays-company-net-profit.md)), and not writing project tags back to SUMIT ([0036](decisions/0036-sumit-read-only.md)). Amounts before VAT are [0041](decisions/0041-amounts-before-vat.md). An expense with no VAT split assumes 18% unless the supplier is VAT-exempt ([0043](decisions/0043-assumed-vat-on-expenses.md)). SUMIT as the source for income, expenses, and bank lines, with no Hapoalim import, is [0065](decisions/0065-review-round5.md) point 40, which amends [0042](decisions/0042-sumit-primary-income-and-expenses.md). The per-screen spec for the eight approved screens is written.
 
 ## Settings screen
 
 A proposal is in [settings.md](module-1-project-pnl/settings.md). **Status: Draft. Not approved.**
 
-A wireframe is now drawn: [14-settings](module-1-project-pnl/screens.md#14-settings), pending owner approval. It shows company details, phone sign-in, the Hapoalim connection, links to Categories and Projects, recurring split rules, the two notifications as toggles, an auto-approve toggle, the after-overhead default (off), Excel and CSV export, log out, and a version line. Every figure on it is example data. The after-overhead default is decided ([0022](decisions/0022-after-overhead-starts-off.md)). The rest of this screen is not.
+A wireframe is now drawn: [14-settings](module-1-project-pnl/screens.md#14-settings), pending owner approval. It shows company details, phone sign-in, links to Categories and Projects, recurring split rules, the two notifications as toggles, an auto-approve toggle, the after-overhead default (off), Excel and CSV export, log out, and a version line. The Hapoalim connection on that drawing is not a build task ([0065](decisions/0065-review-round5.md) point 40). Every figure on it is example data. The after-overhead default is decided ([0022](decisions/0022-after-overhead-starts-off.md)). The rest of this screen is not.
 
 Open until the draft is accepted or replaced:
 
@@ -27,15 +27,11 @@ Open: pricing.
 
 ## Credit-card statement support timing
 
-[0012](decisions/0012-bank-hapoalim-first.md) keeps credit-card company files out of the proof of concept. Bank Hapoalim (`בנק הפועלים`) is the statement format Flow imports.
-
-Open: when, after the proof of concept, credit-card statement import starts.
+Closed by [0065](decisions/0065-review-round5.md) point 40. There is no statement-file import, for Bank Hapoalim or for a credit-card company. Bank lines come from the SUMIT sync.
 
 ## Hapoalim file shape
 
-Flow's behavior for a recognized file, a duplicate file, and an unrecognized file is specified. The column map is not. Overlapping imports treat a row as the same row when the saved account, value date, signed amount in agorot, and normalized memo all match. That identity is a working rule.
-
-Open: confirm the columns and the row identity against a real Bank Hapoalim sample before the parser is built.
+Closed by [0065](decisions/0065-review-round5.md) point 40. There is no parser, so there is no column map to confirm.
 
 ## Confirming an invoice photo
 
@@ -61,7 +57,7 @@ No longer applies. [0033](decisions/0033-google-sign-in.md) supersedes [0017](de
 
 ## SUMIT and the Hapoalim upload
 
-Resolved by [0042](decisions/0042-sumit-primary-income-and-expenses.md). SUMIT, the expense module and the documents, is the primary source for income and expenses. The Hapoalim statement upload stays as a complement for cash matching and for anything not in SUMIT. It does not replace SUMIT, and SUMIT does not replace it.
+Resolved by [0065](decisions/0065-review-round5.md) point 40, which amends [0042](decisions/0042-sumit-primary-income-and-expenses.md). SUMIT is the source for income and expenses, including bank lines. There is no Hapoalim upload beside it.
 
 ## Expenses recorded in SUMIT
 
@@ -115,9 +111,9 @@ Open, as backlog: the forwarding address.
 
 ## Projects proposed at onboarding
 
-[09-onboarding](module-1-project-pnl/screens.md#09-onboarding), pending owner approval, proposes a project for each repeated incoming payer on the Hapoalim file. Rows start checked. The owner can rename, uncheck, or add one. Confirm creates the checked projects. The example rows have 6, 4, 3, and 2 incoming payments. Those counts are the sample, not a threshold.
+[09-onboarding](module-1-project-pnl/screens.md#09-onboarding) step c, the Hapoalim file, is not a build task ([0065](decisions/0065-review-round5.md) point 40). The drawing proposed a project for each repeated incoming payer on that file. That source is gone.
 
-Open: how many incoming payments, over what period, make a payer "recurring."
+Open: if onboarding still proposes projects, which SUMIT history it reads, and how many incoming payments, over what period, make a payer "recurring."
 
 ## Category on each split line
 

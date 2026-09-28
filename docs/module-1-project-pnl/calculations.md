@@ -204,7 +204,9 @@ When the cash arrives, the row is an inflow. If the supplier has an expense rule
 
 ## Matching
 
-Order for a new Hapoalim row that is not a transfer and not a duplicate of a row already imported:
+There is no statement-file import. A bank row arrives from the SUMIT sync ([0065](../decisions/0065-review-round5.md) point 40). The order below is how that row is matched once it exists. It is not a file parser.
+
+Order for a new bank row that is not a transfer and not a duplicate of a row already stored:
 
 1. **Invoice link.** Auto-approve only when the link is unique.
    - One unpaid invoice for the same normalized supplier whose remaining net equals the payment net. Remaining net starts as the invoice net and falls as payments are linked.
@@ -220,8 +222,7 @@ Normalized supplier: trim, collapse internal whitespace, strip Hebrew diacritics
 ## Duplicate imports
 
 - The same invoice photo or PDF (same normalized supplier and invoice number; if the number is missing, same supplier, date, net, and VAT) does not create a second document. Flow opens the existing one.
-- The same statement file (identical bytes already imported) imports nothing. Upload results is an error: the file was already loaded.
-- An overlapping Hapoalim date range imports only rows that are not already stored. A row is the same row when the saved Hapoalim account, value date, signed amount in agorot, and normalized memo all match. Skipped rows are reported on the upload summary and do not move profit. The memo field to use has to be confirmed against a real Hapoalim sample; until then this identity is the working rule and is listed in [open questions](../open-questions.md).
+- There is no statement file to import twice. Bank rows arrive from the SUMIT sync, and a repeated sync does not create a second counting line. The identity of a SUMIT document stays the sync's own document identity.
 
 ## Worked example
 

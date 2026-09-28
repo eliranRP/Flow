@@ -66,7 +66,8 @@ describe("App", () => {
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
     expect(screen.getByText("צילום חשבונית")).toBeInTheDocument();
-    expect(screen.getByText("הצילום, הייבוא וההזנה הידנית יגיעו בהמשך.")).toBeInTheDocument();
+    expect(screen.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeInTheDocument();
+    expect(screen.getByText(/תנועות הבנק מגיעות מ-/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
     expect(
       screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),

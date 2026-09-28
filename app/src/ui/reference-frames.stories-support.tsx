@@ -40,7 +40,7 @@ function StepMark({ state }: { state: "done" | "busy" | "wait" }) {
   return <span className="ui-step-mark"><span className="ui-step-wait" /></span>;
 }
 
-/** ld-05. Bank file processing. */
+/** ld-05 reference only. Not a build task: 0065 point 40 dropped the Hapoalim import. */
 export function UploadProcessingFrame() {
   return (
     <div className="ui-ref">

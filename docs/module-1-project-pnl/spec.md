@@ -49,7 +49,7 @@ Amounts on screen are **net of VAT**. VAT is stored and shown separately. The ow
 
 Version 1 is cash basis. [0004](../decisions/0004-cash-basis-for-v1.md), [0007](../decisions/0007-bank-statement-is-primary-input.md).
 
-A Bank Hapoalim (`בנק הפועלים`) statement remains a complement: cash matching, and anything not already in SUMIT ([0042](../decisions/0042-sumit-primary-income-and-expenses.md)). SUMIT, the expense module and the documents, is the primary source for income and expenses. The pull is read-only ([0036](../decisions/0036-sumit-read-only.md)). An invoice with no matching payment stays unpaid and out of P&L until it is paid ([0007](../decisions/0007-bank-statement-is-primary-input.md)). Amounts on the P&L are before VAT ([0041](../decisions/0041-amounts-before-vat.md)). An expense, or a bank line with no supplier match, that has no VAT split assumes the standard rate (currently 18%) unless the supplier is VAT-exempt ([0043](../decisions/0043-assumed-vat-on-expenses.md)).
+Bank lines come only through the SUMIT sync. There is no Bank Hapoalim statement upload ([0065](../decisions/0065-review-round5.md) point 40, which amends [0042](../decisions/0042-sumit-primary-income-and-expenses.md)). SUMIT, the expense module and the documents, is the source for income and expenses. The pull is read-only ([0036](../decisions/0036-sumit-read-only.md)). An invoice with no matching payment stays unpaid and out of P&L until it is paid ([0007](../decisions/0007-bank-statement-is-primary-input.md)). Amounts on the P&L are before VAT ([0041](../decisions/0041-amounts-before-vat.md)). An expense, or a bank line with no supplier match, that has no VAT split assumes the standard rate (currently 18%) unless the supplier is VAT-exempt ([0043](../decisions/0043-assumed-vat-on-expenses.md)).
 
 An invoice with no matching payment is **unpaid**. It stays out of P&L until a later statement row matches it, or the owner marks it paid. Unpaid invoices remain visible so the owner can see what is still open.
 
@@ -64,10 +64,10 @@ Three paths, all opened from the center **+** button (`הוספה`).
 | Path | Label | What happens |
 | --- | --- | --- |
 | Invoice photo or file | `צלם חשבונית` | One photo, several photos in a row, or a PDF or image already on the phone. Flow reads supplier, amount, VAT, date, and invoice number, and checks for a duplicate. It keeps the Israel invoice allocation number (`חשבונית ישראל`) when the document has one. The document waits to be linked to a payment. Android can also share an image or PDF into the installed app. iPhone cannot. [0020](../decisions/0020-capture-from-the-phone.md). |
-| Bank statement | `העלה דוח בנק/אשראי` | Excel or CSV from Bank Hapoalim (`בנק הפועלים`). Each row becomes a transaction. Own-account transfers are removed. Rows are matched and classified as below. |
-| Manual entry | `הזנה ידנית` | Fallback for cash and cheques: amount, project, and category. This is the path that marks money as paid when there will never be a statement row. |
+| Bank lines | SUMIT sync | Bank transactions arrive with the SUMIT pull. The add sheet still shows a disabled "העלאת דוח בנק" row. That row does not upload a file. |
+| Manual entry | `הזנה ידנית` | Fallback for cash and cheques: amount, project, and category. This is the path that marks money as paid when there will never be a bank line. |
 
-The proof of concept parses Hapoalim files only. The file has to be on the phone; onboarding shows how to export it from Hapoalim. Other banks, and credit-card company files, come after the proof of concept. [0012](../decisions/0012-bank-hapoalim-first.md), [0015](../decisions/0015-installable-mobile-web-app.md). When credit-card statement support starts is an [open question](../open-questions.md). The add-sheet label still says bank and credit (`בנק/אשראי`). Credit-card company files are still rejected. The upload wireframe to build is [08-upload-results-v2](screens.md#08-upload-results-v2), which shows a Hapoalim file.
+There is no statement parser. Screen 08, onboarding step 09c, and ld-05 are not build tasks ([0065](../decisions/0065-review-round5.md) point 40). [0012](../decisions/0012-bank-hapoalim-first.md) is superseded.
 
 Home periods are this month (`החודש`), last month (`חודש קודם`), and year to date (`מתחילת השנה`). The project screen stays on project to date. There is no custom range. [0019](../decisions/0019-home-periods-and-comparison.md).
 
@@ -168,12 +168,12 @@ A Hashavshevet-compatible format is a later export, not the proof of concept. [0
 - VAT filing.
 - Payroll.
 - Invoicing, and Morning or iCount integration. [0003](../decisions/0003-no-invoicing-in-the-poc.md).
-- Open banking. Statements arrive as files the owner uploads.
+- Open banking, and any statement file the owner uploads. Bank lines come from the SUMIT sync.
 - Multi-currency. Amounts are ₪.
 - Progress billing and retention.
 - Category sub-groups.
 - Accrual basis.
-- Statement files from banks other than Bank Hapoalim (`בנק הפועלים`), and credit-card company statement files. [0012](../decisions/0012-bank-hapoalim-first.md).
+- A Bank Hapoalim statement import, and every other bank or credit-card statement file. [0065](../decisions/0065-review-round5.md) point 40.
 - Roles and permissions. The proof of concept is the owner alone. [0013](../decisions/0013-single-user-owner.md).
 
 ## Success metrics

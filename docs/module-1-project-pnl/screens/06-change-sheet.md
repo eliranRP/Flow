@@ -97,7 +97,7 @@ VAT is allocated by largest remainder. The owner does not type VAT per line.
 - **Overhead.** Selectable from the list. A rule may point at overhead.
 - **VAT-exempt.** The amount shown is the net. Split lines are of the net.
 - **Client deposit, no project.** Sheet opens with no project selected. Last-used chip can still show if this supplier has history.
-- **Non-Hapoalim.** No row exists to change.
+- **Statement file.** There is no Hapoalim row to import. A bank line that SUMIT synced can still be changed here.
 - **Long names.** Chips stay on one line and ellipsize. The list row ellipsizes. The create field accepts 80 characters.
 - **0 categories in that direction.** Should not happen: defaults are seeded. If the owner hid every expense category, the chips are empty and `עוד קטגוריות` opens a list whose only action is `+ קטגוריה חדשה`.
 
