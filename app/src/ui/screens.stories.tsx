@@ -65,19 +65,64 @@ const sampleReview: ReviewRow = {
 const sampleUnpaid: UnpaidRow[] = [
   {
     id: "u1",
-    description: "חשבונית",
+    description: "הובלה",
     doc_date: "2026-09-02",
+    project_name: "שיפוץ דירה ת\"א",
+    customer_name: "מ.ש. הובלות",
+    open_gross_agorot: 600_000n,
+    open_net_agorot: 508_475n,
+  },
+  {
+    id: "u2",
+    description: "חשמל",
+    doc_date: "2026-09-10",
+    project_name: "וילה רעננה",
+    customer_name: "אבי חשמל",
+    open_gross_agorot: 800_000n,
+    open_net_agorot: 677_966n,
+  },
+  {
+    id: "u3",
+    description: "חומרים",
+    doc_date: "2026-09-14",
     project_name: "בניין מגורים חולון",
-    customer_name: "יזמות הגליל",
-    open_gross_agorot: 2_340_000n,
-    open_net_agorot: 1_983_051n,
+    customer_name: "חומרי בניין השרון",
+    open_gross_agorot: 940_000n,
+    open_net_agorot: 796_610n,
   },
 ];
 
-const sampleCategories: CategoryRow[] = [
-  { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true },
-  { id: "c2", name: "עבודה", kind: "expense", hidden: true, is_default: true },
+const sampleCategories: Array<CategoryRow & { count?: number }> = [
+  { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, count: 42 },
+  { id: "c2", name: "ציוד והשכרה", kind: "expense", hidden: false, is_default: true, count: 8 },
+  { id: "c3", name: "הובלה", kind: "expense", hidden: false, is_default: true, count: 5 },
+  { id: "c4", name: "עבודה", kind: "expense", hidden: true, is_default: true, count: 1 },
+  { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, count: 3 },
 ];
+
+function listedProject(id: string, name: string, status: "active" | "finished" = "active"): Dashboard["projects"][number] {
+  return {
+    id,
+    name,
+    status,
+    income_agorot: 10_000_000n,
+    direct_agorot: 8_000_000n,
+    shared_agorot: 0n,
+    profit_before_shared_agorot: 2_000_000n,
+    profit_agorot: 2_000_000n,
+  };
+}
+
+const projectsList: Dashboard = {
+  ...sampleDashboard,
+  projects: [
+    listedProject("a", "בניין מגורים חולון"),
+    listedProject("b", "וילה רעננה"),
+    listedProject("c", "מגדל משרדים פ\"ת"),
+    ...Array.from({ length: 14 }, (_, index) => listedProject(`p${String(index)}`, `פרויקט ${String(index + 4)}`)),
+    ...Array.from({ length: 21 }, (_, index) => listedProject(`f${String(index)}`, `הסתיים ${String(index + 1)}`, "finished")),
+  ],
+};
 
 const exampleLabel = "נתוני דוגמה · Example data";
 
@@ -98,6 +143,7 @@ type Story = StoryObj<typeof meta>;
 export const HomeEmpty: Story = {
   render: () => (
     <StoryRoute entry="/?preview=empty" tabs>
+      <ExampleBar />
       <HomeScreen />
     </StoryRoute>
   ),
@@ -106,6 +152,7 @@ export const HomeEmpty: Story = {
 export const HomeLoading: Story = {
   render: () => (
     <StoryRoute entry="/?preview=loading" tabs>
+      <ExampleBar />
       <HomeScreen />
     </StoryRoute>
   ),
@@ -114,6 +161,7 @@ export const HomeLoading: Story = {
 export const HomeOffline: Story = {
   render: () => (
     <StoryRoute entry="/?preview=error" tabs>
+      <ExampleBar />
       <HomeScreen />
     </StoryRoute>
   ),
@@ -122,6 +170,7 @@ export const HomeOffline: Story = {
 export const HomeServerError: Story = {
   render: () => (
     <StoryRoute entry="/?preview=error-server" tabs>
+      <ExampleBar />
       <HomeScreen />
     </StoryRoute>
   ),
@@ -154,6 +203,7 @@ export const Help: Story = {
 export const ProjectsEmpty: Story = {
   render: () => (
     <StoryRoute entry="/projects?preview=empty" tabs>
+      <ExampleBar />
       <ProjectsScreen />
     </StoryRoute>
   ),
@@ -162,6 +212,7 @@ export const ProjectsEmpty: Story = {
 export const ReviewEmpty: Story = {
   render: () => (
     <StoryRoute entry="/review?preview=empty" tabs>
+      <ExampleBar />
       <ReviewScreen />
     </StoryRoute>
   ),
@@ -206,7 +257,7 @@ export const ProjectsList: Story = {
   render: () => (
     <StoryRoute entry="/projects" tabs>
       <ExampleBar />
-      <ProjectsScreen sample={sampleDashboard} />
+      <ProjectsScreen sample={projectsList} />
     </StoryRoute>
   ),
 };
@@ -214,6 +265,7 @@ export const ProjectsList: Story = {
 export const ProjectsLoading: Story = {
   render: () => (
     <StoryRoute entry="/projects?preview=loading" tabs>
+      <ExampleBar />
       <ProjectsScreen />
     </StoryRoute>
   ),
@@ -222,6 +274,7 @@ export const ProjectsLoading: Story = {
 export const ProjectsError: Story = {
   render: () => (
     <StoryRoute entry="/projects?preview=error" tabs>
+      <ExampleBar />
       <ProjectsScreen />
     </StoryRoute>
   ),
@@ -229,7 +282,7 @@ export const ProjectsError: Story = {
 
 export const UnpaidList: Story = {
   render: () => (
-    <StoryRoute entry="/unpaid">
+    <StoryRoute entry="/unpaid" tabs>
       <ExampleBar />
       <UnpaidScreen sample={sampleUnpaid} />
     </StoryRoute>
@@ -238,7 +291,8 @@ export const UnpaidList: Story = {
 
 export const UnpaidEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/unpaid?preview=empty">
+    <StoryRoute entry="/unpaid?preview=empty" tabs>
+      <ExampleBar />
       <UnpaidScreen />
     </StoryRoute>
   ),
@@ -246,7 +300,8 @@ export const UnpaidEmpty: Story = {
 
 export const UnpaidError: Story = {
   render: () => (
-    <StoryRoute entry="/unpaid?preview=error">
+    <StoryRoute entry="/unpaid?preview=error" tabs>
+      <ExampleBar />
       <UnpaidScreen />
     </StoryRoute>
   ),
@@ -254,7 +309,8 @@ export const UnpaidError: Story = {
 
 export const SettingsEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/settings?preview=empty">
+    <StoryRoute entry="/settings?preview=empty" tabs>
+      <ExampleBar />
       <SettingsScreen />
     </StoryRoute>
   ),
@@ -262,16 +318,46 @@ export const SettingsEmpty: Story = {
 
 export const SettingsConnected: Story = {
   render: () => (
-    <StoryRoute entry="/settings">
+    <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ name: "Flow Test", vatRegistered: true, connected: true, companyId: 1001, lastError: "sync_failed" }} />
+      <SettingsScreen
+        sample={{
+          name: "א.ב. בנייה ושיפוצים בע״מ",
+          vatRegistered: true,
+          connected: true,
+          companyId: 1001,
+          lastError: null,
+          email: "ops@nromomentum.com",
+          projectCount: 17,
+          expenseCategories: 7,
+          incomeCategories: 2,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsError: Story = {
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          name: "א.ב. בנייה ושיפוצים בע״מ",
+          vatRegistered: true,
+          connected: true,
+          companyId: 1001,
+          lastError: "sync_failed",
+          email: "ops@nromomentum.com",
+        }}
+      />
     </StoryRoute>
   ),
 };
 
 export const CategoriesList: Story = {
   render: () => (
-    <StoryRoute entry="/settings/categories">
+    <StoryRoute entry="/settings/categories" tabs>
       <ExampleBar />
       <CategoriesScreen sample={sampleCategories} />
     </StoryRoute>
@@ -281,6 +367,7 @@ export const CategoriesList: Story = {
 export const Onboarding: Story = {
   render: () => (
     <StoryRoute entry="/onboarding">
+      <ExampleBar />
       <OnboardingScreen />
     </StoryRoute>
   ),
@@ -306,21 +393,34 @@ export const HomeLongHero: Story = {
 
 export const ProjectDetail: Story = {
   render: () => (
-    <StoryRoute entry="/projects/a">
+    <StoryRoute entry="/projects/a" tabs>
       <ExampleBar />
       <ProjectDetailScreen
         sample={{
           id: "a",
           name: "וילה רעננה",
           status: "active",
-          state_label: "פעיל",
-          budget_agorot: 5_000_000n,
-          income_agorot: 1_800_000n,
-          direct_agorot: 900_000n,
+          state_label: "משפ׳ כהן · מתחילת הפרויקט",
+          budget_agorot: 100_000_000n,
+          income_agorot: 90_000_000n,
+          direct_agorot: 72_000_000n,
           shared_agorot: 0n,
-          profit_agorot: 900_000n,
-          categories: [{ id: "c1", name: "חומרים", amount_agorot: -900_000n }],
-          transactions: [],
+          profit_agorot: 18_000_000n,
+          categories: [
+            { id: "c1", name: "חומרים", amount_agorot: 30_000_000n },
+            { id: "c2", name: "קבלני משנה", amount_agorot: 22_000_000n },
+            { id: "c3", name: "עבודה", amount_agorot: 12_000_000n },
+          ],
+          transactions: [
+            {
+              id: "t1",
+              description: "חומרי בניין השרון",
+              doc_date: "2026-09-14",
+              amount_net: -8_500_000n,
+              direction: "expense",
+              category: "חומרים",
+            },
+          ],
         }}
       />
     </StoryRoute>
@@ -330,6 +430,7 @@ export const ProjectDetail: Story = {
 export const AddSheet: Story = {
   render: () => (
     <StoryRoute entry="/add">
+      <ExampleBar />
       <AddForm />
     </StoryRoute>
   ),
@@ -353,7 +454,8 @@ export const ReviewError: Story = {
 
 export const ProjectDetailLoading: Story = {
   render: () => (
-    <StoryRoute entry="/projects/a?preview=loading">
+    <StoryRoute entry="/projects/a?preview=loading" tabs>
+      <ExampleBar />
       <ProjectDetailScreen />
     </StoryRoute>
   ),
@@ -361,7 +463,8 @@ export const ProjectDetailLoading: Story = {
 
 export const ProjectDetailError: Story = {
   render: () => (
-    <StoryRoute entry="/projects/a?preview=error">
+    <StoryRoute entry="/projects/a?preview=error" tabs>
+      <ExampleBar />
       <ProjectDetailScreen />
     </StoryRoute>
   ),
@@ -369,7 +472,8 @@ export const ProjectDetailError: Story = {
 
 export const CategoriesEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/settings/categories?preview=empty">
+    <StoryRoute entry="/settings/categories?preview=empty" tabs>
+      <ExampleBar />
       <CategoriesScreen />
     </StoryRoute>
   ),
@@ -377,7 +481,8 @@ export const CategoriesEmpty: Story = {
 
 export const CategoriesError: Story = {
   render: () => (
-    <StoryRoute entry="/settings/categories?preview=error">
+    <StoryRoute entry="/settings/categories?preview=error" tabs>
+      <ExampleBar />
       <CategoriesScreen />
     </StoryRoute>
   ),
@@ -424,10 +529,23 @@ export const ChangeSheet: Story = {
       <ExampleBar />
       <ChangeForm
         sample={{
-          projects: [{ id: "a", name: "וילה רעננה" }],
+          supplier: "חומרי בניין השרון",
+          amount: "₪8,500",
+          suggestionId: "holon",
+          recentId: "villa",
+          categoryId: "c1",
+          projects: [
+            { id: "holon", name: "בניין מגורים חולון" },
+            { id: "villa", name: "וילה רעננה" },
+            { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-14", hint: "היום" },
+            { id: "p21", name: "בית פרטי כפר סבא", code: "P-21", hint: "לפני 3 ימים" },
+            { id: "p03", name: "שיפוץ דירה ת\"א", code: "P-03", hint: "לפני שבוע" },
+          ],
           categories: [
             { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
-            { id: "c2", name: "תקבול", hidden: false, kind: "income" },
+            { id: "c2", name: "ציוד והשכרה", hidden: false, kind: "expense" },
+            { id: "c3", name: "הובלה", hidden: false, kind: "expense" },
+            { id: "c4", name: "עבודה", hidden: false, kind: "expense" },
           ],
         }}
       />

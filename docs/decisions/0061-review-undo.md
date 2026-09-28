@@ -33,7 +33,7 @@ Empty states use the §8.2 sentences from the implementation guide.
 
 The projects list shows a footer link, `עוד N פעילים · M הסתיימו`, instead of a finished-projects checkbox.
 
-Toggle and DatePicker leave the library until a shipped screen needs them. RangeSheet keeps MonthGrid.
+DatePicker stays out of the library. [0063](0063-owner-ledger.md) restores Toggle for the overhead switch, the supplier-memory switch, and the settings switches. RangeSheet keeps MonthGrid.
 
 `נתוני דוגמה · Example data` is a Storybook sample label. The running app does not render it.
 
@@ -47,4 +47,4 @@ A disabled or `aria-disabled` control shows `cursor: not-allowed`. One rule in `
 
 The disabled element does not get `pointer-events: none`. That would hide the cursor. The `disabled` attribute blocks the click, or the handler does. A busy control uses `cursor: progress`.
 
-Toggle and the DatePicker trigger stay out of the library, as this decision already says. Both were buttons, so this same rule is what they use if a screen brings them back. The computed-cursor test covers a disabled Button, a disabled IconButton, and the checkbox row (`.ui-toggle`), which is the toggle control still in the library.
+DatePicker stays out of the library. Toggle is back, as [0063](0063-owner-ledger.md) says, and a disabled Toggle uses this same not-allowed rule on its 44px row. The computed-cursor test covers a disabled Button, a disabled IconButton, the checkbox row (`.ui-toggle`), and a disabled Toggle.

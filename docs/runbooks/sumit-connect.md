@@ -72,7 +72,7 @@ from jsonb_array_elements(
 ) as row;
 ```
 
-`list_unpaid` uses the signed-in user. In the SQL editor, set the request JWT to the owner's id, or open חשבוניות פתוחות in the app on כל התקופה. The Vitest answer key is `expected-pnl.json`. The app does not read it.
+`list_unpaid` uses the signed-in user. In the SQL editor, set the request JWT to the owner's id, or open חשבוניות שלא שולמו in the app on כל התקופה. The Vitest answer key is `expected-pnl.json`. The app does not read it.
 
 ## 5. Proof on a local stack
 
@@ -115,6 +115,6 @@ supabase functions deploy sumit-sync
 
 Use the same `SUMIT_KEK` for both. Build the client with `app/.env.production` (`pnpm build`) and upload `app/dist` to Cloudflare Pages. The project name in the Pages dashboard is the existing Flow project. Do not upload `storybook-static`.
 
-Sign in with Google as ops@nromomentum.com, open הגדרות, paste CompanyID 2389917160 and the test key, tap חיבור, then רענון עכשיו. On כל התקופה and חשבוניות, Home shows 37,700 and חשבוניות פתוחות shows 134,520. Repeat the connect for owner@example.com after that account finishes onboarding. Each owner has a separate Flow company. Both may point at the same SUMIT company.
+Sign in with Google as ops@nromomentum.com, open הגדרות, tap חיבור SUMIT, paste מספר חברה 2389917160 and the test key, tap חיבור, then רענון עכשיו. On כל התקופה, Home shows 37,700 and חשבוניות שלא שולמו shows 134,520. Repeat the connect for owner@example.com after that account finishes onboarding. Each owner has a separate Flow company. Both may point at the same SUMIT company.
 
 Worker-day splits for this company are created by the sync ([0050](../decisions/0050-demo-splits-and-review.md)). Overhead stays a company total. The after-overhead switch on Home is a view only.

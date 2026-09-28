@@ -7,9 +7,17 @@ type SearchFieldProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  disabled?: boolean;
 };
 
-export function SearchField({ label, value, onChange, placeholder = "למשל: הרצל", autoFocus = false }: SearchFieldProps) {
+export function SearchField({
+  label,
+  value,
+  onChange,
+  placeholder = "למשל: הרצל",
+  autoFocus = false,
+  disabled = false,
+}: SearchFieldProps) {
   const id = useId();
   return (
     <div className="ui-search">
@@ -23,11 +31,12 @@ export function SearchField({ label, value, onChange, placeholder = "למשל: �
         value={value}
         placeholder={placeholder}
         autoFocus={autoFocus}
+        disabled={disabled}
         onChange={(event) => {
           onChange(event.target.value);
         }}
       />
-      {value !== "" ? (
+      {value !== "" && !disabled ? (
         <button
           type="button"
           aria-label="ניקוי"

@@ -205,6 +205,37 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
+export function CheckIcon(props: IconProps) {
+  return (
+    <Svg {...props} stroke={props.stroke ?? 2.4}>
+      <polyline points="20 6 9 17 4 12" />
+    </Svg>
+  );
+}
+
+export function GripIcon(props: IconProps) {
+  return (
+    <svg width={props.size ?? 20} height={props.size ?? 20} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="9" cy="7" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="7" r="1.3" fill="currentColor" />
+      <circle cx="9" cy="12" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="12" r="1.3" fill="currentColor" />
+      <circle cx="9" cy="17" r="1.3" fill="currentColor" />
+      <circle cx="15" cy="17" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function MoreIcon(props: IconProps) {
+  return (
+    <svg width={props.size ?? 24} height={props.size ?? 24} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.4" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function TrashIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>

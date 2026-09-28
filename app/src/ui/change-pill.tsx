@@ -21,7 +21,7 @@ export function formatChange(percent: number): { text: string; tone: ChangeTone 
 export function ChangePill({ percent, comparison, onBand = false }: ChangePillProps) {
   const change = formatChange(percent);
   const words = change.tone === "flat" ? `0% ${comparison}` : `${change.tone === "up" ? "עלייה" : "ירידה"} של ${change.text} ${comparison}`;
-  const mark = change.tone === "flat" ? change.text : `${change.tone === "up" ? "▲" : "▼"} ${change.text}`;
+  const arrow = change.tone === "up" ? "▲" : change.tone === "down" ? "▼" : "";
   return (
     <span className="inline-flex items-center gap-2">
       <span
@@ -34,7 +34,10 @@ export function ChangePill({ percent, comparison, onBand = false }: ChangePillPr
         )}
         aria-label={words}
       >
-        <span aria-hidden="true">{mark}</span>
+        <span aria-hidden="true">
+          {arrow === "" ? null : `${arrow} `}
+          <bdi dir="ltr">{change.text}</bdi>
+        </span>
       </span>
       <span className={onBand ? "t-label text-on-band-secondary" : "t-label text-text-secondary"}>{comparison}</span>
     </span>

@@ -14,6 +14,14 @@ describe("HomeSkeleton", () => {
     expect(document.querySelector(".ui-skel-pill")).not.toBeNull();
     expect(document.querySelector(".ui-skeleton-hero")).not.toBeNull();
     expect(document.querySelector(".ui-skel-card")).not.toBeNull();
+    const greet = document.querySelector(".ui-skel-greet-a");
+    expect(greet).toBeInstanceOf(HTMLElement);
+    if (greet instanceof HTMLElement) {
+      expect(getComputedStyle(greet).inlineSize).not.toBe("0px");
+      expect(getComputedStyle(greet).width).not.toBe("0px");
+    }
+    expect(document.querySelectorAll(".ui-skel-figure")).toHaveLength(2);
+    expect(document.querySelector(".ui-skel-delta-a")).not.toBeNull();
   });
 
   it("keeps the preview label on a preview load", () => {

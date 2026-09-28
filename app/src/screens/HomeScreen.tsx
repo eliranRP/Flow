@@ -263,11 +263,11 @@ export function HomeBooks({
   );
 }
 
-function unpaidHint(pending: number, unpaidCount: number, unpaidNet: bigint, ready: boolean): string | undefined {
+function unpaidHint(pending: number, unpaidCount: number, unpaidNet: bigint, ready: boolean): ReactNode {
   if (!ready || unpaidCount === 0) return undefined;
-  const amount = formatIls(unpaidNet);
-  if (pending > 0) return `${String(unpaidCount)} חשבוניות לא שולמו · ${amount}`;
-  return `${amount} · לא נכלל ברווח`;
+  const amount = <bdi dir="ltr">{formatIls(unpaidNet)}</bdi>;
+  if (pending > 0) return <>{String(unpaidCount)} חשבוניות לא שולמו · {amount}</>;
+  return <>{amount} · טרם נגבה</>;
 }
 
 function ProjectLine({ project, search }: { project: ProjectRow; search: string }) {

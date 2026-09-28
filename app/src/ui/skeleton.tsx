@@ -8,12 +8,23 @@ export function Skeleton({
   width = "md",
   tone = "surface",
   hero = false,
+  className,
 }: {
   width?: SkeletonWidth;
   tone?: "surface" | "band";
   hero?: boolean;
+  className?: string;
 }) {
-  return <span className={cx("ui-skeleton-bar", tone === "band" && "ui-skeleton-bar-band", hero ? "ui-skeleton-hero" : `ui-skeleton-w-${width}`)} />;
+  return (
+    <span
+      className={cx(
+        "ui-skeleton-bar",
+        tone === "band" && "ui-skeleton-bar-band",
+        className ? null : hero ? "ui-skeleton-hero" : `ui-skeleton-w-${width}`,
+        className,
+      )}
+    />
+  );
 }
 
 export function ListSkeleton() {

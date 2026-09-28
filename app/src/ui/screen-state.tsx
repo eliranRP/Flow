@@ -8,23 +8,29 @@ export function ScreenState({
   title,
   subtitle,
   backTo,
+  action,
+  kicker,
   phase,
   onRetry,
   empty,
+  loading,
   children,
 }: {
   title: string;
   subtitle?: string;
   backTo?: string;
+  action?: ReactNode;
+  kicker?: string;
   phase: ScreenPhase;
   onRetry: () => void;
   empty?: ReactNode;
+  loading?: ReactNode;
   children?: ReactNode;
 }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} />
-      {phase.kind === "loading" ? <ListSkeleton /> : null}
+      <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} kicker={kicker} />
+      {phase.kind === "loading" ? (loading ?? <ListSkeleton />) : null}
       {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={onRetry} /> : null}
       {phase.kind === "empty" ? empty : null}
       {phase.kind === "ready" ? children : null}

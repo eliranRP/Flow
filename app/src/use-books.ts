@@ -86,11 +86,11 @@ export function useUnpaidQuery(active = true) {
   });
 }
 
-export function useReviewQuery() {
+export function useReviewQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["review", preview],
-    enabled: preview === "off",
+    enabled: active && preview === "off",
     queryFn: async (): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

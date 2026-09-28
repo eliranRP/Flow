@@ -12,22 +12,28 @@ export function HomeSkeleton({ preview = false }: { preview?: boolean }) {
         טוען…
       </p>
       <TopBand preview={preview} trailing={<span className="ui-skel-pill" />}>
-        <BandHero>
-          <div className="ui-skel-band">
-            <Skeleton tone="band" width="sm" />
-            <Skeleton tone="band" width="md" />
-            <Skeleton tone="band" hero />
-            <Skeleton tone="band" width="sm" />
-            <span className="ui-skel-figures">
-              <Skeleton tone="band" width="md" />
-              <Skeleton tone="band" width="md" />
+        <div className="ui-skel-band">
+          <span className="ui-greet">
+            <Skeleton tone="band" className="ui-skel-greet-a" />
+            <Skeleton tone="band" className="ui-skel-greet-b" />
+          </span>
+          <BandHero>
+            <Skeleton tone="band" className="ui-skel-label" />
+            <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
+            <span className="ui-skel-delta">
+              <Skeleton tone="band" className="ui-skel-delta-a" />
+              <Skeleton tone="band" className="ui-skel-delta-b" />
             </span>
-          </div>
-        </BandHero>
+          </BandHero>
+          <span className="ui-skel-figures">
+            <Skeleton tone="band" className="ui-skel-figure" />
+            <Skeleton tone="band" className="ui-skel-figure" />
+          </span>
+        </div>
       </TopBand>
       <div className="ui-skel-card">
-        <Skeleton width="sm" />
-        <span className="flex min-w-0 flex-col gap-2">
+        <Skeleton className="ui-skel-dot" />
+        <span className="ui-skel-copy">
           <Skeleton width="lg" />
           <Skeleton width="md" />
         </span>
@@ -36,7 +42,7 @@ export function HomeSkeleton({ preview = false }: { preview?: boolean }) {
       <div className="ui-project-list">
         {rowKeys.map((key) => (
           <div className="ui-row" key={key}>
-            <span className="ui-row-text">
+            <span className="ui-skel-copy">
               <Skeleton width="md" />
               <Skeleton width="sm" />
             </span>
