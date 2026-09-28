@@ -4,6 +4,12 @@
 -- SUMIT keys are envelope ciphertext only. The browser cannot read or write them.
 -- gen_random_uuid() is built into Postgres 13+ (this project is 17). No pgcrypto.
 -- VAT default 1800 bp matches packages/shared STANDARD_VAT_RATE_BP (decisions 0041, 0043).
+--
+-- GRANT EXECUTE: the revoke below removes the default EXECUTE privilege from
+-- PUBLIC for every future function, in every schema. A new function is not
+-- callable until it has an explicit grant. Every function added later, in
+-- public or private, needs `grant execute on function ... to authenticated`,
+-- and to service_role when the server should call it.
 
 -- ---------------------------------------------------------------------------
 -- Enums
@@ -717,6 +723,7 @@ revoke all on all routines in schema public from anon, authenticated, public;
 
 -- PUBLIC's built-in default is EXECUTE on every new function, and anon
 -- inherits PUBLIC. A per-schema revoke from anon does not remove that grant.
+-- After this revoke, every future function needs its own grant execute.
 alter default privileges for role postgres revoke execute on functions from public;
 
 alter default privileges in schema public revoke all on tables from anon;
