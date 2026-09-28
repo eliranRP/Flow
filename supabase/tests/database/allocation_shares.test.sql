@@ -4,7 +4,11 @@ begin;
 
 select plan(3);
 
-select tests.create_supabase_user('alloc_owner');
+do $users$
+begin
+  perform tests.create_supabase_user('alloc_owner');
+end
+$users$;
 
 insert into public.companies (owner_id, name)
 values (tests.get_supabase_uid('alloc_owner'), 'הקצאה');
