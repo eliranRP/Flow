@@ -12,6 +12,7 @@
     "build-storybook": "storybook build",
     "test:storybook": "vitest run --project storybook",
     "test:e2e": "playwright test",
+    "test:e2e:live": "playwright test -c playwright.live.config.ts",
     "preview": "vite preview --host 0.0.0.0 --port 43123 --strictPort"
   },
   "dependencies": {

@@ -65,7 +65,7 @@ export function HomeScreen() {
     },
   });
 
-  const showBooks = preview === "demo" || (!previewing && dashboard.data != null && hasBooks(dashboard.data));
+  const showBooks = !previewing && dashboard.data != null && hasBooks(dashboard.data);
   const loading =
     preview === "loading" ||
     (!previewing && (status === "loading" || ((home.isLoading || dashboard.isLoading) && !showBooks)));
@@ -80,7 +80,7 @@ export function HomeScreen() {
     onlineManager.isOnline();
   const offline = preview === "error" || liveOffline;
   const failed = previewHidesBand(preview) || liveOffline || liveServer;
-  const greeting = homeGreeting(preview === "demo" ? "אלירן" : readOwnerName(session?.user.user_metadata));
+  const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
 
   useEffect(() => {
     if (!failed && showBooks) {
@@ -98,7 +98,7 @@ export function HomeScreen() {
 
   function retry() {
     if (previewing) {
-      void navigate(preview === "demo" ? "/?preview=demo" : "/?preview=1");
+      void navigate("/?preview=1");
       return;
     }
     void home.refetch();
@@ -111,7 +111,7 @@ export function HomeScreen() {
     return <ErrorState offline={offline} onRetry={retry} />;
   }
 
-  if (!showBooks || !dashboard.data) {
+  if (!showBooks) {
     return (
       <div className="flex min-h-full flex-1 flex-col">
         <TopBand preview={previewing}>

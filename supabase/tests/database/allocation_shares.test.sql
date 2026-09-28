@@ -68,8 +68,15 @@ select lives_ok($$set constraints all immediate$$, 'balanced shares pass');
 
 select throws_ok(
   $$update public.allocations
-    set transaction_id = (select id from public.transactions where idempotency_key = 'alloc-2')
-    where share_bp = 6000$$,
+    set transaction_id = (
+      select t.id
+      from public.transactions t
+      join public.companies c on c.id = t.company_id
+      where t.idempotency_key = 'alloc-2'
+        and c.name = 'הקצאה'
+    )
+    where company_id = (select id from public.companies where name = 'הקצאה')
+      and share_bp = 6000$$,
   '23514',
   NULL,
   'moving an allocation checks the old and the new transaction'

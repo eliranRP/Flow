@@ -45,14 +45,6 @@ export const HomeServerError: Story = {
   ),
 };
 
-export const HomeBooks: Story = {
-  render: () => (
-    <StoryRoute entry="/?preview=demo">
-      <HomeScreen />
-    </StoryRoute>
-  ),
-};
-
 export const SignIn: Story = {
   render: () => (
     <StoryRoute entry="/sign-in">
@@ -77,26 +69,10 @@ export const Help: Story = {
   ),
 };
 
-export const Projects: Story = {
-  render: () => (
-    <StoryRoute entry="/projects?preview=demo">
-      <ProjectsScreen />
-    </StoryRoute>
-  ),
-};
-
 export const ProjectsEmpty: Story = {
   render: () => (
     <StoryRoute entry="/projects?preview=empty">
       <ProjectsScreen />
-    </StoryRoute>
-  ),
-};
-
-export const Review: Story = {
-  render: () => (
-    <StoryRoute entry="/review?preview=demo">
-      <ReviewScreen />
     </StoryRoute>
   ),
 };

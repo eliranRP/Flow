@@ -192,12 +192,8 @@ export function ProjectDetailScreen() {
   const search = usePreviewSearch();
   const detail = useQuery({
     queryKey: ["project", preview, projectId],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async () => {
-      if (preview === "demo") {
-        const model = await import("../demo/model");
-        return model.demoProject(projectId);
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("get_project", { p_id: projectId });
@@ -218,7 +214,7 @@ export function ProjectDetailScreen() {
     },
   });
 
-  if (preview !== "off" && preview !== "demo") return <LegacyEmptyProject />;
+  if (preview !== "off") return <LegacyEmptyProject />;
   if (detail.isLoading) return <ScreenMessage title="פרויקט" body="טוען…" loading />;
   if (!detail.data) {
     return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
@@ -276,9 +272,7 @@ export function ProjectDetailScreen() {
           ))}
         </List>
       )}
-      {preview === "off" ? (
-        <ArchiveButton projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />
-      ) : null}
+      <ArchiveButton projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />
     </div>
   );
 }
@@ -579,7 +573,7 @@ export function UnpaidScreen() {
               key={row.id}
               variant="transaction"
               title={row.customer_name ?? row.description}
-              hint={`${row.project_name ?? ""} · ${row.doc_date}`}
+              hint={[row.description, row.project_name, row.doc_date].filter((part) => part != null && part !== "").join(" · ")}
               agorot={ag(row.open_gross_agorot)}
               sign="in"
               source="invoice"
@@ -600,12 +594,8 @@ export function TransactionScreen() {
   const [confirm, setConfirm] = useState(false);
   const detail = useQuery({
     queryKey: ["txn", preview, transactionId],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async () => {
-      if (preview === "demo") {
-        const model = await import("../demo/model");
-        return model.demoTransaction(transactionId);
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("get_transaction", { p_id: transactionId });
@@ -627,7 +617,7 @@ export function TransactionScreen() {
       };
     },
   });
-  if (preview !== "off" && preview !== "demo") {
+  if (preview !== "off") {
     return <ScreenHeader title="פרטי תנועה" backTo={`/${search}`} />;
   }
   if (detail.isLoading) return <ScreenMessage title="פרטי תנועה" body="טוען…" loading />;
@@ -811,7 +801,7 @@ export function SettingsScreen() {
         <p className="t-hint">{dashboard.data?.vat_registered === false ? "עוסק פטור" : "עוסק מורשה"}</p>
       </Section>
       <Section title="חשבון Google">
-        <p>{session?.user.email ?? (preview === "demo" ? "eliranazulay@gmail.com" : "לא מחובר")}</p>
+        <p>{session?.user.email ?? "לא מחובר"}</p>
         {preview === "off" ? (
           <Button
             variant="secondary"

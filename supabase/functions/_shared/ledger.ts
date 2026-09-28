@@ -214,7 +214,7 @@ export function mapCrmEntity(entity: Record<string, unknown>): SumitDoc | null {
 
 /** Read-only SUMIT paths. Anything else throws before the request. */
 export const SUMIT_ALLOWLIST = [
-  "https://api.sumit.co.il/crm/data/listfolders/",
+  "https://api.sumit.co.il/crm/schema/listfolders/",
   "https://api.sumit.co.il/crm/data/listentities/",
 ] as const;
 
