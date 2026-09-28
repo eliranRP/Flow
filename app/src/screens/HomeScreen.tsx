@@ -39,9 +39,8 @@ export function HomeScreen() {
   });
 
   const loading = preview === "loading" || (!previewing && (status === "loading" || home.isLoading));
-  const offline = preview === "error" || (!previewing && home.isError && navigator.onLine === false);
-  const serverFailed =
-    preview === "error-server" || (!previewing && home.isError && navigator.onLine !== false);
+  const offline = preview === "error" || (!previewing && home.isError && !navigator.onLine);
+  const serverFailed = preview === "error-server" || (!previewing && home.isError && navigator.onLine);
   const failed = offline || serverFailed;
   const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
   // Phase 0 does not wire the P&L yet, so the band stays the first-run placeholder.
