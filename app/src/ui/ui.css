@@ -2691,8 +2691,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   padding-inline: var(--space-side);
 }
 
-.ui-benefit,
-.ui-install-step {
+.ui-benefit {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -2720,13 +2719,167 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   block-size: var(--size-chip);
 }
 
-.ui-install-hint {
+.ui-install {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.ui-install-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--space-4);
+}
+
+.ui-install-top {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  min-block-size: var(--topbar-height);
+  padding-inline: var(--space-3);
+}
+
+.ui-install-top .ui-icon-btn {
+  margin-inline-start: auto;
+}
+
+.ui-install-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--space-10);
+  padding-inline: var(--space-side);
+  text-align: center;
+}
+
+.ui-install-hero .t-title-1 {
+  margin-top: var(--space-6);
+  white-space: nowrap;
+}
+
+.ui-install-sub {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line);
+  text-align: center;
+}
+
+.ui-install-benefits,
+.ui-install-steps {
+  margin-top: var(--space-10);
+  padding-inline: var(--space-side);
+}
+
+.ui-install-benefits .ui-row-icon {
+  color: var(--color-accent-text);
+}
+
+.ui-install-benefits .ui-row-title {
+  font-weight: var(--type-title-3-weight);
+  white-space: normal;
+}
+
+.ui-install-steps {
+  margin-bottom: 0;
+  padding-inline: var(--space-side);
+  list-style: none;
+}
+
+.ui-install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding-block: var(--space-3);
+}
+
+.ui-install-step + .ui-install-step {
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-install-num {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: calc(var(--touch-min) - var(--space-4));
+  block-size: calc(var(--touch-min) - var(--space-4));
+  margin-top: var(--space-1);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-title-3-weight);
+  font-variant-numeric: var(--font-numerals);
+}
+
+.ui-install-step-text {
+  min-inline-size: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+}
+
+.ui-install-step-text strong {
+  font-weight: var(--type-title-3-weight);
+}
+
+.ui-install-unit {
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-1);
-  margin-top: var(--space-4);
-  color: var(--color-text-secondary);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ui-install-tile {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--space-8);
+  block-size: var(--space-8);
+  border-radius: var(--radius-note);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-install-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-hint-weight);
+  line-height: var(--type-hint-line);
+  text-align: center;
+}
+
+.ui-install-hint svg {
+  color: var(--color-accent-text);
+}
+
+.ui-install-cta {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-side) calc(var(--safe-bottom) + var(--space-4));
+  background: var(--color-bg);
+}
+
+.ui-install-later {
+  height: var(--touch-min);
+  min-height: var(--touch-min);
 }
 
 .ui-ref-cta {

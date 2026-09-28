@@ -3,16 +3,10 @@ import { IconButton } from "./icon-button";
 import { Skeleton } from "./skeleton";
 import {
   AppIcon,
-  BellIcon,
   CheckIcon,
-  ChevronDownIcon,
   CloseIcon,
   DocumentIcon,
-  DownloadIcon,
-  HomeIcon,
   InfoIcon,
-  ShareIcon,
-  SquarePlusIcon,
 } from "./icons";
 
 const exampleLabel = "נתוני דוגמה · Example data";
@@ -44,82 +38,6 @@ function StepMark({ state }: { state: "done" | "busy" | "wait" }) {
     );
   }
   return <span className="ui-step-mark"><span className="ui-step-wait" /></span>;
-}
-
-/** 17a. Android install. The prompt is not wired to beforeinstallprompt yet. */
-export function InstallAndroidFrame() {
-  const benefits = [
-    { icon: <HomeIcon size={22} />, title: "פתיחה במגע אחד", hint: "מסך הבית, במסך מלא" },
-    { icon: <BellIcon size={22} />, title: "שתי התראות בלבד", hint: "סיכום שבועי ותזכורת לאישור" },
-    { icon: <DownloadIcon size={22} />, title: "בלי חנות אפליקציות", hint: "מתעדכן לבד" },
-  ];
-  return (
-    <div className="ui-ref">
-      <ReferenceTop />
-      <div className="ui-ref-icon">
-        <AppIcon />
-      </div>
-      <header className="ui-ref-copy">
-        <h1 className="t-title-1">התקנת <bdi dir="ltr">Flow</bdi></h1>
-        <p className="t-label">נפתח כמו אפליקציה, ישר ממסך הבית.</p>
-      </header>
-      <div className="ui-ref-body">
-        {benefits.map((benefit) => (
-          <div className="ui-benefit" key={benefit.title}>
-            <span className="ui-benefit-icon">{benefit.icon}</span>
-            <span className="ui-row-text">
-              <span className="ui-row-title">{benefit.title}</span>
-              <span className="ui-row-hint">{benefit.hint}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="ui-ref-cta">
-        <Button full icon={<DownloadIcon size={18} />} onClick={() => undefined}>התקנה</Button>
-        <Button variant="ghost" full quiet onClick={() => undefined}>לא עכשיו</Button>
-      </div>
-    </div>
-  );
-}
-
-/** 17b. iPhone install is three Safari steps. */
-export function InstallIphoneFrame() {
-  const steps = [
-    { icon: <ShareIcon />, text: "מקישים על ״שיתוף״ בסרגל של ספארי" },
-    { icon: <SquarePlusIcon />, text: "בוחרים ״הוסף למסך הבית״" },
-    { icon: <CheckIcon size={18} />, text: "מקישים ״הוסף״ בפינה העליונה" },
-  ];
-  return (
-    <div className="ui-ref">
-      <ReferenceTop />
-      <div className="ui-ref-icon">
-        <AppIcon />
-      </div>
-      <header className="ui-ref-copy">
-        <h1 className="t-title-1">הוספה למסך הבית</h1>
-        <p className="t-label">באייפון זה נעשה מספארי, בשלושה צעדים.</p>
-      </header>
-      <ol className="ui-ref-body">
-        {steps.map((step, index) => (
-          <li className="ui-install-step" key={step.text}>
-            <span className="ui-step-tile">{step.icon}</span>
-            <span>
-              <bdi className="ui-num" dir="ltr">{String(index + 1)}</bdi>
-              {" "}
-              {step.text}
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="ui-install-hint t-hint">
-        כפתור השיתוף נמצא למטה
-        <ChevronDownIcon />
-      </p>
-      <div className="ui-ref-cta">
-        <Button variant="secondary" full onClick={() => undefined}>הבנתי</Button>
-      </div>
-    </div>
-  );
 }
 
 /** ld-05. Bank file processing. */
