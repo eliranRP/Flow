@@ -5,7 +5,26 @@ export type Database = {
   
   "public": {
           Tables: {
-            "allocations": {
+            "agg_month": {
+                  Row: {
+                    "basis": string,"company_id": string,"expense_agorot": number,"income_agorot": number,"net_profit_agorot": number,"ym": string
+                  }
+                  Insert: {
+                    "basis": string,"company_id": string,"expense_agorot": number,"income_agorot": number,"net_profit_agorot": number,"ym": string
+                  }
+                  Update: {
+                    "basis"?: string,"company_id"?: string,"expense_agorot"?: number,"income_agorot"?: number,"net_profit_agorot"?: number,"ym"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "agg_month_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"allocations": {
                   Row: {
                     "amount_net": number,"company_id": string,"created_at": string,"id": string,"project_id": string,"share_bp": number,"transaction_id": string,"updated_at": string
                   }
@@ -34,6 +53,25 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "transactions"
       referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"applied_op": {
+                  Row: {
+                    "client_op_id": string,"company_id": string,"created_at": string,"result": NonNullable<Json>
+                  }
+                  Insert: {
+                    "client_op_id": string,"company_id": string,"created_at"?: string,"result": NonNullable<Json>
+                  }
+                  Update: {
+                    "client_op_id"?: string,"company_id"?: string,"created_at"?: string,"result"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "applied_op_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
     }
                   ]
                 },"audit_log": {
@@ -87,6 +125,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"company_member": {
+                  Row: {
+                    "company_id": string,"role": string,"user_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"role"?: string,"user_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"role"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_member_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"customers": {
                   Row: {
                     "company_id": string,"company_number": string | null,"created_at": string,"id": string,"name": string,"sumit_external_id": number | null,"updated_at": string
@@ -100,6 +157,63 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "customers_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"dirty_month": {
+                  Row: {
+                    "company_id": string,"ym": string
+                  }
+                  Insert: {
+                    "company_id": string,"ym": string
+                  }
+                  Update: {
+                    "company_id"?: string,"ym"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "dirty_month_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"home_snapshot": {
+                  Row: {
+                    "company_id": string,"computed_at": string,"payload": NonNullable<Json>,"period_key": string,"version": number
+                  }
+                  Insert: {
+                    "company_id": string,"computed_at"?: string,"payload": NonNullable<Json>,"period_key": string,"version"?: number
+                  }
+                  Update: {
+                    "company_id"?: string,"computed_at"?: string,"payload"?: NonNullable<Json>,"period_key"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "home_snapshot_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_outbox": {
+                  Row: {
+                    "body": string,"company_id": string,"created_at": string,"id": string,"kind": string,"local_date": string,"sent_at": string | null,"status": string,"title": string,"url": string
+                  }
+                  Insert: {
+                    "body": string,"company_id": string,"created_at"?: string,"id"?: string,"kind": string,"local_date": string,"sent_at"?: string | null,"status"?: string,"title": string,"url": string
+                  }
+                  Update: {
+                    "body"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"kind"?: string,"local_date"?: string,"sent_at"?: string | null,"status"?: string,"title"?: string,"url"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_outbox_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "companies"
@@ -150,6 +264,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_subscription": {
+                  Row: {
+                    "auth_secret": string,"company_id": string,"created_at": string,"endpoint": string,"id": string,"p256dh": string
+                  }
+                  Insert: {
+                    "auth_secret": string,"company_id": string,"created_at"?: string,"endpoint": string,"id"?: string,"p256dh": string
+                  }
+                  Update: {
+                    "auth_secret"?: string,"company_id"?: string,"created_at"?: string,"endpoint"?: string,"id"?: string,"p256dh"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_subscription_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"review_queue": {
                   Row: {
                     "company_id": string,"created_at": string,"id": string,"reason": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["review_status"],"transaction_id": string | null,"updated_at": string
@@ -173,6 +306,25 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "transactions"
       referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"rum_sample": {
+                  Row: {
+                    "company_id": string | null,"created_at": string,"id": number,"lcp_ms": number | null,"path": string | null
+                  }
+                  Insert: {
+                    "company_id"?: string | null,"created_at"?: string,"id"?: never,"lcp_ms"?: number | null,"path"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string | null,"created_at"?: string,"id"?: never,"lcp_ms"?: number | null,"path"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "rum_sample_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
     }
                   ]
                 },"split_rule_targets": {
@@ -231,15 +383,34 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
-                },"sumit_connections": {
+                },"sumit_call_log": {
                   Row: {
-                    "company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null,"updated_at": string
+                    "called_at": string,"company_id": string,"id": number,"purpose": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
+                    "called_at"?: string,"company_id": string,"id"?: never,"purpose": string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
+                    "called_at"?: string,"company_id"?: string,"id"?: never,"purpose"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sumit_call_log_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sumit_connections": {
+                  Row: {
+                    "calls_cap": number,"calls_count": number,"calls_month": string | null,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"drift_fields": string | null,"hook_token": string,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null,"updated_at": string
+                  }
+                  Insert: {
+                    "calls_cap"?: number,"calls_count"?: number,"calls_month"?: string | null,"company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"drift_fields"?: string | null,"hook_token"?: string,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "calls_cap"?: number,"calls_count"?: number,"calls_month"?: string | null,"company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"drift_fields"?: string | null,"hook_token"?: string,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -252,13 +423,13 @@ isOneToOne: true
                   ]
                 },"sumit_refresh_requests": {
                   Row: {
-                    "claimed_at": string | null,"company_id": string,"id": number,"requested_at": string
+                    "claimed_at": string | null,"company_id": string,"id": number,"purpose": string,"requested_at": string
                   }
                   Insert: {
-                    "claimed_at"?: string | null,"company_id": string,"id"?: never,"requested_at"?: string
+                    "claimed_at"?: string | null,"company_id": string,"id"?: never,"purpose"?: string,"requested_at"?: string
                   }
                   Update: {
-                    "claimed_at"?: string | null,"company_id"?: string,"id"?: never,"requested_at"?: string
+                    "claimed_at"?: string | null,"company_id"?: string,"id"?: never,"purpose"?: string,"requested_at"?: string
                   }
                   Relationships: [
                     {
@@ -368,20 +539,32 @@ isOneToOne: true
                 }
           }
           Functions: {
-            "company_pnl":
+            "apply_queued_op":
+{ Args: { "p_args": Json,"p_client_op_id": string,"p_name": string }; Returns: Json
+                           },
+"company_pnl":
 { Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json
                            },
 "create_company":
 { Args: { "p_name": string,"p_vat_registered": boolean }; Returns: string
                            },
 "create_manual_entry":
-{ Args: { "p_category_id": string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id": string,"p_vat_exempt": boolean }; Returns: string
+{ Args: { "p_category_id": string,"p_client_op_id"?: string,"p_description": string,"p_direction": string,"p_doc_date": string,"p_gross_agorot": number,"p_kind": string,"p_project_id": string,"p_vat_exempt": boolean }; Returns: string
+                           },
+"custom_access_token_hook":
+{ Args: { "event": Json }; Returns: Json
                            },
 "delete_transaction":
 { Args: { "p_id": string }; Returns: undefined
                            },
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"dispatch_notifications":
+{ Args: { "p_now"?: string }; Returns: number
+                           },
+"export_ledger":
+{ Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
                            },
 "get_dashboard":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_to"?: string }; Returns: Json
@@ -404,11 +587,35 @@ isOneToOne: true
 "list_unpaid":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"log_rum":
+{ Args: { "p_lcp_ms": number,"p_path": string }; Returns: undefined
+                           },
 "map_budget_section":
 { Args: { "p_name": string,"p_project_id": string,"p_section_id": number }; Returns: string
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
+                           },
+"push_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"read_home_snapshot":
+{ Args: { "p_known"?: Json }; Returns: Json
+                           },
+"refresh_company_months":
+{ Args: { "p_company_id": string,"p_months": (string)[] }; Returns: undefined
+                           },
+"refresh_dirty":
+{ Args: { "p_company_id"?: string }; Returns: number
+                           },
+"register_push":
+{ Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string }; Returns: undefined
+                           },
+"request_refresh":
+{ Args: { "p_purpose"?: string }; Returns: Json
+                           },
+"reserve_sumit_call":
+{ Args: { "p_company_id": string,"p_purpose": string }; Returns: boolean
                            },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id": string,"p_id": string,"p_project_id": string }; Returns: undefined
@@ -424,6 +631,9 @@ isOneToOne: true
                            },
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
+                           },
+"unregister_push":
+{ Args: { "p_endpoint": string }; Returns: undefined
                            },
 "upsert_project":
 { Args: { "p_budget_agorot": number,"p_id": string,"p_name": string,"p_status": string }; Returns: string
