@@ -70,3 +70,5 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0041](0041-amounts-before-vat.md) | 2026-09-26 | Accepted | P&L amounts are before VAT. 0043 amends the missing-split rule for expenses |
 | [0042](0042-sumit-primary-income-and-expenses.md) | 2026-09-26 | Accepted | SUMIT is the primary source for income and expenses; Hapoalim complements it |
 | [0043](0043-assumed-vat-on-expenses.md) | 2026-09-27 | Accepted | Expenses with no VAT split assume 18%, unless the supplier is VAT-exempt |
+| [0044](0044-phase-0-shell-calls.md) | 2026-09-27 | Accepted | Phase 0 shell: preview banner, es-01 copy, type scale, placeholders, review states |
+| [0045](0045-phase-0-design-gaps.md) | 2026-09-28 | Accepted | Phase 0 design gaps: help, load errors, greeting, period pill, Add hint, tab-bar floor |

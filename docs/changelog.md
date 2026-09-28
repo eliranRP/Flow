@@ -1,6 +1,18 @@
 # Changelog
 
+## 2026-09-28
+
+Decision [0045](decisions/0045-phase-0-design-gaps.md), Accepted. It records the Phase 0 design gaps left after the review of `fd355ad`. `/help` is a plain title, one line, and a mailto to ops@nromomentum.com. A non-offline load failure uses "לא הצלחנו לטעון את הנתונים" and is reachable with `?preview=error-server`. A missing name greets with "שלום". The Phase 0 band has no period pill. The Add sheet is a title and one hint. The tab bar's 8px floor is `--tabbar-min-inset`.
+
 ## 2026-09-27
+
+Decision [0044](decisions/0044-phase-0-shell-calls.md), Accepted. It records the Phase 0 shell calls from the UI review: the preview banner is Hebrew only and does not push the band, the first-run empty state asks to connect SUMIT, 17px text uses the type scale, placeholders are a plain title, and Home loading, empty, and error can be opened with `?preview=`.
+
+## 2026-09-27
+
+[DESIGN-RULES.md](design/DESIGN-RULES.md) is the reviewer reference for design and UX. It compiles the design decisions, the token tables, the implementation-guide rules, and a per-screen index of the approved mockups. The mockup files stay in `design/`.
+
+Phase 0 lands the application skeleton on branch `phase-0`: pnpm workspaces (`app/`, `supabase/`, `packages/shared`), schema v1 with owner-scoped RLS, the Rule A P&L checked against the Flow Test demo client, a demo seed script, and a Home latency script. No keys are in the repo. Migrations are applied to the hosted project by hand after review.
 
 Decision [0043](decisions/0043-assumed-vat-on-expenses.md), Accepted. It amends [0041](decisions/0041-amounts-before-vat.md) for expenses.
 

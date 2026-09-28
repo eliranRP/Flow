@@ -1,0 +1,37 @@
+{
+  "name": "flow",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @flow/app dev",
+    "build": "pnpm --filter @flow/app build",
+    "typecheck": "tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter \"!flow\" typecheck",
+    "lint": "eslint .",
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @flow/app test:e2e",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "latency": "tsx scripts/latency.ts",
+    "db:start": "supabase start",
+    "db:test": "supabase test db",
+    "db:test:local": "bash scripts/pgtap-local.sh",
+    "db:types": "supabase gen types typescript --local --schema public > packages/shared/src/database.types.ts",
+    "db:types:check": "bash scripts/check-db-types.sh"
+  },
+  "dependencies": {
+    "@flow/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "@types/node": "^22.18.6",
+    "eslint": "^9.35.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.0"
+  }
+}

@@ -1,6 +1,6 @@
 # Flow · design
 
-This folder holds the approved Flow design: V1 Violet with the coloured top band, in light and dark. The files were exported byte-for-byte from the design box on 26 Sep 2026.
+This folder holds the approved Flow design: V1 Violet with the coloured top band, in light and dark. The files were exported byte-for-byte from the design box on 26 Sep 2026. The reviewer reference that cites these files and the decision records is [DESIGN-RULES.md](../docs/design/DESIGN-RULES.md).
 
 | Folder | Contents |
 |---|---|
