@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, Outlet, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { homeSummarySchema } from "@flow/shared";
+import { addTriggerRef } from "./add-trigger";
 import { AuthProvider, useAuth } from "./auth";
+import { HELP_EMAIL } from "./config";
 import { PageTitle } from "./components/PageTitle";
 import { Sheet } from "./components/Sheet";
 import { HomeSkeleton } from "./components/Skeleton";
@@ -10,6 +12,7 @@ import { ThemeColor } from "./components/ThemeColor";
 import { BackIcon } from "./components/icons";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode, usePreviewSearch } from "./preview";
+import { readSheetBackground } from "./sheet-background";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
 import { ProjectScreen } from "./screens/ProjectScreen";
@@ -20,7 +23,18 @@ export function App() {
     <AuthProvider>
       <ThemeColor />
       <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
-        <Routes>
+        <AppRoutes />
+      </div>
+    </AuthProvider>
+  );
+}
+
+function AppRoutes() {
+  const location = useLocation();
+  const background = readSheetBackground(location.state);
+  return (
+    <>
+      <Routes location={background ?? location}>
           <Route path="/sign-in" element={<SignInScreen />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/preview" element={<Navigate to="/?preview=1" replace />} />
@@ -68,9 +82,14 @@ export function App() {
             </Route>
           </Route>
         </Routes>
-      </div>
-    </AuthProvider>
-  );
+        {background ? (
+          <Routes>
+            <Route path="add" element={<AddSheet />} />
+            <Route path="review/change" element={<ChangeSheet />} />
+          </Routes>
+        ) : null}
+      </>
+    );
 }
 
 function RequireAuth() {
@@ -126,7 +145,7 @@ function AddSheet() {
       title="הוספה"
       hint="בקרוב תוכלו להוסיף כאן הכנסה או הוצאה"
       closeTo={`/${search}`}
-      returnFocusTo='nav [aria-label="הוספה"]'
+      returnFocusRef={addTriggerRef}
     />
   );
 }
@@ -137,11 +156,11 @@ function HelpScreen() {
       <h1 className="t-title-1">עזרה</h1>
       <p className="t-label mt-4 text-text-secondary">לעזרה בכניסה כותבים לנו.</p>
       <p className="mt-4">
-        <a className="t-label text-accent-text underline" href="mailto:ops@nromomentum.com">
-          ops@nromomentum.com
+        <a className="hit-inline t-label text-accent-text underline" href={`mailto:${HELP_EMAIL}`}>
+          {HELP_EMAIL}
         </a>
       </p>
-      <Link to="/sign-in" className="help-back t-label">
+      <Link to="/sign-in" className="help-back hit-inline t-label">
         חזרה
       </Link>
     </main>

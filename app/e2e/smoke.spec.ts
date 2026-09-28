@@ -40,6 +40,14 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
   await expect(page.getByRole("link", { name: "הוספה" })).toBeFocused();
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
+  await page.goto("/projects?preview=1");
+  await page.getByRole("link", { name: "הוספה" }).click();
+  await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
+  await expect(page.locator("h1", { hasText: "פרויקטים" })).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
+  await expect(page).toHaveURL(/\/projects\?preview=1/);
   await page.goto("/transactions/1?preview=1");
   await expect(page.getByRole("heading", { name: "פרטי תנועה" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toHaveCount(0);

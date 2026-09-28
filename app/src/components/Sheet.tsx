@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { Drawer } from "vaul";
 import { CloseIcon } from "./icons";
@@ -6,36 +6,39 @@ import { CloseIcon } from "./icons";
 /**
  * Vaul traps focus, closes on Escape, scrim, and swipe.
  * The sheet is a real route (`/add`, `/review/change`). Opening it pushes
- * history. Closing plays the exit animation, then pops that entry.
+ * history. Closing plays the exit animation, then pops that entry, so the
+ * screen underneath is the one that opened the sheet.
  * A direct visit (nothing under it) replaces the route with `closeTo`.
- * `returnFocusTo` is a selector for the control that opened the sheet.
+ * `returnFocusRef` points at the + control. Focus returns there after close
+ * when that node is still in the document. A direct /add, or a back navigation
+ * that left the tab bar, finds it disconnected and skips the focus.
  */
 export function Sheet({
   title,
   closeTo,
   hint,
-  returnFocusTo,
+  returnFocusRef,
 }: {
   title: string;
   closeTo: string;
   hint?: string;
-  returnFocusTo?: string;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const navigate = useNavigate();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
-    const selector = returnFocusTo;
+    const ref = returnFocusRef;
     return () => {
-      if (!selector) return;
+      if (!ref) return;
       window.setTimeout(() => {
         if (document.querySelector('[role="dialog"]')) return;
-        const el = document.querySelector(selector);
-        if (el instanceof HTMLElement) el.focus();
+        const el = ref.current;
+        if (el?.isConnected) el.focus();
       }, 0);
     };
-  }, [returnFocusTo]);
+  }, [returnFocusRef]);
 
   function leave() {
     const idx = historyIndex();

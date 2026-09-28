@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
+import { HELP_EMAIL } from "./config";
 
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -85,6 +86,21 @@ describe("App", () => {
     });
   });
 
+  it("closes the add sheet back to the screen that opened it", async () => {
+    renderAt("/projects?preview=1");
+    fireEvent.click(screen.getByRole("link", { name: "הוספה" }));
+    expect(await screen.findByRole("dialog", { name: "הוספה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" }),
+    ).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
+  });
+
   it("opens the review change sheet over the review page", () => {
     renderAt("/review/change?preview=1");
     expect(screen.getByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
@@ -119,13 +135,11 @@ describe("App", () => {
     renderAt("/help");
     expect(screen.getByRole("heading", { name: "עזרה" })).toBeInTheDocument();
     expect(screen.getByText("לעזרה בכניסה כותבים לנו.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ops@nromomentum.com" })).toHaveAttribute(
-      "href",
-      "mailto:ops@nromomentum.com",
-    );
+    expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
     const back = screen.getByRole("link", { name: "חזרה" });
-    expect(back).toHaveClass("help-back");
+    expect(back).toHaveClass("help-back", "hit-inline");
     expect(back).not.toHaveClass("icon-btn");
+    expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveClass("hit-inline");
   });
 
   it("sends a signed-out visitor to sign-in", () => {
