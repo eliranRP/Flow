@@ -12,14 +12,49 @@ type TextLinkProps = {
   tone?: "accent" | "quiet";
   size?: "label" | "hint";
   chevron?: boolean;
+  /** Drawn before the words. Categories uses a 16px plus. */
+  icon?: ReactNode;
+  /** Drawn after the words. Categories uses a chevron that turns when expanded. */
+  trailing?: ReactNode;
+  expanded?: boolean;
+  controls?: string;
+  /** The categories footer wraps instead of ellipsizing. */
+  wrap?: boolean;
 };
 
-export function TextLink({ children, className, to, href, onClick, tone = "accent", size = "label", chevron = true }: TextLinkProps) {
-  const classes = cx("ui-text-link", tone === "quiet" && "ui-text-link-quiet", size === "hint" && "ui-text-link-hint", className);
+export function TextLink({
+  children,
+  className,
+  to,
+  href,
+  onClick,
+  tone = "accent",
+  size = "label",
+  chevron = true,
+  icon,
+  trailing,
+  expanded,
+  controls,
+  wrap = false,
+}: TextLinkProps) {
+  const classes = cx(
+    "ui-text-link",
+    tone === "quiet" && "ui-text-link-quiet",
+    size === "hint" && "ui-text-link-hint",
+    wrap && "ui-text-link-wrap",
+    className,
+  );
   const body = (
     <>
+      {icon}
       <span className="ui-text-link-label">{children}</span>
-      {chevron ? <ChevronIcon size={16} /> : null}
+      {trailing != null ? (
+        <span className="ui-chevron-turn" data-open={expanded ? "true" : "false"}>
+          {trailing}
+        </span>
+      ) : chevron ? (
+        <ChevronIcon size={16} />
+      ) : null}
     </>
   );
   if (to) {
@@ -31,7 +66,7 @@ export function TextLink({ children, className, to, href, onClick, tone = "accen
   }
   if (onClick) {
     return (
-      <button type="button" className={classes} onClick={onClick}>
+      <button type="button" className={classes} onClick={onClick} aria-expanded={expanded} aria-controls={controls}>
         {body}
       </button>
     );

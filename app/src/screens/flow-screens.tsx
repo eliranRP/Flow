@@ -1771,7 +1771,41 @@ export function SettingsScreen({
   );
 }
 
-export function CategoriesScreen({ sample }: { sample?: Array<CategoryRow & { count?: number }> } = {}) {
+function CategoryLine({
+  category,
+  muted = false,
+  onMenu,
+}: {
+  category: CategoryRow & { count?: number };
+  muted?: boolean;
+  onMenu: () => void;
+}) {
+  return (
+    <ListRow
+      variant="item"
+      title={category.name}
+      muted={muted}
+      meta={category.count == null ? undefined : `${String(category.count)} תנועות`}
+      action={
+        <IconButton
+          label={`עוד, ${category.name}`}
+          onClick={onMenu}
+        >
+          <MoreIcon />
+        </IconButton>
+      }
+    />
+  );
+}
+
+export function CategoriesScreen({
+  sample,
+  hiddenOpen = false,
+}: {
+  sample?: Array<CategoryRow & { count?: number }>;
+  /** Stories open the hidden list without a click. */
+  hiddenOpen?: boolean;
+} = {}) {
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const toast = useToast();
@@ -1779,7 +1813,7 @@ export function CategoriesScreen({ sample }: { sample?: Array<CategoryRow & { co
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
   const rows: Array<CategoryRow & { count?: number }> = sample ?? categories.data ?? [];
   const [kind, setKind] = useState<"expense" | "income">("expense");
-  const [showHidden, setShowHidden] = useState(false);
+  const [showHidden, setShowHidden] = useState(hiddenOpen);
   const [menu, setMenu] = useState<(CategoryRow & { count?: number }) | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [mergeFrom, setMergeFrom] = useState("");
@@ -1826,8 +1860,9 @@ export function CategoriesScreen({ sample }: { sample?: Array<CategoryRow & { co
   });
   const fromName = rows.find((category) => category.id === mergeFrom)?.name ?? "";
   const intoName = rows.find((category) => category.id === mergeInto)?.name ?? "";
-  const visible = rows.filter((category) => category.kind === kind && (showHidden || !category.hidden));
-  const hiddenCount = rows.filter((category) => category.hidden).length;
+  const shown = rows.filter((category) => category.kind === kind && !category.hidden);
+  const hiddenRows = rows.filter((category) => category.kind === kind && category.hidden);
+  const hiddenExpanded = showHidden && hiddenRows.length > 0;
   const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
@@ -1843,62 +1878,83 @@ export function CategoriesScreen({ sample }: { sample?: Array<CategoryRow & { co
   return (
     <div>
       <ScreenHeader title="קטגוריות" kicker="הגדרות" backTo={`/settings${search}`} />
-      <div className="ui-page-pad ui-page-title-row">
+      <div className="ui-page-pad ui-cat-seg">
         <SegmentedControl
           label="סוג"
+          showLabel={false}
+          radius="input"
           value={kind}
-          onChange={setKind}
+          onChange={(next) => {
+            setKind(next);
+            setShowHidden(false);
+          }}
           options={[
             { value: "expense", label: "הוצאות" },
             { value: "income", label: "הכנסות" },
           ]}
         />
-        {hiddenCount > 0 ? (
-          <TextLink
-            tone="quiet"
-            onClick={() => {
-              setShowHidden((current) => !current);
-            }}
-          >
-            מוסתרות · <bdi dir="ltr">{String(hiddenCount)}</bdi>
-          </TextLink>
-        ) : null}
       </div>
-      {visible.length === 0 ? (
+      {shown.length === 0 && hiddenRows.length === 0 ? (
         <EmptyState icon={<TagIcon />} title="אין עדיין קטגוריות" body="קטגוריות נוצרות מהמסמכים של SUMIT או כשמוסיפים אחת" />
-      ) : (
-      <List>
-        {visible.map((category) => (
-          <ListRow
+      ) : shown.length > 0 ? (
+      <List className="ui-cat-list">
+        {shown.map((category) => (
+          <CategoryLine
             key={category.id}
-            variant="item"
-            title={category.name}
-            hint={category.hidden ? "מוסתרת" : undefined}
-            meta={category.count == null ? undefined : `${String(category.count)} תנועות`}
-            action={
-              <IconButton
-                label={`עוד, ${category.name}`}
-                onClick={() => {
-                  setMenu(category);
-                }}
-              >
-                <MoreIcon />
-              </IconButton>
-            }
+            category={category}
+            onMenu={() => {
+              setMenu(category);
+            }}
           />
         ))}
       </List>
-      )}
-      <p className="ui-page-pad">
+      ) : null}
+      <div className="ui-cat-foot">
         <TextLink
           chevron={false}
+          wrap
+          icon={<PlusIcon size={16} stroke={2.2} />}
           onClick={() => {
             setCreateOpen(true);
           }}
         >
-          + קטגוריה חדשה
+          קטגוריה חדשה
         </TextLink>
-      </p>
+        {hiddenRows.length > 0 ? (
+          <TextLink
+            tone="quiet"
+            chevron={false}
+            wrap
+            className="ui-cat-foot-end"
+            expanded={hiddenExpanded}
+            controls="categories-hidden"
+            trailing={<ChevronDownIcon size={16} />}
+            onClick={() => {
+              setShowHidden((current) => !current);
+            }}
+          >
+            מוסתרות · <bdi className="ui-num">{String(hiddenRows.length)}</bdi>
+          </TextLink>
+        ) : null}
+      </div>
+      {hiddenRows.length > 0 ? (
+        <div id="categories-hidden" hidden={!hiddenExpanded}>
+          {hiddenExpanded ? (
+            <List className="ui-cat-list ui-cat-hidden">
+              {hiddenRows.map((category) => (
+                <CategoryLine
+                  key={category.id}
+                  category={category}
+                  muted
+                  onMenu={() => {
+                    setMenu(category);
+                  }}
+                />
+              ))}
+            </List>
+          ) : null}
+        </div>
+      ) : null}
       <Sheet
         open={menu != null}
         onOpenChange={(open) => {
@@ -1914,7 +1970,7 @@ export function CategoriesScreen({ sample }: { sample?: Array<CategoryRow & { co
               setMenu(null);
             }}
           >
-            {menu?.hidden ? "הצגה" : "הסתרה"}
+            {menu?.hidden ? "החזרה לרשימה" : "הסתרה"}
           </Button>
           <Button
             variant="secondary"
@@ -1966,10 +2022,10 @@ export function CategoriesScreen({ sample }: { sample?: Array<CategoryRow & { co
       <ConfirmSheet
         open={hideTarget != null}
         onOpenChange={(open) => { if (!open) setHideTarget(null); }}
-        title={hideTarget?.hidden ? "להציג את הקטגוריה?" : "להסתיר את הקטגוריה?"}
+        title={hideTarget?.hidden ? "להחזיר את הקטגוריה לרשימה?" : "להסתיר את הקטגוריה?"}
         item={hideTarget?.name}
-        consequence="הקטגוריה לא נמחקת. אפשר להחזיר אותה."
-        confirmLabel={hideTarget?.hidden ? "הצגה" : "הסתרה"}
+        consequence={hideTarget?.hidden ? "הקטגוריה תופיע שוב ברשימה." : "הקטגוריה לא נמחקת. אפשר להחזיר אותה מ״מוסתרות״."}
+        confirmLabel={hideTarget?.hidden ? "החזרה לרשימה" : "הסתרה"}
         destructive={hideTarget?.hidden !== true}
         busy={hide.isPending}
         onConfirm={() => {

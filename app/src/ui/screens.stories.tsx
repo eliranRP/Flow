@@ -372,6 +372,62 @@ export const CategoriesList: Story = {
   ),
 };
 
+export const CategoriesHiddenCollapsed: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={sampleCategories} />
+    </StoryRoute>
+  ),
+};
+
+export const CategoriesHiddenExpanded: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={sampleCategories} hiddenOpen />
+    </StoryRoute>
+  ),
+};
+
+export const CategoriesNoneHidden: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={sampleCategories.filter((category) => !category.hidden)} />
+    </StoryRoute>
+  ),
+};
+
+const longHebrewCategories: Array<CategoryRow & { count?: number }> = [
+  {
+    id: "c1",
+    name: "חומרי בניין וציוד השכרה לקבלני משנה באתר הוילה",
+    kind: "expense",
+    hidden: false,
+    is_default: false,
+    count: 124,
+  },
+  {
+    id: "c2",
+    name: "עבודות גמר ושיפוץ פנים כולל חשמל ואינסטלציה מלאה",
+    kind: "expense",
+    hidden: true,
+    is_default: false,
+    count: 52,
+  },
+];
+
+export const CategoriesLongHebrew: Story = {
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={longHebrewCategories} />
+    </StoryRoute>
+  ),
+};
+
 export const Onboarding: Story = {
   render: () => (
     <StoryRoute entry="/onboarding">

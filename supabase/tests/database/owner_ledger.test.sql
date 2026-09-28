@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(37);
+select plan(41);
 
 do $users$
 begin
@@ -337,6 +337,41 @@ select lives_ok(
   ),
   'the owner can hide a category'
 );
+
+select is(
+  (select hidden from public.categories where name = 'הובלה'),
+  true,
+  'hide sets the flag'
+);
+
+select lives_ok(
+  format(
+    'select public.set_category_hidden(%L::uuid, false)',
+    (select id from public.categories where name = 'הובלה')
+  ),
+  'the owner can return a category to the list'
+);
+
+select is(
+  (select hidden from public.categories where name = 'הובלה'),
+  false,
+  'unhide clears the flag'
+);
+
+insert into ledger_ref (label, id)
+select 'haul', id from public.categories where name = 'הובלה';
+
+select tests.authenticate_as('ledger_b');
+select throws_ok(
+  format(
+    'select public.set_category_hidden(%L::uuid, false)',
+    (select id from ledger_ref where label = 'haul')
+  ),
+  'P0001',
+  'category not found',
+  'another company cannot change the hidden flag'
+);
+select tests.authenticate_as('ledger_a');
 
 select throws_ok(
   format(

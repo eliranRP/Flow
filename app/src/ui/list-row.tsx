@@ -17,6 +17,8 @@ type Common = {
   icon?: ReactNode;
   chevron?: boolean;
   grip?: boolean;
+  /** Hidden categories use a muted name. */
+  muted?: boolean;
   meta?: ReactNode;
 };
 
@@ -57,7 +59,7 @@ export function ListRow(props: ListRowProps) {
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
         <span className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
-          <span className="ui-row-title">
+          <span className={cx("ui-row-title", props.muted && "ui-row-title-muted")}>
             {props.title}
           </span>
           {props.hint ? <span className="ui-row-hint">{props.hint}</span> : null}
@@ -146,6 +148,6 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   return <BigNumber agorot={props.agorot} size="list" loss={props.loss === true} />;
 }
 
-export function List({ children }: { children: ReactNode }) {
-  return <div className={cx("ui-project-list")}>{children}</div>;
+export function List({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx("ui-project-list", className)}>{children}</div>;
 }
