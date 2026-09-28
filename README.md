@@ -67,7 +67,7 @@ pnpm latency          # times get_home() against SUPABASE_URL
 
 `pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script creates that company with `is_demo = true`, or updates one that is already marked demo. It refuses to write into a real company. It is idempotent on `(company, source, external id)`.
 
-`packages/shared/src/database.types.ts` is untouched output of Supabase CLI 2.118.0 (`--schema public`). CI diffs it after `supabase db start`. The app imports `Database` from `@flow/shared`, which omits SUMIT ciphertext columns.
+`packages/shared/src/database.types.ts` is untouched output of Supabase CLI 2.118.0 (`--schema public`). That CLI generates types in-process and does not pass a PostgREST version, so `--local` and `--db-url` both omit `__InternalSupabase`. The PostgREST tag for this CLI is `flow-postgrest-version` in `supabase/config.toml` (16.2). `scripts/check-db-types.sh` passes it as `--postgrest-version` once the CLI accepts the flag, which keeps a local `--db-url` check byte-identical to CI's `--local`. CI runs that diff after `supabase test db`. The app imports `Database` from `@flow/shared`, which omits SUMIT ciphertext columns.
 
 ```bash
 supabase gen types typescript --db-url "$DATABASE_URL" --schema public > packages/shared/src/database.types.ts
