@@ -172,7 +172,7 @@ describe("transaction reassignment", () => {
 });
 
 describe("split monthly rule", () => {
-  it("keeps the monthly toggle disabled and off", () => {
+  it("hides the monthly toggle and shows a full income split as done", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -191,10 +191,37 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const toggle = screen.getByRole("switch", { name: "לפצל כך כל חודש" });
-    expect(toggle).toBeDisabled();
-    expect(toggle).not.toBeChecked();
-    expect(screen.getByText("כלל חודשי יגיע בהמשך")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "לפצל כך כל חודש" })).not.toBeInTheDocument();
+    expect(screen.queryByText("כלל חודשי יגיע בהמשך")).not.toBeInTheDocument();
+    expect(screen.queryByText("אופן הפיצול")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/הכנסות החודש/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/100%/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שמירת פיצול" })).toBeEnabled();
+  });
+
+  it("disables save while a manual split is only partly allocated", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+          <MemoryRouter>
+            <SplitScreen
+              sampleMethod="manual"
+              sampleShares={{ p1: "40" }}
+              sampleProjects={[
+                { id: "p1", name: "חולון", incomeAgorot: 2n },
+                { id: "p2", name: "וילה", incomeAgorot: 1n },
+              ]}
+              sampleAmount={10_000n}
+              sampleContext="מלט"
+            />
+          </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/100%/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שמירת פיצול" })).toBeDisabled();
   });
 
   it("saves only the shares", async () => {
@@ -241,7 +268,6 @@ describe("split monthly rule", () => {
             category_name: null,
             supplier_name: null,
             customer_name: null,
-            allocations: [],
           },
           error: null,
         });

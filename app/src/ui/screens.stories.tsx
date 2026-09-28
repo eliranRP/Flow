@@ -593,21 +593,71 @@ export const Transaction: Story = {
   ),
 };
 
-export const Split: Story = {
-  render: () => (
+const splitProjects = [
+  { id: "a", name: "בניין מגורים חולון", incomeAgorot: 20_000_000n },
+  { id: "b", name: "מגדל משרדים פ\"ת", incomeAgorot: 15_000_000n },
+  { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
+  { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
+];
+
+function SplitStory({
+  method,
+  shares,
+  context = "משכורת עובדי שטח · ספטמבר · עבודה",
+  projects = splitProjects,
+}: {
+  method?: "equal" | "income" | "manual";
+  shares?: Record<string, string>;
+  context?: string;
+  projects?: typeof splitProjects;
+}) {
+  return (
     <StoryRoute entry="/transactions/t1/split">
-      <ExampleBar />
       <SplitScreen
-        sampleContext="משכורת עובדי שטח · ספטמבר · עבודה"
+        example={<span className="t-hint">{exampleLabel}</span>}
+        sampleContext={context}
         sampleAmount={3_600_000n}
-        sampleProjects={[
-          { id: "a", name: "בניין מגורים חולון", incomeAgorot: 20_000_000n },
-          { id: "b", name: "מגדל משרדים פ\"ת", incomeAgorot: 15_000_000n },
-          { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
-          { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
-        ]}
+        sampleProjects={projects}
+        sampleMethod={method}
+        sampleShares={shares}
       />
     </StoryRoute>
+  );
+}
+
+export const Split: Story = {
+  render: () => <SplitStory method="income" />,
+};
+
+export const SplitIncome: Story = {
+  render: () => <SplitStory method="income" />,
+};
+
+export const SplitEqual: Story = {
+  render: () => <SplitStory method="equal" />,
+};
+
+export const SplitManual: Story = {
+  render: () => <SplitStory method="manual" shares={{ a: "40", b: "30", c: "20", d: "10" }} />,
+};
+
+export const SplitPartial: Story = {
+  render: () => <SplitStory method="manual" shares={{ a: "40", b: "10" }} />,
+};
+
+export const SplitLongHebrew: Story = {
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => (
+    <SplitStory
+      method="income"
+      context="ספק עם שם ארוך מאוד · ספטמבר · קטגוריה ארוכה שלא נכנסת בשורה אחת"
+      projects={[
+        { id: "a", name: "בניין מגורים חולון עם שם ארוך מאוד שלא נחתך באמצע המילה", incomeAgorot: 20_000_000n },
+        { id: "b", name: "מגדל משרדים פתח תקווה ועבודות גמר כולל חשמל ואינסטלציה", incomeAgorot: 15_000_000n },
+        { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
+        { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
+      ]}
+    />
   ),
 };
 

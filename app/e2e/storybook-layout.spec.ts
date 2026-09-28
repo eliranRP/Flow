@@ -520,6 +520,35 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   expect(motion.transform).not.toBe("none");
 });
 
+test("split stays calm and pins the save button", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--split-income&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("אופן הפיצול")).toHaveCount(0);
+  await expect(page.getByRole("switch")).toHaveCount(0);
+  const chip = page.locator(".ui-chip-scope");
+  await expect(chip).toBeVisible();
+  const chipPaint = await chip.evaluate((node) => getComputedStyle(node).backgroundColor);
+  expect(chipPaint).not.toBe("rgb(123, 63, 228)");
+  await expect(page.getByText(/100%/)).toBeVisible();
+  const save = page.getByRole("button", { name: "שמירת פיצול" });
+  const saveBox = await save.boundingBox();
+  expect(saveBox).not.toBeNull();
+  if (saveBox) expect(saveBox.y + saveBox.height).toBeGreaterThan(800);
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--split-long-hebrew&viewMode=story", { waitUntil: "domcontentloaded" });
+  const context = page.locator(".ui-split-context");
+  const clipped = await context.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return style.textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1;
+  });
+  expect(clipped).toBe(true);
+  const segment = await page.locator(".ui-seg-label").first().evaluate((node) => getComputedStyle(node).textOverflow);
+  expect(segment).not.toBe("ellipsis");
+  const name = await page.locator(".ui-split-list .ui-row-title").first().evaluate((node) => getComputedStyle(node).webkitLineClamp);
+  expect(name).toBe("2");
+});
+
 test("hebrew counts keep their reading order around the numbers", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-bidicounts--reading-order&viewMode=story", { waitUntil: "domcontentloaded" });
