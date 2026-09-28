@@ -11,6 +11,10 @@ project_id = "flow"
 
 [api]
 enabled = true
+# flow-postgrest-version: 16.2
+# CLI 2.118.0 ships ghcr.io/supabase/cli/postgrest:v16.2. Native gen types does
+# not embed that version. scripts/check-db-types.sh reads the line above and
+# passes it as --postgrest-version once the CLI accepts the flag.
 port = 54321
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
