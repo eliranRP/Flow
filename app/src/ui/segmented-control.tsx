@@ -1,16 +1,28 @@
 import { useRef, type KeyboardEvent } from "react";
+import { cx } from "./cx";
 
 type Option<T extends string> = { value: T; label: string };
 
 type SegmentedControlProps<T extends string> = {
   label: string;
+  /** Categories keeps the name for the group and does not print it under the title. */
+  showLabel?: boolean;
+  /** Categories uses the input radius. Other screens keep the segment token. */
+  radius?: "segment" | "input";
   value: T;
   options: Array<Option<T>>;
   onChange: (value: T) => void;
 };
 
 /** Roving tabindex. Arrow keys follow the reading direction, so they reverse under dir=rtl. */
-export function SegmentedControl<T extends string>({ label, value, options, onChange }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({
+  label,
+  showLabel = true,
+  radius = "segment",
+  value,
+  options,
+  onChange,
+}: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const index = Math.max(0, options.findIndex((option) => option.value === value));
 
@@ -37,8 +49,8 @@ export function SegmentedControl<T extends string>({ label, value, options, onCh
 
   return (
     <div className="ui-field">
-      <span className="ui-field-label">{label}</span>
-    <div className="ui-seg" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+      {showLabel ? <span className="ui-field-label">{label}</span> : null}
+    <div className={cx("ui-seg", radius === "input" && "ui-seg-input")} role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
       {options.map((option, optionIndex) => {
         const selected = value === option.value;
         return (

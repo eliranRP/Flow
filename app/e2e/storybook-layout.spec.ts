@@ -445,6 +445,46 @@ test("a segmented control is hit 4px outside its drawn box", async ({ page }) =>
   expect(hit).toBe(true);
 });
 
+test("the categories hidden link wraps on the end side and does not truncate", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--categories-long-hebrew&viewMode=story", { waitUntil: "domcontentloaded" });
+  const foot = page.locator(".ui-cat-foot");
+  const add = foot.getByRole("button", { name: "קטגוריה חדשה" });
+  const hidden = foot.getByRole("button", { name: /מוסתרות/ });
+  await expect(hidden).toBeVisible();
+  const boxes = await Promise.all([add.boundingBox(), hidden.boundingBox(), foot.boundingBox()]);
+  const [addBox, hiddenBox, footBox] = boxes;
+  expect(addBox).not.toBeNull();
+  expect(hiddenBox).not.toBeNull();
+  expect(footBox).not.toBeNull();
+  if (!addBox || !hiddenBox || !footBox) return;
+  expect(hiddenBox.y).toBeGreaterThanOrEqual(addBox.y + addBox.height - 1);
+  const padEnd = await foot.evaluate((node) => Number.parseFloat(getComputedStyle(node).paddingLeft));
+  expect(Math.abs(hiddenBox.x - (footBox.x + padEnd))).toBeLessThan(2);
+  const label = await hidden.locator(".ui-text-link-label").evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      overflow: style.textOverflow,
+      whiteSpace: style.whiteSpace,
+      fits: node.scrollWidth <= node.clientWidth + 1,
+    };
+  });
+  expect(label.overflow).not.toBe("ellipsis");
+  expect(label.whiteSpace).not.toBe("nowrap");
+  expect(label.fits).toBe(true);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/iframe.html?id=screens-routes--categories-hidden-expanded&viewMode=story", { waitUntil: "domcontentloaded" });
+  const turn = page.locator(".ui-cat-foot .ui-chevron-turn");
+  await expect(turn).toHaveAttribute("data-open", "true");
+  const motion = await turn.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { duration: style.transitionDuration, transform: style.transform };
+  });
+  expect(motion.duration === "0s" || motion.duration === "0ms").toBe(true);
+  expect(motion.transform).not.toBe("none");
+});
+
 test("hebrew counts keep their reading order around the numbers", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-bidicounts--reading-order&viewMode=story", { waitUntil: "domcontentloaded" });
