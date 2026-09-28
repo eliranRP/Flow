@@ -12,8 +12,8 @@ export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
     <div className="ui-empty-state">
       <div className="ui-empty-icon">{icon}</div>
-      <p className="ui-empty-title t-title-3" title={title}>{title}</p>
-      <p className="ui-empty-line" title={body}>{body}</p>
+      <p className="ui-empty-title t-title-3" dir="rtl">{title}</p>
+      <p className="ui-empty-line" dir="rtl">{body}</p>
       {action ? <div className="ui-empty-action">{action}</div> : null}
     </div>
   );

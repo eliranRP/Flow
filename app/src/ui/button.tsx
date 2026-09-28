@@ -58,7 +58,6 @@ export function Button(props: ButtonProps) {
     </>
   );
   const named = {
-    title: props.title ?? label,
     "aria-label": props["aria-label"] ?? label,
   };
   if (isLink(props)) {
@@ -67,7 +66,6 @@ export function Button(props: ButtonProps) {
         to={props.to}
         state={props.state}
         className={classes}
-        title={named.title}
         aria-label={named["aria-label"]}
         aria-disabled={props.busy || undefined}
         aria-busy={props.busy || undefined}
@@ -85,7 +83,6 @@ export function Button(props: ButtonProps) {
       type={type}
       className={classes}
       disabled={disabled}
-      title={named.title}
       aria-label={named["aria-label"]}
       aria-disabled={disabled || busy || undefined}
       aria-busy={busy || undefined}

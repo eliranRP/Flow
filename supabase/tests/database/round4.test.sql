@@ -1,5 +1,5 @@
 -- Round 4: income stays out of Review, remember is optional, section ids win,
--- a suspicious sweep does not wipe the ledger, and the overhead share is honest.
+-- a suspicious sweep does not wipe the ledger, and a project with no income has no overhead share.
 
 begin;
 
@@ -412,9 +412,9 @@ select is(
   'a project with no choice inherits the company default'
 );
 select is(
-  (public.get_project((select id from r4 where label = 'project'))->>'overhead_share_agorot')::bigint,
-  0::bigint,
-  'with no owner weights the overhead share is 0'
+  public.get_project((select id from r4 where label = 'project'))->>'overhead_share_agorot',
+  null,
+  'with no project income the overhead share is unavailable'
 );
 select is(
   (public.get_project((select id from r4 where label = 'project'))->>'overhead_weighted')::boolean,
@@ -595,21 +595,37 @@ select is(
   'a suspicious payload records last_error'
 );
 
+-- The job exists only when Vault holds cron_secret. An empty header is not a schedule.
+reset role;
 select lives_ok(
   $$do $chk$
+    declare
+      secret text;
     begin
       if to_regclass('cron.job') is null then
+        if exists (select 1 from pg_extension where extname = 'pg_cron')
+           and exists (select 1 from pg_extension where extname = 'pg_net')
+        then
+          raise exception 'cron.job is missing while pg_cron is installed';
+        end if;
         return;
       end if;
-      if exists (select 1 from pg_extension where extname = 'pg_cron')
-         and exists (select 1 from pg_extension where extname = 'pg_net')
-         and not exists (select 1 from cron.job where jobname = 'flow-sumit-drain')
-      then
+      select s.decrypted_secret into secret
+      from vault.decrypted_secrets s
+      where s.name = 'cron_secret'
+      limit 1;
+      if coalesce(secret, '') = '' then
+        if exists (select 1 from cron.job where jobname = 'flow-sumit-drain') then
+          raise exception 'drain is scheduled without a secret';
+        end if;
+        return;
+      end if;
+      if not exists (select 1 from cron.job where jobname = 'flow-sumit-drain') then
         raise exception 'drain is not scheduled';
       end if;
     end
     $chk$;$$,
-  'the drain is scheduled when cron and net are installed'
+  'the drain is scheduled only when the cron secret is set'
 );
 
 select * from finish();

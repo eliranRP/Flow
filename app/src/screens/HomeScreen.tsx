@@ -2,6 +2,7 @@ import { formatIls, roundedProfitAgorot, wholeShekels, type Dashboard, type Proj
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { absAgorot } from "../agorot";
 import { useAuth } from "../auth";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
@@ -110,7 +111,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה."
+          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
           action={
             <Button variant="pill" to={`/settings${search}`}>
               חיבור SUMIT
@@ -128,7 +129,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       greeting={greeting}
       previewing={previewing}
       search={search}
-      unpaidGross={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + row.open_gross_agorot, 0n) : 0n}
+      unpaidGross={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n) : 0n}
       unpaidCount={unpaidPhase.kind === "ready" ? (unpaid.data?.length ?? 0) : 0}
       unpaidPhase={unpaidPhase.kind}
       onUnpaidRetry={() => {

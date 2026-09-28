@@ -1,18 +1,22 @@
-/** View-only overhead. The share stays 0 until owner weights exist. Decision 0064. */
+import { formatIls } from "@flow/shared";
 
-export function overheadHint(on: boolean, weighted: boolean): string {
+/** View-only overhead. The share is each project's income portion of company overhead. Decision 0021 and 0065. */
+export function overheadHint(
+  on: boolean,
+  detail: { available: boolean; shareAgorot?: bigint | null; scope?: "project" | "company" },
+): string {
   if (!on) return "כבוי · מציג רווח לפני כלליות";
-  if (!weighted) return "דלוק · אין עדיין משקלות, החלק בכלליות הוא ₪0";
-  return "דלוק · מציג רווח אחרי כלליות";
+  if (detail.scope === "company") return "דלוק · כל פרויקט מציג רווח אחרי חלקו בכלליות";
+  if (!detail.available) return "דלוק · אין הכנסות בפרויקטים בתקופה, אז אי אפשר לחלק את הכלליות";
+  return `דלוק · החלק בכלליות הוא ${formatIls(detail.shareAgorot ?? 0n)}`;
 }
 
 export function shownProfit(
   on: boolean,
+  available: boolean,
   profit: bigint,
   after: bigint | null | undefined,
-  share: bigint | null | undefined,
 ): bigint {
-  if (!on) return profit;
-  if (after != null) return after;
-  return profit - (share ?? 0n);
+  if (!on || !available) return profit;
+  return after ?? profit;
 }

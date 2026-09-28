@@ -40,4 +40,17 @@ describe("ListRow", () => {
     expect(screen.getByRole("button", { name: "התנתקות" })).toHaveAttribute("aria-busy", "true");
     expect(screen.getByRole("button", { name: "וילה" })).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("drops the chevron on a static row and exposes aria-expanded on a disclosure", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="static" title="אלפא" chevron />
+          <ListRow variant="button" title="חשבונית ותשלום" expanded onClick={() => undefined} />
+        </>
+      </MemoryRouter>,
+    );
+    expect(container.querySelector(".ui-row-chevron")).toBeNull();
+    expect(screen.getByRole("button", { name: "חשבונית ותשלום" })).toHaveAttribute("aria-expanded", "true");
+  });
 });

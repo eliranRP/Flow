@@ -9,7 +9,7 @@ export function RadioRow({ label, hint, selected, onSelect }: RadioRowProps) {
   return (
     <button type="button" className="ui-radio-row" role="radio" aria-checked={selected} onClick={onSelect}>
       <span className="ui-row-text">
-        <span className="ui-row-title" title={label}>
+        <span className="ui-row-title">
           {label}
         </span>
         {hint ? <span className="ui-row-hint">{hint}</span> : null}

@@ -9,24 +9,34 @@ export function ScreenHeader({
   backTo,
   action,
   kicker,
+  leading,
+  trailing,
+  size = "default",
 }: {
   title: string;
   subtitle?: string;
   backTo?: string;
   action?: ReactNode;
   kicker?: string;
+  /** Replaces the back control. Transaction and Split pass their own icon button. */
+  leading?: ReactNode;
+  /** Sits on the end of the title row. */
+  trailing?: ReactNode;
+  /** Compact is the t-title-3 used on a transaction. */
+  size?: "default" | "compact";
 }) {
+  const start = leading ?? (backTo ? (
+    <IconButton label="חזרה" to={backTo}>
+      <BackIcon />
+    </IconButton>
+  ) : null);
   return (
     <header className="ui-page">
-      {backTo ? (
-        <IconButton label="חזרה" to={backTo}>
-          <BackIcon />
-        </IconButton>
-      ) : null}
       {kicker ? <p className="t-hint">{kicker}</p> : null}
       <div className="ui-page-title-row">
-        <h1 className="t-title-1">{title}</h1>
-        {action}
+        {start}
+        <h1 className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</h1>
+        {trailing ?? action}
       </div>
       {subtitle ? <p className="t-label mt-4 text-text-secondary">{subtitle}</p> : null}
     </header>

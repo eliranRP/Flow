@@ -13,3 +13,4 @@ type Story = StoryObj<typeof meta>;
 
 export const Income: Story = { args: { label: "הכנסות", value: "₪180,000" } };
 export const Expense: Story = { args: { label: "הוצאות ישירות", value: "₪90,000" } };
+export const Remainder: Story = { args: { label: "נותר לשייך", value: "₪1,200 · 3%" } };

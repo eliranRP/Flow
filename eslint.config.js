@@ -29,6 +29,7 @@ export default defineConfig(
           allowDefaultProject: [
             "eslint.config.js",
             "app/vite.config.ts",
+            "app/playwright.drain.config.ts",
             "packages/shared/vitest.config.ts",
           ],
           defaultProject: "scripts/tsconfig.json",
@@ -54,6 +55,7 @@ export default defineConfig(
       "app/src/**/*.test.ts",
       "app/src/**/*.test.tsx",
       "app/src/**/*.stories.tsx",
+      "app/src/**/*.stories-support.tsx",
       "app/src/demo/**",
     ],
     rules: {
@@ -66,6 +68,8 @@ export default defineConfig(
                 "**/fixtures/**",
                 "**/*.stories",
                 "**/*.stories.*",
+                "**/*.stories-support",
+                "**/*.stories-support.*",
                 "@flow/shared/testing",
                 "**/demo/**",
               ],

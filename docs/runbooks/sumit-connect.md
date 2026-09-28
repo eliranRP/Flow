@@ -9,7 +9,7 @@ Apply, in order, on the hosted SQL editor or with `supabase db push`:
 1. `supabase/migrations/20260927120000_schema_v1.sql` (already applied)
 2. `supabase/migrations/20260928140000_phase1_slice.sql`
 
-`pg_cron` is optional. If it is missing, the migration still finishes and the daily marker is skipped. When both `pg_cron` and `pg_net` are installed, the same migration schedules `flow-sumit-drain` every five minutes. Store Vault secrets `flow_sync_url` and `cron_secret` on the hosted project. Without them the job uses `http://kong:8000/functions/v1/sumit-sync` and an empty cron header, which only works on the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place.
+`pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`.
 
 ## 2. Edge Functions
 
@@ -101,7 +101,7 @@ SUMIT_API_KEY="$SUMIT_API_KEY" \
 pnpm test:e2e:live
 ```
 
-Local email login is off, so the test signs a session with `JWT_SECRET` from `supabase status -o env`. It creates an owner, fills פרטי העסק, pastes the CompanyID and key, runs רענון עכשיו, marks ביטוח המגן VAT-exempt with `set_supplier_settings`, then checks Home (כל התקופה, חשבוניות, 37,700), Projects (שיפוץ הרצל 12), and Unpaid (134,520). It enters one shared split with `save_split`. It creates one invoice in SUMIT, waits out the one-minute force gap, refreshes, and expects that description on Unpaid and the split still in place. It then creates a credit, links it to that invoice, and checks the totals and the split again. `pg_cron` inserts refresh markers. When `pg_net` is installed, `flow-sumit-drain` POSTs `sumit-sync` with `x-flow-cron` every five minutes. Unset `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` before the hosted `pnpm build`, or the local values stay baked into `app/dist`.
+Local email login is off, so the test signs a session with `JWT_SECRET` from `supabase status -o env`. It creates an owner, fills פרטי העסק, pastes the CompanyID and key, runs רענון עכשיו, marks ביטוח המגן VAT-exempt with `set_supplier_settings`, then checks Home (כל התקופה, חשבוניות, 37,700), Projects (שיפוץ הרצל 12), and Unpaid (134,520). It enters one shared split with `save_split`. It creates one invoice in SUMIT, waits out the one-minute force gap, refreshes, and expects that description on Unpaid and the split still in place. It then creates a credit, links it to that invoice, and checks the totals and the split again. `pg_cron` inserts refresh markers. When `pg_net` is installed and Vault `cron_secret` is set, `flow-sumit-drain` POSTs `sumit-sync` with `x-flow-cron` every five minutes. The local check is `pnpm --filter @flow/app exec playwright test -c playwright.drain.config.ts` with `CRON_SECRET` in `supabase/.env`. Unset `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` before the hosted `pnpm build`, or the local values stay baked into `app/dist`.
 
 ## 6. Hosted deploy
 
@@ -109,8 +109,9 @@ Apply the migrations in section 1 on the hosted SQL editor, or `supabase link` t
 
 ```bash
 supabase secrets set SUMIT_KEK="$(openssl rand -base64 32)"
+supabase secrets set CRON_SECRET="$(openssl rand -base64 32)"
 supabase functions deploy sumit-connect
-supabase functions deploy sumit-sync
+supabase functions deploy sumit-sync --no-verify-jwt
 ```
 
 Use the same `SUMIT_KEK` for both. Build the client with `app/.env.production` (`pnpm build`) and upload `app/dist` to Cloudflare Pages. The project name in the Pages dashboard is the existing Flow project. Do not upload `storybook-static`.

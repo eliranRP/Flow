@@ -29,7 +29,7 @@ export function BandFigures({ income, expense }: { income: string; expense: stri
 
 export function FormError({ children }: { children: ReactNode }) {
   return (
-    <p className="ui-form-error" role="alert">
+    <p className="ui-form-error" role="alert" dir="rtl">
       {children}
     </p>
   );

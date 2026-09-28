@@ -104,7 +104,7 @@ export const projectDetailSchema = z
     shared_agorot: agorotSchema,
     profit_agorot: agorotSchema,
     after_overhead: z.boolean().optional(),
-    overhead_share_agorot: agorotSchema.optional(),
+    overhead_share_agorot: agorotOrNull.optional(),
     profit_after_overhead_agorot: agorotSchema.optional(),
     overhead_weighted: z.boolean().optional(),
     categories: z.array(
@@ -141,7 +141,12 @@ export const transactionDetailSchema = z
     vat_status: z.string(),
     doc_kind: z.string().optional(),
     source: z.string(),
+    project_id: z.string().nullable().optional(),
     project_name: z.string().nullable(),
+    category_id: z.string().nullable().optional(),
+    review_status: z.enum(["open", "approved", "skipped", "changed"]).nullable().optional(),
+    paid: z.boolean().nullable().optional(),
+    open_gross_agorot: agorotOrNull.optional(),
     allocations: z
       .array(
         z.object({

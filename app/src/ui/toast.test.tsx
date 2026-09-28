@@ -45,4 +45,38 @@ describe("Toast", () => {
     });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
+
+  it("runs a toast action once when the tap is repeated before the toast closes", () => {
+    let calls = 0;
+    function ActionProbe() {
+      const toast = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            toast.show({
+              tone: "bad",
+              message: "לא נשמר",
+              action: "ביטול",
+              onAction: () => {
+                calls += 1;
+                screen.getByRole("button", { name: "ביטול" }).click();
+              },
+            });
+          }}
+        >
+          הצגה
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <ActionProbe />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    expect(calls).toBe(1);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
 });

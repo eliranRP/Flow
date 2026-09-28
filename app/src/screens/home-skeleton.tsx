@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { BandHero, SectionHead } from "../ui/layout";
+import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
@@ -59,13 +60,7 @@ export function HomeSkeleton({ preview = false, example }: { preview?: boolean; 
       <SectionHead title="פרויקטים מובילים" />
       <div className="ui-project-list">
         {rowKeys.map((key) => (
-          <div className="ui-row" key={key}>
-            <span className="ui-skel-copy">
-              <Skeleton width="md" />
-              <Skeleton width="sm" />
-            </span>
-            <Skeleton width="sm" />
-          </div>
+          <ListRow variant="skeleton" key={key} />
         ))}
       </div>
     </div>
