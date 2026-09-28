@@ -10,6 +10,7 @@ import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { BooksProvider } from "./use-books";
+import { listenForInstallPrompt } from "./ui/install-prompt";
 import { ToastProvider } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -31,6 +32,9 @@ import {
 import { SignInScreen } from "./screens/SignInScreen";
 
 export function App() {
+  useEffect(() => {
+    listenForInstallPrompt();
+  }, []);
   return (
     <ToastProvider>
     <AuthProvider>

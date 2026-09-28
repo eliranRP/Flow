@@ -194,6 +194,26 @@ test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
   }
 });
 
+test("the install screen pins the action under the icon", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--install-iphone&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("img", { name: "Flow" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "סגירה" })).toBeVisible();
+  const action = page.getByRole("button", { name: "הבנתי" });
+  await expect(action).toBeVisible();
+  const box = await action.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  expect(box.y + box.height).toBeGreaterThan(760);
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--install-iphone&viewMode=story", { waitUntil: "domcontentloaded" });
+  const title = page.getByRole("heading", { name: "הוספה למסך הבית" });
+  const lines = await title.evaluate((node) => node.getClientRects().length);
+  expect(lines).toBe(1);
+});
+
 test("change sheet picks a project and a category, then offers save", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=screens-routes--change-sheet&viewMode=story", { waitUntil: "domcontentloaded" });

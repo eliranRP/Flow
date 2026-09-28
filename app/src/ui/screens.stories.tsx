@@ -21,9 +21,8 @@ import { SignInScreen } from "../screens/SignInScreen";
 import { Banner } from "./banner";
 import { OfflineIcon } from "./icons";
 import { TextLink } from "./text-link";
+import { InstallScreen } from "./install-screen";
 import {
-  InstallAndroidFrame,
-  InstallIphoneFrame,
   InvoiceReadingFrame,
   NotificationsLockFrame,
   UploadProcessingFrame,
@@ -820,17 +819,76 @@ function SampleHome({ refreshing = false, notice }: { refreshing?: boolean; noti
 }
 
 export const InstallAndroid: Story = {
+  name: "Android (prompt)",
   render: () => (
     <StoryRoute entry="/">
-      <InstallAndroidFrame />
+      <InstallScreen mode="android-prompt" example onDismiss={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const InstallAndroidSteps: Story = {
+  name: "Android (no prompt)",
+  render: () => (
+    <StoryRoute entry="/">
+      <InstallScreen mode="android-steps" example onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
 
 export const InstallIphone: Story = {
+  name: "iPhone Safari",
   render: () => (
     <StoryRoute entry="/">
-      <InstallIphoneFrame />
+      <InstallScreen mode="iphone" example onDismiss={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const InstallIphoneOther: Story = {
+  name: "iPhone other browser",
+  render: () => (
+    <StoryRoute entry="/">
+      <InstallScreen mode="iphone-other" example onDismiss={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const InstallIpad: Story = {
+  name: "iPad",
+  render: () => (
+    <StoryRoute entry="/">
+      <InstallScreen mode="ipad" example onDismiss={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const InstallAndroidDark: Story = {
+  name: "Android (prompt) dark",
+  globals: { theme: "dark" },
+  render: () => (
+    <StoryRoute entry="/">
+      <InstallScreen mode="android-prompt" example onDismiss={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const InstallIphoneDark: Story = {
+  name: "iPhone Safari dark",
+  globals: { theme: "dark" },
+  render: () => (
+    <StoryRoute entry="/">
+      <InstallScreen mode="iphone" example onDismiss={() => undefined} />
+    </StoryRoute>
+  ),
+};
+
+export const InstallIphoneNarrow: Story = {
+  name: "iPhone 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => (
+    <StoryRoute entry="/">
+      <InstallScreen mode="iphone" example onDismiss={() => undefined} />
     </StoryRoute>
   ),
 };
