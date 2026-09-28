@@ -1,10 +1,10 @@
 -- Quiet the membership notices on a second run of this file.
 set client_min_messages to warning;
 
--- Local stand-in for the pieces `supabase db start` provides.
--- scripts/pgtap-local.sh loads this before the migration. CI does not:
--- the pgtap job uses the Supabase CLI, which already has these roles,
--- the auth schema, and the pgTAP extension.
+-- Local stand-in for the pieces `supabase db start` provides before migrations.
+-- scripts/pgtap-local.sh loads this first. CI does not: the pgtap job uses
+-- the Supabase CLI, which already has these roles and the auth schema.
+-- pgTAP itself is created later, in helpers.sql, after the migration.
 
 do $$
 begin
@@ -24,8 +24,6 @@ grant anon, authenticated, service_role to postgres;
 
 create schema if not exists auth;
 create schema if not exists extensions;
-
-create extension if not exists pgtap with schema extensions;
 
 create table if not exists auth.users (
   instance_id uuid,
@@ -70,3 +68,14 @@ grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to public, anon, authenticated, service_role;
 
 grant usage on schema extensions to public, anon, authenticated, service_role;
+
+-- Supabase grants these before the first migration. Without them, the
+-- migration's revoke all / default-privilege revoke removes nothing, and
+-- "anon cannot read" still passes if those lines are deleted.
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges for role postgres in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges for role postgres in schema public
+  grant all on sequences to anon, authenticated, service_role;
+alter default privileges for role postgres in schema public
+  grant all on functions to anon, authenticated, service_role;
