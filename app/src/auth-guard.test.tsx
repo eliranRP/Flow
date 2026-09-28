@@ -18,8 +18,42 @@ vi.mock("./lib/supabase", () => ({
         return { data: { subscription: { unsubscribe: () => undefined } } };
       },
     },
-    rpc: () =>
-      Promise.resolve({
+    rpc: (name: string) => {
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: null,
+            name: null,
+            vat_registered: true,
+            basis: "cash",
+            from: null,
+            to: null,
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 0,
+            review_count: 0,
+            projects: [],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_unpaid" || name === "list_review" || name === "list_categories") {
+        return Promise.resolve({ data: [], error: null });
+      }
+      if (name === "sumit_status") {
+        return Promise.resolve({
+          data: { connected: false, sumit_company_id: null, last_sync_at: null, last_error: null },
+          error: null,
+        });
+      }
+      return Promise.resolve({
         data: {
           company_id: null,
           name: null,
@@ -27,7 +61,8 @@ vi.mock("./lib/supabase", () => ({
           is_demo: false,
         },
         error: null,
-      }),
+      });
+    },
   }),
 }));
 

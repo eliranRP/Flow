@@ -1,30 +1,43 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { homeSummarySchema } from "@flow/shared";
-import { addTriggerRef } from "./add-trigger";
 import { AuthProvider, useAuth } from "./auth";
 import { HELP_EMAIL } from "./config";
 import { PageTitle } from "./components/PageTitle";
-import { Sheet } from "./components/Sheet";
 import { HomeSkeleton } from "./components/Skeleton";
 import { TabBar } from "./components/TabBar";
 import { ThemeColor } from "./components/ThemeColor";
-import { BackIcon } from "./components/icons";
 import { getSupabase } from "./lib/supabase";
-import { usePreviewMode, usePreviewSearch } from "./preview";
+import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
+import { BooksProvider } from "./use-books";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
-import { ProjectScreen } from "./screens/ProjectScreen";
+import {
+  AddForm,
+  CategoriesScreen,
+  ChangeForm,
+  NotificationsScreen,
+  OnboardingScreen,
+  ProjectDetailScreen,
+  ProjectsScreen,
+  ReviewScreen,
+  SettingsScreen,
+  SplitScreen,
+  TransactionScreen,
+  UnpaidScreen,
+} from "./screens/flow-screens";
 import { SignInScreen } from "./screens/SignInScreen";
 
 export function App() {
   return (
     <AuthProvider>
-      <ThemeColor />
-      <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
-        <AppRoutes />
-      </div>
+      <BooksProvider>
+        <ThemeColor />
+        <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
+          <AppRoutes />
+        </div>
+      </BooksProvider>
     </AuthProvider>
   );
 }
@@ -59,33 +72,33 @@ function AppRoutes() {
           <Route path="/help" element={<HelpScreen />} />
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>
-              <Route path="onboarding" element={<PageTitle title="פרטי העסק" />} />
-              <Route path="transactions/:transactionId" element={<TransactionPage />} />
-              <Route path="transactions/:transactionId/split" element={<SplitPage />} />
+              <Route path="onboarding" element={<OnboardingScreen />} />
+              <Route path="transactions/:transactionId" element={<TransactionScreen />} />
+              <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
             </Route>
             <Route element={<Shell />}>
               <Route element={<HomeWithSheet />}>
                 <Route index element={null} />
-                <Route path="add" element={<AddSheet />} />
+                <Route path="add" element={<AddForm />} />
               </Route>
-              <Route path="projects" element={<PageTitle title="פרויקטים" />} />
-              <Route path="projects/:projectId" element={<ProjectScreen />} />
+              <Route path="projects" element={<ProjectsScreen />} />
+              <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
               <Route element={<ReviewWithSheet />}>
                 <Route path="review" element={null} />
-                <Route path="review/change" element={<ChangeSheet />} />
+                <Route path="review/change" element={<ChangeForm />} />
               </Route>
               <Route path="upload" element={<PageTitle title="תוצאות הייבוא" />} />
-              <Route path="unpaid" element={<UnpaidPage />} />
-              <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="settings" element={<PageTitle title="הגדרות" />} />
-              <Route path="settings/categories" element={<CategoriesPage />} />
+              <Route path="unpaid" element={<UnpaidScreen />} />
+              <Route path="notifications" element={<NotificationsScreen />} />
+              <Route path="settings" element={<SettingsScreen />} />
+              <Route path="settings/categories" element={<CategoriesScreen />} />
             </Route>
           </Route>
         </Routes>
         {background ? (
           <Routes>
-            <Route path="add" element={<AddSheet />} />
-            <Route path="review/change" element={<ChangeSheet />} />
+            <Route path="add" element={<AddForm />} />
+            <Route path="review/change" element={<ChangeForm />} />
           </Routes>
         ) : null}
       </>
@@ -113,7 +126,7 @@ function HomeWithSheet() {
 function ReviewWithSheet() {
   return (
     <>
-      <PageTitle title="לאישור" />
+      <ReviewScreen />
       <Outlet />
     </>
   );
@@ -138,18 +151,6 @@ function FullScreen() {
   );
 }
 
-function AddSheet() {
-  const search = usePreviewSearch();
-  return (
-    <Sheet
-      title="הוספה"
-      hint="בקרוב תוכלו להוסיף כאן הכנסה או הוצאה"
-      closeTo={`/${search}`}
-      returnFocusRef={addTriggerRef}
-    />
-  );
-}
-
 function HelpScreen() {
   return (
     <main className="page safe-bottom min-h-dvh">
@@ -165,44 +166,6 @@ function HelpScreen() {
       </Link>
     </main>
   );
-}
-
-function ChangeSheet() {
-  const search = usePreviewSearch();
-  return <Sheet title="שינוי שיוך" closeTo={`/review${search}`} />;
-}
-
-function UnpaidPage() {
-  const search = usePreviewSearch();
-  return <PageTitle title="חשבוניות פתוחות" backTo={`/${search}`} />;
-}
-
-function NotificationsPage() {
-  const search = usePreviewSearch();
-  return <PageTitle title="התראות" backTo={`/settings${search}`} />;
-}
-
-function CategoriesPage() {
-  const search = usePreviewSearch();
-  return <PageTitle title="קטגוריות" backTo={`/settings${search}`} />;
-}
-
-function TransactionPage() {
-  const search = usePreviewSearch();
-  return (
-    <div className="page">
-      <Link to={`/${search}`} aria-label="חזרה" className="icon-btn">
-        <BackIcon />
-      </Link>
-      <h1 className="t-title-1">פרטי תנועה</h1>
-    </div>
-  );
-}
-
-function SplitPage() {
-  const { transactionId } = useParams();
-  const search = usePreviewSearch();
-  return <PageTitle title="פיצול" backTo={`/transactions/${transactionId ?? ""}${search}`} />;
 }
 
 function AuthCallback() {

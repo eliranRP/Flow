@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { Drawer } from "vaul";
 import { CloseIcon } from "./icons";
@@ -18,11 +18,13 @@ export function Sheet({
   closeTo,
   hint,
   returnFocusRef,
+  children,
 }: {
   title: string;
   closeTo: string;
   hint?: string;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  children?: ReactNode;
 }) {
   const navigate = useNavigate();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -78,6 +80,7 @@ export function Sheet({
             </Drawer.Close>
           </div>
           {hint ? <p className="sheet-hint t-label">{hint}</p> : null}
+          {children}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

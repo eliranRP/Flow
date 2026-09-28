@@ -64,7 +64,8 @@ describe("App", () => {
     renderAt("/add?preview=1");
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByText("בקרוב תוכלו להוסיף כאן הכנסה או הוצאה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הוצאה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הכנסה" })).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),
     ).toBeInTheDocument();

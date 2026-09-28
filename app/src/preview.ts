@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 
-export type HomePreview = "off" | "empty" | "loading" | "error" | "error-server";
+export type HomePreview = "off" | "empty" | "loading" | "error" | "error-server" | "demo";
 
 /** Any `preview` query bypasses sign-in. `loading`, `error`, and `error-server` are review states. */
 export function useHomePreview(): HomePreview {
@@ -10,6 +10,7 @@ export function useHomePreview(): HomePreview {
   if (value === "loading") return "loading";
   if (value === "error") return "error";
   if (value === "error-server") return "error-server";
+  if (value === "demo") return "demo";
   return "empty";
 }
 
