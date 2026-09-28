@@ -8,7 +8,8 @@ type SecretColumn =
   | "key_nonce"
   | "dek_ciphertext"
   | "dek_nonce"
-  | "kek_version";
+  | "kek_version"
+  | "envelope_version";
 
 type PublicSumitConnection = {
   Row: Omit<SumitConnection["Row"], SecretColumn>;

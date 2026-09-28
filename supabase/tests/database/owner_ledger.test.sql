@@ -112,8 +112,8 @@ select tests.authenticate_as('ledger_a');
 
 select is(
   (select count(*)::int from public.review_queue where status = 'open'),
-  3,
-  'shared costs and uncategorised documents are queued'
+  1,
+  'only the unallocated expense is queued; income is categorised and stays out'
 );
 
 select lives_ok(

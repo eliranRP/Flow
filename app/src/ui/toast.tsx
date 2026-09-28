@@ -30,6 +30,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timer = useRef<number | null>(null);
   const remaining = useRef(HOLD_MS);
   const started = useRef(0);
+  const acting = useRef(false);
 
   const clearTimer = () => {
     if (timer.current != null) window.clearTimeout(timer.current);
@@ -47,12 +48,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const show = useCallback(
     (input: ToastInput) => {
+      acting.current = false;
       seq.current += 1;
       setToast({ ...input, id: seq.current });
       arm(HOLD_MS);
     },
     [arm],
   );
+
+  function runAction() {
+    if (!toast?.onAction || acting.current) return;
+    acting.current = true;
+    const action = toast.onAction;
+    clearTimer();
+    setToast(null);
+    action();
+  }
 
   function pause() {
     if (timer.current == null) return;
@@ -70,7 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {toast ? (
         <div className="ui-toast-host" onMouseEnter={pause} onMouseLeave={resume} onFocus={pause} onBlur={resume}>
-          <Toast tone={toast.tone} action={toast.action} onAction={toast.onAction}>
+          <Toast tone={toast.tone} action={toast.action} onAction={toast.onAction ? runAction : undefined}>
             {toast.message}
           </Toast>
         </div>

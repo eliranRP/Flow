@@ -226,7 +226,7 @@ export const HomeBooksMonth: Story = {
         greeting="שלום, אלירן"
         previewing={false}
         search=""
-        unpaidNet={2_340_000n}
+        unpaidGross={2_340_000n}
         unpaidCount={3}
         period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
         onPeriod={() => undefined}
@@ -381,7 +381,7 @@ export const HomeLongHero: Story = {
         greeting="שלום, אלירן"
         previewing={false}
         search=""
-        unpaidNet={0n}
+        unpaidGross={0n}
         unpaidCount={0}
         period={{ kind: "all", from: null, to: null }}
         onPeriod={() => undefined}

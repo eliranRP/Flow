@@ -68,6 +68,9 @@ export function SignInScreen() {
       </SignInBrand>
 
       <SignInPanel>
+        {ready ? null : (
+          <Notice title="הגדרת השרת אינה תקינה" body="הכתובת או המפתח הציבורי אינם תקינים, ולכן אי אפשר להתחבר." tone="bad" />
+        )}
         {notice === "cancelled" ? (
           <Notice title="הכניסה לא הושלמה" body="החלון של Google נסגר. אפשר לנסות שוב." />
         ) : null}

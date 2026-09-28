@@ -1,7 +1,8 @@
 import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type ProjectDetail, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import { useEffect, useState, type ReactNode, type SubmitEvent } from "react";
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { overheadHint, shownProfit } from "../overhead";
 import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
@@ -53,6 +54,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   if (response.error) throw new Error(await edgeErrorCode(response.error));
   return response.data;
 }
+import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
@@ -60,9 +62,10 @@ import { Chip } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
-import { BackIcon, CameraIcon, CheckIcon, ChevronIcon, DocumentIcon, GripIcon, MoreIcon, ProjectsIcon, ReviewIcon, SearchIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, FormError, SectionHead } from "../ui/layout";
+import { BackIcon, CameraIcon, CheckIcon, DocumentIcon, GripIcon, MoreIcon, ProjectsIcon, ReviewIcon, SearchIcon, TrashIcon } from "../ui/icons";
+import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { RadioRow } from "../ui/radio-row";
 import { MoneyField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { ReviewCard } from "../ui/review-card";
@@ -171,7 +174,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
         loading={
           <>
             <div className="ui-page-pad ui-stack">
-              <SearchField label="חיפוש פרויקט" value="" onChange={() => undefined} placeholder="חיפוש פרויקט או לקוח" disabled />
+              <SearchField label="חיפוש פרויקט" value="" onChange={() => undefined} placeholder="חיפוש לפי שם או סטטוס" disabled />
             </div>
             <ListSkeleton />
           </>
@@ -191,10 +194,15 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
   );
 }
 
-function projectMargin(project: { income_agorot: bigint; profit_agorot: bigint }): string | undefined {
+function projectMargin(project: { income_agorot: bigint; profit_agorot: bigint }): ReactNode | undefined {
   if (project.income_agorot <= 0n) return undefined;
   const pct = Number((project.profit_agorot * 100n) / project.income_agorot);
-  return pct < 0 ? `רווחיות −${String(Math.abs(pct))}%` : `רווחיות ${String(pct)}%`;
+  const shown = pct < 0 ? `−${String(Math.abs(pct))}%` : `${String(pct)}%`;
+  return (
+    <>
+      רווחיות <bdi dir="ltr">{shown}</bdi>
+    </>
+  );
 }
 
 function ProjectsBody({
@@ -221,13 +229,13 @@ function ProjectsBody({
   return (
     <>
       <div className="ui-page-pad ui-stack">
-        <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש פרויקט או לקוח" />
+        <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם או סטטוס" />
       </div>
       {visible.length === 0 ? (
         <EmptyState
           icon={<SearchIcon />}
           title={`לא מצאנו ״${needle}״`}
-          body="החיפוש הוא לפי שם הפרויקט. גם פרויקטים שהסתיימו נכללים."
+          body="החיפוש הוא לפי שם או סטטוס. גם פרויקטים שהסתיימו נכללים."
           action={<Button variant="pill" onClick={() => { setQuery(""); }}>ניקוי החיפוש</Button>}
         />
       ) : (
@@ -304,9 +312,24 @@ export function ProjectDetailScreen({ sample }: { sample?: NonNullable<ProjectDe
   const search = usePreviewSearch();
   const detail = useProjectQuery(sample ? "" : projectId);
   const preview = useHomePreview();
+  const toast = useToast();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const [moves, setMoves] = useState(false);
-  const [overhead, setOverhead] = useState(false);
+  const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
+  const wantedOverhead = useRef(false);
+  useEffect(() => {
+    if (sample) return;
+    if (detail.data) setOverheadOn(detail.data.after_overhead === true);
+  }, [sample, detail.data]);
+  const saveOverhead = useWrite({
+    failure: "לא הצלחנו לשמור את התצוגה.",
+    keys: ["project", "dashboard"],
+    run: async () => {
+      const supabase = getSupabase();
+      if (!supabase || projectId === "") throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_after_overhead", { p_on: wantedOverhead.current, p_project_id: projectId }));
+    },
+  });
   if (phase.kind === "empty") return <LegacyEmptyProject />;
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
@@ -317,10 +340,11 @@ export function ProjectDetailScreen({ sample }: { sample?: NonNullable<ProjectDe
   if (!project) {
     return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
+  const profit = shownProfit(overheadOn, project.profit_agorot, project.profit_after_overhead_agorot, project.overhead_share_agorot);
   const income = absAgorot(project.income_agorot);
-  const expenses = absAgorot(project.direct_agorot);
-  const margin = income > 0n ? Number((project.profit_agorot * 100n) / income) : null;
-  const marginText = margin == null ? "" : margin < 0 ? ` · רווחיות −${String(Math.abs(margin))}%` : ` · רווחיות ${String(margin)}%`;
+  const expenses = absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot);
+  const margin = income > 0n ? Number((profit * 100n) / income) : null;
+  const marginShown = margin == null ? null : margin < 0 ? `−${String(Math.abs(margin))}%` : `${String(margin)}%`;
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -332,22 +356,37 @@ export function ProjectDetailScreen({ sample }: { sample?: NonNullable<ProjectDe
         }
         trailing={<ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
-        <div className="ui-band-hero">
+        <BandHero>
           <h1 className="t-title-2">{project.name}</h1>
           <p className="t-label">{project.state_label ?? (project.status === "finished" ? "הסתיים" : "פעיל")}</p>
-        </div>
-        <BandHero>
-          <p className="ui-band-label t-label">רווח{marginText}</p>
-          <p className="t-display"><BigNumber agorot={project.profit_agorot} /></p>
+          <p className="ui-band-label t-label">
+            רווח
+            {marginShown == null ? null : (
+              <>
+                {" · רווחיות "}
+                <bdi dir="ltr">{marginShown}</bdi>
+              </>
+            )}
+          </p>
+          <p className="t-display"><BigNumber agorot={profit} /></p>
           <BandFigures income={formatIls(income)} expense={formatIls(expenses)} />
         </BandHero>
       </TopBand>
       <div className="ui-page-pad">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
-          hint={overhead ? "דלוק · מציג רווח אחרי כלליות" : "כבוי · מציג רווח לפני כלליות"}
-          checked={overhead}
-          onChange={setOverhead}
+          hint={overheadHint(overheadOn, project.overhead_weighted === true)}
+          checked={overheadOn}
+          onChange={(checked) => {
+            if (sample) {
+              setOverheadOn(checked);
+              return;
+            }
+            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            setOverheadOn(checked);
+            wantedOverhead.current = checked;
+            saveOverhead.mutate();
+          }}
         />
       </div>
       {project.budget_agorot != null ? (
@@ -531,6 +570,7 @@ export function ReviewQueue({
   sample?: boolean;
 }) {
   const preview = useHomePreview();
+  const navigate = useNavigate();
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const row = rows[0];
@@ -538,13 +578,14 @@ export function ReviewQueue({
     failure: "לא הצלחנו לאשר.",
     keys: ["review", "dashboard", "unpaid"],
     run: async () => {
-      if (!row?.project_id || !row.category_id) throw new Error("missing");
+      if (!row?.category_id) throw new Error("missing");
+      if (row.direction !== "income" && !row.project_id) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: row.id,
         p_action: "approved",
-        p_project_id: row.project_id,
+        ...(row.direction === "income" || row.project_id == null ? {} : { p_project_id: row.project_id }),
         p_category_id: row.category_id,
       }));
     },
@@ -595,17 +636,15 @@ export function ReviewQueue({
         />
       </div>
       {auto > 0 ? (
-        <div className="ui-banner">
-          <span className="ui-banner-icon">
-            <ReviewIcon />
-          </span>
-          <span className="ui-row-text">
-            <span className="ui-row-title">
+        <Banner
+          icon={<ReviewIcon />}
+          title={
+            <>
               <bdi dir="ltr">{String(auto)}</bdi> תנועות שויכו היום בלי להמתין בתור
-            </span>
-          </span>
-          <TextLink to={`/review${search}`}>צפייה</TextLink>
-        </div>
+            </>
+          }
+          action={<TextLink to={`/review${search}`}>צפייה</TextLink>}
+        />
       ) : null}
       <ReviewCard
         supplier={row.supplier_name ?? row.description}
@@ -620,8 +659,12 @@ export function ReviewQueue({
           busy={approve.isPending}
           onClick={() => {
             if (sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
-            if (!row.project_id || !row.category_id) {
-              toast.show({ tone: "bad", message: "בלי פרויקט וקטגוריה אי אפשר לאשר. בחרו בשינוי." });
+            if (row.reason === "unallocated_shared") {
+              if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
+              return;
+            }
+            if (row.direction === "income" ? !row.category_id : !row.project_id || !row.category_id) {
+              toast.show({ tone: "bad", message: row.direction === "income" ? "בלי קטגוריה אי אפשר לאשר. בחרו בשינוי." : "בלי פרויקט וקטגוריה אי אפשר לאשר. בחרו בשינוי." });
               return;
             }
             approve.mutate();
@@ -736,6 +779,7 @@ export function ChangeForm({
     categoryId?: string;
     projects: ChangeProject[];
     categories: Array<{ id: string; name: string; hidden: boolean; kind?: string }>;
+    direction?: "income" | "expense";
   };
 } = {}) {
   const search = usePreviewSearch();
@@ -755,12 +799,18 @@ export function ChangeForm({
   const [remember, setRemember] = useState(true);
   const [newOpen, setNewOpen] = useState(false);
   const phase = sample ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, categories));
+  const direction = row?.direction ?? sample?.direction ?? "expense";
+  const income = direction === "income";
   const projectOptions: ChangeProject[] = sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name }));
-  const categoryOptions = (sample?.categories ?? categories.data ?? []).filter((category) => !category.hidden && category.kind !== "income");
-  const suggested = projectOptions.find((project) => project.id === (sample?.suggestionId ?? row?.project_id ?? "")) ?? projectOptions[0];
-  const recent = projectOptions.find((project) => project.id === sample?.recentId) ?? projectOptions.find((project) => project.id !== suggested?.id);
+  const categoryOptions = (sample?.categories ?? categories.data ?? []).filter((category) => {
+    if (category.hidden) return false;
+    return income ? category.kind === "income" : category.kind !== "income";
+  });
+  const suggestionId = sample?.suggestionId ?? row?.project_id ?? "";
+  const suggested = suggestionId === "" ? undefined : projectOptions.find((project) => project.id === suggestionId);
+  const recent = projectOptions.find((project) => project.id === sample?.recentId) ?? (suggested ? projectOptions.find((project) => project.id !== suggested.id) : undefined);
   const needle = query.trim();
-  const listed = projectOptions.filter((project) => needle === "" || project.name.includes(needle) || (project.code ?? "").includes(needle));
+  const listed = projectOptions.filter((project) => needle === "" || project.name.includes(needle));
   const shownCategories = moreCategories ? categoryOptions : categoryOptions.slice(0, 3);
   const chosenProject = projectOptions.find((project) => project.id === projectId);
   const chosenCategory = categoryOptions.find((category) => category.id === categoryId);
@@ -782,8 +832,9 @@ export function ChangeForm({
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",
-        p_project_id: projectId,
+        ...(income ? {} : { p_project_id: projectId }),
         p_category_id: categoryId,
+        p_remember: remember,
       }));
     },
   });
@@ -797,75 +848,78 @@ export function ChangeForm({
             event.preventDefault();
             if (sample) return;
             if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
-            if (projectId === "" || categoryId === "") {
-              toast.show({ tone: "bad", message: "בחרו פרויקט וקטגוריה." });
+            if (income ? categoryId === "" : projectId === "" || categoryId === "") {
+              toast.show({ tone: "bad", message: income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
               return;
             }
             save.mutate();
           }}
         >
-          <h2 className="t-title-3">פרויקט</h2>
-          <div className="flex flex-wrap gap-2">
-            {suggested ? (
-              <Chip
-                pressed={projectId === suggested.id}
-                onClick={() => {
-                  setProjectId(suggested.id);
-                }}
-              >
-                {`${suggested.name} · הצעה`}
-              </Chip>
-            ) : null}
-            {recent ? (
-              <Chip
-                pressed={projectId === recent.id}
-                onClick={() => {
-                  setProjectId(recent.id);
-                }}
-              >
-                {`${recent.name} · אחרון`}
-              </Chip>
-            ) : null}
-          </div>
-          <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש פרויקט או קוד (P-12)" />
-          <div className="ui-project-list">
-            {listed.map((project) => (
-              <button
-                key={project.id}
-                type="button"
-                className="ui-row ui-hit"
-                aria-pressed={projectId === project.id}
-                onClick={() => {
-                  setProjectId(project.id);
-                }}
-              >
-                <span className="ui-row-main">
-                  <span className="ui-row-text">
-                    <span className="ui-row-title">{project.code ? `${project.code} · ${project.name}` : project.name}</span>
-                  </span>
-                </span>
-                {project.hint ? <span className="t-hint">{project.hint}</span> : null}
-              </button>
-            ))}
-          </div>
-          <p className="ui-page-title-row">
-            <TextLink
-              chevron={false}
-              onClick={() => {
-                setNewOpen(true);
-              }}
-            >
-              פרויקט חדש
-            </TextLink>
-            <TextLink
-              chevron={false}
-              onClick={() => {
-                toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
-              }}
-            >
-              פיצול בין פרויקטים
-            </TextLink>
-          </p>
+          {income ? null : (
+            <>
+              <h2 className="t-title-3">פרויקט</h2>
+              <div className="flex flex-wrap gap-2">
+                {suggested ? (
+                  <Chip
+                    pressed={projectId === suggested.id}
+                    onClick={() => {
+                      setProjectId(suggested.id);
+                    }}
+                  >
+                    {`${suggested.name} · הצעה`}
+                  </Chip>
+                ) : null}
+                {recent ? (
+                  <Chip
+                    pressed={projectId === recent.id}
+                    onClick={() => {
+                      setProjectId(recent.id);
+                    }}
+                  >
+                    {`${recent.name} · אחרון`}
+                  </Chip>
+                ) : null}
+              </div>
+              <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם הפרויקט" />
+              <div className="ui-project-list" role="radiogroup" aria-label="פרויקט">
+                {listed.map((project) => (
+                  <RadioRow
+                    key={project.id}
+                    label={project.code ? `${project.code} · ${project.name}` : project.name}
+                    {...(project.hint ? { hint: project.hint } : {})}
+                    selected={projectId === project.id}
+                    onSelect={() => {
+                      setProjectId(project.id);
+                    }}
+                  />
+                ))}
+              </div>
+              <p className="ui-page-title-row">
+                <TextLink
+                  chevron={false}
+                  onClick={() => {
+                    setNewOpen(true);
+                  }}
+                >
+                  פרויקט חדש
+                </TextLink>
+                {row?.transaction_id ? (
+                  <TextLink chevron={false} to={`/transactions/${row.transaction_id}/split${search}`}>
+                    פיצול בין פרויקטים
+                  </TextLink>
+                ) : (
+                  <TextLink
+                    chevron={false}
+                    onClick={() => {
+                      toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
+                    }}
+                  >
+                    פיצול בין פרויקטים
+                  </TextLink>
+                )}
+              </p>
+            </>
+          )}
           <h2 className="t-title-3">קטגוריה</h2>
           <div className="flex flex-wrap gap-2">
             {shownCategories.map((category) => (
@@ -889,12 +943,14 @@ export function ChangeForm({
               </Chip>
             ) : null}
           </div>
-          <Toggle
-            label="לזכור לספק הזה"
-            hint={chosenProject && chosenCategory ? `${chosenProject.name} · ${chosenCategory.name}` : "השיוך נשמר עם האישור"}
-            checked={remember}
-            onChange={setRemember}
-          />
+          {income ? null : (
+            <Toggle
+              label="לזכור לספק הזה"
+              hint={chosenProject && chosenCategory ? `${chosenProject.name} · ${chosenCategory.name}` : "השיוך נשמר עם האישור"}
+              checked={remember}
+              onChange={setRemember}
+            />
+          )}
           <Button type="submit" busy={save.isPending} icon={<CheckIcon />}>שמירה ואישור</Button>
         </form>
       ) : (
@@ -938,13 +994,14 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, unpaid);
   const [hidden, setHidden] = useState<string[]>([]);
   const [marking, setMarking] = useState<UnpaidRow | null>(null);
-  const rows = (sample ?? unpaid.data ?? []).filter((row) => !hidden.includes(row.id));
-  const gross = rows.reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n);
+  const all = sample ?? unpaid.data ?? [];
+  const rows = all.filter((row) => !hidden.includes(row.id));
+  const gross = all.reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n);
   return (
     <ScreenState
       title="חשבוניות שלא שולמו"
       backTo={`/${search}`}
-      phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
+      phase={phase.kind === "ready" && all.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void unpaid.refetch(); }}
       empty={<EmptyState icon={<ReviewIcon />} title="הכל שולם" body="אין חשבוניות פתוחות כרגע." />}
     >
@@ -1029,9 +1086,11 @@ export function TransactionScreen({ sample }: { sample?: NonNullable<Transaction
       <ScreenHeader title="פרטי תנועה" backTo={`/${search}`} />
       <p className="t-display ui-page-pad"><BigNumber agorot={txn.amount_net} presentation="detail" /></p>
       <p className="ui-page-pad">{txn.description}</p>
-      <p className="t-hint ui-page-pad">{formatDayMonth(txn.doc_date)} · {txn.project_name ?? "בלי פרויקט"} · {txn.category_name ?? "בלי קטגוריה"}</p>
-      <p className="t-hint ui-page-pad">לפני מע״מ. מע״מ <bdi dir="ltr">{formatIls(txn.vat_amount, { agorot: true })}</bdi> · {vatStatusLabel(txn.vat_status)}</p>
-      <p className="t-hint ui-page-pad">{txn.supplier_name ?? txn.customer_name ?? ""}</p>
+      <FigureLine label="תאריך" value={formatDayMonth(txn.doc_date)} />
+      <FigureLine label="פרויקט" value={txn.project_name ?? "בלי פרויקט"} />
+      <FigureLine label="קטגוריה" value={txn.category_name ?? "בלי קטגוריה"} />
+      <FigureLine label="מע״מ" value={`${formatIls(txn.vat_amount, { agorot: true })} · ${vatStatusLabel(txn.vat_status)}`} />
+      {txn.supplier_name ?? txn.customer_name ? <FigureLine label="צד" value={txn.supplier_name ?? txn.customer_name ?? ""} /> : null}
       <div className="ui-stack ui-page-pad">
         <Button variant="secondary" to={`/transactions/${txn.id}/split${search}`}>פיצול</Button>
         {txn.source === "manual" ? (
@@ -1065,7 +1124,7 @@ export function SplitScreen({ sampleProjects }: { sampleProjects?: Array<{ id: s
   const toast = useToast();
   const dashboard = useDashboardQuery(sampleProjects == null);
   const txn = useTransactionQuery(sampleProjects ? "" : transactionId);
-  const phase = sampleProjects ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
+  const phase = sampleProjects ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, txn));
   const projects = sampleProjects ?? dashboard.data?.projects ?? [];
   const [shares, setShares] = useState<Record<string, string>>({});
   const [seeded, setSeeded] = useState(false);
@@ -1099,7 +1158,7 @@ export function SplitScreen({ sampleProjects }: { sampleProjects?: Array<{ id: s
       subtitle={`החלקים מסתכמים ב-100%. עכשיו ${total.toFixed(0)}%.`}
       backTo={`/transactions/${transactionId}${search}`}
       phase={phase.kind === "ready" && projects.length === 0 ? { kind: "empty" } : phase}
-      onRetry={() => { void dashboard.refetch(); }}
+      onRetry={() => { void dashboard.refetch(); void txn.refetch(); }}
       empty={<EmptyState icon={<ProjectsIcon />} title="אין פרויקטים לפיצול" body="פיצול מחכה לפרויקט אחד לפחות." />}
     >
       <form
@@ -1138,25 +1197,6 @@ type SettingsSample = {
   incomeCategories?: number;
 };
 
-function SettingsKicker({ title }: { title: string }) {
-  return <h2 className="ui-settings-kicker t-hint">{title}</h2>;
-}
-
-function SettingsLink({ to, title, hint, icon }: { to: string; title: string; hint?: string; icon: ReactNode }) {
-  return (
-    <Link to={to} className="ui-row ui-hit">
-      <span className="ui-row-main">
-        <span className="ui-row-icon">{icon}</span>
-        <span className="ui-row-text">
-          <span className="ui-row-title" title={title}>{title}</span>
-          {hint ? <span className="ui-row-hint">{hint}</span> : null}
-        </span>
-      </span>
-      <ChevronIcon />
-    </Link>
-  );
-}
-
 export function SettingsScreen({
   sample,
 }: {
@@ -1175,8 +1215,22 @@ export function SettingsScreen({
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [weekly, setWeekly] = useState(false);
   const [reminder, setReminder] = useState(false);
-  const [overhead, setOverhead] = useState(false);
+  const [overheadOn, setOverheadOn] = useState(false);
+  const wantedOverhead = useRef(false);
+  useEffect(() => {
+    if (sample) return;
+    if (dashboard.data) setOverheadOn(dashboard.data.after_overhead === true);
+  }, [sample, dashboard.data]);
   const phase = sample ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, status));
+  const saveOverhead = useWrite({
+    failure: "לא הצלחנו לשמור את התצוגה.",
+    keys: ["dashboard", "project"],
+    run: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_after_overhead", { p_on: wantedOverhead.current }));
+    },
+  });
   const connect = useWrite({
     failure: (error) => hebrewSumitError(error.message) ?? "החיבור נכשל. בדקו את המזהה ואת המפתח.",
     success: "SUMIT מחובר. המפתח נשאר בשרת.",
@@ -1249,65 +1303,41 @@ export function SettingsScreen({
   return (
     <div>
       <ScreenHeader title="הגדרות" />
-      <SettingsKicker title="החברה" />
-      <div className="ui-project-list">
-        <div className="ui-row">
-          <span className="ui-row-main">
-            <span className="ui-row-icon"><ProjectsIcon /></span>
-            <span className="ui-row-text">
-              <span className="ui-row-title">{businessName ?? "עדיין בלי עסק"}</span>
-              <span className="ui-row-hint">{vatRegistered ? "עוסק מורשה" : "עוסק פטור"}</span>
-            </span>
-          </span>
-        </div>
-        {email ? (
-          <div className="ui-row">
-            <span className="ui-row-text">
-              <span className="ui-row-title" title={email}>{email}</span>
-              <span className="ui-row-hint">חשבון Google</span>
-            </span>
-          </div>
-        ) : null}
-      </div>
-      <SettingsKicker title="חיבור SUMIT" />
-      <div className="ui-project-list">
+      <SectionHead title="החברה" />
+      <List>
+        <ListRow variant="static" title={businessName ?? "עדיין בלי עסק"} hint={vatRegistered ? "עוסק מורשה" : "עוסק פטור"} icon={<ProjectsIcon />} />
+        {email ? <ListRow variant="static" title={email} hint="חשבון Google" /> : null}
+      </List>
+      <SectionHead title="חיבור SUMIT" />
+      <List>
         {connected ? (
-          <div className="ui-row">
-            <span className="ui-row-text">
-              <span className="ui-row-title">SUMIT מחובר</span>
-              <span className="ui-row-hint">
-                מספר חברה <bdi dir="ltr">{String(sumitId ?? "")}</bdi>
-              </span>
-            </span>
-          </div>
+          <ListRow
+            variant="static"
+            title="SUMIT מחובר"
+            hint={<>מספר חברה <bdi dir="ltr">{String(sumitId ?? "")}</bdi></>}
+          />
         ) : (
-          <button type="button" className="ui-row ui-hit" aria-label="חיבור SUMIT" onClick={() => { setConnectOpen(true); }}>
-            <span className="ui-row-text">
-              <span className="ui-row-title">חיבור SUMIT</span>
-              <span className="ui-row-hint">מספר חברה ומפתח API</span>
-            </span>
-            <ChevronIcon />
-          </button>
+          <ListRow variant="button" title="חיבור SUMIT" hint="מספר חברה ומפתח API" onClick={() => { setConnectOpen(true); }} />
         )}
-      </div>
+      </List>
       {lastError ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
-      <div className="ui-stack ui-page-pad">
-        <Button
-          variant="secondary"
-          busy={refresh.isPending}
-          onClick={() => {
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
-            refresh.mutate();
-          }}
-        >
-          רענון עכשיו
-        </Button>
-        {connected ? (
+      {connected ? (
+        <div className="ui-stack ui-page-pad">
+          <Button
+            variant="secondary"
+            busy={refresh.isPending}
+            onClick={() => {
+              if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              refresh.mutate();
+            }}
+          >
+            רענון עכשיו
+          </Button>
           <Button variant="secondary" onClick={() => { setDisconnectOpen(true); }}>
             ניתוק
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <Sheet open={connectOpen} onOpenChange={setConnectOpen} title="חיבור SUMIT">
         <form
           className="ui-stack"
@@ -1335,35 +1365,42 @@ export function SettingsScreen({
           disconnect.mutate();
         }}
       />
-      <SettingsKicker title="סיווג" />
-      <div className="ui-project-list">
-        <SettingsLink to={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<DocumentIcon />} />
-        <SettingsLink to={`/projects${search}`} title="פרויקטים" hint={projectCount == null ? undefined : `${String(projectCount)} פעילים`} icon={<ProjectsIcon />} />
-      </div>
-      <SettingsKicker title="התראות" />
+      <SectionHead title="סיווג" />
+      <List>
+        <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<DocumentIcon />} />
+        <ListRow variant="item" href={`/projects${search}`} title="פרויקטים" hint={projectCount == null ? undefined : `${String(projectCount)} פעילים`} icon={<ProjectsIcon />} />
+      </List>
+      <SectionHead title="התראות" />
       <div className="ui-page-pad">
         <Toggle label="סיכום שבועי" hint="ההודעות לא נשלחות" checked={weekly} onChange={setWeekly} />
         <Toggle label="תזכורת לפריטים ממתינים" hint="ההודעות לא נשלחות" checked={reminder} onChange={setReminder} />
       </div>
-      <SettingsKicker title="אישור ותצוגה" />
+      <SectionHead title="אישור ותצוגה" />
       <div className="ui-page-pad">
         <Toggle label="אישור אוטומטי בביטחון גבוה" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
         <Toggle
           label="רווח אחרי חלק בכלליות"
-          hint={overhead ? "דלוק · מציג רווח אחרי כלליות" : "כבוי · מציג רווח לפני כלליות"}
-          checked={overhead}
-          onChange={setOverhead}
+          hint={overheadHint(overheadOn, false)}
+          checked={overheadOn}
+          onChange={(checked) => {
+            if (sample) {
+              setOverheadOn(checked);
+              return;
+            }
+            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            setOverheadOn(checked);
+            wantedOverhead.current = checked;
+            saveOverhead.mutate();
+          }}
         />
       </div>
-      <SettingsKicker title="נתונים" />
-      <div className="ui-project-list">
-        <SettingsLink to={`/notifications${search}`} title="התראות" hint="אין עדיין התראות" icon={<ReviewIcon />} />
+      <SectionHead title="נתונים" />
+      <List>
+        <ListRow variant="item" href={`/notifications${search}`} title="התראות" hint="אין עדיין התראות" icon={<ReviewIcon />} />
         {preview === "off" ? (
-          <button type="button" className="ui-row ui-hit ui-row-danger" disabled={signOut.isPending} onClick={() => { signOut.mutate(); }}>
-            התנתקות
-          </button>
+          <ListRow variant="danger" title="התנתקות" busy={signOut.isPending} onClick={() => { signOut.mutate(); }} />
         ) : null}
-      </div>
+      </List>
       <p className="ui-poc t-hint"><bdi dir="ltr">Flow · POC 0.1</bdi></p>
     </div>
   );

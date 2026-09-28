@@ -1,7 +1,7 @@
 # Confirm, don't type
 
 **Date:** 2026-09-26
-**Status:** Accepted
+**Status:** Accepted. [0050](0050-demo-splits-and-review.md) amends this for SUMIT rows that are already in the books: they stay in the P&L while they wait in Review.
 
 [0011](0011-auto-approve-high-confidence.md) decides what happens to a high-confidence row. [0021](0021-shared-costs-and-overhead.md) adds a split across active projects and a recurring split rule. This record stays Accepted for confirm-not-type. A one-project remember rule is unchanged.
 

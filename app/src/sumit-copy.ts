@@ -7,6 +7,8 @@ const SUMIT_ERRORS: Record<string, string> = {
   sync_failed: "הרענון נכשל. נסו שוב.",
   sync_page_cap: "יש יותר מדי מסמכים לרענון אחד. פנו לתמיכה.",
   sync_skipped: "הרענון דילג. אפשר שוב בעוד דקה.",
+  sync_sweep_empty: "הרענון הגיע בלי מסמכים, אז הספרים לא נמחקו.",
+  sync_sweep_suspicious: "הרענון נראה חלקי, אז מסמכים ישנים לא נמחקו.",
   connect_failed: "החיבור נכשל. בדקו את המזהה ואת המפתח.",
   method: "החיבור נכשל.",
 };

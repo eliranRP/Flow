@@ -7,28 +7,33 @@ type BannerProps = {
   title: ReactNode;
   hint?: ReactNode;
   to?: string;
+  /** Replaces the chevron. The banner itself is not a link when this is set. */
+  action?: ReactNode;
+  icon?: ReactNode;
 };
 
 /** The one tinted pending card. Hide it when there is nothing to show. */
-export function Banner({ title, hint, to }: BannerProps) {
-  const className = cx("ui-banner", "ui-hit");
+export function Banner({ title, hint, to, action, icon }: BannerProps) {
+  const linked = to != null && action == null;
+  const className = cx("ui-banner", linked && "ui-hit");
   const body = (
     <>
-      <span className="ui-banner-icon">
-        <InboxIcon />
-      </span>
+      <span className="ui-banner-icon">{icon ?? <InboxIcon />}</span>
       <span className="ui-row-text">
         <span className="ui-row-title" title={typeof title === "string" ? title : undefined}>
           {title}
         </span>
         {hint ? <span className="ui-row-hint">{hint}</span> : null}
       </span>
-      <span className="ui-banner-chevron">
-        <ChevronIcon />
-      </span>
+      {action ??
+        (linked ? (
+          <span className="ui-banner-chevron">
+            <ChevronIcon />
+          </span>
+        ) : null)}
     </>
   );
-  if (to) {
+  if (linked && to) {
     return (
       <Link to={to} className={className}>
         {body}

@@ -165,14 +165,14 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
-test("a segmented control is hit 3px outside its drawn box", async ({ page }) => {
+test("a segmented control is hit 4px outside its drawn box", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-segmentedcontrol--expenses&viewMode=story", { waitUntil: "domcontentloaded" });
   const control = page.locator(".ui-seg-btn").first();
   await expect(control).toBeVisible();
   const hit = await control.evaluate((el) => {
     const box = el.getBoundingClientRect();
-    const above = document.elementFromPoint(box.left + box.width / 2, box.top - 3);
+    const above = document.elementFromPoint(box.left + box.width / 2, box.top - 4);
     return above === el || (above instanceof Node && el.contains(above));
   });
   expect(hit).toBe(true);

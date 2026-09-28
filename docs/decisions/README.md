@@ -84,3 +84,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0061](0061-review-undo.md) | 2026-09-28 | Accepted | Undo puts a review item back on the queue. 0063 restores the previous assignment and brings Toggle back |
 | [0062](0062-audit-layout-calls.md) | 2026-09-28 | Accepted | Fixed-height controls ellipsize. Empty states use the small pill. A 0% change stays visible |
 | [0063](0063-owner-ledger.md) | 2026-09-28 | Accepted | Sync writes only SUMIT fields. The design review restores Toggle, the tab bar on pushed screens, and "טרם נגבה" |
+| [0064](0064-review-round4.md) | 2026-09-28 | Accepted | Library-only screens, a saved overhead switch with a zero share, income stays out of Review |
