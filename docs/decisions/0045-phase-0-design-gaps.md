@@ -30,4 +30,4 @@ Dropping the 8px tab-bar floor so a device with no inset sits the labels on the 
 
 ## Consequences
 
-`?preview=error` is offline. `?preview=error-server` is the other load failure. A project with no transactions uses the shared empty state and the `es-02` copy from the implementation guide. The "צריך עזרה בכניסה?" link is only on the failed sign-in note. [DESIGN-RULES.md](../design/DESIGN-RULES.md) points these Phase 0 calls here. The mockup files stay as they are.
+`?preview=error` is offline. `?preview=error-server` is the other load failure. Those two preview screens do not show "מצב תצוגה": the marker is only a demo aid, and these screens have no band to hold it. A project with no transactions uses the shared empty state and the `es-02` copy from the implementation guide. The "צריך עזרה בכניסה?" link is only on the failed sign-in note. [DESIGN-RULES.md](../design/DESIGN-RULES.md) points these Phase 0 calls here. The mockup files stay as they are.
