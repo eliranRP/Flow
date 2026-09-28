@@ -139,6 +139,7 @@ describe("App", () => {
     const back = screen.getByRole("link", { name: "חזרה" });
     expect(back).toHaveClass("help-back");
     expect(back).not.toHaveClass("icon-btn");
+    expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveClass("help-mail");
   });
 
   it("sends a signed-out visitor to sign-in", () => {
