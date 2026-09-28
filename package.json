@@ -13,6 +13,8 @@
     "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @flow/app test:e2e",
+    "test:e2e:live": "pnpm --filter @flow/app test:e2e:live",
+    "check:bundle": "node scripts/check-prod-bundle.mjs",
     "storybook": "pnpm --filter @flow/app storybook",
     "build-storybook": "pnpm --filter @flow/app build-storybook",
     "test:storybook": "pnpm --filter @flow/app test:storybook",

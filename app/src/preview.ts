@@ -1,8 +1,12 @@
 import { useSearchParams } from "react-router-dom";
 
-export type HomePreview = "off" | "empty" | "loading" | "error" | "error-server" | "demo";
+export type HomePreview = "off" | "empty" | "loading" | "error" | "error-server";
 
-/** Any `preview` query bypasses sign-in. `loading`, `error`, and `error-server` are review states. */
+/**
+ * A preview query bypasses sign-in so a reviewer can open empty, loading, and
+ * error chrome. It never supplies accounts, documents, or amounts. `demo` is
+ * treated as empty: the books come from SUMIT through the ledger.
+ */
 export function useHomePreview(): HomePreview {
   const [params] = useSearchParams();
   const value = params.get("preview");
@@ -10,7 +14,6 @@ export function useHomePreview(): HomePreview {
   if (value === "loading") return "loading";
   if (value === "error") return "error";
   if (value === "error-server") return "error-server";
-  if (value === "demo") return "demo";
   return "empty";
 }
 

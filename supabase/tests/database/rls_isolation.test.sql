@@ -30,7 +30,11 @@ where c.name = 'אלפא שיפוצים';
 insert into public.projects (company_id, name, state_label)
 select company_id, 'שיפוץ הרצל 12', 'פעיל' from flow_a;
 
-update flow_a set project_id = (select id from public.projects where name = 'שיפוץ הרצל 12');
+update flow_a a
+set project_id = p.id
+from public.projects p
+where p.company_id = a.company_id
+  and p.name = 'שיפוץ הרצל 12';
 
 insert into public.customers (company_id, name)
 select company_id, 'לקוח א' from flow_a;
@@ -52,9 +56,11 @@ select
   '2026-04-12', '2026-04-12', 'sumit', '2389941435', 'sumit:2389941435',
   project_id, 'בלוקים'
 from flow_a;
-update flow_a set transaction_id = (
-  select id from public.transactions where idempotency_key = 'sumit:2389941435'
-);
+update flow_a a
+set transaction_id = t.id
+from public.transactions t
+where t.company_id = a.company_id
+  and t.idempotency_key = 'sumit:2389941435';
 
 insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
 select company_id, transaction_id, project_id, 10000, -2200000 from flow_a;
@@ -90,7 +96,7 @@ from flow_a;
 grant all on flow_a to authenticated, anon;
 
 select is(
-  (select count(*)::int from public.categories),
+  (select count(*)::int from public.categories c join flow_a a on a.company_id = c.company_id),
   9,
   'a new company seeds 7 expense categories and 2 income categories'
 );

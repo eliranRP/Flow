@@ -7,6 +7,7 @@ export default defineConfig(
   {
     ignores: [
       "**/dist/**",
+      "scripts/**/*.mjs",
       "**/storybook-static/**",
       "**/.vite/**",
       "**/node_modules/**",

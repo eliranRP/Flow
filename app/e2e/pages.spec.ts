@@ -1,42 +1,42 @@
 import { expect, test } from "@playwright/test";
 
 const pages: Array<[string, string]> = [
-  ["/", "76,300"],
+  ["/", "כאן יופיע הרווח הנקי של העסק"],
   ["/projects", "פרויקטים"],
-  ["/projects/herzl", "שיפוץ הרצל 12"],
+  ["/projects/herzl", "פרויקט"],
   ["/review", "לאישור"],
   ["/unpaid", "חשבוניות פתוחות"],
   ["/settings", "הגדרות"],
   ["/settings/categories", "קטגוריות"],
   ["/onboarding", "פרטי העסק"],
   ["/notifications", "התראות"],
-  ["/transactions/H-INV-A", "פרטי תנועה"],
-  ["/transactions/H-INV-A/split", "פיצול"],
+  ["/transactions/1", "פרטי תנועה"],
+  ["/transactions/1/split", "פיצול"],
 ];
 
 for (const [path, heading] of pages) {
-  test(`demo ${path} shows ${heading}`, async ({ page }) => {
+  test(`preview ${path} shows ${heading} without fixture amounts`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     const joiner = path.includes("?") ? "&" : "?";
-    await page.goto(`${path}${joiner}preview=demo`);
+    await page.goto(`${path}${joiner}preview=1`);
     await expect(page.getByRole("heading", { name: heading, exact: false }).first()).toBeVisible();
+    await expect(page.getByText("76,300")).toHaveCount(0);
+    await expect(page.getByText("37,700")).toHaveCount(0);
   });
 }
 
 test("demo add sheet has income and expense", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/add?preview=demo");
+  await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
   await expect(page.getByRole("button", { name: "הוצאה" })).toBeVisible();
   await expect(page.getByRole("button", { name: "הכנסה" })).toBeVisible();
 });
 
-test("demo home shows the golden cash loss and opens the period sheet", async ({ page }) => {
+test("preview home has no fixture profit", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/?preview=demo");
-  await expect(page.getByRole("heading", { name: /76,300/ })).toBeVisible();
-  await page.getByRole("button", { name: "כל התקופה" }).click();
-  await expect(page.getByRole("dialog", { name: "תקופה" })).toBeVisible();
-  await page.getByRole("button", { name: "חשבוניות" }).click();
-  await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
+  await page.goto("/?preview=1");
+  await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+  await expect(page.getByText("37,700")).toHaveCount(0);
+  await expect(page.getByText("76,300")).toHaveCount(0);
 });

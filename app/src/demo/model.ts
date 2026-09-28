@@ -1,3 +1,7 @@
+/**
+ * Unit-test copy of the Flow Test derivation. The app entry does not import
+ * this file. pnpm check:bundle fails if a production module reaches the JSON.
+ */
 import {
   allocateByWeights,
   dashboardSchema,

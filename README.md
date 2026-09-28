@@ -61,31 +61,16 @@ pnpm lint
 pnpm test
 pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
 pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17. Migration first, then pgTAP. No Docker.
-pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID, supplied for that command only
+pnpm check:bundle     # after pnpm build: the client graph and dist import no fixture JSON
+pnpm test:e2e:live    # local Supabase plus the live SUMIT test company. See the SUMIT runbook.
 pnpm latency          # times get_home() against SUPABASE_URL
 ```
 
 Production builds read `app/.env.production` ([0046](docs/decisions/0046-public-anon-key.md)): the hosted URL and the public anon key. Do not put a service-role key in that file or anywhere else in git.
 
-After the phase-1 migration is applied, the first Google sign-in opens the company form and calls `create_company`. A user who already has a company skips it. Connecting SUMIT and checking the golden numbers is [docs/runbooks/sumit-connect.md](docs/runbooks/sumit-connect.md). Until that migration is on the hosted project, the SQL below is the fallback.
+After the phase-1 migration is applied, the first Google sign-in opens the company form and calls `create_company`. A user who already has a company skips it. Connecting SUMIT and checking the golden numbers is [docs/runbooks/sumit-connect.md](docs/runbooks/sumit-connect.md). The hosted database is not seeded with fixture documents.
 
-Demo company, from this repo. The service-role key is only in the environment of this command. It is not a file you commit. `SEED_OWNER_USER_ID` is that auth user id. The script creates the company with `is_demo = true`, or updates one that is already demo, and refuses a real company.
-
-```bash
-SUPABASE_URL=https://sxqpnetmtufkzowutduq.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY="<dashboard service role, this shell only>" \
-SEED_OWNER_USER_ID="<auth.users id>" \
-pnpm seed:demo
-```
-
-Empty company, SQL only. The Supabase SQL editor runs as a role that bypasses RLS. There is no SQL file in the repo for the Flow Test fixture. That data only goes in through the script above. This insert is a real company (`is_demo` stays false), and the category trigger adds the default categories:
-
-```sql
-insert into public.companies (owner_id, name)
-values ('<auth.users id>', 'העסק');
-```
-
-`pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script creates that company with `is_demo = true`, or updates one that is already marked demo. It refuses to write into a real company. It is idempotent on `(company, source, external id)`.
+`pnpm test` loads `packages/shared/fixtures/demo-data.json` and checks the derivation against `expected-pnl.json`. That JSON is the answer key. The app does not import it, and `pnpm check:bundle` fails the build if `app/dist` contains it.
 
 `packages/shared/src/database.types.ts` is untouched output of Supabase CLI 2.118.0 (`--schema public`). That CLI generates types in-process and does not pass a PostgREST version, so `--local` and `--db-url` both omit `__InternalSupabase`. The PostgREST tag for this CLI is `flow-postgrest-version` in `supabase/config.toml` (16.3). `scripts/check-db-types.sh` passes it as `--postgrest-version` once the CLI accepts the flag, which keeps a local `--db-url` check byte-identical to CI's `--local`. CI runs that diff after `supabase test db`. The app imports `Database` from `@flow/shared`, which omits SUMIT ciphertext columns.
 

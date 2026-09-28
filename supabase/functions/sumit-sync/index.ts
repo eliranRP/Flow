@@ -16,7 +16,7 @@ declare const Deno: {
   serve(handler: (req: Request) => Promise<Response> | Response): void;
 };
 
-const LIST_FOLDERS = "https://api.sumit.co.il/crm/data/listfolders/";
+const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
 
 Deno.serve(async (req) => {
@@ -130,6 +130,7 @@ async function sumitCall(
   assertSumitUrl(url);
   const response = await fetch(url, {
     method: "POST",
+    redirect: "error",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ Credentials: credentials, ...extra }),
   });

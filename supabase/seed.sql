@@ -1,7 +1,2 @@
--- Flow does not insert the demo client from SQL.
--- The rows need an auth.users owner, which does not exist until Google
--- sign-in has run. Load the demo company with:
---
---   pnpm seed:demo
---
--- See scripts/seed-demo.ts. It is idempotent on (company, source, external id).
+-- No fixture rows. Documents arrive through sumit-sync after a SUMIT connection.
+-- Do not load packages/shared/fixtures into this database.

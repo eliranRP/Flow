@@ -14,7 +14,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, createElement, useContext, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
-import { allTime, thisMonth, type PeriodChoice } from "./period";
+import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 
 interface BooksContextValue {
@@ -27,8 +27,7 @@ interface BooksContextValue {
 const BooksContext = createContext<BooksContextValue | null>(null);
 
 export function BooksProvider({ children }: { children: ReactNode }) {
-  const preview = useHomePreview();
-  const [period, setPeriod] = useState<PeriodChoice>(preview === "demo" ? allTime() : thisMonth());
+  const [period, setPeriod] = useState<PeriodChoice>(thisMonth());
   const [overheadOn, setOverheadOn] = useState(false);
   const value = useMemo(
     () => ({ period, setPeriod, overheadOn, setOverheadOn }),
@@ -55,12 +54,8 @@ export function useDashboardQuery() {
   const { period } = useBooks();
   return useQuery({
     queryKey: ["dashboard", preview, period],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async (): Promise<Dashboard> => {
-      if (preview === "demo") {
-        const model = await import("./demo/model");
-        return model.demoDashboard(period.from, period.to, period.basis);
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("get_dashboard", rpcArgs(period));
@@ -74,12 +69,8 @@ export function useUnpaidQuery() {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["unpaid", preview],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async (): Promise<UnpaidRow[]> => {
-      if (preview === "demo") {
-        const model = await import("./demo/model");
-        return model.demoUnpaid();
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("list_unpaid");
@@ -93,12 +84,8 @@ export function useReviewQuery() {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["review", preview],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async (): Promise<ReviewRow[]> => {
-      if (preview === "demo") {
-        const model = await import("./demo/model");
-        return model.demoReview();
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("list_review");
@@ -112,12 +99,8 @@ export function useCategoriesQuery() {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["categories", preview],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async (): Promise<CategoryRow[]> => {
-      if (preview === "demo") {
-        const model = await import("./demo/model");
-        return model.demoCategories();
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("list_categories");
@@ -131,11 +114,8 @@ export function useSumitStatusQuery() {
   const preview = useHomePreview();
   return useQuery({
     queryKey: ["sumit", preview],
-    enabled: preview === "off" || preview === "demo",
+    enabled: preview === "off",
     queryFn: async (): Promise<SumitStatus> => {
-      if (preview === "demo") {
-        return { connected: true, sumit_company_id: 2389917160, last_sync_at: null, last_error: null };
-      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("sumit_status");

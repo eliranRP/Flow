@@ -62,3 +62,10 @@ enabled = false
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 skip_nonce_check = false
+
+[edge_runtime]
+enabled = true
+
+# Local only. The value lives in the shell or supabase/.env, never in git.
+[edge_runtime.secrets]
+SUMIT_KEK = "env(SUMIT_KEK)"
