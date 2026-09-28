@@ -12,14 +12,26 @@ export function RouteSheet({
   closeTo,
   hint,
   action,
+  leading,
   returnFocusRef,
+  panelClassName,
+  footClassName,
+  titleRef,
+  onEscape,
+  onBeforeClose,
   children,
 }: {
   title: string;
   closeTo: string;
   hint?: string;
   action?: ReactNode;
+  leading?: ReactNode;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  panelClassName?: string;
+  footClassName?: string;
+  titleRef?: RefObject<HTMLHeadingElement | null>;
+  onEscape?: () => void;
+  onBeforeClose?: () => void;
   children?: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -52,6 +64,12 @@ export function RouteSheet({
       title={title}
       hint={hint}
       action={action}
+      leading={leading}
+      panelClassName={panelClassName}
+      footClassName={footClassName}
+      titleRef={titleRef}
+      onEscape={onEscape}
+      onBeforeClose={onBeforeClose}
       onOpenChange={(next) => {
         if (!next) setOpen(false);
       }}

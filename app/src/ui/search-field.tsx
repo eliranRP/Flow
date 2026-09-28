@@ -39,6 +39,7 @@ export function SearchField({
       {value !== "" && !disabled ? (
         <button
           type="button"
+          className="ui-search-clear"
           aria-label="ניקוי"
           onClick={() => {
             onChange("");

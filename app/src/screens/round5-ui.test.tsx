@@ -158,9 +158,11 @@ describe("transaction reassignment", () => {
     );
     expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /חולון/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "פרויקט: חולון, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
-    fireEvent.click(screen.getByRole("button", { name: "הובלה" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה ואישור" }));
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "שמירה ואישור" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
     });

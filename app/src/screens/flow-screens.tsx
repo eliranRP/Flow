@@ -59,14 +59,14 @@ import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { Chip, StatusPill } from "../ui/chip";
+import { StatusPill } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { BackIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
-import { RadioRow } from "../ui/radio-row";
+import { CHANGE_SAVE_FAILURE, ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
 import { MoneyField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { ReviewCard } from "../ui/review-card";
@@ -830,64 +830,87 @@ function ReviewEmpty({ search }: { search: string }) {
   );
 }
 
-type ChangeProject = { id: string; name: string; code?: string; hint?: string };
+type ChangeSample = {
+  supplier: string;
+  amount: string;
+  suggestionId?: string;
+  suggestionCategoryId?: string;
+  projectId?: string;
+  categoryId?: string;
+  projects: ChangeChoice[];
+  categories: Array<{ id: string; name: string; hidden: boolean; kind?: string }>;
+  direction?: "income" | "expense";
+  initialQuery?: string;
+  loading?: boolean;
+  saveError?: boolean;
+};
 
-export function ChangeForm({
-  sample,
-}: {
-  sample?: {
-    supplier: string;
-    amount: string;
-    suggestionId?: string;
-    recentId?: string;
-    categoryId?: string;
-    projects: ChangeProject[];
-    categories: Array<{ id: string; name: string; hidden: boolean; kind?: string }>;
-    direction?: "income" | "expense";
-  };
-} = {}) {
+function withChoice(options: ChangeChoice[], id: string, name: string | null | undefined): ChangeChoice[] {
+  if (id === "" || name == null || name === "" || options.some((option) => option.id === id)) return options;
+  return [{ id, name }, ...options];
+}
+
+export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const navigate = useNavigate();
   const toast = useToast();
+  const invalidate = useInvalidateBooks();
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const review = useReviewQuery(sample == null);
   const [params] = useSearchParams();
   const item = params.get("item") ?? "";
   const row = (review.data ?? []).find((entry) => entry.id === item);
-  const [projectId, setProjectId] = useState(sample?.suggestionId ?? "");
-  const [categoryId, setCategoryId] = useState(sample?.categoryId ?? "");
-  const [query, setQuery] = useState("");
-  const [moreCategories, setMoreCategories] = useState(false);
+  const [projectId, setProjectId] = useState(sample?.projectId ?? sample?.suggestionId ?? "");
+  const [categoryId, setCategoryId] = useState(sample?.categoryId ?? sample?.suggestionCategoryId ?? "");
   const [remember, setRemember] = useState(true);
-  const [newOpen, setNewOpen] = useState(false);
+  const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
+  const seeded = useRef(false);
+  const toasted = useRef(false);
   const phase = sample
     ? ({ kind: "ready" } as const)
     : combinePhase(combinePhase(screenPhase(preview, dashboard), screenPhase(preview, categories)), screenPhase(preview, review));
   const direction = sample?.direction ?? row?.direction ?? "expense";
   const formPhase = phase.kind === "ready" && sample == null && row == null ? ({ kind: "empty" } as const) : phase;
   const income = direction === "income";
-  const projectOptions: ChangeProject[] = sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name }));
-  const categoryOptions = (sample?.categories ?? categories.data ?? []).filter((category) => {
-    if (category.hidden) return false;
-    return income ? category.kind === "income" : category.kind !== "income";
-  });
-  const suggestionId = sample?.suggestionId ?? row?.project_id ?? "";
-  const suggested = suggestionId === "" ? undefined : projectOptions.find((project) => project.id === suggestionId);
-  const recent = projectOptions.find((project) => project.id === sample?.recentId) ?? (suggested ? projectOptions.find((project) => project.id !== suggested.id) : undefined);
-  const needle = query.trim();
-  const listed = projectOptions.filter((project) => needle === "" || project.name.includes(needle));
-  const shownCategories = moreCategories ? categoryOptions : categoryOptions.slice(0, 3);
-  const chosenProject = projectOptions.find((project) => project.id === projectId);
-  const chosenCategory = categoryOptions.find((category) => category.id === categoryId);
-  const hint = sample
-    ? `${sample.supplier} · ${sample.amount}`
-    : row
-      ? `${row.supplier_name ?? row.description} · ${formatIls(absAgorot(row.amount_net))}`
-      : undefined;
+  useEffect(() => {
+    if (sample || !row || seeded.current) return;
+    seeded.current = true;
+    setProjectId(row.project_id ?? "");
+    setCategoryId(row.category_id ?? "");
+  }, [sample, row]);
+  useEffect(() => {
+    if (!sample?.saveError || toasted.current) return;
+    toasted.current = true;
+    toast.show({
+      tone: "bad",
+      message: CHANGE_SAVE_FAILURE,
+      action: "ניסיון חוזר",
+      onAction: () => undefined,
+    });
+  }, [sample?.saveError, toast]);
+  const suggestionProjectId = sample?.suggestionId ?? row?.project_id ?? "";
+  const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? row?.category_id ?? "";
+  const projectOptions = withChoice(
+    [...(sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({
+      id: project.id,
+      name: project.name,
+      status: project.status,
+    }))), ...extraProjects],
+    projectId,
+    row?.project_name,
+  );
+  const categoryOptions = withChoice(
+    (sample?.categories ?? categories.data ?? []).filter((category) => {
+      if (category.hidden) return false;
+      return income ? category.kind === "income" : category.kind !== "income";
+    }).map((category) => ({ id: category.id, name: category.name })),
+    categoryId,
+    row?.category_name,
+  );
   const save = useWrite({
-    failure: "לא הצלחנו לשמור את השיוך.",
+    failure: CHANGE_SAVE_FAILURE,
     success: "השיוך נשמר",
     keys: ["review", "dashboard"],
     onSuccess: () => {
@@ -906,132 +929,76 @@ export function ChangeForm({
     },
   });
 
-  return (
-    <RouteSheet
-      title="שינוי שיוך"
-      hint={hint}
-      closeTo={`/review${search}`}
-      action={formPhase.kind === "ready" ? (
-        <Button type="submit" form="change-assignment" busy={save.isPending} icon={<CheckIcon />}>שמירה ואישור</Button>
-      ) : undefined}
-    >
-      {formPhase.kind === "ready" ? (
-        <form
-          id="change-assignment"
-          className="ui-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (sample) return;
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
-            if (income ? categoryId === "" : projectId === "" || categoryId === "") {
-              toast.show({ tone: "bad", message: income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
-              return;
-            }
-            save.mutate();
-          }}
-        >
-          {income ? null : (
-            <>
-              <h2 className="t-title-3">פרויקט</h2>
-              <div className="flex flex-wrap gap-2">
-                {suggested ? (
-                  <Chip
-                    pressed={projectId === suggested.id}
-                    onClick={() => {
-                      setProjectId(suggested.id);
-                    }}
-                  >
-                    {`${suggested.name} · הצעה`}
-                  </Chip>
-                ) : null}
-                {recent ? (
-                  <Chip
-                    pressed={projectId === recent.id}
-                    onClick={() => {
-                      setProjectId(recent.id);
-                    }}
-                  >
-                    {`${recent.name} · אחרון`}
-                  </Chip>
-                ) : null}
-              </div>
-              <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם הפרויקט" />
-              <div className="ui-project-list">
-                <div className="ui-result-cap" role="radiogroup" aria-label="פרויקט">
-                  {listed.map((project) => (
-                    <RadioRow
-                      key={project.id}
-                      label={project.name}
-                      {...(project.code || project.hint ? { hint: [project.code, project.hint].filter((part) => part != null && part !== "").join(" · ") } : {})}
-                      selected={projectId === project.id}
-                      onSelect={() => {
-                        setProjectId(project.id);
-                      }}
-                    />
-                  ))}
-                </div>
-                <ListRow
-                  variant="button"
-                  title="פרויקט חדש"
-                  icon={<PlusIcon size={16} />}
-                  onClick={() => {
-                    setNewOpen(true);
-                  }}
-                />
-                {row?.transaction_id ? (
-                  <ListRow variant="item" title="פיצול בין פרויקטים" icon={<SplitIcon size={16} />} href={`/transactions/${row.transaction_id}/split${search}`} />
-                ) : (
-                  <ListRow
-                    variant="button"
-                    title="פיצול בין פרויקטים"
-                    icon={<SplitIcon size={16} />}
-                    onClick={() => {
-                      toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
-                    }}
-                  />
-                )}
-              </div>
-            </>
-          )}
-          <h2 className="t-title-3">קטגוריה</h2>
-          <div className="flex flex-wrap gap-2">
-            {shownCategories.map((category) => (
-              <Chip
-                key={category.id}
-                pressed={categoryId === category.id}
-                onClick={() => {
-                  setCategoryId(category.id);
-                }}
-              >
-                {category.name}
-              </Chip>
-            ))}
-            {!moreCategories && categoryOptions.length > 3 ? (
-              <Chip
-                onClick={() => {
-                  setMoreCategories(true);
-                }}
-              >
-                עוד…
-              </Chip>
-            ) : null}
-          </div>
-          {income ? null : (
-            <Toggle
-              label="לזכור לספק הזה"
-              hint={chosenProject && chosenCategory ? `${chosenProject.name} · ${chosenCategory.name}` : "השיוך נשמר עם האישור"}
-              checked={remember}
-              onChange={setRemember}
-            />
-          )}
-        </form>
-      ) : (
+  async function createProject(name: string): Promise<ChangeChoice> {
+    if (sample) {
+      const created = { id: `new-${name}`, name, status: "active" as const };
+      setExtraProjects((list) => [...list, created]);
+      return created;
+    }
+    if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("supabase");
+    try {
+      const saved = await supabase.rpc("upsert_project", { p_name: name, p_status: "active" });
+      assertNoError(saved);
+      if (typeof saved.data !== "string") throw new Error("supabase");
+      const created = { id: saved.data, name, status: "active" as const };
+      setExtraProjects((list) => [...list, created]);
+      await invalidate(["dashboard"]);
+      toast.show({ message: "הפרויקט נשמר" });
+      return created;
+    } catch (error) {
+      if (error instanceof Error && error.message === "preview") throw error;
+      toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפרויקט." });
+      throw error;
+    }
+  }
+
+  if (formPhase.kind !== "ready") {
+    return (
+      <RouteSheet title="שינוי שיוך" closeTo={`/review${search}`}>
         <ScreenState title="שינוי שיוך" phase={formPhase} onRetry={() => { void dashboard.refetch(); void categories.refetch(); void review.refetch(); }} />
-      )}
-      <Sheet open={newOpen} onOpenChange={setNewOpen} title="פרויקט">
-        <ProjectForm onClose={() => { setNewOpen(false); }} />
-      </Sheet>
-    </RouteSheet>
+      </RouteSheet>
+    );
+  }
+
+  return (
+    <ChangeAssignment
+      host="route"
+      closeTo={`/review${search}`}
+      supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
+      amount={sample?.amount ?? (row ? formatIls(absAgorot(row.amount_net)) : "")}
+      direction={income ? "income" : "expense"}
+      projects={projectOptions}
+      categories={categoryOptions}
+      projectId={projectId}
+      categoryId={categoryId}
+      suggestionProjectId={suggestionProjectId}
+      suggestionCategoryId={suggestionCategoryId}
+      onProjectId={setProjectId}
+      onCategoryId={setCategoryId}
+      {...(income ? {} : { remember, onRemember: setRemember })}
+      saving={save.isPending}
+      initialQuery={sample?.initialQuery}
+      loading={sample?.loading}
+      onSave={() => {
+        if (sample) return;
+        if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+        if (income ? categoryId === "" : projectId === "" || categoryId === "") {
+          toast.show({ tone: "bad", message: income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
+          return;
+        }
+        save.mutate();
+      }}
+      onSplit={() => {
+        if (row?.transaction_id) {
+          void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });
+          return;
+        }
+        toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
+      }}
+      onCreateProject={createProject}
+    />
   );
 }
 
@@ -1175,10 +1142,12 @@ export function TransactionScreen({
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const toast = useToast();
+  const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
+  const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
@@ -1219,7 +1188,7 @@ export function TransactionScreen({
     },
   });
   const reassign = useWrite({
-    failure: "לא הצלחנו לשמור את השיוך.",
+    failure: CHANGE_SAVE_FAILURE,
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
       setChangeOpen(false);
@@ -1233,7 +1202,7 @@ export function TransactionScreen({
     run: async () => {
       const current = sample ?? detail.data;
       if (!current) throw new Error("supabase");
-      const nextProject = (sampleProjects ?? []).find((project) => project.id === projectId);
+      const nextProject = [...(sampleProjects ?? []), ...extraProjects].find((project) => project.id === projectId);
       const nextCategory = (sampleCategories ?? []).find((category) => category.id === categoryId);
       if (sample) {
         if (nextProject) setProjectName(nextProject.name);
@@ -1258,12 +1227,24 @@ export function TransactionScreen({
   const shownProject = projectName || txn.project_name || "בלי פרויקט";
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
-  const changeProjects = sample
-    ? (sampleProjects ?? [])
-    : (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, code: undefined as string | undefined }));
-  const changeCategories = sample
-    ? (sampleCategories ?? [])
-    : (categories.data ?? []).filter((category) => !category.hidden && (txn.direction === "income" ? category.kind === "income" : category.kind !== "income"));
+  const changeProjects = withChoice(
+    [
+      ...(sample
+        ? (sampleProjects ?? []).map((project) => ({ id: project.id, name: project.name, code: project.code }))
+        : (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status }))),
+      ...extraProjects,
+    ],
+    projectId,
+    txn.project_name,
+  );
+  const changeCategories = withChoice(
+    (sample
+      ? (sampleCategories ?? [])
+      : (categories.data ?? []).filter((category) => !category.hidden && (txn.direction === "income" ? category.kind === "income" : category.kind !== "income"))
+    ).map((category) => ({ id: category.id, name: category.name })),
+    categoryId,
+    txn.category_name,
+  );
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   return (
@@ -1308,50 +1289,59 @@ export function TransactionScreen({
       <div className="ui-stack ui-page-pad">
         <Button variant="secondary" icon={<SplitIcon />} to={`/transactions/${txn.id}/split${search}`}>פיצול בין פרויקטים</Button>
       </div>
-      <Sheet
+      <ChangeAssignment
+        host="overlay"
         open={changeOpen}
         onOpenChange={setChangeOpen}
-        title="שינוי שיוך"
-        hint={`${party} · ${formatIls(absAgorot(txn.amount_net))}`}
-        action={
-          <Button
-            type="button"
-            icon={<CheckIcon />}
-            busy={reassign.isPending}
-            onClick={() => {
-              if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
-              reassign.mutate();
-            }}
-          >
-            שמירה ואישור
-          </Button>
-        }
-      >
-        {txn.direction === "income" ? null : (
-          <>
-            <h2 className="t-title-3">פרויקט</h2>
-            <div className="ui-project-list" role="radiogroup" aria-label="פרויקט">
-              {changeProjects.map((project) => (
-                <RadioRow
-                  key={project.id}
-                  label={project.name}
-                  {...(project.code ? { hint: project.code } : {})}
-                  selected={projectId === project.id}
-                  onSelect={() => { setProjectId(project.id); }}
-                />
-              ))}
-            </div>
-          </>
-        )}
-        <h2 className="t-title-3">קטגוריה</h2>
-        <div className="flex flex-wrap gap-2">
-          {changeCategories.map((category) => (
-            <Chip key={category.id} pressed={categoryId === category.id} onClick={() => { setCategoryId(category.id); }}>
-              {category.name}
-            </Chip>
-          ))}
-        </div>
-      </Sheet>
+        supplier={party}
+        amount={formatIls(absAgorot(txn.amount_net))}
+        direction={txn.direction === "income" ? "income" : "expense"}
+        projects={changeProjects}
+        categories={changeCategories}
+        projectId={projectId}
+        categoryId={categoryId}
+        onProjectId={setProjectId}
+        onCategoryId={setCategoryId}
+        saving={reassign.isPending}
+        loading={sample == null && (dashboard.isLoading || categories.isLoading)}
+        onSave={() => {
+          if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (txn.direction === "income" ? categoryId === "" : projectId === "" || categoryId === "") {
+            toast.show({ tone: "bad", message: txn.direction === "income" ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
+            return;
+          }
+          reassign.mutate();
+        }}
+        onSplit={() => {
+          setChangeOpen(false);
+          void navigate(`/transactions/${txn.id}/split${search}`);
+        }}
+        onCreateProject={async (name) => {
+          if (sample) {
+            const created = { id: `new-${name}`, name, status: "active" as const };
+            setExtraProjects((list) => [...list, created]);
+            return created;
+          }
+          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
+          const supabase = getSupabase();
+          if (!supabase) throw new Error("supabase");
+          try {
+            const saved = await supabase.rpc("upsert_project", { p_name: name, p_status: "active" });
+            assertNoError(saved);
+            if (typeof saved.data !== "string") throw new Error("supabase");
+            const created = { id: saved.data, name, status: "active" as const };
+            setExtraProjects((list) => [...list, created]);
+            await invalidate(["dashboard"]);
+            toast.show({ message: "הפרויקט נשמר" });
+            return created;
+          } catch (error) {
+            if (!(error instanceof Error) || error.message !== "preview") {
+              toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפרויקט." });
+            }
+            throw error;
+          }
+        }}
+      />
       <Sheet open={menu} onOpenChange={setMenu} title="עוד">
         {txn.source === "manual" ? (
           <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
