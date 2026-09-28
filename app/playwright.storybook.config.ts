@@ -8,6 +8,7 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:6193",
+    serviceWorkers: "block",
   },
   webServer: {
     command: "python3 -m http.server 6193 --bind 127.0.0.1",
