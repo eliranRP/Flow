@@ -212,10 +212,30 @@ export function mapCrmEntity(entity: Record<string, unknown>): SumitDoc | null {
   };
 }
 
+const CRM_LIST_FIELDS = [
+  "Accounting_DefinitionEnum",
+  "Accounting_DisplayCompanyValue",
+  "Accounting_Date",
+] as const;
+
+/** Fields a CRM document row must carry. Empty means the sample still matches the mapper. */
+export function sampleDrift(entities: Record<string, unknown>[]): string[] {
+  const sample = entities.find((entity) => entity && typeof entity === "object");
+  if (!sample) return [];
+  const missing: string[] = [];
+  if (typeof sample.ID !== "number") missing.push("ID");
+  for (const key of CRM_LIST_FIELDS) {
+    const value = sample[key];
+    if (!Array.isArray(value) || value.length === 0) missing.push(key);
+  }
+  return missing;
+}
+
 /** Read-only SUMIT paths. Anything else throws before the request. */
 export const SUMIT_ALLOWLIST = [
   "https://api.sumit.co.il/crm/data/listfolders/",
   "https://api.sumit.co.il/crm/data/listentities/",
+  "https://api.sumit.co.il/accounting/documents/list/",
 ] as const;
 
 export function assertSumitUrl(url: string): void {

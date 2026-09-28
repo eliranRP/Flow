@@ -9,7 +9,7 @@ import {
   shareBp,
 } from "../_shared/flow-test.ts";
 import { empty, json } from "../_shared/http.ts";
-import { assertSumitUrl, deriveLine, mapCrmEntity, type LedgerLine, type SumitDoc } from "../_shared/ledger.ts";
+import { assertSumitUrl, deriveLine, mapCrmEntity, sampleDrift, type LedgerLine, type SumitDoc } from "../_shared/ledger.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -18,6 +18,7 @@ declare const Deno: {
 
 const LIST_FOLDERS = "https://api.sumit.co.il/crm/data/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
+const LIST_DOCUMENTS = "https://api.sumit.co.il/accounting/documents/list/";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return empty();
@@ -35,14 +36,15 @@ Deno.serve(async (req) => {
     if (cron && cronSecret && cron === cronSecret) {
       const due = await admin
         .from("sumit_refresh_requests")
-        .select("id, company_id")
+        .select("id, company_id, purpose")
         .is("claimed_at", null)
         .limit(20);
       if (due.error) return json({ error: "could not read the refresh queue" }, 500);
       const results = [];
       for (const row of due.data ?? []) {
         await admin.from("sumit_refresh_requests").update({ claimed_at: new Date().toISOString() }).eq("id", row.id);
-        results.push(await syncCompany(admin, row.company_id as string, decodeKek(kekSecret), false));
+        const purpose = row.purpose === "weekly" || row.purpose === "pull" || row.purpose === "app_open" ? row.purpose : "daily";
+        results.push(await syncCompany(admin, row.company_id as string, decodeKek(kekSecret), false, purpose));
       }
       return json({ ok: true, synced: results.length });
     }
@@ -57,7 +59,13 @@ Deno.serve(async (req) => {
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
     if (company.error || !company.data) return json({ error: "no company" }, 400);
     const body = (await req.json().catch(() => ({}))) as { force?: boolean };
-    const result = await syncCompany(admin, company.data.id, decodeKek(kekSecret), body.force === true);
+    const result = await syncCompany(
+      admin,
+      company.data.id,
+      decodeKek(kekSecret),
+      body.force === true,
+      body.force === true ? "pull" : "app_open",
+    );
     return json(result, result.skipped ? 200 : 200);
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
@@ -70,6 +78,7 @@ async function syncCompany(
   companyId: string,
   kek: Uint8Array,
   force: boolean,
+  purpose: string,
 ): Promise<{ ok: boolean; documents: number; skipped?: boolean }> {
   const connection = await admin
     .from("sumit_connections")
@@ -98,9 +107,10 @@ async function syncCompany(
   const apiKey = await openApiKey(envelope, kek);
   const sumitCompanyId = Number(row.sumit_company_id);
   try {
-    const documents = await listDocuments(sumitCompanyId, apiKey);
+    const documents = await listDocuments(admin, companyId, purpose, sumitCompanyId, apiKey);
     await writeLedger(admin, companyId, sumitCompanyId, documents);
     await admin.rpc("sync_review_queue", { p_company_id: companyId });
+    await admin.rpc("refresh_dirty", { p_company_id: companyId });
     await admin
       .from("sumit_connections")
       .update({ last_sync_at: new Date().toISOString(), last_error: null })
@@ -123,11 +133,16 @@ function bytesPrefix(value: unknown): string {
 }
 
 async function sumitCall(
+  admin: SupabaseClient,
+  flowCompanyId: string,
+  purpose: string,
   url: string,
   credentials: { CompanyID: number; APIKey: string },
   extra: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   assertSumitUrl(url);
+  const reserved = await admin.rpc("reserve_sumit_call", { p_company_id: flowCompanyId, p_purpose: purpose });
+  if (reserved.error || reserved.data !== true) throw new Error("SUMIT call budget is spent");
   const response = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -170,32 +185,65 @@ function findFolder(node: unknown, name: string): number | null {
   return null;
 }
 
-async function listDocuments(companyId: number, apiKey: string): Promise<SumitDoc[]> {
+async function listDocuments(
+  admin: SupabaseClient,
+  flowCompanyId: string,
+  purpose: string,
+  companyId: number,
+  apiKey: string,
+): Promise<SumitDoc[]> {
   const credentials = { CompanyID: companyId, APIKey: apiKey };
-  const folders = await sumitCall(LIST_FOLDERS, credentials, {});
+  const folders = await sumitCall(admin, flowCompanyId, purpose, LIST_FOLDERS, credentials, {});
   const folderId = findFolder(folders, "מסמכים");
   if (folderId == null) throw new Error("SUMIT documents folder was not found");
   const docs: SumitDoc[] = [];
   let start = 0;
+  let driftNoted = false;
   for (let page = 0; page < 20; page += 1) {
-    const payload = await sumitCall(LIST_ENTITIES, credentials, {
+    const payload = await sumitCall(admin, flowCompanyId, purpose, LIST_ENTITIES, credentials, {
       Folder: folderId,
       IncludeInheritedFolders: true,
       LoadProperties: true,
       Paging: { StartIndex: start, PageSize: 1000 },
     });
     const data = payload.Data;
-    const entities = extractEntities(data);
-    for (const entity of entities) {
-      if (!entity || typeof entity !== "object") continue;
-      const mapped = mapCrmEntity(entity as Record<string, unknown>);
-      if (mapped) docs.push(mapped);
+    const entities = extractEntities(data).filter((entity): entity is Record<string, unknown> =>
+      Boolean(entity) && typeof entity === "object",
+    );
+    const drift = sampleDrift(entities);
+    let pageDocs = entities.map((entity) => mapCrmEntity(entity)).filter((doc): doc is SumitDoc => doc != null);
+    if (page === 0 && drift.length > 0 && pageDocs.length === 0) {
+      driftNoted = true;
+      const fallback = await sumitCall(admin, flowCompanyId, purpose, LIST_DOCUMENTS, credentials, {
+        Paging: { StartIndex: 0, PageSize: 1000 },
+      }).catch(() => null);
+      const fallbackDocs = fallback
+        ? extractEntities(fallback.Data).flatMap((entity) => {
+          if (!entity || typeof entity !== "object") return [];
+          const mapped = mapCrmEntity(entity as Record<string, unknown>);
+          return mapped ? [mapped] : [];
+        })
+        : [];
+      if (fallbackDocs.length > 0) {
+        pageDocs = fallbackDocs;
+        driftNoted = false;
+      } else {
+        await admin
+          .from("sumit_connections")
+          .update({ drift_fields: drift.join(",") })
+          .eq("company_id", flowCompanyId);
+        throw new Error(`SUMIT schema drift: ${drift.join(",")}`);
+      }
     }
+    docs.push(...pageDocs);
     const hasNext = Boolean(
       data && typeof data === "object" && "HasNextPage" in data && (data as { HasNextPage?: boolean }).HasNextPage,
     );
-    if (!hasNext || entities.length === 0) break;
+    if (!hasNext || entities.length === 0 || driftNoted) break;
     start += entities.length;
+  }
+  if (!driftNoted) {
+    await admin.from("sumit_connections").update({ drift_fields: null }).eq("company_id", flowCompanyId);
   }
   return docs;
 }
