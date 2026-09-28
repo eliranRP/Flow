@@ -1,8 +1,10 @@
 # Contributing
 
-This repository holds product documentation and design artifacts. Do not add application code unless a new decision record says the repo also contains the product.
+This repository holds the product and its documentation. Product behavior is decided in [docs/decisions/](docs/decisions/README.md) and described in the Module 1 spec and the approved design. Application code lives in `app/`, `supabase/`, and `packages/shared`. What that code does today is in [Phase 0](docs/tech/phase-0.md).
 
 Write in English. Use Hebrew only to quote a UI label, and keep the English meaning next to it the first time it matters.
+
+A change that contradicts an accepted decision still starts as a new decision record ([0010](docs/decisions/0010-docs-are-the-source-of-truth.md)). Code that implements a decision already on the books does not need another record. Schema functions still need an explicit `EXECUTE` grant; the rule is in the Phase 0 page.
 
 ## Changelog
 
