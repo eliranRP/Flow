@@ -193,9 +193,10 @@ function linkedRateBp(invoice: DemoSumitDoc | undefined, companyRateBp: number):
  * A receipt has no VAT of its own. Its cash net uses the linked invoice's
  * VAT rate (`doc.orig`), including 0%. The company rate is only the fallback
  * when that invoice is missing or has no amount.
- * An expense with no VAT split assumes the company rate (`assumed`), unless
- * the supplier is VAT-exempt (`derived`, net = gross). An explicit `vat: 0`
- * with gross equal to net is also exempt, not a missing split. Decision 0043.
+ * An expense with no VAT split assumes the company rate (`assumed`).
+ * `vat: 0` with gross equal to net is still a missing split: SUMIT often
+ * sends that when Accounting_VATRate was absent. Exemption is only the
+ * supplier flag (`vat_able` false → `derived`, net = gross). Decision 0043.
  */
 export function normalizeSumitDocument(
   doc: DemoSumitDoc,
@@ -210,18 +211,13 @@ export function normalizeSumitDocument(
   if (doc.kind === "exp") {
     const supplier = doc.cust == null ? undefined : index.suppliers.get(doc.cust);
     const vatExempt = supplier?.vatExempt === true;
-    // vat null: SUMIT sent no split, so the company rate is assumed.
-    // vat 0 with gross == net: an explicit exempt line, not a missing split.
-    // any other vat that differs from net: the source already split it.
-    const explicitZero = doc.vat === 0 && sourceNetAgorot === grossAgorot;
+    // vat null, or vat 0 while gross still equals net: no real split.
+    // A split is a stored vat that actually differs from the gross.
+    // Only a VAT-exempt supplier forces a zero rate.
     const hasSourceSplit = doc.vat != null && sourceNetAgorot !== grossAgorot;
-    const rateBp = vatExempt || explicitZero ? 0 : index.companyRateBp;
+    const rateBp = vatExempt ? 0 : index.companyRateBp;
     const netAgorot = hasSourceSplit ? sourceNetAgorot : netFromGrossAgorot(grossAgorot, rateBp);
-    const vatStatus: VatStatus = hasSourceSplit
-      ? "source"
-      : vatExempt || explicitZero
-        ? "derived"
-        : "assumed";
+    const vatStatus: VatStatus = hasSourceSplit ? "source" : vatExempt ? "derived" : "assumed";
     const role = expenseRole(doc.desc);
     if (role === "project" && projectKey == null) {
       throw new Error(`Project expense ${doc.key} has no budget section`);

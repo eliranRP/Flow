@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { netFromGrossAgorot } from "./money.ts";
 import { demoDataSchema, normalizeSumitDocument, type DemoData, type DemoSumitDoc } from "./pnl.ts";
 
 function doc(partial: Partial<DemoSumitDoc> & Pick<DemoSumitDoc, "key" | "kind" | "gross">): DemoSumitDoc {
@@ -111,13 +112,45 @@ describe("credit notes and refunds", () => {
     expect(refund.vatStatus).toBe("assumed");
   });
 
-  it("treats an explicit 0% expense as exempt instead of assuming 18%", () => {
-    const exempt = line(
+  it("assumes 18% when vat is 0 and the supplier is VAT-able", () => {
+    const expense = line(
       [doc({ key: "ZERO", sumit_id: 32, kind: "exp", gross: -1000, wo: -1000, vat: 0, cust: 9 })],
       "ZERO",
     );
-    expect(exempt.netAgorot).toBe(-100_000n);
-    expect(exempt.vatAgorot).toBe(0n);
+    expect(expense.vatStatus).toBe("assumed");
+    expect(expense.netAgorot).toBe(netFromGrossAgorot(-100_000n, 1800));
+    expect(expense.grossAgorot).toBe(-100_000n);
+    expect(expense.netAgorot).not.toBe(expense.grossAgorot);
+  });
+
+  it("exempts an expense only when the supplier is VAT-exempt", () => {
+    const demo = demoDataSchema.parse({
+      company: { name: "בדיקה", company_id: 1, vat_rate: 0.18 },
+      projects: { p: { name: "פרויקט", budget_section_id: 1 } },
+      customers: {},
+      suppliers: {
+        s: { name: "פטור", company_number: null, vat_able: false, sumit_id: 9 },
+      },
+      shared_alloc_worker_days: {},
+      documents: [
+        {
+          sumit: doc({
+            key: "EXEMPT",
+            sumit_id: 33,
+            kind: "exp",
+            gross: -1000,
+            wo: -1000,
+            vat: 0,
+            cust: 9,
+          }),
+        },
+      ],
+    });
+    const sumit = demo.documents[0]?.sumit;
+    if (!sumit) throw new Error("missing exempt document");
+    const exempt = normalizeSumitDocument(sumit, demo);
     expect(exempt.vatStatus).toBe("derived");
+    expect(exempt.netAgorot).toBe(exempt.grossAgorot);
+    expect(exempt.vatAgorot).toBe(0n);
   });
 });
