@@ -19,7 +19,7 @@ describe("ConfirmSheet", () => {
       />,
     );
     const confirm = screen.getByRole("button", { name: "מחיקה" });
-    expect(confirm).toHaveClass("ui-btn-danger");
+    expect(confirm).toHaveClass("ui-btn-danger-tint");
     expectTarget(confirm);
     expectTarget(screen.getByRole("button", { name: "ביטול" }));
     expectThemePaint(confirm, "backgroundColor");

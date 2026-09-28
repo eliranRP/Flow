@@ -1,13 +1,15 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cx } from "./cx";
+import { TrashIcon } from "./icons";
 
-export type ButtonVariant = "primary" | "secondary" | "pill" | "danger" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "pill" | "danger" | "danger-tint" | "ghost";
 
 type Common = {
   variant?: ButtonVariant;
   busy?: boolean;
   full?: boolean;
+  quiet?: boolean;
   children: ReactNode;
   className?: string;
 };
@@ -28,15 +30,23 @@ const variantClass: Record<ButtonVariant, string> = {
   secondary: "ui-btn-secondary",
   pill: "ui-btn-pill",
   danger: "ui-btn-danger",
+  "danger-tint": "ui-btn-danger-tint",
   ghost: "ui-btn-ghost",
 };
 
 export function Button(props: ButtonProps) {
   const variant = props.variant ?? "primary";
-  const classes = cx("ui-btn", variantClass[variant], props.full && "ui-btn-full", props.className);
+  const classes = cx(
+    "ui-btn",
+    variantClass[variant],
+    props.quiet && "ui-btn-quiet",
+    props.full && "ui-btn-full",
+    props.className,
+  );
   const body = (
     <>
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
+      {variant === "danger" || variant === "danger-tint" ? <TrashIcon /> : null}
       {props.children}
     </>
   );
@@ -47,9 +57,23 @@ export function Button(props: ButtonProps) {
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, variant: _variant, className: _className, children: _children, to: _to, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, to: _to, onClick, ...rest } = props;
   return (
-    <button type={type} className={classes} disabled={disabled || busy} aria-busy={busy || undefined} {...rest}>
+    <button
+      type={type}
+      className={classes}
+      disabled={disabled}
+      aria-disabled={disabled || busy || undefined}
+      aria-busy={busy || undefined}
+      onClick={(event) => {
+        if (busy) {
+          event.preventDefault();
+          return;
+        }
+        onClick?.(event);
+      }}
+      {...rest}
+    >
       {body}
     </button>
   );

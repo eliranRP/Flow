@@ -1,6 +1,6 @@
-import { formatIls, shekelsToAgorot } from "@flow/shared";
+import { formatIls, shekelsToAgorot, type ReviewRow } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
@@ -8,6 +8,7 @@ import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { withSheetBackground } from "../sheet-background";
 import {
+  useBooks,
   useCategoriesQuery,
   useDashboardQuery,
   useInvalidateBooks,
@@ -15,29 +16,29 @@ import {
   useSumitStatusQuery,
   useUnpaidQuery,
 } from "../use-books";
-import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
-import { Card, Section } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { DatePicker } from "../ui/date-picker";
+import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
-import { BackIcon, CameraIcon, DocumentIcon } from "../ui/icons";
+import { BackIcon, CameraIcon, DocumentIcon, ProjectsIcon, ReviewIcon, SearchIcon } from "../ui/icons";
 import { BandHero } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MoneyField } from "../ui/money-field";
 import { BudgetBar } from "../ui/progress-bar";
+import { ReviewCard } from "../ui/review-card";
 import { ScreenHeader } from "../ui/screen-header";
+import { SearchField } from "../ui/search-field";
 import { SegmentedControl } from "../ui/segmented-control";
 import { SelectField } from "../ui/select-field";
 import { Sheet } from "../ui/sheet";
 import { RouteSheet } from "../ui/route-sheet";
-import { Loader } from "../ui/skeleton";
 import { Stat, StatGrid } from "../ui/stat";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
-import { Toggle } from "../ui/toggle";
+import { Toast } from "../ui/toast";
 import { TopBand } from "../ui/top-band";
 
 function ag(value: number): bigint {
@@ -48,7 +49,9 @@ function ScreenMessage({ title, body, loading = false }: { title: string; body: 
   return (
     <>
       <ScreenHeader title={title} />
-      {loading ? <Loader label={body} /> : <p className="t-label page-pad text-text-secondary">{body}</p>}
+      <p className="t-label page-pad text-text-secondary" role={loading ? "status" : undefined} aria-busy={loading || undefined}>
+        {body}
+      </p>
     </>
   );
 }
@@ -110,22 +113,57 @@ export function ProjectsScreen() {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery();
+  const books = useBooks();
   const [open, setOpen] = useState(false);
-  if (preview === "empty") return <ScreenHeader title="פרויקטים" />;
+  const [query, setQuery] = useState("");
+  const [showFinished, setShowFinished] = useState(true);
+  const empty = (
+    <>
+      <ScreenHeader title="פרויקטים" />
+      <EmptyState
+        icon={<ProjectsIcon />}
+        title="עוד אין פרויקטים"
+        body="פרויקט נוצר מסעיף תקציב ב-SUMIT, או מכאן."
+        action={<Button variant="pill" onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+      />
+      <Sheet open={open} onOpenChange={setOpen} title="פרויקט">
+        <ProjectForm onClose={() => { setOpen(false); }} />
+      </Sheet>
+    </>
+  );
+  if (preview === "empty") return empty;
   if (dashboard.isLoading) return <ScreenMessage title="פרויקטים" body="טוען…" loading />;
   if (dashboard.isError || !dashboard.data) return <ScreenMessage title="פרויקטים" body="לא הצלחנו לטעון את הפרויקטים." />;
   const projects = dashboard.data.projects;
+  if (projects.length === 0) return empty;
+  const active = projects.filter((project) => project.status === "active").length;
+  const finished = projects.length - active;
+  const needle = query.trim();
+  const visible = projects.filter((project) => {
+    if (!showFinished && project.status === "finished") return false;
+    if (needle === "") return true;
+    return project.name.includes(needle);
+  });
   return (
     <div>
-      <ScreenHeader title="פרויקטים" />
-      <div className="page-pad">
-        <Button variant="secondary" onClick={() => { setOpen(true); }}>פרויקט חדש</Button>
+      <ScreenHeader title="פרויקטים" subtitle={`${String(active)} פעילים · רווח ${books.period.label}`} />
+      <div className="page-pad stack">
+        <Button variant="pill" onClick={() => { setOpen(true); }}>פרויקט חדש</Button>
+        <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} />
+        {finished > 0 ? (
+          <Checkbox label="הצגת פרויקטים שהסתיימו" checked={showFinished} onChange={setShowFinished} />
+        ) : null}
       </div>
-      {projects.length === 0 ? (
-        <EmptyState icon={<DocumentIcon />} title="אין עדיין פרויקטים" body="פרויקט נוצר מסעיף תקציב ב-SUMIT, או מכאן." />
+      {visible.length === 0 ? (
+        <EmptyState
+          icon={<SearchIcon />}
+          title={`לא מצאנו ״${needle}״`}
+          body="אפשר לחפש לפי שם הפרויקט."
+          action={<Button variant="pill" onClick={() => { setQuery(""); }}>ניקוי החיפוש</Button>}
+        />
       ) : (
         <List>
-          {projects.map((project) => (
+          {visible.map((project) => (
             <ListRow
               key={project.id}
               variant="project"
@@ -263,7 +301,7 @@ export function ProjectDetailScreen() {
               key={txn.id}
               variant="transaction"
               title={txn.description}
-              hint={`${txn.doc_date}${txn.category ? ` · ${txn.category}` : ""}`}
+              hint={`${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`}
               agorot={ag(txn.amount_net)}
               sign={txn.direction === "income" ? "in" : "out"}
               source="invoice"
@@ -300,7 +338,7 @@ function LegacyEmptyProject() {
         title="אין עדיין תנועות"
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
         action={
-          <Button variant="secondary" to={`/add${search}`} state={withSheetBackground(location)}>
+          <Button variant="pill" to={`/add${search}`} state={withSheetBackground(location)}>
             <CameraIcon />
             צילום חשבונית
           </Button>
@@ -329,7 +367,7 @@ function ArchiveButton({
       <ConfirmSheet
         open={confirm}
         onOpenChange={setConfirm}
-        title={finished ? "החזרה לפעיל" : "סיום הפרויקט"}
+        title={finished ? "להחזיר את הפרויקט לפעיל?" : "לסיים את הפרויקט?"}
         item={name}
         consequence="פרויקט לא נמחק. אפשר להחזיר אותו אחר כך."
         confirmLabel="אישור"
@@ -355,30 +393,117 @@ export function ReviewScreen() {
   const search = usePreviewSearch();
   const review = useReviewQuery();
   const invalidate = useInvalidateBooks();
-  if (preview === "empty") return <ScreenHeader title="לאישור" />;
+  if (preview === "empty") return <ReviewEmpty search={search} />;
   if (review.isLoading) return <ScreenMessage title="לאישור" body="טוען…" loading />;
   if (review.isError) return <ScreenMessage title="לאישור" body="לא הצלחנו לטעון את התור." />;
-  const rows = review.data ?? [];
+  return <ReviewQueue rows={review.data ?? []} search={search} preview={preview} invalidate={invalidate} />;
+}
+
+export function ReviewQueue({
+  rows,
+  search,
+  preview = "off",
+  invalidate = () => Promise.resolve(),
+}: {
+  rows: ReviewRow[];
+  search: string;
+  preview?: string;
+  invalidate?: () => Promise<void>;
+}) {
+  const [note, setNote] = useState<string | null>(null);
+  const [noteTone, setNoteTone] = useState<"ok" | "bad">("ok");
+  useEffect(() => {
+    if (!note) return;
+    const timer = window.setTimeout(() => { setNote(null); }, 4000);
+    return () => { window.clearTimeout(timer); };
+  }, [note]);
+  if (rows.length === 0) return <ReviewEmpty search={search} />;
+  const row = rows[0];
+  if (!row) return <ReviewEmpty search={search} />;
+  const change = `/review/change${search}${search ? "&" : "?"}item=${row.id}`;
   return (
     <div>
-      <ScreenHeader title="לאישור" />
-      {rows.length === 0 ? (
-        <EmptyState icon={<DocumentIcon />} title="אין פריטים לאישור" body="כשחסר פרויקט או קטגוריה, הפריט מופיע כאן. הרווח כבר כולל את מה שירד מ-SUMIT." />
-      ) : (
-        <div className="stack">
-          {rows.map((row) => (
-            <Card key={row.id}>
-              <ListRow variant="review" title={row.description} hint={`${row.supplier_name ?? "בלי ספק"} · ${row.doc_date}`} agorot={ag(row.amount_net)} status="ממתין" />
-              <div className="choice-col">
-                <Button variant="secondary" to={`/review/change${search}${search ? "&" : "?"}item=${row.id}`}>שינוי</Button>
-                <Button variant="secondary" onClick={() => { void skip(row.id, invalidate, preview); }}>דילוג</Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <ScreenHeader title="לאישור" subtitle="רק מה שה-AI לא היה בטוח בו" />
+      <p className="t-label page-pad">{`1 מתוך ${String(rows.length)}`}</p>
+      <ReviewCard
+        supplier={row.supplier_name ?? row.description}
+        date={formatDayMonth(row.doc_date)}
+        netAgorot={ag(row.amount_net)}
+        vatLine="לפני מע״מ"
+        suggestion={row.reason ? <p className="t-label">{row.reason}</p> : undefined}
+        actions={
+          <>
+            <Button
+              full
+              onClick={() => {
+                void approve(row, invalidate, preview, (message, tone) => {
+                  setNoteTone(tone);
+                  setNote(message);
+                });
+              }}
+            >
+              אישור
+            </Button>
+            <Button variant="secondary" full to={change}>שינוי</Button>
+            <Button
+              variant="ghost"
+              full
+              onClick={() => {
+                void skip(row.id, invalidate, preview).then(() => {
+                  setNoteTone("ok");
+                  setNote("דילגנו על הפריט");
+                });
+              }}
+            >
+              דלג
+            </Button>
+          </>
+        }
+      />
+      {note ? <div className="page-pad"><Toast tone={noteTone}>{note}</Toast></div> : null}
     </div>
   );
+}
+
+function ReviewEmpty({ search }: { search: string }) {
+  return (
+    <div>
+      <ScreenHeader title="לאישור" subtitle="רק מה שה-AI לא היה בטוח בו" />
+      <EmptyState
+        icon={<ReviewIcon />}
+        title="הכל מאושר"
+        body="אין פריטים שמחכים לך. מה שכבר ירד מ-SUMIT נשאר ברווח."
+        action={<Button variant="pill" to={`/${search}`}>לדף הבית</Button>}
+      />
+    </div>
+  );
+}
+
+async function approve(
+  row: ReviewRow,
+  invalidate: () => Promise<void>,
+  preview: string,
+  tell: (message: string, tone: "ok" | "bad") => void,
+) {
+  if (preview !== "off") return;
+  if (!row.project_id || !row.category_id) {
+    tell("בלי פרויקט וקטגוריה אי אפשר לאשר. בחרו בשינוי.", "bad");
+    return;
+  }
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.rpc("resolve_review", {
+    p_id: row.id,
+    p_action: "approved",
+    p_project_id: row.project_id,
+    p_category_id: row.category_id,
+  });
+  if (error) {
+    tell("לא הצלחנו לאשר. נסו שוב.", "bad");
+    return;
+  }
+  tell("הפריט אושר", "ok");
+  await invalidate();
 }
 
 async function skip(id: string, invalidate: () => Promise<void>, preview: string) {
@@ -452,101 +577,9 @@ export function ChangeForm() {
 
 export function AddForm() {
   const search = usePreviewSearch();
-  const preview = useHomePreview();
-  const dashboard = useDashboardQuery();
-  const categories = useCategoriesQuery();
-  const invalidate = useInvalidateBooks();
-  const [direction, setDirection] = useState<"income" | "expense">("expense");
-  const [kind, setKind] = useState<"payment" | "invoice">("payment");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [exempt, setExempt] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function save(event: SubmitEvent) {
-    event.preventDefault();
-    if (!date) {
-      setError("בדקו סכום, תאריך ופרויקט.");
-      return;
-    }
-    if (preview !== "off") {
-      setError("במצב תצוגה הרשומה לא נשמרת.");
-      return;
-    }
-    const supabase = getSupabase();
-    if (!supabase) return;
-    const gross = shekelsToAgorot(amount);
-    const { error: rpcError } = await supabase.rpc("create_manual_entry", {
-      p_direction: direction,
-      p_kind: direction === "income" ? kind : "expense",
-      p_gross_agorot: Number(gross < 0n ? -gross : gross),
-      p_doc_date: date,
-      p_description: description,
-      p_project_id: (projectId || null) as unknown as string,
-      p_category_id: (categoryId || null) as unknown as string,
-      p_vat_exempt: exempt,
-    });
-    if (rpcError) {
-      setError("בדקו סכום, תאריך ופרויקט.");
-      return;
-    }
-    await invalidate();
-    setAmount("");
-    setDescription("");
-    setError(null);
-  }
-
   return (
     <RouteSheet title="הוספה" closeTo={`/${search}`} returnFocusRef={addTriggerRef}>
-      <form className="stack" onSubmit={(event) => { void save(event); }}>
-        <SegmentedControl
-          label="סוג"
-          value={direction}
-          onChange={setDirection}
-          options={[
-            { value: "income", label: "הכנסה" },
-            { value: "expense", label: "הוצאה" },
-          ]}
-        />
-        {direction === "income" ? (
-          <SegmentedControl
-            label="מסמך"
-            value={kind}
-            onChange={setKind}
-            options={[
-              { value: "payment", label: "תקבול" },
-              { value: "invoice", label: "חשבונית שלא שולמה" },
-            ]}
-          />
-        ) : (
-          <Toggle label="הספק פטור ממע״מ" checked={exempt} onChange={setExempt} />
-        )}
-        <MoneyField label="סכום בשקלים" value={amount} onChange={(event) => { setAmount(event.target.value); }} required />
-        <DatePicker label="תאריך" value={date} onChange={setDate} />
-        <TextField label="תיאור" value={description} onChange={(event) => { setDescription(event.target.value); }} />
-        <SelectField
-          label="פרויקט"
-          value={projectId}
-          onChange={(event) => { setProjectId(event.target.value); }}
-          options={[{ value: "", label: "בלי פרויקט, זו תקורה" }, ...(dashboard.data?.projects ?? []).map((project) => ({ value: project.id, label: project.name }))]}
-        />
-        <SelectField
-          label="קטגוריה"
-          value={categoryId}
-          onChange={(event) => { setCategoryId(event.target.value); }}
-          options={[
-            { value: "", label: "בלי קטגוריה" },
-            ...(categories.data ?? [])
-              .filter((category) => category.kind === (direction === "income" ? "income" : "expense") && !category.hidden)
-              .map((category) => ({ value: category.id, label: category.name })),
-          ]}
-        />
-        {error ? <p className="form-error">{error}</p> : null}
-        <Button type="submit">שמירה</Button>
-      </form>
+      <p className="t-label text-text-secondary">בקרוב תוכלו להוסיף כאן הכנסה או הוצאה</p>
     </RouteSheet>
   );
 }
@@ -573,7 +606,7 @@ export function UnpaidScreen() {
               key={row.id}
               variant="transaction"
               title={row.customer_name ?? row.description}
-              hint={[row.description, row.project_name, row.doc_date].filter((part) => part != null && part !== "").join(" · ")}
+              hint={[row.description, row.project_name, formatDayMonth(row.doc_date)].filter((part) => part != null && part !== "").join(" · ")}
               agorot={ag(row.open_gross_agorot)}
               sign="in"
               source="invoice"
@@ -628,7 +661,7 @@ export function TransactionScreen() {
       <ScreenHeader title="פרטי תנועה" backTo={`/${search}`} />
       <p className="t-display page-pad"><BigNumber agorot={ag(txn.amount_net)} /></p>
       <p className="page-pad">{txn.description}</p>
-      <p className="t-hint page-pad">{txn.doc_date} · {txn.project_name ?? "בלי פרויקט"} · {txn.category_name ?? "בלי קטגוריה"}</p>
+      <p className="t-hint page-pad">{formatDayMonth(txn.doc_date)} · {txn.project_name ?? "בלי פרויקט"} · {txn.category_name ?? "בלי קטגוריה"}</p>
       <p className="t-hint page-pad">לפני מע״מ. מע״מ <bdi dir="ltr">{formatIls(ag(txn.vat_amount))}</bdi> · {txn.vat_status === "assumed" ? "מע״מ משוער 18%" : txn.vat_status}</p>
       <p className="t-hint page-pad">{txn.supplier_name ?? txn.customer_name ?? ""}</p>
       <div className="stack page-pad">
@@ -642,7 +675,7 @@ export function TransactionScreen() {
       <ConfirmSheet
         open={confirm}
         onOpenChange={setConfirm}
-        title="מחיקת רשומה"
+        title="למחוק את הרשומה?"
         item={txn.description}
         consequence="למחוק את הרשומה הידנית? אי אפשר לשחזר."
         confirmLabel="מחיקה"
@@ -796,11 +829,13 @@ export function SettingsScreen() {
   return (
     <div>
       <ScreenHeader title="הגדרות" />
-      <Section title="העסק">
+      <section className="page-pad stack">
+        <h2 className="t-title-3">העסק</h2>
         <p>{dashboard.data?.name ?? "עדיין בלי עסק"}</p>
         <p className="t-hint">{dashboard.data?.vat_registered === false ? "עוסק פטור" : "עוסק מורשה"}</p>
-      </Section>
-      <Section title="חשבון Google">
+      </section>
+      <section className="page-pad stack">
+        <h2 className="t-title-3">חשבון Google</h2>
         <p>{session?.user.email ?? "לא מחובר"}</p>
         {preview === "off" ? (
           <Button
@@ -813,8 +848,9 @@ export function SettingsScreen() {
             יציאה
           </Button>
         ) : null}
-      </Section>
-      <Section title="SUMIT">
+      </section>
+      <section className="page-pad stack">
+        <h2 className="t-title-3">SUMIT</h2>
         <p>{connected ? `מחובר לחברה ${String(status.data?.sumit_company_id ?? "")}` : "לא מחובר"}</p>
         {status.data?.last_error ? <p className="form-error">{status.data.last_error}</p> : null}
         <form className="stack" onSubmit={(event) => { void connect(event); }}>
@@ -823,9 +859,9 @@ export function SettingsScreen() {
           <Button type="submit">חיבור</Button>
         </form>
         <Button variant="secondary" onClick={() => { void refresh(); }}>רענון עכשיו</Button>
-        {connected ? <Button variant="danger" onClick={() => { void disconnect(); }}>ניתוק</Button> : null}
-        {message ? <Banner title={message} /> : null}
-      </Section>
+        {connected ? <Button variant="secondary" onClick={() => { void disconnect(); }}>ניתוק</Button> : null}
+        {message ? <p className="t-label">{message}</p> : null}
+      </section>
       <nav className="stack page-pad">
         <TextLink to={`/settings/categories${search}`}>קטגוריות</TextLink>
         <TextLink to={`/projects${search}`}>פרויקטים</TextLink>
@@ -850,12 +886,12 @@ export function CategoriesScreen() {
         {(categories.data ?? []).map((category) => (
           <ListRow
             key={category.id}
-            variant="supplier"
+            variant="item"
             title={category.name}
             hint={`${category.kind === "income" ? "הכנסה" : "הוצאה"}${category.hidden ? " · מוסתרת" : ""}`}
             action={
               <Button
-                variant="secondary"
+                variant="pill"
                 onClick={() => {
                   if (preview !== "off") return;
                   const supabase = getSupabase();
@@ -869,33 +905,31 @@ export function CategoriesScreen() {
           />
         ))}
       </List>
-      <Card>
-        <form
-          className="stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (preview !== "off") return;
-            const supabase = getSupabase();
-            if (!supabase) return;
-            void supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }).then(() => invalidate());
-          }}
-        >
-          <h2 className="t-title-3">מיזוג</h2>
-          <SelectField
-            label="מקטגוריה"
-            value={mergeFrom}
-            onChange={(event) => { setMergeFrom(event.target.value); }}
-            options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).map((category) => ({ value: category.id, label: category.name }))]}
-          />
-          <SelectField
-            label="אל"
-            value={mergeInto}
-            onChange={(event) => { setMergeInto(event.target.value); }}
-            options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).filter((category) => !category.hidden).map((category) => ({ value: category.id, label: category.name }))]}
-          />
-          <Button type="submit" variant="danger">מיזוג והסתרה</Button>
-        </form>
-      </Card>
+      <form
+        className="stack page-pad"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (preview !== "off") return;
+          const supabase = getSupabase();
+          if (!supabase) return;
+          void supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }).then(() => invalidate());
+        }}
+      >
+        <h2 className="t-title-3">מיזוג</h2>
+        <SelectField
+          label="מקטגוריה"
+          value={mergeFrom}
+          onChange={(event) => { setMergeFrom(event.target.value); }}
+          options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).map((category) => ({ value: category.id, label: category.name }))]}
+        />
+        <SelectField
+          label="אל"
+          value={mergeInto}
+          onChange={(event) => { setMergeInto(event.target.value); }}
+          options={[{ value: "", label: "בחירה" }, ...(categories.data ?? []).filter((category) => !category.hidden).map((category) => ({ value: category.id, label: category.name }))]}
+        />
+        <Button type="submit">מיזוג</Button>
+      </form>
     </div>
   );
 }

@@ -8,18 +8,18 @@ describe("SegmentedControl", () => {
     expectRtl();
     render(
       <SegmentedControl
-        label="בסיס"
-        value="cash"
+        label="תצוגה"
+        value="expenses"
         onChange={() => undefined}
         options={[
-          { value: "cash", label: "מזומן" },
-          { value: "invoiced", label: "חשבוניות" },
+          { value: "expenses", label: "הוצאות" },
+          { value: "income", label: "הכנסות" },
         ]}
       />,
     );
-    const selected = screen.getByRole("button", { name: "מזומן" });
-    expect(selected).toHaveAttribute("aria-pressed", "true");
-    expectTarget(selected);
+    const selected = screen.getByRole("tab", { name: "הוצאות" });
+    expect(selected).toHaveAttribute("aria-selected", "true");
+    expectTarget(selected, 36);
     expectThemePaint(selected, "backgroundColor");
   });
 });

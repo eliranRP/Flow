@@ -1,4 +1,5 @@
 import { formatIls } from "@flow/shared";
+import { useLayoutEffect, useRef, useState } from "react";
 
 export type AmountPresentation = "summary" | "detail";
 
@@ -30,8 +31,28 @@ const sizeClass = {
 } as const;
 
 export function BigNumber({ agorot, presentation = "summary", size, loss = false }: BigNumberProps) {
+  const ref = useRef<HTMLElement>(null);
+  const [stepDown, setStepDown] = useState(false);
+  useLayoutEffect(() => {
+    if (size !== "hero") return;
+    const node = ref.current;
+    const column = node?.parentElement;
+    if (!node || !column) return;
+    const measure = () => {
+      node.classList.add("t-hero");
+      node.classList.remove("t-display");
+      setStepDown(node.scrollWidth > column.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(column);
+    return () => {
+      observer.disconnect();
+    };
+  }, [agorot, presentation, size]);
+  const heroClass = size === "hero" && stepDown ? "t-display" : size ? sizeClass[size] : "";
   return (
-    <bdi dir="ltr" className={["num", size ? sizeClass[size] : "", loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
+    <bdi ref={ref} dir="ltr" className={["num", heroClass, loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
       {formatAmount(agorot, presentation)}
     </bdi>
   );

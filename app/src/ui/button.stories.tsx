@@ -12,10 +12,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = { args: { children: "שמירה", variant: "primary" } };
-export const Secondary: Story = { args: { children: "ביטול", variant: "secondary" } };
-export const Pill: Story = { args: { children: "החודש", variant: "pill" } };
+export const Secondary: Story = { args: { children: "שינוי", variant: "secondary" } };
+export const Pill: Story = { args: { children: "פרויקט חדש", variant: "pill" } };
 export const Danger: Story = { args: { children: "מחיקה", variant: "danger" } };
-export const Ghost: Story = { args: { children: "דילוג", variant: "ghost" } };
+export const DangerTint: Story = { args: { children: "מחיקה", variant: "danger-tint" } };
+export const Ghost: Story = { args: { children: "דלג", variant: "ghost" } };
+export const Quiet: Story = { args: { children: "ביטול", variant: "ghost", quiet: true } };
 export const Disabled: Story = { args: { children: "שמירה", disabled: true } };
 export const Loading: Story = { args: { children: "שומר…", busy: true } };
 export const LongHebrew: Story = { args: { children: longHebrew, full: true } };

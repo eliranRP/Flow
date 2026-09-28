@@ -1,19 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { HomeSkeleton, Loader } from "./skeleton";
+import { HomeSkeleton } from "./skeleton";
 import { expectRtl } from "./test-support";
 
 describe("Skeleton", () => {
-  it("keeps the home skeleton chrome and a loader status", () => {
+  it("keeps the home skeleton chrome without a standalone spinner", () => {
     expectRtl();
-    render(
-      <>
-        <HomeSkeleton />
-        <Loader />
-      </>,
-    );
-    expect(screen.getAllByText("טוען…").length).toBeGreaterThan(0);
+    render(<HomeSkeleton />);
+    expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveAttribute("aria-busy", "true");
+    expect(document.querySelector("[aria-busy='true']")).not.toBeNull();
+    expect(document.querySelector(".ui-spinner")).toBeNull();
   });
 });

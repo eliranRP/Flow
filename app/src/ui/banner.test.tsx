@@ -9,7 +9,7 @@ describe("Banner", () => {
     expectRtl();
     render(
       <MemoryRouter>
-        <Banner to="/review" title="7 פריטים ממתינים" count={7} />
+        <Banner to="/review" title="7 פריטים ממתינים" hint="3 חשבוניות לא שולמו" />
       </MemoryRouter>,
     );
     const link = screen.getByRole("link", { name: /7 פריטים/ });

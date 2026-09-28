@@ -1,26 +1,35 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cx } from "./cx";
+import { ChevronIcon } from "./icons";
 
 type TextLinkProps = {
   children: ReactNode;
   className?: string;
   to?: string;
   href?: string;
+  tone?: "accent" | "quiet";
+  chevron?: boolean;
 };
 
-export function TextLink({ children, className, to, href }: TextLinkProps) {
-  const classes = cx("ui-text-link", className);
+export function TextLink({ children, className, to, href, tone = "accent", chevron = true }: TextLinkProps) {
+  const classes = cx("ui-text-link", tone === "quiet" && "ui-text-link-quiet", className);
+  const body = (
+    <>
+      {children}
+      {chevron ? <ChevronIcon size={16} /> : null}
+    </>
+  );
   if (to) {
     return (
       <Link to={to} className={classes}>
-        {children}
+        {body}
       </Link>
     );
   }
   return (
     <a href={href} className={classes}>
-      {children}
+      {body}
     </a>
   );
 }

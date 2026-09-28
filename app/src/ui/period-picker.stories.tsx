@@ -1,14 +1,12 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { PeriodPicker } from "./period-picker";
-import { SegmentedControl } from "./segmented-control";
 import { longHebrew } from "./story-support";
 import { TopBand } from "./top-band";
 
 function Demo({ initialOpen, pill }: { initialOpen: boolean; pill: string }) {
   const [open, setOpen] = useState(initialOpen);
   const [label, setLabel] = useState(pill);
-  const [basis, setBasis] = useState<"cash" | "invoiced">("cash");
   return (
     <TopBand
       trailing={
@@ -16,23 +14,13 @@ function Demo({ initialOpen, pill }: { initialOpen: boolean; pill: string }) {
           pill={label}
           open={open}
           onOpenChange={setOpen}
+          onCustom={() => undefined}
           options={[
-            { label: "החודש", onSelect: () => { setLabel("החודש"); setOpen(false); } },
-            { label: "חודש קודם", onSelect: () => { setLabel("חודש קודם"); setOpen(false); } },
-            { label: "מתחילת השנה", onSelect: () => { setLabel("מתחילת השנה"); setOpen(false); } },
-            { label: "כל התקופה", onSelect: () => { setLabel("כל התקופה"); setOpen(false); } },
+            { label: "החודש", hint: "ספטמבר 2026", selected: label === "החודש", onSelect: () => { setLabel("החודש"); } },
+            { label: "חודש קודם", hint: "אוגוסט 2026", selected: label === "חודש קודם", onSelect: () => { setLabel("חודש קודם"); } },
+            { label: "מתחילת השנה", hint: "2026", selected: label === "מתחילת השנה", onSelect: () => { setLabel("מתחילת השנה"); } },
+            { label: "כל התקופה", hint: "כל החשבוניות", selected: label === "כל התקופה", onSelect: () => { setLabel("כל התקופה"); } },
           ]}
-          footer={
-            <SegmentedControl
-              label="בסיס"
-              value={basis}
-              onChange={setBasis}
-              options={[
-                { value: "cash", label: "מזומן" },
-                { value: "invoiced", label: "חשבוניות" },
-              ]}
-            />
-          }
         />
       }
     >

@@ -7,8 +7,8 @@ export function Wordmark({ tone = "logo", size = "band" }: WordmarkProps) {
   const color = tone === "on-band" ? "text-on-band" : "text-logo";
   const scale = size === "signin" ? "text-signin" : "text-wordmark";
   return (
-    <p dir="ltr" className={`${scale} ${color} tracking-wordmark`}>
-      Flow
+    <p className={`${scale} ${color} tracking-wordmark w-fit`}>
+      <bdi dir="ltr">Flow</bdi>
     </p>
   );
 }

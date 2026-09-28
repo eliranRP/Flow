@@ -20,11 +20,8 @@ export const TransactionIn: Story = {
 export const TransactionOut: Story = {
   args: { variant: "transaction", title: "העברה", hint: "בנק", agorot: 450_000n, sign: "out", source: "bank" },
 };
-export const Review: Story = {
-  args: { variant: "review", title: "ספק חדש", hint: "חסר פרויקט", agorot: -320_000n, status: "ממתין" },
-};
-export const Supplier: Story = {
-  args: { variant: "supplier", title: "ביטוח המגן", hint: "ספק", vatExempt: true },
+export const Item: Story = {
+  args: { variant: "item", title: "ביטוח המגן", hint: "ספק · פטור ממע״מ" },
 };
 export const EmptyHint: Story = {
   args: { variant: "project", title: "פרויקט בלי תנועות", agorot: 0n },

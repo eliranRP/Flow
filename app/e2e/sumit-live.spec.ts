@@ -209,8 +209,6 @@ async function showInvoicedAllTime(page: Page) {
   await page.goto("/");
   const sheet = page.getByRole("dialog", { name: "תקופה" });
   await page.getByRole("button", { name: "החודש" }).click();
-  await sheet.getByRole("button", { name: "כל התקופה" }).click();
+  await sheet.getByRole("radio", { name: "כל התקופה" }).click();
   await expect(sheet).toBeHidden();
-  await page.getByRole("button", { name: "כל התקופה" }).click();
-  await sheet.getByRole("button", { name: "חשבוניות" }).click();
 }

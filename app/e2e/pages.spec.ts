@@ -29,8 +29,7 @@ test("demo add sheet has income and expense", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "הוצאה" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "הכנסה" })).toBeVisible();
+  await expect(page.getByText("בקרוב תוכלו להוסיף כאן הכנסה או הוצאה")).toBeVisible();
 });
 
 test("preview home has no fixture profit", async ({ page }) => {

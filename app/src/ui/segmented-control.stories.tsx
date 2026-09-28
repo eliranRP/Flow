@@ -3,22 +3,22 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { SegmentedControl } from "./segmented-control";
 import { longHebrew, padded } from "./story-support";
 
-function Demo({ value, long = false }: { value: "cash" | "invoiced"; long?: boolean }) {
+function Demo({ value, long = false }: { value: "expenses" | "income"; long?: boolean }) {
   const [current, setCurrent] = useState(value);
   return (
     <SegmentedControl
-      label="בסיס"
+      label="תצוגה"
       value={current}
       onChange={setCurrent}
       options={
         long
           ? [
-              { value: "cash", label: longHebrew },
-              { value: "invoiced", label: "חשבוניות" },
+              { value: "expenses", label: longHebrew },
+              { value: "income", label: "הכנסות" },
             ]
           : [
-              { value: "cash", label: "מזומן" },
-              { value: "invoiced", label: "חשבוניות" },
+              { value: "expenses", label: "הוצאות" },
+              { value: "income", label: "הכנסות" },
             ]
       }
     />
@@ -34,39 +34,39 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Cash: Story = {
+export const Expenses: Story = {
   args: {
-    label: "בסיס",
-    value: "cash",
+    label: "תצוגה",
+    value: "expenses",
     onChange: () => undefined,
     options: [
-      { value: "cash", label: "מזומן" },
-      { value: "invoiced", label: "חשבוניות" },
+      { value: "expenses", label: "הוצאות" },
+      { value: "income", label: "הכנסות" },
     ],
   },
-  render: () => <Demo value="cash" />,
+  render: () => <Demo value="expenses" />,
 };
-export const Invoiced: Story = {
+export const Income: Story = {
   args: {
-    label: "בסיס",
-    value: "invoiced",
+    label: "תצוגה",
+    value: "income",
     onChange: () => undefined,
     options: [
-      { value: "cash", label: "מזומן" },
-      { value: "invoiced", label: "חשבוניות" },
+      { value: "expenses", label: "הוצאות" },
+      { value: "income", label: "הכנסות" },
     ],
   },
-  render: () => <Demo value="invoiced" />,
+  render: () => <Demo value="income" />,
 };
 export const LongHebrew: Story = {
   args: {
     label: longHebrew,
-    value: "cash",
+    value: "expenses",
     onChange: () => undefined,
     options: [
-      { value: "cash", label: longHebrew },
-      { value: "invoiced", label: "חשבוניות" },
+      { value: "expenses", label: longHebrew },
+      { value: "income", label: "הכנסות" },
     ],
   },
-  render: () => <Demo value="cash" long />,
+  render: () => <Demo value="expenses" long />,
 };

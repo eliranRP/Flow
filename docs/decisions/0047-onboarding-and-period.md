@@ -3,6 +3,8 @@
 **Date:** 2026-09-28
 **Status:** Accepted
 
+The cash/invoiced switch in this record is amended by [0060](0060-library-review-calls.md). The proof of concept shows the invoiced basis only.
+
 ## Context
 
 A first Google sign-in with no company row stopped on a title-only screen. The books for Flow Test also span April to September 2026, so a "this month" view hides most expenses. [0004](0004-cash-basis-for-v1.md) still makes cash the default. [0028](0028-period-sheet-with-custom-range.md) already opened the period from the band.

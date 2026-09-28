@@ -19,7 +19,7 @@ function Demo({ destructive, item }: { destructive: boolean; item: string }) {
       <ConfirmSheet
         open={open}
         onOpenChange={setOpen}
-        title={destructive ? "מחיקת פרויקט" : "הסתרת קטגוריה"}
+        title={destructive ? "למחוק את ההוצאה?" : "להסתיר את הקטגוריה?"}
         item={item}
         consequence={destructive ? "הפרויקט ייעלם מהרשימה. התנועות נשארות." : "הקטגוריה לא תופיע בבחירה."}
         confirmLabel={destructive ? "מחיקה" : "הסתרה"}
@@ -45,7 +45,7 @@ export const Destructive: Story = {
   args: {
     open: true,
     onOpenChange: () => undefined,
-    title: "מחיקת פרויקט",
+    title: "למחוק את ההוצאה?",
     consequence: "הפרויקט ייעלם מהרשימה.",
     confirmLabel: "מחיקה",
     onConfirm: () => undefined,
@@ -56,7 +56,7 @@ export const Plain: Story = {
   args: {
     open: true,
     onOpenChange: () => undefined,
-    title: "הסתרת קטגוריה",
+    title: "להסתיר את הקטגוריה?",
     consequence: "הקטגוריה לא תופיע בבחירה.",
     confirmLabel: "הסתרה",
     onConfirm: () => undefined,

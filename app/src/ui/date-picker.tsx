@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "./button";
-import { dayLabel, formatDisplay, israelToday, monthCells, monthTitle } from "./date-math";
+import { Chip } from "./chip";
+import { dayLabel, formatDisplay, israelToday, monthCells, monthTitle, shiftDays } from "./date-math";
+import { CalendarIcon } from "./icons";
 import { IconButton } from "./icon-button";
 import { Sheet } from "./sheet";
 
@@ -16,22 +18,32 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
   const initial = value ?? today;
   const [cursor, setCursor] = useState(() => parseCursor(initial));
   const cells = monthCells(cursor.year, cursor.month);
-  const nextDisabled = cursor.year > Number(today.slice(0, 4)) || (cursor.year === Number(today.slice(0, 4)) && cursor.month >= Number(today.slice(5, 7)) - 1);
+  const monthKey = String(cursor.month + 1).padStart(2, "0");
+  const nextDisabled =
+    cursor.year > Number(today.slice(0, 4)) ||
+    (cursor.year === Number(today.slice(0, 4)) && cursor.month >= Number(today.slice(5, 7)) - 1);
+  const yesterday = shiftDays(today, -1);
 
   function pick(iso: string) {
     if (iso > today) return;
     onChange(iso);
+    setCursor(parseCursor(iso));
   }
 
   return (
     <>
-      <button type="button" className="ui-field ui-hit" aria-haspopup="dialog" onClick={() => { setOpen(true); }}>
+      <button type="button" className="ui-date-trigger ui-field" aria-haspopup="dialog" onClick={() => { setOpen(true); }}>
         <span className="ui-field-label">{label}</span>
-        <span className="ui-field-control">
+        <span className="ui-field-control ui-date-control">
           <bdi dir="ltr">{value ? formatDisplay(value) : "בחירת תאריך"}</bdi>
+          <CalendarIcon size={20} />
         </span>
       </button>
       <Sheet open={open} onOpenChange={setOpen} title={label}>
+        <div className="flex flex-wrap gap-2">
+          <Chip pressed={value === today} onClick={() => { pick(today); }}>היום</Chip>
+          <Chip pressed={value === yesterday} onClick={() => { pick(yesterday); }}>אתמול</Chip>
+        </div>
         <div className="band-row">
           <IconButton
             label="חודש קודם"
@@ -63,14 +75,15 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
           {weeksOf(cells).map((week) => (
             <div key={week.join("-")} className="ui-cal-row" role="row">
               {week.map((iso) => {
-                const outside = iso.slice(5, 7) !== String(cursor.month + 1).padStart(2, "0");
+                const outside = iso.slice(5, 7) !== monthKey;
+                if (outside) return <span key={iso} className="ui-day" />;
                 const future = iso > today;
                 return (
                   <button
                     key={iso}
                     type="button"
                     role="gridcell"
-                    className={outside ? "ui-day ui-day-outside" : "ui-day"}
+                    className="ui-day"
                     aria-label={dayLabel(iso)}
                     aria-selected={iso === value}
                     aria-current={iso === today ? "date" : undefined}
@@ -79,13 +92,14 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
                       pick(iso);
                     }}
                   >
-                    {Number(iso.slice(8, 10))}
+                    <b>{Number(iso.slice(8, 10))}</b>
                   </button>
                 );
               })}
             </div>
           ))}
         </div>
+        {value ? <p className="t-label">{dayLabel(value)}</p> : null}
         <Button
           variant="primary"
           full

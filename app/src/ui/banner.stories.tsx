@@ -12,16 +12,13 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { title: "3 פריטים ממתינים לאישור", hint: "הרווח כבר כולל אותם", to: "/review", count: 3 },
+  args: { title: "7 פריטים ממתינים לאישור", hint: "3 חשבוניות לא שולמו · ₪23,400", to: "/review" },
 };
-export const EmptyCount: Story = {
-  args: { title: "אין ממתינים", hint: "התור ריק" },
-};
-export const LargeCount: Story = {
-  args: { title: "פריטים ממתינים לאישור", to: "/review", count: 120 },
+export const UnpaidOnly: Story = {
+  args: { title: "3 חשבוניות לא שולמו", hint: "לא נכלל ברווח", to: "/unpaid" },
 };
 export const LongHebrew: Story = {
-  args: { title: longHebrew, hint: longHebrew, to: "/review", count: 7 },
+  args: { title: longHebrew, hint: longHebrew, to: "/review" },
 };
 export const NoticeNeutral: Story = {
   args: { title: "מצב תצוגה" },
