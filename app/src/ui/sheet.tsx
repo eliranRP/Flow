@@ -25,8 +25,8 @@ export function SheetSurface({
   );
   return (
     <div className="ui-sheet-surface">
-      <div className="sheet-grab" />
-      <div className="sheet-head">
+      <div className="ui-sheet-grab" />
+      <div className="ui-sheet-head">
         {heading}
         {onClose ? (
           <IconButton ref={closeRef} label="סגירה" onClick={onClose}>
@@ -34,8 +34,8 @@ export function SheetSurface({
           </IconButton>
         ) : null}
       </div>
-      {hint ? <p className="sheet-hint t-label">{hint}</p> : null}
-      <div className="stack">{children}</div>
+      {hint ? <p className="ui-sheet-hint t-label">{hint}</p> : null}
+      <div className="ui-sheet-body">{children}</div>
     </div>
   );
 }
@@ -71,9 +71,9 @@ export function Sheet({
       }}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className="sheet-scrim" />
+        <Drawer.Overlay className="ui-sheet-scrim" />
         <Drawer.Content
-          className="sheet-panel"
+          className="ui-sheet-panel"
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
             event.preventDefault();

@@ -18,7 +18,7 @@ describe("Chip", () => {
       </>,
     );
     const choice = screen.getByRole("button", { name: "חומרים" });
-    expectTarget(choice, 36);
+    expectTarget(choice);
     expectThemePaint(choice, "color");
     expect(screen.getByRole("button", { name: "מוסתר" })).toBeDisabled();
     expect(screen.getByText("שולם").tagName).toBe("SPAN");

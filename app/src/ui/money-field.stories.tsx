@@ -1,6 +1,12 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { MoneyField } from "./money-field";
 import { longHebrew, padded } from "./story-support";
+
+function Demo({ label, value = "", error, disabled }: { label: string; value?: string; error?: string; disabled?: boolean }) {
+  const [amount, setAmount] = useState(value);
+  return <MoneyField label={label} value={amount} onValueChange={setAmount} error={error} disabled={disabled} />;
+}
 
 const meta = {
   title: "Components/MoneyField",
@@ -11,9 +17,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { args: { label: "סכום לפני מע״מ", defaultValue: "1500" } };
-export const Empty: Story = { args: { label: "סכום לפני מע״מ", placeholder: "0" } };
-export const Disabled: Story = { args: { label: "סכום לפני מע״מ", defaultValue: "1500", disabled: true } };
-export const Error: Story = { args: { label: "סכום לפני מע״מ", defaultValue: "abc", error: "סכום לא תקין" } };
-export const LargeAmount: Story = { args: { label: "סכום לפני מע״מ", defaultValue: "123456789" } };
-export const LongHebrew: Story = { args: { label: longHebrew, defaultValue: "123456789" } };
+const args = { label: "סכום לפני מע״מ", value: "", onValueChange: () => undefined };
+
+export const Default: Story = { args: { ...args, value: "1500" }, render: () => <Demo label="סכום לפני מע״מ" value="1500" /> };
+export const Empty: Story = { args, render: () => <Demo label="סכום לפני מע״מ" /> };
+export const Disabled: Story = { args: { ...args, value: "1500" }, render: () => <Demo label="סכום לפני מע״מ" value="1500" disabled /> };
+export const Error: Story = { args: { ...args, error: "סכום לא תקין" }, render: () => <Demo label="סכום לפני מע״מ" value="12" error="סכום לא תקין" /> };
+export const LargeAmount: Story = { args: { ...args, value: "123456789" }, render: () => <Demo label="סכום לפני מע״מ" value="123456789" /> };
+export const LongHebrew: Story = { args: { ...args, label: longHebrew }, render: () => <Demo label={longHebrew} value="123456789" /> };

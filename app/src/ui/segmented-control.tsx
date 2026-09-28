@@ -9,14 +9,14 @@ type SegmentedControlProps<T extends string> = {
 
 export function SegmentedControl<T extends string>({ label, value, options, onChange }: SegmentedControlProps<T>) {
   return (
-    <div className="ui-seg" role="tablist" aria-label={label}>
+    <div className="ui-seg" role="radiogroup" aria-label={label}>
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className="ui-seg-btn"
-          role="tab"
-          aria-selected={value === option.value}
+          role="radio"
+          aria-checked={value === option.value}
           onClick={() => {
             onChange(option.value);
           }}

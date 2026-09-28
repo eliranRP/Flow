@@ -17,7 +17,7 @@ describe("Button", () => {
     for (const name of ["אישור", "שינוי", "מחיקה"]) {
       expectTarget(screen.getByRole("button", { name }));
     }
-    expectTarget(screen.getByRole("button", { name: "סימון" }), 36);
+    expectTarget(screen.getByRole("button", { name: "סימון" }));
     expect(screen.getByRole("button", { name: "אישור" })).toHaveClass("ui-btn-primary");
     expect(screen.getByRole("button", { name: "מחיקה" })).toHaveClass("ui-btn-danger");
     expectThemePaint(screen.getByRole("button", { name: "אישור" }), "backgroundColor");

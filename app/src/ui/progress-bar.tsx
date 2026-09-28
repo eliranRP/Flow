@@ -52,7 +52,9 @@ export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: B
       >
         <div className="ui-bar-fill" data-over={over ? "true" : "false"} style={{ width: `${String(width)}%` }} />
       </div>
-      <p className="ui-row-hint">נוצלו {String(width)}% מהתקציב</p>
+      <p className="ui-row-hint">
+        <bdi dir="ltr">{`נוצלו ${String(width)}%`}</bdi> מהתקציב
+      </p>
       {over ? (
         <p className="ui-overage t-hint">
           מעל התקציב ב־<bdi dir="ltr">{formatAmount(overage)}</bdi>

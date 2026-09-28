@@ -4,7 +4,7 @@ import { BackIcon } from "./icons";
 /** One title block for every screen. A back control is for screens that are not tab roots. */
 export function ScreenHeader({ title, subtitle, backTo }: { title: string; subtitle?: string; backTo?: string }) {
   return (
-    <header className="page">
+    <header className="ui-page">
       {backTo ? (
         <IconButton label="חזרה" to={backTo}>
           <BackIcon />

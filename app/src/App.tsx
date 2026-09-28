@@ -3,13 +3,14 @@ import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react
 import { homeSummarySchema } from "@flow/shared";
 import { AuthProvider, useAuth } from "./auth";
 import { ScreenHeader } from "./ui/screen-header";
-import { HomeSkeleton } from "./ui/skeleton";
+import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
 import { ThemeColor } from "./components/ThemeColor";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { BooksProvider } from "./use-books";
+import { ToastProvider } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
@@ -31,6 +32,7 @@ import { SignInScreen } from "./screens/SignInScreen";
 
 export function App() {
   return (
+    <ToastProvider>
     <AuthProvider>
       <BooksProvider>
         <ThemeColor />
@@ -39,6 +41,7 @@ export function App() {
         </div>
       </BooksProvider>
     </AuthProvider>
+    </ToastProvider>
   );
 }
 

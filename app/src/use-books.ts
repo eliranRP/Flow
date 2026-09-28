@@ -1,14 +1,17 @@
 import {
   categoryRowSchema,
   dashboardSchema,
+  projectDetailSchema,
   reviewRowSchema,
   sumitStatusSchema,
+  transactionDetailSchema,
   unpaidRowSchema,
-  type Basis,
   type CategoryRow,
   type Dashboard,
+  type ProjectDetail,
   type ReviewRow,
   type SumitStatus,
+  type TransactionDetail,
   type UnpaidRow,
 } from "@flow/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,14 +29,10 @@ interface BooksContextValue {
 
 const BooksContext = createContext<BooksContextValue | null>(null);
 
-function invoiced(period: PeriodChoice): PeriodChoice {
-  return period.basis === "invoiced" ? period : { ...period, basis: "invoiced" };
-}
-
 export function BooksProvider({ children }: { children: ReactNode }) {
-  const [period, setPeriodState] = useState<PeriodChoice>(() => invoiced(thisMonth()));
+  const [period, setPeriodState] = useState<PeriodChoice>(() => thisMonth());
   const setPeriod = useCallback((next: PeriodChoice) => {
-    setPeriodState(invoiced(next));
+    setPeriodState(next);
   }, []);
   const [overheadOn, setOverheadOn] = useState(false);
   const value = useMemo(
@@ -49,9 +48,9 @@ export function useBooks(): BooksContextValue {
   return value;
 }
 
-function rpcArgs(period: PeriodChoice): { p_basis: Basis; p_from?: string; p_to?: string } {
+function rpcArgs(period: PeriodChoice): { p_basis: "invoiced"; p_from?: string; p_to?: string } {
   return {
-    p_basis: period.basis,
+    p_basis: "invoiced",
     ...(period.from && period.to ? { p_from: period.from, p_to: period.to } : {}),
   };
 }
@@ -132,9 +131,39 @@ export function useSumitStatusQuery() {
   });
 }
 
+export function useProjectQuery(projectId: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["project", preview, projectId],
+    enabled: preview === "off" && projectId !== "",
+    queryFn: async (): Promise<ProjectDetail> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const { data, error } = await supabase.rpc("get_project", { p_id: projectId });
+      if (error) throw error;
+      return projectDetailSchema.parse(data);
+    },
+  });
+}
+
+export function useTransactionQuery(transactionId: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["txn", preview, transactionId],
+    enabled: preview === "off" && transactionId !== "",
+    queryFn: async (): Promise<TransactionDetail> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const { data, error } = await supabase.rpc("get_transaction", { p_id: transactionId });
+      if (error) throw error;
+      return transactionDetailSchema.parse(data);
+    },
+  });
+}
+
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async () => {
-    await client.invalidateQueries();
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "txn", "home"]) => {
+    await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }

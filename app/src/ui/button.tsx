@@ -1,7 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { cx } from "./cx";
-import { TrashIcon } from "./icons";
 
 export type ButtonVariant = "primary" | "secondary" | "pill" | "danger" | "danger-tint" | "ghost";
 
@@ -10,6 +9,7 @@ type Common = {
   busy?: boolean;
   full?: boolean;
   quiet?: boolean;
+  icon?: ReactNode;
   children: ReactNode;
   className?: string;
 };
@@ -46,7 +46,7 @@ export function Button(props: ButtonProps) {
   const body = (
     <>
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
-      {variant === "danger" || variant === "danger-tint" ? <TrashIcon /> : null}
+      {props.icon}
       {props.children}
     </>
   );
@@ -57,7 +57,7 @@ export function Button(props: ButtonProps) {
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, to: _to, onClick, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, to: _to, onClick, ...rest } = props;
   return (
     <button
       type={type}

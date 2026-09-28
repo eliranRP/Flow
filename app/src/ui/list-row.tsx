@@ -59,5 +59,5 @@ function RowAmount(props: ListRowProps) {
 }
 
 export function List({ children }: { children: ReactNode }) {
-  return <div className={cx("project-list")}>{children}</div>;
+  return <div className={cx("ui-project-list")}>{children}</div>;
 }

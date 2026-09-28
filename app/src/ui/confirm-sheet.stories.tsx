@@ -63,6 +63,17 @@ export const Plain: Story = {
   },
   render: () => <Demo destructive={false} item="כללי" />,
 };
+export const Merge: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    title: "למזג את הקטגוריה?",
+    item: "כללי ← חומרים",
+    consequence: "התנועות עוברות אל היעד. אי אפשר להפריד אחר כך.",
+    confirmLabel: "מיזוג",
+    onConfirm: () => undefined,
+  },
+};
 export const LongHebrew: Story = {
   args: {
     open: true,

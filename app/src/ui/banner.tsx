@@ -46,12 +46,12 @@ type NoticeProps = {
 export function Notice({ title, body, tone = "neutral", extra }: NoticeProps) {
   return (
     <div className="ui-notice" role="status">
-      <span className={tone === "bad" ? "note-icon note-icon-bad" : "note-icon"}>
+      <span className={tone === "bad" ? "ui-note-icon ui-note-icon-bad" : "ui-note-icon"}>
         <InfoIcon />
       </span>
       <div>
-        <p className="note-title">{title}</p>
-        <p className="note-body">{body}</p>
+        <p className="ui-note-title">{title}</p>
+        <p className="ui-note-body">{body}</p>
         {extra}
       </div>
     </div>

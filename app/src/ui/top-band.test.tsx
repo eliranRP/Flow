@@ -4,7 +4,7 @@ import { TopBand } from "./top-band";
 import { expectRtl } from "./test-support";
 
 describe("TopBand", () => {
-  it("keeps the same violet band in light and dark", () => {
+  it("keeps the same violet ui-band in light and dark", () => {
     expectRtl();
     render(
       <TopBand>
@@ -12,7 +12,7 @@ describe("TopBand", () => {
       </TopBand>,
     );
     const band = screen.getByRole("banner");
-    expect(band).toHaveClass("band");
+    expect(band).toHaveClass("ui-band");
     expect(screen.getByText("Flow")).toHaveAttribute("dir", "ltr");
     document.documentElement.dataset.theme = "light";
     const light = getComputedStyle(document.documentElement).getPropertyValue("--color-band").trim();

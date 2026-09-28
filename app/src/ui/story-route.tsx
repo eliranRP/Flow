@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { TabBar } from "./tab-bar";
+import { ToastProvider } from "./toast";
 
 export function StoryRoute({
   entry,
@@ -19,6 +20,7 @@ export function StoryRoute({
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   return (
     <QueryClientProvider client={client}>
+      <ToastProvider>
       <MemoryRouter initialEntries={[entry]}>
         <AuthProvider>
           <BooksProvider>
@@ -27,6 +29,7 @@ export function StoryRoute({
           </BooksProvider>
         </AuthProvider>
       </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

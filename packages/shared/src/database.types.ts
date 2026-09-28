@@ -410,6 +410,9 @@ isOneToOne: true
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
                            },
+"reopen_review":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id": string,"p_id": string,"p_project_id": string }; Returns: undefined
                            },

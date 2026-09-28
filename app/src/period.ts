@@ -1,73 +1,118 @@
-import type { Basis } from "@flow/shared";
-import { formatDisplay, HEBREW_MONTHS } from "./ui/date-math";
+import { HEBREW_MONTHS, formatDisplay, monthSpan, previousMonthSpan, yearSpan } from "./ui/date-math";
 
+export type PeriodKind = "month" | "lastMonth" | "ytd" | "all" | "custom";
+
+/** Identity is the kind, plus the dates when the kind is custom. The label is derived. */
 export interface PeriodChoice {
+  kind: PeriodKind;
   from: string | null;
   to: string | null;
-  label: string;
-  basis: Basis;
 }
 
-const INVOICED: Basis = "invoiced";
+export function periodLabel(period: PeriodChoice): string {
+  switch (period.kind) {
+    case "month":
+      return "החודש";
+    case "lastMonth":
+      return "חודש קודם";
+    case "ytd":
+      return "מתחילת השנה";
+    case "all":
+      return "כל התקופה";
+    case "custom":
+      return "טווח מותאם";
+    default: {
+      const unreachable: never = period.kind;
+      return unreachable;
+    }
+  }
+}
 
-export function israelToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jerusalem",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+export function samePeriod(left: PeriodChoice, right: PeriodChoice): boolean {
+  if (left.kind !== right.kind) return false;
+  if (left.kind !== "custom") return true;
+  return left.from === right.from && left.to === right.to;
 }
 
 export function thisMonth(now = new Date()): PeriodChoice {
-  const today = israelToday(now);
-  return { from: `${today.slice(0, 8)}01`, to: today, label: "החודש", basis: INVOICED };
+  const span = monthSpan(now);
+  return { kind: "month", from: span.from, to: span.to };
 }
 
 export function lastMonth(now = new Date()): PeriodChoice {
-  const today = israelToday(now);
-  const year = Number(today.slice(0, 4));
-  const month = Number(today.slice(5, 7));
-  const previous = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
-  const start = `${String(previous.year)}-${String(previous.month).padStart(2, "0")}-01`;
-  const endDay = new Date(Date.UTC(previous.year, previous.month, 0)).getUTCDate();
-  const end = `${String(previous.year)}-${String(previous.month).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
-  return { from: start, to: end, label: "חודש קודם", basis: INVOICED };
+  const span = previousMonthSpan(now);
+  return { kind: "lastMonth", from: span.from, to: span.to };
 }
 
 export function yearToDate(now = new Date()): PeriodChoice {
-  const today = israelToday(now);
-  return { from: `${today.slice(0, 4)}-01-01`, to: today, label: "מתחילת השנה", basis: INVOICED };
+  const span = yearSpan(now);
+  return { kind: "ytd", from: span.from, to: span.to };
 }
 
 export function allTime(): PeriodChoice {
-  return { from: null, to: null, label: "כל התקופה", basis: INVOICED };
+  return { kind: "all", from: null, to: null };
 }
 
 export function customRange(from: string, to: string): PeriodChoice {
-  return { from, to, label: "טווח מותאם", basis: INVOICED };
+  return { kind: "custom", from, to };
 }
 
 export function heroProfitLabel(period: PeriodChoice): string {
-  if (!period.from || period.label === "כל התקופה") return "רווח נקי בכל התקופה";
-  if (period.label === "מתחילת השנה") return "רווח נקי מתחילת השנה";
-  if (period.label === "טווח מותאם") return "רווח נקי בטווח שנבחר";
-  const name = HEBREW_MONTHS[Number(period.from.slice(5, 7)) - 1] ?? "";
-  return `רווח נקי ב${name}`;
+  switch (period.kind) {
+    case "all":
+      return "רווח נקי בכל התקופה";
+    case "ytd":
+      return "רווח נקי מתחילת השנה";
+    case "custom":
+      return "רווח נקי בטווח שנבחר";
+    case "month":
+    case "lastMonth": {
+      const name = period.from ? (HEBREW_MONTHS[Number(period.from.slice(5, 7)) - 1] ?? "") : "";
+      return `רווח נקי ב${name}`;
+    }
+    default: {
+      const unreachable: never = period.kind;
+      return unreachable;
+    }
+  }
 }
 
 export function periodHint(period: PeriodChoice): string | undefined {
-  if (!period.from) return "כל החשבוניות";
-  const month = HEBREW_MONTHS[Number(period.from.slice(5, 7)) - 1] ?? "";
-  if (period.label === "החודש" || period.label === "חודש קודם") return `${month} ${period.from.slice(0, 4)}`;
-  if (period.label === "מתחילת השנה") return period.from.slice(0, 4);
-  if (period.to) return `${formatDisplay(period.from)} – ${formatDisplay(period.to)}`;
-  return undefined;
+  switch (period.kind) {
+    case "all":
+      return "כל החשבוניות";
+    case "month":
+    case "lastMonth": {
+      if (!period.from) return undefined;
+      const month = HEBREW_MONTHS[Number(period.from.slice(5, 7)) - 1] ?? "";
+      return `${month} ${period.from.slice(0, 4)}`;
+    }
+    case "ytd":
+      return period.from?.slice(0, 4);
+    case "custom":
+      if (period.from && period.to) return `${formatDisplay(period.from)} – ${formatDisplay(period.to)}`;
+      return undefined;
+    default: {
+      const unreachable: never = period.kind;
+      return unreachable;
+    }
+  }
 }
 
 export function comparisonWords(period: PeriodChoice): string | null {
-  if (period.label === "החודש") return "מחודש שעבר";
-  if (period.label === "חודש קודם") return "מהחודש שלפניו";
-  if (period.label === "מתחילת השנה") return "מהשנה שעברה";
-  return null;
+  switch (period.kind) {
+    case "month":
+      return "מחודש שעבר";
+    case "lastMonth":
+      return "מהחודש שלפניו";
+    case "ytd":
+      return "מהשנה שעברה";
+    case "all":
+    case "custom":
+      return null;
+    default: {
+      const unreachable: never = period.kind;
+      return unreachable;
+    }
+  }
 }

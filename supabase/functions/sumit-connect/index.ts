@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
     return json({ connected: true, sumit_company_id: companyId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "connect failed";
-    return json({ error: message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]") }, 500);
+    console.error("sumit-connect", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));
+    return json({ error: "connect_failed" }, 500);
   }
 });
