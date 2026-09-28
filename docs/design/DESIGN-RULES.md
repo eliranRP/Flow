@@ -249,7 +249,7 @@ The band holds only the summary. Home: wordmark, period pill, greeting, "רוו�
 - Must work from **320 to 480px**. Amounts never wrap. Above 480px, centre a column (`--content-max: 480px`). No desktop layout. [0015](../decisions/0015-installable-mobile-web-app.md), guide §4.
 - Sides 24px. Cards inset 16px. Sections 36–40px apart.
 - `viewport-fit=cover`. Pad with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`. Do not hard-code 47px or 34px.
-- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). Content pads so the last row is not hidden.
+- Tab bar is 52px plus the bottom safe area (86px on a notched iPhone). When that inset is 0, an 8px floor (`--tabbar-min-inset`) keeps the labels off the screen edge ([0045](../decisions/0045-phase-0-design-gaps.md)). Content pads so the last row is not hidden.
 - When the keyboard is open, hide the tab bar and keep the focused field visible.
 - Portrait, `display: standalone`. Guide §4 manifest excerpt.
 
@@ -318,7 +318,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Steps: period pill opens 16. Pending card opens Review. A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
 - Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור SUMIT", and the line says the profit appears once SUMIT is connected.
-- Error: skeleton while loading. Offline with or without cache (`ld-08`, `ld-09`).
+- Error: skeleton while loading (`ld-01`, without a period pill in Phase 0). Offline is `ld-08`. A server load failure, the missing-name greeting, and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md).
 
 ### 02 Project
 
@@ -343,7 +343,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 - Mockups: [04-add-light.png](../../design/screens/04-add-light.png), [04-add-dark.png](../../design/screens/04-add-dark.png).
 - Entry: the + button.
-- Steps: sheet over Home. Photo, bank report, or manual entry. [0020](../decisions/0020-capture-from-the-phone.md).
+- Steps: sheet over Home. Photo, bank report, or manual entry. [0020](../decisions/0020-capture-from-the-phone.md). Phase 0 shows only the title and one hint ([0045](../decisions/0045-phase-0-design-gaps.md)). Closing returns focus to +.
 - Cancel: ✕, scrim, swipe down, or back. Guide §3.3.
 - Success: processing screens [ld-05](../../design/states/ld-05-upload-processing-light.png) (bank) and [ld-06](../../design/states/ld-06-invoice-reading-light.png) (invoice), then results or the new row.
 - Error: [er-01-bank-file](../../design/states/er-01-bank-file-light.png) wrong file. [er-02-invoice-blurry](../../design/states/er-02-invoice-blurry-light.png) unreadable photo. Each has a dark twin.
@@ -385,8 +385,8 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 - Strip (not a screen): [09-onboarding-light.png](../../design/screens/09-onboarding-light.png), [09-onboarding-dark.png](../../design/screens/09-onboarding-dark.png).
 - 09a sign-in: [09a-onboarding-light.png](../../design/screens/09a-onboarding-light.png), [09a-onboarding-dark.png](../../design/screens/09a-onboarding-dark.png). No top bar, no progress. Wordmark, one value line, "כניסה או הרשמה", Google button, privacy line. [0033](../decisions/0033-google-sign-in.md), guide §7.24.
-  - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry.
-  - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon.
+  - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry. No help link.
+  - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
   - Success: a new account goes to 09b. A returning account goes to Home.
 - 09b company: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). Back from step 2. Progress "שלב X מתוך 4".
 - 09c bank report: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). How to get the Hapoalim file onto the phone. [0015](../decisions/0015-installable-mobile-web-app.md).
