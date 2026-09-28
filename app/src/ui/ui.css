@@ -343,10 +343,18 @@ a.ui-row,
   display: contents;
 }
 
-.ui-row[aria-pressed="true"]::before,
-.ui-radio-row[aria-checked="true"]::before,
+.ui-row:is(:focus-visible, [aria-pressed="true"])::before,
+.ui-radio-row:is(:focus-visible, [aria-checked="true"])::before,
+.ui-review-line:focus-visible::before,
 .ui-show-hover > :is(.ui-row, .ui-radio-row, .ui-review-line)::before {
   background: var(--color-tint);
+}
+
+/* The square focus ring would draw a second box. The tint is the indicator. */
+.ui-row:focus-visible,
+.ui-radio-row:focus-visible,
+.ui-review-line:focus-visible {
+  outline: none;
 }
 
 .ui-row-main {
@@ -1243,12 +1251,10 @@ a.ui-row,
   }
 }
 
+/* Press changes the colour token only. No margin, padding, border, or transform. */
 .ui-row:active::before,
+.ui-radio-row:active::before,
 .ui-review-line:active::before {
-  background: var(--color-tint);
-}
-
-.ui-radio-row:active::before {
   background: var(--color-tint-pressed);
 }
 
