@@ -468,8 +468,8 @@ a {
 }
 
 /*
-  §2.7. Vaul's own sheet is 500ms. These selectors outrank the rules it injects.
-  Drag release writes an inline transition; the longhands cover that too.
+  §2.7, pinned to Vaul 1.1.2. Its injected sheet is 500ms, and these selectors
+  outrank it with !important and :has(). Drag release writes an inline transition.
   While .vaul-dragging is set the finger owns the transform, so the override stays off.
 */
 [data-vaul-drawer][data-state="open"],
@@ -599,8 +599,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .signin-help a,
-.signin-privacy a,
-.hit-inline {
+.signin-privacy a {
   display: inline-flex;
   align-items: center;
   min-height: var(--touch-min);
@@ -618,14 +617,14 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   color: var(--color-text-muted);
 }
 
-.help-back,
-main a[href^="mailto:"] {
+.help-mail,
+.help-back {
   display: inline-block;
   min-height: var(--touch-min);
-  padding-block: 11px;
 }
 
 .help-back {
+  min-width: var(--touch-min);
   margin-top: var(--space-6);
   color: var(--color-accent-text);
   text-decoration: none;
@@ -796,7 +795,7 @@ main a[href^="mailto:"] {
   margin-top: var(--row-pad);
   border-radius: var(--radius-input);
 }
-.home-skel-pill { width: 64px; height: 22px; }
+.home-skel-pill { width: 64px; height: 22px; border-radius: 11px; }
 .home-skel-delta { width: 92px; height: 14px; margin-top: var(--space-1); }
 .home-skel-ie-bar { width: 120px; height: 14px; }
 .home-skel-card-icon { width: 22px; height: 22px; }
@@ -828,9 +827,21 @@ main a[href^="mailto:"] {
     animation: none;
   }
 
-  /* 1ms, not 0. Vaul calls leave() from onAnimationEnd, and a 0ms duration can skip that event. */
-  [data-vaul-drawer],
-  [data-vaul-overlay] {
+  /*
+    Vaul 1.1.2 does not listen for animationend. onAnimationEnd is a fixed
+    500ms timer (TRANSITIONS.DURATION). These rules only keep the motion at 1ms.
+    They repeat the open and closed selectors so they outrank the token durations,
+    which the design tokens set to 0ms.
+  */
+  :root {
+    --dur-sheet-in: 1ms;
+    --dur-sheet-out: 1ms;
+  }
+
+  [data-vaul-drawer][data-state="open"]:not(.vaul-dragging),
+  [data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
+  body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"],
+  body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
   }

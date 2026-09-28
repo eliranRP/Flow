@@ -4,10 +4,9 @@
 #
 # CLI 2.118.0 generates types in-process and does not pass a PostgREST version
 # (there is no --postgrest-version flag). --local and --db-url therefore both
-# omit __InternalSupabase. The image that CLI ships is recorded in
-# supabase/config.toml as `flow-postgrest-version`. When the CLI grows
-# --postgrest-version, this script passes that tag on --db-url so the file
-# stays byte-identical to --local.
+# omit __InternalSupabase. The API version is recorded in supabase/config.toml
+# as `flow-postgrest-version`. When the CLI grows --postgrest-version, this
+# script passes that tag on --db-url so the file stays byte-identical to --local.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,16 +20,23 @@ if [[ -z "$postgrest_version" ]]; then
   exit 1
 fi
 
+# Capture help first. `grep -q` under pipefail can exit 1 before the CLI finishes writing.
+help_text="$(supabase gen types typescript --help 2>&1 || true)"
 db_url_flags=()
-if supabase gen types typescript --help 2>&1 | grep -q -- '--postgrest-version'; then
-  db_url_flags=(--postgrest-version "$postgrest_version")
+if [[ "$help_text" == *"--postgrest-version"* ]]; then
+  db_url_flags+=(--postgrest-version "$postgrest_version")
 fi
 
 if [[ -n "${DATABASE_URL:-}" ]]; then
-  supabase gen types typescript --db-url "$DATABASE_URL" --schema public "${db_url_flags[@]}" > "$out"
+  # ${arr[@]+...} stays empty when the array is empty, including under `set -u`.
+  supabase gen types typescript --db-url "$DATABASE_URL" --schema public \
+    ${db_url_flags[@]+"${db_url_flags[@]}"} > "$out"
 else
   supabase gen types typescript --local --schema public > "$out"
 fi
 
-diff -u packages/shared/src/database.types.ts "$out"
+if ! diff -u packages/shared/src/database.types.ts "$out"; then
+  echo "Generated types differ from packages/shared/src/database.types.ts. Run: pnpm db:types" >&2
+  exit 1
+fi
 echo "TYPES_OK"
