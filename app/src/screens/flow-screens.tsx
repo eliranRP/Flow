@@ -341,8 +341,12 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
       >
         <BandHero>
           <div className="ui-project-skel">
-            <Skeleton tone="band" className="ui-skel-project-title" />
-            <Skeleton tone="band" className="ui-skel-project-period" />
+            <span className="ui-skel-project-title">
+              <Skeleton tone="band" className="ui-skel-project-title-bar" />
+            </span>
+            <span className="ui-skel-project-period">
+              <Skeleton tone="band" className="ui-skel-project-period-bar" />
+            </span>
             <Skeleton tone="band" className="ui-skel-project-label" />
             <Skeleton tone="band" className="ui-skel-project-num" />
             <span className="ui-band-figures">
