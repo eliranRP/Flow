@@ -75,6 +75,21 @@
   cursor: pointer;
 }
 
+/*
+  One rule for every disabled control. The element keeps pointer events so the
+  cursor stays visible. A disabled attribute, or the click handler, blocks the action.
+  Busy is progress, and it follows this rule so it wins over not-allowed.
+*/
+:is(button, [role="button"], input, select, textarea, a):is(:disabled, [aria-disabled="true"]),
+:is(label, .ui-field-control, .ui-search):has(:is(input, select, textarea):is(:disabled, [aria-disabled="true"])) {
+  cursor: not-allowed;
+}
+
+:is(button, [role="button"], a)[aria-busy="true"],
+:is(button, [role="button"], a):is(:disabled, [aria-disabled="true"])[aria-busy="true"] {
+  cursor: progress;
+}
+
 .ui-btn-primary:disabled,
 .ui-btn-secondary:disabled,
 .ui-btn-pill:disabled,
@@ -85,7 +100,6 @@
   background: var(--color-disabled-bg);
   color: var(--color-disabled-text);
   border-color: transparent;
-  cursor: default;
 }
 
 .ui-btn-ghost:disabled,
@@ -93,11 +107,6 @@
 .ui-icon-btn:disabled {
   background: transparent;
   color: var(--color-disabled-text);
-  cursor: default;
-}
-
-.ui-btn[aria-busy="true"] {
-  pointer-events: none;
 }
 
 .ui-btn-primary[aria-busy="true"] {

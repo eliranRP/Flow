@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+Disabled controls use one shared `cursor: not-allowed` rule. A busy control uses `cursor: progress`. The disabled element keeps pointer events so the cursor stays visible. Decision [0061](decisions/0061-review-undo.md).
+
 Storybook amounts stay out of story args. A bigint in args is sent to the manager with `JSON.stringify`, which blanks the manager on Components / BigNumber / Summary. The amount is a decimal string in args and becomes a bigint inside render. `pnpm test` rejects a bigint anywhere in story args, and `pnpm test:storybook:smoke` opens every story in the built static Storybook. A screen that is given sample rows does not also call the ledger. A returned Google error is the notice on the sign-in screen.
 
 The second design review's should-fix list is in the same pass. Home's greeting is label size, with the example tag on the sample row only. The pending card sits a section below the band, and project rows have no extra gap. An over-budget line states the real percent while the bar stays at 100%. Checkbox focus draws on the box. Sign-in legal links stay in the hint line.
