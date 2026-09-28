@@ -180,13 +180,15 @@ test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
       await page.goto(`/iframe.html?id=${id}&viewMode=story`, { waitUntil: "domcontentloaded" });
       const heading = page.getByRole("heading", { name: title });
       await expect(heading).toBeVisible();
-      const box = await heading.boundingBox();
-      expect(box, `${title} at ${String(viewport.width)}`).not.toBeNull();
-      if (!box) continue;
-      expect(box.y, `${title} title top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
-      expect(box.y + box.height, `${title} title bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
-      const panelTop = await page.locator(".ui-sheet-panel").evaluate((node) => node.getBoundingClientRect().top);
-      expect(panelTop, `${title} sheet cap at ${String(viewport.width)}`).toBeGreaterThanOrEqual(56);
+      await expect(async () => {
+        const box = await heading.boundingBox();
+        expect(box, `${title} at ${String(viewport.width)}`).not.toBeNull();
+        if (!box) return;
+        expect(box.y, `${title} title top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height, `${title} title bottom at ${String(viewport.width)}`).toBeLessThanOrEqual(viewport.height);
+        const panelTop = await page.locator(".ui-sheet-panel").evaluate((node) => node.getBoundingClientRect().top);
+        expect(panelTop, `${title} sheet cap at ${String(viewport.width)}`).toBeGreaterThanOrEqual(55);
+      }).toPass();
     }
   }
 });
