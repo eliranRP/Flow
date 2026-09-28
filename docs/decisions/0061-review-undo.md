@@ -40,3 +40,11 @@ Toggle and DatePicker leave the library until a shipped screen needs them. Range
 The home loading skeleton is the home route, composed from Skeleton bars inside TopBand, and it does not show `מצב תצוגה`.
 
 The rest of that review follows the implementation guide. The greeting is `t-label` and the example tag sits on that row in Storybook only. The pending card has 24px above it. Project rows are hairlines with 14px padding and no extra gap. The over-budget sentence states the real percent (the bar fill still stops at 100%). The checkbox focus ring is on the box, not the hidden input. Sign-in legal links are underlined hint text.
+
+## Disabled cursor
+
+A disabled or `aria-disabled` control shows `cursor: not-allowed`. One rule in `ui.css` covers `button`, `[role=button]`, `input`, `select`, `textarea`, and `a`, plus a label or field shell that contains a disabled control. That is Button (every variant), IconButton, Checkbox, RadioRow, Chip, SegmentedControl, PeriodPicker, MoneyField, SelectField, SearchField, a ListRow link, and a TabBar item.
+
+The disabled element does not get `pointer-events: none`. That would hide the cursor. The `disabled` attribute blocks the click, or the handler does. A busy control uses `cursor: progress`.
+
+Toggle and the DatePicker trigger stay out of the library, as this decision already says. Both were buttons, so this same rule is what they use if a screen brings them back. The computed-cursor test covers a disabled Button, a disabled IconButton, and the checkbox row (`.ui-toggle`), which is the toggle control still in the library.

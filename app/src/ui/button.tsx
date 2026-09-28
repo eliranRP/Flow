@@ -52,7 +52,16 @@ export function Button(props: ButtonProps) {
   );
   if (isLink(props)) {
     return (
-      <Link to={props.to} state={props.state} className={classes} aria-busy={props.busy || undefined}>
+      <Link
+        to={props.to}
+        state={props.state}
+        className={classes}
+        aria-disabled={props.busy || undefined}
+        aria-busy={props.busy || undefined}
+        onClick={(event) => {
+          if (props.busy) event.preventDefault();
+        }}
+      >
         {body}
       </Link>
     );
