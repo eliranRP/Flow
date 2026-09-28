@@ -73,6 +73,9 @@ export const sumitStatusSchema = z.object({
   sumit_company_id: z.number().nullable(),
   last_sync_at: z.string().nullable(),
   last_error: z.string().nullable(),
+  drift_fields: z.string().nullable().optional(),
+  calls_used: z.number().optional(),
+  calls_cap: z.number().optional(),
 });
 
 export type Basis = z.infer<typeof basisSchema>;

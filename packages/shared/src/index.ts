@@ -28,6 +28,10 @@ export type {
   SumitConnectionStatus,
   VatStatus,
 } from "./schemas.ts";
+export { formatDayMonthYear, monthCells } from "./dates.ts";
+export type { MonthCell } from "./dates.ts";
+export { ledgerToCsv } from "./csv.ts";
+export type { LedgerCsvRow } from "./csv.ts";
 export {
   demoDataSchema,
   expenseRole,
