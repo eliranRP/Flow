@@ -78,6 +78,10 @@ export function netFromGross(grossAgorot: bigint, rateBp: number): bigint {
   return negative ? -net : net;
 }
 
+/**
+ * SUMIT descriptions use a prefix convention. Decision 0063.
+ * "עלות משותפת" is a shared cost. "תקורה" is overhead. Anything else is a project cost.
+ */
 function expenseRole(description: string): PnlRole {
   if (description.startsWith("עלות משותפת")) return "shared";
   if (description.startsWith("תקורה")) return "overhead";
@@ -125,8 +129,10 @@ export function deriveLine(
   };
 
   if (doc.kind === "exp") {
+    const explicitZero = doc.vat === 0;
     const hasSourceSplit = doc.vat != null && sourceNetAgorot !== grossAgorot;
-    const rateBp = vatExempt ? 0 : companyRateBp;
+    const exempt = vatExempt || explicitZero;
+    const rateBp = exempt ? 0 : companyRateBp;
     const netAgorot = hasSourceSplit ? sourceNetAgorot : netFromGross(grossAgorot, rateBp);
     const role = expenseRole(doc.desc);
     return {
@@ -135,7 +141,7 @@ export function deriveLine(
       role,
       netAgorot,
       vatAgorot: grossAgorot - netAgorot,
-      vatStatus: hasSourceSplit ? "source" : vatExempt ? "derived" : "assumed",
+      vatStatus: hasSourceSplit || explicitZero ? "source" : vatExempt ? "derived" : "assumed",
     };
   }
 
@@ -193,7 +199,7 @@ export function mapCrmEntity(entity: Record<string, unknown>): SumitDoc | null {
   const desc = first<string>(entity.Accounting_Description) ?? "";
   const number = first<number>(entity.Accounting_Number);
   if (typeof gross !== "number" || typeof wo !== "number" || typeof dateRaw !== "string") return null;
-  const missingExpenseSplit = kind === "exp" && (rawVat == null || wo === gross);
+  const missingExpenseSplit = kind === "exp" && (rawVat == null || (wo === gross && rawVat !== 0));
   return {
     key: String(id),
     sumit_id: id,

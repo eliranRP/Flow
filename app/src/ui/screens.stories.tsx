@@ -12,6 +12,8 @@ import {
   ReviewQueue,
   ReviewScreen,
   SettingsScreen,
+  SplitScreen,
+  TransactionScreen,
   UnpaidScreen,
 } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
@@ -333,6 +335,89 @@ export const AddSheet: Story = {
   ),
 };
 
+export const ReviewLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/review?preview=loading" tabs>
+      <ReviewScreen />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewError: Story = {
+  render: () => (
+    <StoryRoute entry="/review?preview=error" tabs>
+      <ReviewScreen />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectDetailLoading: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a?preview=loading">
+      <ProjectDetailScreen />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectDetailError: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a?preview=error">
+      <ProjectDetailScreen />
+    </StoryRoute>
+  ),
+};
+
+export const CategoriesEmpty: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories?preview=empty">
+      <CategoriesScreen />
+    </StoryRoute>
+  ),
+};
+
+export const CategoriesError: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories?preview=error">
+      <CategoriesScreen />
+    </StoryRoute>
+  ),
+};
+
+export const Transaction: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "חשבונית חשמל",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -1_003_000n,
+          amount_net: -850_000n,
+          vat_amount: -153_000n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_name: "וילה רעננה",
+          category_name: "חומרים",
+          supplier_name: "חברת החשמל",
+          customer_name: null,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const Split: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t1/split">
+      <ExampleBar />
+      <SplitScreen sampleProjects={[{ id: "a", name: "וילה רעננה" }, { id: "b", name: "הרצל" }]} />
+    </StoryRoute>
+  ),
+};
+
 export const ChangeSheet: Story = {
   render: () => (
     <StoryRoute entry="/review/change?item=r1">
@@ -340,7 +425,10 @@ export const ChangeSheet: Story = {
       <ChangeForm
         sample={{
           projects: [{ id: "a", name: "וילה רעננה" }],
-          categories: [{ id: "c1", name: "חומרים", hidden: false }],
+          categories: [
+            { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
+            { id: "c2", name: "תקבול", hidden: false, kind: "income" },
+          ],
         }}
       />
     </StoryRoute>

@@ -7,16 +7,20 @@ type CardArgs = {
   sourceLine: string;
   netAgorot: string;
   vatLine: string;
+  project?: string;
+  category?: string;
+  confidence?: number;
 };
 
-function CardView({ supplier, sourceLine, netAgorot, vatLine }: CardArgs) {
+function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence }: CardArgs) {
+  const suggestion = project || category ? { project, category, confidence } : undefined;
   return (
     <ReviewCard
       supplier={supplier}
       sourceLine={sourceLine}
       netAgorot={BigInt(netAgorot)}
       vatLine={vatLine}
-      suggestion={<p className="t-hint">הצעת AI</p>}
+      suggestion={suggestion}
     />
   );
 }
@@ -33,8 +37,25 @@ type Story = StoryObj<typeof meta>;
 export const OneCard: Story = {
   args: {
     supplier: "חומרי בניין השרון בע״מ",
-    sourceLine: "חשבונית מצולמת · 21/09/2026",
+    sourceLine: "חשבונית · 21/09/2026",
     netAgorot: "-850000",
     vatLine: "לפני מע״מ · מע״מ ₪1,530",
+  },
+};
+
+export const Suggestion: Story = {
+  args: {
+    ...OneCard.args,
+    project: "וילה רעננה",
+    category: "חומרים",
+  },
+};
+
+export const Confidence: Story = {
+  args: {
+    ...OneCard.args,
+    project: "וילה רעננה",
+    category: "חומרים",
+    confidence: 92,
   },
 };

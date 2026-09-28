@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -9,6 +10,15 @@ const sumitCompanyId = Number(process.env.SUMIT_COMPANY_ID ?? "");
 const sumitKey = process.env.SUMIT_API_KEY ?? "";
 const jwtSecret = process.env.JWT_SECRET ?? "";
 const live = process.env.SUMIT_LIVE === "1" && supabaseUrl && anonKey && serviceKey && jwtSecret && sumitKey && sumitCompanyId > 0;
+
+type WorkerFixture = {
+  projects: Record<string, { name: string }>;
+  shared_alloc_worker_days: Record<string, Record<string, number>>;
+};
+
+const workerFixture: WorkerFixture = JSON.parse(
+  readFileSync(new URL("../../packages/shared/fixtures/demo-data.json", import.meta.url), "utf8"),
+) as WorkerFixture;
 
 test.skip(!live, "Set SUMIT_LIVE=1 and the local Supabase and SUMIT env vars.");
 
@@ -104,6 +114,96 @@ async function linkCredit(creditId: number, invoiceId: number): Promise<void> {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function rowsOf(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) throw new Error("expected rows");
+  return value.filter((row): row is Record<string, unknown> => isRecord(row));
+}
+
+function textField(row: Record<string, unknown>, key: string): string {
+  const value = row[key];
+  if (typeof value !== "string") throw new Error(`missing ${key}`);
+  return value;
+}
+
+async function ownerRest(token: string, path: string, init?: RequestInit): Promise<unknown> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: anonKey,
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+  });
+  const body: unknown = await response.json();
+  if (!response.ok) {
+    const message = isRecord(body) && typeof body.message === "string" ? body.message : "owner request failed";
+    throw new Error(message);
+  }
+  return body;
+}
+
+async function markInsuranceExempt(token: string): Promise<void> {
+  const suppliers = rowsOf(await ownerRest(token, "suppliers?select=id,name&name=ilike.*ביטוח המגן*"));
+  const supplier = suppliers[0];
+  if (!supplier) throw new Error("insurance supplier was not imported");
+  await ownerRest(token, "rpc/set_supplier_settings", {
+    method: "POST",
+    body: JSON.stringify({ p_id: textField(supplier, "id"), p_vat_exempt: true }),
+  });
+}
+
+async function enterWorkerSplit(token: string): Promise<string> {
+  const shared = rowsOf(
+    await ownerRest(token, "transactions?select=id,doc_date&pnl_role=eq.shared&removed_at=is.null&order=doc_date.asc"),
+  );
+  const row = shared.find((item) => {
+    const month = textField(item, "doc_date").slice(0, 7);
+    return Object.keys(workerFixture.shared_alloc_worker_days[month] ?? {}).length > 1;
+  });
+  if (!row) throw new Error("no shared cost to split");
+  const month = textField(row, "doc_date").slice(0, 7);
+  const days = workerFixture.shared_alloc_worker_days[month];
+  if (!days) throw new Error(`no worker days for ${month}`);
+  const projects = rowsOf(await ownerRest(token, "projects?select=id,name"));
+  const entries = Object.entries(days).map(([key, weight]) => {
+    const name = workerFixture.projects[key]?.name;
+    const project = projects.find((item) => textField(item, "name") === name);
+    if (!project) throw new Error(`project ${name ?? key} was not imported`);
+    return { project_id: textField(project, "id"), weight };
+  });
+  const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  let used = 0;
+  const shares = entries.map((entry, index) => {
+    const share = index === entries.length - 1 ? 10000 - used : Math.round((entry.weight / total) * 10000);
+    used += share;
+    return { project_id: entry.project_id, share_bp: share };
+  });
+  await ownerRest(token, "rpc/save_split", {
+    method: "POST",
+    body: JSON.stringify({ p_transaction_id: textField(row, "id"), p_shares: shares }),
+  });
+  return textField(row, "id");
+}
+
+async function expectSplitSurvived(token: string, transactionId: string): Promise<void> {
+  const txn = rowsOf(
+    await ownerRest(token, `transactions?select=user_assigned,pnl_role&id=eq.${transactionId}`),
+  )[0];
+  if (!txn) throw new Error("split transaction missing");
+  expect(txn.user_assigned).toBe(true);
+  expect(txn.pnl_role).toBe("shared");
+  const allocations = rowsOf(
+    await ownerRest(token, `allocations?select=share_bp&transaction_id=eq.${transactionId}`),
+  );
+  const sum = allocations.reduce((total, item) => total + Number(item.share_bp), 0);
+  expect(sum).toBe(10000);
+}
+
 function documentId(payload: Record<string, unknown>): number {
   const data = payload.Data;
   if (!data || typeof data !== "object") throw new Error("SUMIT create returned no document");
@@ -115,7 +215,9 @@ function documentId(payload: Record<string, unknown>): number {
 test("live SUMIT backfill matches the golden totals and a new invoice syncs", async ({ page }) => {
   test.setTimeout(360_000);
   const session = await sessionForNewOwner();
+  const token = String(session.access_token);
   const probe = `FLOW-PROBE-${String(Date.now())}`;
+  let splitId = "";
   let createdId: number | null = null;
   let creditId: number | null = null;
 
@@ -142,8 +244,11 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await expect(page.getByText("SUMIT מחובר")).toBeVisible();
 
   await sync(page);
+  await markInsuranceExempt(token);
+  await page.goto("/");
   await showInvoicedAllTime(page);
   await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
+  splitId = await enterWorkerSplit(token);
   await page.goto("/projects");
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
   await expect(page.getByText("שיפוץ הרצל 12")).toBeVisible();
@@ -168,6 +273,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
     await sync(page);
     await page.goto("/unpaid");
     await expect(page.getByText(probe)).toBeVisible();
+    await expectSplitSurvived(token, splitId);
   } finally {
     if (createdId != null) {
       const credited = await sumit("/accounting/documents/create/", {
@@ -191,6 +297,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
       await page.goto("/unpaid");
       await expect(page.getByText("134,520")).toBeVisible();
       await expect(page.getByText(probe)).toHaveCount(0);
+      await expectSplitSurvived(token, splitId);
     }
   }
 });

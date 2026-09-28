@@ -87,6 +87,8 @@ describe("formatIls", () => {
   it("puts the shekel sign before the digits", () => {
     expect(formatIls(20_000_000n)).toBe("₪200,000");
     expect(formatIls(-1_000_000n)).toBe("−₪10,000");
+    expect(formatIls(-30n)).toBe("₪0");
+    expect(formatIls(-30n, { agorot: true })).toBe("−₪0.30");
   });
 
   it("keeps a non-zero agora remainder only when asked", () => {

@@ -163,44 +163,25 @@ select is((select count(*)::int from public.audit_log), 0, 'second user cannot r
 
 with u as (update public.companies set name = 'נגנב' returning 1)
 select is((select count(*)::int from u), 0, 'second user cannot update the company');
-with u as (update public.projects set name = 'נגנב' returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update projects');
-with u as (update public.transactions set description = 'נגנב' returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update transactions');
-with u as (update public.customers set name = 'נגנב' returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update customers');
-with u as (update public.suppliers set name = 'נגנב' returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update suppliers');
-with u as (update public.categories set hidden = true returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update categories');
-with u as (update public.allocations set share_bp = 1 returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update allocations');
-with u as (update public.split_rules set label = 'נגנב' returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update split rules');
-with u as (update public.split_rule_targets set share_bp = 1 returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update split targets');
-with u as (update public.overhead set updated_at = now() returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update overhead');
-with u as (update public.review_queue set reason = 'נגנב' returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot update the review queue');
-with u as (delete from public.projects returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete projects');
-with u as (delete from public.customers returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete customers');
-with u as (delete from public.suppliers returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete suppliers');
-with u as (delete from public.categories returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete categories');
-with u as (delete from public.transactions returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete transactions');
-with u as (delete from public.allocations returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete allocations');
-with u as (delete from public.split_rules returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete split rules');
-with u as (delete from public.split_rule_targets returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete split targets');
-with u as (delete from public.review_queue returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete the review queue');
+select throws_ok($$update public.projects set name = 'נגנב'$$, '42501', NULL, 'second user cannot update projects');
+select throws_ok($$update public.transactions set description = 'נגנב'$$, '42501', NULL, 'second user cannot update transactions');
+select throws_ok($$update public.customers set name = 'נגנב'$$, '42501', NULL, 'second user cannot update customers');
+select throws_ok($$update public.suppliers set name = 'נגנב'$$, '42501', NULL, 'second user cannot update suppliers');
+select throws_ok($$update public.categories set hidden = true$$, '42501', NULL, 'second user cannot update categories');
+select throws_ok($$update public.allocations set share_bp = 1$$, '42501', NULL, 'second user cannot update allocations');
+select throws_ok($$update public.split_rules set label = 'נגנב'$$, '42501', NULL, 'second user cannot update split rules');
+select throws_ok($$update public.split_rule_targets set share_bp = 1$$, '42501', NULL, 'second user cannot update split targets');
+select throws_ok($$update public.overhead set updated_at = now()$$, '42501', NULL, 'second user cannot update overhead');
+select throws_ok($$update public.review_queue set reason = 'נגנב'$$, '42501', NULL, 'second user cannot update the review queue');
+select throws_ok($$delete from public.projects$$, '42501', NULL, 'second user cannot delete projects');
+select throws_ok($$delete from public.customers$$, '42501', NULL, 'second user cannot delete customers');
+select throws_ok($$delete from public.suppliers$$, '42501', NULL, 'second user cannot delete suppliers');
+select throws_ok($$delete from public.categories$$, '42501', NULL, 'second user cannot delete categories');
+select throws_ok($$delete from public.transactions$$, '42501', NULL, 'second user cannot delete transactions');
+select throws_ok($$delete from public.allocations$$, '42501', NULL, 'second user cannot delete allocations');
+select throws_ok($$delete from public.split_rules$$, '42501', NULL, 'second user cannot delete split rules');
+select throws_ok($$delete from public.split_rule_targets$$, '42501', NULL, 'second user cannot delete split targets');
+select throws_ok($$delete from public.review_queue$$, '42501', NULL, 'second user cannot delete the review queue');
 with u as (delete from public.companies returning 1)
 select is((select count(*)::int from u), 0, 'second user cannot delete the company');
 
@@ -284,6 +265,7 @@ select throws_ok(
   'cannot create a company owned by someone else'
 );
 
+reset role;
 insert into public.projects (company_id, name)
 select id, 'פרויקט של ב' from public.companies where name = 'בטא';
 insert into public.customers (company_id, name)
@@ -458,6 +440,7 @@ select throws_ok(
   'cannot move an audit row into another company'
 );
 
+reset role;
 delete from public.overhead
 where transaction_id = (
   select id from public.transactions where idempotency_key = 'beta-move'
@@ -501,19 +484,26 @@ select throws_ok(
 
 select tests.authenticate_as('owner_a');
 
-insert into public.overhead (company_id, transaction_id)
-select company_id, transaction_id from flow_a;
-
-select is((select count(*)::int from public.overhead), 1, 'owner can still mark their transaction as overhead');
+select throws_ok(
+  $$insert into public.overhead (company_id, transaction_id)
+    select company_id, transaction_id from flow_a$$,
+  '42501',
+  NULL,
+  'owner cannot insert overhead directly'
+);
 select is((select name from public.companies), 'אלפא אחרי', 'the company name survived the other user');
 
 select tests.authenticate_as('owner_b');
-select is((select count(*)::int from public.overhead), 0, 'second user still cannot see that overhead row');
-with u as (delete from public.overhead returning 1)
-select is((select count(*)::int from u), 0, 'second user cannot delete overhead');
+select is((select count(*)::int from public.overhead), 0, 'second user still cannot see overhead');
+select throws_ok(
+  $$delete from public.overhead$$,
+  '42501',
+  NULL,
+  'second user cannot delete overhead'
+);
 
 select tests.authenticate_as('owner_a');
-select is((select count(*)::int from public.overhead), 1, 'the overhead row survived the other user');
+select is((select count(*)::int from public.overhead), 0, 'a direct overhead insert did not land');
 
 select tests.clear_authentication();
 

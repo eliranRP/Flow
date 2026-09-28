@@ -5,15 +5,14 @@ const SUMIT_ERRORS: Record<string, string> = {
   "could not store the connection": "לא הצלחנו לשמור את החיבור.",
   "SUMIT is not connected": "SUMIT לא מחובר.",
   sync_failed: "הרענון נכשל. נסו שוב.",
+  sync_page_cap: "יש יותר מדי מסמכים לרענון אחד. פנו לתמיכה.",
+  sync_skipped: "הרענון דילג. אפשר שוב בעוד דקה.",
   connect_failed: "החיבור נכשל. בדקו את המזהה ואת המפתח.",
   method: "החיבור נכשל.",
 };
 
-/** Hebrew for a known SUMIT code. Anything else is logged and replaced. */
+/** Hebrew for a known SUMIT code. An unknown code becomes the generic sentence. */
 export function hebrewSumitError(code: string | null | undefined): string | null {
   if (!code) return null;
-  const mapped = SUMIT_ERRORS[code];
-  if (mapped) return mapped;
-  console.error("sumit error", code);
-  return "החיבור נכשל. נסו שוב.";
+  return SUMIT_ERRORS[code] ?? "החיבור נכשל. נסו שוב.";
 }

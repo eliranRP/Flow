@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -206,5 +206,49 @@ describe("rejected writes", () => {
     expect(await screen.findByText("לא הצלחנו לדלג.")).toBeInTheDocument();
     expect(screen.queryByText("דילגנו על הפריט")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+  });
+
+  it("approves a review item and undo calls reopen_review", async () => {
+    const calls: string[] = [];
+    rpc.impl = (name) => {
+      calls.push(name);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r1",
+              transaction_id: "t1",
+              description: "מלט",
+              doc_date: "2026-09-01",
+              doc_kind: "invoice",
+              amount_net: -100,
+              vat_agorot: 18,
+              direction: "expense",
+              reason: "missing_category",
+              project_id: "p1",
+              category_id: "c1",
+              project_name: "הרצל",
+              category_name: "חומרים",
+              confidence: null,
+              supplier_name: "מחסן",
+              auto_approved_today: 0,
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("הצעה")).toBeInTheDocument();
+    expect(screen.getByText(/חשבונית/)).toBeInTheDocument();
+    expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    await waitFor(() => {
+      expect(calls).toContain("reopen_review");
+    });
+    expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
+    expect(calls).toContain("resolve_review");
   });
 });

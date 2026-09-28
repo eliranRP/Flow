@@ -48,4 +48,32 @@ export default defineConfig(
       "react-hooks/exhaustive-deps": "error",
     },
   },
+  {
+    files: ["app/src/**/*.{ts,tsx}"],
+    ignores: [
+      "app/src/**/*.test.ts",
+      "app/src/**/*.test.tsx",
+      "app/src/**/*.stories.tsx",
+      "app/src/demo/**",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/fixtures/**",
+                "**/*.stories",
+                "**/*.stories.*",
+                "@flow/shared/testing",
+                "**/demo/**",
+              ],
+              message: "Screens and the app runtime do not import fixtures, stories, demo data, or the testing entry.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

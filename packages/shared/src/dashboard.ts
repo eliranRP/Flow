@@ -67,6 +67,7 @@ export const reviewRowSchema = z.object({
   project_id: z.string().nullable(),
   category_id: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  doc_kind: z.string().optional(),
   vat_agorot: agorotSchema.optional(),
   project_name: z.string().nullable().optional(),
   category_name: z.string().nullable().optional(),
@@ -116,6 +117,7 @@ export const projectDetailSchema = z
         amount_net: agorotSchema,
         direction: z.string(),
         source: z.string().optional(),
+        doc_kind: z.string().optional(),
         category: z.string().nullable(),
       }),
     ),
@@ -132,8 +134,19 @@ export const transactionDetailSchema = z
     amount_net: agorotSchema,
     vat_amount: agorotSchema,
     vat_status: z.string(),
+    doc_kind: z.string().optional(),
     source: z.string(),
     project_name: z.string().nullable(),
+    allocations: z
+      .array(
+        z.object({
+          project_id: z.string(),
+          project_name: z.string().nullable().optional(),
+          share_bp: z.number(),
+          amount_net: agorotSchema,
+        }),
+      )
+      .optional(),
     category_name: z.string().nullable(),
     supplier_name: z.string().nullable(),
     customer_name: z.string().nullable(),

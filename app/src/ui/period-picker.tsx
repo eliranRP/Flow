@@ -182,7 +182,7 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
             setCursor((current) => shiftMonth(current, -1));
           }}
         >
-          ‹
+          ›
         </IconButton>
         <p className="t-label">{monthTitle(cursor.year, cursor.month)}</p>
         <IconButton
@@ -192,7 +192,7 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
             setCursor((current) => shiftMonth(current, 1));
           }}
         >
-          ›
+          ‹
         </IconButton>
       </div>
       <MonthGrid label="טווח מותאם" year={cursor.year} month={cursor.month} today={today} range={{ from, to }} onPick={pick} />

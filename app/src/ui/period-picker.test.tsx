@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { PeriodPicker } from "./period-picker";
+import { dayLabel, formatDisplay, israelToday } from "./date-math";
+import { PeriodPicker, RangeSheet } from "./period-picker";
 import { expectRtl, expectTarget } from "./test-support";
 
 function Harness() {
@@ -26,5 +27,31 @@ describe("PeriodPicker", () => {
     fireEvent.click(pill);
     expect(screen.getByRole("dialog", { name: "תקופה" })).toBeInTheDocument();
     expectTarget(screen.getByRole("radio", { name: "החודש" }));
+  });
+});
+
+describe("RangeSheet", () => {
+  it("sets from on the first day and to on the second", () => {
+    const today = israelToday();
+    const [year, month] = today.split("-");
+    const from = `${year ?? ""}-${month ?? ""}-01`;
+    const to = `${year ?? ""}-${month ?? ""}-03`;
+    expect(to <= today).toBe(true);
+    let applied: [string, string] | null = null;
+    render(
+      <RangeSheet
+        open
+        onOpenChange={() => undefined}
+        onApply={(nextFrom, nextTo) => {
+          applied = [nextFrom, nextTo];
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("gridcell", { name: dayLabel(from) }));
+    fireEvent.click(screen.getByRole("gridcell", { name: dayLabel(to) }));
+    expect(screen.getByText(formatDisplay(from))).toBeInTheDocument();
+    expect(screen.getByText(formatDisplay(to))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "הצגת 3 ימים" }));
+    expect(applied).toEqual([from, to]);
   });
 });

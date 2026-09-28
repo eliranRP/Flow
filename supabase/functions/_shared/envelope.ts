@@ -41,10 +41,17 @@ async function importKey(raw: Uint8Array, usage: "encrypt" | "decrypt"): Promise
 export async function aesGcmEncrypt(
   key: Uint8Array,
   plain: Uint8Array,
+  additionalData?: Uint8Array,
 ): Promise<{ ciphertext: Uint8Array; nonce: Uint8Array }> {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const cryptoKey = await importKey(key, "encrypt");
-  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: tight(nonce) }, cryptoKey, tight(plain)));
+  const cipher = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: tight(nonce), additionalData: additionalData ? tight(additionalData) : undefined },
+      cryptoKey,
+      tight(plain),
+    ),
+  );
   return { ciphertext: cipher, nonce };
 }
 
@@ -52,9 +59,14 @@ export async function aesGcmDecrypt(
   key: Uint8Array,
   ciphertext: Uint8Array,
   nonce: Uint8Array,
+  additionalData?: Uint8Array,
 ): Promise<Uint8Array> {
   const cryptoKey = await importKey(key, "decrypt");
-  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: tight(nonce) }, cryptoKey, tight(ciphertext));
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: tight(nonce), additionalData: additionalData ? tight(additionalData) : undefined },
+    cryptoKey,
+    tight(ciphertext),
+  );
   return new Uint8Array(plain);
 }
 
@@ -66,11 +78,22 @@ export interface Envelope {
   kekVersion: string;
 }
 
-/** Encrypt an API key under a fresh DEK, and the DEK under the KEK. */
-export async function sealApiKey(apiKey: string, kek: Uint8Array, kekVersion: string): Promise<Envelope> {
+/**
+ * Encrypt an API key under a fresh DEK, and the DEK under the KEK.
+ * Version "1" has no additional data. Version "2" binds companyId so the
+ * ciphertext cannot be moved to another tenant. Decision 0063.
+ */
+export async function sealApiKey(
+  apiKey: string,
+  kek: Uint8Array,
+  kekVersion: string,
+  companyId?: string,
+): Promise<Envelope> {
+  const aad = kekVersion === "2" ? te.encode(companyId ?? "") : undefined;
+  if (kekVersion === "2" && !companyId) throw new Error("version 2 seals bind a company");
   const dek = crypto.getRandomValues(new Uint8Array(32));
-  const sealedKey = await aesGcmEncrypt(dek, te.encode(apiKey));
-  const sealedDek = await aesGcmEncrypt(kek, dek);
+  const sealedKey = await aesGcmEncrypt(dek, te.encode(apiKey), aad);
+  const sealedDek = await aesGcmEncrypt(kek, dek, aad);
   return {
     keyCiphertext: bytesToHex(sealedKey.ciphertext),
     keyNonce: bytesToHex(sealedKey.nonce),
@@ -80,8 +103,9 @@ export async function sealApiKey(apiKey: string, kek: Uint8Array, kekVersion: st
   };
 }
 
-export async function openApiKey(envelope: Envelope, kek: Uint8Array): Promise<string> {
-  const dek = await aesGcmDecrypt(kek, hexToBytes(envelope.dekCiphertext), hexToBytes(envelope.dekNonce));
-  const plain = await aesGcmDecrypt(dek, hexToBytes(envelope.keyCiphertext), hexToBytes(envelope.keyNonce));
+export async function openApiKey(envelope: Envelope, kek: Uint8Array, companyId?: string): Promise<string> {
+  const aad = envelope.kekVersion === "2" ? te.encode(companyId ?? "") : undefined;
+  const dek = await aesGcmDecrypt(kek, hexToBytes(envelope.dekCiphertext), hexToBytes(envelope.dekNonce), aad);
+  const plain = await aesGcmDecrypt(dek, hexToBytes(envelope.keyCiphertext), hexToBytes(envelope.keyNonce), aad);
   return td.decode(plain);
 }

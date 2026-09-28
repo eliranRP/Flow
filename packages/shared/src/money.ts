@@ -109,7 +109,9 @@ export function formatIls(agorot: bigint, options?: { agorot?: boolean }): strin
     const agora = (abs % 100n).toString().padStart(2, "0");
     return `${sign}₪${whole}.${agora}`;
   }
-  const digits = wholeShekels(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const shekels = wholeShekels(abs);
+  if (shekels === 0) return "₪0";
+  const digits = shekels.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return `${sign}₪${digits}`;
 }
 

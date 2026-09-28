@@ -1,7 +1,7 @@
 # Flow Test splits are rules, and a SUMIT row stays in the P&L while it waits
 
 **Date:** 2026-09-28
-**Status:** Accepted
+**Status:** Accepted. [0063](0063-owner-ledger.md) removes the Edge Function copy of the worker-day table. The table stays in the fixture.
 
 ## Context
 
@@ -21,4 +21,4 @@ Calling `getdetails` for every expense to read the item name. Holding SUMIT rows
 
 ## Consequences
 
-A contractor who is not Flow Test will see a review card per uncategorised expense, and Home will already include the money. The worker-day table is duplicated in `supabase/functions/_shared/flow-test.ts` and checked against the fixture's results by the ledger parity test.
+A contractor who is not Flow Test will see a review card per uncategorised expense, and Home will already include the money. The worker-day table lives in the fixture. [0063](0063-owner-ledger.md) deleted the Edge Function copy. The ledger parity test still checks the fixture's results.

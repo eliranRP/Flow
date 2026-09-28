@@ -11,6 +11,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const AsButton: Story = {
+  args: { children: "עוד פריטים" },
+  render: (args) => <TextLink onClick={() => undefined}>{args.children}</TextLink>,
+};
 export const Route: Story = { args: { to: "/sign-in", children: "חזרה" } };
 export const Mail: Story = { args: { href: "mailto:ops@nromomentum.com", children: "ops@nromomentum.com" } };
 export const LongHebrew: Story = { args: { to: "/help", children: longHebrew } };

@@ -164,3 +164,43 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
   }
   expect(failures, failures.join("\n")).toEqual([]);
 });
+
+test("a segmented control is hit 3px outside its drawn box", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/iframe.html?id=components-segmentedcontrol--expenses&viewMode=story", { waitUntil: "domcontentloaded" });
+  const control = page.locator(".ui-seg-btn").first();
+  await expect(control).toBeVisible();
+  const hit = await control.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const above = document.elementFromPoint(box.left + box.width / 2, box.top - 3);
+    return above === el || (above instanceof Node && el.contains(above));
+  });
+  expect(hit).toBe(true);
+});
+
+test("hebrew counts keep their reading order around the numbers", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/iframe.html?id=components-bidicounts--reading-order&viewMode=story", { waitUntil: "domcontentloaded" });
+  const order = await page.locator("[data-bidi='projects']").evaluate((node) => {
+    const parts: Array<{ text: string; x: number }> = [];
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const text = walker.currentNode.textContent?.trim() ?? "";
+      if (text === "" || text === "·") continue;
+      const range = document.createRange();
+      range.selectNodeContents(walker.currentNode);
+      parts.push({ text, x: range.getBoundingClientRect().x });
+    }
+    return parts.sort((left, right) => right.x - left.x).map((part) => part.text);
+  });
+  expect(order.slice(0, 3)).toEqual(["עוד", "4", "פעילים"]);
+  const used = await page.getByText("נוצלו").evaluate((node) => {
+    const host = node.parentElement;
+    if (!host) return [];
+    const word = node.getBoundingClientRect();
+    const number = host.querySelector("bdi")?.getBoundingClientRect();
+    if (!number) return [];
+    return [word.right > number.right, number.left < word.left];
+  });
+  expect(used).toEqual([true, true]);
+});

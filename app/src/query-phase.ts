@@ -1,7 +1,8 @@
 import { onlineManager } from "@tanstack/react-query";
 import type { HomePreview } from "./preview";
+import type { ScreenPhase } from "./ui/screen-phase";
 
-export type ScreenPhase = { kind: "loading" } | { kind: "error"; offline: boolean } | { kind: "empty" } | { kind: "ready" };
+export type { ScreenPhase };
 
 type QueryFlags = {
   isPending: boolean;
