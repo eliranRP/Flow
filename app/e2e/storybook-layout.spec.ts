@@ -278,17 +278,18 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
 
 test("a row tint is wider than its content by the spacing token on both sides", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const cases = [
+  const cases: Array<{ id: string; selector: string; hover: boolean; name?: string }> = [
     { id: "components-listrow--hover", selector: ".ui-show-hover .ui-row", hover: false },
     { id: "components-listrow--project", selector: ".ui-row", hover: true },
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
     { id: "components-reviewcard--suggestion", selector: ".ui-review-line", hover: true },
-  ] as const;
+    { id: "screens-routes--settings-connected", selector: "a.ui-row", name: "פרויקטים", hover: true },
+  ];
   const failures: string[] = [];
   for (const item of cases) {
     await page.goto(`/iframe.html?id=${item.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
-    const row = page.locator(item.selector).first();
+    const row = page.locator(item.selector).filter(item.name ? { hasText: item.name } : {}).first();
     await expect(row).toBeVisible();
     if (item.hover) await row.hover();
     const problem = await row.evaluate((node) => {
@@ -310,6 +311,40 @@ test("a row tint is wider than its content by the spacing token on both sides", 
       return "";
     });
     if (problem) failures.push(`${item.id}: ${problem}`);
+    if (item.hover || item.id === "components-radiorow--selected") {
+      const read = () => row.evaluate((node) => {
+        const content = node.getBoundingClientRect();
+        const tint = getComputedStyle(node, "::before");
+        const style = getComputedStyle(node);
+        const left = Number.parseFloat(tint.left);
+        const right = Number.parseFloat(tint.right);
+        const top = Number.parseFloat(tint.top);
+        const bottom = Number.parseFloat(tint.bottom);
+        return {
+          tint: [content.left + left, content.right - right, content.top + top, content.bottom - bottom],
+          box: [content.left, content.right, content.top, content.bottom],
+          geometry: [style.margin, style.padding, style.borderWidth, style.transform, style.borderRadius],
+          color: tint.backgroundColor,
+          outline: style.outlineStyle,
+        };
+      });
+      const hovered = await read();
+      const spot = await row.boundingBox();
+      if (!spot) failures.push(`${item.id}: missing box`);
+      else {
+        await page.mouse.move(spot.x + spot.width / 2, spot.y + spot.height / 2);
+        await page.mouse.down();
+        const active = await read();
+        await page.mouse.up();
+        const slack = 0.6;
+        const tintDelta = Math.max(...active.tint.map((value, index) => Math.abs(value - hovered.tint[index]!)));
+        const boxDelta = Math.max(...active.box.map((value, index) => Math.abs(value - hovered.box[index]!)));
+        if (tintDelta > slack) failures.push(`${item.id}: hover and active tint boxes differ by ${String(tintDelta)}px`);
+        if (boxDelta > slack) failures.push(`${item.id}: the row box moves on press`);
+        if (active.geometry.join("|") !== hovered.geometry.join("|")) failures.push(`${item.id}: press changes margin, padding, border, or transform`);
+        if (active.color === "rgba(0, 0, 0, 0)") failures.push(`${item.id}: active tint is transparent`);
+      }
+    }
     if (item.id === "components-listrow--hover") {
       const shifted = await page.locator(".ui-row-title").evaluateAll((nodes) => {
         const edges = nodes.map((node) => Math.round(node.getBoundingClientRect().right));
@@ -317,6 +352,82 @@ test("a row tint is wider than its content by the spacing token on both sides", 
       });
       if (shifted) failures.push(`${item.id}: ${shifted}`);
     }
+  }
+  await page.goto("/iframe.html?id=components-listrow--project&viewMode=story", { waitUntil: "domcontentloaded" });
+  const focusRow = page.locator(".ui-row").first();
+  await expect(focusRow).toBeVisible();
+  let focused = false;
+  for (let step = 0; step < 6; step += 1) {
+    await page.keyboard.press("Tab");
+    focused = await focusRow.evaluate((node) => node.matches(":focus-visible"));
+    if (focused) break;
+  }
+  if (!focused) failures.push("project row focus is not :focus-visible");
+  else {
+    const read = () => focusRow.evaluate((node) => {
+      const content = node.getBoundingClientRect();
+      const tint = getComputedStyle(node, "::before");
+      const style = getComputedStyle(node);
+      const left = Number.parseFloat(tint.left);
+      const right = Number.parseFloat(tint.right);
+      const top = Number.parseFloat(tint.top);
+      const bottom = Number.parseFloat(tint.bottom);
+      return {
+        tint: [content.left + left, content.right - right, content.top + top, content.bottom - bottom],
+        outline: style.outlineStyle,
+        color: tint.backgroundColor,
+      };
+    });
+    const byKeyboard = await read();
+    if (byKeyboard.outline !== "none") failures.push("project row focus draws an outline");
+    if (byKeyboard.color === "rgba(0, 0, 0, 0)") failures.push("focus tint is transparent");
+    await focusRow.hover();
+    const byHover = await read();
+    const delta = Math.max(...byKeyboard.tint.map((value, index) => Math.abs(value - byHover.tint[index]!)));
+    if (delta > 0.6) failures.push(`focus tint differs from hover by ${String(delta)}px`);
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
+test("pressed buttons and chips keep the hover box", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const cases = [
+    ["components-button--primary", ".ui-btn"],
+    ["components-button--secondary", ".ui-btn"],
+    ["components-button--pill", ".ui-btn"],
+    ["components-button--ghost", ".ui-btn"],
+    ["components-button--danger", ".ui-btn"],
+    ["components-chip--choice-off", ".ui-chip"],
+    ["components-chip--suggested", ".ui-chip"],
+    ["components-chip--selected", ".ui-chip"],
+  ] as const;
+  const failures: string[] = [];
+  for (const [id, selector] of cases) {
+    await page.goto(`/iframe.html?id=${id}&viewMode=story`, { waitUntil: "domcontentloaded" });
+    const control = page.locator(selector).first();
+    await expect(control).toBeVisible();
+    const read = () => control.evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return {
+        box: [box.left, box.right, box.top, box.bottom],
+        geometry: [style.margin, style.padding, style.borderWidth, style.transform, style.borderRadius],
+      };
+    });
+    await control.hover();
+    const hovered = await read();
+    const spot = await control.boundingBox();
+    if (!spot) {
+      failures.push(`${id}: missing box`);
+      continue;
+    }
+    await page.mouse.move(spot.x + spot.width / 2, spot.y + spot.height / 2);
+    await page.mouse.down();
+    const active = await read();
+    await page.mouse.up();
+    const delta = Math.max(...active.box.map((value, index) => Math.abs(value - hovered.box[index]!)));
+    if (delta > 0.6) failures.push(`${id}: press moves the box by ${String(delta)}px`);
+    if (active.geometry.join("|") !== hovered.geometry.join("|")) failures.push(`${id}: press changes margin, padding, border, radius, or transform`);
   }
   expect(failures, failures.join("\n")).toEqual([]);
 });
