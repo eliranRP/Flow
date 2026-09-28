@@ -1,4 +1,5 @@
 import type { CategoryRow, Dashboard, ReviewRow, UnpaidRow } from "@flow/shared";
+import type { ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { HelpScreen } from "../screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "../screens/HomeScreen";
@@ -17,13 +18,14 @@ import {
   UnpaidScreen,
 } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
+import { Banner } from "./banner";
+import { OfflineIcon } from "./icons";
+import { TextLink } from "./text-link";
 import {
   InstallAndroidFrame,
   InstallIphoneFrame,
   InvoiceReadingFrame,
   NotificationsLockFrame,
-  OfflineCachedFrame,
-  PullToRefreshFrame,
   UploadProcessingFrame,
 } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
@@ -492,6 +494,7 @@ export const ProjectDetail: Story = {
 };
 
 export const AddSheet: Story = {
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => (
     <StoryRoute entry="/add">
       <ExampleBar />
@@ -662,6 +665,7 @@ export const SplitLongHebrew: Story = {
 };
 
 export const ChangeSheet: Story = {
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => (
     <StoryRoute entry="/review/change?item=r1">
       <ExampleBar />
@@ -675,7 +679,7 @@ export const ChangeSheet: Story = {
           projects: [
             { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
             { id: "villa", name: "וילה רעננה", code: "P-02" },
-            { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-14", hint: "היום" },
+            { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-08", hint: "היום" },
             { id: "p21", name: "בית פרטי כפר סבא", code: "P-21", hint: "לפני 3 ימים" },
             { id: "p03", name: "שיפוץ דירה ת\"א", code: "P-03", hint: "לפני שבוע" },
           ],
@@ -691,10 +695,27 @@ export const ChangeSheet: Story = {
   ),
 };
 
+function SampleHome({ refreshing = false, notice }: { refreshing?: boolean; notice?: ReactNode } = {}) {
+  return (
+    <HomeBooks
+      data={sampleDashboard}
+      greeting="בוקר טוב, אלירן"
+      previewing={false}
+      search=""
+      unpaidGross={2_340_000n}
+      unpaidCount={3}
+      period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
+      onPeriod={() => undefined}
+      example={exampleOnBand}
+      refreshing={refreshing}
+      notice={notice}
+    />
+  );
+}
+
 export const InstallAndroid: Story = {
   render: () => (
     <StoryRoute entry="/">
-      <ExampleBar />
       <InstallAndroidFrame />
     </StoryRoute>
   ),
@@ -703,7 +724,6 @@ export const InstallAndroid: Story = {
 export const InstallIphone: Story = {
   render: () => (
     <StoryRoute entry="/">
-      <ExampleBar />
       <InstallIphoneFrame />
     </StoryRoute>
   ),
@@ -712,7 +732,6 @@ export const InstallIphone: Story = {
 export const UploadProcessing: Story = {
   render: () => (
     <StoryRoute entry="/">
-      <ExampleBar />
       <UploadProcessingFrame />
     </StoryRoute>
   ),
@@ -721,7 +740,6 @@ export const UploadProcessing: Story = {
 export const InvoiceReading: Story = {
   render: () => (
     <StoryRoute entry="/">
-      <ExampleBar />
       <InvoiceReadingFrame />
     </StoryRoute>
   ),
@@ -729,18 +747,24 @@ export const InvoiceReading: Story = {
 
 export const PullToRefresh: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs>
-      <ExampleBar />
-      <PullToRefreshFrame />
+    <StoryRoute entry="/" tabs reviewCount={7}>
+      <SampleHome refreshing />
     </StoryRoute>
   ),
 };
 
 export const OfflineCached: Story = {
   render: () => (
-    <StoryRoute entry="/" tabs>
-      <ExampleBar />
-      <OfflineCachedFrame />
+    <StoryRoute entry="/" tabs reviewCount={7}>
+      <SampleHome
+        notice={
+          <Banner
+            icon={<OfflineIcon />}
+            title={<>אין חיבור · נתונים מ-<bdi dir="ltr">09:12</bdi></>}
+            action={<TextLink onClick={() => undefined}>ניסיון חוזר</TextLink>}
+          />
+        }
+      />
     </StoryRoute>
   ),
 };
@@ -748,7 +772,6 @@ export const OfflineCached: Story = {
 export const NotificationsLock: Story = {
   render: () => (
     <StoryRoute entry="/">
-      <ExampleBar />
       <NotificationsLockFrame />
     </StoryRoute>
   ),

@@ -101,7 +101,7 @@ type ToastProps = {
 export function Toast({ children, action, onAction, tone = "ok" }: ToastProps) {
   return (
     <div className="ui-toast" role="status" dir="rtl">
-      <span className={tone === "bad" ? "ui-toast-mark ui-toast-bad" : "ui-toast-mark"} aria-hidden="true">
+      <span className={tone === "bad" ? "ui-toast-mark ui-toast-icon ui-toast-bad" : "ui-toast-mark ui-toast-icon"} aria-hidden="true">
         {tone === "bad" ? <AlertIcon size={18} /> : <CheckIcon size={18} />}
       </span>
       <span className="ui-toast-text" dir="rtl">{children}</span>

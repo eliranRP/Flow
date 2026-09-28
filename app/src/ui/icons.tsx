@@ -296,6 +296,59 @@ export function GoogleIcon({ size = 22 }: { size?: number }) {
   );
 }
 
+const APP_F_PATH =
+  "M35.07 75 C34.07 75 33.29 74.21 33.29 73.21 L33.29 26.79 C33.29 25.79 34.07 25 35.07 25 L67.93 25 C68.93 25 69.71 25.79 69.71 26.79 L69.71 34 C69.71 35 68.93 35.79 67.93 35.79 L45.86 35.79 L45.86 46.29 L66.5 46.29 C67.5 46.29 68.29 47.07 68.29 48.07 L68.29 55.29 C68.29 56.29 67.5 57.07 66.5 57.07 L45.86 57.07 L45.86 73.21 C45.86 74.21 45.07 75 44.07 75 Z";
+
+/** White F on the band tile. Install uses 72px; a lock-screen row uses 38px. */
+export function AppIcon({ size = "install" }: { size?: "install" | "note" }) {
+  return (
+    <span className={size === "note" ? "ui-app-icon ui-app-icon-note" : "ui-app-icon ui-app-icon-install"} role="img" aria-label="Flow">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <path fill="currentColor" d={APP_F_PATH} />
+      </svg>
+    </span>
+  );
+}
+
+export function DownloadIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </Svg>
+  );
+}
+
+export function ShareIcon(props: IconProps) {
+  return (
+    <Svg size={22} stroke={1.8} {...props}>
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </Svg>
+  );
+}
+
+export function SquarePlusIcon(props: IconProps) {
+  return (
+    <Svg size={22} stroke={1.8} {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+    </Svg>
+  );
+}
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <Svg size={26} stroke={1.8} {...props}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </Svg>
+  );
+}
+
 export function TrashIcon(props: IconProps) {
   return (
     <Svg size={20} stroke={2} {...props}>

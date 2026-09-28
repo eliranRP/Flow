@@ -157,6 +157,8 @@ export function HomeBooks({
   period,
   onPeriod,
   example,
+  refreshing = false,
+  notice,
 }: {
   data: Dashboard;
   greeting: string;
@@ -170,6 +172,10 @@ export function HomeBooks({
   onPeriod: (choice: PeriodChoice) => void;
   /** Storybook sample label. The live home never passes it. */
   example?: ReactNode;
+  /** ld-07. The spinner sits above the band content. */
+  refreshing?: boolean;
+  /** ld-09. A note under the band, above the pending card. */
+  notice?: ReactNode;
 }) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
@@ -196,6 +202,11 @@ export function HomeBooks({
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <TopBand
         preview={previewing}
+        status={refreshing ? (
+          <div className="ui-ptr">
+            <span className="ui-spinner" role="status" aria-label="מרענן" />
+          </div>
+        ) : null}
         trailing={
           <PeriodPicker
             pill={periodLabel(period)}
@@ -228,6 +239,8 @@ export function HomeBooks({
           <BandFigures income={formatIls(data.income_agorot)} expense={formatIls(data.expense_agorot)} />
         </BandHero>
       </TopBand>
+
+      {notice}
 
       {unpaidPhase === "error" ? (
         <div className="ui-page-pad">

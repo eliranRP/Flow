@@ -5,6 +5,8 @@ type TopBandProps = {
   children?: ReactNode;
   trailing?: ReactNode;
   leading?: ReactNode;
+  /** Sits above the wordmark row. Pull-to-refresh uses it for the spinner. */
+  status?: ReactNode;
   /** Example tag sits on the band, not in a strip above it. */
   example?: ReactNode;
   preview?: boolean;
@@ -13,9 +15,10 @@ type TopBandProps = {
 };
 
 /** Violet band. Home and the Project header only. */
-export function TopBand({ children, trailing, leading, example, preview = false, wordmark = true }: TopBandProps) {
+export function TopBand({ children, trailing, leading, status, example, preview = false, wordmark = true }: TopBandProps) {
   return (
     <header className="ui-band">
+      {status}
       <div className="ui-band-row">
         {leading}
         {wordmark ? <Wordmark tone="on-band" /> : null}

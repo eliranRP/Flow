@@ -51,6 +51,11 @@ const preview: Preview = {
           styles: { width: "320px", height: "844px" },
           type: "mobile",
         },
+        "flow390-short": {
+          name: "Flow 390 short",
+          styles: { width: "390px", height: "700px" },
+          type: "mobile",
+        },
       },
       defaultViewport: "flow390",
     },

@@ -28,10 +28,10 @@ export const Undo: Story = {
   render: () => <AboveBar action="ביטול">הפריט אושר</AboveBar>,
 };
 export const ErrorRetry: Story = {
-  args: { children: "לא נשמר", action: "ניסיון חוזר", tone: "bad" },
+  args: { children: "לא נשמר – אין חיבור", action: "ניסיון חוזר", tone: "bad" },
   render: () => (
     <AboveBar action="ניסיון חוזר" tone="bad">
-      לא נשמר
+      לא נשמר – אין חיבור
     </AboveBar>
   ),
 };
