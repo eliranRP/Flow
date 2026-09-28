@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
-import { GoogleButton } from "../components/GoogleButton";
-import { Note } from "../components/Note";
-import { Wordmark } from "../components/Wordmark";
+import { GoogleButton } from "../ui/google-button";
+import { Notice } from "../ui/banner";
+import { Wordmark } from "../ui/wordmark";
 import { getSupabase } from "../lib/supabase";
 
 type Notice = "cancelled" | "failed" | null;
@@ -78,10 +78,10 @@ export function SignInScreen() {
 
       <section className="signin-sheet">
         {notice === "cancelled" ? (
-          <Note title="הכניסה לא הושלמה" body="החלון של Google נסגר. אפשר לנסות שוב." />
+          <Notice title="הכניסה לא הושלמה" body="החלון של Google נסגר. אפשר לנסות שוב." />
         ) : null}
         {notice === "failed" ? (
-          <Note
+          <Notice
             tone="bad"
             title="לא הצלחנו להתחבר"
             body="אולי אין חיבור לאינטרנט, או ש-Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב."

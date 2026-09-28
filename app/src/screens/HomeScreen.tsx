@@ -3,11 +3,17 @@ import { onlineManager, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
-import { EmptyState } from "../components/EmptyState";
-import { Money } from "../components/Money";
-import { ChartIcon, InfoIcon, OfflineIcon, RefreshIcon } from "../components/icons";
-import { HomeSkeleton } from "../components/Skeleton";
-import { Wordmark } from "../components/Wordmark";
+import { ChartIcon } from "../ui/icons";
+import { HomeSkeleton } from "../ui/skeleton";
+import { BigNumber } from "../ui/big-number";
+import { Button } from "../ui/button";
+import { EmptyState } from "../ui/empty-state";
+import { ErrorState } from "../ui/error-state";
+import { ListRow } from "../ui/list-row";
+import { PeriodPicker } from "../ui/period-picker";
+import { SegmentedControl } from "../ui/segmented-control";
+import { Toggle } from "../ui/toggle";
+import { TopBand } from "../ui/top-band";
 import { homeGreeting, profitBandLabel } from "../home-label";
 import { getSupabase } from "../lib/supabase";
 import { allTime, lastMonth, thisMonth, yearToDate } from "../period";
@@ -99,44 +105,26 @@ export function HomeScreen() {
   if (loading) return <HomeSkeleton previewing={previewing} />;
 
   if (failed) {
-    return (
-      <div className="flex min-h-full flex-1 flex-col">
-        <EmptyState
-          icon={offline ? <OfflineIcon /> : <InfoIcon size={36} />}
-          title={offline ? "אין חיבור לאינטרנט" : "לא הצלחנו לטעון את הנתונים"}
-          body={offline ? "בדקו את החיבור ונסו שוב. שום דבר לא נמחק." : "נסו שוב בעוד רגע"}
-          action={
-            <button type="button" className="btn-pri" onClick={retry}>
-              <RefreshIcon />
-              ניסיון חוזר
-            </button>
-          }
-        />
-      </div>
-    );
+    return <ErrorState offline={offline} onRetry={retry} />;
   }
 
   if (!showBooks || !dashboard.data) {
     return (
       <div className="flex min-h-full flex-1 flex-col">
-        <header className="band">
-          <div className="band-row">
-            <Wordmark tone="on-band" />
-          </div>
+        <TopBand preview={previewing}>
           <div className="band-hero">
             <p className="t-title-2">{greeting}</p>
             <h1 className="band-label t-label">{profitBandLabel(false)}</h1>
           </div>
-          {previewing ? <p className="preview-banner t-hint">מצב תצוגה</p> : null}
-        </header>
+        </TopBand>
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
           body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
           action={
-            <Link to={`/settings${search}`} className="btn-sec">
+            <Button variant="secondary" to={`/settings${search}`}>
               חיבור SUMIT
-            </Link>
+            </Button>
           }
         />
       </div>
@@ -210,24 +198,43 @@ function HomeBooks({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="band">
-        <div className="band-row">
-          <Wordmark tone="on-band" />
-          <button type="button" className="band-period" onClick={() => { setSheet(true); }}>
-            {periodLabel}
-          </button>
-        </div>
+      <TopBand
+        preview={previewing}
+        trailing={
+          <PeriodPicker
+            pill={periodLabel}
+            open={sheet}
+            onOpenChange={setSheet}
+            options={[
+              { label: "החודש", onSelect: () => { onPeriod(thisMonth()); } },
+              { label: "חודש קודם", onSelect: () => { onPeriod(lastMonth()); } },
+              { label: "מתחילת השנה", onSelect: () => { onPeriod(yearToDate()); } },
+              { label: "כל התקופה", onSelect: () => { onPeriod(allTime(basis)); } },
+            ]}
+            footer={
+              <SegmentedControl
+                label="בסיס"
+                value={basis}
+                onChange={onBasis}
+                options={[
+                  { value: "cash", label: "מזומן" },
+                  { value: "invoiced", label: "חשבוניות" },
+                ]}
+              />
+            }
+          />
+        }
+      >
         <div className="band-hero">
           <p className="t-title-2">{greeting}</p>
           <p className="band-label t-label">
             {basis === "cash" ? "רווח נקי במזומן" : "רווח נקי לפי חשבוניות"} · {data.name}
           </p>
           <h1 className="t-hero">
-            <Money agorot={ag(data.net_profit_agorot)} />
+            <BigNumber agorot={ag(data.net_profit_agorot)} />
           </h1>
         </div>
-        {previewing ? <p className="preview-banner t-hint">מצב תצוגה</p> : null}
-      </header>
+      </TopBand>
 
       <div className="stat-grid">
         <Stat label="הכנסות" amount={data.income_agorot} change={incomeChange} />
@@ -251,14 +258,7 @@ function HomeBooks({
 
       <div className="section-head">
         <h2 className="t-title-3">פרויקטים</h2>
-        <label className="overhead-toggle">
-          <input
-            type="checkbox"
-            checked={overheadOn}
-            onChange={(event) => { onOverhead(event.target.checked); }}
-          />
-          רווח אחרי חלק מהתקורה
-        </label>
+        <Toggle label="רווח אחרי חלק מהתקורה" checked={overheadOn} onChange={onOverhead} />
       </div>
       {overheadOn && shares == null ? (
         <p className="t-hint page-pad">אין הכנסות בתקופה, אז אי אפשר לחלק את התקורה.</p>
@@ -269,40 +269,24 @@ function HomeBooks({
         ))}
         {rest.length > 0 ? (
           <li>
-            <Link to={`/projects${search}`} className="project-line">
-              <span>עוד {rest.length} פרויקטים</span>
-              <Money agorot={ag(restProfit)} />
-            </Link>
+            <ListRow
+              variant="project"
+              title={`עוד ${String(rest.length)} פרויקטים`}
+              agorot={ag(restProfit)}
+              loss={restProfit < 0}
+              href={`/projects${search}`}
+            />
           </li>
         ) : null}
         <li className={overheadOn ? "overhead-struck" : "overhead-row"}>
-          <div className="project-line">
-            <span>הוצאות כלליות · תקורה{overheadOn ? " · חולק לפרויקטים בתצוגה הזו" : ""}</span>
-            <Money agorot={ag(-data.overhead_agorot)} />
-          </div>
+          <ListRow
+            variant="project"
+            title={`הוצאות כלליות · תקורה${overheadOn ? " · חולק לפרויקטים בתצוגה הזו" : ""}`}
+            agorot={ag(-data.overhead_agorot)}
+            loss={data.overhead_agorot > 0}
+          />
         </li>
       </ul>
-
-      {sheet ? (
-        <div className="period-sheet" role="dialog" aria-label="תקופה">
-          <div className="sheet-head">
-            <h2 className="t-title-2">תקופה</h2>
-            <button type="button" className="icon-btn" aria-label="סגירה" onClick={() => { setSheet(false); }}>
-              סגירה
-            </button>
-          </div>
-          <div className="choice-col">
-            <button type="button" className="btn-sec" onClick={() => { onPeriod(thisMonth()); setSheet(false); }}>החודש</button>
-            <button type="button" className="btn-sec" onClick={() => { onPeriod(lastMonth()); setSheet(false); }}>חודש קודם</button>
-            <button type="button" className="btn-sec" onClick={() => { onPeriod(yearToDate()); setSheet(false); }}>מתחילת השנה</button>
-            <button type="button" className="btn-sec" onClick={() => { onPeriod(allTime(basis)); setSheet(false); }}>כל התקופה</button>
-          </div>
-          <div className="seg" role="group" aria-label="בסיס">
-            <button type="button" aria-pressed={basis === "cash"} onClick={() => { onBasis("cash"); }}>מזומן</button>
-            <button type="button" aria-pressed={basis === "invoiced"} onClick={() => { onBasis("invoiced"); }}>חשבוניות</button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -322,7 +306,7 @@ function Stat({
     <div className={emphasis ? "stat stat-em" : "stat"}>
       <p className="t-hint">{label}</p>
       <p className="t-title-3">
-        <Money agorot={ag(amount)} />
+        <BigNumber agorot={ag(amount)} />
       </p>
       {change ? <p className={change.good ? "delta good" : "delta bad"}>{change.text}</p> : null}
     </div>
@@ -341,19 +325,19 @@ function ProjectLine({
   overheadOn: boolean;
 }) {
   const shown = overheadOn && share != null ? project.profit_before_shared_agorot - share : project.profit_agorot;
+  const hint = overheadOn && share != null
+    ? `לפני ${formatIls(ag(project.profit_before_shared_agorot))} · חלק ${formatIls(ag(share))}`
+    : undefined;
   return (
     <li>
-      <Link to={`/projects/${project.id}${search}`} className="project-line">
-        <span>
-          {project.name}
-          {overheadOn && share != null ? (
-            <span className="t-hint block">
-              לפני {formatIls(ag(project.profit_before_shared_agorot))} · חלק {formatIls(ag(share))}
-            </span>
-          ) : null}
-        </span>
-        <Money agorot={ag(shown)} />
-      </Link>
+      <ListRow
+        variant="project"
+        title={project.name}
+        hint={hint}
+        agorot={ag(shown)}
+        loss={shown < 0}
+        href={`/projects/${project.id}${search}`}
+      />
     </li>
   );
 }
