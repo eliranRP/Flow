@@ -394,9 +394,11 @@ a {
 }
 
 .btn-sec {
+  position: relative;
   display: inline-flex;
   height: var(--control-height-sm);
   align-items: center;
+  gap: var(--space-2);
   padding-inline: var(--space-6);
   border: 0;
   border-radius: var(--radius-chip);
@@ -408,8 +410,35 @@ a {
   transition: background-color var(--dur-press);
 }
 
+.btn-sec::after {
+  content: "";
+  position: absolute;
+  inset-block: -4px;
+  inset-inline: 0;
+}
+
 .btn-sec:active {
   background: var(--color-tint-pressed);
+}
+
+.btn-pri {
+  display: inline-flex;
+  height: var(--control-height);
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-6);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--dur-press);
+}
+
+.btn-pri:active {
+  background: var(--color-accent-pressed);
 }
 
 .sheet-scrim {
@@ -447,6 +476,11 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   padding: var(--space-1) var(--space-side) 0;
+}
+
+.sheet-hint {
+  padding: var(--space-2) var(--space-side) 0;
+  color: var(--color-text-secondary);
 }
 
 .note {
@@ -527,10 +561,30 @@ a {
   text-align: center;
 }
 
+.signin-help a {
+  display: inline-block;
+  padding-block: 13px;
+  min-height: var(--touch-min);
+}
+
 .signin-privacy {
   margin-top: var(--space-4);
   text-align: center;
   color: var(--color-text-muted);
+}
+
+.signin-privacy a {
+  display: inline-block;
+  padding-block: 15px;
+  margin-block: -15px;
+  min-height: var(--touch-min);
+}
+
+.help-back {
+  display: inline-block;
+  margin-top: var(--space-6);
+  color: var(--color-accent-text);
+  text-decoration: none;
 }
 
 .gsi-button {
@@ -612,6 +666,103 @@ a {
     animation: none;
   }
 }
+
+/*
+  ld-01 geometry, without the period pill (decision 0045).
+  Bar sizes are the mockup's, so the skeleton matches the figured home.
+*/
+.home-skel-gr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px var(--space-side) 0;
+}
+
+.home-skel-hero {
+  padding: 28px var(--space-side) 0;
+}
+
+.home-skel-change {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: 14px;
+}
+
+.home-skel-ie {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-side) 0;
+}
+
+.home-skel-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: var(--space-6) var(--space-4) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.home-skel-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.home-skel-sec {
+  padding: 30px var(--space-side) 0;
+}
+
+.home-skel-sec h2 {
+  margin-bottom: var(--space-1);
+}
+
+.home-skel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+
+.home-skel-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.home-skel-rows > .home-skel-row + .home-skel-row {
+  border-top: 1px solid var(--color-line);
+}
+
+.skeleton-bar,
+.skeleton-bar-band {
+  display: block;
+  flex: none;
+}
+
+.home-skel-greet { width: 118px; height: 14px; }
+.home-skel-greet-side { width: 96px; height: 10px; }
+.home-skel-label { width: 120px; height: 14px; }
+.home-skel-amount {
+  width: 210px;
+  height: 44px;
+  margin-top: 14px;
+  border-radius: var(--radius-input);
+}
+.home-skel-pill { width: 64px; height: 22px; border-radius: 11px; }
+.home-skel-delta { width: 92px; height: 14px; margin-top: var(--space-1); }
+.home-skel-ie-bar { width: 120px; height: 14px; }
+.home-skel-card-icon { width: 22px; height: 22px; }
+.home-skel-card-title { width: 190px; height: 14px; }
+.home-skel-card-sub { width: 140px; height: 10px; }
+.home-skel-amt { width: 78px; height: 14px; }
+.home-skel-sub { width: 72px; height: 10px; }
+.home-skel-row:nth-child(1) .home-skel-name { width: 150px; height: 14px; }
+.home-skel-row:nth-child(2) .home-skel-name { width: 118px; height: 14px; }
+.home-skel-row:nth-child(3) .home-skel-name { width: 170px; height: 14px; }
 
 .gsi-spinner {
   width: var(--space-5);

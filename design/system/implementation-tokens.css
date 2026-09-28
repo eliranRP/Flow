@@ -86,7 +86,8 @@
   --topbar-height: 52px;
   --fab-size: 48px;
   --tabbar-content: 52px;        /* + safe-area-inset-bottom = 86px on notched iPhones */
-  --tabbar-height: calc(var(--tabbar-content) + max(env(safe-area-inset-bottom, 0px), 8px));
+  --tabbar-min-inset: 8px;       /* floor when safe-area-inset-bottom is 0; decision 0045 */
+  --tabbar-height: calc(var(--tabbar-content) + max(env(safe-area-inset-bottom, 0px), var(--tabbar-min-inset)));
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --content-max: 480px;          /* phone-only app: wider viewports centre a phone column */
