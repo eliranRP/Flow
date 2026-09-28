@@ -60,17 +60,18 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
-pnpm db:test:local    # same suite with pg_prove on a local Postgres 17. No Docker. See scripts/pgtap-local.sh.
+pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17. Migration first, then pgTAP. No Docker.
 pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID
 pnpm latency          # times get_home() against SUPABASE_URL
 ```
 
 `pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script creates that company with `is_demo = true`, or updates one that is already marked demo. It refuses to write into a real company. It is idempotent on `(company, source, external id)`.
 
-`packages/shared/src/database.types.ts` is generated from that local database:
+`packages/shared/src/database.types.ts` is untouched output of Supabase CLI 2.118.0 (`--schema public`). CI diffs it after `supabase db start`. The app imports `Database` from `@flow/shared`, which omits SUMIT ciphertext columns.
 
 ```bash
 supabase gen types typescript --db-url "$DATABASE_URL" --schema public > packages/shared/src/database.types.ts
+DATABASE_URL=postgresql://postgres@127.0.0.1:5432/flow_pgtap pnpm db:types:check
 ```
 
 ## Documentation

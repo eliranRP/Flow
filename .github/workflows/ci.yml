@@ -35,4 +35,5 @@ jobs:
         with:
           version: 2.118.0
       - run: supabase db start
+      - run: bash scripts/check-db-types.sh
       - run: supabase test db
