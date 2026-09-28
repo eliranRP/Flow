@@ -10,7 +10,8 @@ import { HomeSkeleton } from "../components/Skeleton";
 import { Wordmark } from "../components/Wordmark";
 import { homeGreeting, profitBandLabel } from "../home-label";
 import { getSupabase } from "../lib/supabase";
-import { allTime, lastMonth, thisMonth, yearToDate } from "../period";
+import { RangeFields } from "../components/DateField";
+import { allTime, israelToday, lastMonth, thisMonth, yearToDate } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 
@@ -197,6 +198,9 @@ function HomeBooks({
   onBasis: (basis: "cash" | "invoiced") => void;
 }) {
   const [sheet, setSheet] = useState(false);
+  const [refreshNote, setRefreshNote] = useState<string | null>(null);
+  const [rangeFrom, setRangeFrom] = useState(israelToday());
+  const [rangeTo, setRangeTo] = useState(israelToday());
   const rows = [...data.projects].sort(
     (a, b) => Math.abs(b.income_agorot) + Math.abs(b.direct_agorot) - (Math.abs(a.income_agorot) + Math.abs(a.direct_agorot)),
   );
@@ -216,6 +220,28 @@ function HomeBooks({
           <button type="button" className="band-period" onClick={() => { setSheet(true); }}>
             {periodLabel}
           </button>
+          <button
+            type="button"
+            className="band-period"
+            onClick={() => {
+              if (previewing) {
+                setRefreshNote("במצב תצוגה אין קריאה ל-SUMIT");
+                return;
+              }
+              const supabase = getSupabase();
+              if (!supabase) return;
+              void supabase.rpc("request_refresh", { p_purpose: "pull" }).then(({ data, error }) => {
+                if (error) {
+                  setRefreshNote("לא הצלחנו לבקש רענון");
+                  return;
+                }
+                const reason = data && typeof data === "object" && "reason" in data && typeof data.reason === "string" ? data.reason : "";
+                setRefreshNote(reason === "recent" ? "רענון אחרון היה לאחרונה" : "הרענון נרשם");
+              });
+            }}
+          >
+            רענון
+          </button>
         </div>
         <div className="band-hero">
           <p className="t-title-2">{greeting}</p>
@@ -227,6 +253,7 @@ function HomeBooks({
           </h1>
         </div>
         {previewing ? <p className="preview-banner t-hint">מצב תצוגה</p> : null}
+        {refreshNote ? <p className="t-hint">{refreshNote}</p> : null}
       </header>
 
       <div className="stat-grid">
@@ -297,6 +324,25 @@ function HomeBooks({
             <button type="button" className="btn-sec" onClick={() => { onPeriod(yearToDate()); setSheet(false); }}>מתחילת השנה</button>
             <button type="button" className="btn-sec" onClick={() => { onPeriod(allTime(basis)); setSheet(false); }}>כל התקופה</button>
           </div>
+          <RangeFields
+            from={rangeFrom}
+            to={rangeTo}
+            onChange={(from, to) => {
+              setRangeFrom(from);
+              setRangeTo(to);
+            }}
+          />
+          <button
+            type="button"
+            className="btn-pri"
+            onClick={() => {
+              if (!rangeFrom || !rangeTo || rangeFrom > rangeTo) return;
+              onPeriod({ from: rangeFrom, to: rangeTo, label: "טווח", basis });
+              setSheet(false);
+            }}
+          >
+            הצגת הטווח
+          </button>
           <div className="seg" role="group" aria-label="בסיס">
             <button type="button" aria-pressed={basis === "cash"} onClick={() => { onBasis("cash"); }}>מזומן</button>
             <button type="button" aria-pressed={basis === "invoiced"} onClick={() => { onBasis("invoiced"); }}>חשבוניות</button>

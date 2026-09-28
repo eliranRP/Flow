@@ -1,8 +1,10 @@
-import { formatIls, shekelsToAgorot } from "@flow/shared";
+import { formatIls, ledgerToCsv, shekelsToAgorot, type LedgerCsvRow } from "@flow/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type SubmitEvent } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
+import { ConfirmSheet, UndoToast } from "../components/ConfirmSheet";
+import { DateField } from "../components/DateField";
 import { EmptyState } from "../components/EmptyState";
 import { Money } from "../components/Money";
 import { PageTitle } from "../components/PageTitle";
@@ -10,6 +12,7 @@ import { Sheet } from "../components/Sheet";
 import { BackIcon, CameraIcon, DocumentIcon } from "../components/icons";
 import { withSheetBackground } from "../sheet-background";
 import { addTriggerRef } from "../add-trigger";
+import { offlineQueue } from "../lib/offline-queue";
 import { getSupabase } from "../lib/supabase";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import {
@@ -63,6 +66,7 @@ export function OnboardingScreen() {
       setError(rpcError.message.includes("already") ? "כבר יש עסק על החשבון." : "לא הצלחנו לשמור. נסו שוב.");
       return;
     }
+    await supabase.auth.refreshSession();
     void navigate("/", { replace: true });
   }
 
@@ -471,15 +475,27 @@ export function AddForm() {
     const supabase = getSupabase();
     if (!supabase) return;
     const gross = shekelsToAgorot(amount);
-    const { error: rpcError } = await supabase.rpc("create_manual_entry", {
+    const args = {
       p_direction: direction,
       p_kind: direction === "income" ? kind : "expense",
       p_gross_agorot: Number(gross < 0n ? -gross : gross),
       p_doc_date: date,
       p_description: description,
+      p_project_id: projectId,
+      p_category_id: categoryId,
+      p_vat_exempt: exempt,
+    };
+    const clientOpId = crypto.randomUUID();
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await offlineQueue.enqueue({ clientOpId, name: "create_manual_entry", args });
+      setError("יישלח כשהחיבור יחזור");
+      return;
+    }
+    const { error: rpcError } = await supabase.rpc("create_manual_entry", {
+      ...args,
       p_project_id: (projectId || null) as unknown as string,
       p_category_id: (categoryId || null) as unknown as string,
-      p_vat_exempt: exempt,
+      p_client_op_id: clientOpId,
     });
     if (rpcError) {
       setError("בדקו סכום, תאריך ופרויקט.");
@@ -507,7 +523,7 @@ export function AddForm() {
           <label className="field"><input type="checkbox" checked={exempt} onChange={(event) => { setExempt(event.target.checked); }} /> הספק פטור ממע״מ</label>
         )}
         <label className="field">סכום בשקלים<input value={amount} onChange={(event) => { setAmount(event.target.value); }} inputMode="decimal" required /></label>
-        <label className="field">תאריך<input type="date" value={date} onChange={(event) => { setDate(event.target.value); }} required /></label>
+        <DateField label="תאריך" value={date} onChange={setDate} />
         <label className="field">תיאור<input value={description} onChange={(event) => { setDescription(event.target.value); }} /></label>
         <label className="field">פרויקט
           <select value={projectId} onChange={(event) => { setProjectId(event.target.value); }}>
@@ -796,7 +812,7 @@ export function SettingsScreen() {
             className="btn-sec"
             onClick={() => {
               const supabase = getSupabase();
-              void supabase?.auth.signOut();
+              void offlineQueue.clear().finally(() => { void supabase?.auth.signOut(); });
             }}
           >
             יציאה
@@ -807,6 +823,8 @@ export function SettingsScreen() {
         <h2 className="t-title-3">SUMIT</h2>
         <p>{connected ? `מחובר לחברה ${String(status.data?.sumit_company_id ?? "")}` : "לא מחובר"}</p>
         {status.data?.last_error ? <p className="form-error">{status.data.last_error}</p> : null}
+        {status.data?.drift_fields ? <p className="t-hint">סכימת SUMIT השתנתה: {status.data.drift_fields}</p> : null}
+        {connected ? <p className="t-hint">קריאות החודש: {status.data?.calls_used ?? 0} מתוך {status.data?.calls_cap ?? 100}</p> : null}
         <form className="stack" onSubmit={(event) => { void connect(event); }}>
           <label className="field">CompanyID<input value={companyId} onChange={(event) => { setCompanyId(event.target.value); }} inputMode="numeric" /></label>
           <label className="field">מפתח API<input type="password" value={apiKey} onChange={(event) => { setApiKey(event.target.value); }} autoComplete="off" /></label>
@@ -818,6 +836,7 @@ export function SettingsScreen() {
       </section>
       <nav className="stack">
         <Link to={`/settings/categories${search}`}>קטגוריות</Link>
+        <ExportButton />
         <Link to={`/projects${search}`}>פרויקטים</Link>
         <Link to={`/notifications${search}`}>התראות</Link>
       </nav>
@@ -832,7 +851,11 @@ export function CategoriesScreen() {
   const invalidate = useInvalidateBooks();
   const [mergeFrom, setMergeFrom] = useState("");
   const [mergeInto, setMergeInto] = useState("");
+  const [hideId, setHideId] = useState<string | null>(null);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [undo, setUndo] = useState<string | null>(null);
   if (preview === "empty") return <PageTitle title="קטגוריות" backTo={`/settings${search}`} />;
+  const hiding = (categories.data ?? []).find((category) => category.id === hideId);
   return (
     <div className="page">
       <Link to={`/settings${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
@@ -841,16 +864,7 @@ export function CategoriesScreen() {
         {(categories.data ?? []).map((category) => (
           <li key={category.id} className="project-line">
             <span>{category.name}<span className="t-hint block">{category.kind === "income" ? "הכנסה" : "הוצאה"}{category.hidden ? " · מוסתרת" : ""}</span></span>
-            <button
-              type="button"
-              className="btn-sec"
-              onClick={() => {
-                if (preview !== "off") return;
-                const supabase = getSupabase();
-                if (!supabase) return;
-                void supabase.rpc("set_category_hidden", { p_id: category.id, p_hidden: !category.hidden }).then(() => invalidate());
-              }}
-            >
+            <button type="button" className="btn-sec" onClick={() => { setHideId(category.id); }}>
               {category.hidden ? "הצגה" : "הסתרה"}
             </button>
           </li>
@@ -860,10 +874,8 @@ export function CategoriesScreen() {
         className="stack card"
         onSubmit={(event) => {
           event.preventDefault();
-          if (preview !== "off") return;
-          const supabase = getSupabase();
-          if (!supabase) return;
-          void supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }).then(() => invalidate());
+          if (!mergeFrom || !mergeInto || mergeFrom === mergeInto) return;
+          setMergeOpen(true);
         }}
       >
         <h2 className="t-title-3">מיזוג</h2>
@@ -879,8 +891,85 @@ export function CategoriesScreen() {
             {(categories.data ?? []).filter((category) => !category.hidden).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
         </label>
-        <button type="submit" className="btn-bad">מיזוג והסתרה</button>
+        <button type="submit" className="btn-bad">המשך לאישור</button>
       </form>
+      {hiding ? (
+        <ConfirmSheet
+          title={hiding.hidden ? "הצגת קטגוריה" : "הסתרת קטגוריה"}
+          body={hiding.hidden ? `${hiding.name} תחזור לרשימות.` : `${hiding.name} תוסתר מהרשימות. הרשומות נשארות.`}
+          confirmLabel={hiding.hidden ? "הצגה" : "הסתרה"}
+          onClose={() => { setHideId(null); }}
+          onConfirm={() => {
+            const nextHidden = !hiding.hidden;
+            setHideId(null);
+            if (preview !== "off") {
+              setUndo("במצב תצוגה זה לא נשמר");
+              return;
+            }
+            const supabase = getSupabase();
+            if (!supabase) return;
+            void supabase.rpc("set_category_hidden", { p_id: hiding.id, p_hidden: nextHidden }).then(() => {
+              setUndo(nextHidden ? "הקטגוריה הוסתרה" : "הקטגוריה הוצגה");
+              return invalidate();
+            });
+          }}
+        />
+      ) : null}
+      {mergeOpen ? (
+        <ConfirmSheet
+          title="מיזוג קטגוריות"
+          body="הרשומות יעברו לקטגוריה שנבחרה, והמקור יוסתר."
+          confirmLabel="מיזוג והסתרה"
+          onClose={() => { setMergeOpen(false); }}
+          onConfirm={() => {
+            setMergeOpen(false);
+            if (preview !== "off") return;
+            const supabase = getSupabase();
+            if (!supabase) return;
+            void supabase.rpc("merge_category", { p_from: mergeFrom, p_into: mergeInto }).then(() => invalidate());
+          }}
+        />
+      ) : null}
+      {undo ? <UndoToast label={undo} onUndo={() => { setUndo(null); }} /> : null}
+    </div>
+  );
+}
+
+function ExportButton() {
+  const preview = useHomePreview();
+  const [note, setNote] = useState<string | null>(null);
+  return (
+    <div className="stack">
+      <button
+        type="button"
+        className="btn-sec"
+        onClick={() => {
+          if (preview !== "off") {
+            setNote("במצב תצוגה הקובץ לא יורד");
+            return;
+          }
+          const supabase = getSupabase();
+          if (!supabase) return;
+          void supabase.rpc("export_ledger", {}).then(({ data, error }) => {
+            if (error || !Array.isArray(data)) {
+              setNote("לא הצלחנו להכין את הקובץ");
+              return;
+            }
+            const csv = ledgerToCsv(data as unknown as LedgerCsvRow[]);
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "flow-export.csv";
+            link.click();
+            URL.revokeObjectURL(url);
+            setNote("הקובץ ירד");
+          });
+        }}
+      >
+        ייצוא לרואה החשבון
+      </button>
+      {note ? <p className="t-hint">{note}</p> : null}
     </div>
   );
 }
@@ -891,9 +980,64 @@ export function NotificationsScreen() {
     <div className="page">
       <Link to={`/settings${search}`} aria-label="חזרה" className="icon-btn"><BackIcon /></Link>
       <h1 className="t-title-1">התראות</h1>
-      <p className="t-label">שתי הודעות, שעון ישראל. סיכום ביום ראשון ב-08:00, ותזכורת לאישור ב-18:00 רק כשיש תור.</p>
-      <p className="t-hint">בשלב הזה ההודעות לא נשלחות. אין שירות בתשלום ואין Push.</p>
+      <p className="t-label">שתי הודעות, שעון ישראל. סיכום ביום ראשון ב-08:00, ותזכורת לאישור ב-18:00 רק כשיש תור. שבת בלי הודעה.</p>
+      <p className="t-hint">Web Push עם מפתח VAPID, בלי שירות בתשלום. באייפון זה עובד רק מאפליקציה שהותקנה למסך הבית.</p>
+      <PushButton />
     </div>
   );
+}
+
+function PushButton() {
+  const preview = useHomePreview();
+  const vapid = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim() ?? "";
+  const [note, setNote] = useState<string | null>(null);
+  if (!vapid) {
+    return <p className="t-hint">השליחה מוכנה בשרת. חסר מפתח VAPID ציבורי בדפדפן, והמפתח הפרטי נשאר סוד של הפונקציה.</p>;
+  }
+  return (
+    <div className="stack">
+      <button
+        type="button"
+        className="btn-pri"
+        onClick={() => {
+          if (preview !== "off") {
+            setNote("במצב תצוגה אין הרשמה");
+            return;
+          }
+          void subscribe(vapid).then((message) => { setNote(message); });
+        }}
+      >
+        הפעלת התראות
+      </button>
+      {note ? <p className="t-hint">{note}</p> : null}
+    </div>
+  );
+}
+
+function urlBase64ToBytes(value: string): Uint8Array<ArrayBuffer> {
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - (value.length % 4)) % 4);
+  const raw = atob(padded);
+  const bytes = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let index = 0; index < raw.length; index += 1) bytes[index] = raw.charCodeAt(index);
+  return bytes;
+}
+
+async function subscribe(vapid: string): Promise<string> {
+  const supabase = getSupabase();
+  if (!supabase || !("serviceWorker" in navigator) || !("PushManager" in window)) return "הדפדפן הזה לא תומך בהתראות";
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return "ההרשאה לא ניתנה";
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToBytes(vapid),
+  });
+  const json = subscription.toJSON();
+  const { error } = await supabase.rpc("register_push", {
+    p_endpoint: subscription.endpoint,
+    p_p256dh: json.keys?.p256dh ?? "",
+    p_auth: json.keys?.auth ?? "",
+  });
+  return error ? "לא הצלחנו לשמור את המכשיר" : "המכשיר רשום";
 }
 

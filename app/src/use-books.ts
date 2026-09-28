@@ -56,6 +56,18 @@ export function useDashboardQuery() {
   return useQuery({
     queryKey: ["dashboard", preview, period],
     enabled: preview === "off" || preview === "demo",
+    placeholderData: () => {
+      try {
+        const raw = localStorage.getItem("flow-dashboard");
+        if (!raw) return undefined;
+        const stored: unknown = JSON.parse(raw);
+        const payload = stored && typeof stored === "object" && "payload" in stored ? stored.payload : undefined;
+        const parsed = dashboardSchema.safeParse(payload);
+        return parsed.success ? parsed.data : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     queryFn: async (): Promise<Dashboard> => {
       if (preview === "demo") {
         const model = await import("./demo/model");
@@ -65,7 +77,13 @@ export function useDashboardQuery() {
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("get_dashboard", rpcArgs(period));
       if (error) throw error;
-      return dashboardSchema.parse(data);
+      const parsed = dashboardSchema.parse(data);
+      try {
+        localStorage.setItem("flow-dashboard", JSON.stringify({ at: new Date().toISOString(), payload: parsed }));
+      } catch {
+        // A full cache is not a reason to hide the books.
+      }
+      return parsed;
     },
   });
 }

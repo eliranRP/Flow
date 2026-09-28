@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => {
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png"],
       workbox: {
         navigateFallback: "/index.html",
+        importScripts: ["/push-sw.js"],
       },
       manifest: {
         name: "Flow",

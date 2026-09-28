@@ -1015,3 +1015,36 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .card { margin-inline: var(--space-side); margin-top: var(--space-3); }
+
+.date-nav, .date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.date-nav { grid-template-columns: 1fr 1fr; }
+
+.date-day {
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.date-day.muted { color: var(--color-text-muted); }
+
+.undo-toast {
+  position: fixed;
+  inset-inline: var(--space-side);
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
