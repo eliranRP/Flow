@@ -1,17 +1,35 @@
+import { useState, type ReactNode } from "react";
 import { BandHero, SectionHead } from "../ui/layout";
+import { PeriodPicker } from "../ui/period-picker";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 
 const rowKeys = ["a", "b", "c"] as const;
 
 /** ld-01. A live load hides the preview label. Preview loading keeps מצב תצוגה (0044). */
-export function HomeSkeleton({ preview = false }: { preview?: boolean }) {
+export function HomeSkeleton({ preview = false, example }: { preview?: boolean; example?: ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col" aria-busy="true">
       <p className="sr-only" role="status">
         טוען…
       </p>
-      <TopBand preview={preview} trailing={<span className="ui-skel-pill" />}>
+      <TopBand
+        preview={preview}
+        example={example}
+        trailing={
+          <PeriodPicker
+            pill="החודש"
+            open={open}
+            onOpenChange={setOpen}
+            options={[
+              { label: "החודש", hint: "התקופה הנוכחית", selected: true, onSelect: () => { setOpen(false); } },
+              { label: "חודש קודם", onSelect: () => { setOpen(false); } },
+              { label: "מתחילת השנה", onSelect: () => { setOpen(false); } },
+            ]}
+          />
+        }
+      >
         <div className="ui-skel-band">
           <span className="ui-greet">
             <Skeleton tone="band" className="ui-skel-greet-a" />

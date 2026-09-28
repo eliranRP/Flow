@@ -1,6 +1,6 @@
 import { cx } from "./cx";
 
-const rowKeys = ["a", "b", "c"] as const;
+const rowKeys = ["a", "b", "c", "d", "e", "f"] as const;
 
 type SkeletonWidth = "sm" | "md" | "lg";
 

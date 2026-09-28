@@ -23,7 +23,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
     expect(screen.getByText("שלום")).toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר")).toBeInTheDocument();
+    expect(screen.getByText("מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
@@ -39,7 +39,7 @@ describe("App", () => {
     renderAt("/?preview=error");
     expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill", "ui-btn-retry");
     expect(document.querySelector(".ui-band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
@@ -48,7 +48,7 @@ describe("App", () => {
     renderAt("/?preview=error-server");
     expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
     expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-pill", "ui-btn-retry");
     expect(document.querySelector(".ui-band")).toBeNull();
   });
 

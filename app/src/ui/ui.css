@@ -203,6 +203,15 @@ a.ui-row,
   background: var(--color-tint-pressed);
 }
 
+.ui-btn-retry {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-btn-retry:active:not(:disabled) {
+  background: var(--color-accent-pressed);
+}
+
 .ui-btn-danger,
 .ui-btn-danger-tint {
   min-height: var(--touch-min);
@@ -355,6 +364,11 @@ a.ui-row,
 }
 
 .ui-sheet-surface {
+  display: flex;
+  min-block-size: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
   padding: var(--space-2) 0 var(--space-4);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
@@ -363,11 +377,20 @@ a.ui-row,
 .ui-sheet-body {
   display: flex;
   min-width: 0;
+  min-block-size: 0;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--space-3);
   margin-top: var(--space-4);
   padding-inline: var(--space-side);
+  overflow-x: hidden;
+  overflow-y: auto;
   overflow-wrap: anywhere;
+}
+
+.ui-sheet-foot {
+  flex: none;
+  padding: var(--space-3) var(--space-side) 0;
 }
 
 .ui-field {
@@ -596,7 +619,7 @@ a.ui-row,
   display: inline-flex;
   max-width: 100%;
   min-width: 0;
-  min-height: 28px;
+  min-height: var(--switch-track-h);
   align-items: center;
   gap: var(--space-1);
   padding-inline: var(--space-2);
@@ -640,6 +663,14 @@ a.ui-row,
   min-width: 0;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.ui-budget-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .ui-budget-title {
@@ -766,7 +797,8 @@ a.ui-row,
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-block: 8px;
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .ui-notice {
@@ -933,8 +965,8 @@ a.ui-row,
 
 .ui-radio {
   display: grid;
-  inline-size: 22px;
-  block-size: 22px;
+  inline-size: var(--switch-knob);
+  block-size: var(--switch-knob);
   flex: none;
   place-items: center;
   border: var(--stroke-strong) solid var(--color-control-border);
@@ -1043,7 +1075,7 @@ a.ui-row,
   align-items: center;
   gap: var(--space-2);
   margin: var(--space-4) var(--space-side) 0;
-  padding: 12px 14px;
+  padding: var(--space-3) var(--field-pad);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -1213,8 +1245,14 @@ a.ui-row,
 }
 
 .ui-example,
-.ui-greet .t-label {
+.ui-greet .t-label,
+.ui-band-example {
   color: var(--color-on-band-secondary);
+}
+
+.ui-band-example {
+  padding: var(--space-2) var(--space-side) 0;
+  text-align: end;
 }
 
 .ui-example-bar {
@@ -1357,7 +1395,8 @@ a.ui-row,
   transition: background-color var(--dur-press);
 }
 
-.ui-tab-slot-fab:active .ui-fab {
+.ui-tab-slot-fab:active .ui-fab,
+.ui-fab-pressed {
   background: var(--color-accent-pressed);
 }
 
@@ -1423,11 +1462,15 @@ a.ui-row,
 .ui-sheet-panel {
   position: fixed;
   z-index: 31;
+  display: flex;
+  flex-direction: column;
   inset-inline: 0;
   bottom: 0;
   width: 100%;
   max-width: var(--content-max);
+  max-block-size: calc(100dvh - 56px);
   margin-inline: auto;
+  overflow: hidden;
   padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
@@ -1692,15 +1735,79 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   gap: var(--space-2);
 }
 
-.ui-skel-greet-a { inline-size: 118px; block-size: 14px; }
-.ui-skel-greet-b { inline-size: 96px; block-size: 10px; }
-.ui-skel-label { inline-size: 120px; block-size: 14px; }
-.ui-skel-hero-num { inline-size: 210px; block-size: 44px; border-radius: var(--radius-input); }
+.ui-skel-greet-a { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+.ui-skel-greet-b { inline-size: var(--skel-sm); block-size: var(--skel-block); }
+.ui-skel-label { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+.ui-skel-hero-num { inline-size: var(--skel-lg); block-size: var(--skel-hero); border-radius: var(--radius-input); }
 .ui-skel-delta { display: flex; align-items: center; gap: var(--space-2); }
-.ui-skel-delta-a { inline-size: 64px; block-size: 22px; border-radius: var(--radius-chip); }
-.ui-skel-delta-b { inline-size: 92px; block-size: 14px; }
-.ui-skel-figure { inline-size: 120px; block-size: 14px; }
-.ui-skel-dot { inline-size: 22px; block-size: 22px; border-radius: var(--radius-chip); }
+.ui-skel-delta-a { inline-size: var(--skel-sm); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
+.ui-skel-delta-b { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
+.ui-skel-figure { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+.ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
+
+.ui-row-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.ui-row-stack > .ui-row {
+  border-bottom: 0;
+}
+
+.ui-row-action {
+  padding-bottom: var(--space-2);
+}
+
+.ui-row-meta {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-row-chevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.ui-meter-row {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-meter-row .ui-bar {
+  flex: 1;
+}
+
+.ui-split-remain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-top: 1px solid var(--color-line);
+  padding-top: var(--space-3);
+}
+
+.ui-step-no {
+  display: grid;
+  width: var(--switch-track-h);
+  height: var(--switch-track-h);
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
 
 .ui-settings-kicker {
   margin-block: var(--space-section) var(--space-1);
@@ -1768,7 +1875,8 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   width: var(--switch-knob);
   height: var(--switch-knob);
   border-radius: var(--radius-chip);
-  background: var(--color-surface);
+  background: var(--color-knob);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
 }
 
 .ui-switch-row input {
@@ -1786,14 +1894,19 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-switch-row input:checked + .ui-switch i {
   inset-inline-start: auto;
   inset-inline-end: var(--switch-inset);
+  background: var(--color-knob-on);
+}
+
+.ui-switch-copy .t-hint {
+  color: var(--color-text-muted);
 }
 
 .ui-switch-row:has(input:disabled) {
+  opacity: 0.45;
   color: var(--color-text-muted);
 }
 
 .ui-switch-row input:disabled + .ui-switch {
-  opacity: 0.45;
   background: var(--color-disabled-bg);
 }
 

@@ -7,6 +7,7 @@ export function SheetSurface({
   title,
   children,
   hint,
+  action,
   onClose,
   drawer = false,
   closeRef,
@@ -15,6 +16,8 @@ export function SheetSurface({
   title: string;
   children?: ReactNode;
   hint?: string;
+  /** Stays pinned under the scrolling body. */
+  action?: ReactNode;
   onClose?: () => void;
   drawer?: boolean;
   closeRef?: RefObject<HTMLButtonElement | null>;
@@ -42,6 +45,7 @@ export function SheetSurface({
       </div>
       {hint ? <p className="ui-sheet-hint t-label">{hint}</p> : null}
       <div className="ui-sheet-body">{children}</div>
+      {action ? <div className="ui-sheet-foot">{action}</div> : null}
     </div>
   );
 }
@@ -52,6 +56,7 @@ export function Sheet({
   title,
   children,
   hint,
+  action,
   modal = true,
   onClosed,
 }: {
@@ -60,6 +65,7 @@ export function Sheet({
   title: string;
   children?: ReactNode;
   hint?: string;
+  action?: ReactNode;
   /** A modal sheet draws the scrim. Period and range both use that. */
   modal?: boolean;
   /** Fires after the close animation. Route sheets navigate then. */
@@ -90,6 +96,7 @@ export function Sheet({
           <SheetSurface
             title={title}
             hint={hint}
+            action={action}
             drawer
             closeRef={closeRef}
             titleRef={titleRef}

@@ -13,19 +13,30 @@ export function ProgressBar({ value, max = 100, label, variant = "bar", caption 
   const safeMax = max <= 0 ? 1 : max;
   const ratio = Math.min(1, Math.max(0, value / safeMax));
   const percent = Math.round(ratio * 100);
+  const bar = (
+    <div
+      className={variant === "thin" ? "ui-bar ui-bar-thin" : "ui-bar"}
+      role="meter"
+      aria-label={label}
+      aria-valuenow={variant === "thin" ? value : percent}
+      aria-valuemin={0}
+      aria-valuemax={variant === "thin" ? safeMax : 100}
+    >
+      <div className="ui-bar-fill" style={{ width: `${String(percent)}%` }} />
+    </div>
+  );
+  if (variant === "thin") {
+    return (
+      <div className="ui-meter-row">
+        {bar}
+        {caption}
+      </div>
+    );
+  }
   return (
     <div>
-      {variant === "bar" ? <p className="ui-meter-label t-hint">{label}</p> : null}
-      <div
-        className={variant === "thin" ? "ui-bar ui-bar-thin" : "ui-bar"}
-        role="meter"
-        aria-label={label}
-        aria-valuenow={variant === "thin" ? value : percent}
-        aria-valuemin={0}
-        aria-valuemax={variant === "thin" ? safeMax : 100}
-      >
-        <div className="ui-bar-fill" style={{ width: `${String(percent)}%` }} />
-      </div>
+      <p className="ui-meter-label t-hint">{label}</p>
+      {bar}
       {caption}
     </div>
   );
@@ -56,12 +67,14 @@ export function BudgetBar({ spentAgorot, budgetAgorot, label = "תקציב" }: B
   const overage = over ? spentAgorot - budgetAgorot : 0n;
   return (
     <div className="ui-budget">
-      <p className="ui-budget-title t-title-3">{label}</p>
-      <p className="ui-budget-amounts t-hint">
-        <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
-        <span>מתוך</span>
-        <bdi dir="ltr">{formatAmount(budgetAgorot)}</bdi>
-      </p>
+      <div className="ui-budget-head">
+        <p className="ui-budget-title t-title-3">{label}</p>
+        <p className="ui-budget-amounts t-hint">
+          <bdi dir="ltr">{formatAmount(spentAgorot)}</bdi>
+          <span>מתוך</span>
+          <bdi dir="ltr">{formatAmount(budgetAgorot)}</bdi>
+        </p>
+      </div>
       <div
         className="ui-bar"
         role="meter"

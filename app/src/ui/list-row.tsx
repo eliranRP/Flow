@@ -2,14 +2,21 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { BigNumber } from "./big-number";
 import { cx } from "./cx";
-import { BankIcon, DocumentIcon } from "./icons";
+import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 
 type Common = {
   title: string;
+  /** Muted line above the title. Project and category rows use it. */
+  eyebrow?: string;
   hint?: ReactNode;
   href?: string;
   action?: ReactNode;
+  /** The action sits under the row, on the end side. */
+  actionBelow?: boolean;
   icon?: ReactNode;
+  chevron?: boolean;
+  grip?: boolean;
+  meta?: ReactNode;
 };
 
 export type ListRowProps =
@@ -27,9 +34,15 @@ export function ListRow(props: ListRowProps) {
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
   const body = (
     <>
+      {props.grip ? (
+        <span className="ui-grip" aria-hidden="true">
+          <GripIcon />
+        </span>
+      ) : null}
       <span className="ui-row-main">
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
         <span className="ui-row-text">
+          {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
           <span className="ui-row-title" title={props.title}>
             {props.title}
           </span>
@@ -37,7 +50,13 @@ export function ListRow(props: ListRowProps) {
         </span>
       </span>
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
-      {props.action}
+      {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
+      {props.actionBelow ? null : props.action}
+      {props.chevron ? (
+        <span className="ui-row-chevron" aria-hidden="true">
+          <ChevronIcon />
+        </span>
+      ) : null}
     </>
   );
 
@@ -73,14 +92,24 @@ export function ListRow(props: ListRowProps) {
   }
 
   const className = props.variant === "project" ? "ui-row ui-row-project ui-hit" : "ui-row ui-hit";
-  if (props.href) {
-    return (
-      <Link to={props.href} className={className}>
-        {body}
-      </Link>
-    );
-  }
-  return <div className={className}>{body}</div>;
+  const row = props.href ? (
+    <Link to={props.href} className={className}>
+      {body}
+    </Link>
+  ) : (
+    <div className={className}>{body}</div>
+  );
+  return withAction(props, row);
+}
+
+function withAction(props: ListRowProps, row: ReactNode) {
+  if (!props.actionBelow || props.action == null) return row;
+  return (
+    <div className="ui-row-stack">
+      {row}
+      <div className="ui-row-action">{props.action}</div>
+    </div>
+  );
 }
 
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {

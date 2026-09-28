@@ -11,12 +11,14 @@ export function RouteSheet({
   title,
   closeTo,
   hint,
+  action,
   returnFocusRef,
   children,
 }: {
   title: string;
   closeTo: string;
   hint?: string;
+  action?: ReactNode;
   returnFocusRef?: RefObject<HTMLElement | null>;
   children?: ReactNode;
 }) {
@@ -49,6 +51,7 @@ export function RouteSheet({
       open={open}
       title={title}
       hint={hint}
+      action={action}
       onOpenChange={(next) => {
         if (!next) setOpen(false);
       }}
