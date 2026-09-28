@@ -304,9 +304,10 @@ a.ui-row,
   inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
-  overflow: hidden;
+  overflow: visible;
   min-height: var(--touch-min);
   padding-block: var(--row-pad);
+  padding-inline: 0;
   border-bottom: 1px solid var(--color-line);
   color: inherit;
   text-decoration: none;
@@ -317,11 +318,35 @@ a.ui-row,
   flex: none;
 }
 
-.ui-row:active {
-  background: var(--color-tint);
+.ui-row,
+.ui-radio-row,
+.ui-review-line {
+  position: relative;
+  z-index: 0;
+}
+
+/* Tint sits behind the words. It grows by --space-3 each side and does not move the content. */
+.ui-row::before,
+.ui-radio-row::before,
+.ui-review-line::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-inline: calc(var(--space-3) * -1);
+  inset-block: 0;
   border-radius: var(--radius-input);
-  margin-inline: calc(var(--space-3) * -1);
-  padding-inline: var(--space-3);
+  background: transparent;
+  pointer-events: none;
+}
+
+.ui-show-hover {
+  display: contents;
+}
+
+.ui-row[aria-pressed="true"]::before,
+.ui-radio-row[aria-checked="true"]::before,
+.ui-show-hover > :is(.ui-row, .ui-radio-row, .ui-review-line)::before {
+  background: var(--color-tint);
 }
 
 .ui-row-main {
@@ -966,15 +991,12 @@ a.ui-row,
   background: transparent;
   color: inherit;
   text-align: start;
+  padding-inline: 0;
 }
 
 .ui-radio-row .ui-row-text {
   flex: 1;
   min-inline-size: 0;
-}
-
-.ui-radio-row:active {
-  background: var(--color-tint-pressed);
 }
 
 .ui-radio {
@@ -1207,14 +1229,27 @@ a.ui-row,
 }
 
 @media (hover: hover) {
-  .ui-row:hover,
+  .ui-row:hover::before,
+  .ui-radio-row:hover::before,
+  .ui-review-line:hover::before {
+    background: var(--color-tint);
+  }
+
   .ui-chip-choice:hover,
   .ui-btn-ghost:hover,
   .ui-text-link:hover,
-  .ui-radio-row:hover,
   .ui-banner:hover {
     background: var(--color-tint);
   }
+}
+
+.ui-row:active::before,
+.ui-review-line:active::before {
+  background: var(--color-tint);
+}
+
+.ui-radio-row:active::before {
+  background: var(--color-tint-pressed);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -276,6 +276,51 @@ test("loading band skeletons stay inside the gutter and do not touch", async ({ 
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
+test("a row tint is wider than its content by the spacing token on both sides", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const cases = [
+    { id: "components-listrow--hover", selector: ".ui-show-hover .ui-row", hover: false },
+    { id: "components-listrow--project", selector: ".ui-row", hover: true },
+    { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
+    { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
+    { id: "components-reviewcard--suggestion", selector: ".ui-review-line", hover: true },
+  ] as const;
+  const failures: string[] = [];
+  for (const item of cases) {
+    await page.goto(`/iframe.html?id=${item.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
+    const row = page.locator(item.selector).first();
+    await expect(row).toBeVisible();
+    if (item.hover) await row.hover();
+    const problem = await row.evaluate((node) => {
+      const content = node.getBoundingClientRect();
+      const tint = getComputedStyle(node, "::before");
+      const left = Number.parseFloat(tint.left);
+      const right = Number.parseFloat(tint.right);
+      const token = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-3"));
+      if (!Number.isFinite(left) || !Number.isFinite(right) || !Number.isFinite(token)) return "tint insets are not a length";
+      const slack = 0.6;
+      const pastStart = -left;
+      const pastEnd = -right;
+      if (Math.abs(pastStart - token) > slack) return `inline start extends ${String(pastStart)}px, token is ${String(token)}px`;
+      if (Math.abs(pastEnd - token) > slack) return `inline end extends ${String(pastEnd)}px, token is ${String(token)}px`;
+      if (tint.backgroundColor === "rgba(0, 0, 0, 0)") return "tint is transparent";
+      const border = Number.parseFloat(getComputedStyle(node).borderTopWidth) + Number.parseFloat(getComputedStyle(node).borderBottomWidth);
+      const block = Number.parseFloat(tint.height);
+      if (Math.abs(block - (content.height - border)) > 1.5) return "tint block size does not match the row";
+      return "";
+    });
+    if (problem) failures.push(`${item.id}: ${problem}`);
+    if (item.id === "components-listrow--hover") {
+      const shifted = await page.locator(".ui-row-title").evaluateAll((nodes) => {
+        const edges = nodes.map((node) => Math.round(node.getBoundingClientRect().right));
+        return edges.length >= 2 && edges.every((edge) => edge === edges[0]) ? "" : `titles sit at ${edges.join(", ")}`;
+      });
+      if (shifted) failures.push(`${item.id}: ${shifted}`);
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("a segmented control is hit 4px outside its drawn box", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-segmentedcontrol--expenses&viewMode=story", { waitUntil: "domcontentloaded" });

@@ -79,6 +79,18 @@ export const LongHebrew: Story = {
 export const LargeAmount: Story = {
   args: { variant: "transaction", title: "חשבונית גדולה", agorot: String(largeAgorot), sign: "in", source: "invoice" },
 };
+export const Hover: Story = {
+  args: { variant: "project", title: "וילה הרצליה", hint: "שיפוץ", agorot: "2000000" },
+  render: () => (
+    <div className="ui-project-list">
+      <div className="ui-show-hover">
+        <ListRow variant="project" title="וילה הרצליה" hint="שיפוץ" agorot={2_000_000n} />
+      </div>
+      <ListRow variant="project" title="משרד רמת גן" agorot={4_500_000n} />
+    </div>
+  ),
+};
+
 export const ListOfRows: Story = {
   args: { variant: "project", title: "טק-ליין", agorot: "-2940000", loss: true },
   render: () => (
