@@ -44,9 +44,14 @@ const args = {
 };
 
 export const Closed: Story = { args, render: () => <Demo initialOpen={false} pill="כל התקופה" /> };
-export const Open: Story = { args: { ...args, open: true }, render: () => <Demo initialOpen pill="כל התקופה" /> };
+export const Open: Story = {
+  args: { ...args, open: true },
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <Demo initialOpen pill="כל התקופה" />,
+};
 export const LongHebrew: Story = { args: { ...args, pill: longHebrew }, render: () => <Demo initialOpen={false} pill={longHebrew} /> };
 export const Range: Story = {
   args,
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <RangeSheet open onOpenChange={() => undefined} onApply={() => undefined} />,
 };

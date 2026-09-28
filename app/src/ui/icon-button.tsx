@@ -41,7 +41,7 @@ export const IconButton = forwardRef<HTMLButtonElement | HTMLAnchorElement, Icon
       </Link>
     );
   }
-  const { label, children, onBand: _onBand, className: _className, type = "button", ...rest } = props;
+  const { label, children, onBand: _onBand, className: _className, type = "button", title: _nativeTitle, ...rest } = props;
   return (
     <button
       ref={(node) => {

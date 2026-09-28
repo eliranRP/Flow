@@ -27,7 +27,7 @@ export type ListRowProps =
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
   | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean })
+  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean })
   | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
@@ -84,6 +84,7 @@ export function ListRow(props: ListRowProps) {
       <button
         type="button"
         className="ui-row ui-hit"
+        disabled={props.disabled === true}
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
         onClick={props.onClick}

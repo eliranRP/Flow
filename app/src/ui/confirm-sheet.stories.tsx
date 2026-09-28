@@ -36,6 +36,7 @@ const meta = {
   title: "Components/ConfirmSheet",
   component: ConfirmSheet,
   decorators: [padded],
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
 } satisfies Meta<typeof ConfirmSheet>;
 
 export default meta;

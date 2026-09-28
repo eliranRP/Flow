@@ -6,6 +6,12 @@ import { HomeIcon, PlusIcon, ProjectsIcon, ReviewIcon, SettingsIcon } from "./ic
 
 const slot = "ui-tab-slot";
 
+export function reviewAwaitingLabel(count: number): string {
+  if (count === 1) return "לאישור, פריט אחד ממתין לאישור";
+  const shown = count > 99 ? "99+" : String(count);
+  return `לאישור, ${shown} פריטים ממתינים לאישור`;
+}
+
 type TabBarProps = {
   label?: string;
   reviewCount?: number;
@@ -34,13 +40,13 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPres
           <span className="ui-tab-icon">
             <HomeIcon />
           </span>
-          בית
+          <span className="ui-tab-label">בית</span>
         </Link>
         <Link to={`/projects${search}`} className={slot} aria-current={section === "projects" ? "page" : undefined}>
           <span className="ui-tab-icon">
             <ProjectsIcon />
           </span>
-          פרויקטים
+          <span className="ui-tab-label">פרויקטים</span>
         </Link>
         <Link
           ref={addTriggerRef}
@@ -57,7 +63,7 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPres
           to={`/review${search}`}
           className={slot}
           aria-current={section === "review" ? "page" : undefined}
-          aria-label={reviewCount > 0 ? `לאישור, ${badge} ממתינים` : undefined}
+          aria-label={reviewCount > 0 ? reviewAwaitingLabel(reviewCount) : undefined}
         >
           <span className="ui-tab-icon">
             <ReviewIcon />
@@ -67,13 +73,13 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPres
               </span>
             ) : null}
           </span>
-          לאישור
+          <span className="ui-tab-label">לאישור</span>
         </Link>
         <Link to={`/settings${search}`} className={slot} aria-current={section === "settings" ? "page" : undefined}>
           <span className="ui-tab-icon">
             <SettingsIcon />
           </span>
-          הגדרות
+          <span className="ui-tab-label">הגדרות</span>
         </Link>
       </div>
     </nav>

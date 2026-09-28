@@ -25,11 +25,13 @@ for (const [path, heading] of pages) {
   });
 }
 
-test("add sheet is a title until income and expense can be entered", async ({ page }) => {
+test("add sheet follows mockup 04 and does not capture yet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/add?preview=1");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  await expect(page.getByText("בקרוב תוכלו להוסיף כאן הכנסה או הוצאה")).toBeVisible();
+  await expect(page.getByText("צילום חשבונית")).toBeVisible();
+  await expect(page.getByText("הצילום, הייבוא וההזנה הידנית יגיעו בהמשך.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
 });
 
 test("a failed load is not an empty or missing record", async ({ page }) => {

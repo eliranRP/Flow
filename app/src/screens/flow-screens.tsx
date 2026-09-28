@@ -63,7 +63,7 @@ import { Chip, StatusPill } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
-import { BackIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, GoogleIcon, LogoutIcon, MoreIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { BackIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
@@ -116,6 +116,12 @@ export function OnboardingScreen() {
 
   return (
     <main className="ui-onboard">
+      <div className="ui-progress-row">
+        <div className="ui-bar ui-bar-slim" role="meter" aria-label="שלב 1 מתוך 4" aria-valuenow={1} aria-valuemin={1} aria-valuemax={4}>
+          <div className="ui-bar-fill" style={{ width: "25%" }} />
+        </div>
+        <span className="t-hint">שלב <bdi className="ui-num" dir="ltr">1</bdi> מתוך <bdi className="ui-num" dir="ltr">4</bdi></span>
+      </div>
       <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." />
       <form className="ui-page-pad" onSubmit={submit}>
         <TextField label="שם העסק" value={name} onChange={(event) => { setName(event.target.value); }} required minLength={2} />
@@ -950,43 +956,41 @@ export function ChangeForm({
                 ) : null}
               </div>
               <SearchField label="חיפוש פרויקט" value={query} onChange={setQuery} placeholder="חיפוש לפי שם הפרויקט" />
-              <div className="ui-project-list" role="radiogroup" aria-label="פרויקט">
-                {listed.map((project) => (
-                  <RadioRow
-                    key={project.id}
-                    label={project.name}
-                    {...(project.code || project.hint ? { hint: [project.code, project.hint].filter((part) => part != null && part !== "").join(" · ") } : {})}
-                    selected={projectId === project.id}
-                    onSelect={() => {
-                      setProjectId(project.id);
-                    }}
-                  />
-                ))}
-              </div>
-              <p className="ui-page-title-row">
-                <TextLink
-                  chevron={false}
+              <div className="ui-project-list">
+                <div className="ui-result-cap" role="radiogroup" aria-label="פרויקט">
+                  {listed.map((project) => (
+                    <RadioRow
+                      key={project.id}
+                      label={project.name}
+                      {...(project.code || project.hint ? { hint: [project.code, project.hint].filter((part) => part != null && part !== "").join(" · ") } : {})}
+                      selected={projectId === project.id}
+                      onSelect={() => {
+                        setProjectId(project.id);
+                      }}
+                    />
+                  ))}
+                </div>
+                <ListRow
+                  variant="button"
+                  title="פרויקט חדש"
+                  icon={<PlusIcon size={16} />}
                   onClick={() => {
                     setNewOpen(true);
                   }}
-                >
-                  <PlusIcon size={16} /> פרויקט חדש
-                </TextLink>
+                />
                 {row?.transaction_id ? (
-                  <TextLink chevron={false} to={`/transactions/${row.transaction_id}/split${search}`}>
-                    <SplitIcon size={16} /> פיצול בין פרויקטים
-                  </TextLink>
+                  <ListRow variant="item" title="פיצול בין פרויקטים" icon={<SplitIcon size={16} />} href={`/transactions/${row.transaction_id}/split${search}`} />
                 ) : (
-                  <TextLink
-                    chevron={false}
+                  <ListRow
+                    variant="button"
+                    title="פיצול בין פרויקטים"
+                    icon={<SplitIcon size={16} />}
                     onClick={() => {
                       toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
                     }}
-                  >
-                    <SplitIcon size={16} /> פיצול בין פרויקטים
-                  </TextLink>
+                  />
                 )}
-              </p>
+              </div>
             </>
           )}
           <h2 className="t-title-3">קטגוריה</h2>
@@ -1034,8 +1038,43 @@ export function ChangeForm({
 export function AddForm() {
   const search = usePreviewSearch();
   return (
-    <RouteSheet title="הוספה" closeTo={`/${search}`} returnFocusRef={addTriggerRef}>
-      <p className="t-label text-text-secondary">בקרוב תוכלו להוסיף כאן הכנסה או הוצאה</p>
+    <RouteSheet
+      title="הוספה"
+      hint="ה-AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר"
+      closeTo={`/${search}`}
+      returnFocusRef={addTriggerRef}
+    >
+      <p className="t-hint">הצילום, הייבוא וההזנה הידנית יגיעו בהמשך.</p>
+      <div className="ui-add-rows">
+        <ListRow
+          variant="button"
+          disabled
+          title="צילום חשבונית"
+          hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
+          icon={<CameraIcon size={26} />}
+          chevron
+          onClick={() => undefined}
+        />
+        <ListRow
+          variant="button"
+          disabled
+          title="העלאת דוח בנק"
+          hint="קובץ Excel מאפליקציית פועלים"
+          icon={<BankIcon size={26} />}
+          chevron
+          onClick={() => undefined}
+        />
+        <ListRow
+          variant="button"
+          disabled
+          title="הזנה ידנית"
+          hint="סכום, פרויקט וקטגוריה – רק במקרה הצורך"
+          icon={<PencilIcon size={26} />}
+          chevron
+          onClick={() => undefined}
+        />
+      </div>
+      <Button variant="ghost" full to={`/${search}`}>ביטול</Button>
     </RouteSheet>
   );
 }

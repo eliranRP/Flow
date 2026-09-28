@@ -48,10 +48,10 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
           {suggestion.category ? (
             <p className="ui-review-line">
               <span className="t-label">קטגוריה</span>
-              <span>
+              <span className="ui-review-value">
                 {suggestion.category}
                 {suggestion.confidence == null ? null : (
-                  <bdi className="t-hint" dir="ltr">{`${String(suggestion.confidence)}%`}</bdi>
+                  <bdi className="t-hint ui-num" dir="ltr">{`${String(suggestion.confidence)}%`}</bdi>
                 )}
               </span>
             </p>

@@ -19,5 +19,6 @@ describe("Sheet", () => {
       </SheetSurface>,
     );
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
+    expect(document.querySelector("[title]")).toBeNull();
   });
 });

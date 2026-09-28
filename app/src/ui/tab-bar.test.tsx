@@ -31,8 +31,17 @@ describe("TabBar", () => {
     );
     const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
     const names = [...nav.querySelectorAll("a")].map((link) => link.getAttribute("aria-label") ?? link.textContent.trim());
-    expect(names).toEqual(["בית", "פרויקטים", "הוספה", "לאישור, 7 ממתינים", "הגדרות"]);
+    expect(names).toEqual(["בית", "פרויקטים", "הוספה", "לאישור, 7 פריטים ממתינים לאישור", "הגדרות"]);
     expectTarget(screen.getByRole("link", { name: "הוספה" }));
+  });
+
+  it("uses the singular awaiting label for one item", () => {
+    render(
+      <MemoryRouter>
+        <TabBar reviewCount={1} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "לאישור, פריט אחד ממתין לאישור" })).toBeInTheDocument();
   });
 
   it("keeps 99+ in an ltr isolate", () => {

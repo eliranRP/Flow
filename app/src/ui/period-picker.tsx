@@ -84,7 +84,10 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
             }}
           >
             <CalendarIcon size={20} />
-            <span className="ui-row-title">טווח מותאם</span>
+            <span className="ui-row-text">
+              <span className="ui-row-title">טווח מותאם</span>
+              <span className="ui-row-hint">בחירת תאריכים בלוח</span>
+            </span>
             <span className="ui-banner-chevron">
               <ChevronIcon />
             </span>
