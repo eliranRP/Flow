@@ -18,11 +18,11 @@ function envValue(name: string): string {
 const supabaseUrl = process.env.VITE_SUPABASE_URL || envValue("SUPABASE_URL") || "http://127.0.0.1:54321";
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || envValue("SUPABASE_SERVICE_ROLE_KEY");
 const cronSecret = process.env.CRON_SECRET || envValue("CRON_SECRET");
-const ready = supabaseUrl.length > 0 && serviceKey.length > 0 && cronSecret.length > 0;
 
-test.skip(!ready, "Set CRON_SECRET and the local service role before the drain check.");
+test("the cron drain opens the sync path and rejects a bad secret", async () => {
+  expect(serviceKey, "SUPABASE_SERVICE_ROLE_KEY is required").not.toBe("");
+  expect(cronSecret, "CRON_SECRET is required").not.toBe("");
 
-test("the cron drain claims a refresh row", async () => {
   const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const email = `flow-drain-${String(Date.now())}@example.com`;
   const created = await admin.auth.admin.createUser({ email, email_confirm: true });
@@ -42,13 +42,30 @@ test("the cron drain claims a refresh row", async () => {
     dek_ciphertext: "\\x03",
     dek_nonce: "\\x04",
     kek_version: "1",
-    last_sync_at: new Date().toISOString(),
+    last_sync_at: null,
   }).select("company_id");
   expect(connection.error, connection.error?.message).toBeNull();
 
   const marker = await admin.from("sumit_refresh_requests").insert({ company_id: companyId }).select("id").single();
   expect(marker.error, marker.error?.message).toBeNull();
   const markerId = marker.data?.id as number;
+
+  const wrong = await fetch(`${supabaseUrl}/functions/v1/sumit-sync`, {
+    method: "POST",
+    headers: { "x-flow-cron": "not-the-secret", "content-type": "application/json" },
+    body: "{}",
+  });
+  expect(wrong.status).toBe(401);
+
+  const empty = await fetch(`${supabaseUrl}/functions/v1/sumit-sync`, {
+    method: "POST",
+    headers: { "x-flow-cron": "", "content-type": "application/json" },
+    body: "{}",
+  });
+  expect(empty.status).toBe(401);
+
+  const untouched = await admin.from("sumit_refresh_requests").select("claimed_at").eq("id", markerId).single();
+  expect(untouched.data?.claimed_at).toBeNull();
 
   const response = await fetch(`${supabaseUrl}/functions/v1/sumit-sync`, {
     method: "POST",
@@ -59,5 +76,9 @@ test("the cron drain claims a refresh row", async () => {
 
   const claimed = await admin.from("sumit_refresh_requests").select("claimed_at").eq("id", markerId).single();
   expect(claimed.error, claimed.error?.message).toBeNull();
-  expect(claimed.data?.claimed_at).toBeTruthy();
+  expect(claimed.data?.claimed_at).toBeNull();
+
+  const stored = await admin.from("sumit_connections").select("last_error").eq("company_id", companyId).single();
+  expect(stored.error, stored.error?.message).toBeNull();
+  expect(stored.data?.last_error).toBe("sync_failed");
 });

@@ -6,10 +6,17 @@ Apply the migration first, then deploy the two functions, then paste the key in 
 
 Apply, in order, on the hosted SQL editor or with `supabase db push`:
 
-1. `supabase/migrations/20260927120000_schema_v1.sql` (already applied)
+1. `supabase/migrations/20260927120000_schema_v1.sql`
 2. `supabase/migrations/20260928140000_phase1_slice.sql`
+3. `supabase/migrations/20260928180000_reopen_review.sql`
+4. `supabase/migrations/20260928190000_review_card.sql`
+5. `supabase/migrations/20260928210000_owner_ledger.sql`
+6. `supabase/migrations/20260928220000_allocation_share_lock.sql`
+7. `supabase/migrations/20260928230000_review_round4.sql`
+8. `supabase/migrations/20260929010000_review_round5.sql`
+9. `supabase/migrations/20260929120000_review_round7.sql`
 
-`pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`.
+`pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job runs every five minutes (`*/5 * * * *`), not once a day. It is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. Create the secret once, store it in both places, then migrate — or migrate first and call `select private.schedule_drain();` after the Vault rows exist. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`. A SUMIT `Status` other than 0 sets `sumit_rejected` and waits 5 minutes, then 15 minutes, 1 hour, 6 hours, and at most 24 hours before the drain tries that company again.
 
 ## 2. Edge Functions
 
@@ -20,7 +27,7 @@ Secrets, names only:
 | Name | Required | How to create it |
 | --- | --- | --- |
 | `SUMIT_KEK` | yes | `openssl rand -base64 32` (32 bytes). Same value on both functions. |
-| `CRON_SECRET` | no | any long random string, only if you will POST the daily drain |
+| `CRON_SECRET` | yes, for the drain | one random string, stored as this Edge secret and as Vault `cron_secret`. The drain runs every five minutes. |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are injected by Supabase. Do not copy the service-role key into the repo or the browser.
 
@@ -108,11 +115,22 @@ Local email login is off, so the test signs a session with `JWT_SECRET` from `su
 Apply the migrations in section 1 on the hosted SQL editor, or `supabase link` to flow-pilot and `supabase db push`. Deploy the functions:
 
 ```bash
+CRON_SECRET="$(openssl rand -base64 32)"
 supabase secrets set SUMIT_KEK="$(openssl rand -base64 32)"
-supabase secrets set CRON_SECRET="$(openssl rand -base64 32)"
+supabase secrets set CRON_SECRET="$CRON_SECRET"
 supabase functions deploy sumit-connect
 supabase functions deploy sumit-sync --no-verify-jwt
 ```
+
+Use that same `CRON_SECRET` shell value in the SQL editor. Do not print it. If a secret with that name already exists, update it instead of inserting a second row.
+
+```sql
+select vault.create_secret('<the CRON_SECRET value>', 'cron_secret', 'flow drain');
+select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/sumit-sync', 'flow_sync_url', 'flow drain url');
+select private.schedule_drain();
+```
+
+Store the Vault rows before `supabase db push` when you want the migration's own `schedule_drain()` call to create the job. If they are stored afterwards, run `select private.schedule_drain();` once. The Flow Test SUMIT account is currently restricted by ActionsBilling obligo, so do not run the live refresh in section 5 until that restriction is lifted.
 
 Use the same `SUMIT_KEK` for both. Build the client with `app/.env.production` (`pnpm build`) and upload `app/dist` to Cloudflare Pages. The project name in the Pages dashboard is the existing Flow project. Do not upload `storybook-static`.
 

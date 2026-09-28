@@ -141,6 +141,8 @@ export const transactionDetailSchema = z
     vat_status: z.string(),
     doc_kind: z.string().optional(),
     source: z.string(),
+    pnl_role: z.enum(["project", "shared", "overhead"]).nullable().optional(),
+    review_reason: z.string().nullable().optional(),
     project_id: z.string().nullable().optional(),
     project_name: z.string().nullable(),
     category_id: z.string().nullable().optional(),

@@ -73,7 +73,6 @@ When supplier, net, and date are all present, Flow saves the document as unpaid 
 | Camera permission denied | `אין גישה למצלמה` and `אפשר במערכת` plus the PDF picker still available. |
 | Unreadable photo (extraction threw, or the image is blank) | `לא הצלחנו לקרוא את החשבונית` and one action, `צלם שוב`. Nothing is stored as a transaction. The photo stays in the local queue so a later retry can run without reshooting, with a secondary `מחק`. |
 | Not a spreadsheet | `הקובץ אינו Excel או CSV`. Nothing imported. |
-| Non-Hapoalim file | Upload results in the error state. No rows created. |
 | Empty spreadsheet | `הקובץ ריק`. Nothing imported. |
 
 **Offline.** The photo, PDF, and manual entry are stored on the device and the sheet confirms `נשמר בטלפון. יסונכרן כשיהיה רשת`. Manual save with project and category completes locally and counts on Home immediately (it is approved and paid). There is no statement file to parse. AI guesses that need the network stay suggested with `ממתין לרשת` on the review card. Invoice extraction that needs the network stays queued; the confirmation appears after it runs.

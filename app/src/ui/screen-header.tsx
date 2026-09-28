@@ -12,6 +12,7 @@ export function ScreenHeader({
   leading,
   trailing,
   size = "default",
+  subtitleClassName,
 }: {
   title: string;
   subtitle?: string;
@@ -24,6 +25,7 @@ export function ScreenHeader({
   trailing?: ReactNode;
   /** Compact is the t-title-3 used on a transaction. */
   size?: "default" | "compact";
+  subtitleClassName?: string;
 }) {
   const start = leading ?? (backTo ? (
     <IconButton label="חזרה" to={backTo}>
@@ -38,7 +40,7 @@ export function ScreenHeader({
         <h1 className={size === "compact" ? "t-title-3" : "t-title-1"}>{title}</h1>
         {trailing ?? action}
       </div>
-      {subtitle ? <p className="t-label mt-4 text-text-secondary">{subtitle}</p> : null}
+      {subtitle ? <p className={subtitleClassName ? `t-label mt-4 text-text-secondary ${subtitleClassName}` : "t-label mt-4 text-text-secondary"}>{subtitle}</p> : null}
     </header>
   );
 }

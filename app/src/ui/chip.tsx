@@ -8,15 +8,16 @@ type ChipProps = {
   pressed?: boolean;
   children: ReactNode;
   onClick?: () => void;
+  className?: string;
 };
 
-export function Chip({ kind = "choice", pressed = false, children, onClick }: ChipProps) {
+export function Chip({ kind = "choice", pressed = false, children, onClick, className }: ChipProps) {
   const resolved = pressed ? "selected" : kind;
   const label = typeof children === "string" ? children : undefined;
   return (
     <button
       type="button"
-      className={cx("ui-chip", `ui-chip-${resolved}`)}
+      className={cx("ui-chip", `ui-chip-${resolved}`, className)}
       aria-pressed={pressed}
       aria-label={label}
       disabled={kind === "disabled"}

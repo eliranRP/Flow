@@ -59,10 +59,10 @@ export function InstallScreen({
     <section className="ui-install">
       <div className="ui-install-scroll">
         <div className="ui-install-top">
-          {example ? <span className="t-hint">{exampleLabel}</span> : null}
           <IconButton label="סגירה" onClick={onDismiss}>
             <CloseIcon />
           </IconButton>
+          {example ? <span className="t-hint">{exampleLabel}</span> : null}
         </div>
         <header className="ui-install-hero">
           <AppIcon />

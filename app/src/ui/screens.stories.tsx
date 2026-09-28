@@ -25,7 +25,6 @@ import { InstallScreen } from "./install-screen";
 import {
   InvoiceReadingFrame,
   NotificationsLockFrame,
-  UploadProcessingFrame,
 } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
 import { TabBar } from "./tab-bar";
@@ -676,7 +675,7 @@ const changeCategories = [
   { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
   { id: "c2", name: "ציוד והשכרה", hidden: false, kind: "expense" },
   { id: "c3", name: "הובלה", hidden: false, kind: "expense" },
-  { id: "c4", name: "עבודה", hidden: false, kind: "expense" },
+  { id: "c4", name: "עבודה", hidden: true, kind: "expense" },
 ];
 
 function ChangeStory({
@@ -889,14 +888,6 @@ export const InstallIphoneNarrow: Story = {
   render: () => (
     <StoryRoute entry="/">
       <InstallScreen mode="iphone" example onDismiss={() => undefined} />
-    </StoryRoute>
-  ),
-};
-
-export const UploadProcessing: Story = {
-  render: () => (
-    <StoryRoute entry="/">
-      <UploadProcessingFrame />
     </StoryRoute>
   ),
 };

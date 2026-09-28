@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { homeSummarySchema } from "@flow/shared";
 import { AuthProvider, useAuth } from "./auth";
-import { ScreenHeader } from "./ui/screen-header";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
 import { ThemeColor } from "./components/ThemeColor";
@@ -10,7 +9,8 @@ import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { BooksProvider } from "./use-books";
-import { listenForInstallPrompt } from "./ui/install-prompt";
+import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
+import { InstallScreen } from "./ui/install-screen";
 import { ToastProvider } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -34,6 +34,18 @@ import { SignInScreen } from "./screens/SignInScreen";
 export function App() {
   useEffect(() => {
     listenForInstallPrompt();
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Tab") document.documentElement.dataset.keyboard = "true";
+    }
+    function onPointer() {
+      delete document.documentElement.dataset.keyboard;
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
+    };
   }, []);
   return (
     <ToastProvider>
@@ -82,6 +94,7 @@ function AppRoutes() {
               <Route path="onboarding" element={<OnboardingScreen />} />
               <Route path="transactions/:transactionId" element={<TransactionScreen />} />
               <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
+              <Route path="install" element={<InstallRoute />} />
             </Route>
             <Route element={<Shell />}>
               <Route element={<HomeWithSheet />}>
@@ -94,7 +107,6 @@ function AppRoutes() {
                 <Route path="review" element={null} />
                 <Route path="review/change" element={<ChangeForm />} />
               </Route>
-              <Route path="upload" element={<ScreenHeader title="תוצאות הייבוא" />} />
               <Route path="unpaid" element={<UnpaidScreen />} />
               <Route path="notifications" element={<NotificationsScreen />} />
               <Route path="settings" element={<SettingsScreen />} />
@@ -136,6 +148,21 @@ function ReviewWithSheet() {
       <ReviewScreen />
       <Outlet />
     </>
+  );
+}
+
+function InstallRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search;
+  if (isStandalone()) return <Navigate to={`/settings${search}`} replace />;
+  return (
+    <InstallScreen
+      mode={detectInstallMode()}
+      onDismiss={() => {
+        void navigate(-1);
+      }}
+    />
   );
 }
 
