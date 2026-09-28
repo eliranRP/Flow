@@ -4,7 +4,7 @@ test("preview home is the first-run empty state", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");
   await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
-  await expect(page.getByText("שלום, …")).toBeVisible();
+  await expect(page.getByText("שלום", { exact: true })).toBeVisible();
   await expect(page.getByText("עוד אין נתונים")).toBeVisible();
   await expect(page.getByRole("link", { name: "חיבור SUMIT" })).toBeVisible();
   await expect(page.getByText("מצב תצוגה")).toBeVisible();
@@ -15,9 +15,14 @@ test("preview home is the first-run empty state", async ({ page }) => {
 test("preview error and loading states are reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=error");
-  await expect(page.getByText("לא הצלחנו לטעון")).toBeVisible();
+  await expect(page.getByText("אין חיבור לאינטרנט")).toBeVisible();
+  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.locator("header.band")).toHaveCount(0);
+  await page.goto("/?preview=error-server");
+  await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toBeVisible();
   await page.goto("/?preview=loading");
   await expect(page.locator("[aria-busy=true]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פרויקטים מובילים" })).toBeVisible();
 });
 
 test("add is a sheet over Home and transaction detail has no tab bar", async ({ page }) => {
@@ -33,6 +38,7 @@ test("add is a sheet over Home and transaction detail has no tab bar", async ({ 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "הוספה" })).toBeFocused();
   expect(await page.evaluate(() => (history.state as { idx?: number }).idx)).toBe(0);
   await page.goto("/transactions/1?preview=1");
   await expect(page.getByRole("heading", { name: "פרטי תנועה" })).toBeVisible();

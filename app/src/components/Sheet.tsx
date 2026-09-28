@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Drawer } from "vaul";
 import { CloseIcon } from "./icons";
@@ -8,11 +8,34 @@ import { CloseIcon } from "./icons";
  * The sheet is a real route (`/add`, `/review/change`). Opening it pushes
  * history. Closing plays the exit animation, then pops that entry.
  * A direct visit (nothing under it) replaces the route with `closeTo`.
+ * `returnFocusTo` is a selector for the control that opened the sheet.
  */
-export function Sheet({ title, closeTo }: { title: string; closeTo: string }) {
+export function Sheet({
+  title,
+  closeTo,
+  hint,
+  returnFocusTo,
+}: {
+  title: string;
+  closeTo: string;
+  hint?: string;
+  returnFocusTo?: string;
+}) {
   const navigate = useNavigate();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    const selector = returnFocusTo;
+    return () => {
+      if (!selector) return;
+      window.setTimeout(() => {
+        if (document.querySelector('[role="dialog"]')) return;
+        const el = document.querySelector(selector);
+        if (el instanceof HTMLElement) el.focus();
+      }, 0);
+    };
+  }, [returnFocusTo]);
 
   function leave() {
     const idx = historyIndex();
@@ -51,6 +74,7 @@ export function Sheet({ title, closeTo }: { title: string; closeTo: string }) {
               <CloseIcon />
             </Drawer.Close>
           </div>
+          {hint ? <p className="sheet-hint t-label">{hint}</p> : null}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
