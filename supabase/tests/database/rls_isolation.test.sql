@@ -3,7 +3,7 @@
 
 begin;
 
-select no_plan();
+select plan(83);
 
 select tests.create_supabase_user('owner_a');
 select tests.create_supabase_user('owner_b');
@@ -57,6 +57,12 @@ select company_id, transaction_id, project_id, 10000, -2200000 from flow_a;
 
 insert into public.split_rules (company_id, supplier_id, method, label)
 select company_id, supplier_id, 'worker_days', 'ימי עבודה' from flow_a;
+
+alter table flow_a add column rule_id uuid;
+alter table flow_a add column spare_project_id uuid;
+update flow_a set rule_id = (
+  select id from public.split_rules where label = 'ימי עבודה'
+);
 
 insert into public.split_rule_targets (company_id, rule_id, project_id, month, share_bp)
 select a.company_id, r.id, a.project_id, '2026-04-01', 10000
@@ -270,7 +276,70 @@ select throws_ok(
 
 insert into public.projects (company_id, name)
 select id, 'פרויקט של ב' from public.companies where name = 'בטא';
+insert into public.customers (company_id, name)
+select id, 'לקוח של ב' from public.companies where name = 'בטא';
+insert into public.suppliers (company_id, name)
+select id, 'ספק של ב' from public.companies where name = 'בטא';
+insert into public.categories (company_id, name, kind, sort_order)
+select id, 'קטגוריה של ב', 'expense', 99 from public.companies where name = 'בטא';
+insert into public.transactions (
+  company_id, direction, doc_kind,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, description
+)
+select id, 'expense', 'expense', 100, 100, 0, 'unknown',
+  '2026-09-02', 'manual', 'beta-move', 'תנועה של ב'
+from public.companies where name = 'בטא';
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select c.id, t.id, p.id, 10000, 100
+from public.companies c
+join public.transactions t on t.company_id = c.id and t.idempotency_key = 'beta-move'
+join public.projects p on p.company_id = c.id and p.name = 'פרויקט של ב'
+where c.name = 'בטא';
+insert into public.split_rules (company_id, method, label)
+select id, 'manual', 'כלל של ב' from public.companies where name = 'בטא';
+insert into public.split_rule_targets (company_id, rule_id, project_id, share_bp)
+select c.id, r.id, p.id, 10000
+from public.companies c
+join public.split_rules r on r.company_id = c.id and r.label = 'כלל של ב'
+join public.projects p on p.company_id = c.id and p.name = 'פרויקט של ב'
+where c.name = 'בטא';
+insert into public.overhead (company_id, transaction_id)
+select c.id, t.id
+from public.companies c
+join public.transactions t on t.company_id = c.id and t.idempotency_key = 'beta-move'
+where c.name = 'בטא';
+insert into public.review_queue (company_id, reason)
+select id, 'תור של ב' from public.companies where name = 'בטא';
 
+-- sumit_connections has no insert grant for authenticated. A spare project
+-- on אלפא gives the composite foreign keys a real destination row.
+reset role;
+insert into public.projects (company_id, name)
+select company_id, 'פרויקט פנוי' from flow_a;
+update flow_a set spare_project_id = (
+  select id from public.projects where name = 'פרויקט פנוי'
+);
+insert into public.sumit_connections (
+  company_id, sumit_company_id,
+  key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version
+)
+select
+  id, 1,
+  '\x0011'::bytea, '\x00112233445566778899aabb'::bytea,
+  '\x00ff'::bytea, '\xff00112233445566778899aa'::bytea,
+  'SUMIT_KEK_v1'
+from public.companies where name = 'בטא';
+select tests.authenticate_as('owner_b');
+
+select throws_ok(
+  $$update public.categories
+    set company_id = (select company_id from flow_a)
+    where name = 'קטגוריה של ב'$$,
+  '42501',
+  NULL,
+  'cannot move a category into another company'
+);
 select throws_ok(
   $$update public.projects
     set company_id = (select company_id from flow_a)
@@ -278,6 +347,110 @@ select throws_ok(
   '42501',
   NULL,
   'cannot move a project into another company'
+);
+select throws_ok(
+  $$update public.customers
+    set company_id = (select company_id from flow_a)
+    where name = 'לקוח של ב'$$,
+  '42501',
+  NULL,
+  'cannot move a customer into another company'
+);
+select throws_ok(
+  $$update public.suppliers
+    set company_id = (select company_id from flow_a),
+        remembered_project_id = null,
+        remembered_category_id = null
+    where name = 'ספק של ב'$$,
+  '42501',
+  NULL,
+  'cannot move a supplier into another company'
+);
+select throws_ok(
+  $$update public.transactions
+    set company_id = (select company_id from flow_a),
+        project_id = null,
+        customer_id = null,
+        supplier_id = null,
+        category_id = null
+    where idempotency_key = 'beta-move'$$,
+  '42501',
+  NULL,
+  'cannot move a transaction into another company'
+);
+select throws_ok(
+  $$update public.allocations
+    set company_id = (select company_id from flow_a),
+        transaction_id = (select transaction_id from flow_a),
+        project_id = (select spare_project_id from flow_a)
+    where transaction_id = (
+      select id from public.transactions where idempotency_key = 'beta-move'
+    )$$,
+  '42501',
+  NULL,
+  'cannot move an allocation into another company'
+);
+select throws_ok(
+  $$update public.split_rules
+    set company_id = (select company_id from flow_a),
+        supplier_id = null
+    where label = 'כלל של ב'$$,
+  '42501',
+  NULL,
+  'cannot move a split rule into another company'
+);
+select throws_ok(
+  $$update public.split_rule_targets
+    set company_id = (select company_id from flow_a),
+        rule_id = (select rule_id from flow_a),
+        project_id = (select spare_project_id from flow_a)
+    where project_id = (
+      select id from public.projects where name = 'פרויקט של ב'
+    )$$,
+  '42501',
+  NULL,
+  'cannot move a split target into another company'
+);
+select throws_ok(
+  $$update public.overhead
+    set company_id = (select company_id from flow_a),
+        transaction_id = (select transaction_id from flow_a)
+    where transaction_id = (
+      select id from public.transactions where idempotency_key = 'beta-move'
+    )$$,
+  '42501',
+  NULL,
+  'cannot move an overhead row into another company'
+);
+select throws_ok(
+  $$update public.review_queue
+    set company_id = (select company_id from flow_a),
+        transaction_id = null
+    where reason = 'תור של ב'$$,
+  '42501',
+  NULL,
+  'cannot move a review row into another company'
+);
+select throws_ok(
+  $$update public.sumit_connections
+    set company_id = (select company_id from flow_a)
+    where company_id = (select id from public.companies where name = 'בטא')$$,
+  '42501',
+  NULL,
+  'cannot move a SUMIT connection into another company'
+);
+select throws_ok(
+  $$update public.audit_log
+    set company_id = (select company_id from flow_a)
+    where company_id = (select id from public.companies where name = 'בטא')$$,
+  '42501',
+  NULL,
+  'cannot move an audit row into another company'
+);
+
+delete from public.overhead
+where transaction_id = (
+  select id from public.transactions where idempotency_key = 'beta-move'
 );
 
 select throws_ok(
