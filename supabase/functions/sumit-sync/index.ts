@@ -61,7 +61,9 @@ Deno.serve(async (req) => {
     return json(result, result.skipped ? 200 : 200);
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
-    return json({ error: message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]") }, 500);
+    console.error("sumit-sync", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));
+    const code = message === "sync_failed" || message === "SUMIT is not connected" || message === "unauthorized" || message === "no company" ? message : "sync_failed";
+    return json({ error: code }, 500);
   }
 });
 
@@ -108,9 +110,9 @@ async function syncCompany(
     return { ok: true, documents: documents.length };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
-    const safe = message.replaceAll(apiKey, "[redacted]").slice(0, 400);
-    await admin.from("sumit_connections").update({ last_error: safe }).eq("company_id", companyId);
-    throw new Error(safe);
+    console.error("sumit sync failed", message.replaceAll(apiKey, "[redacted]").slice(0, 400));
+    await admin.from("sumit_connections").update({ last_error: "sync_failed" }).eq("company_id", companyId);
+    throw new Error("sync_failed");
   }
 }
 

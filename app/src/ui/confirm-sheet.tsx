@@ -1,4 +1,5 @@
 import { Button } from "./button";
+import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
 
 type ConfirmSheetProps = {
@@ -9,6 +10,7 @@ type ConfirmSheetProps = {
   consequence: string;
   confirmLabel: string;
   destructive?: boolean;
+  busy?: boolean;
   onConfirm: () => void;
 };
 
@@ -20,6 +22,7 @@ export function ConfirmSheet({
   consequence,
   confirmLabel,
   destructive = false,
+  busy = false,
   onConfirm,
 }: ConfirmSheetProps) {
   return (
@@ -29,6 +32,8 @@ export function ConfirmSheet({
       <Button
         variant={destructive ? "danger-tint" : "primary"}
         full
+        busy={busy}
+        icon={destructive ? <TrashIcon /> : undefined}
         onClick={() => {
           onConfirm();
         }}

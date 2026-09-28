@@ -22,7 +22,7 @@ export const OnBand: Story = {
   args: { label: "סגירה", onBand: true, children: <CloseIcon /> },
   decorators: [
     (Story) => (
-      <div className="band p-4">
+      <div className="ui-band p-4">
         <Story />
       </div>
     ),

@@ -5,8 +5,6 @@
 import {
   allocateByWeights,
   dashboardSchema,
-  demoDataSchema,
-  pnlFromDemo,
   shekelsToAgorot,
   type Basis,
   type CategoryRow,
@@ -14,6 +12,7 @@ import {
   type ReviewRow,
   type UnpaidRow,
 } from "@flow/shared";
+import { demoDataSchema, pnlFromDemo } from "@flow/shared/testing";
 import raw from "../../../packages/shared/fixtures/demo-data.json";
 
 const demo = demoDataSchema.parse(raw);
@@ -168,8 +167,8 @@ export function demoUnpaid(): UnpaidRow[] {
       doc_date: doc.date,
       project_name: project?.name ?? null,
       customer_name: doc.cust_name,
-      open_gross_agorot: num(remaining),
-      open_net_agorot: num(net),
+      open_gross_agorot: remaining,
+      open_net_agorot: net,
     });
   }
   return rows;

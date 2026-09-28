@@ -4,8 +4,11 @@ import {
   allocateByWeights,
   divHalfEven,
   formatIls,
+  wholeShekels,
   netFromGrossAgorot,
+  parseShekelInput,
   rateFractionToBp,
+  roundedProfitAgorot,
   shareBp,
   shekelsToAgorot,
 } from "./money.ts";
@@ -84,5 +87,27 @@ describe("formatIls", () => {
   it("puts the shekel sign before the digits", () => {
     expect(formatIls(20_000_000n)).toBe("₪200,000");
     expect(formatIls(-1_000_000n)).toBe("−₪10,000");
+  });
+
+  it("keeps a non-zero agora remainder only when asked", () => {
+    expect(formatIls(10050n, { agorot: true })).toBe("₪100.50");
+    expect(formatIls(10000n, { agorot: true })).toBe("₪100");
+    expect(formatIls(-10050n, { agorot: true })).toBe("−₪100.50");
+  });
+});
+
+describe("parseShekelInput", () => {
+  it("accepts the grouped display a money field shows after blur", () => {
+    expect(parseShekelInput("12,000")).toBe(1_200_000n);
+    expect(parseShekelInput("1,000.50")).toBe(100_050n);
+    expect(shekelsToAgorot("12,000")).toBe(1_200_000n);
+  });
+});
+
+describe("roundedProfitAgorot", () => {
+  it("equals rounded income minus rounded expenses", () => {
+    // 1.50 rounds to 2, 0.50 rounds to 0. The raw net 1.00 would show as ₪1.
+    expect(formatIls(roundedProfitAgorot(150n, 50n))).toBe("₪2");
+    expect(wholeShekels(roundedProfitAgorot(150n, 50n))).toBe(2);
   });
 });

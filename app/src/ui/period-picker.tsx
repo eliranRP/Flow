@@ -1,12 +1,22 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "./button";
 import { Chip } from "./chip";
-import { dayLabel, formatDisplay, israelToday, monthCells, monthTitle } from "./date-math";
+import {
+  formatDisplay,
+  inclusiveDays,
+  israelToday,
+  monthSpan,
+  monthTitle,
+  previousMonthSpan,
+  rangeLengthLabel,
+  shiftMonth,
+  yearSpan,
+} from "./date-math";
 import { CalendarIcon, ChevronIcon } from "./icons";
 import { IconButton } from "./icon-button";
+import { MonthGrid } from "./month-grid";
 import { RadioRow } from "./radio-row";
 import { Sheet } from "./sheet";
-import { lastMonth, thisMonth, yearToDate } from "../period";
 
 export type PeriodOption = {
   label: string;
@@ -29,7 +39,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
     <>
       <button
         type="button"
-        className="band-period ui-hit"
+        className="ui-band-period ui-hit"
         onClick={() => {
           onOpenChange(true);
         }}
@@ -60,23 +70,23 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
               }}
             />
           ))}
-          {onCustom ? (
-            <button
-              type="button"
-              className="ui-radio-row"
-              onClick={() => {
-                custom.current = true;
-                onOpenChange(false);
-              }}
-            >
-              <CalendarIcon size={20} />
-              <span className="ui-row-title">טווח מותאם</span>
-              <span className="ui-banner-chevron">
-                <ChevronIcon />
-              </span>
-            </button>
-          ) : null}
         </div>
+        {onCustom ? (
+          <button
+            type="button"
+            className="ui-radio-row"
+            onClick={() => {
+              custom.current = true;
+              onOpenChange(false);
+            }}
+          >
+            <CalendarIcon size={20} />
+            <span className="ui-row-title">טווח מותאם</span>
+            <span className="ui-banner-chevron">
+              <ChevronIcon />
+            </span>
+          </button>
+        ) : null}
       </Sheet>
     </>
   );
@@ -91,17 +101,17 @@ type RangeSheetProps = {
 /** Opens only after the period sheet has closed, so the two sheets never stack. */
 export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
   const today = israelToday();
-  const start = thisMonth().from ?? today;
-  const [from, setFrom] = useState(start);
+  const spans = useMemo(
+    () => ({ month: monthSpan(), previous: previousMonthSpan(), year: yearSpan() }),
+    [],
+  );
+  const [from, setFrom] = useState(spans.month.from);
   const [to, setTo] = useState(today);
   const [cursor, setCursor] = useState(() => ({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) - 1 }));
   const [arm, setArm] = useState<"from" | "to">("from");
-  const cells = monthCells(cursor.year, cursor.month);
-  const monthKey = String(cursor.month + 1).padStart(2, "0");
   const nextDisabled =
     cursor.year > Number(today.slice(0, 4)) ||
     (cursor.year === Number(today.slice(0, 4)) && cursor.month >= Number(today.slice(5, 7)) - 1);
-  const days = Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
 
   function pick(iso: string) {
     if (iso > today) return;
@@ -130,64 +140,57 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange} title="טווח מותאם">
       <div className="flex flex-wrap gap-2">
         <Chip
-          pressed={from === start && to === today}
+          pressed={from === spans.month.from && to === spans.month.to}
           onClick={() => {
-            preset(start, today);
+            preset(spans.month.from, spans.month.to);
           }}
         >
           החודש
         </Chip>
         <Chip
-          pressed={from === (lastMonth().from ?? from) && to === (lastMonth().to ?? to)}
+          pressed={from === spans.previous.from && to === spans.previous.to}
           onClick={() => {
-            const previous = lastMonth();
-            if (previous.from && previous.to) preset(previous.from, previous.to);
+            preset(spans.previous.from, spans.previous.to);
           }}
         >
           חודש קודם
         </Chip>
         <Chip
-          pressed={from === (yearToDate().from ?? from) && to === today}
+          pressed={from === spans.year.from && to === today}
           onClick={() => {
-            const year = yearToDate();
-            if (year.from) preset(year.from, today);
+            preset(spans.year.from, today);
           }}
         >
           מתחילת השנה
         </Chip>
       </div>
-      <p className="t-hint">מתאריך <bdi dir="ltr">{formatDisplay(from)}</bdi></p>
-      <p className="t-hint">עד תאריך <bdi dir="ltr">{formatDisplay(to)}</bdi></p>
-      <div className="band-row">
-        <IconButton label="חודש קודם" onClick={() => { setCursor((current) => shiftMonth(current, -1)); }}>‹</IconButton>
+      <p className="t-hint">
+        מתאריך <bdi dir="ltr">{formatDisplay(from)}</bdi>
+      </p>
+      <p className="t-hint">
+        עד תאריך <bdi dir="ltr">{formatDisplay(to)}</bdi>
+      </p>
+      <div className="ui-band-row">
+        <IconButton
+          label="חודש קודם"
+          onClick={() => {
+            setCursor((current) => shiftMonth(current, -1));
+          }}
+        >
+          ‹
+        </IconButton>
         <p className="t-label">{monthTitle(cursor.year, cursor.month)}</p>
-        <IconButton label="חודש הבא" disabled={nextDisabled} onClick={() => { setCursor((current) => shiftMonth(current, 1)); }}>›</IconButton>
+        <IconButton
+          label="חודש הבא"
+          disabled={nextDisabled}
+          onClick={() => {
+            setCursor((current) => shiftMonth(current, 1));
+          }}
+        >
+          ›
+        </IconButton>
       </div>
-      <div className="ui-cal" role="grid" aria-label="טווח מותאם">
-        {weeksOf(cells).map((week) => (
-          <div key={week.join("-")} className="ui-cal-row" role="row">
-            {week.map((iso) => {
-              if (iso.slice(5, 7) !== monthKey) return <span key={iso} className="ui-day" />;
-              const future = iso > today;
-              const selected = iso === from || iso === to;
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  role="gridcell"
-                  className="ui-day"
-                  aria-label={dayLabel(iso)}
-                  aria-selected={selected}
-                  disabled={future}
-                  onClick={() => { pick(iso); }}
-                >
-                  <b>{Number(iso.slice(8, 10))}</b>
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+      <MonthGrid label="טווח מותאם" year={cursor.year} month={cursor.month} today={today} range={{ from, to }} onPick={pick} />
       <Button
         full
         onClick={() => {
@@ -195,19 +198,8 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
           onOpenChange(false);
         }}
       >
-        {days > 0 ? `הצגת ${String(days)} ימים` : "הצגה"}
+        {rangeLengthLabel(inclusiveDays(from, to))}
       </Button>
     </Sheet>
   );
-}
-
-function weeksOf(cells: string[]): string[][] {
-  const weeks: string[][] = [];
-  for (let index = 0; index < cells.length; index += 7) weeks.push(cells.slice(index, index + 7));
-  return weeks;
-}
-
-function shiftMonth(cursor: { year: number; month: number }, delta: number): { year: number; month: number } {
-  const date = new Date(Date.UTC(cursor.year, cursor.month + delta, 1));
-  return { year: date.getUTCFullYear(), month: date.getUTCMonth() };
 }

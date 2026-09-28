@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { HomeSkeleton, Skeleton } from "./skeleton";
+import { Skeleton } from "./skeleton";
 import { padded } from "./story-support";
 
 const meta = {
@@ -12,4 +12,3 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Bar: Story = { args: { width: "md" } };
-export const Home: Story = { args: {}, render: () => <HomeSkeleton /> };

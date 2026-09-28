@@ -4,6 +4,14 @@ import "@testing-library/jest-dom/vitest";
 import "../../design/system/implementation-tokens.css";
 import "./ui/ui.css";
 
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 if (typeof window.matchMedia !== "function") {
   Object.defineProperty(window, "matchMedia", {
     writable: true,

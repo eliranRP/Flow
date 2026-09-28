@@ -8,12 +8,7 @@ export type AmountPresentation = "summary" | "detail";
  * Callers pass net agorot. The figure is before VAT. Decisions 0041 and 0043.
  */
 export function formatAmount(agorot: bigint, presentation: AmountPresentation = "summary"): string {
-  const negative = agorot < 0n;
-  const abs = negative ? -agorot : agorot;
-  if (presentation === "summary" || abs % 100n === 0n) return formatIls(agorot);
-  const shekels = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const agora = (abs % 100n).toString().padStart(2, "0");
-  return `${negative ? "−" : ""}₪${shekels}.${agora}`;
+  return formatIls(agorot, { agorot: presentation === "detail" });
 }
 
 type BigNumberProps = {
@@ -30,35 +25,52 @@ const sizeClass = {
   list: "t-title-3",
 } as const;
 
+export function heroTypeClass(size: "hero" | "display" | "list" | undefined, stepDown: boolean): string {
+  if (size === "hero") return stepDown ? "t-display" : "t-hero";
+  return size ? sizeClass[size] : "";
+}
+
 export function BigNumber({ agorot, presentation = "summary", size, loss = false }: BigNumberProps) {
   const ref = useRef<HTMLElement>(null);
   const [stepDown, setStepDown] = useState(false);
+  const text = formatAmount(agorot, presentation);
   useLayoutEffect(() => {
     if (size !== "hero") return;
     const node = ref.current;
-    const column = node?.parentElement;
-    if (!node || !column) return;
+    const column = node?.closest(".ui-band-hero");
+    if (!node || !(column instanceof HTMLElement)) return;
+    const probe = document.createElement("bdi");
+    probe.className = "ui-num t-hero";
+    probe.textContent = text;
+    probe.setAttribute("aria-hidden", "true");
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    probe.style.pointerEvents = "none";
+    probe.style.whiteSpace = "nowrap";
+    probe.style.inlineSize = "max-content";
+    column.appendChild(probe);
     const measure = () => {
-      node.classList.add("t-hero");
-      node.classList.remove("t-display");
-      setStepDown(node.scrollWidth > column.clientWidth);
+      const style = getComputedStyle(column);
+      const pad = (Number.parseFloat(style.paddingInlineStart) || 0) + (Number.parseFloat(style.paddingInlineEnd) || 0);
+      const content = column.clientWidth - pad;
+      setStepDown(probe.getBoundingClientRect().width > content);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(column);
     return () => {
       observer.disconnect();
+      probe.remove();
     };
-  }, [agorot, presentation, size]);
-  const heroClass = size === "hero" && stepDown ? "t-display" : size ? sizeClass[size] : "";
+  }, [size, text]);
   return (
-    <bdi ref={ref} dir="ltr" className={["num", heroClass, loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
-      {formatAmount(agorot, presentation)}
+    <bdi ref={ref} dir="ltr" className={["ui-num", heroTypeClass(size, stepDown), loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
+      {text}
     </bdi>
   );
 }
 
-/** List and inline amounts. Same whole-shekel, pre-VAT rules as BigNumber. */
+/** List and inline amounts. Same rules as BigNumber at the summary size. */
 export function Money({ agorot }: { agorot: bigint }) {
   return <BigNumber agorot={agorot} />;
 }

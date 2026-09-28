@@ -32,6 +32,19 @@ test("demo add sheet has income and expense", async ({ page }) => {
   await expect(page.getByText("בקרוב תוכלו להוסיף כאן הכנסה או הוצאה")).toBeVisible();
 });
 
+test("a failed load is not an empty or missing record", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/unpaid?preview=error");
+  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByText("הכל שולם")).toHaveCount(0);
+  await page.goto("/projects/missing?preview=error");
+  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByText("הפרויקט לא נמצא.")).toHaveCount(0);
+  await page.goto("/review?preview=error");
+  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  await expect(page.getByText("הכל מאושר")).toHaveCount(0);
+});
+
 test("preview home has no fixture profit", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");

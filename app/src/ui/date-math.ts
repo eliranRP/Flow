@@ -41,12 +41,55 @@ export function formatDisplay(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-/** Category and day, without the year. Transaction hints use this. */
-export function formatDayMonth(iso: string): string {
+/** Day and month. A date outside the current year keeps the year. */
+export function formatDayMonth(iso: string, now = new Date()): string {
+  const year = iso.slice(0, 4);
   const month = iso.slice(5, 7);
   const day = iso.slice(8, 10);
-  if (!/^\d{2}$/.test(month) || !/^\d{2}$/.test(day)) return iso;
+  if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month) || !/^\d{2}$/.test(day)) return iso;
+  if (year !== israelToday(now).slice(0, 4)) return `${day}/${month}/${year}`;
   return `${day}/${month}`;
+}
+
+export function monthSpan(now = new Date()): { from: string; to: string } {
+  const today = israelToday(now);
+  return { from: `${today.slice(0, 8)}01`, to: today };
+}
+
+export function previousMonthSpan(now = new Date()): { from: string; to: string } {
+  const today = israelToday(now);
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  const previous = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+  const start = `${String(previous.year)}-${pad(previous.month)}-01`;
+  const endDay = new Date(Date.UTC(previous.year, previous.month, 0)).getUTCDate();
+  return { from: start, to: `${String(previous.year)}-${pad(previous.month)}-${pad(endDay)}` };
+}
+
+export function yearSpan(now = new Date()): { from: string; to: string } {
+  const today = israelToday(now);
+  return { from: `${today.slice(0, 4)}-01-01`, to: today };
+}
+
+export function shiftMonth(cursor: { year: number; month: number }, delta: number): { year: number; month: number } {
+  const date = new Date(Date.UTC(cursor.year, cursor.month + delta, 1));
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() };
+}
+
+export function weeksOf(cells: string[]): string[][] {
+  const weeks: string[][] = [];
+  for (let index = 0; index < cells.length; index += 7) weeks.push(cells.slice(index, index + 7));
+  return weeks;
+}
+
+export function inclusiveDays(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
+}
+
+export function rangeLengthLabel(days: number): string {
+  if (days === 1) return "הצגת יום אחד";
+  if (days > 1) return `הצגת ${String(days)} ימים`;
+  return "הצגה";
 }
 
 export function shiftDays(iso: string, days: number): string {

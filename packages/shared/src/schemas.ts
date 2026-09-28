@@ -42,7 +42,7 @@ export const sumitConnectionStatusSchema = z.object({
 export const homeSummarySchema = z.object({
   company_id: uuid.nullable(),
   name: z.string().nullable(),
-  net_profit_agorot: z.number().int(),
+  net_profit_agorot: z.union([z.number().int(), z.string().regex(/^-?\d+$/)]).transform((value) => BigInt(value)),
   is_demo: z.boolean(),
 });
 

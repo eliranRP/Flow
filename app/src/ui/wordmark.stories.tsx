@@ -16,7 +16,7 @@ export const OnBand: Story = {
   args: { tone: "on-band", size: "band" },
   decorators: [
     (Story) => (
-      <div className="band p-4">
+      <div className="ui-band p-4">
         <Story />
       </div>
     ),

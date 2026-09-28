@@ -4,7 +4,7 @@ import { usePreviewSearch } from "../preview";
 import { withSheetBackground } from "../sheet-background";
 import { HomeIcon, PlusIcon, ProjectsIcon, ReviewIcon, SettingsIcon } from "./icons";
 
-const slot = "tab-slot";
+const slot = "ui-tab-slot";
 
 type TabBarProps = {
   label?: string;
@@ -16,8 +16,8 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
   const location = useLocation();
   const badge = reviewCount > 99 ? "99+" : String(reviewCount);
   return (
-    <nav className="tabbar" aria-label={label}>
-      <div className="tabbar-slots">
+    <nav className="ui-tabbar" aria-label={label}>
+      <div className="ui-tabbar-slots">
         <NavLink to={`/${search}`} end className={slot}>
           <span className="tab-icon">
             <HomeIcon />
@@ -35,9 +35,9 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0 }: TabBa
           to={`/add${search}`}
           state={withSheetBackground(location)}
           aria-label="הוספה"
-          className={`${slot} tab-slot-fab`}
+          className={`${slot} ui-tab-slot-fab`}
         >
-          <span className="fab">
+          <span className="ui-fab">
             <PlusIcon />
           </span>
         </NavLink>

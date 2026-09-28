@@ -1,23 +1,37 @@
-import { useId, type InputHTMLAttributes } from "react";
+import { useId } from "react";
 
 type MoneyFieldProps = {
   label: string;
+  value: string;
+  onValueChange: (raw: string) => void;
   error?: string;
-} & Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "inputMode" | "type">;
+  id?: string;
+  disabled?: boolean;
+};
 
-function grouped(raw: string): string {
+function digitsOnly(raw: string): string {
   const cleaned = raw.replace(/[^\d.]/g, "");
-  if (cleaned === "") return "";
   const [whole, frac] = cleaned.split(".");
-  const withCommas = (whole ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return frac == null ? withCommas : `${withCommas}.${frac.slice(0, 2)}`;
+  if (frac == null) return whole ?? "";
+  return `${whole ?? ""}.${frac.slice(0, 2)}`;
 }
 
-/** Whole or decimal shekels, before VAT. The ₪ sits with the digits. */
-export function MoneyField({ label, error, id, onBlur, onChange, ...rest }: MoneyFieldProps) {
+function grouped(raw: string): string {
+  if (raw === "") return "";
+  const [whole, frac] = raw.split(".");
+  const withCommas = (whole ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return frac == null ? withCommas : `${withCommas}.${frac}`;
+}
+
+/**
+ * The stored value is digits. Grouping is display-only, so a blur cannot
+ * hand the parent a comma that the agorot parser rejects.
+ */
+export function MoneyField({ label, value, onValueChange, error, id, disabled = false }: MoneyFieldProps) {
   const generated = useId();
   const fieldId = id ?? generated;
   const errorId = `${fieldId}-error`;
+  const shown = grouped(value);
   return (
     <div className={error ? "ui-field ui-field-error" : "ui-field"}>
       <label className="ui-field-label" htmlFor={fieldId}>
@@ -33,18 +47,14 @@ export function MoneyField({ label, error, id, onBlur, onChange, ...rest }: Mone
             dir="ltr"
             inputMode="decimal"
             type="text"
+            value={shown}
+            disabled={disabled}
+            size={Math.max(shown.length, 1)}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? errorId : undefined}
-            onChange={onChange}
-            onBlur={(event) => {
-              const next = grouped(event.currentTarget.value);
-              if (next !== event.currentTarget.value) {
-                event.currentTarget.value = next;
-                onChange?.(event);
-              }
-              onBlur?.(event);
+            onChange={(event) => {
+              onValueChange(digitsOnly(event.target.value));
             }}
-            {...rest}
           />
         </span>
       </span>

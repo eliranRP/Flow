@@ -55,10 +55,15 @@ export function parseDecimalHalfEven(text: string, scale: number): bigint {
   return negative ? -scaled : scaled;
 }
 
+/** Strip grouping commas and spaces, then parse shekels to agorot. */
+export function parseShekelInput(text: string): bigint {
+  return parseDecimalHalfEven(text.trim().replace(/[\s,]/g, ""), 2);
+}
+
 /** Shekels, as a decimal string or a JSON number, to integer agorot. */
 export function shekelsToAgorot(shekels: number | string): bigint {
   const text = typeof shekels === "string" ? shekels : numberToDecimal(shekels);
-  return parseDecimalHalfEven(text, 2);
+  return parseShekelInput(text);
 }
 
 /** A VAT fraction such as 0.18 to basis points (1800). */
@@ -83,14 +88,29 @@ export function wholeShekels(agorot: bigint): number {
 }
 
 /**
- * ₪ before the digits, thousands commas, whole shekels, Unicode minus.
- * Summaries do not show agorot. Decision 0016 and the implementation guide §6.4.
+ * Visible profit is rounded income minus rounded expenses.
+ * Rounding each side on its own, then subtracting the raw net, does not add up.
  */
-export function formatIls(agorot: bigint): string {
+export function roundedProfitAgorot(incomeAgorot: bigint, expenseAgorot: bigint): bigint {
+  return BigInt(wholeShekels(incomeAgorot) - wholeShekels(expenseAgorot)) * 100n;
+}
+
+/**
+ * ₪ before the digits, thousands commas, Unicode minus.
+ * Summaries are whole shekels. `{ agorot: true }` keeps a non-zero agora remainder.
+ * Decision 0016 and the implementation guide §6.4.
+ */
+export function formatIls(agorot: bigint, options?: { agorot?: boolean }): string {
   const negative = agorot < 0n;
-  const shekels = wholeShekels(negative ? -agorot : agorot);
-  const digits = shekels.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${negative ? "−" : ""}₪${digits}`;
+  const abs = negative ? -agorot : agorot;
+  const sign = negative ? "−" : "";
+  if (options?.agorot && abs % 100n !== 0n) {
+    const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const agora = (abs % 100n).toString().padStart(2, "0");
+    return `${sign}₪${whole}.${agora}`;
+  }
+  const digits = wholeShekels(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${sign}₪${digits}`;
 }
 
 /**

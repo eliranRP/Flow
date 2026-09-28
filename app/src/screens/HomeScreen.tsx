@@ -1,4 +1,4 @@
-import { formatIls, homeSummarySchema, type Dashboard, type ProjectRow } from "@flow/shared";
+import { formatIls, homeSummarySchema, roundedProfitAgorot, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
 import { onlineManager, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,16 +10,29 @@ import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { ChartIcon } from "../ui/icons";
-import { BandHero, SectionHead } from "../ui/layout";
+import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker, RangeSheet } from "../ui/period-picker";
-import { HomeSkeleton } from "../ui/skeleton";
+import { HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { homeGreeting, profitBandLabel } from "../home-label";
 import { getSupabase } from "../lib/supabase";
-import { allTime, comparisonWords, customRange, heroProfitLabel, lastMonth, periodHint, thisMonth, yearToDate, type PeriodChoice } from "../period";
+import {
+  allTime,
+  comparisonWords,
+  customRange,
+  heroProfitLabel,
+  lastMonth,
+  periodHint,
+  periodLabel,
+  samePeriod,
+  thisMonth,
+  yearToDate,
+  type PeriodChoice,
+} from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
+import { screenPhase } from "../query-phase";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 
 function readOwnerName(metadata: unknown): string | null {
@@ -30,13 +43,12 @@ function readOwnerName(metadata: unknown): string | null {
   return typeof raw === "string" ? raw : null;
 }
 
-function ag(value: number): bigint {
-  return BigInt(Math.trunc(value));
-}
-
-function changePercent(current: number, previous: number | null): number | null {
-  if (previous == null || previous === 0) return null;
-  return Math.round(((current - previous) / Math.abs(previous)) * 100);
+function changePercent(current: bigint, previous: bigint | null): number | null {
+  if (previous == null || previous === 0n) return null;
+  const currentShekels = wholeShekels(current);
+  const previousShekels = wholeShekels(previous);
+  if (previousShekels === 0) return null;
+  return Math.round(((currentShekels - previousShekels) / Math.abs(previousShekels)) * 100);
 }
 
 export function HomeScreen() {
@@ -61,21 +73,11 @@ export function HomeScreen() {
     },
   });
 
-  const showBooks = !previewing && dashboard.data != null && hasBooks(dashboard.data);
-  const loading =
-    preview === "loading" ||
-    (!previewing && (status === "loading" || ((home.isLoading || dashboard.isLoading) && !showBooks)));
-  const liveOffline =
-    !previewing &&
-    (home.isPaused || dashboard.isPaused || ((home.isError || dashboard.isError) && !onlineManager.isOnline()));
-  const liveServer =
-    !previewing &&
-    (home.isError || dashboard.isError) &&
-    !home.isPaused &&
-    !dashboard.isPaused &&
-    onlineManager.isOnline();
-  const offline = preview === "error" || liveOffline;
-  const failed = previewHidesBand(preview) || liveOffline || liveServer;
+  const phase = screenPhase(preview, dashboard);
+  const showBooks = phase.kind === "ready" && dashboard.data != null && hasBooks(dashboard.data);
+  const loading = phase.kind === "loading" || (!previewing && status === "loading" && !showBooks);
+  const failed = phase.kind === "error" || previewHidesBand(preview);
+  const offline = phase.kind === "error" ? phase.offline : preview === "error";
   const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
 
   useEffect(() => {
@@ -99,12 +101,13 @@ export function HomeScreen() {
     }
     void home.refetch();
     void dashboard.refetch();
+    void unpaid.refetch();
   }
 
-  if (loading) return <HomeSkeleton previewing={previewing} />;
+  if (loading) return <HomeSkeleton />;
 
   if (failed) {
-    return <ErrorState offline={offline} onRetry={retry} />;
+    return <ErrorState offline={offline || !onlineManager.isOnline()} onRetry={retry} />;
   }
 
   if (!showBooks) {
@@ -113,16 +116,16 @@ export function HomeScreen() {
         <TopBand preview={previewing}>
           <BandHero>
             <p className="t-title-2">{greeting}</p>
-            <h1 className="band-label t-label">{profitBandLabel(false)}</h1>
+            <h1 className="ui-band-label t-label">{profitBandLabel(false)}</h1>
           </BandHero>
         </TopBand>
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
+          body="מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה."
           action={
-            <Button variant="pill" to={`/settings${search}`}>
-              חיבור SUMIT
+            <Button variant="pill" to={`/add${search}`}>
+              העלאת דוח בנק
             </Button>
           }
         />
@@ -130,14 +133,19 @@ export function HomeScreen() {
     );
   }
 
+  const unpaidPhase = screenPhase(preview, unpaid);
   return (
     <HomeBooks
       data={dashboard.data}
       greeting={greeting}
       previewing={previewing}
       search={search}
-      unpaidNet={unpaid.data?.reduce((sum, row) => sum + row.open_net_agorot, 0) ?? 0}
-      unpaidCount={unpaid.data?.length ?? 0}
+      unpaidNet={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + row.open_net_agorot, 0n) : 0n}
+      unpaidCount={unpaidPhase.kind === "ready" ? (unpaid.data?.length ?? 0) : 0}
+      unpaidPhase={unpaidPhase.kind}
+      onUnpaidRetry={() => {
+        void unpaid.refetch();
+      }}
       period={books.period}
       onPeriod={books.setPeriod}
     />
@@ -145,7 +153,7 @@ export function HomeScreen() {
 }
 
 function hasBooks(data: Dashboard): boolean {
-  return data.projects.length > 0 || data.income_agorot !== 0 || data.expense_agorot !== 0;
+  return data.projects.length > 0 || data.income_agorot !== 0n || data.expense_agorot !== 0n;
 }
 
 export function HomeBooks({
@@ -155,6 +163,8 @@ export function HomeBooks({
   search,
   unpaidNet,
   unpaidCount,
+  unpaidPhase = "ready",
+  onUnpaidRetry,
   period,
   onPeriod,
 }: {
@@ -162,26 +172,29 @@ export function HomeBooks({
   greeting: string;
   previewing: boolean;
   search: string;
-  unpaidNet: number;
+  unpaidNet: bigint;
   unpaidCount: number;
+  unpaidPhase?: "loading" | "error" | "empty" | "ready";
+  onUnpaidRetry?: () => void;
   period: PeriodChoice;
   onPeriod: (choice: PeriodChoice) => void;
 }) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
-  const leading = [...data.projects].sort((a, b) => b.profit_agorot - a.profit_agorot).slice(0, 3);
-  const percent = changePercent(data.net_profit_agorot, data.prev_net_agorot);
+  const leading = [...data.projects].sort((a, b) => (a.profit_agorot < b.profit_agorot ? 1 : a.profit_agorot > b.profit_agorot ? -1 : 0)).slice(0, 3);
+  const hero = roundedProfitAgorot(data.income_agorot, data.expense_agorot);
+  const previous =
+    data.prev_income_agorot != null && data.prev_expense_agorot != null
+      ? roundedProfitAgorot(data.prev_income_agorot, data.prev_expense_agorot)
+      : data.prev_net_agorot;
+  const percent = changePercent(hero, previous);
   const comparison = comparisonWords(period);
   const pending = data.review_count;
-  const showCard = pending > 0 || unpaidCount > 0;
+  const unpaidReady = unpaidPhase === "ready";
+  const showCard = pending > 0 || (unpaidReady && unpaidCount > 0);
   const cardTo = pending > 0 ? `/review${search}` : `/unpaid${search}`;
   const cardTitle = pending > 0 ? `${String(pending)} פריטים ממתינים לאישור` : `${String(unpaidCount)} חשבוניות לא שולמו`;
-  const cardHint =
-    pending > 0 && unpaidCount > 0
-      ? `${String(unpaidCount)} חשבוניות לא שולמו · ${formatIls(ag(unpaidNet))}`
-      : pending === 0
-        ? "לא נכלל ברווח"
-        : undefined;
+  const cardHint = unpaidHint(pending, unpaidCount, unpaidNet, unpaidReady);
 
   const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
 
@@ -191,16 +204,16 @@ export function HomeBooks({
         preview={previewing}
         trailing={
           <PeriodPicker
-            pill={period.label}
+            pill={periodLabel(period)}
             open={sheet}
             onOpenChange={setSheet}
             onCustom={() => {
               setRange(true);
             }}
             options={choices.map((choice) => ({
-              label: choice.label,
+              label: periodLabel(choice),
               hint: periodHint(choice),
-              selected: choice.label === period.label,
+              selected: samePeriod(choice, period),
               onSelect: () => {
                 onPeriod(choice);
               },
@@ -210,35 +223,37 @@ export function HomeBooks({
       >
         <BandHero>
           <p className="t-title-2">{greeting}</p>
-          <p className="band-label t-label">{heroProfitLabel(period)}</p>
-          <h1 className="t-hero">
-            <BigNumber agorot={ag(data.net_profit_agorot)} />
+          <p className="ui-band-label t-label">{heroProfitLabel(period)}</p>
+          <h1>
+            <BigNumber agorot={hero} size="hero" />
           </h1>
           {comparison && percent != null ? <ChangePill percent={percent} comparison={comparison} onBand /> : null}
-          <div className="band-figures">
-            <span>
-              הכנסות
-              <bdi dir="ltr">{formatIls(ag(data.income_agorot))}</bdi>
-            </span>
-            <span>
-              הוצאות
-              <bdi dir="ltr">{formatIls(ag(data.expense_agorot))}</bdi>
-            </span>
-          </div>
+          <BandFigures income={formatIls(data.income_agorot)} expense={formatIls(data.expense_agorot)} />
         </BandHero>
       </TopBand>
+
+      {unpaidPhase === "error" ? (
+        <div className="ui-page-pad">
+          <ErrorState
+            offline={false}
+            onRetry={() => {
+              onUnpaidRetry?.();
+            }}
+          />
+        </div>
+      ) : null}
 
       {showCard ? <Banner to={cardTo} title={cardTitle} hint={cardHint} /> : null}
 
       <SectionHead title="פרויקטים מובילים" />
-      <ul className="project-list">
+      <ul className="ui-project-list">
         {leading.map((project) => (
           <li key={project.id}>
             <ProjectLine project={project} search={search} />
           </li>
         ))}
       </ul>
-      <p className="page-pad">
+      <p className="ui-page-pad">
         <TextLink to={`/projects${search}`} tone="quiet">
           לכל הפרויקטים
         </TextLink>
@@ -254,21 +269,28 @@ export function HomeBooks({
   );
 }
 
+function unpaidHint(pending: number, unpaidCount: number, unpaidNet: bigint, ready: boolean): string | undefined {
+  if (!ready || unpaidCount === 0) return undefined;
+  const amount = formatIls(unpaidNet);
+  if (pending > 0) return `${String(unpaidCount)} חשבוניות לא שולמו · ${amount}`;
+  return `${amount} · לא נכלל ברווח`;
+}
+
 function ProjectLine({ project, search }: { project: ProjectRow; search: string }) {
   return (
     <ListRow
       variant="project"
       title={project.name}
       hint={marginHint(project)}
-      agorot={ag(project.profit_agorot)}
-      loss={project.profit_agorot < 0}
+      agorot={project.profit_agorot}
+      loss={project.profit_agorot < 0n}
       href={`/projects/${project.id}${search}`}
     />
   );
 }
 
 function marginHint(project: ProjectRow): string | undefined {
-  if (project.income_agorot <= 0) return undefined;
-  const pct = Math.round((project.profit_agorot / project.income_agorot) * 100);
+  if (project.income_agorot <= 0n) return undefined;
+  const pct = Number((project.profit_agorot * 100n) / project.income_agorot);
   return pct < 0 ? `רווחיות −${String(Math.abs(pct))}%` : `רווחיות ${String(pct)}%`;
 }

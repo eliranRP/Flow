@@ -3,9 +3,9 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { SearchField } from "./search-field";
 import { padded } from "./story-support";
 
-function Demo({ value }: { value: string }) {
+function Demo({ value, autoFocus = false }: { value: string; autoFocus?: boolean }) {
   const [text, setText] = useState(value);
-  return <SearchField label="חיפוש פרויקט" value={text} onChange={setText} />;
+  return <SearchField label="חיפוש פרויקט" value={text} onChange={setText} autoFocus={autoFocus} />;
 }
 
 const meta = {
@@ -24,4 +24,8 @@ export const Empty: Story = {
 export const Filled: Story = {
   args: { label: "חיפוש פרויקט", value: "הרצל", onChange: () => undefined },
   render: () => <Demo value="הרצל" />,
+};
+export const Focus: Story = {
+  args: { label: "חיפוש פרויקט", value: "", onChange: () => undefined },
+  render: () => <Demo value="" autoFocus />,
 };

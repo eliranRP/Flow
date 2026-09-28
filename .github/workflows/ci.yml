@@ -23,6 +23,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build
+      # After the build: the Rollup module graph and the golden values in dist.
       - run: pnpm check:bundle
       - run: pnpm --filter @flow/app exec playwright install --with-deps chromium
       - run: pnpm test:storybook

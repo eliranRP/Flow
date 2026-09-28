@@ -6,6 +6,22 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 /** Static hosts that only serve files: deep links fall back to index.html. */
+/** Module ids of the production build. check:bundle reads this file. */
+function bundleGraph(): Plugin {
+  return {
+    name: "flow-bundle-graph",
+    apply: "build",
+    generateBundle() {
+      const ids = [...this.getModuleIds()].filter((id) => !id.includes("\0"));
+      this.emitFile({
+        type: "asset",
+        fileName: "bundle-graph.json",
+        source: JSON.stringify(ids),
+      });
+    },
+  };
+}
+
 function spaFallback(): Plugin {
   return {
     name: "spa-fallback",
@@ -31,6 +47,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     optimizeDeps: {
+      // The books screens pull these in after sign-in. Pre-bundling them avoids a
+      // mid-session reload while Vite discovers the query client and Supabase.
       include: ["@tanstack/react-query", "@supabase/supabase-js"],
     },
     base: "/",
@@ -46,6 +64,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      ...(storybook ? [] : [bundleGraph()]),
       ...(storybook
         ? []
         : [

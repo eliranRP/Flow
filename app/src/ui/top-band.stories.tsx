@@ -31,7 +31,7 @@ export const Preview: Story = {
     children: (
       <BandHero>
         <p className="t-title-2">שלום</p>
-        <h1 className="band-label t-label">כאן יופיע הרווח הנקי של העסק</h1>
+        <h1 className="ui-band-label t-label">כאן יופיע הרווח הנקי של העסק</h1>
       </BandHero>
     ),
   },

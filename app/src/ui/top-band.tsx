@@ -10,13 +10,13 @@ type TopBandProps = {
 /** Violet band. Home and the Project header only. */
 export function TopBand({ children, trailing, preview = false }: TopBandProps) {
   return (
-    <header className="band">
-      <div className="band-row">
+    <header className="ui-band">
+      <div className="ui-band-row">
         <Wordmark tone="on-band" />
         {trailing}
       </div>
       {children}
-      {preview ? <p className="preview-banner t-hint">מצב תצוגה</p> : null}
+      {preview ? <p className="ui-preview-banner t-hint">מצב תצוגה</p> : null}
     </header>
   );
 }

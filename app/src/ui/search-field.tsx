@@ -6,9 +6,10 @@ type SearchFieldProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 };
 
-export function SearchField({ label, value, onChange, placeholder = "למשל: הרצל" }: SearchFieldProps) {
+export function SearchField({ label, value, onChange, placeholder = "למשל: הרצל", autoFocus = false }: SearchFieldProps) {
   const id = useId();
   return (
     <div className="ui-search">
@@ -21,6 +22,7 @@ export function SearchField({ label, value, onChange, placeholder = "למשל: �
         type="search"
         value={value}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         onChange={(event) => {
           onChange(event.target.value);
         }}

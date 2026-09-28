@@ -22,8 +22,8 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
     expect(screen.getByText("שלום")).toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toBeInTheDocument();
+    expect(screen.getByText("מעלים דוח Excel מאפליקציית פועלים, ובונים ממנו רווח והפסד תוך דקה.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "העלאת דוח בנק" })).toBeInTheDocument();
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
@@ -34,12 +34,12 @@ describe("App", () => {
     expect(tabs).toEqual(["בית", "פרויקטים", "הוספה", "לאישור", "הגדרות"]);
   });
 
-  it("shows the offline error from preview=error, without the band", () => {
+  it("shows the offline error from preview=error, without the ui-band", () => {
     renderAt("/?preview=error");
     expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
     expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
-    expect(document.querySelector(".band")).toBeNull();
+    expect(document.querySelector(".ui-band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
@@ -48,14 +48,14 @@ describe("App", () => {
     expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
     expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("ui-btn-primary");
-    expect(document.querySelector(".band")).toBeNull();
+    expect(document.querySelector(".ui-band")).toBeNull();
   });
 
   it("shows the ld-01 loading skeleton from preview=loading", () => {
     renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
-    expect(document.querySelector(".band")).not.toBeNull();
+    expect(document.querySelector(".ui-band")).not.toBeNull();
     expect(document.querySelectorAll(".ui-skel-row")).toHaveLength(3);
   });
 
@@ -100,7 +100,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "פרויקטים" })).toBeInTheDocument();
   });
 
-  it("opens the review change sheet over the review page", () => {
+  it("opens the review change sheet over the review ui-page", () => {
     renderAt("/review/change?preview=1");
     expect(screen.getByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "לאישור", hidden: true })).toBeInTheDocument();
@@ -138,8 +138,8 @@ describe("App", () => {
     const back = screen.getByRole("link", { name: "חזרה" });
     expect(back).toHaveClass("ui-text-link");
     expect(back).not.toHaveClass("ui-icon-btn");
-    expect(back.closest(".page-pad")).not.toBeNull();
-    expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".page-pad")).not.toBeNull();
+    expect(back.closest(".ui-page-pad")).not.toBeNull();
+    expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".ui-page-pad")).not.toBeNull();
   });
 
   it("sends a signed-out visitor to sign-in", () => {

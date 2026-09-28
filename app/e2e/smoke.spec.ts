@@ -7,7 +7,7 @@ test("preview home is the first-run empty state", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
   await expect(page.getByText("שלום", { exact: true })).toBeVisible();
   await expect(page.getByText("עוד אין נתונים")).toBeVisible();
-  await expect(page.getByRole("link", { name: "חיבור SUMIT" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "העלאת דוח בנק" })).toBeVisible();
   await expect(page.getByText("מצב תצוגה")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "ניווט ראשי" })).toBeVisible();
   await expect(page.getByText("₪0")).toHaveCount(0);

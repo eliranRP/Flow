@@ -12,4 +12,4 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Undo: Story = { args: { children: "הפריט אושר", action: "ביטול", onAction: () => undefined } };
-export const ErrorRetry: Story = { args: { children: "לא נשמר", action: "שוב", onAction: () => undefined, tone: "bad" } };
+export const ErrorRetry: Story = { args: { children: "לא נשמר", action: "ניסיון חוזר", onAction: () => undefined, tone: "bad" } };

@@ -17,9 +17,9 @@ describe("SegmentedControl", () => {
         ]}
       />,
     );
-    const selected = screen.getByRole("tab", { name: "הוצאות" });
-    expect(selected).toHaveAttribute("aria-selected", "true");
-    expectTarget(selected, 36);
+    const selected = screen.getByRole("radio", { name: "הוצאות" });
+    expect(selected).toHaveAttribute("aria-checked", "true");
+    expectTarget(selected);
     expectThemePaint(selected, "backgroundColor");
   });
 });

@@ -1,1 +1,1 @@
-export { HomeSkeleton } from "../ui/skeleton";
+export { HomeSkeleton } from "../screens/home-skeleton";
