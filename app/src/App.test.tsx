@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
 import { HELP_EMAIL } from "./config";
+import { getSupabase } from "./lib/supabase";
 
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -143,12 +144,14 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: HELP_EMAIL }).closest(".ui-page-pad")).not.toBeNull();
   });
 
-  it("sends a signed-out visitor to sign-in", () => {
+  it("sends a signed-out visitor to sign-in", async () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
     expect(screen.getByText("הרווח וההפסד של העסק, בלי אקסלים")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "תנאי שימוש" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "המשך עם Google" })).toBeDisabled();
+    const google = screen.getByRole("button", { name: "המשך עם Google" });
+    if (getSupabase()) expect(google).toBeEnabled();
+    else expect(google).toBeDisabled();
   });
 });
