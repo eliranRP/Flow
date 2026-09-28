@@ -2,7 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { copyFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 /** Static hosts that only serve files: deep links fall back to index.html. */
@@ -18,7 +18,15 @@ function spaFallback(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Local .env stays at the repo root. The committed public client keys live in
+  // app/.env.production and fill any VITE_ value the shell did not set.
+  const appEnv = loadEnv(mode, __dirname, "VITE_");
+  for (const [key, value] of Object.entries(appEnv)) {
+    if (!process.env[key]) process.env[key] = value;
+  }
+
+  return {
   base: "/",
   envDir: path.resolve(__dirname, ".."),
   server: {
@@ -59,4 +67,5 @@ export default defineConfig({
       },
     }),
   ],
+};
 });

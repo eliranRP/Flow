@@ -7,6 +7,7 @@ export default defineConfig(
   {
     ignores: [
       "**/dist/**",
+      "**/.vite/**",
       "**/node_modules/**",
       "design/**",
       "docs/**",

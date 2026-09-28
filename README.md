@@ -61,8 +61,28 @@ pnpm lint
 pnpm test
 pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
 pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17. Migration first, then pgTAP. No Docker.
-pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID
+pnpm seed:demo        # needs SUPABASE_SERVICE_ROLE_KEY and SEED_OWNER_USER_ID, supplied for that command only
 pnpm latency          # times get_home() against SUPABASE_URL
+```
+
+Production builds read `app/.env.production` ([0046](docs/decisions/0046-public-anon-key.md)): the hosted URL and the public anon key. Do not put a service-role key in that file or anywhere else in git.
+
+The hosted database does not create a company when someone signs in. After the owner signs in with Google once, copy their id from Authentication → Users. Then either seed the Flow Test demo company, or insert an empty company in the SQL editor.
+
+Demo company, from this repo. The service-role key is only in the environment of this command. It is not a file you commit. `SEED_OWNER_USER_ID` is that auth user id. The script creates the company with `is_demo = true`, or updates one that is already demo, and refuses a real company.
+
+```bash
+SUPABASE_URL=https://sxqpnetmtufkzowutduq.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY="<dashboard service role, this shell only>" \
+SEED_OWNER_USER_ID="<auth.users id>" \
+pnpm seed:demo
+```
+
+Empty company, SQL only. The Supabase SQL editor runs as a role that bypasses RLS. There is no SQL file in the repo for the Flow Test fixture. That data only goes in through the script above. This insert is a real company (`is_demo` stays false), and the category trigger adds the default categories:
+
+```sql
+insert into public.companies (owner_id, name)
+values ('<auth.users id>', 'העסק');
 ```
 
 `pnpm test` loads `packages/shared/fixtures/demo-data.json` (the Flow Test SUMIT company) and checks the P&L against `expected-pnl.json` Rule A, on both invoiced and cash basis. The seed script creates that company with `is_demo = true`, or updates one that is already marked demo. It refuses to write into a real company. It is idempotent on `(company, source, external id)`.
