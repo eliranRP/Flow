@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
+import { EmptyState } from "../components/EmptyState";
 import { Money } from "../components/Money";
-import { BackIcon } from "../components/icons";
+import { BackIcon, CameraIcon, DocumentIcon } from "../components/icons";
 import { usePreviewSearch } from "../preview";
 
 /** Template A+band. The empty project shows ₪0, isolated as a number. */
@@ -22,6 +23,17 @@ export function ProjectScreen() {
           </p>
         </div>
       </header>
+      <EmptyState
+        icon={<DocumentIcon />}
+        title="אין עדיין תנועות"
+        body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
+        action={
+          <Link to={`/add${search}`} className="btn-sec">
+            <CameraIcon />
+            צילום חשבונית
+          </Link>
+        }
+      />
     </div>
   );
 }

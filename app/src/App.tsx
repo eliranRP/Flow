@@ -42,15 +42,7 @@ export function App() {
               />
             }
           />
-          <Route
-            path="/help"
-            element={
-              <LegalScreen
-                title="עזרה בכניסה"
-                body="אם החלון של Google נסגר, אפשר לנסות שוב. אם אין חיבור, בדקו את הרשת ואז לחצו שוב על המשך עם Google. לא צריך סיסמה."
-              />
-            }
-          />
+          <Route path="/help" element={<HelpScreen />} />
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>
               <Route path="onboarding" element={<PageTitle title="פרטי העסק" />} />
@@ -129,7 +121,31 @@ function FullScreen() {
 
 function AddSheet() {
   const search = usePreviewSearch();
-  return <Sheet title="הוספה" closeTo={`/${search}`} />;
+  return (
+    <Sheet
+      title="הוספה"
+      hint="בקרוב תוכלו להוסיף כאן הכנסה או הוצאה"
+      closeTo={`/${search}`}
+      returnFocusTo='nav [aria-label="הוספה"]'
+    />
+  );
+}
+
+function HelpScreen() {
+  return (
+    <main className="page safe-bottom min-h-dvh">
+      <h1 className="t-title-1">עזרה</h1>
+      <p className="t-label mt-4 text-text-secondary">לעזרה בכניסה כותבים לנו.</p>
+      <p className="mt-4">
+        <a className="t-label text-accent-text underline" href="mailto:ops@nromomentum.com">
+          ops@nromomentum.com
+        </a>
+      </p>
+      <Link to="/sign-in" className="help-back t-label">
+        חזרה
+      </Link>
+    </main>
+  );
 }
 
 function ChangeSheet() {

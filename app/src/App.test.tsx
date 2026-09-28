@@ -19,7 +19,7 @@ describe("App", () => {
   it("shows the first-run Home in preview, without a fake profit", () => {
     renderAt("/?preview=1");
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
-    expect(screen.getByText("שלום, …")).toBeInTheDocument();
+    expect(screen.getByText("שלום")).toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
     expect(screen.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toBeInTheDocument();
@@ -33,22 +33,37 @@ describe("App", () => {
     expect(tabs).toEqual(["בית", "פרויקטים", "הוספה", "לאישור", "הגדרות"]);
   });
 
-  it("shows the offline error from preview=error", () => {
+  it("shows the offline error from preview=error, without the band", () => {
     renderAt("/?preview=error");
-    expect(screen.getByText("לא הצלחנו לטעון")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+    expect(screen.getByText("בדקו את החיבור ונסו שוב. שום דבר לא נמחק.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("btn-pri");
+    expect(document.querySelector(".band")).toBeNull();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
-  it("shows the loading skeleton from preview=loading", () => {
+  it("shows the server load error from preview=error-server", () => {
+    renderAt("/?preview=error-server");
+    expect(screen.getByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
+    expect(screen.getByText("נסו שוב בעוד רגע")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toHaveClass("btn-pri");
+    expect(document.querySelector(".band")).toBeNull();
+  });
+
+  it("shows the ld-01 loading skeleton from preview=loading", () => {
     renderAt("/?preview=loading");
     expect(screen.getByText("טוען…")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
+    expect(document.querySelectorAll(".home-skel-row")).toHaveLength(3);
+    expect(document.querySelector(".home-skel-pill")).not.toBeNull();
+    expect(document.querySelector(".home-skel-ie")).not.toBeNull();
   });
 
   it("opens Add as a sheet over Home and keeps the tab bar", async () => {
     renderAt("/add?preview=1");
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
+    expect(screen.getByText("בקרוב תוכלו להוסיף כאן הכנסה או הוצאה")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),
     ).toBeInTheDocument();
@@ -65,6 +80,9 @@ describe("App", () => {
       expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
     });
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.activeElement).toHaveAttribute("aria-label", "הוספה");
+    });
   });
 
   it("opens the review change sheet over the review page", () => {
@@ -78,6 +96,36 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "פרטי תנועה" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "ניווט ראשי" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "חזרה לבית" })).not.toBeInTheDocument();
+  });
+
+  it("shows the project empty state when there are no transactions", () => {
+    renderAt("/projects/1?preview=1");
+    expect(screen.getByText("אין עדיין תנועות")).toBeInTheDocument();
+    expect(screen.getByText("חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "צילום חשבונית" })).toBeInTheDocument();
+  });
+
+  it("offers sign-in help only after a failed attempt", () => {
+    renderAt("/sign-in?error=popup_closed");
+    expect(screen.queryByRole("link", { name: "צריך עזרה בכניסה?" })).not.toBeInTheDocument();
+  });
+
+  it("links a failed sign-in to help", () => {
+    renderAt("/sign-in?error=server_error");
+    expect(screen.getByRole("link", { name: "צריך עזרה בכניסה?" })).toHaveAttribute("href", "/help");
+  });
+
+  it("shows help as a title, one line, and a mailto", () => {
+    renderAt("/help");
+    expect(screen.getByRole("heading", { name: "עזרה" })).toBeInTheDocument();
+    expect(screen.getByText("לעזרה בכניסה כותבים לנו.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ops@nromomentum.com" })).toHaveAttribute(
+      "href",
+      "mailto:ops@nromomentum.com",
+    );
+    const back = screen.getByRole("link", { name: "חזרה" });
+    expect(back).toHaveClass("help-back");
+    expect(back).not.toHaveClass("icon-btn");
   });
 
   it("sends a signed-out visitor to sign-in", () => {

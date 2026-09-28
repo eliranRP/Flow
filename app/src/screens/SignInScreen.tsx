@@ -99,7 +99,7 @@ export function SignInScreen() {
           />
         </div>
 
-        {notice ? (
+        {notice === "failed" ? (
           <p className="signin-help">
             <Link to="/help" className="t-label text-text-secondary underline">
               צריך עזרה בכניסה?
