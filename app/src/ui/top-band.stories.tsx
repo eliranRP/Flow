@@ -18,8 +18,8 @@ function BandView({ preview, heading, amount, label }: BandArgs) {
     body = <h1 className="ui-band-label t-label">{label}</h1>;
   } else {
     body = (
-      <h1 className="t-hero">
-        <BigNumber agorot={BigInt(amount ?? "0")} />
+      <h1>
+        <BigNumber agorot={BigInt(amount ?? "0")} size="hero" />
       </h1>
     );
   }

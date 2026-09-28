@@ -24,7 +24,10 @@ describe("BigNumber", () => {
     const original = rect.value as (this: Element) => DOMRect;
     const client = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth");
     Element.prototype.getBoundingClientRect = function (this: Element) {
-      if (this.getAttribute("aria-hidden") === "true") return DOMRect.fromRect({ width: 480, height: 44 });
+      if (this.getAttribute("aria-hidden") === "true") {
+        const hero = this.className.includes("t-hero");
+        return DOMRect.fromRect({ width: hero ? 480 : 120, height: 44 });
+      }
       return original.call(this);
     };
     Object.defineProperty(Element.prototype, "clientWidth", { configurable: true, get: () => 200 });

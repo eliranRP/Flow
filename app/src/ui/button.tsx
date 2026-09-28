@@ -47,7 +47,7 @@ export function Button(props: ButtonProps) {
     <>
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
       {props.icon}
-      {props.children}
+      <span className={variant === "pill" ? "ui-pill-label" : "ui-btn-label"}>{props.children}</span>
     </>
   );
   if (isLink(props)) {

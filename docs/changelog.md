@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+A period pill, chip, or status pill stays on one line. Long text ellipsizes and the chevron stays visible, clear of the wordmark. The closed period story is the band and the white on-band pill, with the תקופה label inside the band. A budget title clamps to two lines, the amounts sit on the next line without breaking a number, and the used percent is floored so 99.9% is not shown as 100%.
+
 Disabled controls use one shared `cursor: not-allowed` rule. A busy control uses `cursor: progress`. The disabled element keeps pointer events so the cursor stays visible. Decision [0061](decisions/0061-review-undo.md).
 
 Storybook amounts stay out of story args. A bigint in args is sent to the manager with `JSON.stringify`, which blanks the manager on Components / BigNumber / Summary. The amount is a decimal string in args and becomes a bigint inside render. `pnpm test` rejects a bigint anywhere in story args, and `pnpm test:storybook:smoke` opens every story in the built static Storybook. A screen that is given sample rows does not also call the ledger. A returned Google error is the notice on the sign-in screen.

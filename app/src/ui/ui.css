@@ -11,6 +11,8 @@
 .ui-btn {
   position: relative;
   display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
   min-height: var(--touch-min);
   align-items: center;
   justify-content: center;
@@ -22,8 +24,25 @@
   transition: background-color var(--dur-press);
 }
 
+.ui-btn-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.ui-pill-label,
+.ui-chip-label,
+.ui-period-label,
+.ui-text-link-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-btn.ui-btn-primary {
-  height: var(--control-height);
+  height: auto;
+  min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-accent);
   color: var(--color-on-accent);
@@ -35,7 +54,8 @@
 }
 
 .ui-btn.ui-btn-secondary {
-  height: var(--control-height);
+  height: auto;
+  min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-tint);
   color: var(--color-accent-text);
@@ -127,6 +147,7 @@
 .ui-btn-pill {
   height: var(--size-chip);
   min-height: var(--size-chip);
+  max-width: 100%;
   border-radius: var(--radius-chip);
   background: var(--color-tint);
   color: var(--color-accent-text);
@@ -167,7 +188,8 @@
 }
 
 .ui-btn-danger-tint {
-  height: var(--control-height);
+  height: auto;
+  min-height: var(--control-height);
   background: var(--color-bad-tint);
 }
 
@@ -244,6 +266,11 @@
   text-decoration: none;
 }
 
+.ui-row > .ui-num,
+.ui-row > .t-title-3 {
+  flex: none;
+}
+
 .ui-row:active {
   background: var(--color-tint);
   border-radius: var(--radius-input);
@@ -280,10 +307,14 @@
 }
 
 .ui-row-hint {
+  display: block;
+  overflow: hidden;
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ui-row-icon {
@@ -298,10 +329,12 @@
 
 .ui-sheet-body {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-3);
   margin-top: var(--space-4);
   padding-inline: var(--space-side);
+  overflow-wrap: anywhere;
 }
 
 .ui-field {
@@ -313,6 +346,8 @@
 }
 
 .ui-field-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--color-text-secondary);
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
@@ -320,6 +355,9 @@
 }
 
 .ui-field-control {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: var(--control-height);
   min-height: var(--touch-min);
   padding-inline: 14px;
@@ -415,6 +453,8 @@
 
 .ui-seg {
   display: flex;
+  max-width: 100%;
+  min-width: 0;
   gap: 3px;
   padding: 3px;
   border-radius: var(--radius-segment);
@@ -425,12 +465,17 @@
   position: relative;
   block-size: var(--size-chip);
   min-block-size: var(--size-chip);
+  min-width: 0;
   flex: 1;
+  padding-inline: var(--space-2);
+  overflow: hidden;
   border: 0;
   border-radius: var(--radius-input);
   background: transparent;
   color: var(--color-text-secondary);
   font-weight: var(--type-body-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ui-seg-btn:active {
@@ -447,6 +492,8 @@
 .ui-chip {
   position: relative;
   display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
   block-size: var(--size-chip);
   min-block-size: var(--size-chip);
   align-items: center;
@@ -456,6 +503,12 @@
   border: 1px solid transparent;
   font-size: var(--type-label-size);
   font-weight: var(--type-body-weight);
+}
+
+.ui-chip-mark,
+.ui-chip-spark,
+.ui-period-chevron {
+  flex: none;
 }
 
 .ui-chip:active:not(:disabled) {
@@ -489,6 +542,8 @@
 
 .ui-status {
   display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
   min-height: 28px;
   align-items: center;
   gap: var(--space-1);
@@ -520,24 +575,43 @@
   color: var(--color-bad);
 }
 
-.ui-meter-label,
-.ui-budget-head .t-title-3 {
+.ui-meter-label {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ui-budget-head {
+.ui-budget {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-inline-size: 0;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.ui-budget-head .t-hint {
-  flex: none;
+.ui-budget-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-budget-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.ui-budget-amounts bdi,
+.ui-num {
   white-space: nowrap;
+}
+
+.ui-budget .ui-row-hint {
+  margin-top: var(--space-1);
 }
 
 .ui-banner {
@@ -667,10 +741,21 @@
 
 .ui-notice {
   display: flex;
+  max-width: 100%;
+  min-width: 0;
   gap: var(--space-3);
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--color-tint);
+}
+
+.ui-notice > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.ui-notice-body {
+  overflow-wrap: anywhere;
 }
 
 .ui-spinner {
@@ -747,12 +832,19 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  max-width: 100%;
+  min-width: 0;
   min-height: var(--touch-min);
-  min-width: var(--touch-min);
   color: var(--color-accent-text);
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   text-decoration: none;
+}
+
+.ui-text-link > svg,
+.ui-btn > svg,
+.ui-btn > .ui-spinner {
+  flex: none;
 }
 
 .ui-text-link-quiet {
@@ -1016,6 +1108,7 @@
 
 .ui-band {
   position: relative;
+  min-width: 0;
   background: var(--color-band);
   color: var(--color-on-band);
   border-radius: 0 0 var(--radius-band) var(--radius-band);
@@ -1027,11 +1120,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
   min-height: var(--touch-min);
   padding: var(--space-3) var(--space-side) 0;
 }
 
+.ui-band-row > .text-wordmark {
+  flex: none;
+}
+
 .ui-band-hero {
+  min-width: 0;
   padding: var(--space-6) var(--space-side) 0;
 }
 
@@ -1086,7 +1186,9 @@
 }
 
 .ui-band-label {
-  margin-top: var(--band-label-gap);
+  margin-top: var(--space-2);
+  padding-inline: var(--space-side);
+  padding-bottom: var(--space-2);
   color: var(--color-on-band-secondary);
 }
 
@@ -1180,6 +1282,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
   padding: var(--space-6) var(--space-10);
   text-align: center;
 }
@@ -1196,11 +1300,14 @@
 }
 
 .ui-empty-line {
-  max-width: var(--empty-line);
+  max-width: min(100%, var(--empty-line));
   margin-top: var(--label-gap);
+  overflow-wrap: anywhere;
 }
 
 .ui-empty-action {
+  width: 100%;
+  max-width: 100%;
   margin-top: var(--space-6);
 }
 
@@ -1271,11 +1378,30 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
   padding: var(--space-1) var(--space-side) 0;
 }
 
+.ui-sheet-head .t-title-2,
+.ui-band-hero .t-title-2,
+.ui-empty-state .t-title-2,
+.ui-notice-title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-sheet-head .t-title-2 {
+  flex: 1;
+}
+
 .ui-sheet-hint {
+  min-width: 0;
   padding: var(--space-2) var(--space-side) 0;
+  overflow-wrap: anywhere;
   color: var(--color-text-secondary);
 }
 
@@ -1498,9 +1624,13 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  max-width: 100%;
+  min-width: 0;
   height: var(--size-period);
   min-height: var(--size-period);
+  flex: 0 1 auto;
   padding-inline: var(--space-3);
+  overflow: visible;
   border-radius: var(--radius-chip);
   background: var(--color-band-pill);
   color: var(--color-text);
@@ -1517,7 +1647,8 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   color: var(--color-accent-text);
 }
 
-.ui-page .t-title-1 {
+.ui-page .t-title-1,
+.ui-page .t-label {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;

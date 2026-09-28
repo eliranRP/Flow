@@ -25,7 +25,7 @@ function Demo({ initialOpen, pill }: { initialOpen: boolean; pill: string }) {
         />
       }
     >
-      {null}
+      <p className="ui-band-label t-label">תקופה</p>
     </TopBand>
   );
 }
