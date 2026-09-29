@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { placeToast, ToastProvider, useToast } from "./toast";
+import { placeToast, toastMinBlock, ToastProvider, useToast } from "./toast";
 
 function Probe({ tone, message = "הפריט אושר" }: { tone?: "ok" | "bad" | "info"; message?: string }) {
   const toast = useToast();
@@ -234,7 +234,7 @@ describe("placeToast", () => {
     host.remove();
   });
 
-  it("clears every control, and shrinks into the open gap when the toast cannot", () => {
+  it("does not clip the toast when the free gap is shorter than two lines", () => {
     const header = document.createElement("header");
     header.className = "ui-page";
     const first = document.createElement("button");
@@ -250,15 +250,34 @@ describe("placeToast", () => {
     second.getBoundingClientRect = () => box(160, 40);
     toast.getBoundingClientRect = () => box(48, 48);
     placeToast(host);
-    const top = Number.parseFloat(host.style.top);
-    const used = toast.style.maxHeight === "" ? 48 : Number.parseFloat(toast.style.maxHeight);
-    const bottom = top + used;
-    expect(bottom).toBeLessThanOrEqual(200);
-    expect(bottom <= 40 || top >= 80).toBe(true);
-    expect(bottom <= 120 || top >= 160).toBe(true);
+    expect(toast.style.overflow).not.toBe("hidden");
+    expect(toast.style.maxHeight).toBe("");
     header.remove();
     first.remove();
     second.remove();
+    host.remove();
+  });
+
+  it("shrinks a tall toast only down to two lines", () => {
+    const header = document.createElement("header");
+    header.className = "ui-page";
+    const button = document.createElement("button");
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(header, button, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 220 });
+    header.getBoundingClientRect = () => box(0, 20);
+    button.getBoundingClientRect = () => box(140, 40);
+    toast.getBoundingClientRect = () => box(0, 160);
+    placeToast(host);
+    const cap = Number.parseFloat(toast.style.maxHeight);
+    expect(toast.style.overflow).toBe("hidden");
+    expect(cap).toBeGreaterThanOrEqual(toastMinBlock());
+    expect(cap).toBeLessThan(160);
+    header.remove();
+    button.remove();
     host.remove();
   });
 

@@ -1,5 +1,6 @@
 -- A same-category approval restores the suggestion on undo.
--- A guess already undone is put back when the review or the audit shows it.
+-- A guess already undone is put back when the review or the undo row shows it.
+-- Audit meta is not that record.
 -- A sync failure waits, so it cannot fill the drain page.
 
 begin;
@@ -354,8 +355,8 @@ select is(
 );
 select is(
   (select category_suggested from public.transactions where idempotency_key = 'r13:audit'),
-  true,
-  'an audit row that records the suggestion restores it'
+  false,
+  'audit meta alone does not restore a suggestion'
 );
 select is(
   (select category_suggested from public.transactions where idempotency_key = 'r13:locked'),

@@ -115,6 +115,7 @@ function AppRoutes() {
               <Route path="/e2e/unpaid" element={<DevUnpaid />} />
               <Route path="/e2e/txn" element={<DevTransaction />} />
               <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
+              <Route path="/e2e/project-category" element={<DevProjectCategory />} />
               <Route path="/e2e/change" element={<DevChange />} />
               <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
               <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
@@ -523,6 +524,23 @@ function DevProjectDetail() {
           amount_net: -400n,
           direction: "expense",
           category: "חומרים",
+        }],
+      }}
+    />
+  );
+}
+
+function DevProjectCategory() {
+  return (
+    <ProjectCategoryScreen
+      sample={{
+        categoryName: "חומרים",
+        projectName: "שיפוץ הרצל 12",
+        rows: [{
+          id: "t1",
+          description: "מלט",
+          doc_date: "2026-09-12",
+          amount_net: -400n,
         }],
       }}
     />

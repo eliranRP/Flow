@@ -1,4 +1,4 @@
-import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -8,7 +8,7 @@ import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
-import { useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
+import { useFlowSearch, useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import {
   activeProjects,
@@ -33,7 +33,9 @@ import {
   useDashboardQuery,
   useFiledTodayQuery,
   useInvalidateBooks,
+  useProjectCategoryQuery,
   useProjectQuery,
+  useProjectWaitingQuery,
   useReviewQuery,
   useSumitStatusQuery,
   useTransactionQuery,
@@ -432,7 +434,15 @@ function withParam(search: string, key: string, value: string): string {
 }
 
 /** Confirmed categories, then the amount still waiting, so the lines match the project's expenses. */
-function ProjectCategories({ project, search }: { project: NonNullable<ProjectDetail>; search: string }) {
+function ProjectCategories({
+  project,
+  search,
+  categoryTo,
+}: {
+  project: NonNullable<ProjectDetail>;
+  search: string;
+  categoryTo?: string;
+}) {
   const pending = project.pending_count ?? 0;
   const waiting = pending > 0;
   if (project.categories.length === 0 && !waiting) {
@@ -448,8 +458,7 @@ function ProjectCategories({ project, search }: { project: NonNullable<ProjectDe
           agorot={absAgorot(category.amount_agorot)}
           loss={false}
           chevron={category.id != null}
-          href={category.id == null ? undefined : `/projects/${project.id}/categories/${category.id}${search}`}
-          state={{ project }}
+          href={category.id == null ? undefined : (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`)}
         />
       ))}
       {waiting ? (
@@ -564,7 +573,11 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
         </div>
       ) : null}
       <SectionHead title="הוצאות לפי קטגוריה" />
-      <ProjectCategories project={project} search={search} />
+      <ProjectCategories
+        project={project}
+        search={search}
+        categoryTo={sample?.id === "p1" ? `/e2e/project-category${search}` : undefined}
+      />
       <p className="ui-page-pad ui-page-title-row">
         <TextLink to={`/settings/categories${search}`} tone="quiet">כל הקטגוריות</TextLink>
         <TextLink
@@ -757,19 +770,62 @@ export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) 
 
 export function ReviewScreen() {
   const preview = useHomePreview();
-  const search = usePreviewSearch();
+  const search = useFlowSearch();
   const [params] = useSearchParams();
   const projectFilter = params.get("project");
   const review = useReviewQuery();
+  const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const phase = screenPhase(preview, review);
-  const rows = (review.data ?? []).filter((row) => projectFilter == null || row.project_id === projectFilter);
-  if (phase.kind === "empty" || (phase.kind === "ready" && projectFilter != null && rows.length === 0)) {
-    return <ReviewEmpty search={search} filtered={projectFilter != null} />;
+  if (projectFilter != null && preview === "off") {
+    const waitingPhase = screenPhase(preview, waiting);
+    if (waitingPhase.kind === "loading" || waitingPhase.kind === "error") {
+      return <ScreenState title="לאישור" phase={waitingPhase} onRetry={() => { void waiting.refetch(); }} />;
+    }
+    const held = waiting.data ?? [];
+    if (held.length === 0) return <ReviewEmpty search={search} filtered />;
+    if (held.every((row) => row.review_id != null)) {
+      if (phase.kind !== "ready") {
+        return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} />;
+      }
+      const ids = new Set(held.map((row) => row.review_id));
+      const rows = (review.data ?? []).filter((row) => ids.has(row.id));
+      if (rows.length === 0) return <ReviewEmpty search={search} filtered />;
+      return <ReviewQueue rows={rows} search={search} />;
+    }
+    return <ProjectWaitingList rows={held} search={search} />;
+  }
+  const rows = review.data ?? [];
+  if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
+    return <ReviewEmpty search={search} />;
   }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} />;
   }
   return <ReviewQueue rows={rows} search={search} />;
+}
+
+function ProjectWaitingList({ rows, search }: { rows: ProjectWaitingRow[]; search: string }) {
+  return (
+    <div>
+      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" />
+      <List>
+        {rows.map((row) => (
+          <ListRow
+            key={row.transaction_id}
+            variant="transaction"
+            title={row.description}
+            hint={formatDayMonth(row.doc_date)}
+            agorot={row.amount_net}
+            sign="out"
+            source="invoice"
+            href={row.review_id == null
+              ? `/transactions/${row.transaction_id}${search}`
+              : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
+          />
+        ))}
+      </List>
+    </div>
+  );
 }
 
 export function ReviewQueue({
@@ -1022,26 +1078,32 @@ function ReviewEmpty({ search, filtered = false }: { search: string; filtered?: 
   );
 }
 
-export function ProjectCategoryScreen() {
+type CategorySample = {
+  categoryName: string;
+  projectName: string;
+  rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
+};
+
+export function ProjectCategoryScreen({ sample }: { sample?: CategorySample } = {}) {
   const { projectId = "", categoryId = "" } = useParams();
-  const location = useLocation();
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const carried = (location.state as { project?: NonNullable<ProjectDetail> } | null)?.project;
-  const detail = useProjectQuery(carried?.id === projectId ? "" : projectId);
-  const phase = carried?.id === projectId ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId);
+  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const back = `/projects/${projectId}${search}`;
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void detail.refetch(); }} />;
+    return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
   }
-  const project = carried?.id === projectId ? carried : detail.data;
-  if (!project) return <ScreenHeader title="קטגוריה" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
-  const category = project.categories.find((row) => row.id === categoryId);
-  const name = category?.name ?? "קטגוריה";
-  const rows = project.transactions.filter((txn) => txn.category === category?.name);
+  const first = category.data?.pages[0];
+  if (!sample && (first == null)) {
+    return <ScreenHeader title="קטגוריה" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
+  }
+  const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
+  const projectName = sample?.projectName ?? first?.project_name ?? "";
+  const rows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   return (
     <div>
-      <ScreenHeader title={name} subtitle={project.name} backTo={back} />
+      <ScreenHeader title={name} subtitle={projectName} backTo={sample ? `/e2e/project-detail${search}` : back} />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
@@ -1053,12 +1115,25 @@ export function ProjectCategoryScreen() {
               title={txn.description}
               hint={formatDayMonth(txn.doc_date)}
               agorot={txn.amount_net}
-              sign={txn.direction === "income" ? "in" : "out"}
+              sign="out"
               source="invoice"
               href={`/transactions/${txn.id}${search}`}
             />
           ))}
         </List>
+      )}
+      {sample || !category.hasNextPage ? null : (
+        <div className="ui-page-pad">
+          <Button
+            variant="pill"
+            busy={category.isFetchingNextPage}
+            onClick={() => {
+              void category.fetchNextPage();
+            }}
+          >
+            עוד תנועות
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -1085,7 +1160,7 @@ function withChoice(options: ChangeChoice[], id: string, name: string | null | u
 }
 
 export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
-  const search = usePreviewSearch();
+  const search = useFlowSearch();
   const preview = useHomePreview();
   const navigate = useNavigate();
   const toast = useToast();

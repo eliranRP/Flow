@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { isTransientWriteError } from "../use-write";
 import { Button } from "./button";
 import { IconButton } from "./icon-button";
 import { BackIcon, CheckIcon, PlusIcon, SplitIcon } from "./icons";
@@ -15,12 +16,16 @@ import { Toggle } from "./toggle";
 
 export const CHANGE_SAVE_FAILURE = "לא נשמר – אין חיבור";
 
+/** A refusal the database will repeat. Not a connection problem. Decision 0072. */
+export const CHANGE_SAVE_REFUSAL = "לא נשמר. בדקו את הפרטים ונסו שוב.";
+
 /** The database refuses one project on a shared cost. Say where the split happens. */
 export const SHARED_SPLIT_FAILURE = "עלות משותפת מחולקת במסך החלוקה.";
 
 export function changeSaveFailure(error: Error): string | { message: string; retry: false } {
   if (error.message.includes("shared costs are split")) return { message: SHARED_SPLIT_FAILURE, retry: false };
-  return CHANGE_SAVE_FAILURE;
+  if (isTransientWriteError(error)) return CHANGE_SAVE_FAILURE;
+  return { message: CHANGE_SAVE_REFUSAL, retry: false };
 }
 
 export type ChangeChoice = {

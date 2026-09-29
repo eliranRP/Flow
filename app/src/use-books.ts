@@ -1,7 +1,9 @@
 import {
   categoryRowSchema,
   dashboardSchema,
+  projectCategorySchema,
   projectDetailSchema,
+  projectWaitingSchema,
   filedTodaySchema,
   reviewRowSchema,
   sumitStatusSchema,
@@ -10,13 +12,15 @@ import {
   type CategoryRow,
   type Dashboard,
   type FiledTodayRow,
+  type ProjectCategoryPage,
   type ProjectDetail,
+  type ProjectWaitingRow,
   type ReviewRow,
   type SumitStatus,
   type TransactionDetail,
   type UnpaidRow,
 } from "@flow/shared";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
 import { thisMonth, type PeriodChoice } from "./period";
@@ -163,6 +167,45 @@ export function useProjectQuery(projectId: string) {
   });
 }
 
+const CATEGORY_PAGE = 40;
+
+export function useProjectCategoryQuery(projectId: string, categoryId: string) {
+  const preview = useHomePreview();
+  return useInfiniteQuery({
+    queryKey: ["project-category", preview, projectId, categoryId],
+    enabled: preview === "off" && projectId !== "" && categoryId !== "",
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const { data, error } = await supabase.rpc("list_project_category", {
+        p_project: projectId,
+        p_category: categoryId,
+        p_offset: pageParam,
+        p_limit: CATEGORY_PAGE,
+      });
+      if (error) throw error;
+      return projectCategorySchema.parse(data);
+    },
+    getNextPageParam: (page) => page?.next_offset ?? undefined,
+  });
+}
+
+export function useProjectWaitingQuery(projectId: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["project-waiting", preview, projectId],
+    enabled: preview === "off" && projectId !== "",
+    queryFn: async (): Promise<ProjectWaitingRow[]> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const { data, error } = await supabase.rpc("project_waiting", { p_project: projectId });
+      if (error) throw error;
+      return projectWaitingSchema.parse(data);
+    },
+  });
+}
+
 export function useTransactionQuery(transactionId: string) {
   const preview = useHomePreview();
   return useQuery({
@@ -180,7 +223,7 @@ export function useTransactionQuery(transactionId: string) {
 
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "txn", "home"]) => {
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "txn", "home"]) => {
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }
