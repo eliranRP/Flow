@@ -58,7 +58,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Project | confirm אישור | Calls `upsert_project` with the other status. | never | the confirm button | toast "הפרויקט סומן כהסתיים" or "הפרויקט חזר לפעיל" | toast "לא הצלחנו לעדכן את הפרויקט." | pass |
 | Project | אחרי חלק בהוצאות כלליות | Calls `set_after_overhead` for this project. | never | the switch stays on the chosen side until the write fails | the profit figure follows the switch | toast "לא הצלחנו לשמור את התצוגה.", switch returns | pass |
 | Project | כל הקטגוריות | Opens categories. | never | no | route `/settings/categories` | none | pass |
-| Project | a category row | Opens that category's transactions for this project. When a line includes a shared-cost share, "כולל חלק מהוצאות משותפות" sits above the list in the primary text colour. | a category with no id, or no line includes a share | no | route `/projects/:id/categories/:categoryId` | none | pass |
+| Project | a category row | Opens that category's transactions for this project. When a line includes a shared-cost share, "כולל חלק מהוצאות משותפות" sits above the list in the muted hint colour. | a category with no id, or no line includes a share | no | route `/projects/:id/categories/:categoryId` | none | pass |
 | Category | חזרה | Returns to the project. An empty list says "אין תנועות בקטגוריה הזו". | never | no | route `/projects/:id` | the shared error state. ניסיון חוזר refetches | pass |
 | Project | ממתינה לאישור | Opens the review queue filtered to this project. | the project has no suggested expenses | no | route `/review?project=:id` | none | pass |
 | Project | תנועות אחרונות | Reveals the project's recent transactions. | never | no | the transaction rows appear | none | pass |

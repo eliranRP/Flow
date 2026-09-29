@@ -97,7 +97,7 @@ describe("project category breakdown", () => {
     });
     const note = screen.getByText("כולל חלק מהוצאות משותפות");
     expect(note).toHaveClass("ui-shared-note");
-    expect(note).not.toHaveClass("t-hint");
+    expect(note).toHaveClass("t-hint");
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>

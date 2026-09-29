@@ -8,7 +8,9 @@ import { allocate, incomeBasis, type SplitProject } from "./split-math";
  */
 
 export const reviewerIncomeAgorot = 180_000n;
-export const reviewerMaterialsAgorot = 22_000n;
+/** The מלט line is these two rows. A paged sample shows them one at a time. */
+export const reviewerMaterialsPageAgorot = [14_000n, 8_000n] as const;
+export const reviewerMaterialsAgorot = reviewerMaterialsPageAgorot[0] + reviewerMaterialsPageAgorot[1];
 export const reviewerHaulAgorot = 18_000n;
 export const reviewerWaitingBoltsAgorot = 15_000n;
 export const reviewerWaitingPaintAgorot = 30_000n;
@@ -17,11 +19,8 @@ export const reviewerOtherIncomeAgorot = 120_000n;
 
 export const reviewerProjectName = "בית הספר אלון";
 export const reviewerOtherProjectName = "מחסן הנמל";
-/** The מלט line, split so a paged sample still adds up to it. */
-export const reviewerMaterialsPageAgorot = [14_000n, 8_000n] as const;
-
 export const reviewerSplitProjects: SplitProject[] = [
-  { id: "p-herzl", name: reviewerProjectName, incomeAgorot: reviewerIncomeAgorot },
+  { id: "p-alon", name: reviewerProjectName, incomeAgorot: reviewerIncomeAgorot },
   { id: "p-raanana", name: reviewerOtherProjectName, incomeAgorot: reviewerOtherIncomeAgorot },
 ];
 
@@ -45,9 +44,19 @@ export const reviewerFiled: FiledTodayRow[] = [
     id: "t-sample-sand",
     description: "חול",
     doc_date: "2026-09-29",
-    amount_net: -reviewerMaterialsAgorot,
+    amount_net: -reviewerMaterialsPageAgorot[0],
     direction: "expense",
     supplier_name: "מחצבת הדקל בע״מ",
+    project_name: reviewerProjectName,
+    category_name: "מלט",
+  },
+  {
+    id: "t-sample-cement",
+    description: "מלט",
+    doc_date: "2026-09-29",
+    amount_net: -reviewerMaterialsPageAgorot[1],
+    direction: "expense",
+    supplier_name: "סיד האבן בע״מ",
     project_name: reviewerProjectName,
     category_name: "מלט",
   },
@@ -89,7 +98,7 @@ export const reviewerQueue: ReviewRow[] = [
     amount_net: -reviewerWaitingBoltsAgorot,
     direction: "expense",
     reason: "missing_category",
-    project_id: "p-herzl",
+    project_id: "p-alon",
     category_id: null,
     supplier_name: "ברגי העמק בע״מ",
     project_name: reviewerProjectName,
@@ -106,7 +115,7 @@ export const reviewerQueue: ReviewRow[] = [
     amount_net: -reviewerWaitingPaintAgorot,
     direction: "expense",
     reason: null,
-    project_id: "p-herzl",
+    project_id: "p-alon",
     category_id: "c-materials",
     supplier_name: "צבעי הכרמל בע״מ",
     project_name: reviewerProjectName,

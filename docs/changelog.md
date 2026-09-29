@@ -2,6 +2,10 @@
 
 ## 2026-09-29
 
+Decision [0074](decisions/0074-toast-and-remembered-supplier.md), amended. The shared-cost sentence uses the muted hint colour. The review card supplier wraps, and it is not cut. The remember arrow stays on the destination's line. A toast above a tall sheet keeps its minimum height and does not cover the header.
+
+Decision [0073](decisions/0073-review-handoff.md) point 2. The reviewer guard also rejects Flow Test 2 ids and totals, פ״ת, ת״א, צבעי הגליל, מנופי, and the hosted Supabase URL and anon key. The reviewers-only build runs that guard.
+
 Decision [0074](decisions/0074-toast-and-remembered-supplier.md), amended. The supplier's full name wraps and is never truncated. A toast over an open sheet sits just above the sheet and does not cover its header. Toast text uses balanced wrapping. The timer also pauses while the toast is touched. "כולל חלק מהוצאות משותפות" shows only when a category line includes a shared share, in the primary text colour.
 
 Decision [0071](decisions/0071-shared-cost-copy.md) point 6, amended. A rule restore confirms a guess made before the rule existed. The one-time `restore_rule` audit records the flag from before the restore, and the row ends as an assignment. A reopened missing-project rule and a pending undo of a rule stay untouched.

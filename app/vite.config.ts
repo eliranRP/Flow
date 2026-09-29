@@ -4,6 +4,7 @@ import { copyFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { checkReviewerBundle } from "../scripts/check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "../scripts/hosted-env.mjs";
 
 /** Static hosts that only serve files: deep links fall back to index.html. */
@@ -22,6 +23,20 @@ function bundleGraph(): Plugin {
       }
       const target = path.resolve(__dirname, "bundle-graph.json");
       writeFileSync(target, JSON.stringify([...ids]));
+    },
+  };
+}
+
+function reviewerGuard(): Plugin {
+  return {
+    name: "flow-reviewer-guard",
+    apply: "build",
+    closeBundle() {
+      if (process.env.VITE_REVIEWER_BUILD !== "1") return;
+      const bad = checkReviewerBundle();
+      if (bad.length > 0) {
+        throw new Error(`${bad.join("\n")}\nThe reviewers-only build must not contain a Flow Test 2 name, a golden id or total, or the hosted Supabase URL or anon key.`);
+      }
     },
   };
 }
@@ -74,7 +89,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      ...(storybook ? [] : [bundleGraph()]),
+      ...(storybook ? [] : [bundleGraph(), reviewerGuard()]),
       ...(storybook
         ? []
         : [

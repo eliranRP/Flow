@@ -6,7 +6,6 @@ import {
   reviewerBooks,
   reviewerCategories,
   reviewerFiled,
-  reviewerMaterialsPageAgorot,
   reviewerOtherProjectName,
   reviewerProjectChoices,
   reviewerProjectName,
@@ -67,7 +66,7 @@ function ReviewerHome() {
     { label: "רווח", amount: books.profit },
     { label: "עלות משותפת בתור", amount: books.shared },
   ];
-  const herzl = books.split.find((part) => part.id === "p-herzl");
+  const alon = books.split.find((part) => part.id === "p-alon");
   const raanana = books.split.find((part) => part.id === "p-raanana");
   return (
     <>
@@ -92,7 +91,7 @@ function ReviewerHome() {
         <p className="t-hint">
           חלוקה לפי הכנסות של העלות המשותפת:
           {" "}
-          <bdi className="ui-num" dir="ltr">{herzl ? money(herzl.agorot) : ""}</bdi>
+          <bdi className="ui-num" dir="ltr">{alon ? money(alon.agorot) : ""}</bdi>
           {" ו־"}
           <bdi className="ui-num" dir="ltr">{raanana ? money(raanana.agorot) : ""}</bdi>
           {`. ${reviewerOtherProjectName} נכנס רק במשקל החלוקה, `}
@@ -155,31 +154,13 @@ function ReviewerCategory() {
   const [params] = useSearchParams();
   const empty = params.get("empty") === "1";
   const more = params.get("more") === "1";
-  const sand = reviewerFiled.find((row) => row.category_name === "מלט");
-  const [firstPart, secondPart] = reviewerMaterialsPageAgorot;
-  const rows = empty || sand == null || firstPart == null || secondPart == null ? [] : more
-    ? [
-      {
-        id: sand.id,
-        description: sand.description,
-        doc_date: sand.doc_date,
-        amount_net: -firstPart,
-      },
-      {
-        id: "t-sample-cement",
-        description: "מלט",
-        doc_date: sand.doc_date,
-        amount_net: -secondPart,
-      },
-    ]
-    : [
-      {
-        id: sand.id,
-        description: sand.description,
-        doc_date: sand.doc_date,
-        amount_net: sand.amount_net,
-      },
-    ];
+  const materials = reviewerFiled.filter((row) => row.category_name === "מלט");
+  const rows = empty ? [] : materials.map((row) => ({
+    id: row.id,
+    description: row.description,
+    doc_date: row.doc_date,
+    amount_net: row.amount_net,
+  }));
   return (
     <ProjectCategoryScreen
       backTo="/reviewer"
@@ -266,7 +247,7 @@ function ReviewerSave() {
   const item = reviewerQueue.find((row) => row.id === params.get("item")) ?? reviewerQueue.find((row) => row.supplier_name === "צבעי הכרמל בע״מ");
   const navigate = useNavigate();
   const toast = useToast();
-  const [projectId, setProjectId] = useState(item?.project_id ?? "p-herzl");
+  const [projectId, setProjectId] = useState(item?.project_id ?? "p-alon");
   const [categoryId, setCategoryId] = useState(item?.category_id ?? "");
   const [remember, setRemember] = useState(true);
   const [projects, setProjects] = useState(reviewerProjectChoices);
@@ -287,7 +268,7 @@ function ReviewerSave() {
       categories={reviewerCategories}
       projectId={projectId}
       categoryId={categoryId}
-      suggestionProjectId={item?.project_id ?? "p-herzl"}
+      suggestionProjectId={item?.project_id ?? "p-alon"}
       suggestionCategoryId={item?.category_id ?? ""}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
