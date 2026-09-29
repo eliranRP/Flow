@@ -65,6 +65,9 @@ export const reviewRowSchema = z.object({
   amount_net: agorotSchema,
   direction: z.enum(["income", "expense"]),
   reason: z.string().nullable(),
+  /** Set by list_review so a split is not treated as a single project. */
+  pnl_role: z.enum(["project", "shared", "overhead"]).nullable().optional(),
+  share_count: z.number().int().nonnegative().optional(),
   project_id: z.string().nullable(),
   category_id: z.string().nullable(),
   supplier_name: z.string().nullable(),

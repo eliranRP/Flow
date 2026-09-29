@@ -107,6 +107,47 @@ test("a manual 100 does not clip and is not a contact field", async ({ page }) =
   await expect(page.getByText("הסך 100%")).toBeVisible();
 });
 
+test("a failed save after browser back keeps the typed percents", async ({ page }) => {
+  await page.evaluate(() => {
+    const state: unknown = window.history.state;
+    window.history.pushState(state, "", "/e2e/split?save=fail");
+    window.dispatchEvent(new PopStateEvent("popstate", { state }));
+  });
+  await expect(page).toHaveURL(/\/e2e\/split\?save=fail$/);
+  await page.getByRole("button", { name: "חלוקה ידנית" }).click();
+  const first = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
+  const second = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
+  const third = page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" });
+  await first.fill("50");
+  await second.fill("30");
+  await third.fill("20");
+  await page.goBack();
+  await expect(page.getByText("החלוקה לא נשמרה")).toBeVisible();
+  await expect(page).toHaveURL(/\/e2e\/split\?save=fail$/);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+  await expect(first).toHaveValue("50");
+  await expect(second).toHaveValue("30");
+  await expect(third).toHaveValue("20");
+});
+
+test("a second close discards an incomplete split", async ({ page }) => {
+  await page.getByRole("radio", { name: "שווה בין פרויקטים שאבחר" }).click();
+  await page.getByRole("button", { name: "שיפוץ הרצל 12" }).click();
+  await expect(page.getByRole("button", { name: "ביטול השינוי" })).toBeVisible();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).toHaveURL(/\/e2e\/split$/);
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).not.toHaveURL(/\/e2e\/split/);
+});
+
+test("one project hides the split link that only loops back", async ({ page }) => {
+  await page.getByRole("radio", { name: "לפרויקט אחד" }).click();
+  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "פיצול בין פרויקטים" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "פרויקט חדש" })).toBeVisible();
+});
+
 test("light and dark both show the question", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/e2e/split");

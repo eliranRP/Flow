@@ -272,7 +272,9 @@ function ReviewerPreviewRoute() {
 }
 
 function DevSplit() {
+  const [params] = useSearchParams();
   const [saved, setSaved] = useState("");
+  const fail = params.get("save") === "fail";
   return (
     <>
       <SplitScreen
@@ -282,7 +284,10 @@ function DevSplit() {
           { id: "b", name: "שיפוץ דירה ביאליק 8 חולון", incomeAgorot: 1_000n },
           { id: "c", name: "פרגולה בית כהן", incomeAgorot: 1_000n },
         ]}
-        onSave={(rows) => { setSaved(JSON.stringify(rows)); }}
+        onSave={async (rows) => {
+          if (fail) throw new Error("save");
+          setSaved(JSON.stringify(rows));
+        }}
       />
       <div id="e2e-split-saved" hidden>{saved}</div>
     </>

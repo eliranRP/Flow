@@ -348,7 +348,7 @@ describe("placeToast", () => {
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
-  it("keeps a minimum height above a tall sheet and does not cover the header", () => {
+  it("keeps a tall toast above the sheet instead of under the header", () => {
     const sheet = document.createElement("div");
     sheet.setAttribute("data-vaul-drawer", "");
     sheet.setAttribute("data-state", "open");
@@ -367,10 +367,10 @@ describe("placeToast", () => {
     placeToast(host);
     const top = Number.parseFloat(host.style.top);
     const cap = toast.style.maxHeight === "" ? 120 : Number.parseFloat(toast.style.maxHeight);
-    expect(cap).toBeGreaterThanOrEqual(toastMinBlock());
-    expect(top).toBeGreaterThanOrEqual(76);
-    expect(top + cap).toBeLessThanOrEqual(844);
-    expect(toast.style.overflow).not.toBe("hidden");
+    const sheetTop = 36;
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(top + cap).toBeLessThanOrEqual(sheetTop);
+    expect(top).toBeLessThan(76);
     sheet.remove();
     host.remove();
   });

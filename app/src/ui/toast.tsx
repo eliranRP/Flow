@@ -100,7 +100,7 @@ function coversPageHeader(top: number, height: number, header: Element | null, s
   return rect.top < top + height && rect.bottom > top;
 }
 
-/** Sit just under the page header, or just above an open sheet, clear of every control. A shrink stays tall enough for two lines and ביטול, except it never covers a sheet header. */
+/** Sit just under the page header, or just above an open sheet, clear of every control. A toast too tall for the gap above a sheet stays in the safe area above that sheet, with the text balanced, and does not slide under the header. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   if (toast instanceof HTMLElement) {
@@ -128,42 +128,37 @@ export function placeToast(layer: HTMLElement): void {
       layer.style.top = `${String(above)}px`;
       return;
     }
+    // Too tall for the gap. Stay in the safe area above the sheet so the toast
+    // never covers a control under the header. Decision 0075.
     const head = sheet.querySelector(".ui-sheet-head");
-    const limit = head instanceof HTMLElement ? head.getBoundingClientRect().top : sheetTop;
+    const headTop = head instanceof HTMLElement ? head.getBoundingClientRect().top : sheetTop;
     const headBottom = head instanceof HTMLElement ? head.getBoundingClientRect().bottom : sheetTop;
-    const room = limit - gap - safe;
-    const minBlock = toastMinBlock();
-    if (toast instanceof HTMLElement && room >= minBlock && height > room) {
+    const headerVisible = headBottom > sheetTop && headTop < floor;
+    const gapRoom = sheetTop - gap - safe;
+    if (!headerVisible && gapRoom >= height) {
+      layer.style.top = `${String(Math.max(safe, sheetTop - gap - height))}px`;
+      return;
+    }
+    const room = Math.max(0, gapRoom);
+    if (toast instanceof HTMLElement && room > 0 && height > room) {
       toast.style.maxHeight = `${String(room)}px`;
       toast.style.overflow = "hidden";
-      layer.style.top = `${String(safe)}px`;
-      return;
     }
-    if (room < minBlock) {
-      // A scrolled sheet reports its header above the viewport. Follow the visible
-      // sheet instead, so ניסיון חוזר stays on screen.
-      const headerVisible = headBottom > sheetTop && limit < floor;
-      if (!headerVisible) {
-        const gapRoom = sheetTop - gap - safe;
-        if (gapRoom >= height) {
-          layer.style.top = `${String(Math.max(safe, sheetTop - gap - height))}px`;
-          return;
-        }
+    const used = toast instanceof HTMLElement && toast.style.maxHeight !== ""
+      ? Number.parseFloat(toast.style.maxHeight)
+      : height;
+    let top = safe;
+    if (toastHits(top, used, boxes)) {
+      for (const box of boxes) {
+        const candidate = box.bottom + gap;
+        if (candidate < safe || candidate + used > sheetTop - gap) continue;
+        if (toastHits(candidate, used, boxes)) continue;
+        if (coversPageHeader(candidate, used, pageHeader, sheet)) continue;
+        top = candidate;
+        break;
       }
-      const below = (headerVisible ? headBottom : sheetTop) + gap;
-      const available = floor - below;
-      if (available >= minBlock) {
-        if (toast instanceof HTMLElement && height > available) {
-          toast.style.maxHeight = `${String(available)}px`;
-          toast.style.overflow = "hidden";
-        }
-        layer.style.top = `${String(Math.max(safe, below))}px`;
-        return;
-      }
-      layer.style.top = `${String(safe)}px`;
-      return;
     }
-    layer.style.top = `${String(safe)}px`;
+    layer.style.top = `${String(top)}px`;
     return;
   }
   const candidates = [measured];

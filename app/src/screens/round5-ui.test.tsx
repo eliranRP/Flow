@@ -889,6 +889,8 @@ describe("shared transaction category", () => {
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     const saving = await screen.findByRole("radio", { name: "הובלה" });
     expect(saving).toHaveAttribute("aria-busy", "true");
+    expect(saving.querySelector(".ui-spinner")).not.toBeNull();
+    expect(saving.querySelector(".ui-radio")?.textContent).not.toContain("✓");
     expect(getComputedStyle(saving).cursor).toBe("progress");
     expect(screen.getByRole("radio", { name: "חומרים" })).toBeDisabled();
     expect(getComputedStyle(screen.getByRole("radio", { name: "חומרים" })).cursor).toBe("not-allowed");

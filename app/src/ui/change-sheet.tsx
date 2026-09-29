@@ -88,6 +88,10 @@ type Shared = {
   contained?: boolean;
   /** With contained, open straight onto the project list. */
   start?: "summary" | "project";
+  /** The one-project picker hides the link that only returns to the split screen. */
+  hideSplitLink?: boolean;
+  /** Throw away an incomplete edit. The sheet then closes. */
+  onDiscard?: () => void;
   onSplit: () => void;
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
@@ -148,6 +152,9 @@ export function ChangeAssignment(props: Props) {
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const settled = useRef(false);
+  const inflight = useRef<Promise<boolean> | null>(null);
+  const warned = useRef(false);
+  const forceDiscard = useRef(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const projectBtn = useRef<HTMLButtonElement>(null);
   const categoryBtn = useRef<HTMLButtonElement>(null);
@@ -167,6 +174,10 @@ export function ChangeAssignment(props: Props) {
       ? containedView
       : urlView;
   const sheetOpen = props.host === "overlay" ? props.open : true;
+
+  useEffect(() => {
+    if (!props.hold) warned.current = false;
+  }, [props.hold]);
 
   useEffect(() => {
     if (sheetOpen) settled.current = false;
@@ -297,15 +308,23 @@ export function ChangeAssignment(props: Props) {
   async function commitChoice(kind: "project" | "category", id: string, previous: string): Promise<boolean> {
     if (!props.onCommitPick) return true;
     setSavingId(id);
+    const work = (async () => {
+      try {
+        const outcome = await props.onCommitPick?.(kind, id);
+        setSavingId(null);
+        return outcome !== "left";
+      } catch {
+        setSavingId(null);
+        if (kind === "project") props.onProjectId(previous);
+        else props.onCategoryId(previous);
+        return false;
+      }
+    })();
+    inflight.current = work;
     try {
-      const outcome = await props.onCommitPick(kind, id);
-      setSavingId(null);
-      return outcome !== "left";
-    } catch {
-      setSavingId(null);
-      if (kind === "project") props.onProjectId(previous);
-      else props.onCategoryId(previous);
-      return false;
+      return await work;
+    } finally {
+      if (inflight.current === work) inflight.current = null;
     }
   }
 
@@ -387,15 +406,46 @@ export function ChangeAssignment(props: Props) {
   const propsRef = useRef(props);
   propsRef.current = props;
 
+  function closeSheet(discard: boolean): boolean {
+    if (discard) propsRef.current.onDiscard?.();
+    settled.current = true;
+    discardPicker();
+    return true;
+  }
+
+  function discardHeld() {
+    forceDiscard.current = true;
+    const dialog = document.querySelector("[role='dialog']");
+    const close = dialog?.querySelector("button[aria-label='סגירה']");
+    if (close instanceof HTMLElement) close.click();
+  }
+
   async function allowClose(): Promise<boolean> {
     if (settled.current) return true;
+    if (forceDiscard.current) return closeSheet(true);
+    const flight = inflight.current;
+    if (flight) {
+      try {
+        await flight;
+      } catch {
+        // The write already toasted. The dismiss still closes.
+      }
+      return closeSheet(false);
+    }
     const current = propsRef.current;
-    if (current.hold) return false;
-    if (savingId != null) return false;
+    if (current.hold) {
+      if (!warned.current) {
+        warned.current = true;
+        return false;
+      }
+      return closeSheet(true);
+    }
     if (current.pending && current.onCommitPending) {
       try {
         await current.onCommitPending();
-      } catch {
+      } catch (error) {
+        const incomplete = error instanceof Error && (error.message === "incomplete" || error.message === "remember");
+        if (incomplete) warned.current = true;
         return false;
       }
     }
@@ -454,7 +504,12 @@ export function ChangeAssignment(props: Props) {
               }}
             />
           </div>
-          {props.hold ? <p className="t-hint" role="status">{props.hold}</p> : null}
+          {props.hold ? (
+            <p className="t-hint ui-hold-line" role="status">
+              <span>{props.hold}</span>
+              <TextLink chevron={false} onClick={discardHeld}>ביטול השינוי</TextLink>
+            </p>
+          ) : null}
           {showRemember ? (
             <Toggle
               label="לזכור לספק הזה"
@@ -487,6 +542,7 @@ export function ChangeAssignment(props: Props) {
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : (props.suggestionCategoryId ?? "")}
           savingId={savingId}
           note={pickerKind === "project" ? props.projectNote : undefined}
+          splitLink={pickerKind === "project" && props.hideSplitLink !== true}
           onSelect={(id) => {
             void choose(pickerKind, id);
           }}
@@ -495,7 +551,7 @@ export function ChangeAssignment(props: Props) {
             setNameError("");
             setCreatingNew(true);
           } : undefined}
-          onSplit={pickerKind === "project" ? () => {
+          onSplit={pickerKind === "project" && props.hideSplitLink !== true ? () => {
             afterHistory(props.onSplit);
           } : undefined}
         />
@@ -543,6 +599,7 @@ function Picker({
   suggestionId,
   savingId,
   note,
+  splitLink = true,
   onSelect,
   onCreate,
   onSplit,
@@ -556,6 +613,7 @@ function Picker({
   suggestionId: string;
   savingId: string | null;
   note?: string;
+  splitLink?: boolean;
   onSelect: (id: string) => void;
   onCreate?: () => void;
   onSplit?: () => void;
@@ -571,7 +629,7 @@ function Picker({
         placeholder={kind === "project" ? "חיפוש פרויקט או קוד (P-12)" : "חיפוש קטגוריה"}
         autoFocus={false}
       />
-      {note ? <p className="t-hint">{note}</p> : null}
+      {note ? <p className="t-hint ui-pick-note">{note}</p> : null}
       {loading ? (
         <div aria-busy="true">
           <p className="sr-only" role="status">טוען…</p>
@@ -609,7 +667,7 @@ function Picker({
       {kind === "project" && !loading ? (
         <div className="ui-change-links">
           <TextLink icon={<PlusIcon size={16} />} chevron={false} onClick={onCreate}>פרויקט חדש</TextLink>
-          <TextLink icon={<SplitIcon size={16} />} chevron={false} onClick={onSplit}>פיצול בין פרויקטים</TextLink>
+          {splitLink && onSplit ? <TextLink icon={<SplitIcon size={16} />} chevron={false} onClick={onSplit}>פיצול בין פרויקטים</TextLink> : null}
         </div>
       ) : null}
     </div>

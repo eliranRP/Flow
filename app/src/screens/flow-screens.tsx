@@ -1305,6 +1305,17 @@ function withChoice(options: ChangeChoice[], id: string, name: string | null | u
   return [{ id, name }, ...options];
 }
 
+function reviewIsSplit(row: { reason?: string | null; pnl_role?: string | null; share_count?: number | null } | null | undefined): boolean {
+  if (!row) return false;
+  return row.pnl_role === "shared" || (row.share_count ?? 0) > 1 || row.reason === "unallocated_shared";
+}
+
+function reviewSplitTitle(row: { project_name?: string | null; share_count?: number | null; reason?: string | null }): string {
+  if ((row.share_count ?? 0) > 1) return `מפוצל · ${String(row.share_count)} פרויקטים`;
+  if (row.project_name) return row.project_name;
+  return "עלות משותפת · טרם פוצלה";
+}
+
 export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const search = useFlowSearch();
   const preview = useHomePreview();
@@ -1317,7 +1328,12 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const review = useReviewQuery(sample == null);
   const [params] = useSearchParams();
   const item = params.get("item") ?? "";
-  const row = (review.data ?? []).find((entry) => entry.id === item);
+  const live = (review.data ?? []).find((entry) => entry.id === item);
+  const [kept, setKept] = useState<ReviewRow | null>(null);
+  useEffect(() => {
+    if (live) setKept(live);
+  }, [live]);
+  const row = live ?? (kept?.id === item ? kept : null);
   const [projectId, setProjectId] = useState(sample?.projectId ?? sample?.suggestionId ?? "");
   const [categoryId, setCategoryId] = useState(sample?.categoryId ?? sample?.suggestionCategoryId ?? "");
   const [remember, setRemember] = useState(true);
@@ -1325,11 +1341,14 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const [leaveNote, setLeaveNote] = useState("");
   const [savedRemember, setSavedRemember] = useState(true);
   const wroteReview = useRef(false);
+  const closedReview = useRef(false);
+  closedReview.current = wroteReview.current || (kept != null && live == null);
   const picked = useRef({ projectId, categoryId, remember });
   const sharedTx = useRef<string | null>(null);
   sharedTx.current = row?.transaction_id ?? null;
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const seeded = useRef(false);
+  const baseline = useRef({ projectId: "", categoryId: "", remember: true });
   const toasted = useRef(false);
   const phase = sample
     ? ({ kind: "ready" } as const)
@@ -1337,19 +1356,23 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const direction = sample?.direction ?? row?.direction ?? "expense";
   const formPhase = phase.kind === "ready" && sample == null && row == null ? ({ kind: "empty" } as const) : phase;
   const income = direction === "income";
+  const splitReview = reviewIsSplit(row);
   useEffect(() => {
     if (hold === "") return;
-    const complete = income ? categoryId !== "" : projectId !== "" && categoryId !== "";
+    const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
     if (complete) setHold("");
-  }, [hold, income, projectId, categoryId]);
+  }, [hold, income, splitReview, projectId, categoryId]);
   useEffect(() => {
     if (leaveNote !== "" && remember === savedRemember) setLeaveNote("");
   }, [leaveNote, remember, savedRemember]);
   useEffect(() => {
     if (sample || !row || seeded.current) return;
     seeded.current = true;
-    setProjectId(row.project_id ?? "");
-    setCategoryId(row.category_id ?? "");
+    const nextProject = row.project_id ?? "";
+    const nextCategory = row.category_id ?? "";
+    baseline.current = { projectId: nextProject, categoryId: nextCategory, remember: true };
+    setProjectId(nextProject);
+    setCategoryId(nextCategory);
   }, [sample, row]);
   useEffect(() => {
     if (!sample?.saveError || toasted.current) return;
@@ -1436,6 +1459,27 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       assertNoError(await supabase.rpc("undo_reassign", { p_id: sharedUndoId.current }));
     },
   });
+  const reassignClosed = useWrite({
+    failure: changeSaveFailure,
+    success: "השיוך נשמר",
+    keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    onSuccess: () => {
+      setProjectId(picked.current.projectId);
+      setCategoryId(picked.current.categoryId);
+      baseline.current = { ...baseline.current, projectId: picked.current.projectId, categoryId: picked.current.categoryId };
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      const next = picked.current;
+      const transactionId = sharedTx.current;
+      if (!supabase || transactionId == null || next.projectId === "" || next.categoryId === "") throw new Error("supabase");
+      assertNoError(await supabase.rpc("reassign_transaction", {
+        p_id: transactionId,
+        p_project_id: next.projectId,
+        p_category_id: next.categoryId,
+      }));
+    },
+  });
   const collapseShared = useWrite({
     failure: changeSaveFailure,
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
@@ -1484,23 +1528,31 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       {...(income ? {} : { remember, onRemember: setRemember })}
       hold={hold || leaveNote}
       pending={!income && remember !== savedRemember}
-      projectNote={row?.reason === "unallocated_shared" ? COLLAPSE_SPLIT_NOTE : undefined}
-      projectTitle={row?.reason === "unallocated_shared" && (row.project_name == null || row.project_name === "") ? "עלות משותפת · טרם פוצלה" : undefined}
+      projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}
+      projectTitle={splitReview && row ? reviewSplitTitle(row) : undefined}
       initialQuery={sample?.initialQuery}
       loading={sample?.loading}
+      onDiscard={() => {
+        setProjectId(baseline.current.projectId);
+        setCategoryId(baseline.current.categoryId);
+        setRemember(baseline.current.remember);
+        setSavedRemember(baseline.current.remember);
+        setHold("");
+        setLeaveNote("");
+      }}
       onCommitPick={async (kind, id) => {
         if (sample) return;
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
         picked.current = { projectId: nextProject, categoryId: nextCategory, remember };
-        if (row?.reason === "unallocated_shared") {
+        if (splitReview) {
           if (kind === "project") {
-            if (!row.transaction_id || id === "") throw new Error("supabase");
+            if (!row?.transaction_id || id === "") throw new Error("supabase");
             await collapseShared.mutateAsync();
             return;
           }
-          if (!row.transaction_id) throw new Error("supabase");
+          if (!row?.transaction_id) throw new Error("supabase");
           await setSharedCategory.mutateAsync();
           return;
         }
@@ -1510,21 +1562,25 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
           return;
         }
         setHold("");
+        if (closedReview.current) {
+          await reassignClosed.mutateAsync();
+          return;
+        }
         await save.mutateAsync();
       }}
       onCommitPending={async () => {
         if (sample) return;
         if (blocked()) throw new Error("preview");
-        const complete = income ? categoryId !== "" : projectId !== "" && categoryId !== "";
+        const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
         if (!complete) {
-          setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+          setHold(income || splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           throw new Error("incomplete");
         }
-        if (remember !== savedRemember && (wroteReview.current || row?.reason === "unallocated_shared")) {
+        if (remember !== savedRemember && (wroteReview.current || splitReview || closedReview.current)) {
           setLeaveNote("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
           throw new Error("remember");
         }
-        if (wroteReview.current || row?.reason === "unallocated_shared") return;
+        if (wroteReview.current || splitReview || closedReview.current) return;
         setHold("");
         picked.current = { projectId, categoryId, remember };
         await save.mutateAsync();
@@ -2019,6 +2075,11 @@ export function TransactionScreen({
         projectTitle={splitRow ? shownProject : undefined}
         hold={hold}
         leave={leaveChange}
+        onDiscard={() => {
+          setHold("");
+          setProjectId(committed.current.projectId !== "" ? committed.current.projectId : (detailRow.project_id ?? ""));
+          setCategoryId(committed.current.categoryId !== "" ? committed.current.categoryId : (detailRow.category_id ?? ""));
+        }}
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
         onCommitPick={commitPick}
         onSplit={() => {
@@ -2078,6 +2139,46 @@ function sameBasis(left: Record<string, number>, right: Record<string, number>):
   return true;
 }
 
+type SplitDraft = {
+  method: SplitMethod | null;
+  manual: Record<string, string>;
+  chosen: string[];
+  oneProject: string;
+};
+
+function splitDraftKey(id: string): string {
+  return `flow-split:${id}`;
+}
+
+function readSplitDraft(id: string): SplitDraft | null {
+  if (id === "" || typeof sessionStorage === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(splitDraftKey(id));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SplitDraft>;
+    const method = parsed.method;
+    if (method != null && method !== "equal" && method !== "chosen" && method !== "income" && method !== "manual" && method !== "one") return null;
+    return {
+      method: method ?? null,
+      manual: parsed.manual ?? {},
+      chosen: parsed.chosen ?? [],
+      oneProject: parsed.oneProject ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeSplitDraft(id: string, draft: SplitDraft) {
+  if (id === "" || typeof sessionStorage === "undefined") return;
+  sessionStorage.setItem(splitDraftKey(id), JSON.stringify(draft));
+}
+
+function clearSplitDraft(id: string) {
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.removeItem(splitDraftKey(id));
+}
+
 export function SplitScreen({
   sampleProjects,
   sampleAmount,
@@ -2130,18 +2231,20 @@ export function SplitScreen({
     status: project.status,
   }));
   const active = activeProjects(projects);
-  const [method, setMethod] = useState<SplitMethod | null>(sampleMethod === undefined ? null : sampleMethod);
-  const [oneProject, setOneProject] = useState("");
+  const draftId = sampleProjects != null ? `sample${location.search}` : transactionId;
+  const restored = sampleMethod === undefined && sampleShares == null ? readSplitDraft(draftId) : null;
+  const [method, setMethod] = useState<SplitMethod | null>(restored ? restored.method : (sampleMethod === undefined ? null : sampleMethod));
+  const [oneProject, setOneProject] = useState(restored?.oneProject ?? "");
   const [oneOpen, setOneOpen] = useState(false);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const oneSaved = useRef("");
   const collapseTarget = useRef("");
   const oneUndoId = useRef<string | null>(null);
-  const [chosen, setChosen] = useState<string[]>(sampleChosen ?? []);
-  const [manual, setManual] = useState<Record<string, string>>(sampleShares ?? {});
+  const [chosen, setChosen] = useState<string[]>(restored?.chosen ?? sampleChosen ?? []);
+  const [manual, setManual] = useState<Record<string, string>>(restored?.manual ?? sampleShares ?? {});
   const [detail, setDetail] = useState(false);
-  const [seeded, setSeeded] = useState(false);
-  const manualEdited = useRef(sampleShares != null);
+  const [seeded, setSeeded] = useState(restored != null);
+  const manualEdited = useRef(sampleShares != null || restored?.method === "manual");
   const priorMethod = useRef<SplitMethod | null>(sampleMethod === "manual" ? null : (sampleMethod ?? null));
   const rowsRef = useRef<Array<{ project_id: string; share_bp: number }>>([]);
   const fallback = backTo ?? `/transactions/${transactionId}${search}`;
@@ -2208,6 +2311,7 @@ export function SplitScreen({
     success: "החלוקה נשמרה",
     keys: ["dashboard", "txn", "project"],
     onSuccess: () => {
+      clearSplitDraft(draftId);
       if (popLeave.current) return;
       goBack(fallback);
     },
@@ -2224,6 +2328,7 @@ export function SplitScreen({
       oneSaved.current = collapseTarget.current;
       setOneProject(collapseTarget.current);
       const id = oneUndoId.current;
+      clearSplitDraft(draftId);
       toast.show({
         message: "השיוך נשמר",
         ...(id ? { action: "ביטול", onAction: () => { void undoOne(id); } } : {}),
@@ -2238,8 +2343,26 @@ export function SplitScreen({
   const busy = sampleSaving || save.isPending || collapseOne.isPending;
   const oneProjectRef = useRef(oneProject);
   oneProjectRef.current = oneProject;
-  const gate = useRef({ method, valid, dirty, oneProject });
-  gate.current = { method, valid, dirty, oneProject };
+  const gate = useRef({ method, valid, dirty, oneProject, manual, chosen });
+  gate.current = { method, valid, dirty, oneProject, manual, chosen };
+  const warned = useRef(false);
+  const discardClose = useRef(false);
+  const inflight = useRef<Promise<unknown> | null>(null);
+  function rememberDraft() {
+    const now = gate.current;
+    writeSplitDraft(draftId, {
+      method: now.method,
+      manual: now.manual,
+      chosen: now.chosen,
+      oneProject: now.oneProject,
+    });
+  }
+  function blockedChoice(): boolean {
+    const now = gate.current;
+    if (now.method == null) return false;
+    if (now.method === "one") return now.oneProject === "";
+    return !now.valid;
+  }
   async function undoOne(id: string) {
     const supabase = getSupabase();
     if (!supabase) {
@@ -2282,99 +2405,145 @@ export function SplitScreen({
     await collapseOne.mutateAsync();
     return "left";
   }
+  function abandon() {
+    discardClose.current = true;
+    clearSplitDraft(draftId);
+    goBack(fallback);
+  }
   async function leave() {
-    if (busy) return;
+    if (sampleSaving) return;
+    if (inflight.current) {
+      try {
+        await inflight.current;
+      } catch {
+        // The failure toast is already up. The dismiss still closes.
+      }
+      if (!discardClose.current) goBack(fallback);
+      return;
+    }
+    if (!blockedChoice()) warned.current = false;
+    if (blockedChoice()) {
+      if (!warned.current) {
+        warned.current = true;
+        return;
+      }
+      abandon();
+      return;
+    }
     if (gate.current.method === "one") {
-      if (gate.current.oneProject === "") return;
       if (oneSaved.current === gate.current.oneProject) {
+        clearSplitDraft(draftId);
         goBack(fallback);
         return;
       }
+      rememberDraft();
       try {
-        const outcome = await collapseNow(gate.current.oneProject);
-        if (outcome !== "left" && oneSaved.current === gate.current.oneProject) goBack(fallback);
+        const work = collapseNow(gate.current.oneProject);
+        inflight.current = work;
+        const outcome = await work;
+        if (outcome !== "left" && oneSaved.current === gate.current.oneProject) {
+          clearSplitDraft(draftId);
+          goBack(fallback);
+        }
       } catch {
         return;
+      } finally {
+        inflight.current = null;
       }
       return;
     }
-    if (gate.current.method != null && !gate.current.valid) return;
     if (gate.current.dirty && gate.current.valid) {
+      rememberDraft();
       if (onSave) {
         try {
-          const saved = await onSave(rowsRef.current);
+          const work = Promise.resolve(onSave(rowsRef.current));
+          inflight.current = work;
+          const saved = await work;
           if (saved === false) return;
         } catch {
+          toast.show({ tone: "bad", message: "החלוקה לא נשמרה", action: "ניסיון חוזר", onAction: () => { void leave(); } });
           return;
+        } finally {
+          inflight.current = null;
         }
+        clearSplitDraft(draftId);
         baseline.current = JSON.stringify(rowsRef.current);
-        gate.current = { method: gate.current.method, valid: true, dirty: false, oneProject: gate.current.oneProject };
+        gate.current = { ...gate.current, valid: true, dirty: false };
         return;
       }
       if (blocked()) return;
       if (sampleProjects) {
+        clearSplitDraft(draftId);
         goBack(fallback);
         return;
       }
       try {
-        await save.mutateAsync();
+        const work = save.mutateAsync();
+        inflight.current = work;
+        await work;
       } catch {
         return;
+      } finally {
+        inflight.current = null;
       }
       return;
     }
+    clearSplitDraft(draftId);
     goBack(fallback);
   }
   useEffect(() => {
     function onPop() {
       const splitUrl = hereRef.current;
-      const now = gate.current;
-      if (now.method === "one") {
-        if (!now.valid) {
+      if (discardClose.current) return;
+      if (blockedChoice()) {
+        if (!warned.current) {
+          warned.current = true;
           void navigate(splitUrl);
           return;
         }
-        if (!now.dirty) return;
-        popLeave.current = true;
-        void (async () => {
-          try {
-            await collapseNow(now.oneProject);
-          } catch {
-            popLeave.current = false;
-            void navigate(splitUrl);
-          }
-        })();
+        clearSplitDraft(draftId);
         return;
       }
-      if (now.method != null && !now.valid) {
-        void navigate(splitUrl);
-        return;
-      }
+      const now = gate.current;
       if (!now.dirty || !now.valid) return;
+      rememberDraft();
       popLeave.current = true;
-      void (async () => {
+      const work = (async () => {
         try {
+          if (now.method === "one") {
+            await collapseNow(now.oneProject);
+            clearSplitDraft(draftId);
+            return;
+          }
           if (onSave) {
             const saved = await onSave(rowsRef.current);
             if (saved === false) {
               popLeave.current = false;
               void navigate(splitUrl);
+              return;
             }
+            clearSplitDraft(draftId);
             return;
           }
           if (sampleProjects || blocked()) return;
           await save.mutateAsync();
+          clearSplitDraft(draftId);
         } catch {
           popLeave.current = false;
+          toast.show({ tone: "bad", message: "החלוקה לא נשמרה" });
           void navigate(splitUrl);
         }
       })();
+      inflight.current = work;
+      void work.finally(() => {
+        if (inflight.current === work) inflight.current = null;
+      });
     }
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
     };
-  }, [blocked, navigate, onOneProject, onSave, sampleProjects, save, collapseOne]);
+  }, [blocked, draftId, navigate, onOneProject, onSave, sampleProjects, save, collapseOne, toast]);
   function openManual() {
     if (busy) return;
     if (method !== "manual") priorMethod.current = method;
@@ -2449,7 +2618,7 @@ export function SplitScreen({
       <ScreenHeader
         layout="stacked"
         title="חלוקה בין פרויקטים"
-        leading={<IconButton label="סגירה" disabled={busy} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
+        leading={<IconButton label="סגירה" disabled={sampleSaving} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
         trailing={example}
       />
       <div className="ui-split-amount">
@@ -2459,14 +2628,15 @@ export function SplitScreen({
       <h2 className="ui-split-question t-title-3">איך לחלק?</h2>
       <fieldset className="ui-split-body" disabled={busy}>
         <div className="ui-split-card" role="radiogroup" aria-label="איך לחלק?">
-          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} onSelect={() => { setMethod("equal"); }} />
-          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} onSelect={() => { setMethod("chosen"); }} />
+          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} busy={busy && method === "equal"} onSelect={() => { setMethod("equal"); }} />
+          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} onSelect={() => { setMethod("chosen"); }} />
           <RadioRow
             marker="start"
             label="לפי הכנסות"
             description={hasIncome ? "לפי ההכנסות של כל פרויקט בתקופה" : undefined}
             disabledReason={hasIncome ? undefined : "אין הכנסות בתקופה הזו"}
             selected={method === "income"}
+            busy={busy && method === "income"}
             onSelect={() => { setMethod("income"); }}
           />
           <RadioRow
@@ -2474,6 +2644,7 @@ export function SplitScreen({
             label={ONE_PROJECT_OPTION}
             description={ONE_PROJECT_DETAIL}
             selected={method === "one"}
+            busy={busy && method === "one"}
             onSelect={() => {
               setMethod("one");
               setOneOpen(true);
@@ -2567,15 +2738,18 @@ export function SplitScreen({
         {method === "manual" && valid ? <p className="ui-split-remain t-label">הסך 100%</p> : null}
       </fieldset>
       <div className="ui-split-cta">
-        <p className={summaryIdle ? "ui-split-summary t-body ui-split-summary-idle" : "ui-split-summary t-body"} role={summaryIdle ? "status" : undefined}>
-          {method === "manual" && manualLeft < 0 ? (
-            <>
-              {"הסך "}
-              <bdi className="ui-split-bad" dir="ltr">{`${percentWords(manualUsed)}%`}</bdi>
-              {". צריך 100%."}
-            </>
-          ) : summary}
-        </p>
+        <div className={summaryIdle ? "ui-hold-line" : undefined}>
+          <p className={summaryIdle ? "ui-split-summary t-body ui-split-summary-idle" : "ui-split-summary t-body"} role={summaryIdle ? "status" : undefined}>
+            {method === "manual" && manualLeft < 0 ? (
+              <>
+                {"הסך "}
+                <bdi className="ui-split-bad" dir="ltr">{`${percentWords(manualUsed)}%`}</bdi>
+                {". צריך 100%."}
+              </>
+            ) : summary}
+          </p>
+          {summaryIdle ? <TextLink chevron={false} onClick={abandon}>ביטול השינוי</TextLink> : null}
+        </div>
       </div>
     </form>
     <ChangeAssignment
@@ -2594,11 +2768,12 @@ export function SplitScreen({
       onProjectId={setOneProject}
       onCategoryId={() => undefined}
       projectNote={COLLAPSE_SPLIT_NOTE}
+      hideSplitLink
       onCommitPick={(_kind, id) => collapseNow(id)}
       onSplit={() => { setOneOpen(false); }}
       onCreateProject={async (name) => {
         if (sampleProjects != null) {
-          const created = { id: `split-new-${String(extraProjects.length + 1)}`, name, status: "active" as const };
+          const created = { id: `split-extra-${String(extraProjects.length + 1)}`, name, status: "active" as const };
           setExtraProjects((list) => [...list, created]);
           return created;
         }
