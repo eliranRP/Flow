@@ -85,6 +85,7 @@ export function placeToast(layer: HTMLElement): void {
   const candidates = [measured];
   for (const box of boxes) candidates.push(box.top - gap - height);
   for (const box of boxes) candidates.push(box.bottom + gap);
+  if (sheet instanceof HTMLElement) candidates.push(sheet.getBoundingClientRect().top - gap - height);
   candidates.push(safe);
   if (height > 0) {
     for (const top of candidates) {

@@ -207,7 +207,7 @@ def er_g_cancel(mode):
 
 @scr("er-04-google-failed")
 def er_g_failed(mode):
-    return signin(mode, gnote("info", "לא הצלחנו להתחבר", "אולי אין חיבור לאינטרנט, או ש-Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב.", "bad"),
+    return signin(mode, gnote("info", "לא הצלחנו להתחבר", "אולי אין חיבור לאינטרנט, או ש־Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב.", "bad"),
         extra='<div style="margin-top:12px;text-align:center"><span class="lnk q">צריך עזרה בכניסה?</span></div>')
 
 @scr("er-05-save-failed")
