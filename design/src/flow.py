@@ -296,7 +296,7 @@ def project(mode):
 @screen("03-review")
 def review(mode):
     return f'''<div class="scr">{STATUS}{topbar(back=False)}
-<div class="head" style="padding-top:0"><div class="t1">לאישור</div><div class="lbl">רק מה שה-AI לא היה בטוח בו</div></div>
+<div class="head" style="padding-top:0"><div class="t1">לאישור</div><div class="lbl">רק מה שה־AI לא היה בטוח בו</div></div>
 <div class="pad" style="margin-top:16px;display:flex;align-items:center;gap:12px"><div class="prog" style="flex:1"><i style="width:43%"></i></div><span class="hint">{n(3)} מתוך {n(7)}</span></div>
 <div class="card" style="margin-top:16px;padding:12px 14px">{ic("checkc",20,1.9)}<div class="tx" style="font-size:15px">{n(12)} תנועות אושרו אוטומטית היום</div><span class="lnk">צפייה</span><span class="cv">{ic("x",18,2)}</span></div>
 <div class="box" style="margin-top:20px;padding:20px">
@@ -315,7 +315,7 @@ def add(mode):
     opts = [("camera","צילום חשבונית","מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"),("upload","העלאת דוח בנק","קובץ Excel מאפליקציית פועלים"),("edit","הזנה ידנית","סכום, פרויקט וקטגוריה – רק במקרה הצורך")]
     rows = "".join(f'<div class="rowi" style="padding:18px 0"><span class="acc" style="flex:none">{ic(i,26,1.8)}</span><div class="tx"><div class="t3" style="font-weight:600">{t}</div><div class="hint">{h}</div></div><span class="cv">{ic("chev",20,2)}</span></div>' for i, t, h in opts)
     return f'''<div class="scr"><iframe class="under" src="01-home-{mode}.html" scrolling="no"></iframe><div class="scrim"></div>
-<div class="sheet"><div class="grab"></div><div class="shd"><div><div class="t2">הוספה</div><div class="lbl">ה-AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר</div></div><span class="iconbtn" style="margin-block-start:-6px;margin-inline-start:-12px">{ic("x",22,2)}</span></div>
+<div class="sheet"><div class="grab"></div><div class="shd"><div><div class="t2">הוספה</div><div class="lbl">ה־AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר</div></div><span class="iconbtn" style="margin-block-start:-6px;margin-inline-start:-12px">{ic("x",22,2)}</span></div>
 <div class="pad list" style="margin-top:8px">{rows}</div><div class="acts" style="margin-top:8px"><div class="btn gho" style="color:var(--text-secondary)">ביטול</div></div></div></div>'''
 
 @screen("05-projects")
@@ -358,7 +358,7 @@ def categories(mode):
 
 @screen("08-upload-results")
 def upload(mode):
-    items = [("checkc","acc",f"{n(33)} אושרו אוטומטית",f"{n(18)} הותאמו לחשבוניות · {n(15)} לפי כללים שלמדנו"),("transfer","",f"{n(2)} העברות בין החשבונות שלך","הוסרו – לא נספרות ברווח"),("inbox","acc",f"{n(7)} ממתינות לאישור","ה-AI לא היה בטוח – צריך את האישור שלך")]
+    items = [("checkc","acc",f"{n(33)} אושרו אוטומטית",f"{n(18)} הותאמו לחשבוניות · {n(15)} לפי כללים שלמדנו"),("transfer","",f"{n(2)} העברות בין החשבונות שלך","הוסרו – לא נספרות ברווח"),("inbox","acc",f"{n(7)} ממתינות לאישור","ה־AI לא היה בטוח – צריך את האישור שלך")]
     rows = "".join(f'<div class="rowi" style="padding:16px 0">{ic(i,22,1.9,c)}<div class="tx"><div>{t}</div><div class="hint">{h}</div></div></div>' for i, c, t, h in items)
     return f'''<div class="scr">{STATUS}{topbar(close=True, back=False)}
 <div class="head" style="padding-top:0"><div class="t1">דוח בנק הועלה</div><div class="lbl"><bdi>פועלים_ספטמבר.xlsx</bdi> · {n("01–30/09")}</div><div class="hint">בנק הפועלים · חשבון {n("12-345-678901")}</div></div>
@@ -388,7 +388,7 @@ def signin(mode, notice="", state="", extra=""):
 <div style="position:absolute;bottom:34px;inset-inline:0" class="pad">{notice}
 <div class="t2" style="margin-top:{24 if notice else 0}px">כניסה או הרשמה</div><div class="lbl" style="margin-top:2px">בלי סיסמה – עם חשבון Google שכבר יש לך</div>
 <div style="margin-top:20px">{gbtn(state)}</div>{extra}
-<div class="hint" style="margin-top:16px;text-align:center">נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.<br><span style="text-decoration:underline">תנאי שימוש</span> · <span style="text-decoration:underline">מדיניות פרטיות</span></div></div></div>'''
+<div class="hint" style="margin-top:16px;text-align:center">נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.<br><span style="text-decoration:underline">תנאי שימוש</span> · <span style="text-decoration:underline">מדיניות פרטיות</span></div></div></div>'''
 def ob_a(mode):
     return signin(mode)
 def ob_b(mode):
