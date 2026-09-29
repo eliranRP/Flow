@@ -2146,6 +2146,15 @@ type SplitDraft = {
   oneProject: string;
 };
 
+type SplitPop = (event: PopStateEvent) => void;
+let splitPop: SplitPop | null = null;
+if (typeof window !== "undefined" && !(window as Window & { __flowSplitPop?: boolean }).__flowSplitPop) {
+  (window as Window & { __flowSplitPop?: boolean }).__flowSplitPop = true;
+  window.addEventListener("popstate", (event) => {
+    splitPop?.(event);
+  }, true);
+}
+
 function splitDraftKey(id: string): string {
   return `flow-split:${id}`;
 }
@@ -2347,6 +2356,7 @@ export function SplitScreen({
   gate.current = { method, valid, dirty, oneProject, manual, chosen };
   const warned = useRef(false);
   const discardClose = useRef(false);
+  const releasePop = useRef(false);
   const inflight = useRef<Promise<unknown> | null>(null);
   function rememberDraft() {
     const now = gate.current;
@@ -2491,47 +2501,84 @@ export function SplitScreen({
     clearSplitDraft(draftId);
     goBack(fallback);
   }
+  const popApi = useRef({
+    blocked,
+    draftId,
+    onSave,
+    sampleProjects,
+    save,
+    collapseNow,
+    toast,
+    rememberDraft,
+    blockedChoice,
+  });
+  popApi.current = {
+    blocked,
+    draftId,
+    onSave,
+    sampleProjects,
+    save,
+    collapseNow,
+    toast,
+    rememberDraft,
+    blockedChoice,
+  };
   useEffect(() => {
-    function onPop() {
+    function holdPop(event: PopStateEvent, splitUrl: string) {
+      event.stopImmediatePropagation();
+      window.history.pushState(window.history.state, "", splitUrl);
+    }
+    function leavePop() {
+      releasePop.current = true;
+      window.history.back();
+    }
+    function onPop(event: PopStateEvent) {
+      const api = popApi.current;
+      if (releasePop.current) {
+        releasePop.current = false;
+        return;
+      }
       const splitUrl = hereRef.current;
       if (discardClose.current) return;
-      if (blockedChoice()) {
+      if (api.blockedChoice()) {
         if (!warned.current) {
           warned.current = true;
-          void navigate(splitUrl);
+          holdPop(event, splitUrl);
           return;
         }
-        clearSplitDraft(draftId);
+        clearSplitDraft(api.draftId);
         return;
       }
       const now = gate.current;
       if (!now.dirty || !now.valid) return;
-      rememberDraft();
+      holdPop(event, splitUrl);
+      api.rememberDraft();
       popLeave.current = true;
       const work = (async () => {
         try {
           if (now.method === "one") {
-            await collapseNow(now.oneProject);
-            clearSplitDraft(draftId);
+            await api.collapseNow(now.oneProject);
+            clearSplitDraft(api.draftId);
+            leavePop();
             return;
           }
-          if (onSave) {
-            const saved = await onSave(rowsRef.current);
+          if (api.onSave) {
+            const saved = await api.onSave(rowsRef.current);
             if (saved === false) {
               popLeave.current = false;
-              void navigate(splitUrl);
               return;
             }
-            clearSplitDraft(draftId);
+            clearSplitDraft(api.draftId);
+            leavePop();
             return;
           }
-          if (sampleProjects || blocked()) return;
-          await save.mutateAsync();
-          clearSplitDraft(draftId);
+          if (api.sampleProjects || api.blocked()) return;
+          await api.save.mutateAsync();
+          clearSplitDraft(api.draftId);
+          leavePop();
         } catch {
           popLeave.current = false;
-          toast.show({ tone: "bad", message: "החלוקה לא נשמרה" });
-          void navigate(splitUrl);
+          api.toast.show({ tone: "bad", message: "החלוקה לא נשמרה" });
         }
       })();
       inflight.current = work;
@@ -2539,11 +2586,12 @@ export function SplitScreen({
         if (inflight.current === work) inflight.current = null;
       });
     }
-    window.addEventListener("popstate", onPop);
+    // The module listener is already on window, so a later pop cannot miss it.
+    splitPop = onPop;
     return () => {
-      window.removeEventListener("popstate", onPop);
+      if (splitPop === onPop) splitPop = null;
     };
-  }, [blocked, draftId, navigate, onOneProject, onSave, sampleProjects, save, collapseOne, toast]);
+  }, []);
   function openManual() {
     if (busy) return;
     if (method !== "manual") priorMethod.current = method;
