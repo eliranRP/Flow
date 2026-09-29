@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { homeSummarySchema, type Dashboard } from "@flow/shared";
 import { thisMonth } from "./period";
@@ -120,6 +120,7 @@ function AppRoutes() {
               <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
               <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
               <Route path="/e2e/split" element={<DevSplit />} />
+              <Route path="/reviewer/*" element={<ReviewerPreviewRoute />} />
             </>
           ) : null}
           <Route element={<RequireAuth />}>
@@ -255,6 +256,19 @@ const devReviewItems = [
 ];
 
 /** A local split so each mode can be saved without writing a ledger row. */
+function ReviewerPreviewRoute() {
+  const preview = useRef<LazyExoticComponent<ComponentType> | null>(null);
+  if (preview.current == null) {
+    preview.current = lazy(() => import("./reviewer-preview").then((mod) => ({ default: mod.ReviewerPreview })));
+  }
+  const Preview = preview.current;
+  return (
+    <Suspense fallback={null}>
+      <Preview />
+    </Suspense>
+  );
+}
+
 function DevSplit() {
   const [saved, setSaved] = useState("");
   return (

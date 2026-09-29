@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+Decision [0073](decisions/0073-review-handoff.md), Accepted. From r23 on, a handoff summary includes a self-check against the PR reviewer's checklist and the UI design reviewer's checklist: DESIGN-RULES, CONTROLS.md with pass or fail, a 320px clipping and overflow sweep, a no-op-control sweep, the cursor rules, and that the numbers add up. `/reviewer` on the dev server shows sample books (a queue with a shared cost, today's filed list, and saves that succeed or fail on demand), marked "נתוני דוגמה · Example data", and that module is left out of the hosted build. Only Blocking and Should items block a merge. A nit waits for the next batch.
+
 Decision [0071](decisions/0071-shared-cost-copy.md) points 4 and 6, amended. A category line and its drill-down are the same confirmed expenses, including this project's share of a shared cost, and the list is paged. "ממתינה לאישור" and `/review?project=` both use `project_waiting`. Undo of an approval restores whether the category was a suggestion. A guess already undone is marked suggested again from the review, from an undo that had no review, or from a reopened missing-project approval. A pending undo stores the flag. Audit meta is not that record: older rows stored an empty meta, and the backfill does not read it and writes no audit rows. This amends [0070](decisions/0070-split-remainder-and-undo-log.md) point 9.
 
 Decision [0072](decisions/0072-design-review-rulings.md) point 14. A save the database refuses says "לא נשמר. בדקו את הפרטים ונסו שוב." and offers no ניסיון חוזר. "לא נשמר – אין חיבור" stays for a network or server error. Point 2: a toast that shrinks stays tall enough for two lines and for ביטול.
