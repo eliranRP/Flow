@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+Decision [0073](decisions/0073-review-handoff.md) point 2. The reviewer guard also rejects id 2375135516, the totals with thousands commas and a leading ₪, פ"ת, ת"א, and פתח תקווה. The hosted check reads quoted URL and key values, checks their shape, adds the project ref, and fails when `app/.env.production` is missing or has fewer than those two values.
+
 Decision [0074](decisions/0074-toast-and-remembered-supplier.md), amended. The shared-cost sentence uses the muted hint colour. The review card supplier wraps, and it is not cut. The remember arrow stays on the destination's line. A toast above a tall sheet keeps its minimum height and does not cover the header.
 
 Decision [0073](decisions/0073-review-handoff.md) point 2. The reviewer guard also rejects Flow Test 2 ids and totals, פ״ת, ת״א, צבעי הגליל, מנופי, and the hosted Supabase URL and anon key. The reviewers-only build runs that guard.

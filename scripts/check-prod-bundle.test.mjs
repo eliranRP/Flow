@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hostedClientMarkers, reviewerNameViolations, sourceViolations, violations } from "./check-prod-bundle.mjs";
+import { goldenValues, hostedClientMarkers, parseHostedClient, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "./hosted-env.mjs";
 
 test("flags a fixture module, a story, and a golden value", () => {
@@ -46,9 +46,9 @@ test("flags a Flow Test 2 name in the reviewer dist", () => {
 
 test("flags Flow Test 2 places, the plain crane name, golden ids, and the hosted client", () => {
   const places = reviewerNameViolations([
-    { name: "app/dist/assets/reviewer.js", body: "פ״ת ת״א צבעי הגליל מנופי" },
+    { name: "app/dist/assets/reviewer.js", body: "פ״ת ת״א פ\"ת ת\"א פתח תקווה צבעי הגליל מנופי" },
   ], []);
-  for (const name of ["פ״ת", "ת״א", "צבעי הגליל", "מנופי"]) {
+  for (const name of ["פ״ת", "ת״א", "פ\"ת", "ת\"א", "פתח תקווה", "צבעי הגליל", "מנופי"]) {
     assert.ok(places.some((line) => line.includes(name)), name);
   }
   const golden = reviewerNameViolations([
@@ -61,7 +61,56 @@ test("flags Flow Test 2 places, the plain crane name, golden ids, and the hosted
   ], ["https://hosted.supabase.co", "eyJ-hosted-anon"]);
   assert.ok(hosted.some((line) => line.includes("hosted Supabase URL")));
   assert.ok(hosted.some((line) => line.includes("hosted Supabase anon key")));
-  assert.equal(hostedClientMarkers().length, 2);
+  const ref = reviewerNameViolations([
+    { name: "app/dist/assets/reviewer.js", body: "sxqpnetmtufkzowutduq" },
+  ], ["sxqpnetmtufkzowutduq"]);
+  assert.ok(ref.some((line) => line.includes("hosted Supabase project ref")));
+});
+
+test("flags every golden value in every written form", () => {
+  for (const value of goldenValues) {
+    for (const form of writtenGoldenForms(value)) {
+      const inHosted = violations({
+        modules: ["/repo/app/src/main.tsx"],
+        files: [{ name: "app/dist/assets/index.js", body: form }],
+      });
+      assert.ok(inHosted.some((line) => line.includes(form)), form);
+      const inReviewer = reviewerNameViolations([
+        { name: "app/dist/assets/reviewer.js", body: form },
+      ], []);
+      assert.ok(inReviewer.some((line) => line.includes(form)), form);
+    }
+  }
+  assert.ok(goldenValues.includes("2375135516"));
+  assert.deepEqual(writtenGoldenForms("37700"), ["37700", "37,700", "₪37700", "₪37,700"]);
+  assert.deepEqual(writtenGoldenForms("134520"), ["134520", "134,520", "₪134520", "₪134,520"]);
+  assert.deepEqual(writtenGoldenForms("114000"), ["114000", "114,000", "₪114000", "₪114,000"]);
+  assert.deepEqual(writtenGoldenForms("2375135516"), ["2375135516"]);
+});
+
+test("the hosted client check fails closed", () => {
+  const missing = hostedClientMarkers("/workspace/no-such.env");
+  assert.deepEqual(missing.markers, []);
+  assert.ok(missing.problems.some((line) => line.includes("missing")));
+
+  const one = parseHostedClient('VITE_SUPABASE_URL="https://abc.supabase.co"\n');
+  assert.deepEqual(one.markers, ["https://abc.supabase.co", "abc"]);
+  assert.ok(one.problems.some((line) => line.includes("URL and anon key")));
+
+  const quoted = parseHostedClient("VITE_SUPABASE_URL=\"https://abc.supabase.co\"\nVITE_SUPABASE_ANON_KEY='eyJaaa.bbb.ccc'\n");
+  assert.deepEqual(quoted.problems, []);
+  assert.deepEqual(quoted.markers, ["https://abc.supabase.co", "abc", "eyJaaa.bbb.ccc"]);
+
+  const shaped = parseHostedClient("VITE_SUPABASE_URL=https://evil.example\nVITE_SUPABASE_ANON_KEY=not-a-jwt\n");
+  assert.ok(shaped.problems.some((line) => line.includes("not https://")));
+  assert.ok(shaped.problems.some((line) => line.includes("not a JWT")));
+  assert.equal(shaped.markers.length, 0);
+
+  const real = hostedClientMarkers();
+  assert.deepEqual(real.problems, []);
+  assert.ok(real.markers.includes("https://sxqpnetmtufkzowutduq.supabase.co"));
+  assert.ok(real.markers.includes("sxqpnetmtufkzowutduq"));
+  assert.equal(real.markers.length, 3);
 });
 
 test("a hosted build rejects an empty Supabase URL or anon key", () => {

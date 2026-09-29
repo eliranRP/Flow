@@ -35,7 +35,7 @@ function reviewerGuard(): Plugin {
       if (process.env.VITE_REVIEWER_BUILD !== "1") return;
       const bad = checkReviewerBundle();
       if (bad.length > 0) {
-        throw new Error(`${bad.join("\n")}\nThe reviewers-only build must not contain a Flow Test 2 name, a golden id or total, or the hosted Supabase URL or anon key.`);
+        throw new Error(`${bad.join("\n")}\nThe reviewers-only build must not contain a Flow Test 2 name, a golden id or total, or the hosted Supabase URL, anon key, or project ref.`);
       }
     },
   };
