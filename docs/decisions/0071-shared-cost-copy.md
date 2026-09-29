@@ -13,10 +13,10 @@ The r19 review of `a62e4b0` found the review card saying "חסר פרויקט, �
 
 1. The review card takes the queue reason. `unallocated_shared` says "הוצאה משותפת · אישור יפתח חלוקה". A category on that card can still show. "חסר פרויקט, בחרו בשינוי" stays for a project expense that has a category and no project. This amends [0070](0070-split-remainder-and-undo-log.md) point 8.
 2. אישור on an unallocated shared cost opens Split for that transaction. It does not call `resolve_review`. That is the one tap.
-3. When `resolve_review` or `reassign_transaction` refuses a single project on a shared cost, the toast is "עלות משותפת מחולקת במסך החלוקה." Other save failures stay "לא נשמר – אין חיבור".
+3. A shared cost is not saved as one project. The change sheet skips that call and toasts "עלות משותפת מחולקת במסך החלוקה." with לחלוקה, which opens Split. Other save failures stay "לא נשמר – אין חיבור". ניסיון חוזר is offered only for a network or server error, not for a refusal the database will repeat.
 4. `get_project` still omits a suggested category's name. It also returns `pending_count` and `pending_agorot` for those project expenses. The screen lists "1 ממתינה לאישור" or "N ממתינות לאישור" with that amount. Named lines plus the waiting amount equal the project's direct expenses. A project with only waiting costs shows that line, not the empty sentence. This amends [0070](0070-split-remainder-and-undo-log.md) point 6.
 5. A row in שויכו היום is a categorised project expense (or another row the banner already counts), not an unallocated shared cost that only looks filed because the queue was never synced.
-6. `reopen_review` of a different non-null category clears `category_suggested`. The fill trigger recomputes the flag only when the restored category is null.
+6. `reopen_review` and `undo_reassign` restore `category_suggested` with the category. `resolve_review`, `reassign_transaction`, and `set_transaction_category` store that prior flag. The fill trigger forces the flag off on a category change only when the statement did not set the flag itself. A guess that was already undone is put back to suggested when a suggested review still matches the category, or when the audit meta records that this category was a suggestion. Historical audit rows stored an empty meta, so the review and the undo row are that record; a transaction update from here writes the flag and the category into the meta. This amends [0070](0070-split-remainder-and-undo-log.md) point 9.
 
 ## Alternatives rejected
 

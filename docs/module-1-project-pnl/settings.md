@@ -24,7 +24,7 @@ The order matches [14-settings](screens.md#14-settings).
 
 ### Phone sign-in
 
-`טלפון`. The number the owner signed in with, example `050-123-4567`, and `קוד ב-SMS` ([0017](../decisions/0017-sms-sign-in.md)). Changing the number is [open](../open-questions.md#changing-the-phone-number). The wireframe does not draw a change flow.
+`טלפון`. The number the owner signed in with, example `050-123-4567`, and `קוד ב־SMS` ([0017](../decisions/0017-sms-sign-in.md)). Changing the number is [open](../open-questions.md#changing-the-phone-number). The wireframe does not draw a change flow.
 
 ### Bank Hapoalim
 
@@ -67,7 +67,7 @@ The wireframe draws `אישור אוטומטי` on, subline `חשבונית יח
 
 ### Data export
 
-`ייצוא לאקסל` and `ייצוא ל-CSV` download approved, paid lines (the counting set in [calculations](calculations.md), all dates, all projects and overhead). CSV is the same rows. Draft columns, in this order:
+`ייצוא לאקסל` and `ייצוא ל־CSV` download approved, paid lines (the counting set in [calculations](calculations.md), all dates, all projects and overhead). CSV is the same rows. Draft columns, in this order:
 
 1. Date (`dd/mm/yyyy`)
 2. Direction (`הכנסה` / `הוצאה`)

@@ -190,6 +190,12 @@ describe("Toast", () => {
 });
 
 describe("placeToast", () => {
+  const innerHeight = window.innerHeight;
+
+  afterEach(() => {
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: innerHeight });
+  });
+
   function box(bottom: number, height: number): DOMRect {
     return {
       x: 0,
@@ -225,6 +231,34 @@ describe("placeToast", () => {
     placeToast(host);
     expect(host.style.top).toBe("128px");
     sheet.remove();
+    host.remove();
+  });
+
+  it("clears every control, and shrinks into the open gap when the toast cannot", () => {
+    const header = document.createElement("header");
+    header.className = "ui-page";
+    const first = document.createElement("button");
+    const second = document.createElement("button");
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(header, first, second, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 200 });
+    header.getBoundingClientRect = () => box(20, 20);
+    first.getBoundingClientRect = () => box(80, 40);
+    second.getBoundingClientRect = () => box(160, 40);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    const top = Number.parseFloat(host.style.top);
+    const used = toast.style.maxHeight === "" ? 48 : Number.parseFloat(toast.style.maxHeight);
+    const bottom = top + used;
+    expect(bottom).toBeLessThanOrEqual(200);
+    expect(bottom <= 40 || top >= 80).toBe(true);
+    expect(bottom <= 120 || top >= 160).toBe(true);
+    header.remove();
+    first.remove();
+    second.remove();
     host.remove();
   });
 

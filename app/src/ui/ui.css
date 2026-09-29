@@ -2486,10 +2486,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   pointer-events: none;
 }
 
-.ui-toast-slot {
-  min-block-size: calc(var(--control-height) + var(--space-4));
-}
-
 .ui-toast-live {
   position: absolute;
   inline-size: 1px;
@@ -2515,13 +2511,13 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 /* --type-body-line is a unitless multiplier, so the footer height multiplies it by the body size. */
 html:has(.ui-split) {
   --split-foot: calc(1px + var(--space-4) + var(--type-body-size) * var(--type-body-line) + var(--space-3) + var(--control-height) + var(--space-4) + var(--safe-bottom));
-  scroll-padding-bottom: var(--split-foot);
+  scroll-padding-bottom: calc(var(--split-foot) + var(--space-2));
 }
 
 .ui-split {
   min-height: 100dvh;
   overflow-x: hidden;
-  padding-block-end: var(--split-foot);
+  padding-block-end: calc(var(--split-foot) + var(--space-2));
 }
 
 .ui-split .ui-page {

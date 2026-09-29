@@ -34,7 +34,7 @@ test("add sheet follows mockup 04 and does not capture yet", async ({ page }) =>
   await expect(page.getByText("צילום חשבונית")).toBeVisible();
   await expect(page.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeVisible();
   await expect(page.getByText("העלאת דוח בנק")).toHaveCount(0);
-  await expect(page.getByText("ה-AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר")).toHaveCount(0);
+  await expect(page.getByText("ה־AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
 });
 

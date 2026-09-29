@@ -332,6 +332,26 @@ export const ReviewMissingProject: Story = {
   ),
 };
 
+export const ReviewSharedCost: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue
+        rows={[{
+          ...sampleReview,
+          project_id: null,
+          project_name: null,
+          category_id: "c1",
+          category_name: "חומרים",
+          reason: "unallocated_shared",
+        }]}
+        search=""
+        sample
+      />
+    </StoryRoute>
+  ),
+};
+
 export const ReviewMissingCategory: Story = {
   render: () => (
     <StoryRoute entry="/review" tabs reviewCount={1}>

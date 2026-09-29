@@ -10,7 +10,7 @@ The r18 and r19 design reviews of Split v2 and the review screen asked for a fix
 ## Decision
 
 1. When the basis points do not sum to 10000, each manual row shows `amount × bp / 10000` and takes no leftover agora. The summary stays the invalid message ("נשארו …% לחלק" or "הסך …%. צריך 100%."). A valid split still puts the leftover agora on the last project, as in [0070](0070-split-remainder-and-undo-log.md).
-2. A toast is placed just under the page header or the open sheet header. Placement runs again while the sheet settles, and the top is clamped inside the viewport. It does not cover a control. The host fallback is the safe area plus a spacing token.
+2. A toast is placed just under the page header or the open sheet header. Placement runs again while the sheet settles, and the top stays inside the viewport. It moves until it is clear of every control, trying under the header and above the controls. When no full slot is free, it shrinks into the largest open gap, or sits at the top edge inside the safe area, and it does not overlap a control. The host fallback is the safe area plus a spacing token.
 3. "בחרו איך לחלק" is primary text. Invalid summary lines stay secondary.
 4. "הסך 100%" sits clear of the sticky footer. The split page pads by the footer height.
 5. A read-only check row uses the default cursor. A busy control uses `cursor: progress`. That is the loading cursor.
@@ -21,6 +21,7 @@ The r18 and r19 design reviews of Split v2 and the review screen asked for a fix
 10. When an even split's shekel parts are not exactly equal, the subline and the summary say "₪1,000 מתחלק שווה בין 3 פרויקטים". "₪X לכל אחד" stays only when every part is the same amount.
 11. The empty שויכו היום copy stays, with a maqaf: "כש־SUMIT".
 12. The שויכו היום story uses the same tab bar as the app route. The banner count and the sample list are the same number of rows.
+13. A Hebrew prefix before a Latin word uses a maqaf: כש־SUMIT, ב־SUMIT, מ־SUMIT, ל־SUMIT, מ־Google. An ASCII hyphen is not that join.
 
 ## Alternatives rejected
 

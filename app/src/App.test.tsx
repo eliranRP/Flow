@@ -24,7 +24,7 @@ describe("App", () => {
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר.")).toBeInTheDocument();
+    expect(screen.getByText("הרווח יופיע כאן אחרי ש־SUMIT מחובר.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
@@ -85,7 +85,7 @@ describe("App", () => {
     expect(screen.getByText("צילום חשבונית")).toBeInTheDocument();
     expect(screen.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeInTheDocument();
     expect(screen.queryByText("העלאת דוח בנק")).not.toBeInTheDocument();
-    expect(screen.queryByText(/ה-AI ישייך/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ה־AI ישייך/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
     expect(
       screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),

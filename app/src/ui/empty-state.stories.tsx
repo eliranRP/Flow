@@ -17,7 +17,7 @@ export const Default: Story = {
   args: {
     icon: <ChartIcon />,
     title: "עוד אין נתונים",
-    body: "הרווח יופיע כאן אחרי ש-SUMIT מחובר.",
+    body: "הרווח יופיע כאן אחרי ש־SUMIT מחובר.",
     action: (
       <Button variant="pill" to="/settings">
         חיבור SUMIT

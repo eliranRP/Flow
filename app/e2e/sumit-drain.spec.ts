@@ -82,7 +82,10 @@ test("the cron drain opens the sync path and rejects a bad secret", async () => 
   expect(claimed.error, claimed.error?.message).toBeNull();
   expect(claimed.data?.claimed_at).toBeNull();
 
-  const stored = await admin.from("sumit_connections").select("last_error").eq("company_id", companyId).single();
+  const stored = await admin.from("sumit_connections").select("last_error, next_attempt_at").eq("company_id", companyId).single();
   expect(stored.error, stored.error?.message).toBeNull();
   expect(stored.data?.last_error).toBe("sync_failed");
+  const retryAt = Date.parse(String(stored.data?.next_attempt_at));
+  expect(Number.isNaN(retryAt)).toBe(false);
+  expect(retryAt).toBeGreaterThan(Date.now());
 });

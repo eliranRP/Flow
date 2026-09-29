@@ -7,12 +7,28 @@ export function assertNoError(result: { error: { message: string } | null }): vo
   if (result.error) throw new Error(result.error.message);
 }
 
-/** A write that checks the PostgREST error, stays busy, and toasts a retry. */
+export type WriteFailure = string | { message: string; retry?: boolean };
+
+/** A database refusal is final. Retry is for a dropped connection or a server error. */
+export function isTransientWriteError(error: Error): boolean {
+  return /failed to fetch|networkerror|network request failed|load failed|timeout|econnreset|econnrefused|bad gateway|gateway|502|503|504/i.test(error.message);
+}
+
+function failureMessage(failure: WriteFailure): string {
+  return typeof failure === "string" ? failure : failure.message;
+}
+
+function failureRetries(failure: WriteFailure, error: Error): boolean {
+  if (typeof failure !== "string" && failure.retry != null) return failure.retry;
+  return isTransientWriteError(error);
+}
+
+/** A write that checks the PostgREST error, stays busy, and toasts a retry for a transient failure. */
 export function useWrite(options: {
   run: () => Promise<void>;
   keys: string[];
   success?: string;
-  failure: string | ((error: Error) => string);
+  failure: string | ((error: Error) => WriteFailure);
   onSuccess?: () => void;
 }) {
   const toast = useToast();
@@ -27,13 +43,12 @@ export function useWrite(options: {
     },
     onError: (error) => {
       const failure = error instanceof Error ? error : new Error("failed");
+      const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
+      const retryable = failureRetries(reported, failure);
       toast.show({
         tone: "bad",
-        message: typeof options.failure === "function" ? options.failure(failure) : options.failure,
-        action: "ניסיון חוזר",
-        onAction: () => {
-          retry.current();
-        },
+        message: failureMessage(reported),
+        ...(retryable ? { action: "ניסיון חוזר", onAction: () => { retry.current(); } } : {}),
       });
     },
   });

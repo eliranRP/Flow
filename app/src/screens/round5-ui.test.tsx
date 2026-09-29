@@ -563,7 +563,7 @@ describe("notification switches", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText("החיבור ל-SUMIT נכשל.")).toBeInTheDocument();
+    expect(screen.getByText("החיבור ל־SUMIT נכשל.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
     expect(screen.getAllByText(/מחדש/)).toHaveLength(1);
     const authRefresh = screen.getByRole("button", { name: /רענון עכשיו/ });

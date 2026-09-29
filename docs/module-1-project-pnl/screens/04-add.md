@@ -24,7 +24,7 @@ If Home's empty state button `+ פרויקט חדש` was used, that opens the cr
 
 ## Elements and fields
 
-Sheet title `הוספה`. Subtitle `ה-AI ישייך לפרויקט ולקטגוריה – אתה רק מאשר`.
+Sheet title `הוספה`. Subtitle `ה־AI ישייך לפרויקט ולקטגוריה – אתה רק מאשר`.
 
 | Row | Hebrew | What it captures |
 | --- | --- | --- |

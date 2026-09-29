@@ -78,7 +78,7 @@ export function SignInScreen() {
           <Notice
             tone="bad"
             title="לא הצלחנו להתחבר"
-            body="אולי אין חיבור לאינטרנט, או ש-Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב."
+            body="אולי אין חיבור לאינטרנט, או ש־Google לא אישרה את החשבון. כדאי לבדוק את החיבור ולנסות שוב."
           />
         ) : null}
 
@@ -98,7 +98,7 @@ export function SignInScreen() {
         ) : null}
 
         <SignInPrivacy>
-          נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
+          נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר.
           <br />
           <TextLink to="/terms" size="hint" chevron={false}>
             תנאי שימוש

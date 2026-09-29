@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { TabBar } from "./tab-bar";
 import { placeToast, Toast } from "./toast";
+import "./toast.stories.css";
 
 const meta = {
   title: "Components/Toast",

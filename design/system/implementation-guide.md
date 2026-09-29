@@ -592,7 +592,7 @@ Screens: `18-home-overhead-on`, `19-project-overhead-on`.
 
 ### 7.24 Sign in with Google
 Screens: `09a-onboarding` (sign-in), `er-03-google-cancelled`, `er-04-google-failed`; board 8. Google is the **only** sign-in method in the POC (no phone number, no one-time code, no password).
-- **Layout (09a):** status bar only (no top bar, no progress row). The wordmark (44px, `logo`) and one value line ("הרווח וההפסד של העסק, בלי אקסלים") sit in the upper third. The bottom block holds "כניסה או הרשמה" (title-2), "בלי סיסמה – עם חשבון Google שכבר יש לך", the button, and a hint-size privacy line: "נקבל מ-Google רק שם ואימייל. אין לנו גישה לתיבת הדואר." with underlined links to the terms and the privacy policy.
+- **Layout (09a):** status bar only (no top bar, no progress row). The wordmark (44px, `logo`) and one value line ("הרווח וההפסד של העסק, בלי אקסלים") sit in the upper third. The bottom block holds "כניסה או הרשמה" (title-2), "בלי סיסמה – עם חשבון Google שכבר יש לך", the button, and a hint-size privacy line: "נקבל מ־Google רק שם ואימייל. אין לנו גישה לתיבת הדואר." with underlined links to the terms and the privacy policy.
 - **Button (follow Google's sign-in branding guidelines):**
   - Light theme in **both** modes: `gsi-bg` #FFFFFF fill, 1px `gsi-border` #747775 stroke, `gsi-text` #1F1F1F. Don't recolour it in violet or tint it for dark mode.
   - The standard four-colour "G" at 20px, unmodified, on the start side (the right in RTL), 12px gap to the text. Pill shape, 52px high, full width.
@@ -774,7 +774,7 @@ Motion is short, calm and functional. Nothing bounces, overshoots or loops for a
 
 ### 11.1 Hebrew tone
 - **Short, friendly, direct, second person.** Talk to the contractor like a helpful bookkeeper. Say what happened and what to do next. Aim for one line where possible.
-- **Gender-neutral second person.** Use plural imperatives for instructions ("העלו", "בחרו", "הוסיפו למסך הבית"), and noun or infinitive forms for buttons ("אישור", "שמירה", "ביטול", "הוספה", "סימון כשולם"). Avoid "אתה"/"את". The draft 04 subtitle "אתה רק מאשר" **SHOULD** become, for example, "ה-AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר".
+- **Gender-neutral second person.** Use plural imperatives for instructions ("העלו", "בחרו", "הוסיפו למסך הבית"), and noun or infinitive forms for buttons ("אישור", "שמירה", "ביטול", "הוספה", "סימון כשולם"). Avoid "אתה"/"את". The draft 04 subtitle "אתה רק מאשר" **SHOULD** become, for example, "ה־AI ישייך לפרויקט ולקטגוריה – נשאר רק לאשר".
 - Use plain words, not accounting jargon. Write "רווח", "הכנסות", "הוצאות", "לא שולמו", "כלליות". Where a term is unavoidable (מע״מ, ח.פ.), keep it standard.
 - **Explain the AI briefly.** Show suggestions with ✦ and a confidence % in `hint`. Give a one-line "למה?" reason ("לפי כלל: חומרי בניין השרון ← חולון").
 - **No exclamation marks, no emoji, no ALL-CAPS English.**

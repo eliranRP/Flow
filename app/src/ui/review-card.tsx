@@ -26,7 +26,7 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
   ].filter((line): line is { label: string; value: string } => line != null);
   const shared = reason === "unallocated_shared";
   const note = shared
-    ? "הוצאה משותפת · אישור יפתח חלוקה"
+    ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה"
     : suggestion?.category != null && suggestion.project == null
       ? "חסר פרויקט, בחרו בשינוי"
       : suggestion?.project != null && suggestion.category == null

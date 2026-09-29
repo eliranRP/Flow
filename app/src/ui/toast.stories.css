@@ -1,0 +1,4 @@
+/* Storybook only. The app does not render this spacer. */
+.ui-toast-slot {
+  min-block-size: calc(var(--control-height) + var(--space-4));
+}

@@ -500,6 +500,55 @@ test("install, notifications, onboarding, and legal screens", async ({ page }) =
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
+async function overlaps(left: { x: number; y: number; width: number; height: number }, right: { x: number; y: number; width: number; height: number }): Promise<boolean> {
+  return left.y < right.y + right.height && left.y + left.height > right.y
+    && left.x < right.x + right.width && left.x + left.width > right.x;
+}
+
+test("a preview toast stays clear of the onboarding business-type controls", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto("/onboarding?preview=1");
+  await page.getByRole("textbox", { name: "שם העסק" }).fill("בדיקה");
+  await page.getByRole("button", { name: "המשך" }).click();
+  const note = page.locator(".ui-toast");
+  await expect(note).toBeVisible();
+  await expect.poll(async () => {
+    const toast = await note.boundingBox();
+    const registered = await page.getByRole("radio", { name: "עוסק מורשה" }).boundingBox();
+    const exempt = await page.getByRole("radio", { name: "עוסק פטור" }).boundingBox();
+    if (!toast || !registered || !exempt) return true;
+    return (await overlaps(toast, registered)) || (await overlaps(toast, exempt));
+  }).toBe(false);
+});
+
+test("a preview toast stays clear of שמירה in the new-category sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto("/e2e/categories?preview=1");
+  await page.getByRole("button", { name: "קטגוריה חדשה" }).click();
+  const save = page.getByRole("button", { name: "שמירה" });
+  await expect(save).toBeVisible();
+  await save.click();
+  const note = page.locator(".ui-toast");
+  await expect(note).toBeVisible();
+  await expect.poll(async () => {
+    const toast = await note.boundingBox();
+    const button = await save.boundingBox();
+    if (!toast || !button) return true;
+    return overlaps(toast, button);
+  }).toBe(false);
+});
+
+test("a category row opens its transactions and the waiting line opens that project's queue", async ({ page }) => {
+  await page.goto("/e2e/project-detail?preview=1");
+  await page.getByRole("link", { name: /חומרים/ }).click();
+  await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
+  await expect(page.getByText("מלט")).toBeVisible();
+  await page.goto("/e2e/project-detail?preview=1");
+  await page.getByRole("link", { name: /ממתינה לאישור/ }).click();
+  await expect(page).toHaveURL(/project=p1/);
+  await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
+});
+
 test("a toast dismisses on tap", async ({ page }) => {
   await page.goto("/onboarding?preview=1");
   await page.getByRole("textbox", { name: "שם העסק" }).fill("בדיקה");
