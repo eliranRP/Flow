@@ -65,3 +65,5 @@ Backoff reads "SUMIT לא זמין כרגע." The auth screen says reconnect onc
 ## r17 addendum
 
 `reassign_undo` enables row level security and has no policies. The table stays revoked from anon and authenticated. `reassign_transaction`, `set_transaction_category`, and `undo_reassign` are security definer, so they keep writing it as the owner, who bypasses row level security. pgTAP checks that the table has row level security and that no ordinary table in `public` has it off.
+
+The design review of r15 is accepted with these fixes. A sheet panel draws no focus ring. Real controls inside it keep the 2px `:focus-visible` ring. Split segment labels stay on one line at 320, and the Split sample writes פ״ת with a gershayim. The overhead hint wording stays as it is: "כבוי · מציג רווח לפני כלליות", "דלוק · כל פרויקט מציג רווח אחרי חלקו בכלליות", "דלוק · אין הכנסות בפרויקטים, אז אי אפשר לחלק את הכלליות", and "דלוק · החלק בכלליות הוא" plus the amount.

@@ -91,6 +91,26 @@ export const Hover: Story = {
   ),
 };
 
+export const SharedNone: Story = {
+  name: "Shared cost, no shares",
+  args: { variant: "button", title: "עלות משותפת · טרם פוצלה" },
+  render: () => (
+    <List>
+      <ListRow variant="button" title="עלות משותפת · טרם פוצלה" chevron onClick={() => undefined} />
+    </List>
+  ),
+};
+
+export const SharedOne: Story = {
+  name: "Shared cost, one share",
+  args: { variant: "button", title: "בניין מגורים חולון" },
+  render: () => (
+    <List>
+      <ListRow variant="button" title="בניין מגורים חולון" chevron onClick={() => undefined} />
+    </List>
+  ),
+};
+
 export const ListOfRows: Story = {
   args: { variant: "project", title: "טק-ליין", agorot: "-2940000", loss: true },
   render: () => (

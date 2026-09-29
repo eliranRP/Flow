@@ -21,4 +21,34 @@ describe("Sheet", () => {
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(document.querySelector("[title]")).toBeNull();
   });
+
+  it("draws no outline on an opened sheet panel", () => {
+    render(
+      <Sheet open onOpenChange={() => undefined} title="תקופה">
+        <button type="button">בפנים</button>
+      </Sheet>,
+    );
+    const panel = screen.getByRole("dialog", { name: "תקופה" });
+    expect(panel).toHaveClass("ui-sheet-panel");
+    panel.focus();
+    expect(getComputedStyle(panel).outlineStyle).toBe("none");
+    expect(sheetFocusRule()).toBe("none");
+    expect(screen.getByRole("button", { name: "בפנים" })).toBeInTheDocument();
+  });
 });
+
+function sheetFocusRule(): string {
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of rules) {
+      if (!(rule instanceof CSSStyleRule)) continue;
+      if (rule.selectorText.includes(".ui-sheet-panel:focus-visible")) return rule.style.outline;
+    }
+  }
+  return "";
+}

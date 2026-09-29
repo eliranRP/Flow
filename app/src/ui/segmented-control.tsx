@@ -9,8 +9,6 @@ type SegmentedControlProps<T extends string> = {
   showLabel?: boolean;
   /** Categories uses the input radius. Other screens keep the segment token. */
   radius?: "segment" | "input";
-  /** Split lets a narrow label wrap instead of ellipsizing. */
-  wrap?: boolean;
   value: T;
   options: Array<Option<T>>;
   onChange: (value: T) => void;
@@ -21,7 +19,6 @@ export function SegmentedControl<T extends string>({
   label,
   showLabel = true,
   radius = "segment",
-  wrap = false,
   value,
   options,
   onChange,
@@ -53,7 +50,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div className="ui-field">
       {showLabel ? <span className="ui-field-label">{label}</span> : null}
-    <div className={cx("ui-seg", radius === "input" && "ui-seg-input", wrap && "ui-seg-wrap")} role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+    <div className={cx("ui-seg", radius === "input" && "ui-seg-input")} role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
       {options.map((option, optionIndex) => {
         const selected = value === option.value;
         return (
