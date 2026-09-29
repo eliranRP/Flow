@@ -9,7 +9,7 @@ describe("sumit-connect", () => {
   it("validates listfolders before it writes", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const write = vi.fn(() => Promise.resolve({ error: null }));
-    const fetcher = vi.fn(() =>
+    const fetcher = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
       Promise.resolve(new Response(JSON.stringify({
         Status: 1,
         UserErrorMessage: "invalid api key",
@@ -22,7 +22,7 @@ describe("sumit-connect", () => {
       write,
     })).rejects.toThrow("sumit_auth");
     expect(fetcher).toHaveBeenCalledOnce();
-    expect(fetcher.mock.calls[0]?.[0]).toBe(LIST_FOLDERS);
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe(LIST_FOLDERS);
     expect(write).not.toHaveBeenCalled();
 
     const source = readFileSync(path.resolve(process.cwd(), "../supabase/functions/sumit-connect/index.ts"), "utf8");
