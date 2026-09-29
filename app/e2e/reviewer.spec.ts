@@ -64,6 +64,10 @@ test("home links open a queue, a filed list, and each save", async ({ page }) =>
     ["תור, בלי חיבור", /\/reviewer\/review\?save=offline$/],
     ["שויכו היום", /\/reviewer\/filed$/],
     ["שויכו היום, אין תנועות", /\/reviewer\/filed\?empty=1$/],
+    ["קטגוריה, חומרים", /\/reviewer\/category$/],
+    ["קטגוריה, אין תנועות", /\/reviewer\/category\?empty=1$/],
+    ["תור של הפרויקט", /\/reviewer\/project$/],
+    ["תור של הפרויקט, אין פריטים", /\/reviewer\/project\?empty=1$/],
     ["שמירה שמצליחה", /\/reviewer\/save\?save=ok$/],
     ["שמירה שנדחית", /\/reviewer\/save\?save=fail$/],
     ["שמירה בלי חיבור", /\/reviewer\/save\?save=offline$/],
@@ -136,6 +140,36 @@ test("a refused queue save has no retry, and a dropped connection does", async (
   expect(await retry.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await retry.click();
   await toast(page, offline);
+});
+
+test("the category page shows the materials line, and can be empty", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/category");
+  await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
+  await expect(page.getByText("שיפוץ הרצל 12")).toBeVisible();
+  await expect(page.getByText("₪220")).toBeVisible();
+  await expectNoOverflow(page);
+  await page.getByRole("button", { name: "חזרה" }).click();
+  await expect(page).toHaveURL(/\/reviewer$/);
+  await page.goto("/reviewer/category?empty=1");
+  await expect(page.getByText("אין תנועות בקטגוריה הזו")).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("the project queue goes back, and its empty state offers חזרה לפרויקט", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/project");
+  await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
+  await expect(page.getByText("₪150")).toBeVisible();
+  await expectNoOverflow(page);
+  await page.getByRole("button", { name: "חזרה" }).click();
+  await expect(page).toHaveURL(/\/reviewer$/);
+  await page.goto("/reviewer/project?empty=1");
+  await expect(page.getByText("אין פריטים לאישור בפרויקט הזה")).toBeVisible();
+  await expect(page.getByText("אין פריטים של הפרויקט הזה בתור.")).toBeVisible();
+  await expectNoOverflow(page);
+  await page.getByRole("link", { name: "חזרה לפרויקט" }).click();
+  await expect(page).toHaveURL(/\/reviewer$/);
 });
 
 test("filed today lists both rows, opens one, and can be empty", async ({ page }) => {

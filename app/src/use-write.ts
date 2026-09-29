@@ -7,7 +7,13 @@ export function assertNoError(result: { error: { message: string } | null }): vo
   if (result.error) throw new Error(result.error.message);
 }
 
-export type WriteFailure = string | { message: string; retry?: boolean };
+export type WriteFailure = string | {
+  message: string;
+  retry?: boolean;
+  tone?: "bad" | "info";
+  /** A shared-cost refusal offers לחלוקה instead of a retry. */
+  action?: string;
+};
 
 /** A database refusal is final. Retry is for a dropped connection or a server error. */
 export function isTransientWriteError(error: Error): boolean {
@@ -30,6 +36,8 @@ export function useWrite(options: {
   success?: string;
   failure: string | ((error: Error) => WriteFailure);
   onSuccess?: () => void;
+  /** Where לחלוקה goes when the database refuses one project on a shared cost. */
+  onSplit?: () => void;
 }) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
@@ -45,10 +53,16 @@ export function useWrite(options: {
       const failure = error instanceof Error ? error : new Error("failed");
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
       const retryable = failureRetries(reported, failure);
+      const tone = typeof reported === "string" ? "bad" : (reported.tone ?? "bad");
+      const split = typeof reported !== "string" && reported.action != null && options.onSplit != null;
       toast.show({
-        tone: "bad",
+        tone,
         message: failureMessage(reported),
-        ...(retryable ? { action: "ניסיון חוזר", onAction: () => { retry.current(); } } : {}),
+        ...(split
+          ? { action: reported.action, onAction: () => { options.onSplit?.(); } }
+          : retryable
+            ? { action: "ניסיון חוזר", onAction: () => { retry.current(); } }
+            : {}),
       });
     },
   });

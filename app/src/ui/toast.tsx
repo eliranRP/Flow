@@ -29,8 +29,8 @@ const BAD_MS = 4000;
 const SWIPE_PX = 48;
 
 function toastMs(input: ToastInput): number {
-  if (input.tone === "bad" || input.tone === "info") return BAD_MS;
   if (input.action && input.onAction) return ACTION_MS;
+  if (input.tone === "bad" || input.tone === "info") return BAD_MS;
   return OK_MS;
 }
 
@@ -86,6 +86,20 @@ function toastHits(top: number, height: number, boxes: ToastBox[]): boolean {
   return boxes.some((box) => box.top < bottom && box.bottom > top);
 }
 
+/** A toast that crosses the sheet's top edge covers the rounded corner and the grab area. */
+function straddlesSheet(top: number, height: number, sheetTop: number | null): boolean {
+  if (sheetTop == null) return false;
+  const bottom = top + height;
+  return top < sheetTop - 0.5 && bottom > sheetTop + 0.5;
+}
+
+function coversPageHeader(top: number, height: number, header: Element | null, sheet: Element | null): boolean {
+  if (!(header instanceof HTMLElement) || (sheet instanceof Element && sheet.contains(header))) return false;
+  const rect = header.getBoundingClientRect();
+  if (rect.height === 0) return false;
+  return rect.top < top + height && rect.bottom > top;
+}
+
 /** Sit just under the page or sheet header, clear of every control. A shrink stays tall enough for two lines and ביטול. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
@@ -101,18 +115,21 @@ export function placeToast(layer: HTMLElement): void {
     : safe + inset;
   const floor = window.innerHeight - gap;
   const boxes = toastControls(layer, sheet);
+  const sheetTop = sheet instanceof HTMLElement ? sheet.getBoundingClientRect().top : null;
   const candidates = [measured];
+  if (sheetTop != null) candidates.push(sheetTop - gap - height);
   for (const box of boxes) candidates.push(box.top - gap - height);
   for (const box of boxes) candidates.push(box.bottom + gap);
-  if (sheet instanceof HTMLElement) candidates.push(sheet.getBoundingClientRect().top - gap - height);
   candidates.push(safe);
+  const pageHeader = document.querySelector("header.ui-page, header.ui-band");
   if (height > 0) {
     for (const top of candidates) {
       if (top < safe || top + height > floor) continue;
-      if (!toastHits(top, height, boxes)) {
-        layer.style.top = `${String(top)}px`;
-        return;
-      }
+      if (toastHits(top, height, boxes)) continue;
+      if (straddlesSheet(top, height, sheetTop)) continue;
+      if (coversPageHeader(top, height, pageHeader, sheet)) continue;
+      layer.style.top = `${String(top)}px`;
+      return;
     }
   }
   const edges = [safe, floor];
@@ -291,7 +308,7 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
           swiped.current = false;
           return;
         }
-        if (event.target instanceof Element && event.target.closest("button")) return;
+        if (event.target instanceof Element && event.target.closest("button, .ui-toast-action")) return;
         onDismiss?.();
       }}
     >
@@ -302,7 +319,7 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
           </span>
           <span className="ui-toast-text" dir="rtl">{children}</span>
           {action && onAction ? (
-            <button type="button" aria-label={action} onClick={onAction}>
+            <button type="button" className="ui-toast-action" aria-label={action} onClick={onAction}>
               {action}
             </button>
           ) : null}

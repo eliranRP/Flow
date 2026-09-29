@@ -54,6 +54,34 @@ test("undo on the approve toast brings the card back", async ({ page }) => {
   await expect(page.getByText("1 מתוך 2")).toBeVisible();
 });
 
+test("a near-miss on ביטול undoes the card instead of dismissing the toast", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/e2e/review");
+  await expect(page.getByText("1 מתוך 2")).toBeVisible();
+  await page.getByRole("button", { name: "אישור" }).click();
+  await expect(page.getByText("2 מתוך 2")).toBeVisible();
+  const action = page.locator(".ui-toast button", { hasText: "ביטול" });
+  await expect(action).toBeVisible();
+  const box = await action.boundingBox();
+  expect(box).not.toBeNull();
+  if (box == null) return;
+  expect(box.height).toBeLessThan(44);
+  const reach = (44 - box.height) / 2;
+  expect(reach).toBeGreaterThan(4);
+  const point = {
+    x: box.x + box.width / 2,
+    y: box.y - Math.min(8, reach - 1),
+  };
+  const hit = await page.evaluate(({ x, y }) => {
+    const node = document.elementFromPoint(x, y);
+    const button = node instanceof Element ? node.closest("button") : null;
+    return button?.textContent ?? "";
+  }, point);
+  expect(hit).toContain("ביטול");
+  await page.mouse.click(point.x, point.y);
+  await expect(page.getByText("1 מתוך 2")).toBeVisible();
+});
+
 test("an empty review queue sends you home", async ({ page }) => {
   await page.goto("/review?preview=1");
   await page.getByRole("link", { name: "לדף הבית" }).click();

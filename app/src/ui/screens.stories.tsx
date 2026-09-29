@@ -1,6 +1,7 @@
 import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from "@flow/shared";
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { Route, Routes } from "react-router-dom";
 import { HelpScreen } from "../screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "../screens/HomeScreen";
 import {
@@ -9,8 +10,10 @@ import {
   ChangeForm,
   FiledTodayScreen,
   OnboardingScreen,
+  ProjectCategoryScreen,
   ProjectDetailScreen,
   ProjectsScreen,
+  ReviewEmpty as ReviewEmptyState,
   ReviewQueue,
   ReviewScreen,
   SettingsScreen,
@@ -347,6 +350,78 @@ export const ReviewSharedCost: Story = {
         }]}
         search=""
         sample
+      />
+    </StoryRoute>
+  ),
+};
+
+const categorySample = {
+  categoryName: "חומרים",
+  projectName: "שיפוץ הרצל 12",
+  rows: [
+    { id: "t-sand", description: "חול", doc_date: "2026-09-29", amount_net: -22_000n },
+    { id: "t-bolts", description: "ברגים", doc_date: "2026-09-28", amount_net: -18_000n },
+  ],
+};
+
+export const ProjectCategory: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c-materials">
+      <ExampleBar />
+      <ProjectCategoryScreen sample={categorySample} backTo="/projects/a" />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectCategoryEmpty: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c-materials">
+      <ExampleBar />
+      <ProjectCategoryScreen
+        sample={{ categoryName: "חומרים", projectName: "שיפוץ הרצל 12", rows: [] }}
+        backTo="/projects/a"
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectCategoryError: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c1?preview=error">
+      <ExampleBar />
+      <Routes>
+        <Route path="/projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
+      </Routes>
+    </StoryRoute>
+  ),
+};
+
+export const ReviewFiltered: Story = {
+  render: () => (
+    <StoryRoute entry="/review?project=a" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue
+        rows={[sampleReview]}
+        search="?project=a"
+        sample
+        backTo="/projects/a"
+        homeTo="/projects/a"
+        homeLabel="חזרה לפרויקט"
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewFilteredEmpty: Story = {
+  render: () => (
+    <StoryRoute entry="/review?project=a" tabs>
+      <ExampleBar />
+      <ReviewEmptyState
+        search="?project=a"
+        filtered
+        backTo="/projects/a"
+        homeTo="/projects/a"
+        homeLabel="חזרה לפרויקט"
       />
     </StoryRoute>
   ),

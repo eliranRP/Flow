@@ -9,30 +9,46 @@ vi.mock("./use-books", () => ({
   useInvalidateBooks: () => async () => undefined,
 }));
 
-function Save({ run, failure }: { run: () => Promise<void>; failure: typeof changeSaveFailure | string }) {
-  const save = useWrite({ keys: [], failure, run });
+function Save({
+  run,
+  failure,
+  onSplit,
+}: {
+  run: () => Promise<void>;
+  failure: typeof changeSaveFailure | string;
+  onSplit?: () => void;
+}) {
+  const save = useWrite({ keys: [], failure, run, onSplit });
   return <button type="button" onClick={() => { save.mutate(); }}>שמירה</button>;
 }
 
-function renderSave(run: () => Promise<void>, failure: typeof changeSaveFailure | string = changeSaveFailure) {
+function renderSave(
+  run: () => Promise<void>,
+  failure: typeof changeSaveFailure | string = changeSaveFailure,
+  onSplit?: () => void,
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <Save run={run} failure={failure} />
+        <Save run={run} failure={failure} onSplit={onSplit} />
       </ToastProvider>
     </QueryClientProvider>,
   );
 }
 
 describe("useWrite", () => {
-  it("does not offer a retry when the database refuses a shared cost", async () => {
+  it("offers לחלוקה, not a retry, when the database refuses a shared cost", async () => {
+    const onSplit = vi.fn();
     renderSave(async () => {
       throw new Error("shared costs are split, not assigned to one project");
-    });
+    }, changeSaveFailure, onSplit);
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "לחלוקה" }));
+    expect(onSplit).toHaveBeenCalledOnce();
   });
 
   it("offers a retry when the network fails", async () => {
