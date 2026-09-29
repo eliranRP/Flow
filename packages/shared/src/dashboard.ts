@@ -127,6 +127,9 @@ export const projectDetailSchema = z
         amount_agorot: agorotSchema,
       }),
     ),
+    /** Project expenses whose category is still a suggestion. Omitted on older payloads. */
+    pending_count: z.number().int().nonnegative().optional(),
+    pending_agorot: agorotSchema.optional(),
     transactions: z.array(
       z.object({
         id: z.string(),

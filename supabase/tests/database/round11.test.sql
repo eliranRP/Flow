@@ -1,9 +1,12 @@
 -- The banner count and list_auto_assigned_today are the same rows.
--- A suggested category stays out of a project's category breakdown.
+-- The filed fixture is a project expense with a category, so it would stay
+-- filed if sync_review_queue ran.
+-- A suggested category stays out of the named breakdown. Its amount is
+-- pending_agorot, and the named lines plus that amount equal direct_agorot.
 
 begin;
 
-select plan(11);
+select plan(15);
 
 do $users$
 begin
@@ -56,12 +59,13 @@ where c.label = 'company';
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
-  doc_date, source, idempotency_key, category_id, description
+  doc_date, source, idempotency_key, project_id, category_id, description
 )
-select c.id, 'expense', 'expense', 'shared',
+select c.id, 'expense', 'expense', 'project',
   -1000, -1000, 0, 'unknown',
-  '2026-09-29', 'sumit', 'r11:filed', h.id, 'שויך היום'
+  '2026-09-29', 'sumit', 'r11:filed', p.id, h.id, 'שויך היום'
 from r11 c
+join r11 p on p.label = 'beta'
 join r11 h on h.label = 'materials'
 where c.label = 'company';
 
@@ -124,6 +128,11 @@ select is(
   'שויך היום',
   'the listed row is the one filed today'
 );
+select is(
+  (select public.list_auto_assigned_today() -> 0 ->> 'project_name'),
+  'ביתא',
+  'the filed row is a project expense, not an unallocated shared cost'
+);
 select ok(
   not exists (
     select 1
@@ -152,6 +161,26 @@ select is(
   ((public.get_project((select id from r11 where label = 'alpha')) -> 'categories' -> 0 ->> 'amount_agorot')::bigint),
   3000::bigint,
   'the confirmed category keeps its own amount'
+);
+select is(
+  ((public.get_project((select id from r11 where label = 'alpha')) ->> 'pending_count')::int),
+  1,
+  'the suggested expense is waiting for approval'
+);
+select is(
+  ((public.get_project((select id from r11 where label = 'alpha')) ->> 'pending_agorot')::bigint),
+  5000::bigint,
+  'the waiting line carries the suggested amount'
+);
+select is(
+  (
+    select coalesce(sum((row ->> 'amount_agorot')::bigint), 0)::bigint
+    from jsonb_array_elements(
+      public.get_project((select id from r11 where label = 'alpha')) -> 'categories'
+    ) row
+  ) + ((public.get_project((select id from r11 where label = 'alpha')) ->> 'pending_agorot')::bigint),
+  ((public.get_project((select id from r11 where label = 'alpha')) ->> 'direct_agorot')::bigint),
+  'named categories plus waiting costs equal the project expenses'
 );
 
 select * from finish();

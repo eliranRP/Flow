@@ -15,6 +15,14 @@ import { Toggle } from "./toggle";
 
 export const CHANGE_SAVE_FAILURE = "לא נשמר – אין חיבור";
 
+/** The database refuses one project on a shared cost. Say where the split happens. */
+export const SHARED_SPLIT_FAILURE = "עלות משותפת מחולקת במסך החלוקה.";
+
+export function changeSaveFailure(error: Error): string {
+  if (error.message.includes("shared costs are split")) return SHARED_SPLIT_FAILURE;
+  return CHANGE_SAVE_FAILURE;
+}
+
 export type ChangeChoice = {
   id: string;
   name: string;

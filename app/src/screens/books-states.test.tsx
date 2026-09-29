@@ -11,6 +11,7 @@ import {
   CategoriesScreen,
   ProjectDetailScreen,
   ProjectsScreen,
+  ChangeForm,
   ReviewQueue,
   ReviewScreen,
   SettingsScreen,
@@ -89,6 +90,7 @@ function renderAt(path: string) {
                 <Route path="/projects" element={<ProjectsScreen />} />
                 <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
                 <Route path="/review" element={<ReviewScreen />} />
+                <Route path="/review/change" element={<ChangeForm />} />
                 <Route path="/unpaid" element={<UnpaidScreen />} />
                 <Route path="/settings" element={<SettingsScreen />} />
                 <Route path="/settings/categories" element={<CategoriesScreen />} />
@@ -268,6 +270,107 @@ describe("rejected writes", () => {
     });
     expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
     expect(calls).toContain("resolve_review");
+  });
+
+  it("opens split for an unallocated shared cost", async () => {
+    const calls: string[] = [];
+    rpc.impl = (name) => {
+      calls.push(name);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r1",
+              transaction_id: "t-shared",
+              description: "מלט",
+              doc_date: "2026-09-01",
+              amount_net: -100,
+              direction: "expense",
+              reason: "unallocated_shared",
+              project_id: null,
+              category_id: "c1",
+              project_name: null,
+              category_name: "חומרים",
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("הוצאה משותפת · אישור יפתח חלוקה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.getByText("חומרים")).toBeInTheDocument();
+    const approve = screen.getByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    fireEvent.click(approve);
+    expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
+    expect(calls).not.toContain("resolve_review");
+  });
+
+  it("says a shared cost is split when one project is refused", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            ...emptyDashboard,
+            projects: [
+              {
+                id: "p1",
+                name: "הרצל",
+                status: "active",
+                income_agorot: 0,
+                direct_agorot: 0,
+                shared_agorot: 0,
+                profit_before_shared_agorot: 0,
+                profit_agorot: 0,
+              },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true }],
+          error: null,
+        });
+      }
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r1",
+              transaction_id: "t1",
+              description: "מלט",
+              doc_date: "2026-09-01",
+              amount_net: -100,
+              direction: "expense",
+              reason: "unallocated_shared",
+              project_id: "p1",
+              category_id: "c1",
+              project_name: "הרצל",
+              category_name: "חומרים",
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      if (name === "resolve_review") {
+        return Promise.resolve({
+          data: null,
+          error: { message: "shared costs are split, not assigned to one project" },
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review/change?item=r1");
+    fireEvent.click(await screen.findByRole("button", { name: "שמירה ואישור" }));
+    expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
+    expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
   });
 
   it("disables approve when the card has no suggestion", async () => {
