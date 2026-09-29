@@ -102,7 +102,7 @@ async function syncCompany(
   companyId: string,
   kek: Uint8Array,
   force: boolean,
-): Promise<{ ok: boolean; documents: number; skipped?: boolean }> {
+): Promise<{ ok: boolean; documents: number; skipped?: boolean; sumit_reads: number }> {
   const connection = await admin
     .from("sumit_connections")
     .select("sumit_company_id, key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, last_sync_at, last_error, next_attempt_at")
@@ -116,7 +116,7 @@ async function syncCompany(
   }
   const last = row.last_sync_at ? Date.parse(row.last_sync_at as string) : 0;
   const minGap = force ? 60_000 : 6 * 60 * 60 * 1000;
-  if (last && Date.now() - last < minGap) return { ok: true, documents: 0, skipped: true };
+  if (last && Date.now() - last < minGap) return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
 
   const envelope: Envelope = {
     keyCiphertext: String(row.key_ciphertext),
@@ -136,11 +136,12 @@ async function syncCompany(
   let apiKey = "";
   try {
     apiKey = await openApiKey(envelope, kek, companyId);
-    const documents = await listDocuments(sumitCompanyId, apiKey);
+    const listed = await listDocuments(sumitCompanyId, apiKey);
+    const documents = listed.docs;
     await writeLedger(admin, companyId, documents);
     const stamped = await admin.rpc("stamp_sumit_sync", { p_company: companyId });
     if (stamped.error) throw new Error("could not stamp the sync");
-    return { ok: true, documents: documents.length };
+    return { ok: true, documents: documents.length, sumit_reads: listed.reads };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
     const safe = apiKey === "" ? message : message.replaceAll(apiKey, "[redacted]");
@@ -227,8 +228,10 @@ function findFolder(node: unknown, name: string): number | null {
   return null;
 }
 
-async function listDocuments(companyId: number, apiKey: string): Promise<SumitDoc[]> {
+async function listDocuments(companyId: number, apiKey: string): Promise<{ docs: SumitDoc[]; reads: number }> {
   const credentials = { CompanyID: companyId, APIKey: apiKey };
+  let reads = 0;
+  reads += 1;
   const folders = await sumitCall(LIST_FOLDERS, credentials, {});
   const folder = findFolder(folders, "מסמכים");
   if (folder == null) throw new Error("SUMIT documents folder was not found");
@@ -236,6 +239,7 @@ async function listDocuments(companyId: number, apiKey: string): Promise<SumitDo
   let dropped = 0;
   let start = 0;
   for (let page = 0; page < PAGE_CAP; page += 1) {
+    reads += 1;
     const payload = await sumitCall(LIST_ENTITIES, credentials, {
       Folder: folder,
       IncludeInheritedFolders: true,
@@ -255,7 +259,7 @@ async function listDocuments(companyId: number, apiKey: string): Promise<SumitDo
     );
     if (!hasNext || entities.length === 0) {
       if (dropped > 0) console.error("sumit-sync dropped entities", dropped);
-      return docs;
+      return { docs, reads };
     }
     start += entities.length;
   }

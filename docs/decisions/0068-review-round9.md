@@ -37,3 +37,13 @@ The Settings hint "אפשר לנסות שוב ב-HH:MM" sits in the hint colour 
 The Project Detail loading band uses its own boxes for the name, the period line, the profit line, the figure, and the income and expense row. Those boxes follow the loaded band, including the wrap of the figure row at 320. Home still uses `.ui-skel-stack`. The Home trim in [0067](0067-review-round8.md) point 9 is unchanged.
 
 Skipped, because the copy and the placement are still open: the auth row does not repeat "חיבור מחדש" on the refresh row, and the backoff screen keeps both the red status line and the grey clock. `design/system/design-system.md` already diffs as text. The shared-cost labels from point 1 already cover zero and one allocations.
+
+## Further addendum
+
+The code review of r13 had no blocking items. This addendum amends points 2 and 4.
+
+Disconnect copies `sumit_company_id` onto `companies.last_sumit_company_id` and then deletes the connection row. The key is gone and the books stay. The next `replace_sumit_connection` compares the live connection id, or that remembered id when the row is gone. A different id retires `source = 'sumit'` rows and skips their open reviews. A manual row stays. Another company's rows stay. `p_validated` must be true or the function raises before any write. `sumit-connect` sets that flag only after one `listfolders` call returns Status 0, so a typo does not empty Home.
+
+When `set_transaction_category` closes an open `missing_category` item on a shared row with no allocations, it inserts an open `unallocated_shared` item in the same function. `undo_reassign` removes that follow-up when it reopens the missing-category item.
+
+The live check writes to SUMIT only when `SUMIT_CREATE_DOCUMENTS=1`. The default run is connect, two syncs, and the saved split. The helper allowlists read paths, counts every call, and expects zero writes. Flow Test 2 stays at 75 Operations. A screen-reader title draws no focus ring. The 2px ring stays on real controls.

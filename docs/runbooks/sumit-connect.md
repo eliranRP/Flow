@@ -18,6 +18,7 @@ Apply, in order, on the hosted SQL editor or with `supabase db push`:
 10. `supabase/migrations/20260929130000_review_round8.sql`
 11. `supabase/migrations/20260929140000_sumit_status_next_attempt_grant.sql`
 12. `supabase/migrations/20260929150000_review_0068.sql`
+13. `supabase/migrations/20260929160000_review_0068_addendum.sql`
 
 Migrations are append-only from `20260929150000` on. Hosted Supabase had only the Phase 0 migration when `20260929120000` was edited in place, so that one edit stays. Do not edit a migration after it has been applied. Add a new file.
 
@@ -43,9 +44,9 @@ Each Google user has their own Flow company. Both can point at SUMIT CompanyID *
 - `ops@nromomentum.com` already has company Flow Test (`a94bb8a1-fdbb-423d-bca9-ab63a8e6672a`). Sign in, open הגדרות, paste the CompanyID and the API key, tap חיבור, then רענון עכשיו.
 - `owner@example.com` signs in with Google. Onboarding asks for the business name and VAT mode (עוסק מורשה). Then the same SUMIT form.
 
-The key is not returned to the browser. ניתוק deletes the ciphertext and leaves the ledger.
+The key is not returned to the browser. ניתוק deletes the ciphertext, leaves the ledger, and keeps the last SUMIT company id on the Flow company.
 
-Connecting again always clears `reject_attempts`, `next_attempt_at`, and `last_sync_at`. If the SUMIT company id changes, the same transaction retires the previous company's `source = 'sumit'` rows and closes their open review items, so Home does not mix two companies. A manual row stays. Flow Test 2 (`2393153301`) can use a fresh Flow company, or an existing one: the switch does the wipe. Disconnect still keeps the books.
+Connecting again always clears `reject_attempts`, `next_attempt_at`, and `last_sync_at`. `sumit-connect` calls `listfolders` once before it stores the key. A failed check leaves the ledger and the previous connection alone. When the SUMIT company id differs from the live connection, or from the id remembered by ניתוק, that same transaction retires the previous company's `source = 'sumit'` rows and closes their open review items, so Home does not mix two companies. A manual row stays. Flow Test 2 (`2393153301`) can use a fresh Flow company, or an existing one: Disconnect, then Connect, compares the remembered id and retires the old ledger after that one successful read. Disconnect still keeps the books.
 
 There is no SQL seed for the Flow Test documents. `pnpm seed:demo` refuses to run. The sync writes the rows. Do not insert `demo-data.json` into the hosted database.
 
@@ -115,7 +116,7 @@ SUMIT_API_KEY="$SUMIT_API_KEY" \
 pnpm test:e2e:live
 ```
 
-Flow Test 2 is company `2393153301`. Set `SUMIT_NO_DOCUMENTS=1` for that company so the check connects, syncs twice, and confirms the saved split without creating a document. Document creates spend the monthly action budget.
+Flow Test 2 is company `2393153301`. The live check is read-only unless `SUMIT_CREATE_DOCUMENTS=1`. The default run connects, syncs twice, and confirms the saved split without creating a document. Document creates spend the monthly action budget. Do not set that flag for Flow Test 2.
 
 Local email login is off, so the test signs a session with `JWT_SECRET` from `supabase status -o env`. It creates an owner, fills פרטי העסק, pastes the CompanyID and key, runs רענון עכשיו, marks ביטוח המגן VAT-exempt with `set_supplier_settings`, then checks Home (כל התקופה, חשבוניות, 37,700), Projects (שיפוץ הרצל 12), and Unpaid (134,520). It enters one shared split with `save_split`. It creates one invoice in SUMIT, waits out the one-minute force gap, refreshes, and expects that description on Unpaid and the split still in place. It then creates a credit, links it to that invoice, and checks the totals and the split again. `pg_cron` inserts refresh markers. When `pg_net` is installed and Vault `cron_secret` is set, `flow-sumit-drain` POSTs `sumit-sync` with `x-flow-cron` every five minutes. The local check is `pnpm --filter @flow/app exec playwright test -c playwright.drain.config.ts` with `CRON_SECRET` in `supabase/.env`. Unset `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` before the hosted `pnpm build`, or the local values stay baked into `app/dist`.
 

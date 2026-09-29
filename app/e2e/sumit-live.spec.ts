@@ -68,7 +68,20 @@ async function sessionForNewOwner(): Promise<Record<string, unknown>> {
   };
 }
 
+const READ_PATHS = new Set([
+  "/crm/schema/listfolders/",
+  "/crm/data/listentities/",
+  "/website/companies/listquotas/",
+]);
+const writesEnabled = process.env.SUMIT_CREATE_DOCUMENTS === "1";
+const sumitCounts = { reads: 0, writes: 0 };
+let serverReads = 0;
+
 async function sumit(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const read = READ_PATHS.has(path);
+  if (!read && !writesEnabled) throw new Error(`SUMIT write is not enabled: ${path}`);
+  if (read) sumitCounts.reads += 1;
+  else sumitCounts.writes += 1;
   const response = await fetch(`https://api.sumit.co.il${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -85,6 +98,18 @@ async function sumit(path: string, body: Record<string, unknown>): Promise<Recor
     throw new Error(message);
   }
   return parsed;
+}
+
+function operationsUsed(payload: Record<string, unknown>): number {
+  const rows = Array.isArray(payload.Data) ? payload.Data : [];
+  const match = rows.find((row) => {
+    if (row == null || typeof row !== "object") return false;
+    const record = row as Record<string, unknown>;
+    return record.ApplicationName === "ActionsBilling" && record.StatisticName === "Operations";
+  }) as Record<string, unknown> | undefined;
+  const usage = match?.Usage;
+  if (typeof usage !== "number") throw new Error("SUMIT did not report Operations");
+  return usage;
 }
 
 function entityList(data: unknown): Array<{ ID?: number; Folder?: unknown }> {
@@ -240,11 +265,19 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await page.getByRole("button", { name: "המשך" }).click();
   await expect(page.getByText("עוד אין נתונים")).toBeVisible();
 
+  const operationsBefore = operationsUsed(await sumit("/website/companies/listquotas/", {}));
+
   await page.goto("/settings");
   await page.getByRole("button", { name: "חיבור SUMIT" }).click();
   await page.getByLabel("מספר חברה").fill(String(sumitCompanyId));
   await page.getByLabel("מפתח API").fill(sumitKey);
+  const connecting = page.waitForResponse((response) => response.url().includes("/functions/v1/sumit-connect"));
   await page.getByRole("button", { name: "חיבור" }).click();
+  const connected = await connecting;
+  const connectBody = (await connected.json()) as { error?: string; sumit_reads?: number };
+  expect(connected.ok(), connectBody.error ?? "connect failed").toBe(true);
+  if (typeof connectBody.sumit_reads !== "number") throw new Error("connect did not report its SUMIT reads");
+  serverReads += connectBody.sumit_reads;
   await expect(page.getByText("SUMIT מחובר. המפתח נשאר בשרת.")).toBeVisible();
 
   await sync(page);
@@ -259,60 +292,66 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   await page.goto("/unpaid");
   await expect(page.getByText("134,520")).toBeVisible();
 
-  if (process.env.SUMIT_NO_DOCUMENTS === "1") {
-    await page.waitForTimeout(61_000);
-    await page.goto("/settings");
-    await sync(page);
-    await showInvoicedAllTime(page);
-    await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
-    await page.goto("/unpaid");
-    await expect(page.getByText("134,520")).toBeVisible();
-    await expectSplitSurvived(token, splitId);
-    return;
-  }
-
-  try {
-    const created = await sumit("/accounting/documents/create/", {
-      Details: {
-        Type: 0,
-        Date: new Date().toISOString().slice(0, 10),
-        Language: 0,
-        Currency: 0,
-        Description: probe,
-        Customer: { Name: 'יזמות הגליל בע"מ', SearchMode: 0 },
-      },
-      Items: [{ Item: { Name: probe, Price: 118 }, Quantity: 1, UnitPrice: 118 }],
-    });
-    createdId = documentId(created);
-    await page.waitForTimeout(61_000);
-    await page.goto("/settings");
-    await sync(page);
-    await expectProbeListed(page, token, probe);
-    await expectSplitSurvived(token, splitId);
-  } finally {
-    if (createdId != null) {
-      const credited = await sumit("/accounting/documents/create/", {
+  if (process.env.SUMIT_CREATE_DOCUMENTS === "1") {
+    try {
+      const created = await sumit("/accounting/documents/create/", {
         Details: {
-          Type: 5,
+          Type: 0,
           Date: new Date().toISOString().slice(0, 10),
           Language: 0,
           Currency: 0,
-          Description: `${probe}-credit`,
+          Description: probe,
           Customer: { Name: 'יזמות הגליל בע"מ', SearchMode: 0 },
         },
-        Items: [{ Item: { Name: `${probe}-credit`, Price: 118 }, Quantity: 1, UnitPrice: 118 }],
+        Items: [{ Item: { Name: probe, Price: 118 }, Quantity: 1, UnitPrice: 118 }],
       });
-      creditId = documentId(credited);
-      await linkCredit(creditId, createdId);
+      createdId = documentId(created);
       await page.waitForTimeout(61_000);
       await page.goto("/settings");
       await sync(page);
-      await showInvoicedAllTime(page);
-      await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
-      await expectProbeAbsent(page, token, probe);
+      await expectProbeListed(page, token, probe);
       await expectSplitSurvived(token, splitId);
+    } finally {
+      if (createdId != null) {
+        const credited = await sumit("/accounting/documents/create/", {
+          Details: {
+            Type: 5,
+            Date: new Date().toISOString().slice(0, 10),
+            Language: 0,
+            Currency: 0,
+            Description: `${probe}-credit`,
+            Customer: { Name: 'יזמות הגליל בע"מ', SearchMode: 0 },
+          },
+          Items: [{ Item: { Name: `${probe}-credit`, Price: 118 }, Quantity: 1, UnitPrice: 118 }],
+        });
+        creditId = documentId(credited);
+        await linkCredit(creditId, createdId);
+        await page.waitForTimeout(61_000);
+        await page.goto("/settings");
+        await sync(page);
+        await showInvoicedAllTime(page);
+        await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
+        await expectProbeAbsent(page, token, probe);
+        await expectSplitSurvived(token, splitId);
+      }
     }
+    return;
   }
+
+  await page.waitForTimeout(61_000);
+  await page.goto("/settings");
+  await sync(page);
+  await showInvoicedAllTime(page);
+  await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
+  await page.goto("/unpaid");
+  await expect(page.getByText("134,520")).toBeVisible();
+  await expectSplitSurvived(token, splitId);
+  const operationsAfter = operationsUsed(await sumit("/website/companies/listquotas/", {}));
+  expect(sumitCounts.writes).toBe(0);
+  expect(sumitCounts.reads).toBe(2);
+  expect(serverReads).toBe(5);
+  expect(operationsAfter).toBe(operationsBefore);
+  expect(operationsAfter).toBe(75);
 });
 
 async function unpaidRows(token: string): Promise<Array<Record<string, unknown>>> {
@@ -347,9 +386,11 @@ async function sync(page: Page) {
   const pending = page.waitForResponse((response) => response.url().includes("/functions/v1/sumit-sync"));
   await page.getByRole("button", { name: "רענון עכשיו" }).click();
   const response = await pending;
-  const body = (await response.json()) as { ok?: boolean; skipped?: boolean; error?: string };
+  const body = (await response.json()) as { ok?: boolean; skipped?: boolean; error?: string; sumit_reads?: number };
   expect(response.ok(), body.error ?? "sync failed").toBe(true);
   expect(body.skipped).not.toBe(true);
+  if (typeof body.sumit_reads !== "number") throw new Error("sync did not report its SUMIT reads");
+  serverReads += body.sumit_reads;
   await expect(page.getByText("הרענון הסתיים.")).toBeVisible();
 }
 
