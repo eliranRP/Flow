@@ -122,6 +122,8 @@ function AppRoutes() {
               <Route path="/e2e/split" element={<DevSplit />} />
               <Route path="/reviewer/*" element={<ReviewerPreviewRoute />} />
             </>
+          ) : import.meta.env.VITE_REVIEWER_BUILD === "1" ? (
+            <Route path="/reviewer/*" element={<ReviewerPreviewRoute />} />
           ) : null}
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>

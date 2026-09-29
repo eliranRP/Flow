@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+A reviewers-only build sets `VITE_REVIEWER_BUILD=1` so `/reviewer` is in that bundle. The hosted build leaves it unset.
+
 Decision [0072](decisions/0072-design-review-rulings.md) points 2, 14, 15, and 16. A toast action keeps a text-sized label and a hit area of at least 44×44, and a tap there runs the action. When the slot under an open sheet covers a control, the toast sits fully above the sheet instead of across its top edge. A shared cost refused before the write or by the database uses the info tone, לחלוקה, and 5 seconds. The queue opened from a project goes back to that project, and its empty state says "חזרה לפרויקט". An empty category says "אין תנועות בקטגוריה הזו", and an empty filtered queue says "אין פריטים לאישור בפרויקט הזה". The reviewer preview and the stories show the category page and that filtered queue.
 
 Decision [0073](decisions/0073-review-handoff.md), Accepted. From r23 on, a handoff summary includes a self-check against the PR reviewer's checklist and the UI design reviewer's checklist: DESIGN-RULES, CONTROLS.md with pass or fail, a 320px clipping and overflow sweep, a no-op-control sweep, the cursor rules, and that the numbers add up. `/reviewer` on the dev server shows sample books (a queue with a shared cost, today's filed list, and saves that succeed or fail on demand), marked "נתוני דוגמה · Example data", and that module is left out of the hosted build. Only Blocking and Should items block a merge. A nit waits for the next batch.
