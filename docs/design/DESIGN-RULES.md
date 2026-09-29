@@ -414,7 +414,7 @@ Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mocku
 - Nothing is selected until a tap, unless a saved split is being re-edited. Three choices, one tap each: "שווה בין כל הפרויקטים", "שווה בין פרויקטים שאבחר", "לפי הכנסות". "All" and "income" enable "שמירה" on that tap. Chosen opens a checklist of active projects and enables "שמירה" at two or more. A ticked row shows its ₪ share. Nothing to type there. Income with no income in the period is disabled, with the reason "אין הכנסות בתקופה הזו".
 - "חלוקה ידנית" is a text link, not a default. The fields fit "100%", one decimal, at least 96px wide. The row focuses the input. `inputmode=decimal`, `autocomplete=off`, and the name is `split-pct-<projectId>`. "חזרה לאפשרויות" restores the previous choice.
 - One save button, "שמירה", on as soon as the split is valid. Busy label "שומר…". One summary line, for example "₪250 לכל אחד מ־4 פרויקטים" or "לפי הכנסות · N פרויקטים". Nothing chosen says "בחרו איך לחלק". A short manual split says "נשארו 30% לחלק". Over says "הסך 120%. צריך 100%." with only the total in the bad colour. A valid manual split says "הסך 100%" and "חלוקה ידנית · N פרויקטים".
-- Displayed shekel parts put the leftover agora on the last project so the line adds up. Stored shares still sum to 10000 basis points. `save_split` still puts that agora remainder on the first JSON element.
+- Displayed shekel parts put the leftover agora on the last project so the line adds up. The save sends those shares reversed, so the stored agorot match the screen. Stored shares still sum to 10000 basis points.
 - Cancel: ✕. Guide §13.
 - Success: toast "החלוקה נשמרה", then close. Error: `er-05`, "החלוקה לא נשמרה", with "ניסיון חוזר". Values stay.
 

@@ -1,4 +1,4 @@
-import type { CategoryRow, Dashboard, ReviewRow, UnpaidRow } from "@flow/shared";
+import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from "@flow/shared";
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { HelpScreen } from "../screens/HelpScreen";
@@ -7,6 +7,7 @@ import {
   AddForm,
   CategoriesScreen,
   ChangeForm,
+  FiledTodayScreen,
   OnboardingScreen,
   ProjectDetailScreen,
   ProjectsScreen,
@@ -267,6 +268,46 @@ export const ReviewWithoutSuggestion: Story = {
     <StoryRoute entry="/review" tabs reviewCount={1}>
       <ExampleBar />
       <ReviewQueue rows={[bareReview]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewBanner: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[sampleReview]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+const sampleFiled: FiledTodayRow[] = [
+  {
+    id: "t-filed",
+    description: "מלט",
+    doc_date: "2026-09-29",
+    amount_net: -350_000n,
+    direction: "expense",
+    supplier_name: "מנופי המרכז בע״מ",
+    project_name: "שיפוץ הרצל 12",
+    category_name: "חומרים",
+  },
+];
+
+export const FiledToday: Story = {
+  render: () => (
+    <StoryRoute entry="/review/filed">
+      <ExampleBar />
+      <FiledTodayScreen sample={sampleFiled} />
+    </StoryRoute>
+  ),
+};
+
+export const FiledTodayEmpty: Story = {
+  render: () => (
+    <StoryRoute entry="/review/filed?preview=empty">
+      <ExampleBar />
+      <FiledTodayScreen sample={[]} />
     </StoryRoute>
   ),
 };

@@ -8,7 +8,8 @@ test("a skip toast stays clear of the actions and leaves on its own", async ({ p
   const skip = page.getByRole("button", { name: "דלג" });
   const change = page.getByRole("button", { name: "שינוי" });
   await skip.click();
-  const toast = page.getByRole("status");
+  const toast = page.locator(".ui-toast");
+  await expect(toast).toHaveAttribute("role", "status");
   await expect(toast).toHaveText(/דילגנו על הפריט/);
   await expect(page.getByRole("heading", { name: "הובלות הגליל" })).toBeVisible();
   await expect(page.getByText("2 מתוך 2")).toBeVisible();

@@ -22,10 +22,17 @@ export function useToast(): ToastContextValue {
   return value;
 }
 
-/** A confirmation leaves on its own. An error stays long enough to read the retry. */
+/** A confirmation leaves on its own. ביטול stays long enough to tap without a hover pause. An error stays long enough to read the retry. */
 const OK_MS = 2500;
+const ACTION_MS = 5000;
 const BAD_MS = 4000;
 const SWIPE_PX = 48;
+
+function toastMs(input: ToastInput): number {
+  if (input.tone === "bad") return BAD_MS;
+  if (input.action && input.onAction) return ACTION_MS;
+  return OK_MS;
+}
 
 /** One toast under the page header. A new show replaces it. The host does not catch taps. */
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -56,7 +63,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       acting.current = false;
       seq.current += 1;
       setToast({ ...input, id: seq.current });
-      arm(input.tone === "bad" ? BAD_MS : OK_MS);
+      arm(toastMs(input));
     },
     [arm],
   );
@@ -112,20 +119,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      {toast ? (
-        <div className="ui-toast-host" ref={host}>
-          <Toast
-            tone={toast.tone}
-            action={toast.action}
-            onAction={toast.onAction ? runAction : undefined}
-            onDismiss={dismiss}
-            onPause={pause}
-            onResume={resume}
-          >
-            {toast.message}
-          </Toast>
-        </div>
-      ) : null}
+      <div className="ui-toast-host" ref={host}>
+        <Toast
+          tone={toast?.tone ?? "ok"}
+          action={toast?.action}
+          onAction={toast?.onAction ? runAction : undefined}
+          onDismiss={toast ? dismiss : undefined}
+          onPause={toast ? pause : undefined}
+          onResume={toast ? resume : undefined}
+        >
+          {toast?.message ?? ""}
+        </Toast>
+      </div>
     </ToastContext.Provider>
   );
 }
@@ -160,9 +165,10 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
     onDismiss?.();
   }
 
+  const quiet = children == null || children === "";
   return (
     <div
-      className="ui-toast"
+      className={quiet ? "ui-toast-live" : "ui-toast"}
       role="status"
       dir="rtl"
       onMouseEnter={onPause}
@@ -180,15 +186,19 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
         onDismiss?.();
       }}
     >
-      <span className={tone === "bad" ? "ui-toast-mark ui-toast-icon ui-toast-bad" : "ui-toast-mark ui-toast-icon"} aria-hidden="true">
-        {tone === "bad" ? <InfoIcon size={18} /> : <CheckIcon size={18} />}
-      </span>
-      <span className="ui-toast-text" dir="rtl">{children}</span>
-      {action && onAction ? (
-        <button type="button" aria-label={action} onClick={onAction}>
-          {action}
-        </button>
-      ) : null}
+      {quiet ? null : (
+        <>
+          <span className={tone === "bad" ? "ui-toast-mark ui-toast-icon ui-toast-bad" : "ui-toast-mark ui-toast-icon"} aria-hidden="true">
+            {tone === "bad" ? <InfoIcon size={18} /> : <CheckIcon size={18} />}
+          </span>
+          <span className="ui-toast-text" dir="rtl">{children}</span>
+          {action && onAction ? (
+            <button type="button" aria-label={action} onClick={onAction}>
+              {action}
+            </button>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

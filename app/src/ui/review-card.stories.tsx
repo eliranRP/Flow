@@ -52,6 +52,13 @@ export const OneCard: Story = {
   },
 };
 
+export const MissingProject: Story = {
+  args: {
+    ...OneCard.args,
+    category: "חומרים",
+  },
+};
+
 export const Suggestion: Story = {
   args: {
     ...OneCard.args,

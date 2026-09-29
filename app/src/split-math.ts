@@ -121,6 +121,15 @@ export function allocate(amount: bigint, ordered: Array<{ id: string; bp: number
   return parts;
 }
 
+/**
+ * `save_split` adds leftover agorot to the first JSON element.
+ * The screen puts that leftover on the last project, so the payload is reversed
+ * and the stored agorot match the rows the owner just confirmed.
+ */
+export function sharesForSave(parts: Array<{ id: string; bp: number }>): Array<{ project_id: string; share_bp: number }> {
+  return [...parts].reverse().map((part) => ({ project_id: part.id, share_bp: part.bp }));
+}
+
 export function splitIsValid(parts: AllocatedPart[]): boolean {
   if (parts.length === 0) return false;
   const sum = parts.reduce((total, part) => total + part.bp, 0);
