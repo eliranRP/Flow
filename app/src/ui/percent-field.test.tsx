@@ -13,7 +13,7 @@ describe("PercentField", () => {
     const { unmount } = render(<Field start="9" />);
     const input = screen.getByRole("textbox", { name: "אחוז, חולון" });
     fireEvent.change(input, { target: { value: "12.349x" } });
-    expect(input).toHaveValue("12.34");
+    expect(input).toHaveValue("12.3");
     fireEvent.change(input, { target: { value: "8" } });
     expect(input).toHaveValue("8");
     fireEvent.change(input, { target: { value: "" } });
@@ -22,8 +22,9 @@ describe("PercentField", () => {
     expect(input).toHaveValue("100");
     expect(input).toHaveAttribute("inputmode", "decimal");
     expect(input).toHaveAttribute("autocomplete", "off");
-    expect(input.getAttribute("name") ?? "").toMatch(/^flow-share-/);
-    expect(input.id).toMatch(/^flow-share-/);
+    expect(input.getAttribute("name") ?? "").toMatch(/^split-pct-/);
+    expect(input.id).toMatch(/^split-pct-/);
+    expect(input).toHaveAttribute("enterkeyhint", "next");
     unmount();
 
     render(<Field />);

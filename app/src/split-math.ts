@@ -29,14 +29,40 @@ export function percentToBp(raw: string): number {
   return Number.isFinite(hundredths) ? hundredths : 0;
 }
 
-/** The percent string that percentToBp turns back into the same basis points. */
+/** One decimal. 3330 is "33.3" and 10000 is "100". */
 export function bpToPercent(bp: number): string {
-  const hundredths = Math.round(bp);
-  const whole = Math.trunc(hundredths / 100);
-  const frac = Math.abs(hundredths % 100);
+  const tenths = Math.round(bp / 10);
+  const whole = Math.trunc(tenths / 10);
+  const frac = Math.abs(tenths % 10);
   if (frac === 0) return String(whole);
-  if (frac % 10 === 0) return `${String(whole)}.${String(frac / 10)}`;
-  return `${String(whole)}.${String(frac).padStart(2, "0")}`;
+  return `${String(whole)}.${String(frac)}`;
+}
+
+/**
+ * Manual fields keep one decimal, so basis points become tenths that still sum to 100.0%.
+ * The largest fractional remainder gets the extra tenth.
+ */
+export function basisToPercents(ids: string[], basis: Record<string, number>): Record<string, string> {
+  const rows = ids.map((id) => {
+    const exact = (basis[id] ?? 0) / 10;
+    const floor = Math.floor(exact + 1e-9);
+    return { id, floor, rest: exact - floor };
+  });
+  let spare = 1000 - rows.reduce((sum, row) => sum + row.floor, 0);
+  const ranked = [...rows].sort((a, b) => b.rest - a.rest || ids.indexOf(a.id) - ids.indexOf(b.id));
+  const extra = new Set<string>();
+  for (const row of ranked) {
+    if (spare <= 0) break;
+    extra.add(row.id);
+    spare -= 1;
+  }
+  const out: Record<string, string> = {};
+  for (const row of rows) {
+    const tenths = row.floor + (extra.has(row.id) ? 1 : 0);
+    if (tenths <= 0) continue;
+    out[row.id] = tenths % 10 === 0 ? String(tenths / 10) : `${String(Math.trunc(tenths / 10))}.${String(tenths % 10)}`;
+  }
+  return out;
 }
 
 export function activeProjects(projects: SplitProject[]): SplitProject[] {
@@ -77,8 +103,8 @@ export function incomeBasis(projects: SplitProject[]): Record<string, number> {
 
 /**
  * Shekel parts for a signed or absolute amount.
- * Same rule as save_split: each part is amount * bp / 10000, truncating toward zero,
- * and any leftover agorot is added to the first positive share.
+ * Each part is amount * bp / 10000, truncating toward zero.
+ * Leftover agorot is added to the last positive share so the parts match the amount.
  */
 export function allocate(amount: bigint, ordered: Array<{ id: string; bp: number }>): AllocatedPart[] {
   const rows = ordered.filter((row) => row.bp > 0);
@@ -88,9 +114,9 @@ export function allocate(amount: bigint, ordered: Array<{ id: string; bp: number
     assigned += agorot;
     return { id: row.id, bp: row.bp, agorot };
   });
-  const first = parts[0];
-  if (first && assigned !== amount) {
-    parts[0] = { ...first, agorot: first.agorot + (amount - assigned) };
+  const last = parts[parts.length - 1];
+  if (last && assigned !== amount) {
+    parts[parts.length - 1] = { ...last, agorot: last.agorot + (amount - assigned) };
   }
   return parts;
 }

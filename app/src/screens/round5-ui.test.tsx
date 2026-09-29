@@ -183,7 +183,7 @@ describe("transaction reassignment", () => {
 });
 
 describe("split monthly rule", () => {
-  it("hides the monthly toggle and starts from an even split", () => {
+  it("hides the monthly toggle and waits for a choice", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -195,7 +195,7 @@ describe("split monthly rule", () => {
                 { id: "p2", name: "וילה", incomeAgorot: 1n },
               ]}
               sampleAmount={10_000n}
-              sampleContext="מלט"
+              sampleMeta="מלט"
             />
           </MemoryRouter>
           </BooksProvider>
@@ -206,9 +206,11 @@ describe("split monthly rule", () => {
     expect(screen.queryByText("כלל חודשי יגיע בהמשך")).not.toBeInTheDocument();
     expect(screen.queryByText("אופן הפיצול")).not.toBeInTheDocument();
     expect(screen.queryByText("נותר לשייך")).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText(/לכל אחד מ־/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שמירת פיצול" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("בחרו איך לחלק")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" }));
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
   });
 
   it("disables save while a manual split is only partly allocated", () => {
@@ -225,18 +227,18 @@ describe("split monthly rule", () => {
                 { id: "p2", name: "וילה", incomeAgorot: 1n },
               ]}
               sampleAmount={10_000n}
-              sampleContext="מלט"
+              sampleMeta="מלט"
             />
           </MemoryRouter>
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText("נותר לשייך")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שמירת פיצול" })).toBeDisabled();
+    expect(screen.getByText(/נשארו/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
     const share = screen.getByRole("textbox", { name: "אחוז, חולון" });
     expect(share).toHaveAttribute("autocomplete", "off");
-    expect(share.getAttribute("name") ?? "").toBe("flow-share-p1");
+    expect(share.getAttribute("name") ?? "").toBe("split-pct-p1");
     fireEvent.click(screen.getByText("וילה"));
     expect(screen.getByRole("textbox", { name: "אחוז, וילה" })).toHaveFocus();
   });
@@ -306,7 +308,8 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: "שמירת פיצול" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "save_split")).toBe(true);
     });

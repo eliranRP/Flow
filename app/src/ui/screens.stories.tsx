@@ -1,5 +1,5 @@
 import type { CategoryRow, Dashboard, ReviewRow, UnpaidRow } from "@flow/shared";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { HelpScreen } from "../screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "../screens/HomeScreen";
@@ -742,69 +742,92 @@ function SplitStory({
   method,
   shares,
   chosen,
-  context = "משכורת עובדי שטח · ספטמבר · עבודה",
   projects = splitProjects,
+  saving = false,
 }: {
-  method?: "equal" | "chosen" | "income" | "manual";
+  method?: "equal" | "chosen" | "income" | "manual" | null;
   shares?: Record<string, string>;
   chosen?: string[];
-  context?: string;
   projects?: typeof splitProjects;
-}) {
+  saving?: boolean;
+} = {}) {
   return (
     <StoryRoute entry="/transactions/t1/split">
       <SplitScreen
-        example={<span className="t-hint">{exampleLabel}</span>}
-        sampleContext={context}
-        sampleAmount={3_600_000n}
+        sampleMeta="חשמל · 12/09/2026"
+        sampleAmount={100_000n}
         sampleProjects={projects}
         sampleMethod={method}
         sampleShares={shares}
         sampleChosen={chosen}
+        sampleSaving={saving}
       />
     </StoryRoute>
   );
 }
 
-export const Split: Story = {
-  render: () => <SplitStory />,
-};
+function splitQuadrant(render: () => ReactElement): { base: Story; dark: Story; narrow: Story; darkNarrow: Story } {
+  return {
+    base: { render },
+    dark: { render, globals: { theme: "dark" } },
+    narrow: { render, parameters: { viewport: { defaultViewport: "flow320" } } },
+    darkNarrow: { render, globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } },
+  };
+}
 
-export const SplitIncome: Story = {
-  render: () => <SplitStory method="income" />,
-};
+const splitDefault = splitQuadrant(() => <SplitStory />);
+export const SplitDefault: Story = splitDefault.base;
+export const SplitDefaultDark: Story = splitDefault.dark;
+export const SplitDefault320: Story = splitDefault.narrow;
+export const SplitDefaultDark320: Story = splitDefault.darkNarrow;
 
-export const SplitEqual: Story = {
-  render: () => <SplitStory method="equal" />,
-};
+const splitAll = splitQuadrant(() => <SplitStory method="equal" />);
+export const SplitAll: Story = splitAll.base;
+export const SplitAllDark: Story = splitAll.dark;
+export const SplitAll320: Story = splitAll.narrow;
+export const SplitAllDark320: Story = splitAll.darkNarrow;
 
-export const SplitChosen: Story = {
-  render: () => <SplitStory method="chosen" chosen={["a", "c"]} />,
-};
+const splitSelected2 = splitQuadrant(() => <SplitStory method="chosen" chosen={["a", "c"]} />);
+export const SplitSelected2: Story = splitSelected2.base;
+export const SplitSelected2Dark: Story = splitSelected2.dark;
+export const SplitSelected2_320: Story = splitSelected2.narrow;
+export const SplitSelected2Dark320: Story = splitSelected2.darkNarrow;
 
-export const SplitManual: Story = {
-  render: () => <SplitStory method="manual" shares={{ a: "40", b: "30", c: "20", d: "10" }} />,
-};
+const splitSelectedInvalid = splitQuadrant(() => <SplitStory method="chosen" chosen={["a"]} />);
+export const SplitSelectedInvalid: Story = splitSelectedInvalid.base;
+export const SplitSelectedInvalidDark: Story = splitSelectedInvalid.dark;
+export const SplitSelectedInvalid320: Story = splitSelectedInvalid.narrow;
+export const SplitSelectedInvalidDark320: Story = splitSelectedInvalid.darkNarrow;
 
-export const SplitPartial: Story = {
-  render: () => <SplitStory method="manual" shares={{ a: "100", b: "12.34" }} />,
-};
+const splitIncomeDisabled = splitQuadrant(() => (
+  <SplitStory projects={splitProjects.map((project) => ({ ...project, incomeAgorot: 0n }))} />
+));
+export const SplitIncomeDisabled: Story = splitIncomeDisabled.base;
+export const SplitIncomeDisabledDark: Story = splitIncomeDisabled.dark;
+export const SplitIncomeDisabled320: Story = splitIncomeDisabled.narrow;
+export const SplitIncomeDisabledDark320: Story = splitIncomeDisabled.darkNarrow;
 
-export const SplitLongHebrew: Story = {
-  parameters: { viewport: { defaultViewport: "flow320" } },
-  render: () => (
-    <SplitStory
-      method="income"
-      context="ספק עם שם ארוך מאוד · ספטמבר · קטגוריה ארוכה שלא נכנסת בשורה אחת"
-      projects={[
-        { id: "a", name: "בניין מגורים חולון עם שם ארוך מאוד שלא נחתך באמצע המילה", incomeAgorot: 20_000_000n },
-        { id: "b", name: "מגדל משרדים פתח תקווה ועבודות גמר כולל חשמל ואינסטלציה", incomeAgorot: 15_000_000n },
-        { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
-        { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
-      ]}
-    />
-  ),
-};
+const splitManualValid = splitQuadrant(() => (
+  <SplitStory method="manual" shares={{ a: "25", b: "25", c: "25", d: "25" }} />
+));
+export const SplitManualValid: Story = splitManualValid.base;
+export const SplitManualValidDark: Story = splitManualValid.dark;
+export const SplitManualValid320: Story = splitManualValid.narrow;
+export const SplitManualValidDark320: Story = splitManualValid.darkNarrow;
+
+const splitManualOver = splitQuadrant(() => (
+  <SplitStory method="manual" shares={{ a: "70", b: "50" }} />
+));
+export const SplitManualOver: Story = splitManualOver.base;
+export const SplitManualOverDark: Story = splitManualOver.dark;
+export const SplitManualOver320: Story = splitManualOver.narrow;
+export const SplitManualOverDark320: Story = splitManualOver.darkNarrow;
+
+const splitSaving = splitQuadrant(() => <SplitStory method="equal" saving />);
+export const SplitSaving: Story = splitSaving.base;
+export const SplitSavingDark: Story = splitSaving.dark;
+export const SplitSaving320: Story = splitSaving.narrow;
+export const SplitSavingDark320: Story = splitSaving.darkNarrow;
 
 const changeProjects = [
   { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
