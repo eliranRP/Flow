@@ -359,8 +359,8 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
   await expect(sheet).toBeVisible();
   await sheet.getByRole("button", { name: /פרויקט:/ }).click();
   await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
-  await sheet.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
-  await expect(page).toHaveURL(/\/transactions\/t-manual\/split$/);
+  await page.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
+  await expect(page).toHaveURL(/\/transactions\/t-manual\/split\?preview=1$/);
   await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/e2e\/txn\?preview=1$/);
@@ -572,7 +572,10 @@ async function fingerprint(page: Page) {
     url: location.pathname + location.search,
     dialogs: document.querySelectorAll("[role='dialog']").length,
     toast: document.querySelector(".ui-toast")?.textContent ?? "",
-    checked: [...document.querySelectorAll("[aria-checked],[aria-pressed],[aria-selected]")].map((node) => node.getAttribute("aria-checked") ?? node.getAttribute("aria-pressed") ?? node.getAttribute("aria-selected")).join(","),
+    checked: [...document.querySelectorAll("[aria-checked],[aria-pressed],[aria-selected],input[type='checkbox'],input[type='radio']")].map((node) => {
+      if (node instanceof HTMLInputElement && (node.type === "checkbox" || node.type === "radio")) return node.checked ? "1" : "0";
+      return node.getAttribute("aria-checked") ?? node.getAttribute("aria-pressed") ?? node.getAttribute("aria-selected");
+    }).join(","),
     expanded: [...document.querySelectorAll("[aria-expanded]")].map((node) => node.getAttribute("aria-expanded")).join(","),
     text: document.body.innerText,
   }));
@@ -667,11 +670,11 @@ for (const url of sweepPages) {
         reachable = await target.evaluate(hitTarget);
       }
       if (!reachable) {
-        const coveredTab = await target.evaluate((el) => {
-          const sheet = document.querySelector("[data-vaul-drawer][data-state='open'], [role='dialog'][data-state='open']");
-          return sheet != null && el.closest(".ui-tabbar") != null;
+        const covered = await target.evaluate((el) => {
+          const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
+          return sheet != null && !sheet.contains(el);
         });
-        if (coveredTab) {
+        if (covered) {
           skipped += 1;
           continue;
         }
