@@ -134,17 +134,26 @@ type CategoryPatch = { category_id: string; category_name: string };
 
 const categoryPatches = new Map<string, CategoryPatch>();
 const queueListeners = new Set<() => void>();
+/** Stable for useSyncExternalStore. A fresh array on every read loops the queue. */
+let queueViewCache: ReviewRow[] | null = null;
 
 /** The queue the reviewer is showing, including a category saved on a split. */
 export function reviewerQueueView(): ReviewRow[] {
-  return reviewerQueue.map((row) => {
+  if (queueViewCache) return queueViewCache;
+  if (categoryPatches.size === 0) {
+    queueViewCache = reviewerQueue;
+    return queueViewCache;
+  }
+  queueViewCache = reviewerQueue.map((row) => {
     const patch = categoryPatches.get(row.id);
     return patch ? { ...row, ...patch } : row;
   });
+  return queueViewCache;
 }
 
 export function patchReviewerCategory(id: string, categoryId: string, categoryName: string): void {
   categoryPatches.set(id, { category_id: categoryId, category_name: categoryName });
+  queueViewCache = null;
   for (const listener of queueListeners) listener();
 }
 
