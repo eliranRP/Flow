@@ -87,7 +87,7 @@ test("a manual 100 does not clip and is not a contact field", async ({ page }) =
   await expect(input).toHaveAttribute("inputmode", "decimal");
   await expect(input).toHaveAttribute("autocomplete", "off");
   await expect(input).toHaveAttribute("name", "flow-share-a");
-  await page.getByText("שיפוץ הרצל 12").click();
+  await page.getByText("שיפוץ הרצל 12", { exact: true }).click();
   await expect(input).toBeFocused();
   await input.fill("100");
   await expect(input).toHaveValue("100");
