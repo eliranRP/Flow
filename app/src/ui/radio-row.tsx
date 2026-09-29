@@ -18,7 +18,7 @@ type RadioRowProps = {
   disabled?: boolean;
   /** Replaces the description while the row cannot be chosen. */
   disabledReason?: string;
-  /** The row is writing. The cursor is progress and the check stays. */
+  /** The row is writing. A spinner replaces the check, and the cursor is progress. */
   busy?: boolean;
   selected: boolean;
   onSelect: () => void;
@@ -44,8 +44,8 @@ export function RadioRow({
   const off = disabled || disabledReason != null;
   const sub = off && disabledReason ? disabledReason : description;
   const radio = (
-    <span className="ui-radio" data-on={selected ? "true" : "false"} aria-hidden="true">
-      {selected ? "✓" : ""}
+    <span className="ui-radio" data-on={selected || busy ? "true" : "false"} aria-hidden="true">
+      {busy ? <span className="ui-spinner" /> : selected ? "✓" : ""}
     </span>
   );
   const text = picker ? (

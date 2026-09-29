@@ -291,7 +291,7 @@
 .t-title-3 { font-size: var(--type-title-3-size); line-height: var(--type-title-3-line); font-weight: var(--type-title-3-weight); }
 .t-body { font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
 .t-label { font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
-.t-hint { font-size: var(--type-hint-size); line-height: var(--type-hint-line); font-weight: var(--type-hint-weight); }
+.t-hint { font-size: var(--type-hint-size); line-height: var(--type-hint-line); font-weight: var(--type-hint-weight); color: var(--color-text-muted); }
 .t-micro { font-size: var(--type-micro-size); line-height: var(--type-micro-line); font-weight: var(--type-micro-weight); }
 .t-wordmark { font-size: var(--type-wordmark-size); line-height: var(--type-wordmark-line); font-weight: var(--type-wordmark-weight); }
 

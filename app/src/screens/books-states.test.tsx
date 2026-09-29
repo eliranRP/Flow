@@ -388,6 +388,141 @@ describe("rejected writes", () => {
     });
   });
 
+  it("keeps a closed review row so a second pick still writes", async () => {
+    let open = true;
+    const calls: string[] = [];
+    rpc.impl = (name) => {
+      calls.push(name);
+      if (name === "list_review") {
+        if (!open) return Promise.resolve({ data: [], error: null });
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: "suggested",
+            pnl_role: "project",
+            share_count: 0,
+            project_id: "p1",
+            category_id: "c1",
+            project_name: "הרצל",
+            category_name: "חומרים",
+            supplier_name: "מחסן",
+          }],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            ...emptyDashboard,
+            projects: [
+              { id: "p1", name: "הרצל", status: "active", income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_before_shared_agorot: 0, profit_agorot: 0 },
+              { id: "p2", name: "וילה", status: "active", income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_before_shared_agorot: 0, profit_agorot: 0 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true },
+            { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+          ],
+          error: null,
+        });
+      }
+      if (name === "resolve_review") {
+        open = false;
+        return Promise.resolve({ data: null, error: null });
+      }
+      if (name === "reassign_transaction") return Promise.resolve({ data: "undo-2", error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review/change?item=r1");
+    fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    await waitFor(() => {
+      expect(calls).toContain("resolve_review");
+    });
+    expect(await screen.findByText("מחסן")).toBeInTheDocument();
+    expect(screen.queryByText("אין פריט לשינוי")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
+    await waitFor(() => {
+      expect(calls).toContain("reassign_transaction");
+    });
+    expect(calls.filter((name) => name === "resolve_review")).toHaveLength(1);
+  });
+
+  it("saves a split category from review and collapses a project tap", async () => {
+    const calls: string[] = [];
+    rpc.impl = (name) => {
+      calls.push(name);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "ליסינג",
+            doc_date: "2026-07-01",
+            amount_net: -320000,
+            direction: "expense",
+            reason: "missing_category",
+            pnl_role: "shared",
+            share_count: 6,
+            project_id: null,
+            category_id: null,
+            project_name: null,
+            category_name: null,
+            supplier_name: "ליסינג הדרך בע״מ",
+          }],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            ...emptyDashboard,
+            projects: [
+              { id: "p1", name: "הרצל", status: "active", income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_before_shared_agorot: 0, profit_agorot: 0 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true }],
+          error: null,
+        });
+      }
+      if (name === "set_transaction_category") return Promise.resolve({ data: "undo-c", error: null });
+      if (name === "collapse_split") return Promise.resolve({ data: "undo-s", error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review/change?item=r1");
+    expect(await screen.findByRole("button", { name: /פרויקט: מפוצל · 6 פרויקטים/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
+    await waitFor(() => {
+      expect(calls).toContain("set_transaction_category");
+    });
+    expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
+    expect(calls).not.toContain("resolve_review");
+    fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
+    expect(await screen.findByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
+    await waitFor(() => {
+      expect(calls).toContain("collapse_split");
+    });
+    expect(calls).not.toContain("resolve_review");
+  });
+
   it("says a project expense is missing a category", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {

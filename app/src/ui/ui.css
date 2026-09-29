@@ -1120,6 +1120,12 @@ a.ui-row,
   background: var(--color-accent);
 }
 
+.ui-radio > .ui-spinner {
+  inline-size: 12px;
+  block-size: 12px;
+  border-width: 2px;
+}
+
 .ui-check {
   display: grid;
   inline-size: var(--icon-check);
@@ -2984,6 +2990,18 @@ div.ui-check-row {
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
+}
+
+.ui-pick-note,
+.ui-hold-line {
+  margin-block: var(--space-3);
+}
+
+.ui-hold-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
 }
 
 .ui-change-links {
