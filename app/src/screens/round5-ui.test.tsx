@@ -371,7 +371,7 @@ describe("notification switches", () => {
     fireEvent.click(screen.getByRole("button", { name: /חיבור SUMIT/ }));
     fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
     fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "secret-key" } });
-    fireEvent.click(screen.getByRole("button", { name: "חיבור", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^חיבור$/ }));
     expect(await screen.findByText("החיבור נכשל. בדקו את המזהה ואת המפתח.")).toBeInTheDocument();
   });
 
@@ -467,7 +467,7 @@ describe("notification switches", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("החיבור ל-SUMIT נכשל.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "חיבור מחדש", exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
     expect(screen.getAllByText(/מחדש/)).toHaveLength(1);
     const authRefresh = screen.getByRole("button", { name: /רענון עכשיו/ });
     expect(authRefresh).toBeDisabled();
