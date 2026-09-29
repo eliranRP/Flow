@@ -483,7 +483,12 @@ function ReviewerSplit() {
       sampleMeta="עגורני החוף בע״מ · 29/09/2026"
       backTo={`/reviewer/review?save=${mode}`}
       onSave={async () => {
-        await write.mutateAsync();
+        try {
+          await write.mutateAsync();
+        } catch {
+          // useWrite already toasted. Returning false keeps that toast and the screen.
+          return false;
+        }
       }}
     />
   );
