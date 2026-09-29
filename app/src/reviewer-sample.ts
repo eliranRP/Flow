@@ -112,10 +112,10 @@ export const reviewerQueue: ReviewRow[] = [
   },
 ];
 
-export type SampleSave = "ok" | "fail" | "offline";
+export type SampleSave = "ok" | "fail" | "offline" | "shared";
 
 export function sampleSaveMode(value: string | null): SampleSave {
-  if (value === "fail" || value === "offline") return value;
+  if (value === "fail" || value === "offline" || value === "shared") return value;
   return "ok";
 }
 

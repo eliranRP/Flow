@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { formatIls } from "@flow/shared";
-import { FiledTodayScreen, ProjectCategoryScreen, ReviewEmpty, ReviewQueue, SplitScreen } from "./screens/flow-screens";
+import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
+import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen } from "./screens/flow-screens";
 import {
   reviewerBooks,
   reviewerCategories,
@@ -36,6 +36,7 @@ export function ReviewerPreview() {
   else if (path.endsWith("/review")) page = <ReviewerQueue />;
   else if (path.endsWith("/filed")) page = <ReviewerFiled />;
   else if (path.endsWith("/category")) page = <ReviewerCategory />;
+  else if (path.endsWith("/waiting")) page = <ReviewerWaiting />;
   else if (path.endsWith("/project")) page = <ReviewerProject />;
   else if (path.endsWith("/save")) page = <ReviewerSave />;
   else if (path.endsWith("/split")) page = <ReviewerSplit />;
@@ -104,11 +105,14 @@ function ReviewerHome() {
         <Button full variant="secondary" to="/reviewer/filed?empty=1">שויכו היום, אין תנועות</Button>
         <Button full variant="secondary" to="/reviewer/category">קטגוריה, חומרים</Button>
         <Button full variant="secondary" to="/reviewer/category?empty=1">קטגוריה, אין תנועות</Button>
+        <Button full variant="secondary" to="/reviewer/category?more=1">קטגוריה, עוד תנועות</Button>
+        <Button full variant="secondary" to="/reviewer/waiting">לאישור בפרויקט</Button>
         <Button full variant="secondary" to="/reviewer/project">תור של הפרויקט</Button>
         <Button full variant="secondary" to="/reviewer/project?empty=1">תור של הפרויקט, אין פריטים</Button>
         <Button full variant="secondary" to="/reviewer/save?save=ok">שמירה שמצליחה</Button>
         <Button full variant="secondary" to="/reviewer/save?save=fail">שמירה שנדחית</Button>
         <Button full variant="secondary" to="/reviewer/save?save=offline">שמירה בלי חיבור</Button>
+        <Button full variant="secondary" to="/reviewer/save?save=shared">שמירה, עלות משותפת</Button>
       </div>
     </>
   );
@@ -116,27 +120,18 @@ function ReviewerHome() {
 
 function ReviewerQueue() {
   const [params] = useSearchParams();
-  const navigate = useNavigate();
   const mode = sampleSaveMode(params.get("save"));
-  const [rows, setRows] = useState(reviewerQueue);
   const search = `?save=${mode}`;
   return (
-    <ReviewQueue
-      rows={rows}
+    <SampleQueue
+      rows={reviewerQueue}
+      mode={mode}
       search={search}
-      sample
-      sampleSave={mode}
       changeTo={`/reviewer/save?save=${mode}`}
       filedTo="/reviewer/filed"
       backTo="/reviewer"
       homeTo="/reviewer"
       homeLabel="לתצוגת הביקורת"
-      onShared={() => {
-        void navigate(`/reviewer/split${search}`);
-      }}
-      onSampleDone={(id) => {
-        setRows((current) => current.filter((row) => row.id !== id));
-      }}
     />
   );
 }
@@ -156,20 +151,61 @@ function ReviewerFiled() {
 function ReviewerCategory() {
   const [params] = useSearchParams();
   const empty = params.get("empty") === "1";
+  const more = params.get("more") === "1";
   const sand = reviewerFiled.find((row) => row.category_name === "חומרים");
+  const haul = reviewerFiled.find((row) => row.category_name === "הובלה");
+  const rows = empty || sand == null ? [] : [
+    {
+      id: sand.id,
+      description: sand.description,
+      doc_date: sand.doc_date,
+      amount_net: sand.amount_net,
+    },
+    ...(more && haul != null ? [{
+      id: haul.id,
+      description: haul.description,
+      doc_date: haul.doc_date,
+      amount_net: haul.amount_net,
+    }] : []),
+  ];
   return (
     <ProjectCategoryScreen
       backTo="/reviewer"
+      rowHref={(row) => `/reviewer/transaction/${row.id}`}
       sample={{
         categoryName: "חומרים",
         projectName: "שיפוץ הרצל 12",
-        rows: empty || sand == null ? [] : [{
-          id: sand.id,
-          description: sand.description,
-          doc_date: sand.doc_date,
-          amount_net: sand.amount_net,
-        }],
+        pageSize: more ? 1 : undefined,
+        rows,
       }}
+    />
+  );
+}
+
+function ReviewerWaiting() {
+  const rows: ProjectWaitingRow[] = reviewerQueue
+    .filter((row) => row.project_id != null && row.transaction_id != null)
+    .map((row) => ({
+      review_id: row.id,
+      transaction_id: row.transaction_id ?? row.id,
+      description: row.description,
+      doc_date: row.doc_date,
+      amount_net: row.amount_net,
+      direction: row.direction,
+      reason: row.reason,
+      project_id: row.project_id,
+      category_id: row.category_id,
+      category_name: row.category_name ?? null,
+      supplier_name: row.supplier_name,
+    }));
+  return (
+    <ProjectWaitingList
+      rows={rows}
+      search=""
+      backTo="/reviewer"
+      hrefFor={(row) => row.review_id == null
+        ? `/reviewer/transaction/${row.transaction_id}`
+        : "/reviewer/save?save=ok"}
     />
   );
 }
@@ -180,11 +216,12 @@ function ReviewerProject() {
     return <ReviewEmpty search="" filtered backTo="/reviewer" homeTo="/reviewer" homeLabel="חזרה לפרויקט" />;
   }
   return (
-    <ReviewQueue
+    <SampleQueue
       rows={reviewerQueue.filter((row) => row.project_id != null)}
+      mode="ok"
       search=""
-      sample
-      sampleSave="ok"
+      changeTo="/reviewer/save?save=ok"
+      filedTo="/reviewer/filed"
       backTo="/reviewer"
       homeTo="/reviewer"
       homeLabel="חזרה לפרויקט"
@@ -222,6 +259,8 @@ function ReviewerSave() {
   const [projects, setProjects] = useState(reviewerProjectChoices);
   const write = useSampleWrite(mode, "השיוך נשמר", () => {
     void navigate("/reviewer/review");
+  }, () => {
+    void navigate(`/reviewer/split?save=${mode}`);
   });
   return (
     <ChangeAssignment
@@ -263,8 +302,11 @@ function ReviewerSave() {
 
 function ReviewerSplit() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const mode = sampleSaveMode(params.get("save"));
-  const write = useSampleWrite(mode, "החלוקה נשמרה");
+  const write = useSampleWrite(mode, "החלוקה נשמרה", () => {
+    void navigate(`/reviewer/review?save=${mode}`);
+  });
   return (
     <SplitScreen
       sampleAmount={reviewerSharedAgorot}
@@ -278,16 +320,69 @@ function ReviewerSplit() {
   );
 }
 
-function useSampleWrite(mode: SampleSave, success: string, onSuccess?: () => void) {
+function useSampleWrite(mode: SampleSave, success: string, onSuccess?: () => void, onSplit?: () => void) {
   return useWrite({
     failure: changeSaveFailure,
     success,
     keys: [],
     onSuccess,
-    run: () => {
-      if (mode === "fail") return Promise.reject(new Error("category kind must match the direction"));
-      if (mode === "offline") return Promise.reject(new Error("Failed to fetch"));
-      return Promise.resolve();
-    },
+    onSplit,
+    run: () => sampleRun(mode),
   });
+}
+
+function sampleRun(mode: SampleSave): Promise<void> {
+  if (mode === "fail") return Promise.reject(new Error("category kind must match the direction"));
+  if (mode === "offline") return Promise.reject(new Error("Failed to fetch"));
+  if (mode === "shared") return Promise.reject(new Error("shared costs are split"));
+  return Promise.resolve();
+}
+
+function SampleQueue({
+  rows: initial,
+  mode,
+  search,
+  changeTo,
+  filedTo,
+  backTo,
+  homeTo,
+  homeLabel,
+}: {
+  rows: ReviewRow[];
+  mode: SampleSave;
+  search: string;
+  changeTo: string;
+  filedTo: string;
+  backTo: string;
+  homeTo: string;
+  homeLabel: string;
+}) {
+  const navigate = useNavigate();
+  const [rows, setRows] = useState(initial);
+  return (
+    <ReviewQueue
+      rows={rows}
+      search={search}
+      sample
+      previewWrite={{
+        run: () => sampleRun(mode),
+        onDone: (id) => {
+          setRows((current) => current.filter((row) => row.id !== id));
+        },
+        onUndo: (id) => {
+          const original = initial.find((row) => row.id === id);
+          if (!original) return;
+          setRows((current) => (current.some((row) => row.id === id) ? current : [original, ...current]));
+        },
+      }}
+      changeTo={changeTo}
+      filedTo={filedTo}
+      backTo={backTo}
+      homeTo={homeTo}
+      homeLabel={homeLabel}
+      onShared={() => {
+        void navigate(`/reviewer/split${search === "" ? "" : search}`);
+      }}
+    />
+  );
 }

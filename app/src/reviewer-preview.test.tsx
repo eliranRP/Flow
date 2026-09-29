@@ -3,14 +3,26 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { ReviewQueue } from "./screens/flow-screens";
+import { ReviewQueue, type ReviewPreviewWrite } from "./screens/flow-screens";
 import { reviewerQueue } from "./reviewer-sample";
 import { ToastProvider } from "./ui/toast";
 
 const paint = reviewerQueue[2];
 if (!paint) throw new Error("missing sample row");
 
-function renderQueue(row: ReviewRow, sampleSave: "ok" | "fail" | "offline") {
+function previewWrite(mode: "ok" | "fail" | "offline"): ReviewPreviewWrite {
+  return {
+    run: () => {
+      if (mode === "fail") return Promise.reject(new Error("category kind must match the direction"));
+      if (mode === "offline") return Promise.reject(new Error("Failed to fetch"));
+      return Promise.resolve();
+    },
+    onDone: () => undefined,
+    onUndo: () => undefined,
+  };
+}
+
+function renderQueue(row: ReviewRow, mode: "ok" | "fail" | "offline") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -19,7 +31,7 @@ function renderQueue(row: ReviewRow, sampleSave: "ok" | "fail" | "offline") {
           <Routes>
             <Route
               path="/reviewer/review"
-              element={<ReviewQueue rows={[row]} search="" sample sampleSave={sampleSave} />}
+              element={<ReviewQueue rows={[row]} search="" sample previewWrite={previewWrite(mode)} />}
             />
             <Route path="/transactions/:transactionId/split" element={<p>חלוקה לדוגמה</p>} />
           </Routes>
@@ -34,6 +46,7 @@ describe("reviewer sample saves", () => {
     renderQueue(paint, "ok");
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });
 

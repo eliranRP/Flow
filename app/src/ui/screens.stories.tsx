@@ -357,7 +357,7 @@ export const ReviewSharedCost: Story = {
 
 const categorySample = {
   categoryName: "חומרים",
-  projectName: "שיפוץ הרצל 12",
+  projectName: "וילה רעננה",
   rows: [
     { id: "t-sand", description: "חול", doc_date: "2026-09-29", amount_net: -22_000n },
     { id: "t-bolts", description: "ברגים", doc_date: "2026-09-28", amount_net: -18_000n },
@@ -378,7 +378,7 @@ export const ProjectCategoryEmpty: Story = {
     <StoryRoute entry="/projects/a/categories/c-materials">
       <ExampleBar />
       <ProjectCategoryScreen
-        sample={{ categoryName: "חומרים", projectName: "שיפוץ הרצל 12", rows: [] }}
+        sample={{ categoryName: "חומרים", projectName: "וילה רעננה", rows: [] }}
         backTo="/projects/a"
       />
     </StoryRoute>

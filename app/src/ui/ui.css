@@ -1208,7 +1208,6 @@ a.ui-row,
   gap: var(--toast-gap);
   inline-size: 100%;
   max-inline-size: var(--content-max);
-  min-block-size: calc(var(--space-3) * 2 + var(--type-label-size) * var(--type-label-line) * 2);
   border-radius: var(--radius-button);
   padding: var(--space-3) var(--space-4);
   background: var(--color-toast-bg);
@@ -2273,7 +2272,22 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-switch-copy .t-hint {
+  min-inline-size: 0;
   color: var(--color-text-muted);
+}
+
+.ui-remember-line {
+  display: flex;
+  min-inline-size: 0;
+  gap: 0.25rem;
+}
+
+.ui-remember-supplier {
+  overflow: hidden;
+  min-inline-size: 0;
+  flex: 1 1 auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ui-switch-row:has(input:disabled) {

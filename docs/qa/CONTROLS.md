@@ -6,7 +6,7 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 
 `result` is the Playwright pass on 2026-09-29. Every row below passed.
 
-The reviewer preview at the end is dev-server only. It is not in the hosted build. Decision [0073](../decisions/0073-review-handoff.md).
+The reviewer preview at the end is the dev server, or a reviewers-only build with `VITE_REVIEWER_BUILD=1` and no hosted key. It is not in the hosted build. Decision [0073](../decisions/0073-review-handoff.md).
 
 | screen | control | expected | disabled when | busy | success | error | result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -20,8 +20,8 @@ The reviewer preview at the end is dev-server only. It is not in the hosted buil
 | Shared | Text, amount, and percent fields | The input fills the box. A tap on the left edge, the centre, or the right edge focuses it and opens the keypad. Amounts and percents use `inputmode=decimal`. A whole number uses `numeric`. `autocomplete=off`, the name is not a contact field, and the font is at least 16px. | never | no | the field is focused. `9,999,999.99` fits at 320px (`scrollWidth` <= `clientWidth`) | none | pass |
 | Shared | Confirm sheet, the confirm label | Runs the confirm action. | never | the write | the action's toast, sheet closes | the action's error toast, sheet stays | pass |
 | Shared | Confirm sheet, ביטול | Closes without saving. | never | no | sheet gone | none | pass |
-| Shared | Toast body | Tap or swipe dismisses it. A tap inside the action's hit area does not. | never | no | toast gone | none | pass |
-| Shared | Toast action | Runs the labelled action (ביטול, ניסיון חוזר, or לחלוקה). The label stays text-sized. The hit area is at least 44×44, and a tap there runs the action. | never | the retry | the action's result | the same error toast again | pass |
+| Shared | Toast body | Tap or swipe dismisses it. A tap inside the action's hit area does not. A tap on a toast over an open sheet never closes that sheet. A plain confirmation stays 4s. | never | no | toast gone, sheet stays | none | pass |
+| Shared | Toast action | Runs the labelled action (ביטול, ניסיון חוזר, or לחלוקה). The label stays text-sized. The hit area is at least 44×44, and a tap there runs the action and leaves the sheet open. An action stays 5s. | never | the retry | the action's result, sheet stays | the same error toast again, sheet stays | pass |
 | Shared | Error state, ניסיון חוזר | Refetches the failed query. On a preview error, returns to the empty preview. | never | no | the screen loads, or the empty preview | the error state stays | pass |
 | Sign-in | המשך עם Google | Starts Google sign-in. | no Supabase client | pending label while the redirect starts | route `/` or `/onboarding` | notice on `/sign-in` | pass |
 | Sign-in | צריך עזרה בכניסה? | Opens help. Shown only after a failed sign-in. | never | no | route `/help` | none | pass |
@@ -58,7 +58,7 @@ The reviewer preview at the end is dev-server only. It is not in the hosted buil
 | Project | confirm אישור | Calls `upsert_project` with the other status. | never | the confirm button | toast "הפרויקט סומן כהסתיים" or "הפרויקט חזר לפעיל" | toast "לא הצלחנו לעדכן את הפרויקט." | pass |
 | Project | אחרי חלק בהוצאות כלליות | Calls `set_after_overhead` for this project. | never | the switch stays on the chosen side until the write fails | the profit figure follows the switch | toast "לא הצלחנו לשמור את התצוגה.", switch returns | pass |
 | Project | כל הקטגוריות | Opens categories. | never | no | route `/settings/categories` | none | pass |
-| Project | a category row | Opens that category's transactions for this project. | a category with no id | no | route `/projects/:id/categories/:categoryId` | none | pass |
+| Project | a category row | Opens that category's transactions for this project. When there is at least one line, "כולל חלק מהוצאות משותפות" sits above the list. | a category with no id | no | route `/projects/:id/categories/:categoryId` | none | pass |
 | Category | חזרה | Returns to the project. An empty list says "אין תנועות בקטגוריה הזו". | never | no | route `/projects/:id` | the shared error state. ניסיון חוזר refetches | pass |
 | Project | ממתינה לאישור | Opens the review queue filtered to this project. | the project has no suggested expenses | no | route `/review?project=:id` | none | pass |
 | Project | תנועות אחרונות | Reveals the project's recent transactions. | never | no | the transaction rows appear | none | pass |
@@ -83,7 +83,7 @@ The reviewer preview at the end is dev-server only. It is not in the hosted buil
 | Change sheet | picker חזרה | Returns to the summary without a new choice. | never | no | the summary | none | pass |
 | Change sheet | פרויקט חדש | Opens the name field, then `upsert_project`, and selects it. | never | שמירה is busy | toast "הפרויקט נשמר", the new project is selected | toast "לא הצלחנו לשמור את הפרויקט." | pass |
 | Change sheet | פיצול בין פרויקטים | Opens Split for this transaction. From the transaction sheet this replaces the history entry. Without a transaction id, a toast explains that. | never | no | route `/transactions/:id/split`, or the toast | none | pass |
-| Change sheet | remember toggle | Includes `p_remember` on save. Expense only. | never | no | the switch moves | none | pass |
+| Change sheet | remember toggle | Includes `p_remember` on save. Expense only. The hint shows the supplier's full name, truncated with an ellipsis when it does not fit. | never | no | the switch moves | none | pass |
 | Change sheet | שמירה ואישור | Calls `resolve_review` with action `changed`. A shared cost skips that call. | missing project (expense) or category; the click toasts "בחרו פרויקט וקטגוריה." or "בחרו קטגוריה." | the button is busy | toast "השיוך נשמר", back to review, keeping `project` when the queue was filtered | toast "לא נשמר – אין חיבור" with ניסיון חוזר when the failure is a network or server error. Another refusal toasts "לא נשמר. בדקו את הפרטים ונסו שוב." with no ניסיון חוזר. A shared cost, before the write or from the database, toasts "עלות משותפת מחולקת במסך החלוקה." in the info tone, with לחלוקה, for 5 seconds. לחלוקה opens Split. There is no ניסיון חוזר. | pass |
 | Add | צילום חשבונית | Does not run. Capture is not built. | always. Hint says camera or PDF. Cursor not-allowed. | no | none | none | pass |
 | Add | הזנה ידנית | Does not run. Manual entry is not built. | always. Hint says it is only when needed. Cursor not-allowed. | no | none | none | pass |
@@ -138,26 +138,28 @@ The reviewer preview at the end is dev-server only. It is not in the hosted buil
 
 ## Reviewer preview
 
-Dev server only (`/reviewer`). Sample data, marked "נתוני דוגמה · Example data". Not a hosted screen. Saves do not call the ledger. `?save=fail` toasts "לא נשמר. בדקו את הפרטים ונסו שוב." with no ניסיון חוזר. `?save=offline` toasts "לא נשמר – אין חיבור" with ניסיון חוזר. `?save=ok` succeeds.
+Dev server, or a reviewers-only build (`VITE_REVIEWER_BUILD=1`, empty Supabase URL and anon key, sample names, no Flow Test 2 name). Sample data, marked "נתוני דוגמה · Example data". Not a hosted screen. Saves do not call the ledger. `?save=fail` toasts "לא נשמר. בדקו את הפרטים ונסו שוב." with no ניסיון חוזר. `?save=offline` toasts "לא נשמר – אין חיבור" with ניסיון חוזר, and that toast does not close the sheet. `?save=shared` toasts "עלות משותפת מחולקת במסך החלוקה." with לחלוקה. `?save=ok` succeeds. Approve toasts ביטול and restores the card.
 
 | screen | control | expected | disabled when | busy | success | error | result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Reviewer index | each section link | Opens that sample screen. | never | no | the named route | none | pass |
 | Reviewer queue | אישור on a shared cost | Opens the sample split. | never, while the card can be approved | no | route `/reviewer/split` | none | pass |
 | Reviewer queue | אישור on a missing category | Does not run. The card says "חסר קטגוריה, בחרו בשינוי". | no project and category. Cursor not-allowed. | no | none | none | pass |
-| Reviewer queue | אישור on a ready card | Sample save for `?save=`. | while the card is leaving | the button is busy | toast "הפריט אושר", the card leaves. `ok` only | refusal with no retry, or the connection toast with ניסיון חוזר | pass |
+| Reviewer queue | אישור on a ready card | Sample save for `?save=`. | while the card is leaving | the button is busy | toast "הפריט אושר" with ביטול, the card leaves. ביטול puts the card back. `ok` only | refusal with no retry, or the connection toast with ניסיון חוזר | pass |
 | Reviewer queue | דלג | Same sample save, then the next card. | while the card is leaving | the button is busy | toast "דילגנו על הפריט" | the same save errors | pass |
 | Reviewer queue | שינוי | Opens the sample change sheet. | never | no | route `/reviewer/save` | none | pass |
 | Reviewer queue | צפייה | Opens the sample filed list. | never | no | route `/reviewer/filed` | none | pass |
 | Reviewer queue | סגירה | Hides the banner for this visit. | never | no | the banner is gone | none | pass |
 | Reviewer queue | חזרה | Returns to the reviewer index. | never | no | route `/reviewer` | none | pass |
 | Reviewer queue | לתצוגת הביקורת | Returns to the index after the last card. | never | no | route `/reviewer` | none | pass |
-| Reviewer category | the materials row | Shows the same ₪220 as the חומרים line. | never | no | route `/reviewer/category` | none | pass |
+| Reviewer category | the materials row | Shows the same ₪220 as the חומרים line, and opens that sample transaction. | never | no | route `/reviewer/transaction/t-sample-sand` | none | pass |
+| Reviewer category | עוד תנועות | On `?more=1`, reveals the rest of the sample. The first page stays ₪220. | the list is already open | no | the next sample row, ₪180 | none | pass |
 | Reviewer category | חזרה | Returns to the index. An empty list says "אין תנועות בקטגוריה הזו". | never | no | route `/reviewer` | none | pass |
-| Reviewer project queue | חזרה | Returns to the index. The cards are this project's waiting rows. | never | no | route `/reviewer` | none | pass |
+| Reviewer project queue | חזרה | Returns to the index. The cards are this project's waiting rows. דלג advances. צפייה and שינוי stay on the sample filed list and the sample save. | never | no | route `/reviewer` | none | pass |
+| Reviewer waiting | a row | Opens the sample save. Bolts are ₪150 and paint is ₪300. | never | no | route `/reviewer/save` | none | pass |
 | Reviewer project queue, empty | חזרה לפרויקט | Returns to the index. The title is "אין פריטים לאישור בפרויקט הזה". | never | no | route `/reviewer` | none | pass |
 | Reviewer filed | a row | Opens that sample transaction. | never | no | the supplier, the amount, and the assignment | none | pass |
 | Reviewer filed | חזרה | Returns to the filed list, or from the list to the index. | never | no | the previous sample screen | none | pass |
-| Reviewer save | שמירה ואישור | Sample save for `?save=`. | never | the button is busy | toast "השיוך נשמר", route `/reviewer/review` | refusal with no retry, or the connection toast with ניסיון חוזר | pass |
-| Reviewer split | שמירה | Sample save after a valid choice. | no valid choice. Cursor not-allowed. | the button is busy | toast "החלוקה נשמרה" | refusal with no retry on `?save=fail` | pass |
+| Reviewer save | שמירה ואישור | Sample save for `?save=`. A toast tap does not close the sheet. | never | the button is busy | toast "השיוך נשמר", route `/reviewer/review` | refusal with no retry, the connection toast with ניסיון חוזר, or the shared-cost toast with לחלוקה. The sheet stays open until the action leaves it | pass |
+| Reviewer split | שמירה | Sample save after a valid choice. | no valid choice. Cursor not-allowed. | the button is busy | toast "החלוקה נשמרה", back to the sample queue | refusal with no retry on `?save=fail` | pass |
 | Reviewer split | שווה בין כל הפרויקטים | Selects the even split. Cursor pointer. | never | no | שמירה enables | none | pass |

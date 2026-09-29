@@ -11,10 +11,16 @@ function bundleGraph(): Plugin {
   return {
     name: "flow-bundle-graph",
     apply: "build",
-    generateBundle() {
-      const ids = [...this.getModuleIds()].filter((id) => !id.includes("\0"));
+    generateBundle(_options, bundle) {
+      const ids = new Set<string>();
+      for (const item of Object.values(bundle)) {
+        if (item.type !== "chunk") continue;
+        for (const id of Object.keys(item.modules)) {
+          if (!id.includes("\0")) ids.add(id);
+        }
+      }
       const target = path.resolve(__dirname, "bundle-graph.json");
-      writeFileSync(target, JSON.stringify(ids));
+      writeFileSync(target, JSON.stringify([...ids]));
     },
   };
 }
@@ -36,7 +42,9 @@ export default defineConfig(({ mode }) => {
   // app/.env.production and fill any VITE_ value the shell did not set.
   const appEnv = loadEnv(mode, __dirname, "VITE_");
   for (const [key, value] of Object.entries(appEnv)) {
-    if (!process.env[key]) process.env[key] = value;
+    // An explicit empty string stays empty. A reviewers-only build sets the
+    // Supabase URL and anon key to "" so the hosted key is not filled in.
+    if (process.env[key] == null) process.env[key] = value;
   }
 
   const lifecycle = process.env.npm_lifecycle_event ?? "";

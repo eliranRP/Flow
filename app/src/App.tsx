@@ -542,6 +542,7 @@ function DevProjectDetail() {
           category: "חומרים",
         }],
       }}
+      categoryTo="/e2e/project-category"
     />
   );
 }
@@ -549,6 +550,7 @@ function DevProjectDetail() {
 function DevProjectCategory() {
   return (
     <ProjectCategoryScreen
+      backTo="/e2e/project-detail"
       sample={{
         categoryName: "חומרים",
         projectName: "שיפוץ הרצל 12",
