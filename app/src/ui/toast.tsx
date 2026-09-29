@@ -39,6 +39,25 @@ function cssPx(name: string): number {
   return Number.isFinite(value) ? value : 0;
 }
 
+function tokenPx(name: string, fallback: number): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (raw.endsWith("rem")) {
+    const root = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const parsed = Number.parseFloat(raw);
+    return Number.isFinite(parsed) ? parsed * root : fallback;
+  }
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+/** Two lines of the toast, plus its padding, so a shrink cannot hide the words or ביטול. */
+export function toastMinBlock(): number {
+  const pad = tokenPx("--space-3", 12);
+  const size = tokenPx("--type-label-size", 15);
+  const line = tokenPx("--type-label-line", 1.5);
+  return pad * 2 + size * line * 2;
+}
+
 /** The open sheet, or the page header, and the spacing tokens that sit the toast under it. */
 export function toastAnchor(): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
   const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
@@ -67,7 +86,7 @@ function toastHits(top: number, height: number, boxes: ToastBox[]): boolean {
   return boxes.some((box) => box.top < bottom && box.bottom > top);
 }
 
-/** Sit just under the page or sheet header, clear of every control. Shrinks into a free gap when the full toast does not fit. */
+/** Sit just under the page or sheet header, clear of every control. A shrink stays tall enough for two lines and ביטול. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   if (toast instanceof HTMLElement) {
@@ -111,9 +130,13 @@ export function placeToast(layer: HTMLElement): void {
       bestTop = start;
     }
   }
+  const minBlock = toastMinBlock();
   if (toast instanceof HTMLElement && height > bestRoom) {
-    toast.style.maxHeight = `${String(Math.max(bestRoom, 0))}px`;
-    toast.style.overflow = "hidden";
+    const cap = Math.max(bestRoom, minBlock);
+    if (cap < height) {
+      toast.style.maxHeight = `${String(cap)}px`;
+      toast.style.overflow = "hidden";
+    }
   }
   layer.style.top = `${String(Math.max(safe, bestTop))}px`;
 }

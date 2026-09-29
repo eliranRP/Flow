@@ -38,7 +38,7 @@ describe("useWrite", () => {
   it("offers a retry when the network fails", async () => {
     renderSave(async () => {
       throw new Error("Failed to fetch");
-    }, "לא נשמר – אין חיבור");
+    });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.getByText("לא נשמר – אין חיבור")).toBeInTheDocument();
@@ -64,11 +64,12 @@ describe("useWrite", () => {
   it("does not offer a retry for another deterministic refusal", async () => {
     renderSave(async () => {
       throw new Error("category kind must match the direction");
-    }, "לא נשמר – אין חיבור");
+    });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
-      expect(screen.getByText("לא נשמר – אין חיבור")).toBeInTheDocument();
+      expect(screen.getByText("לא נשמר. בדקו את הפרטים ונסו שוב.")).toBeInTheDocument();
     });
+    expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });
 });

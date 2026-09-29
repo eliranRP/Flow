@@ -1208,11 +1208,13 @@ a.ui-row,
   gap: var(--toast-gap);
   inline-size: 100%;
   max-inline-size: var(--content-max);
+  min-block-size: calc(var(--space-3) * 2 + var(--type-label-size) * var(--type-label-line) * 2);
   border-radius: var(--radius-button);
   padding: var(--space-3) var(--space-4);
   background: var(--color-toast-bg);
   color: var(--color-toast-text);
   font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
   pointer-events: auto;
 }
 
@@ -1236,7 +1238,12 @@ a.ui-row,
   block-size: var(--spinner);
 }
 
-.ui-toast-text,
+.ui-toast-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  unicode-bidi: isolate;
+}
+
 .ui-notice-title,
 .ui-notice-body,
 .ui-form-error,

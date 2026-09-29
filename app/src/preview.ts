@@ -26,6 +26,18 @@ export function previewHidesBand(preview: HomePreview): boolean {
   return preview === "error" || preview === "error-server";
 }
 
+/** Keeps preview and a project filter on the review path. Empty when neither is set. */
+export function useFlowSearch(): string {
+  const [params] = useSearchParams();
+  const next = new URLSearchParams();
+  const preview = params.get("preview");
+  const project = params.get("project");
+  if (preview) next.set("preview", preview);
+  if (project) next.set("project", project);
+  const value = next.toString();
+  return value ? `?${value}` : "";
+}
+
 /** Keeps the current preview flag on in-app links. Empty when signed in for real. */
 export function usePreviewSearch(): string {
   const [params] = useSearchParams();

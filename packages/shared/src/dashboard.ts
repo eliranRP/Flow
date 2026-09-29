@@ -181,6 +181,41 @@ export const transactionDetailSchema = z
   })
   .nullable();
 
+/** One page of a category line. The rows use the same filters as that line. */
+export const projectCategorySchema = z
+  .object({
+    category_name: z.string().nullable(),
+    project_name: z.string().nullable(),
+    total_agorot: agorotSchema,
+    rows: z.array(
+      z.object({
+        id: z.string(),
+        description: z.string(),
+        doc_date: z.string(),
+        amount_net: agorotSchema,
+      }),
+    ),
+    next_offset: z.number().int().nonnegative().nullable(),
+  })
+  .nullable();
+
+/** Open reviews for a project, plus suggested expenses that have no open review. */
+export const projectWaitingRowSchema = z.object({
+  review_id: z.string().nullable(),
+  transaction_id: z.string(),
+  description: z.string(),
+  doc_date: z.string(),
+  amount_net: agorotSchema,
+  direction: z.enum(["income", "expense"]),
+  reason: z.string().nullable(),
+  project_id: z.string().nullable(),
+  category_id: z.string().nullable(),
+  category_name: z.string().nullable(),
+  supplier_name: z.string().nullable(),
+});
+
+export const projectWaitingSchema = z.array(projectWaitingRowSchema);
+
 export type Basis = z.infer<typeof basisSchema>;
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
@@ -190,4 +225,6 @@ export type FiledTodayRow = z.infer<typeof filedTodaySchema>;
 export type CategoryRow = z.infer<typeof categoryRowSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
+export type ProjectCategoryPage = z.infer<typeof projectCategorySchema>;
+export type ProjectWaitingRow = z.infer<typeof projectWaitingRowSchema>;
 export type TransactionDetail = z.infer<typeof transactionDetailSchema>;
