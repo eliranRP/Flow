@@ -509,8 +509,13 @@ a.ui-row,
   border-radius: var(--radius-input);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: var(--type-body-size);
+  box-sizing: border-box;
+  font-size: max(16px, var(--type-body-size));
   font-weight: var(--type-body-weight);
+}
+
+.ui-money-field.ui-field-control {
+  padding: 0;
 }
 
 .ui-field-control:focus {
@@ -531,34 +536,47 @@ a.ui-row,
 }
 
 .ui-money-field {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  direction: ltr;
+  cursor: text;
 }
 
-.ui-money-ltr {
-  display: inline-flex;
+.ui-money-prefix,
+.ui-percent-suffix {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
-  inline-size: max-content;
-  max-inline-size: 100%;
+  color: inherit;
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .ui-money-prefix {
-  color: inherit;
-  font-weight: 600;
+  /* Sits just to the left of the right-aligned digits. --money-digits is the text width. */
+  inset-inline-end: calc(var(--field-pad) + var(--money-digits, 0ch) + 0.35em);
 }
 
 .ui-money-field input {
-  flex: 0 1 auto;
-  inline-size: auto;
-  min-inline-size: 1ch;
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
   min-block-size: var(--touch-min);
+  margin: 0;
+  padding-inline: var(--field-pad);
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  text-align: start;
+  font-size: max(16px, var(--type-body-size));
+  font-variant-numeric: tabular-nums lining-nums;
+  text-align: right;
   outline: none;
 }
 
@@ -1121,16 +1139,31 @@ a.ui-row,
 
 .ui-search {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: stretch;
   inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
   block-size: var(--size-search);
-  padding-inline: var(--field-pad);
   border: 1px solid var(--color-control-border);
   border-radius: var(--radius-input);
   background: var(--color-surface);
+}
+
+.ui-search-field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: 100%;
+  padding-inline: var(--field-pad);
+  cursor: text;
+}
+
+.ui-search-icon {
+  display: inline-flex;
+  flex: none;
+  pointer-events: none;
 }
 
 .ui-search:focus-within {
@@ -1138,12 +1171,15 @@ a.ui-row,
 }
 
 .ui-search input {
-  flex: 1;
+  flex: 1 1 auto;
   min-inline-size: 0;
+  inline-size: 100%;
+  min-block-size: var(--touch-min);
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
+  font-size: max(16px, var(--type-body-size));
   outline: none;
 }
 
@@ -2688,18 +2724,15 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-percent-suffix {
-  flex: none;
+  inset-inline-end: var(--space-3);
   color: var(--color-text-secondary);
   font-weight: var(--type-body-weight);
 }
 
 .ui-percent-field .ui-money-field input {
-  flex: 1 1 auto;
-  inline-size: 4ch;
-  min-inline-size: 3ch;
-  field-sizing: content;
+  padding-inline-end: 1.75em;
   font-size: inherit;
-  text-align: end;
+  text-align: right;
   white-space: nowrap;
 }
 

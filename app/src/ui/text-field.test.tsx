@@ -9,6 +9,9 @@ describe("TextField", () => {
     render(<TextField label="שם העסק" error="מספר קצר מדי – 9 ספרות" defaultValue="12" />);
     const field = screen.getByLabelText("שם העסק");
     expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAttribute("autocomplete", "off");
+    expect(field.getAttribute("name") ?? "").toMatch(/^flow-text-/);
+    expect(field.getAttribute("name") ?? "").not.toMatch(/name|email|tel|phone|contact/i);
     expectTarget(field);
     expectThemePaint(field, "color");
     expect(screen.getByText("מספר קצר מדי – 9 ספרות")).toBeInTheDocument();

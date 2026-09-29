@@ -266,6 +266,7 @@ The band holds only the summary. Home: one quiet period pill, one label, the her
 - The design chevron `back` already points right. Do not flip it again. Do not mirror +, ✓, ✕, search, calendar, or ▼/▲.
 - Every amount, percent, date, time, phone, and company number is an isolated LTR span (`.num` or `<bdi dir="ltr">`).
 - LTR inputs (`dir="ltr"`, `inputmode`) stay visually right-aligned. That is the one allowed physical `text-align`. Guide §6.
+- A text, amount, or percent field focuses from a tap anywhere in the box. The input fills the box. ₪ and % sit outside the digits and ignore the pointer. The font is at least 16px. `autocomplete` is off, and the name is not a contact field. Amounts and percents use `inputmode=decimal`. A value up to `9,999,999.99` stays fully visible at 320px. [0069](../decisions/0069-back-and-one-tap-review.md).
 
 ### 3.5 Numbers, currency, dates
 

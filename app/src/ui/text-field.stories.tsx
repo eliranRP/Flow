@@ -16,3 +16,12 @@ export const Empty: Story = { args: { label: "שם הפרויקט", placeholder:
 export const Disabled: Story = { args: { label: "שם הפרויקט", defaultValue: "טק-ליין", disabled: true } };
 export const Error: Story = { args: { label: "שם הפרויקט", defaultValue: "", error: "חסר שם" } };
 export const LongHebrew: Story = { args: { label: longHebrew, defaultValue: longHebrew } };
+export const LongHebrew320: Story = {
+  args: { label: longHebrew, defaultValue: longHebrew },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const LongHebrew320Dark: Story = {
+  args: { label: longHebrew, defaultValue: longHebrew },
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
