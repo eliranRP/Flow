@@ -406,9 +406,12 @@ Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mocku
 
 ### 11 Split
 
-- Mockups: [11-split-light.png](../../design/screens/11-split-light.png), [11-split-dark.png](../../design/screens/11-split-dark.png).
+- Mockups: [11-split-light.png](../../design/screens/11-split-light.png), [11-split-dark.png](../../design/screens/11-split-dark.png). The behaviour below is [0069](../decisions/0069-back-and-one-tap-review.md) point 10 until a new spec replaces it.
 - Entry: Split on a review card, or from detail.
-- Steps: divide by amount or percent. Shares total 100%. [0006](../decisions/0006-confirm-not-type.md), [0021](../decisions/0021-shared-costs-and-overhead.md).
+- Top: the amount, then one question, "איך לחלק?".
+- Three choices, one tap each: "שווה בין כל הפרויקטים" (default), "שווה בין פרויקטים שאבחר", "לפי הכנסות". Chosen opens a checklist of active projects. A ticked row shows its ₪ share. Nothing to type.
+- "חלוקה ידנית" is a quiet link. The inputs fit 100 and two decimals. The row focuses the input. `inputmode=decimal`, `autocomplete=off`, and the name starts with `flow-share-`.
+- One save button, on as soon as the split is valid. One summary line, for example "₪500 לכל אחד מ־2 פרויקטים". "נותר לשייך" only while a manual split is short of 100%. The shekel parts use the same first-share remainder as `save_split`.
 - Cancel: ✕. Guide §13.
 - Success: toast, allocations saved. Error: `er-05`.
 

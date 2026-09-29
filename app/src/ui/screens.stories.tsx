@@ -741,11 +741,13 @@ const splitProjects = [
 function SplitStory({
   method,
   shares,
+  chosen,
   context = "משכורת עובדי שטח · ספטמבר · עבודה",
   projects = splitProjects,
 }: {
-  method?: "equal" | "income" | "manual";
+  method?: "equal" | "chosen" | "income" | "manual";
   shares?: Record<string, string>;
+  chosen?: string[];
   context?: string;
   projects?: typeof splitProjects;
 }) {
@@ -758,13 +760,14 @@ function SplitStory({
         sampleProjects={projects}
         sampleMethod={method}
         sampleShares={shares}
+        sampleChosen={chosen}
       />
     </StoryRoute>
   );
 }
 
 export const Split: Story = {
-  render: () => <SplitStory method="income" />,
+  render: () => <SplitStory />,
 };
 
 export const SplitIncome: Story = {
@@ -775,12 +778,16 @@ export const SplitEqual: Story = {
   render: () => <SplitStory method="equal" />,
 };
 
+export const SplitChosen: Story = {
+  render: () => <SplitStory method="chosen" chosen={["a", "c"]} />,
+};
+
 export const SplitManual: Story = {
   render: () => <SplitStory method="manual" shares={{ a: "40", b: "30", c: "20", d: "10" }} />,
 };
 
 export const SplitPartial: Story = {
-  render: () => <SplitStory method="manual" shares={{ a: "40", b: "10" }} />,
+  render: () => <SplitStory method="manual" shares={{ a: "100", b: "12.34" }} />,
 };
 
 export const SplitLongHebrew: Story = {

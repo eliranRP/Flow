@@ -18,6 +18,12 @@ describe("PercentField", () => {
     expect(input).toHaveValue("8");
     fireEvent.change(input, { target: { value: "" } });
     expect(input).toHaveValue("");
+    fireEvent.change(input, { target: { value: "100" } });
+    expect(input).toHaveValue("100");
+    expect(input).toHaveAttribute("inputmode", "decimal");
+    expect(input).toHaveAttribute("autocomplete", "off");
+    expect(input.getAttribute("name") ?? "").toMatch(/^flow-share-/);
+    expect(input.id).toMatch(/^flow-share-/);
     unmount();
 
     render(<Field />);
