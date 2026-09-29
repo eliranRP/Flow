@@ -131,9 +131,17 @@ export function placeToast(layer: HTMLElement): void {
     const head = sheet.querySelector(".ui-sheet-head");
     const limit = head instanceof HTMLElement ? head.getBoundingClientRect().top : sheetTop;
     const room = limit - gap - safe;
-    if (toast instanceof HTMLElement && room > 0 && room < height) {
+    const minBlock = toastMinBlock();
+    if (toast instanceof HTMLElement && room >= minBlock && height > room) {
       toast.style.maxHeight = `${String(room)}px`;
       toast.style.overflow = "hidden";
+      layer.style.top = `${String(safe)}px`;
+      return;
+    }
+    if (room < minBlock) {
+      const used = Math.max(height, minBlock);
+      layer.style.top = `${String(Math.min(safe, limit - gap - used))}px`;
+      return;
     }
     layer.style.top = `${String(safe)}px`;
     return;

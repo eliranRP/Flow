@@ -128,23 +128,49 @@ export const flowTest2Names = [
   "שיפוץ הרצל",
   "הובלות הגליל",
   "מנופי המרכז",
+  "מנופי",
   "השרון",
   "יזמות הגליל",
   "פרגולות הגליל",
   "לוי רעננה",
   "ביאליק",
   "פרגולה בית כהן",
+  "פ״ת",
+  "ת״א",
+  "צבעי הגליל",
 ];
 
+/** The hosted public client, read from the committed production env. */
+export function hostedClientMarkers() {
+  const file = path.join(root, "app/.env.production");
+  if (!existsSync(file)) return [];
+  /** @type {string[]} */
+  const markers = [];
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const match = /^(VITE_SUPABASE_URL|VITE_SUPABASE_ANON_KEY)=(.*)$/.exec(line.trim());
+    if (match?.[2]) markers.push(match[2]);
+  }
+  return markers;
+}
+
 /**
+ * Flow Test 2 names, the hosted golden ids and totals, and the hosted client.
  * @param {{ name: string, body: string }[]} files
+ * @param {string[]} [hosted]
  * @returns {string[]}
  */
-export function reviewerNameViolations(files) {
+export function reviewerNameViolations(files, hosted = hostedClientMarkers()) {
   const found = [];
   for (const file of files) {
     for (const name of flowTest2Names) {
       if (file.body.includes(name)) found.push(`${file.name} contains Flow Test 2 name ${name}`);
+    }
+    for (const value of goldenValues) {
+      if (file.body.includes(value)) found.push(`${file.name} contains golden value ${value}`);
+    }
+    for (const marker of hosted) {
+      const kind = marker.startsWith("http") ? "hosted Supabase URL" : "hosted Supabase anon key";
+      if (file.body.includes(marker)) found.push(`${file.name} contains ${kind}`);
     }
   }
   return found;
@@ -186,6 +212,6 @@ if (isMain) {
     process.exit(1);
   }
   console.log(reviewer
-    ? "reviewer dist has no Flow Test 2 names"
+    ? "reviewer dist has no Flow Test 2 names, golden ids, or the hosted client"
     : "production graph and dist have no fixtures or golden values");
 }

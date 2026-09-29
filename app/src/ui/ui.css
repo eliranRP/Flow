@@ -1343,9 +1343,8 @@ a.ui-row,
 }
 
 .ui-review-supplier {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-inline-size: 0;
+  white-space: normal;
 }
 
 .ui-review-doc {
@@ -2278,7 +2277,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-shared-note {
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .ui-remember-line {
@@ -2296,6 +2295,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-remember-dest {
   flex: 1 1 auto;
   min-inline-size: 0;
+}
+
+.ui-remember-join {
+  white-space: nowrap;
 }
 
 .ui-switch-row:has(input:disabled) {

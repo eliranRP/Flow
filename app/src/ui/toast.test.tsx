@@ -348,6 +348,32 @@ describe("placeToast", () => {
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
+  it("keeps a minimum height above a tall sheet and does not cover the header", () => {
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    const header = document.createElement("div");
+    header.className = "ui-sheet-head";
+    sheet.appendChild(header);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    sheet.getBoundingClientRect = () => box(76, 40);
+    header.getBoundingClientRect = () => box(76, 40);
+    toast.getBoundingClientRect = () => box(120, 120);
+    placeToast(host);
+    const top = Number.parseFloat(host.style.top);
+    const cap = toast.style.maxHeight === "" ? 120 : Number.parseFloat(toast.style.maxHeight);
+    expect(cap).toBeGreaterThanOrEqual(toastMinBlock());
+    expect(top + cap).toBeLessThanOrEqual(36);
+    expect(toast.style.overflow).not.toBe("hidden");
+    sheet.remove();
+    host.remove();
+  });
+
   it("sits fully above a short sheet instead of across its top edge", () => {
     const sheet = document.createElement("div");
     sheet.setAttribute("data-vaul-drawer", "");

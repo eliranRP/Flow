@@ -151,7 +151,8 @@ test("the category page shows the materials line, and can be empty", async ({ pa
   await page.goto("/reviewer/category");
   await expect(page.getByRole("heading", { name: "מלט" })).toBeVisible();
   await expect(page.getByText("בית הספר אלון")).toBeVisible();
-  await expect(page.getByText("₪220")).toBeVisible();
+  await expect(page.getByText("₪140")).toBeVisible();
+  await expect(page.getByText("₪80")).toBeVisible();
   await expectNoOverflow(page);
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page).toHaveURL(/\/reviewer$/);
@@ -185,7 +186,7 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await expectNoOverflow(page);
   await page.getByRole("link", { name: /מחצבת הדקל/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/transaction\/t-sample-sand$/);
-  await expect(page.getByText("₪220")).toBeVisible();
+  await expect(page.getByText("₪140")).toBeVisible();
   await expect(page.getByText("בית הספר אלון · מלט")).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();

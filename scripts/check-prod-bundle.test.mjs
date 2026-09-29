@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reviewerNameViolations, sourceViolations, violations } from "./check-prod-bundle.mjs";
+import { hostedClientMarkers, reviewerNameViolations, sourceViolations, violations } from "./check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "./hosted-env.mjs";
 
 test("flags a fixture module, a story, and a golden value", () => {
@@ -36,12 +36,32 @@ test("flags a dev route and a reviewer marker in the hosted bundle", () => {
 test("flags a Flow Test 2 name in the reviewer dist", () => {
   const found = reviewerNameViolations([
     { name: "app/dist/assets/reviewer.js", body: "שיפוץ הרצל 12 והובלות הגליל" },
-  ]);
+  ], []);
   assert.ok(found.some((line) => line.includes("שיפוץ הרצל")));
   assert.ok(found.some((line) => line.includes("הובלות הגליל")));
   assert.deepEqual(reviewerNameViolations([
     { name: "app/dist/assets/reviewer.js", body: "בית הספר אלון" },
-  ]), []);
+  ], []), []);
+});
+
+test("flags Flow Test 2 places, the plain crane name, golden ids, and the hosted client", () => {
+  const places = reviewerNameViolations([
+    { name: "app/dist/assets/reviewer.js", body: "פ״ת ת״א צבעי הגליל מנופי" },
+  ], []);
+  for (const name of ["פ״ת", "ת״א", "צבעי הגליל", "מנופי"]) {
+    assert.ok(places.some((line) => line.includes(name)), name);
+  }
+  const golden = reviewerNameViolations([
+    { name: "app/dist/assets/reviewer.js", body: "2389917160 37700" },
+  ], []);
+  assert.ok(golden.some((line) => line.includes("2389917160")));
+  assert.ok(golden.some((line) => line.includes("37700")));
+  const hosted = reviewerNameViolations([
+    { name: "app/dist/assets/reviewer.js", body: "https://hosted.supabase.co eyJ-hosted-anon" },
+  ], ["https://hosted.supabase.co", "eyJ-hosted-anon"]);
+  assert.ok(hosted.some((line) => line.includes("hosted Supabase URL")));
+  assert.ok(hosted.some((line) => line.includes("hosted Supabase anon key")));
+  assert.equal(hostedClientMarkers().length, 2);
 });
 
 test("a hosted build rejects an empty Supabase URL or anon key", () => {

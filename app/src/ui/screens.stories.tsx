@@ -687,6 +687,35 @@ export const HomeLongHero: Story = {
   ),
 };
 
+export const ProjectSharedCost: Story = {
+  name: "Shared cost note",
+  render: () => (
+    <StoryRoute entry="/projects/a" tabs>
+      <ProjectDetailScreen
+        example={exampleOnBand}
+        sample={{
+          id: "a",
+          name: "וילה רעננה",
+          status: "active",
+          state_label: "משפ׳ כהן · מתחילת הפרויקט",
+          budget_agorot: 100_000_000n,
+          income_agorot: 90_000_000n,
+          direct_agorot: 72_000_000n,
+          shared_agorot: 4_000_000n,
+          profit_agorot: 14_000_000n,
+          categories: [
+            { id: "c1", name: "חומרים", amount_agorot: 30_000_000n, has_shared_share: false },
+            { id: "c2", name: "הובלה", amount_agorot: 4_000_000n, has_shared_share: true },
+          ],
+          pending_count: 0,
+          pending_agorot: 0n,
+          transactions: [],
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const ProjectDetail: Story = {
   render: () => (
     <StoryRoute entry="/projects/a" tabs>

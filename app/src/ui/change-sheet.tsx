@@ -336,8 +336,9 @@ export function ChangeAssignment(props: Props) {
               hint={
                 <span className="ui-remember-line">
                   <span className="ui-remember-supplier">{props.supplier}</span>
-                  <bdi dir="ltr">←</bdi>
                   <span className="ui-remember-dest">
+                    <bdi className="ui-remember-join" dir="ltr">{"←\u00A0"}</bdi>
+                    {"\u2060"}
                     {projectName === "" ? "פרויקט" : projectName}
                     {" · "}
                     {categoryName === "" ? "קטגוריה" : categoryName}
