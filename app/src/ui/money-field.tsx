@@ -1,4 +1,6 @@
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
+import { flowControlName } from "./field-name";
+import { holdFieldMouse, holdFieldPointer } from "./field-pointer";
 
 type MoneyFieldProps = {
   label: string;
@@ -29,35 +31,45 @@ function grouped(raw: string): string {
  */
 export function MoneyField({ label, value, onValueChange, error, id, disabled = false }: MoneyFieldProps) {
   const generated = useId();
-  const fieldId = id ?? generated;
+  const fieldId = flowControlName("flow-amount", generated, id);
   const errorId = `${fieldId}-error`;
   const shown = grouped(value);
+  const shellStyle = { "--money-digits": `${shown.length}ch` } as CSSProperties;
   return (
     <div className={error ? "ui-field ui-field-error" : "ui-field"}>
       <label className="ui-field-label" htmlFor={fieldId}>
         {label}
       </label>
-      <span className="ui-money-field ui-field-control">
-        <span className="ui-money-ltr" dir="ltr">
-          <span className="ui-money-prefix" aria-hidden="true">
-            ₪
-          </span>
-          <input
-            id={fieldId}
-            dir="ltr"
-            inputMode="decimal"
-            type="text"
-            value={shown}
-            disabled={disabled}
-            size={Math.max(shown.length, 1)}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : undefined}
-            onChange={(event) => {
-              onValueChange(digitsOnly(event.target.value));
-            }}
-          />
+      <div
+        className="ui-money-field ui-field-control"
+        style={shellStyle}
+        data-vaul-no-drag=""
+        onPointerDown={holdFieldPointer}
+        onMouseDown={holdFieldMouse}
+      >
+        <span className="ui-money-prefix" aria-hidden="true">
+          ₪
         </span>
-      </span>
+        <input
+          id={fieldId}
+          name={fieldId}
+          dir="ltr"
+          inputMode="decimal"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          type="text"
+          value={shown}
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          onPointerDown={holdFieldPointer}
+          onChange={(event) => {
+            onValueChange(digitsOnly(event.target.value));
+          }}
+        />
+      </div>
       {error ? (
         <span id={errorId} className="ui-field-message">
           {error}
@@ -102,8 +114,8 @@ export function PercentField({
   disabled = false,
   enterKeyHint = "next",
 }: PercentFieldProps) {
-  const generated = useId().replace(/:/g, "");
-  const fieldId = id ?? `split-pct-${generated}`;
+  const generated = useId();
+  const fieldId = id ?? flowControlName("split-pct", generated);
   const fieldName = name ?? fieldId;
   const errorId = `${fieldId}-error`;
   return (
@@ -111,7 +123,15 @@ export function PercentField({
       <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
         {label}
       </label>
-      <span className="ui-money-field ui-field-control ui-percent-control">
+      <div
+        className="ui-money-field ui-field-control ui-percent-control"
+        data-vaul-no-drag=""
+        onPointerDown={holdFieldPointer}
+        onMouseDown={holdFieldMouse}
+      >
+        <span className="ui-percent-suffix" aria-hidden="true">
+          %
+        </span>
         <input
           id={fieldId}
           name={fieldName}
@@ -127,6 +147,7 @@ export function PercentField({
           value={value}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
+          onPointerDown={holdFieldPointer}
           onFocus={(event) => {
             event.currentTarget.select();
           }}
@@ -134,10 +155,7 @@ export function PercentField({
             onValueChange(percentDigits(event.target.value));
           }}
         />
-        <span className="ui-percent-suffix" aria-hidden="true">
-          %
-        </span>
-      </span>
+      </div>
       {error ? (
         <span id={errorId} className="ui-field-message">
           {error}

@@ -29,6 +29,9 @@ describe("MoneyField", () => {
     const field = screen.getByLabelText("סכום");
     expect(field).toHaveAttribute("dir", "ltr");
     expect(field).toHaveAttribute("inputmode", "decimal");
+    expect(field).toHaveAttribute("autocomplete", "off");
+    expect(field.getAttribute("name") ?? "").toMatch(/^flow-amount-/);
+    expect(field.getAttribute("name") ?? "").not.toMatch(/name|email|tel|phone|contact/i);
     expectTarget(field);
     expect(screen.getByText("₪")).toBeInTheDocument();
     expect(screen.queryByText("לפני מע״מ")).not.toBeInTheDocument();

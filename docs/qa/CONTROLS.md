@@ -15,6 +15,7 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Tab bar | הגדרות | Opens settings. | never | no | route `/settings` | none | pass |
 | Shared | Back, חזרה, ✕ on a screen | Pops history when this visit pushed a screen. Otherwise opens the named parent. | while a split save is in progress | no | previous screen, or the parent | none | pass |
 | Shared | Sheet ✕ | Closes the sheet. One history entry, so browser back does the same. | never | no | sheet gone, focus returns | none | pass |
+| Shared | Text, amount, and percent fields | The input fills the box. A tap on the left edge, the centre, or the right edge focuses it and opens the keypad. Amounts and percents use `inputmode=decimal`. A whole number uses `numeric`. `autocomplete=off`, the name is not a contact field, and the font is at least 16px. | never | no | the field is focused. `9,999,999.99` fits at 320px (`scrollWidth` <= `clientWidth`) | none | pass |
 | Shared | Confirm sheet, the confirm label | Runs the confirm action. | never | the write | the action's toast, sheet closes | the action's error toast, sheet stays | pass |
 | Shared | Confirm sheet, ביטול | Closes without saving. | never | no | sheet gone | none | pass |
 | Shared | Toast body | Tap or swipe dismisses it. | never | no | toast gone | none | pass |
@@ -47,6 +48,8 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Projects | פרויקט חדש | Opens the project sheet. | never | no | sheet title פרויקט | none | pass |
 | Projects | שמירה on the new-project sheet | Calls `upsert_project`. | never | the button is busy | toast "הפרויקט נשמר", sheet closes | toast "לא הצלחנו לשמור את הפרויקט." | pass |
 | Projects | ביטול on the new-project sheet | Closes the sheet without saving. | never | no | sheet gone | none | pass |
+| Projects | שם on the new-project sheet | A tap on the left edge, the centre, or the right edge focuses the field. | never | no | the text field is focused | none | pass |
+| Projects | תקציב בשקלים, או ריק | A tap on the left edge, the centre, or the right edge focuses the field. `9,999,999.99` stays fully visible at 320px. | never | no | decimal keypad, `scrollWidth` <= `clientWidth`, ₪ inside the box | none | pass |
 | Project | Back | Returns to the project list. | never | no | route `/projects` | none | pass |
 | Project | עוד | Opens the more sheet. While the project is loading, the sheet only says it is still loading. | never | no | sheet title עוד | none | pass |
 | Project | סיום הפרויקט / החזרה לפעיל | Opens the confirm sheet. | never | no | confirm sheet | none | pass |
@@ -97,7 +100,7 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Split | לפי הכנסות | Selects the income split. | no income in the period. Reason "אין הכנסות בתקופה הזו". | no | summary "לפי הכנסות · N פרויקטים" | none | pass |
 | Split | הצגת הפירוט / הסתרת הפירוט | Shows or hides the read-only shares. | while saving | no | the list toggles | none | pass |
 | Split | חלוקה ידנית | Replaces the detail with percent fields. | while saving | no | one field per project | none | pass |
-| Split | a percent field | Edits that share. The row focuses the field. | while saving | no | the remainder line updates | a field over 100% shows "עד 100%" | pass |
+| Split | a percent field | Edits that share. A tap on the left edge, the centre, or the right edge focuses it, and 100 stays fully visible. The row focuses it too. | while saving | no | the remainder line updates | a field over 100% shows "עד 100%" | pass |
 | Split | חזרה לאפשרויות | Restores the previous choice. | while saving | no | the three choices return | none | pass |
 | Split | שמירה | Calls `save_split`. | no valid choice. Summary says why. | שומר… | toast "החלוקה נשמרה", back to the caller | toast "החלוקה לא נשמרה" with ניסיון חוזר | pass |
 | Settings | חיבור SUMIT | Opens the connect sheet. Shown when SUMIT is not connected. | never | no | sheet title חיבור SUMIT | none | pass |
