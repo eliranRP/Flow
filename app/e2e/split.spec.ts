@@ -45,7 +45,7 @@ test("nothing is selected until one tap on every project", async ({ page }) => {
   await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
   await expect(page.getByRole("button", { name: "שמירה" })).toBeEnabled();
   const rows = await saveAndCheck(page);
-  expect(rows.map((row) => row.share_bp)).toEqual([3333, 3333, 3334]);
+  expect(rows.map((row) => row.share_bp)).toEqual([3334, 3333, 3333]);
 });
 
 test("chosen projects need two ticks and then split evenly", async ({ page }) => {
@@ -55,14 +55,14 @@ test("chosen projects need two ticks and then split evenly", async ({ page }) =>
   await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
   await page.getByRole("button", { name: "פרגולה בית כהן" }).click();
   const rows = await saveAndCheck(page);
-  expect(rows.map((row) => row.project_id)).toEqual(["a", "c"]);
+  expect(rows.map((row) => row.project_id)).toEqual(["c", "a"]);
   expect(rows.map((row) => row.share_bp)).toEqual([5000, 5000]);
 });
 
 test("income follows the project weights", async ({ page }) => {
   await page.getByRole("radio", { name: "לפי הכנסות" }).click();
   const rows = await saveAndCheck(page);
-  expect(rows.map((row) => row.share_bp)).toEqual([6000, 2000, 2000]);
+  expect(rows.map((row) => row.share_bp)).toEqual([2000, 2000, 6000]);
 });
 
 test("manual percents save, including one decimal that round-trips", async ({ page }) => {
@@ -74,13 +74,13 @@ test("manual percents save, including one decimal that round-trips", async ({ pa
   await second.fill("30");
   await third.fill("20");
   let rows = await saveAndCheck(page);
-  expect(rows.map((row) => row.share_bp)).toEqual([5000, 3000, 2000]);
+  expect(rows.map((row) => row.share_bp)).toEqual([2000, 3000, 5000]);
 
   await first.fill("33.3");
   await second.fill("33.3");
   await third.fill("33.4");
   rows = await saveAndCheck(page);
-  expect(rows.map((row) => row.share_bp)).toEqual([3330, 3330, 3340]);
+  expect(rows.map((row) => row.share_bp)).toEqual([3340, 3330, 3330]);
 });
 
 test("a manual 100 does not clip and is not a contact field", async ({ page }) => {

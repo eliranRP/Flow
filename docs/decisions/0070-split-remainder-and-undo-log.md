@@ -11,7 +11,7 @@ The r18 review of `c52dc91` asked for four fixes. The split screen put the lefto
 
 1. The screen still puts the leftover agora on the last project. `sharesForSave` reverses that list before `save_split`, so the database's first element is the last project on screen and the stored agorot match the rows the owner confirmed. Stored `share_bp` still sum to 10000. This amends [0069](0069-back-and-one-tap-review.md) point 10 and DESIGN-RULES §11.
 2. A new migration revokes `SELECT` on `reassign_undo` from `authenticated`. Row level security stays on, with no policies. An authenticated `select` raises `42501`. The round 9 catalogue check stays.
-3. The no-op sweep scrolls each control into view before the hit test. A control that stays unclickable fails the run. A tab-bar control under an open sheet is the exception, and the test logs how many it skipped on that page.
+3. The no-op sweep scrolls each control into view before the hit test. A control that stays unclickable fails the run. A control outside an open sheet is covered by the scrim, including the tab bar, so the test logs it and moves on.
 4. From the transaction change sheet, "פיצול בין פרויקטים" closes the sheet state and opens Split with `replace: true`, so the sheet's history entry is replaced rather than popped after the push.
 5. The review queue is expenses. An income row still takes the suggested category and is filed without waiting. This amends [0069](0069-back-and-one-tap-review.md) point 4.
 6. `get_project`'s category breakdown omits rows with `category_suggested`. The project totals still include those amounts.
