@@ -15,9 +15,14 @@ export const reviewerWaitingPaintAgorot = 30_000n;
 export const reviewerSharedAgorot = 100_000n;
 export const reviewerOtherIncomeAgorot = 120_000n;
 
+export const reviewerProjectName = "בית הספר אלון";
+export const reviewerOtherProjectName = "מחסן הנמל";
+/** The מלט line, split so a paged sample still adds up to it. */
+export const reviewerMaterialsPageAgorot = [14_000n, 8_000n] as const;
+
 export const reviewerSplitProjects: SplitProject[] = [
-  { id: "p-herzl", name: "שיפוץ הרצל 12", incomeAgorot: reviewerIncomeAgorot },
-  { id: "p-raanana", name: "וילה רעננה", incomeAgorot: reviewerOtherIncomeAgorot },
+  { id: "p-herzl", name: reviewerProjectName, incomeAgorot: reviewerIncomeAgorot },
+  { id: "p-raanana", name: reviewerOtherProjectName, incomeAgorot: reviewerOtherIncomeAgorot },
 ];
 
 export const reviewerProjectChoices = reviewerSplitProjects.map((project) => ({
@@ -26,8 +31,8 @@ export const reviewerProjectChoices = reviewerSplitProjects.map((project) => ({
 }));
 
 export const reviewerCategories = [
-  { id: "c-materials", name: "חומרים" },
-  { id: "c-haul", name: "הובלה" },
+  { id: "c-materials", name: "מלט" },
+  { id: "c-haul", name: "שינוע" },
 ];
 
 function expenseVat(net: bigint): bigint {
@@ -42,9 +47,9 @@ export const reviewerFiled: FiledTodayRow[] = [
     doc_date: "2026-09-29",
     amount_net: -reviewerMaterialsAgorot,
     direction: "expense",
-    supplier_name: "מחצבות השרון בע״מ",
-    project_name: "שיפוץ הרצל 12",
-    category_name: "חומרים",
+    supplier_name: "מחצבת הדקל בע״מ",
+    project_name: reviewerProjectName,
+    category_name: "מלט",
   },
   {
     id: "t-sample-haul",
@@ -52,9 +57,9 @@ export const reviewerFiled: FiledTodayRow[] = [
     doc_date: "2026-09-29",
     amount_net: -reviewerHaulAgorot,
     direction: "expense",
-    supplier_name: "הובלות הגליל בע״מ",
-    project_name: "שיפוץ הרצל 12",
-    category_name: "הובלה",
+    supplier_name: "שינוע הנמל בע״מ",
+    project_name: reviewerProjectName,
+    category_name: "שינוע",
   },
 ];
 
@@ -69,7 +74,7 @@ export const reviewerQueue: ReviewRow[] = [
     reason: "unallocated_shared",
     project_id: null,
     category_id: null,
-    supplier_name: "מנופי המרכז בע״מ",
+    supplier_name: "עגורני החוף בע״מ",
     project_name: null,
     category_name: null,
     doc_kind: "invoice",
@@ -86,8 +91,8 @@ export const reviewerQueue: ReviewRow[] = [
     reason: "missing_category",
     project_id: "p-herzl",
     category_id: null,
-    supplier_name: "ברגי הצפון בע״מ",
-    project_name: "שיפוץ הרצל 12",
+    supplier_name: "ברגי העמק בע״מ",
+    project_name: reviewerProjectName,
     category_name: null,
     doc_kind: "invoice",
     vat_agorot: expenseVat(-reviewerWaitingBoltsAgorot),
@@ -103,9 +108,9 @@ export const reviewerQueue: ReviewRow[] = [
     reason: null,
     project_id: "p-herzl",
     category_id: "c-materials",
-    supplier_name: "צבעי הגליל בע״מ",
-    project_name: "שיפוץ הרצל 12",
-    category_name: "חומרים",
+    supplier_name: "צבעי הכרמל בע״מ",
+    project_name: reviewerProjectName,
+    category_name: "מלט",
     doc_kind: "invoice",
     vat_agorot: expenseVat(-reviewerWaitingPaintAgorot),
     auto_approved_today: reviewerFiled.length,
@@ -164,5 +169,6 @@ export function reviewerBooksAddUp(): boolean {
     && books.splitSum === books.shared
     && books.bpSum === 10000
     && books.queueTotal === books.shared + books.waiting
-    && books.vatMatches;
+    && books.vatMatches
+    && reviewerMaterialsPageAgorot[0] + reviewerMaterialsPageAgorot[1] === books.materials;
 }

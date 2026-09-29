@@ -47,6 +47,31 @@ describe("Toast", () => {
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
+  it("pauses the timer while the toast is being touched", () => {
+    vi.useFakeTimers();
+    render(
+      <ToastProvider>
+        <Probe />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    const status = screen.getByRole("status");
+    fireEvent.pointerDown(status, { pointerType: "touch", button: 0, clientX: 4, clientY: 4 });
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(status).toBeInTheDocument();
+    fireEvent.pointerUp(status, { pointerType: "touch", clientX: 6, clientY: 6 });
+    act(() => {
+      vi.advanceTimersByTime(3_999);
+    });
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(document.querySelector(".ui-toast")).toBeNull();
+  });
+
   it("leaves an error up longer, and a new toast replaces the one on screen", () => {
     vi.useFakeTimers();
     function Two() {
@@ -211,7 +236,7 @@ describe("placeToast", () => {
     };
   }
 
-  it("clamps a toast measured below the viewport, then sits under the header once the sheet settles", () => {
+  it("sits above an open sheet, and at the screen top when that does not fit", () => {
     const sheet = document.createElement("div");
     sheet.setAttribute("data-vaul-drawer", "");
     sheet.setAttribute("data-state", "open");
@@ -224,13 +249,18 @@ describe("placeToast", () => {
     host.appendChild(toast);
     document.body.append(sheet, host);
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
-    header.getBoundingClientRect = () => box(820, 40);
+    sheet.getBoundingClientRect = () => box(820, 200);
+    header.getBoundingClientRect = () => box(660, 40);
     toast.getBoundingClientRect = () => box(48, 48);
     placeToast(host);
     expect(Number.parseFloat(host.style.top) + 48).toBeLessThanOrEqual(700);
-    header.getBoundingClientRect = () => box(120, 40);
+    expect(Number.parseFloat(host.style.top) + 48).toBeLessThanOrEqual(620);
+    sheet.getBoundingClientRect = () => box(500, 380);
+    header.getBoundingClientRect = () => box(160, 40);
     placeToast(host);
-    expect(host.style.top).toBe("128px");
+    expect(host.style.top).toBe("64px");
+    const top = Number.parseFloat(host.style.top);
+    expect(top + 48).toBeLessThanOrEqual(120);
     sheet.remove();
     host.remove();
   });

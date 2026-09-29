@@ -66,7 +66,7 @@ export function violations(input) {
     }
     if (file.body.includes("Example data")) found.push(`${file.name} contains Example data`);
     if (file.body.includes("/e2e/")) found.push(`${file.name} contains /e2e/`);
-    for (const marker of ["sampleSave", "runSampleSave", "reviewer-preview", "reviewer-sample"]) {
+    for (const marker of ["sampleSaveMode", "sampleRun", "reviewerBooks", "reviewerQueue", "reviewer-preview", "reviewer-sample"]) {
       if (file.body.includes(marker)) found.push(`${file.name} contains ${marker}`);
     }
     if (file.body.includes("new-")) found.push(`${file.name} contains a story id prefix`);
@@ -123,6 +123,39 @@ function scanDist(dist) {
   return files;
 }
 
+/** Names from the Flow Test 2 books. A reviewers-only dist must not contain them. */
+export const flowTest2Names = [
+  "שיפוץ הרצל",
+  "הובלות הגליל",
+  "מנופי המרכז",
+  "השרון",
+  "יזמות הגליל",
+  "פרגולות הגליל",
+  "לוי רעננה",
+  "ביאליק",
+  "פרגולה בית כהן",
+];
+
+/**
+ * @param {{ name: string, body: string }[]} files
+ * @returns {string[]}
+ */
+export function reviewerNameViolations(files) {
+  const found = [];
+  for (const file of files) {
+    for (const name of flowTest2Names) {
+      if (file.body.includes(name)) found.push(`${file.name} contains Flow Test 2 name ${name}`);
+    }
+  }
+  return found;
+}
+
+export function checkReviewerBundle() {
+  const dist = path.join(root, "app/dist");
+  if (!existsSync(dist)) return ["app/dist is missing. Build the reviewers-only bundle first."];
+  return reviewerNameViolations(scanDist(dist));
+}
+
 export function checkProductionBundle() {
   const dist = path.join(root, "app/dist");
   const graphPath = path.join(root, "app/bundle-graph.json");
@@ -146,10 +179,13 @@ export function checkProductionBundle() {
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  const bad = checkProductionBundle();
+  const reviewer = process.argv.includes("--reviewer");
+  const bad = reviewer ? checkReviewerBundle() : checkProductionBundle();
   if (bad.length > 0) {
     console.error(bad.join("\n"));
     process.exit(1);
   }
-  console.log("production graph and dist have no fixtures or golden values");
+  console.log(reviewer
+    ? "reviewer dist has no Flow Test 2 names"
+    : "production graph and dist have no fixtures or golden values");
 }

@@ -1253,6 +1253,7 @@ a.ui-row,
 .ui-toast-text {
   flex: 1 1 auto;
   min-inline-size: 0;
+  text-wrap: balance;
   unicode-bidi: isolate;
 }
 
@@ -2276,18 +2277,25 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   color: var(--color-text-muted);
 }
 
+.ui-shared-note {
+  color: var(--color-text);
+}
+
 .ui-remember-line {
   display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   min-inline-size: 0;
   gap: 0.25rem;
 }
 
 .ui-remember-supplier {
-  overflow: hidden;
-  min-inline-size: 0;
+  flex: 0 1 auto;
+}
+
+.ui-remember-dest {
   flex: 1 1 auto;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-inline-size: 0;
 }
 
 .ui-switch-row:has(input:disabled) {

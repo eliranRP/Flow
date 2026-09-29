@@ -2,6 +2,12 @@
 
 ## 2026-09-29
 
+Decision [0074](decisions/0074-toast-and-remembered-supplier.md), amended. The supplier's full name wraps and is never truncated. A toast over an open sheet sits just above the sheet and does not cover its header. Toast text uses balanced wrapping. The timer also pauses while the toast is touched. "כולל חלק מהוצאות משותפות" shows only when a category line includes a shared share, in the primary text colour.
+
+Decision [0071](decisions/0071-shared-cost-copy.md) point 6, amended. A rule restore confirms a guess made before the rule existed. The one-time `restore_rule` audit records the flag from before the restore, and the row ends as an assignment. A reopened missing-project rule and a pending undo of a rule stay untouched.
+
+A reviewers-only build uses invented sample names. `pnpm check:reviewer-bundle` fails on a known Flow Test 2 name. A hosted build fails when `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is set but empty. `check:bundle` watches `sampleSaveMode`, `sampleRun`, `reviewerBooks`, and `reviewerQueue`.
+
 Decision [0074](decisions/0074-toast-and-remembered-supplier.md), Accepted. A toast with an action stays 5 seconds. A plain confirmation stays 4 seconds. The two-line minimum applies only when the text shrinks or wraps. A tap on a toast does not close the sheet under it. "לזכור לספק הזה" shows the supplier's full name, with an ellipsis when it does not fit. This amends [0069](decisions/0069-back-and-one-tap-review.md).
 
 Decision [0071](decisions/0071-shared-cost-copy.md) point 6, amended. A category that matches the supplier's remembered rule is an assignment, not a guess. The backfill leaves those rows alone, puts back a rule row an earlier backfill already flipped, and writes an audit row for every flip.

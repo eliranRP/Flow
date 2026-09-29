@@ -125,6 +125,8 @@ export const projectDetailSchema = z
         id: z.string().nullable(),
         name: z.string().nullable(),
         amount_agorot: agorotSchema,
+        /** True when this line includes this project's share of a shared cost. */
+        has_shared_share: z.boolean().optional(),
       }),
     ),
     /** Project expenses whose category is still a suggestion. Omitted on older payloads. */

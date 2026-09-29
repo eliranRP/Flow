@@ -4,6 +4,7 @@ import { copyFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { rejectEmptyHostedSupabase } from "../scripts/hosted-env.mjs";
 
 /** Static hosts that only serve files: deep links fall back to index.html. */
 /** Module ids of the production build. Written beside dist so the host never serves it. */
@@ -45,6 +46,10 @@ export default defineConfig(({ mode }) => {
     // An explicit empty string stays empty. A reviewers-only build sets the
     // Supabase URL and anon key to "" so the hosted key is not filled in.
     if (process.env[key] == null) process.env[key] = value;
+  }
+  const emptyHosted = rejectEmptyHostedSupabase(process.env, process.env.VITE_REVIEWER_BUILD === "1");
+  if (emptyHosted.length > 0) {
+    throw new Error(`${emptyHosted.join("\n")}\nA hosted build needs the public client key. Unset the variable to use app/.env.production, or set VITE_REVIEWER_BUILD=1 for the reviewers-only build.`);
   }
 
   const lifecycle = process.env.npm_lifecycle_event ?? "";

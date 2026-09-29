@@ -73,6 +73,7 @@ describe("project category breakdown", () => {
     expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", "/projects/a/categories/h");
     expect(screen.getByRole("link", { name: /1 ממתינה לאישור/ })).toHaveAttribute("href", "/review?project=a");
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
+    expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
   });
 
   it("keeps a project that is only waiting off the empty category sentence", () => {
@@ -84,6 +85,41 @@ describe("project category breakdown", () => {
     });
     expect(screen.getByText("2 ממתינות לאישור")).toBeInTheDocument();
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
+  });
+
+  it("shows the shared-cost note only when a line includes a share", () => {
+    const { rerender } = renderProject({
+      ...projectBase,
+      categories: [
+        { id: "h", name: "הובלה", amount_agorot: 7_000n, has_shared_share: true },
+        { id: "m", name: "חומרים", amount_agorot: 2_000n, has_shared_share: false },
+      ],
+    });
+    const note = screen.getByText("כולל חלק מהוצאות משותפות");
+    expect(note).toHaveClass("ui-shared-note");
+    expect(note).not.toHaveClass("t-hint");
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/projects/a"]}>
+            <Routes>
+              <Route
+                path="/projects/:projectId"
+                element={
+                  <ProjectDetailScreen
+                    sample={{
+                      ...projectBase,
+                      categories: [{ id: "m", name: "חומרים", amount_agorot: 2_000n, has_shared_share: false }],
+                    }}
+                  />
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
   });
 
   it("says there are no classified expenses when nothing is waiting either", () => {

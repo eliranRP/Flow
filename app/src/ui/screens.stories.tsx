@@ -359,14 +359,14 @@ const categorySample = {
   categoryName: "חומרים",
   projectName: "וילה רעננה",
   rows: [
-    { id: "t-sand", description: "חול", doc_date: "2026-09-29", amount_net: -22_000n },
-    { id: "t-bolts", description: "ברגים", doc_date: "2026-09-28", amount_net: -18_000n },
+    { id: "t1", description: "חומרי בניין השרון", doc_date: "2026-09-14", amount_net: -8_500_000n },
+    { id: "t2", description: "מלט וחול", doc_date: "2026-09-20", amount_net: -21_500_000n },
   ],
 };
 
 export const ProjectCategory: Story = {
   render: () => (
-    <StoryRoute entry="/projects/a/categories/c-materials">
+    <StoryRoute entry="/projects/a/categories/c1">
       <ExampleBar />
       <ProjectCategoryScreen sample={categorySample} backTo="/projects/a" />
     </StoryRoute>
@@ -375,7 +375,7 @@ export const ProjectCategory: Story = {
 
 export const ProjectCategoryEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/projects/a/categories/c-materials">
+    <StoryRoute entry="/projects/a/categories/c1">
       <ExampleBar />
       <ProjectCategoryScreen
         sample={{ categoryName: "חומרים", projectName: "וילה רעננה", rows: [] }}

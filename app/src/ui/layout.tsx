@@ -45,9 +45,9 @@ export function FigureLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Category lines include this project's share of a shared cost. */
+/** Shown only when a category line includes this project's share of a shared cost. */
 export function SharedCostNote() {
-  return <p className="ui-page-pad t-hint">כולל חלק מהוצאות משותפות</p>;
+  return <p className="ui-page-pad ui-shared-note t-body">כולל חלק מהוצאות משותפות</p>;
 }
 
 export function SectionHead({ title, children }: { title: string; children?: ReactNode }) {
