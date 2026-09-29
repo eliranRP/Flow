@@ -23,7 +23,7 @@ async function readSaved(page: Page) {
 }
 
 async function saveAndCheck(page: Page) {
-  await page.getByRole("button", { name: "שמירת פיצול" }).click();
+  await page.getByRole("button", { name: "שמירה" }).click();
   await expect(page.locator("#e2e-split-saved")).not.toHaveText("");
   const rows = await readSaved(page);
   const result = settled(rows);
@@ -34,23 +34,26 @@ async function saveAndCheck(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/e2e/split");
+  await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
 });
 
-test("equal is the default and the shares add up to the amount", async ({ page }) => {
-  await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByText("נותר לשייך")).toHaveCount(0);
-  await expect(page.getByText(/לכל אחד מ־/)).toHaveCount(0);
+test("nothing is selected until one tap on every project", async ({ page }) => {
+  await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  await expect(page.getByText("בחרו איך לחלק")).toBeVisible();
+  await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeEnabled();
   const rows = await saveAndCheck(page);
   expect(rows.map((row) => row.share_bp)).toEqual([3333, 3333, 3334]);
 });
 
-test("chosen projects split evenly among the ticked rows", async ({ page }) => {
+test("chosen projects need two ticks and then split evenly", async ({ page }) => {
   await page.getByRole("radio", { name: "שווה בין פרויקטים שאבחר" }).click();
-  await expect(page.getByRole("button", { name: "שמירת פיצול" })).toBeDisabled();
   await page.getByRole("button", { name: "שיפוץ הרצל 12" }).click();
+  await expect(page.getByText("בחרו לפחות 2 פרויקטים")).toBeVisible();
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
   await page.getByRole("button", { name: "פרגולה בית כהן" }).click();
-  await expect(page.getByText("נותר לשייך")).toHaveCount(0);
   const rows = await saveAndCheck(page);
   expect(rows.map((row) => row.project_id)).toEqual(["a", "c"]);
   expect(rows.map((row) => row.share_bp)).toEqual([5000, 5000]);
@@ -58,12 +61,11 @@ test("chosen projects split evenly among the ticked rows", async ({ page }) => {
 
 test("income follows the project weights", async ({ page }) => {
   await page.getByRole("radio", { name: "לפי הכנסות" }).click();
-  await expect(page.getByText("נותר לשייך")).toHaveCount(0);
   const rows = await saveAndCheck(page);
   expect(rows.map((row) => row.share_bp)).toEqual([6000, 2000, 2000]);
 });
 
-test("manual percents save, including decimals that round-trip", async ({ page }) => {
+test("manual percents save, including one decimal that round-trips", async ({ page }) => {
   await page.getByRole("button", { name: "חלוקה ידנית" }).click();
   const first = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
   const second = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
@@ -74,11 +76,11 @@ test("manual percents save, including decimals that round-trip", async ({ page }
   let rows = await saveAndCheck(page);
   expect(rows.map((row) => row.share_bp)).toEqual([5000, 3000, 2000]);
 
-  await first.fill("33.33");
-  await second.fill("33.33");
-  await third.fill("33.34");
+  await first.fill("33.3");
+  await second.fill("33.3");
+  await third.fill("33.4");
   rows = await saveAndCheck(page);
-  expect(rows.map((row) => row.share_bp)).toEqual([3333, 3333, 3334]);
+  expect(rows.map((row) => row.share_bp)).toEqual([3330, 3330, 3340]);
 });
 
 test("a manual 100 does not clip and is not a contact field", async ({ page }) => {
@@ -86,7 +88,7 @@ test("a manual 100 does not clip and is not a contact field", async ({ page }) =
   const input = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
   await expect(input).toHaveAttribute("inputmode", "decimal");
   await expect(input).toHaveAttribute("autocomplete", "off");
-  await expect(input).toHaveAttribute("name", "flow-share-a");
+  await expect(input).toHaveAttribute("name", "split-pct-a");
   await page.getByText("שיפוץ הרצל 12", { exact: true }).click();
   await expect(input).toBeFocused();
   await input.fill("100");
@@ -94,9 +96,13 @@ test("a manual 100 does not clip and is not a contact field", async ({ page }) =
   const clipped = await input.evaluate((node) => node.scrollWidth - node.clientWidth);
   expect(clipped).toBeLessThanOrEqual(1);
   await page.setViewportSize({ width: 320, height: 700 });
-  const clippedNarrow = await input.evaluate((node) => node.scrollWidth - node.clientWidth);
-  expect(clippedNarrow).toBeLessThanOrEqual(1);
-  await expect(page.getByText("נותר לשייך")).toBeVisible();
+  const narrow = await input.evaluate((node) => ({
+    clip: node.scrollWidth - node.clientWidth,
+    width: node.parentElement?.getBoundingClientRect().width ?? 0,
+  }));
+  expect(narrow.clip).toBeLessThanOrEqual(1);
+  expect(narrow.width).toBeGreaterThanOrEqual(96);
+  await expect(page.getByText("הסך 100%")).toBeVisible();
 });
 
 test("light and dark both show the question", async ({ page }) => {
@@ -108,5 +114,5 @@ test("light and dark both show the question", async ({ page }) => {
   expect(light.toLowerCase()).toBe("#ffffff");
   expect(dark.toLowerCase()).toBe("#15111e");
   await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "שמירת פיצול" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
 });

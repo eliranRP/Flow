@@ -20,6 +20,7 @@ type TextLinkProps = {
   controls?: string;
   /** The categories footer wraps instead of ellipsizing. */
   wrap?: boolean;
+  disabled?: boolean;
 };
 
 export function TextLink({
@@ -36,6 +37,7 @@ export function TextLink({
   expanded,
   controls,
   wrap = false,
+  disabled = false,
 }: TextLinkProps) {
   const classes = cx(
     "ui-text-link",
@@ -66,7 +68,7 @@ export function TextLink({
   }
   if (onClick) {
     return (
-      <button type="button" className={classes} onClick={onClick} aria-expanded={expanded} aria-controls={controls}>
+      <button type="button" className={classes} onClick={onClick} aria-expanded={expanded} aria-controls={controls} disabled={disabled}>
         {body}
       </button>
     );

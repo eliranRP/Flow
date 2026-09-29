@@ -73,44 +73,76 @@ type PercentFieldProps = {
   onValueChange: (raw: string) => void;
   /** The row already names the project. The label stays for the input. */
   hideLabel?: boolean;
-  /** Stable id. Callers pass flow-share-{projectId} so the field is not a contact. */
+  /** Stable id. Callers pass split-pct-{projectId} so the field is not a contact. */
   id?: string;
   name?: string;
+  error?: string;
+  disabled?: boolean;
+  /** The last row in a split uses "done". */
+  enterKeyHint?: "next" | "done";
 };
 
-/** A percent share. The stored value is digits, the same way MoneyField stores an amount. */
-export function PercentField({ label, value, onValueChange, hideLabel = false, id, name }: PercentFieldProps) {
+/** One decimal. "33.3" stays "33.3"; a second digit is dropped. */
+function percentDigits(raw: string): string {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  const [whole, frac] = cleaned.split(".");
+  if (frac == null) return whole ?? "";
+  return `${whole ?? ""}.${frac.slice(0, 1)}`;
+}
+
+/** A percent share. The suffix sits in the padding, so 100 never shares the digit box. */
+export function PercentField({
+  label,
+  value,
+  onValueChange,
+  hideLabel = false,
+  id,
+  name,
+  error,
+  disabled = false,
+  enterKeyHint = "next",
+}: PercentFieldProps) {
   const generated = useId().replace(/:/g, "");
-  const fieldId = id ?? `flow-share-${generated}`;
+  const fieldId = id ?? `split-pct-${generated}`;
   const fieldName = name ?? fieldId;
+  const errorId = `${fieldId}-error`;
   return (
-    <div className="ui-field ui-percent-field">
+    <div className={error ? "ui-field ui-field-error ui-percent-field" : "ui-field ui-percent-field"}>
       <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
         {label}
       </label>
       <span className="ui-money-field ui-field-control ui-percent-control">
-        <span className="ui-money-ltr" dir="ltr">
-          <input
-            id={fieldId}
-            name={fieldName}
-            dir="ltr"
-            inputMode="decimal"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            type="text"
-            value={value}
-            size={Math.max(value.length, 6)}
-            onChange={(event) => {
-              onValueChange(digitsOnly(event.target.value));
-            }}
-          />
-          <span className="ui-money-prefix" aria-hidden="true">
-            %
-          </span>
+        <input
+          id={fieldId}
+          name={fieldName}
+          dir="ltr"
+          inputMode="decimal"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          enterKeyHint={enterKeyHint}
+          disabled={disabled}
+          type="text"
+          value={value}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          onFocus={(event) => {
+            event.currentTarget.select();
+          }}
+          onChange={(event) => {
+            onValueChange(percentDigits(event.target.value));
+          }}
+        />
+        <span className="ui-percent-suffix" aria-hidden="true">
+          %
         </span>
       </span>
+      {error ? (
+        <span id={errorId} className="ui-field-message">
+          {error}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -50,11 +50,13 @@ export function BackButton({
   fallback,
   label = "חזרה",
   onBand = false,
+  disabled = false,
   children,
 }: {
   fallback: string;
   label?: string;
   onBand?: boolean;
+  disabled?: boolean;
   children?: ReactNode;
 }) {
   const goBack = useGoBack();
@@ -62,7 +64,9 @@ export function BackButton({
     <IconButton
       label={label}
       onBand={onBand}
+      disabled={disabled}
       onClick={() => {
+        if (disabled) return;
         goBack(fallback);
       }}
     >

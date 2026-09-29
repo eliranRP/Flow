@@ -406,14 +406,15 @@ Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mocku
 
 ### 11 Split
 
-- Mockups: [11-split-light.png](../../design/screens/11-split-light.png), [11-split-dark.png](../../design/screens/11-split-dark.png). The behaviour below is [0069](../decisions/0069-back-and-one-tap-review.md) point 10 until a new spec replaces it.
+- Mockups: [11-split-light.png](../../design/screens/11-split-light.png), [11-split-dark.png](../../design/screens/11-split-dark.png). Behaviour is [0069](../decisions/0069-back-and-one-tap-review.md) point 10 (Split v2: presets first). This amends the earlier "divide by amount or percent" rule: presets come first, there is no ₪ typing, and a manual percent sits behind "חלוקה ידנית".
 - Entry: Split on a review card, or from detail.
-- Top: the amount, then one question, "איך לחלק?".
-- Three choices, one tap each: "שווה בין כל הפרויקטים" (default), "שווה בין פרויקטים שאבחר", "לפי הכנסות". Chosen opens a checklist of active projects. A ticked row shows its ₪ share. Nothing to type.
-- "חלוקה ידנית" is a quiet link. The inputs fit 100 and two decimals. The row focuses the input. `inputmode=decimal`, `autocomplete=off`, and the name starts with `flow-share-`.
-- One save button, on as soon as the split is valid. One summary line, for example "₪500 לכל אחד מ־2 פרויקטים". "נותר לשייך" only while a manual split is short of 100%. The shekel parts use the same first-share remainder as `save_split`.
+- Title: "חלוקה בין פרויקטים". Then the amount, then "איך לחלק?".
+- Nothing is selected until a tap, unless a saved split is being re-edited. Three choices, one tap each: "שווה בין כל הפרויקטים", "שווה בין פרויקטים שאבחר", "לפי הכנסות". "All" and "income" enable "שמירה" on that tap. Chosen opens a checklist of active projects and enables "שמירה" at two or more. A ticked row shows its ₪ share. Nothing to type there. Income with no income in the period is disabled, with the reason "אין הכנסות בתקופה הזו".
+- "חלוקה ידנית" is a text link, not a default. The fields fit "100%", one decimal, at least 96px wide. The row focuses the input. `inputmode=decimal`, `autocomplete=off`, and the name is `split-pct-<projectId>`. "חזרה לאפשרויות" restores the previous choice.
+- One save button, "שמירה", on as soon as the split is valid. Busy label "שומר…". One summary line, for example "₪250 לכל אחד מ־4 פרויקטים" or "לפי הכנסות · N פרויקטים". Nothing chosen says "בחרו איך לחלק". A short manual split says "נשארו 30% לחלק". Over says "הסך 120%. צריך 100%." with only the total in the bad colour. A valid manual split says "הסך 100%" and "חלוקה ידנית · N פרויקטים".
+- Displayed shekel parts put the leftover agora on the last project so the line adds up. Stored shares still sum to 10000 basis points. `save_split` still puts that agora remainder on the first JSON element.
 - Cancel: ✕. Guide §13.
-- Success: toast, allocations saved. Error: `er-05`.
+- Success: toast "החלוקה נשמרה", then close. Error: `er-05`, "החלוקה לא נשמרה", with "ניסיון חוזר". Values stay.
 
 ### 12 Unpaid
 

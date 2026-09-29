@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allocate, bpToPercent, evenBasis, incomeBasis, percentToBp, splitIsValid, summaryKind } from "./split-math";
+import { allocate, basisToPercents, bpToPercent, evenBasis, incomeBasis, percentToBp, splitIsValid, summaryKind } from "./split-math";
 
 describe("split math", () => {
   it("round-trips percents that have to sum to 10000", () => {
@@ -7,13 +7,15 @@ describe("split math", () => {
     expect(percentToBp("33.33")).toBe(3333);
     expect(percentToBp("33.34")).toBe(3334);
     expect(percentToBp("12.5")).toBe(1250);
+    expect(percentToBp("33.3")).toBe(3330);
     expect(percentToBp("")).toBe(0);
     expect(percentToBp(".")).toBe(0);
     const basis = evenBasis(["a", "b", "c"]);
     expect(basis).toEqual({ a: 3333, b: 3333, c: 3334 });
-    const typed = Object.fromEntries(Object.entries(basis).map(([id, bp]) => [id, percentToBp(bpToPercent(bp))]));
-    expect(typed).toEqual(basis);
-    expect(Object.values(typed).reduce((sum, bp) => sum + bp, 0)).toBe(10000);
+    const typed = basisToPercents(["a", "b", "c"], basis);
+    expect(typed).toEqual({ a: "33.3", b: "33.3", c: "33.4" });
+    expect(Object.values(typed).reduce((sum, raw) => sum + percentToBp(raw), 0)).toBe(10000);
+    expect(bpToPercent(10000)).toBe("100");
   });
 
   it("puts leftover agorot on the first share so the parts equal the amount", () => {
@@ -22,14 +24,14 @@ describe("split math", () => {
       { id: "b", bp: 3333 },
       { id: "c", bp: 3334 },
     ]);
-    expect(parts.map((part) => part.agorot)).toEqual([335n, 333n, 333n]);
+    expect(parts.map((part) => part.agorot)).toEqual([333n, 333n, 335n]);
     expect(parts.reduce((sum, part) => sum + part.agorot, 0n)).toBe(1001n);
     expect(splitIsValid(parts)).toBe(true);
     expect(summaryKind("equal", parts)).toEqual({
       kind: "mixed",
       groups: [
-        { agorot: 335n, count: 1 },
         { agorot: 333n, count: 2 },
+        { agorot: 335n, count: 1 },
       ],
     });
   });

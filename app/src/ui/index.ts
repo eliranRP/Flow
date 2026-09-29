@@ -6,6 +6,7 @@ export { Button } from "./button";
 export type { ButtonProps, ButtonVariant } from "./button";
 export { ChangePill } from "./change-pill";
 export { Checkbox } from "./checkbox";
+export { CheckRow } from "./check-row";
 export { Chip, StatusPill } from "./chip";
 export type { ChipKind } from "./chip";
 export { ConfirmSheet } from "./confirm-sheet";
