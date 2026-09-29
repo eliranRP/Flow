@@ -1,6 +1,7 @@
+import { useLayoutEffect, useRef } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { TabBar } from "./tab-bar";
-import { Toast } from "./toast";
+import { placeToast, Toast } from "./toast";
 
 const meta = {
   title: "Components/Toast",
@@ -11,18 +12,25 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** Under the title, clear of the actions. The host ignores taps; the toast does not. */
-function BelowHeader(props: { children: string; action: string; tone?: "ok" | "bad" }) {
+function BelowHeader(props: { children: string; action: string; tone?: "ok" | "bad" | "info" }) {
+  const host = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = host.current;
+    if (!node) return;
+    placeToast(node);
+  }, []);
   return (
     <div className="relative min-h-dvh">
       <header className="ui-page">
         <h1 className="t-title-1">לאישור</h1>
         <p className="t-label mt-4 text-text-secondary">מסמכים שמחכים לשיוך</p>
       </header>
+      <div className="ui-toast-slot" />
       <div className="ui-review-actions">
         <button className="ui-btn ui-btn-primary" type="button">אישור</button>
         <button className="ui-btn ui-btn-ghost" type="button">דלג</button>
       </div>
-      <div className="ui-toast-host">
+      <div className="ui-toast-host" ref={host}>
         <Toast action={props.action} onAction={() => undefined} tone={props.tone}>
           {props.children}
         </Toast>

@@ -2479,11 +2479,15 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   position: fixed;
   z-index: 40;
   inset-inline: 0;
-  top: calc(var(--safe-top) + 6rem);
+  top: calc(var(--safe-top) + var(--space-4));
   display: flex;
   justify-content: center;
   padding-inline: var(--space-side);
   pointer-events: none;
+}
+
+.ui-toast-slot {
+  min-block-size: calc(var(--control-height) + var(--space-4));
 }
 
 .ui-toast-live {
@@ -2511,7 +2515,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-split {
   min-height: 100dvh;
   overflow-x: hidden;
-  padding-block-end: calc(var(--control-height) + var(--space-8) + var(--space-8) + var(--safe-bottom));
+  padding-block-end: calc(1px + var(--space-4) + var(--type-body-line) + var(--space-3) + var(--control-height) + var(--space-4) + var(--safe-bottom));
 }
 
 .ui-split .ui-page {
@@ -2683,6 +2687,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-radio-start {
   gap: var(--space-3);
+}
+
+div.ui-check-row {
+  cursor: default;
 }
 
 .ui-check-row {

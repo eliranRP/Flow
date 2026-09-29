@@ -29,7 +29,9 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
     ? "הוצאה משותפת · אישור יפתח חלוקה"
     : suggestion?.category != null && suggestion.project == null
       ? "חסר פרויקט, בחרו בשינוי"
-      : null;
+      : suggestion?.project != null && suggestion.category == null
+        ? "חסר קטגוריה, בחרו בשינוי"
+        : null;
   return (
     <article className="ui-review">
       <div className="ui-review-doc">

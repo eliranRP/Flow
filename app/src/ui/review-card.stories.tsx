@@ -61,6 +61,13 @@ export const MissingProject: Story = {
   },
 };
 
+export const MissingCategory: Story = {
+  args: {
+    ...OneCard.args,
+    project: "וילה רעננה",
+  },
+};
+
 export const SharedCost: Story = {
   args: {
     ...OneCard.args,
@@ -77,7 +84,7 @@ export const Suggestion: Story = {
   },
 };
 
-export const Confidence: Story = {
+export const NoScore: Story = {
   args: {
     ...OneCard.args,
     project: "וילה רעננה",

@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+Decision [0072](decisions/0072-design-review-rulings.md), Accepted. An invalid manual split shows each row as its own percent of the amount, and the summary keeps the invalid message. A toast under an opening sheet is measured again after the sheet settles and stays inside the viewport. The idle split summary is primary text. An even split whose shekel parts differ says "₪1,000 מתחלק שווה בין 3 פרויקטים". A preview notice uses the info tone. The empty filed list says "כש־SUMIT". A project with no category says "חסר קטגוריה, בחרו בשינוי".
+
 Decision [0071](decisions/0071-shared-cost-copy.md), Accepted. An unallocated shared cost says "הוצאה משותפת · אישור יפתח חלוקה", and אישור opens Split. Assigning that cost to one project toasts "עלות משותפת מחולקת במסך החלוקה." A project's category list keeps the guessed name out and adds "x ממתינות לאישור" with the amount, so the lines match the expenses. This amends [0070](decisions/0070-split-remainder-and-undo-log.md) points 6 and 8.
 
 Decision [0070](decisions/0070-split-remainder-and-undo-log.md), Accepted. The split the owner sees is the split that is saved: the leftover agora stays on the last project, and the payload is reversed so `save_split` stores those same agorot. `SELECT` on `reassign_undo` is revoked from `authenticated` again. Income suggestions are filed and are not queued. A project's category breakdown omits a category the owner has not confirmed. A toast with ביטול stays about 5 seconds, and the status region stays mounted. This amends [0069](decisions/0069-back-and-one-tap-review.md) points 4, 8, and 10.

@@ -51,9 +51,11 @@ const sampleDashboard: Dashboard = {
   projects: [
     { id: "a", name: "בניין מגורים חולון", status: "active", income_agorot: 30_000_000n, direct_agorot: 22_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 8_000_000n, profit_agorot: 8_000_000n },
     { id: "b", name: "וילה רעננה", status: "active", income_agorot: 18_000_000n, direct_agorot: 13_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 5_000_000n, profit_agorot: 5_000_000n },
-    { id: "c", name: "מגדל משרדים פ\"ת", status: "active", income_agorot: 25_000_000n, direct_agorot: 21_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 4_000_000n, profit_agorot: 4_000_000n },
+    { id: "c", name: "מגדל משרדים פ״ת", status: "active", income_agorot: 25_000_000n, direct_agorot: 21_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 4_000_000n, profit_agorot: 4_000_000n },
   ],
 };
+
+const filedTodayCount = 12;
 
 const sampleReview: ReviewRow = {
   id: "r1",
@@ -70,7 +72,7 @@ const sampleReview: ReviewRow = {
   category_name: "חומרים",
   confidence: 92,
   supplier_name: "חומרי בניין השרון בע״מ",
-  auto_approved_today: 12,
+  auto_approved_today: filedTodayCount,
 };
 
 const sampleUnpaid: UnpaidRow[] = [
@@ -78,7 +80,7 @@ const sampleUnpaid: UnpaidRow[] = [
     id: "u1",
     description: "הובלה",
     doc_date: "2026-09-02",
-    project_name: "שיפוץ דירה ת\"א",
+    project_name: "שיפוץ דירה ת״א",
     customer_name: "מ.ש. הובלות",
     open_gross_agorot: 600_000n,
     open_net_agorot: 508_475n,
@@ -129,7 +131,7 @@ const projectsList: Dashboard = {
   projects: [
     listedProject("a", "בניין מגורים חולון"),
     listedProject("b", "וילה רעננה"),
-    listedProject("c", "מגדל משרדים פ\"ת"),
+    listedProject("c", "מגדל משרדים פ״ת"),
     ...Array.from({ length: 14 }, (_, index) => listedProject(`p${String(index)}`, `פרויקט ${String(index + 4)}`)),
     ...Array.from({ length: 21 }, (_, index) => listedProject(`f${String(index)}`, `הסתיים ${String(index + 1)}`, "finished")),
   ],
@@ -281,22 +283,20 @@ export const ReviewBanner: Story = {
   ),
 };
 
-const sampleFiled: FiledTodayRow[] = [
-  {
-    id: "t-filed",
-    description: "מלט",
-    doc_date: "2026-09-29",
-    amount_net: -350_000n,
-    direction: "expense",
-    supplier_name: "מנופי המרכז בע״מ",
-    project_name: "שיפוץ הרצל 12",
-    category_name: "חומרים",
-  },
-];
+const sampleFiled: FiledTodayRow[] = Array.from({ length: filedTodayCount }, (_, index) => ({
+  id: index === 0 ? "t-filed" : `t-filed-${String(index)}`,
+  description: index === 0 ? "מלט" : "חשבונית",
+  doc_date: "2026-09-29",
+  amount_net: -350_000n,
+  direction: "expense" as const,
+  supplier_name: index === 0 ? "מנופי המרכז בע״מ" : `ספק ${String(index + 1)}`,
+  project_name: "שיפוץ הרצל 12",
+  category_name: "חומרים",
+}));
 
 export const FiledToday: Story = {
   render: () => (
-    <StoryRoute entry="/review/filed">
+    <StoryRoute entry="/review/filed" tabs>
       <ExampleBar />
       <FiledTodayScreen sample={sampleFiled} />
     </StoryRoute>
@@ -305,9 +305,49 @@ export const FiledToday: Story = {
 
 export const FiledTodayEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/review/filed?preview=empty">
+    <StoryRoute entry="/review/filed?preview=empty" tabs>
       <ExampleBar />
       <FiledTodayScreen sample={[]} />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewMissingProject: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue
+        rows={[{
+          ...sampleReview,
+          project_id: null,
+          project_name: null,
+          category_id: "c1",
+          category_name: "חומרים",
+          reason: "missing_project",
+        }]}
+        search=""
+        sample
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewMissingCategory: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue
+        rows={[{
+          ...sampleReview,
+          project_id: "a",
+          project_name: "וילה רעננה",
+          category_id: null,
+          category_name: null,
+          reason: "missing_category",
+        }]}
+        search=""
+        sample
+      />
     </StoryRoute>
   ),
 };
@@ -796,6 +836,7 @@ function SplitStory({
 } = {}) {
   return (
     <StoryRoute entry="/transactions/t1/split">
+      <ExampleBar />
       <SplitScreen
         sampleMeta="חשמל · 12/09/2026"
         sampleAmount={100_000n}
@@ -874,10 +915,10 @@ export const SplitSavingDark320: Story = splitSaving.darkNarrow;
 
 const changeProjects = [
   { id: "holon", name: "בניין מגורים חולון", code: "P-14" },
-  { id: "p14", name: "מגדל משרדים פ\"ת", code: "P-08", recent: "היום" },
+  { id: "p14", name: "מגדל משרדים פ״ת", code: "P-08", recent: "היום" },
   { id: "villa", name: "וילה רעננה", code: "P-02", recent: "אתמול" },
   { id: "p21", name: "בית פרטי כפר סבא", code: "P-21", recent: "לפני 3 ימים" },
-  { id: "p03", name: "שיפוץ דירה ת\"א", code: "P-03", recent: "לפני שבוע" },
+  { id: "p03", name: "שיפוץ דירה ת״א", code: "P-03", recent: "לפני שבוע" },
   { id: "p17", name: "גן יבנה – תוספת קומה", code: "P-17" },
 ];
 

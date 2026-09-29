@@ -87,6 +87,30 @@ describe("split math", () => {
     });
   });
 
+  it("shows each row as its own percent when the total is not 100%", () => {
+    const amount = 100_000n;
+    expect(allocate(amount, [
+      { id: "a", bp: 7000 },
+      { id: "b", bp: 5000 },
+    ]).map((part) => part.agorot)).toEqual([70_000n, 50_000n]);
+    expect(allocate(amount, [
+      { id: "a", bp: 7000 },
+      { id: "b", bp: 500 },
+    ]).map((part) => part.agorot)).toEqual([70_000n, 5_000n]);
+    expect(allocate(amount, [
+      { id: "a", bp: 10000 },
+      { id: "b", bp: 3000 },
+      { id: "c", bp: 2000 },
+      { id: "d", bp: 1000 },
+    ]).map((part) => part.agorot)).toEqual([100_000n, 30_000n, 20_000n, 10_000n]);
+    expect(allocate(amount, [
+      { id: "a", bp: 15000 },
+      { id: "b", bp: 3000 },
+      { id: "c", bp: 2000 },
+      { id: "d", bp: 1000 },
+    ]).map((part) => part.agorot)).toEqual([150_000n, 30_000n, 20_000n, 10_000n]);
+  });
+
   it("rejects a partial manual split and a split with nobody chosen", () => {
     expect(splitIsValid(allocate(10_000n, [{ id: "a", bp: 4000 }]))).toBe(false);
     expect(splitIsValid(allocate(10_000n, []))).toBe(false);

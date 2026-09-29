@@ -373,6 +373,36 @@ describe("rejected writes", () => {
     expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
   });
 
+  it("says a project expense is missing a category", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r1",
+              transaction_id: "t1",
+              description: "מלט",
+              doc_date: "2026-09-01",
+              amount_net: -100,
+              direction: "expense",
+              reason: "missing_category",
+              project_id: "p1",
+              category_id: null,
+              project_name: "הרצל",
+              category_name: null,
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+  });
+
   it("disables approve when the card has no suggestion", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {

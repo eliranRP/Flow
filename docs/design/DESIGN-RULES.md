@@ -171,7 +171,7 @@ Short, calm, functional. No bounce, no overshoot, no attention loops. Animate on
 | `--dur-sheet-in` | 280ms | Sheet up. Easing `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)` |
 | `--dur-sheet-out` | 220ms | Sheet down. Easing `--ease-exit` `cubic-bezier(0.4, 0, 1, 1)` |
 | `--dur-shimmer` | 1400ms linear | Skeleton sweep, right to left |
-| `--toast-duration` | 2500ms | A confirmation. An error stays 4000ms. A pointer hover pauses it. [0069](../decisions/0069-back-and-one-tap-review.md) |
+| `--toast-duration` | 2500ms | A confirmation. An error stays 4000ms. A preview notice uses the info tone, not the error tone, and also stays 4000ms. A pointer hover pauses it. [0069](../decisions/0069-back-and-one-tap-review.md), [0072](../decisions/0072-design-review-rulings.md) |
 
 Screen push is 250ms from the start side. Toast in 200ms / out 150ms.
 
@@ -413,7 +413,7 @@ Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mocku
 - Title: "חלוקה בין פרויקטים". Then the amount, then "איך לחלק?".
 - Nothing is selected until a tap, unless a saved split is being re-edited. Three choices, one tap each: "שווה בין כל הפרויקטים", "שווה בין פרויקטים שאבחר", "לפי הכנסות". "All" and "income" enable "שמירה" on that tap. Chosen opens a checklist of active projects and enables "שמירה" at two or more. A ticked row shows its ₪ share. Nothing to type there. Income with no income in the period is disabled, with the reason "אין הכנסות בתקופה הזו".
 - "חלוקה ידנית" is a text link, not a default. The fields fit "100%", one decimal, at least 96px wide. The row focuses the input. `inputmode=decimal`, `autocomplete=off`, and the name is `split-pct-<projectId>`. "חזרה לאפשרויות" restores the previous choice.
-- One save button, "שמירה", on as soon as the split is valid. Busy label "שומר…". One summary line, for example "₪250 לכל אחד מ־4 פרויקטים" or "לפי הכנסות · N פרויקטים". Nothing chosen says "בחרו איך לחלק". A short manual split says "נשארו 30% לחלק". Over says "הסך 120%. צריך 100%." with only the total in the bad colour. A valid manual split says "הסך 100%" and "חלוקה ידנית · N פרויקטים".
+- One save button, "שמירה", on as soon as the split is valid. Busy label "שומר…". One summary line, for example "₪250 לכל אחד מ־4 פרויקטים" when every part is the same amount, or "₪1,000 מתחלק שווה בין 3 פרויקטים" when an even split does not land on equal shekels, or "לפי הכנסות · N פרויקטים". Nothing chosen says "בחרו איך לחלק" in the primary text colour. A short manual split says "נשארו 30% לחלק". Over says "הסך 120%. צריך 100%." with only the total in the bad colour, and each row shows its own percent of the amount. A valid manual split says "הסך 100%" and "חלוקה ידנית · N פרויקטים". [0072](../decisions/0072-design-review-rulings.md).
 - Displayed shekel parts put the leftover agora on the last project so the line adds up. The save sends those shares reversed, so the stored agorot match the screen. Stored shares still sum to 10000 basis points.
 - Cancel: ✕. Guide §13.
 - Success: toast "החלוקה נשמרה", then close. Error: `er-05`, "החלוקה לא נשמרה", with "ניסיון חוזר". Values stay.
