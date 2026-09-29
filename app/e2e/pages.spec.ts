@@ -5,6 +5,7 @@ const pages: Array<[string, string]> = [
   ["/projects", "פרויקטים"],
   ["/projects/herzl", "פרויקט"],
   ["/review", "לאישור"],
+  ["/review/filed", "שויכו היום"],
   ["/unpaid", "חשבוניות שלא שולמו"],
   ["/settings", "הגדרות"],
   ["/settings/categories", "קטגוריות"],

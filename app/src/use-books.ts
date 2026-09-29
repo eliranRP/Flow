@@ -2,12 +2,14 @@ import {
   categoryRowSchema,
   dashboardSchema,
   projectDetailSchema,
+  filedTodaySchema,
   reviewRowSchema,
   sumitStatusSchema,
   transactionDetailSchema,
   unpaidRowSchema,
   type CategoryRow,
   type Dashboard,
+  type FiledTodayRow,
   type ProjectDetail,
   type ReviewRow,
   type SumitStatus,
@@ -82,6 +84,21 @@ export function useUnpaidQuery(active = true) {
       const { data, error } = await supabase.rpc("list_unpaid");
       if (error) throw error;
       return unpaidRowSchema.array().parse(data);
+    },
+  });
+}
+
+export function useFiledTodayQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["filed-today", preview],
+    enabled: active && preview === "off",
+    queryFn: async (): Promise<FiledTodayRow[]> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      const { data, error } = await supabase.rpc("list_auto_assigned_today");
+      if (error) throw error;
+      return filedTodaySchema.array().parse(data);
     },
   });
 }

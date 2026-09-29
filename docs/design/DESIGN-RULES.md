@@ -335,6 +335,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Done: [es-03-review-done-light.png](../../design/states/es-03-review-done-light.png), [es-03-review-done-dark.png](../../design/states/es-03-review-done-dark.png). "הכל מאושר".
 - Entry: tab לאישור, the Home pending card, or the 18:00 nudge. [0006](../decisions/0006-confirm-not-type.md), [0018](../decisions/0018-two-notifications.md).
 - Steps: one card. The suggestion is two short rows under הצעה, project and category, with no confidence number. אישור accepts that suggestion. It is disabled, with a not-allowed cursor, only when the card says אין הצעה. Change opens 06. A plain אישור does not write a supplier rule. [0069](../decisions/0069-back-and-one-tap-review.md). High-confidence rows never appear here. [0011](../decisions/0011-auto-approve-high-confidence.md).
+- Banner: when rows were assigned today without waiting, "N תנועות שויכו היום בלי להמתין בתור". צפייה opens "שויכו היום". A row opens that transaction. Back returns to the queue. סגירה hides the banner for this visit. [0069](../decisions/0069-back-and-one-tap-review.md).
 - Back: none on the tab. Change and Split close back to the card.
 - Success: the card leaves and the visit meter advances. The queue-done empty state when none remain. A toast, when it shows, sits under the header and does not cover דלג. Approve can still offer ביטול on that toast. [0069](../decisions/0069-back-and-one-tap-review.md).
 - Error: save failure toast (`er-05`).

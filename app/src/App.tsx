@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { homeSummarySchema } from "@flow/shared";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { homeSummarySchema, type Dashboard } from "@flow/shared";
+import { thisMonth } from "./period";
 import { AuthProvider, useAuth } from "./auth";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
@@ -10,7 +11,8 @@ import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
-import { InstallScreen } from "./ui/install-screen";
+import { InstallScreen, type InstallMode } from "./ui/install-screen";
+import { ChangeAssignment } from "./ui/change-sheet";
 import { BackButton, ScrollMemory, useGoBack } from "./ui/back";
 import { Button } from "./ui/button";
 import { CheckIcon } from "./ui/icons";
@@ -19,14 +21,16 @@ import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
 import { ToastProvider, useToast } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
-import { HomeScreen } from "./screens/HomeScreen";
+import { HomeBooks, HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
 import {
   AddForm,
   CategoriesScreen,
   ChangeForm,
   NotificationsScreen,
+  ReviewQueue,
   OnboardingScreen,
+  FiledTodayScreen,
   ProjectDetailScreen,
   ProjectsScreen,
   ReviewScreen,
@@ -101,13 +105,25 @@ function AppRoutes() {
               <Route path="/e2e/project" element={<DevProject />} />
               <Route path="/e2e/expense" element={<DevExpense />} />
               <Route path="/e2e/review" element={<DevReview />} />
+              <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
+              <Route path="/e2e/filed" element={<DevFiled />} />
+              <Route path="/e2e/home" element={<DevHome />} />
+              <Route path="/e2e/projects" element={<DevProjects />} />
+              <Route path="/e2e/settings" element={<DevSettings />} />
+              <Route path="/e2e/categories" element={<DevCategories />} />
+              <Route path="/e2e/unpaid" element={<DevUnpaid />} />
+              <Route path="/e2e/txn" element={<DevTransaction />} />
+              <Route path="/e2e/project-detail" element={<DevProjectDetail />} />
+              <Route path="/e2e/change" element={<DevChange />} />
+              <Route path="/e2e/install-android" element={<DevInstall mode="android-prompt" />} />
+              <Route path="/e2e/install-other" element={<DevInstall mode="iphone-other" />} />
               <Route path="/e2e/split" element={<DevSplit />} />
             </>
           ) : null}
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>
               <Route path="onboarding" element={<OnboardingScreen />} />
-              <Route path="transactions/:transactionId" element={<TransactionScreen />} />
+              <Route path="transactions/:transactionId" element={<TransactionRoute />} />
               <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
               <Route path="install" element={<InstallRoute />} />
             </Route>
@@ -122,6 +138,7 @@ function AppRoutes() {
                 <Route path="review" element={null} />
                 <Route path="review/change" element={<ChangeForm />} />
               </Route>
+              <Route path="review/filed" element={<FiledTodayScreen />} />
               <Route path="unpaid" element={<UnpaidScreen />} />
               <Route path="notifications" element={<NotificationsScreen />} />
               <Route path="settings" element={<SettingsScreen />} />
@@ -292,7 +309,25 @@ function DevReview() {
         <p className="ui-page-pad t-title-3">אין פריטים לאישור</p>
       )}
       <div className="ui-review-actions">
-        <Button full icon={<CheckIcon />} onClick={() => undefined}>אישור</Button>
+        <Button
+          full
+          icon={<CheckIcon />}
+          disabled={!item}
+          onClick={() => {
+            if (!item) return;
+            const next = index + 1;
+            toast.show({
+              message: "הפריט אושר",
+              action: "ביטול",
+              onAction: () => {
+                setIndex(next - 1);
+              },
+            });
+            setIndex(next);
+          }}
+        >
+          אישור
+        </Button>
         <div className="ui-review-actions-row">
           <Button variant="secondary" onClick={() => { setChange(true); }}>שינוי</Button>
           <Button
@@ -310,6 +345,277 @@ function DevReview() {
       </div>
       {change ? <p className="ui-page-pad">השינוי נפתח</p> : null}
     </div>
+  );
+}
+
+function DevReviewBanner() {
+  return (
+    <ReviewQueue
+      sample
+      search="?preview=1&sample=1"
+      rows={[{
+        id: "q1",
+        transaction_id: "t1",
+        description: "מלט",
+        doc_date: "2026-09-29",
+        amount_net: -350_000n,
+        direction: "expense",
+        reason: "missing_category",
+        project_id: "p1",
+        category_id: "c1",
+        supplier_name: "מנופי המרכז בע״מ",
+        project_name: "שיפוץ הרצל 12",
+        category_name: "חומרים",
+        auto_approved_today: 39,
+      }]}
+    />
+  );
+}
+
+function DevFiled() {
+  return (
+    <FiledTodayScreen
+      sample={[{
+        id: "t-filed",
+        description: "מלט",
+        doc_date: "2026-09-29",
+        amount_net: -350_000n,
+        direction: "expense",
+        supplier_name: "מנופי המרכז בע״מ",
+        project_name: "שיפוץ הרצל 12",
+        category_name: "חומרים",
+      }]}
+    />
+  );
+}
+
+const devDashboard: Dashboard = {
+  company_id: "e2e",
+  name: "בדיקה",
+  vat_registered: true,
+  basis: "cash",
+  from: "2026-09-01",
+  to: "2026-09-29",
+  income_agorot: 1_000n,
+  direct_agorot: 400n,
+  shared_agorot: 0n,
+  overhead_agorot: 0n,
+  expense_agorot: 400n,
+  net_profit_agorot: 600n,
+  prev_income_agorot: null,
+  prev_expense_agorot: null,
+  prev_net_agorot: null,
+  active_projects: 2,
+  review_count: 2,
+  after_overhead: false,
+  projects: [
+    { id: "p1", name: "שיפוץ הרצל 12", status: "active", income_agorot: 1_000n, direct_agorot: 400n, shared_agorot: 0n, profit_before_shared_agorot: 600n, profit_agorot: 600n },
+    { id: "p2", name: "וילה רעננה", status: "active", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n },
+    { id: "p3", name: "פרויקט ישן", status: "finished", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n },
+  ],
+};
+
+function DevHome() {
+  const [period, setPeriod] = useState(thisMonth());
+  return (
+    <HomeBooks
+      data={devDashboard}
+      previewing
+      search="?preview=1"
+      unpaidGross={50_000n}
+      unpaidCount={1}
+      period={period}
+      onPeriod={setPeriod}
+    />
+  );
+}
+
+function DevProjects() {
+  return <ProjectsScreen sample={devDashboard} />;
+}
+
+function DevSettings() {
+  const [params] = useSearchParams();
+  const mode = params.get("connected");
+  const connected = mode === "1" || mode === "auth";
+  return (
+    <SettingsScreen
+      sample={{
+        name: "בדיקה",
+        vatRegistered: true,
+        connected,
+        companyId: connected ? 1001 : null,
+        lastError: mode === "auth" ? "sumit_auth" : null,
+        email: "owner@example.com",
+        projectCount: 2,
+        expenseCategories: 1,
+        incomeCategories: 1,
+      }}
+    />
+  );
+}
+
+function DevCategories() {
+  return (
+    <CategoriesScreen
+      sample={[
+        { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false, count: 2 },
+        { id: "c2", name: "ישנה", kind: "expense", hidden: true, is_default: false, count: 0 },
+        { id: "c3", name: "עבודה", kind: "income", hidden: false, is_default: false, count: 1 },
+      ]}
+    />
+  );
+}
+
+function DevUnpaid() {
+  return (
+    <UnpaidScreen
+      sample={[{
+        id: "u1",
+        description: "חשבונית פתוחה",
+        doc_date: "2026-09-01",
+        customer_name: "לקוח לדוגמה",
+        project_name: "שיפוץ הרצל 12",
+        open_gross_agorot: 50_000n,
+        open_net_agorot: 40_000n,
+      }]}
+    />
+  );
+}
+
+function TransactionRoute() {
+  if (import.meta.env.DEV) return <DevTransactionGate />;
+  return <TransactionScreen />;
+}
+
+function DevTransactionGate() {
+  const { transactionId } = useParams();
+  if (transactionId === "t-filed") return <DevTransaction />;
+  return <TransactionScreen />;
+}
+
+function DevProjectDetail() {
+  return (
+    <ProjectDetailScreen
+      sample={{
+        id: "p1",
+        name: "שיפוץ הרצל 12",
+        status: "active",
+        state_label: "פעיל",
+        budget_agorot: null,
+        income_agorot: 1_000n,
+        direct_agorot: 400n,
+        shared_agorot: 0n,
+        profit_agorot: 600n,
+        after_overhead: false,
+        overhead_share_agorot: 0n,
+        profit_after_overhead_agorot: 600n,
+        overhead_weighted: true,
+        categories: [{ id: "c1", name: "חומרים", amount_agorot: 400n }],
+        transactions: [{
+          id: "t1",
+          description: "מלט",
+          doc_date: "2026-09-12",
+          amount_net: -400n,
+          direction: "expense",
+          category: "חומרים",
+        }],
+      }}
+    />
+  );
+}
+
+function DevChange() {
+  const toast = useToast();
+  const [projectId, setProjectId] = useState("p1");
+  const [categoryId, setCategoryId] = useState("c1");
+  const [remember, setRemember] = useState(true);
+  const [projects, setProjects] = useState([
+    { id: "p1", name: "שיפוץ הרצל 12" },
+    { id: "p2", name: "וילה רעננה" },
+  ]);
+  return (
+    <ChangeAssignment
+      host="route"
+      closeTo="/review?preview=1"
+      supplier="מנופי המרכז בע״מ"
+      amount="₪3,500"
+      direction="expense"
+      projects={projects}
+      categories={[
+        { id: "c1", name: "חומרים" },
+        { id: "c2", name: "הובלה" },
+      ]}
+      projectId={projectId}
+      categoryId={categoryId}
+      suggestionProjectId="p1"
+      suggestionCategoryId="c1"
+      onProjectId={setProjectId}
+      onCategoryId={setCategoryId}
+      remember={remember}
+      onRemember={setRemember}
+      onSave={() => {
+        if (projectId === "" || categoryId === "") {
+          toast.show({ tone: "bad", message: "בחרו פרויקט וקטגוריה." });
+          return;
+        }
+        toast.show({ message: "השיוך נשמר" });
+      }}
+      onSplit={() => {
+        toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });
+      }}
+      onCreateProject={(name) => {
+        const created = { id: `new-${name}`, name, status: "active" as const };
+        setProjects((list) => [...list, created]);
+        toast.show({ message: "הפרויקט נשמר" });
+        return Promise.resolve(created);
+      }}
+    />
+  );
+}
+
+function DevInstall({ mode }: { mode: InstallMode }) {
+  const goBack = useGoBack();
+  const toast = useToast();
+  return (
+    <InstallScreen
+      mode={mode}
+      onDismiss={() => {
+        goBack("/settings?preview=1");
+      }}
+      onInstall={() => {
+        toast.show({ message: "ההתקנה נפתחה" });
+      }}
+    />
+  );
+}
+
+function DevTransaction() {
+  return (
+    <TransactionScreen
+      sample={{
+        id: "t-manual",
+        description: "רשומה ידנית",
+        direction: "expense",
+        doc_date: "2026-09-12",
+        amount_gross: -118n,
+        amount_net: -100n,
+        vat_amount: -18n,
+        vat_status: "assumed",
+        source: "manual",
+        project_id: "p1",
+        project_name: "שיפוץ הרצל 12",
+        category_id: "c1",
+        category_name: "חומרים",
+        supplier_name: "ספק",
+        customer_name: null,
+        paid: true,
+        open_gross_agorot: null,
+        allocations: [],
+      }}
+      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }]}
+      sampleCategories={[{ id: "c1", name: "חומרים" }]}
+    />
   );
 }
 

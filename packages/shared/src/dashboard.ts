@@ -77,6 +77,18 @@ export const reviewRowSchema = z.object({
   auto_approved_today: z.number().int().nonnegative().optional(),
 });
 
+/** A SUMIT row filed today with no open review item. Same filter as auto_approved_today. */
+export const filedTodaySchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  doc_date: z.string(),
+  amount_net: agorotSchema,
+  direction: z.enum(["income", "expense"]),
+  supplier_name: z.string().nullable(),
+  project_name: z.string().nullable(),
+  category_name: z.string().nullable(),
+});
+
 export const categoryRowSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -171,6 +183,7 @@ export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
 export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
 export type ReviewRow = z.infer<typeof reviewRowSchema>;
+export type FiledTodayRow = z.infer<typeof filedTodaySchema>;
 export type CategoryRow = z.infer<typeof categoryRowSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;

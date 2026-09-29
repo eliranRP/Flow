@@ -1,4 +1,4 @@
-import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type ProjectDetail, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -30,6 +30,7 @@ import {
   useBooks,
   useCategoriesQuery,
   useDashboardQuery,
+  useFiledTodayQuery,
   useInvalidateBooks,
   useProjectQuery,
   useReviewQuery,
@@ -657,6 +658,57 @@ function ProjectMenu({
   );
 }
 
+/** Dev-only rows so the review banner can open a list that has a transaction. */
+function devFiledFixture(sampleFlag: string | null): FiledTodayRow[] | undefined {
+  if (!import.meta.env.DEV || sampleFlag !== "1") return undefined;
+  return [{
+    id: "t-filed",
+    description: "מלט",
+    doc_date: "2026-09-29",
+    amount_net: -350_000n,
+    direction: "expense",
+    supplier_name: "מנופי המרכז בע״מ",
+    project_name: "שיפוץ הרצל 12",
+    category_name: "חומרים",
+  }];
+}
+
+export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) {
+  const preview = useHomePreview();
+  const search = usePreviewSearch();
+  const [params] = useSearchParams();
+  const fixture = devFiledFixture(params.get("sample"));
+  const shown = sample ?? fixture;
+  const filed = useFiledTodayQuery(shown == null);
+  const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
+  const rows = shown ?? filed.data ?? [];
+  return (
+    <ScreenState
+      title="שויכו היום"
+      subtitle="אפשר לפתוח כל תנועה ולשנות את השיוך"
+      backTo={`/review${search}`}
+      phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
+      onRetry={() => { void filed.refetch(); }}
+      empty={<EmptyState icon={<ReviewIcon />} title="אין תנועות ששויכו היום" body="כש-SUMIT משייך תנועה בלי תור, היא תופיע כאן." />}
+    >
+      <List>
+        {rows.map((row) => (
+          <ListRow
+            key={row.id}
+            variant="transaction"
+            title={row.supplier_name ?? row.description}
+            hint={[row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · ")}
+            agorot={row.amount_net}
+            sign={row.direction === "income" ? "in" : "out"}
+            source="invoice"
+            href={`/transactions/${row.id}${search}`}
+          />
+        ))}
+      </List>
+    </ScreenState>
+  );
+}
+
 export function ReviewScreen() {
   const preview = useHomePreview();
   const search = usePreviewSearch();
@@ -790,7 +842,7 @@ export function ReviewQueue({
           }
           action={
             <>
-              <TextLink to={`/review${search}`}>צפייה</TextLink>
+              <TextLink to={`/review/filed${search}`}>צפייה</TextLink>
               <IconButton label="סגירה" onClick={() => { setHideAuto(true); }}>
                 <CloseIcon />
               </IconButton>
@@ -813,7 +865,7 @@ export function ReviewQueue({
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (!approvable || !row || sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (!approvable || !row || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "bad", message }); })) return;
             if (row.reason === "unallocated_shared") {
               if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
               return;
@@ -831,7 +883,7 @@ export function ReviewQueue({
             busy={skip.isPending}
             disabled={leaving}
             onClick={() => {
-              if (leaving || sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              if (leaving || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "bad", message }); })) return;
               skip.mutate();
             }}
           >
@@ -1264,10 +1316,9 @@ export function TransactionScreen({
     onSuccess: () => {
       setChangeSheet(false);
       const id = undoId.current;
-      if (sample) return;
       toast.show({
         message: "השיוך נשמר",
-        ...(id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
       });
     },
     run: async () => {
@@ -1297,10 +1348,9 @@ export function TransactionScreen({
     onSuccess: () => {
       setChangeSheet(false);
       const id = undoId.current;
-      if (sample) return;
       toast.show({
         message: "השיוך נשמר",
-        ...(id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
+        ...(!sample && id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
       });
     },
     run: async () => {

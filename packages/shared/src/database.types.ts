@@ -431,6 +431,9 @@ isOneToOne: true
               "company_id": string,"id": number
             }[]
                            },
+"list_auto_assigned_today":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
