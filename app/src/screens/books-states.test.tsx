@@ -310,10 +310,12 @@ describe("rejected writes", () => {
     expect(calls).not.toContain("resolve_review");
   });
 
-  it("says a shared cost is split when one project is refused", async () => {
+  it("unsplits an unallocated shared cost from the project picker", async () => {
     const calls: string[] = [];
     rpc.impl = (name) => {
       calls.push(name);
+      if (name === "collapse_split") return Promise.resolve({ data: "undo-split", error: null });
+      if (name === "undo_reassign") return Promise.resolve({ data: null, error: null });
       if (name === "get_dashboard") {
         return Promise.resolve({
           data: {
@@ -371,13 +373,19 @@ describe("rejected writes", () => {
     };
     renderAt("/review/change?item=r1");
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
-    fireEvent.click(await screen.findByRole("radio", { name: "הרצל" }));
-    expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
-    expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(await screen.findByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
+    await waitFor(() => {
+      expect(calls).toContain("collapse_split");
+    });
     expect(calls).not.toContain("resolve_review");
-    fireEvent.click(screen.getByRole("button", { name: "לחלוקה", hidden: true }));
-    expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
+    expect(calls).not.toContain("reassign_transaction");
+    expect(calls).not.toContain("save_split");
+    expect(await screen.findByText("השיוך נשמר")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => {
+      expect(calls).toContain("undo_reassign");
+    });
   });
 
   it("says a project expense is missing a category", async () => {

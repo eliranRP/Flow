@@ -393,7 +393,10 @@ isOneToOne: true
                 }
           }
           Functions: {
-            "company_pnl":
+            "collapse_split":
+{ Args: { "p_id": string,"p_project_id": string }; Returns: string
+                           },
+"company_pnl":
 { Args: { "p_basis": string,"p_company_id": string,"p_from": string,"p_to": string }; Returns: Json
                            },
 "create_category":

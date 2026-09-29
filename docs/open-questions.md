@@ -209,4 +209,4 @@ Noted from [0075](decisions/0075-save-on-tap-and-on-leave.md). Not in this round
 
 `resolve_review` is the only write that stores "לזכור לספק הזה", and it runs with the assignment. Flipping the switch after that tap cannot be written again. The sheet stays open and says to turn the switch back. A separate write for the supplier rule would close this.
 
-A review item that is a split for a reason other than `unallocated_shared` still uses `resolve_review` on a tap. That call replaces the shares with one project. The transaction sheet uses `set_transaction_category` and keeps the shares. Those two paths should do the same thing.
+A review item that is a split for a reason other than `unallocated_shared` still uses `resolve_review` on a tap. That call replaces the shares with one project and does not return an undo id. [0076](decisions/0076-collapse-split-to-one-project.md) covers the transaction sheet and an `unallocated_shared` project tap: those call `collapse_split`. A category tap on a split still uses `set_transaction_category` and keeps the shares. The other review reasons should do the same.

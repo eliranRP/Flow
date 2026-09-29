@@ -19,6 +19,7 @@ import {
 import { useWrite } from "./use-write";
 import { Button } from "./ui/button";
 import { ChangeAssignment, changeSaveFailure } from "./ui/change-sheet";
+import { FigureLine, SectionHead, SharedCostNote } from "./ui/layout";
 import { ScreenHeader } from "./ui/screen-header";
 import { useToast } from "./ui/toast";
 
@@ -42,6 +43,7 @@ export function ReviewerPreview() {
   else if (path.endsWith("/project")) page = <ReviewerProject />;
   else if (path.endsWith("/save")) page = <ReviewerSave />;
   else if (path.endsWith("/split-expense")) page = <ReviewerSplitExpense />;
+  else if (path.endsWith("/unsplit")) page = <ReviewerUnsplit />;
   else if (path.endsWith("/split")) page = <ReviewerSplit />;
   return (
     <>
@@ -117,6 +119,7 @@ function ReviewerHome() {
         <Button full variant="secondary" to="/reviewer/save?save=offline">שמירה בלי חיבור</Button>
         <Button full variant="secondary" to="/reviewer/save?save=shared">שמירה, עלות משותפת</Button>
         <Button full variant="secondary" to="/reviewer/split-expense">הוצאה מפוצלת, שינוי קטגוריה</Button>
+        <Button full variant="secondary" to="/reviewer/unsplit">חלוקה חזרה לפרויקט אחד</Button>
       </div>
     </>
   );
@@ -308,6 +311,117 @@ function ReviewerSave() {
         return Promise.resolve(created);
       }}
     />
+  );
+}
+
+const unsplitProjects = [
+  { id: "p-alon", name: reviewerProjectName, bp: 1667 },
+  { id: "p-raanana", name: reviewerOtherProjectName, bp: 1667 },
+  { id: "p-north", name: "מגרש הצפון", bp: 1667 },
+  { id: "p-south", name: "מחסן הדרום", bp: 1667 },
+  { id: "p-east", name: "גג המזרח", bp: 1666 },
+  { id: "p-west", name: "חניון המערב", bp: 1666 },
+] as const;
+
+const unsplitNet = 320_000n;
+
+function unsplitShare(bp: number): bigint {
+  return (unsplitNet * BigInt(bp)) / 10_000n;
+}
+
+function ReviewerUnsplit() {
+  const toast = useToast();
+  const [collapsed, setCollapsed] = useState<string | null>(null);
+  const [showSplit, setShowSplit] = useState(true);
+  const projects = unsplitProjects.map((project) => ({ id: project.id, name: project.name }));
+  const spent = (id: string, bp: number) => collapsed == null
+    ? unsplitShare(bp)
+    : collapsed === id
+      ? unsplitNet
+      : 0n;
+  return (
+    <>
+      <div className="ui-page-pad">
+        <Button
+          variant="secondary"
+          onClick={() => { setShowSplit((open) => !open); }}
+        >
+          {showSplit ? "שינוי שיוך" : "איך לחלק?"}
+        </Button>
+      </div>
+      <section aria-label="סכומי הפרויקטים">
+        <SectionHead title="סכומי הפרויקטים" />
+        {unsplitProjects.map((project) => {
+          const amount = spent(project.id, project.bp);
+          const shared = collapsed == null;
+          return (
+            <article key={project.id} aria-label={project.name}>
+              <h3 className="t-title-3 ui-page-pad">{project.name}</h3>
+              <FigureLine label="הוצאות" value={formatIls(amount, { agorot: true })} />
+              {shared ? <SharedCostNote /> : null}
+            </article>
+          );
+        })}
+      </section>
+      {showSplit ? (
+        <SplitScreen
+          sampleAmount={unsplitNet}
+          sampleProjects={projects}
+          sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
+          backTo="/reviewer"
+          onOneProject={async (id): Promise<"left"> => {
+            setCollapsed(id);
+            setShowSplit(false);
+            toast.show({
+              message: "השיוך נשמר",
+              action: "ביטול",
+              onAction: () => { setCollapsed(null); },
+            });
+            return "left";
+          }}
+        />
+      ) : (
+        <TransactionScreen
+          sample={{
+            id: "t-leasing",
+            description: "ליסינג",
+            direction: "expense",
+            doc_date: "2026-07-01",
+            amount_gross: -377_600n,
+            amount_net: -unsplitNet,
+            vat_amount: -57_600n,
+            vat_status: "source",
+            source: "sumit",
+            pnl_role: collapsed == null ? "shared" : "project",
+            review_status: "approved",
+            project_id: collapsed,
+            project_name: collapsed == null ? null : projects.find((project) => project.id === collapsed)?.name ?? null,
+            category_id: "c-materials",
+            category_name: "מלט",
+            supplier_name: "ליסינג הדרך בע״מ",
+            customer_name: null,
+            allocations: collapsed == null
+              ? unsplitProjects.map((project) => ({
+                project_id: project.id,
+                project_name: project.name,
+                share_bp: project.bp,
+                amount_net: -unsplitShare(project.bp),
+              }))
+              : [{
+                project_id: collapsed,
+                project_name: projects.find((project) => project.id === collapsed)?.name ?? "",
+                share_bp: 10000,
+                amount_net: -unsplitNet,
+              }],
+          }}
+          sampleProjects={projects}
+          sampleCategories={reviewerCategories}
+          onOpenSplit={() => { setShowSplit(true); }}
+          onSampleUnsplit={(id) => { setCollapsed(id); }}
+          onSampleUndo={() => { setCollapsed(null); }}
+        />
+      )}
+    </>
   );
 }
 

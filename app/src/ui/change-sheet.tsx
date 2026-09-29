@@ -22,6 +22,12 @@ export const CHANGE_SAVE_REFUSAL = "לא נשמר. בדקו את הפרטים ו
 /** The database refuses one project on a shared cost. Say where the split happens. */
 export const SHARED_SPLIT_FAILURE = "עלות משותפת מחולקת במסך החלוקה.";
 
+/** Decision 0076. The fourth split choice, and the note above the project picker. */
+export const ONE_PROJECT_OPTION = "לפרויקט אחד";
+export const ONE_PROJECT_DETAIL = "הסכום כולו עובר לפרויקט אחד";
+export const COLLAPSE_SPLIT_NOTE = "החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.";
+export const COLLAPSE_PICK_HOLD = "בחרו פרויקט.";
+
 export function changeSaveFailure(error: Error): WriteFailure {
   if (error.message.includes("shared costs are split")) {
     return { message: SHARED_SPLIT_FAILURE, retry: false, tone: "info", action: "לחלוקה" };
@@ -74,6 +80,14 @@ type Shared = {
   leave?: { current: () => Promise<boolean> };
   /** A split already has its projects. The sheet changes the category only. */
   categoryOnly?: boolean;
+  /** Shown on the project row when the id is still empty, such as a split label. */
+  projectTitle?: string;
+  /** Shown above the project list. A split uses it to say the shares will go. */
+  projectNote?: string;
+  /** The picker stays in this component instead of the page URL. */
+  contained?: boolean;
+  /** With contained, open straight onto the project list. */
+  start?: "summary" | "project";
   onSplit: () => void;
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
@@ -126,6 +140,8 @@ export function ChangeAssignment(props: Props) {
   const params = new URLSearchParams(location.search);
   const urlPick = params.get("pick");
   const [creatingNew, setCreatingNew] = useState(false);
+  const [containedView, setContainedView] = useState<ChangeView>(props.start === "project" ? "project" : "summary");
+  const wasOpen = useRef(false);
   const [query, setQuery] = useState(props.initialQuery ?? "");
   const [newName, setNewName] = useState("");
   const [nameError, setNameError] = useState("");
@@ -144,16 +160,22 @@ export function ChangeAssignment(props: Props) {
   const locationRef = useRef(location);
   locationRef.current = location;
 
+  const urlView: ChangeView = urlPick === "project" || urlPick === "category" ? urlPick : "summary";
   const view: ChangeView = creatingNew
     ? "new"
-    : urlPick === "project" || urlPick === "category"
-      ? urlPick
-      : "summary";
+    : props.contained
+      ? containedView
+      : urlView;
   const sheetOpen = props.host === "overlay" ? props.open : true;
 
   useEffect(() => {
     if (sheetOpen) settled.current = false;
-  }, [sheetOpen]);
+    if (props.contained && sheetOpen && !wasOpen.current) {
+      setContainedView(props.start === "project" ? "project" : "summary");
+      setCreatingNew(false);
+    }
+    wasOpen.current = sheetOpen;
+  }, [sheetOpen, props.contained, props.start]);
 
   useEffect(() => {
     function onPop() {
@@ -213,6 +235,10 @@ export function ChangeAssignment(props: Props) {
     opener.current = next;
     setQuery("");
     setCreatingNew(false);
+    if (props.contained) {
+      setContainedView(next);
+      return;
+    }
     pushPick(next);
   }
 
@@ -231,6 +257,16 @@ export function ChangeAssignment(props: Props) {
   function back() {
     if (creatingNew) {
       setCreatingNew(false);
+      if (props.contained) setContainedView(props.start === "project" ? "project" : "summary");
+      return;
+    }
+    if (props.contained) {
+      if (props.start === "project" && props.host === "overlay") {
+        props.onOpenChange(false);
+        return;
+      }
+      pendingFocus.current = containedView === "category" ? "category" : "project";
+      setContainedView("summary");
       return;
     }
     pendingFocus.current = view === "category" ? "category" : "project";
@@ -239,6 +275,7 @@ export function ChangeAssignment(props: Props) {
 
   function discardPicker() {
     setCreatingNew(false);
+    if (propsRef.current.contained) return;
     const steps = depth.current;
     if (steps === 0) return;
     depth.current = 0;
@@ -280,7 +317,16 @@ export function ChangeAssignment(props: Props) {
     pendingFocus.current = kind;
     setCreatingNew(false);
     const stay = await commitChoice(kind, id, previous);
-    if (stay) closePickLevel();
+    if (!stay) return;
+    if (props.contained) {
+      if (props.start === "project" && props.host === "overlay") {
+        props.onOpenChange(false);
+        return;
+      }
+      setContainedView("summary");
+      return;
+    }
+    closePickLevel();
   }
 
   async function submitNew(event: SubmitEvent) {
@@ -300,7 +346,17 @@ export function ChangeAssignment(props: Props) {
       pendingFocus.current = "project";
       setCreatingNew(false);
       const stay = await commitChoice("project", created.id, previous);
-      if (stay) closePickLevel();
+      setCreating(false);
+      if (!stay) return;
+      if (props.contained) {
+        if (props.start === "project" && props.host === "overlay") {
+          props.onOpenChange(false);
+          return;
+        }
+        setContainedView("summary");
+        return;
+      }
+      closePickLevel();
     } catch {
       setCreating(false);
       return;
@@ -309,6 +365,7 @@ export function ChangeAssignment(props: Props) {
   }
 
   const projectName = props.projects.find((option) => option.id === props.projectId)?.name ?? "";
+  const projectLabel = projectName !== "" ? projectName : (props.projectTitle ?? "לא נבחר");
   const categoryName = props.categories.find((option) => option.id === props.categoryId)?.name ?? "";
   const projectSuggested = props.suggestionProjectId != null && props.suggestionProjectId !== "" && props.projectId === props.suggestionProjectId;
   const categorySuggested = props.suggestionCategoryId != null && props.suggestionCategoryId !== "" && props.categoryId === props.suggestionCategoryId;
@@ -375,8 +432,8 @@ export function ChangeAssignment(props: Props) {
                 variant="button"
                 buttonRef={projectBtn}
                 eyebrow="פרויקט"
-                title={projectName === "" ? "לא נבחר" : projectName}
-                label={`פרויקט: ${projectName === "" ? "לא נבחר" : projectName}, שינוי`}
+                title={projectLabel}
+                label={`פרויקט: ${projectLabel}, שינוי`}
                 tag={projectSuggested ? <SuggestTag /> : undefined}
                 chevron
                 onClick={() => {
@@ -429,6 +486,7 @@ export function ChangeAssignment(props: Props) {
           selectedId={pickerKind === "project" ? props.projectId : props.categoryId}
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : (props.suggestionCategoryId ?? "")}
           savingId={savingId}
+          note={pickerKind === "project" ? props.projectNote : undefined}
           onSelect={(id) => {
             void choose(pickerKind, id);
           }}
@@ -484,6 +542,7 @@ function Picker({
   selectedId,
   suggestionId,
   savingId,
+  note,
   onSelect,
   onCreate,
   onSplit,
@@ -496,6 +555,7 @@ function Picker({
   selectedId: string;
   suggestionId: string;
   savingId: string | null;
+  note?: string;
   onSelect: (id: string) => void;
   onCreate?: () => void;
   onSplit?: () => void;
@@ -511,6 +571,7 @@ function Picker({
         placeholder={kind === "project" ? "חיפוש פרויקט או קוד (P-12)" : "חיפוש קטגוריה"}
         autoFocus={false}
       />
+      {note ? <p className="t-hint">{note}</p> : null}
       {loading ? (
         <div aria-busy="true">
           <p className="sr-only" role="status">טוען…</p>
