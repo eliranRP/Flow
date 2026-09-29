@@ -16,7 +16,7 @@ select tests.authenticate_as('r19_a');
 select lives_ok($$select public.create_company('סבב 19', true)$$, 'owner creates a company');
 
 create temp table r19 (label text primary key, id uuid);
-grant all on r19 to authenticated, service_role;
+grant all on r19 to anon, authenticated, service_role;
 insert into r19 (label, id) select 'company', id from public.companies;
 
 select lives_ok($$select public.upsert_project(null, 'אלון', null, 'active')$$, 'owner opens אלון');
@@ -43,7 +43,7 @@ insert into public.transactions (
   amount_gross, amount_net, vat_amount, vat_status,
   doc_date, source, idempotency_key, description, category_id
 )
-select id, 'income', 'income', 'project', 118000, 100000, 18000, 'source',
+select id, 'income', 'invoice', 'project', 118000, 100000, 18000, 'source',
   '2026-07-03', 'manual', 'r19:income', 'הכנסה',
   (select id from public.categories where company_id = (select id from r19 where label = 'company') and name = 'תקבול מלקוח' and kind = 'income')
 from r19 where label = 'company';

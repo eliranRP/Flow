@@ -108,11 +108,8 @@ test("a manual 100 does not clip and is not a contact field", async ({ page }) =
 });
 
 test("a failed save after browser back keeps the typed percents", async ({ page }) => {
-  await page.evaluate(() => {
-    const state: unknown = window.history.state;
-    window.history.pushState(state, "", "/e2e/split?save=fail");
-    window.dispatchEvent(new PopStateEvent("popstate", { state }));
-  });
+  await page.goto("/e2e/project");
+  await page.getByRole("link", { name: "פיצול שנכשל" }).click();
   await expect(page).toHaveURL(/\/e2e\/split\?save=fail$/);
   await page.getByRole("button", { name: "חלוקה ידנית" }).click();
   const first = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });

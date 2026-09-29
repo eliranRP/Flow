@@ -215,6 +215,7 @@ const devLinks: Array<[string, string]> = [
   ["/onboarding?preview=1", "הצטרפות לדוגמה"],
   ["/install?preview=1", "התקנה לדוגמה"],
   ["/review/change?preview=1", "שינוי לדוגמה"],
+  ["/e2e/split?save=fail", "פיצול שנכשל"],
 ];
 
 function DevProject() {
