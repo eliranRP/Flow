@@ -29,6 +29,7 @@
   --sheet-gap: 56px;
   --bar-h: 8px;
   --spinner: 18px;
+  --spinner-radio: 12px;
   --icon-check: 24px;
   --empty-measure: 280px;
   --figure-gap: 6px;
@@ -1121,9 +1122,17 @@ a.ui-row,
 }
 
 .ui-radio > .ui-spinner {
-  inline-size: 12px;
-  block-size: 12px;
+  inline-size: var(--spinner-radio);
+  block-size: var(--spinner-radio);
   border-width: 2px;
+}
+
+.ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) {
+  color: var(--color-disabled-text);
+}
+
+.ui-radio-row:is(:disabled, [aria-disabled="true"]):not([aria-busy="true"]) .ui-radio {
+  border-color: var(--color-line);
 }
 
 .ui-check {
@@ -2850,7 +2859,7 @@ div.ui-check-row {
 }
 
 .ui-split-summary-idle {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
 }
 
 .ui-split-cta {

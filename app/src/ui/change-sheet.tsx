@@ -155,6 +155,7 @@ export function ChangeAssignment(props: Props) {
   const inflight = useRef<Promise<boolean> | null>(null);
   const warned = useRef(false);
   const forceDiscard = useRef(false);
+  const requestClose = useRef<(() => void) | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const projectBtn = useRef<HTMLButtonElement>(null);
   const categoryBtn = useRef<HTMLButtonElement>(null);
@@ -180,7 +181,10 @@ export function ChangeAssignment(props: Props) {
   }, [props.hold]);
 
   useEffect(() => {
-    if (sheetOpen) settled.current = false;
+    if (sheetOpen) {
+      settled.current = false;
+      forceDiscard.current = false;
+    }
     if (props.contained && sheetOpen && !wasOpen.current) {
       setContainedView(props.start === "project" ? "project" : "summary");
       setCreatingNew(false);
@@ -407,6 +411,7 @@ export function ChangeAssignment(props: Props) {
   propsRef.current = props;
 
   function closeSheet(discard: boolean): boolean {
+    forceDiscard.current = false;
     if (discard) propsRef.current.onDiscard?.();
     settled.current = true;
     discardPicker();
@@ -415,9 +420,7 @@ export function ChangeAssignment(props: Props) {
 
   function discardHeld() {
     forceDiscard.current = true;
-    const dialog = document.querySelector("[role='dialog']");
-    const close = dialog?.querySelector("button[aria-label='סגירה']");
-    if (close instanceof HTMLElement) close.click();
+    requestClose.current?.();
   }
 
   async function allowClose(): Promise<boolean> {
@@ -440,7 +443,7 @@ export function ChangeAssignment(props: Props) {
       }
       return closeSheet(true);
     }
-    if (current.pending && current.onCommitPending) {
+    if (current.onCommitPending) {
       try {
         await current.onCommitPending();
       } catch (error) {
@@ -507,7 +510,7 @@ export function ChangeAssignment(props: Props) {
           {props.hold ? (
             <p className="t-hint ui-hold-line" role="status">
               <span>{props.hold}</span>
-              <TextLink chevron={false} onClick={discardHeld}>ביטול השינוי</TextLink>
+              <TextLink tone="quiet" chevron={false} onClick={discardHeld}>ביטול השינוי</TextLink>
             </p>
           ) : null}
           {showRemember ? (
@@ -580,6 +583,7 @@ export function ChangeAssignment(props: Props) {
     footClassName: view === "summary" ? "ui-sheet-foot-safe" : undefined,
     onEscape: view === "summary" ? undefined : back,
     onBeforeClose: allowClose,
+    onRequestClose: requestClose,
     children: body,
   };
 

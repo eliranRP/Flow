@@ -335,6 +335,76 @@ export const ReviewMissingProject: Story = {
   ),
 };
 
+const splitReviewRow: ReviewRow = {
+  id: "q-split",
+  transaction_id: "t-split",
+  description: "מנוף ליום",
+  doc_date: "2026-09-29",
+  amount_net: -100_000n,
+  direction: "expense",
+  reason: "missing_category",
+  pnl_role: "shared",
+  share_count: 2,
+  project_id: null,
+  category_id: null,
+  supplier_name: "עגורני החוף בע״מ",
+  project_name: null,
+  category_name: null,
+  doc_kind: "invoice",
+};
+
+export const ReviewSplitMissingCategory: Story = {
+  name: "Split missing category",
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[splitReviewRow]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewSplitCategorySaved: Story = {
+  name: "Split category saved",
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue
+        rows={[{
+          ...splitReviewRow,
+          category_id: "c-haul",
+          category_name: "שינוע",
+        }]}
+        search=""
+        sample
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ChangeSplitUnallocated: Story = {
+  name: "Change split, unallocated",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => (
+    <ChangeStory
+      supplier="עגורני החוף בע״מ"
+      projectId=""
+      categoryId=""
+      suggestionId=""
+      suggestionCategoryId=""
+      split
+      splitTitle="עלות משותפת · טרם פוצלה"
+      projects={[
+        { id: "p-alon", name: "בית הספר אלון", code: "P-01" },
+        { id: "p-namal", name: "מחסן הנמל", code: "P-02" },
+      ]}
+      categories={[
+        { id: "c1", name: "מלט", hidden: false, kind: "expense" },
+        { id: "c2", name: "שינוע", hidden: false, kind: "expense" },
+      ]}
+    />
+  ),
+};
+
 export const ReviewSharedCost: Story = {
   render: () => (
     <StoryRoute entry="/review" tabs reviewCount={1}>
@@ -1065,6 +1135,8 @@ function ChangeStory({
   initialQuery,
   loading,
   saveError,
+  split,
+  splitTitle,
 }: {
   entry?: string;
   projectId?: string;
@@ -1077,6 +1149,8 @@ function ChangeStory({
   initialQuery?: string;
   loading?: boolean;
   saveError?: boolean;
+  split?: boolean;
+  splitTitle?: string;
 } = {}) {
   return (
     <StoryRoute entry={entry}>
@@ -1094,6 +1168,8 @@ function ChangeStory({
           ...(initialQuery != null ? { initialQuery } : {}),
           ...(loading ? { loading } : {}),
           ...(saveError ? { saveError } : {}),
+          ...(split ? { split } : {}),
+          ...(splitTitle != null ? { splitTitle } : {}),
         }}
       />
     </StoryRoute>

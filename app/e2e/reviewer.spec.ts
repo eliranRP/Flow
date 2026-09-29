@@ -239,8 +239,15 @@ test("a tap on the toast does not close the sheet under it", async ({ page }) =>
     expect(toastBox.y).toBeGreaterThanOrEqual(0);
     expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(844);
     const aboveSheet = toastBox.y + toastBox.height <= sheetBox.y + 1;
-    const underHeader = toastBox.y >= headBox.y + headBox.height - 1;
-    expect(aboveSheet || underHeader).toBe(true);
+    const fullHeight = toastBox.height >= 40;
+    const close = sheet.getByRole("button", { name: "סגירה" });
+    const closeBox = await close.boundingBox();
+    expect(fullHeight).toBe(true);
+    expect(toastBox.y).toBeGreaterThanOrEqual(0);
+    if (closeBox) {
+      const coversClose = toastBox.y < closeBox.y + closeBox.height && toastBox.y + toastBox.height > closeBox.y;
+      expect(aboveSheet || !coversClose).toBe(true);
+    }
   }
   await toastAction(page, "ניסיון חוזר").click();
   await expect(sheet).toBeVisible();
@@ -394,4 +401,37 @@ test("a split returns to one project and the project totals follow", async ({ pa
   await toastAction(page, "ביטול").click();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
+});
+
+test("a review split keeps the sheet open and shows the category on the card", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/review");
+  await page.getByRole("link", { name: "שינוי" }).click();
+  await expect(page).toHaveURL(/item=q-shared/);
+  await expect(page.getByRole("button", { name: "פרויקט: עלות משותפת · טרם פוצלה, שינוי" })).toBeVisible();
+  await expect(page.getByText("הצעה")).toHaveCount(0);
+  await pickCategory(page, "שינוע");
+  await toast(page, "השיוך נשמר");
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "קטגוריה: שינוע, שינוי" })).toBeVisible();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).toHaveURL(/\/reviewer\/review/);
+  await expect(page.getByRole("heading", { name: "עגורני החוף בע״מ" })).toBeVisible();
+  await expect(page.getByText("שינוע")).toBeVisible();
+  await expect(page.getByText("עלות משותפת · טרם פוצלה")).toBeVisible();
+});
+
+test("ביטול השינוי is reachable in the reviewer, and a second close discards", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 693 });
+  await page.goto("/reviewer/save?save=ok&item=q-bolts");
+  const sheet = page.getByRole("dialog", { name: "שינוי שיוך" });
+  await expect(sheet.getByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים, שינוי" })).toBeVisible();
+  await sheet.getByRole("button", { name: "סגירה" }).click();
+  const cancel = sheet.getByRole("button", { name: "ביטול השינוי" });
+  await expect(cancel).toBeVisible();
+  await expect(cancel).toHaveClass(/ui-text-link-quiet/);
+  await expect(sheet.locator(".t-hint", { hasText: "בחרו קטגוריה." })).toBeVisible();
+  await sheet.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).toHaveURL(/\/reviewer$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });

@@ -72,6 +72,7 @@ export function Sheet({
   titleRef: titleRefProp,
   onEscape,
   onBeforeClose,
+  onRequestClose,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -94,6 +95,8 @@ export function Sheet({
    * Picker history is dropped here, after a pending edit has been saved.
    */
   onBeforeClose?: () => void | boolean | Promise<void | boolean>;
+  /** The sheet's own close. Callers use this instead of the first dialog's ✕. */
+  onRequestClose?: RefObject<(() => void) | null>;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const localTitle = useRef<HTMLHeadingElement>(null);
@@ -115,6 +118,17 @@ export function Sheet({
       deciding.current = false;
     }
   }
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
+  useEffect(() => {
+    if (!onRequestClose) return;
+    onRequestClose.current = () => {
+      void requestCloseRef.current();
+    };
+    return () => {
+      onRequestClose.current = null;
+    };
+  });
   function keepOpenForToast(event: { preventDefault: () => void; target: EventTarget | null; detail?: { originalEvent?: { target: EventTarget | null } } }) {
     const nodes = [event.target, event.detail?.originalEvent?.target];
     const onToast = nodes.some((node) => {

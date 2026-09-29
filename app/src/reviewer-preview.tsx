@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
-import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen } from "./screens/flow-screens";
+import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen, reviewIsSplit, reviewSplitTitle } from "./screens/flow-screens";
 import {
+  patchReviewerCategory,
   reviewerBooks,
   reviewerCategories,
   reviewerFiled,
   reviewerOtherProjectName,
   reviewerProjectChoices,
   reviewerProjectName,
-  reviewerQueue,
+  reviewerQueueView,
   reviewerSharedAgorot,
   reviewerSplitProjects,
   reviewerWaitingPaintAgorot,
   sampleSaveMode,
+  subscribeReviewerQueue,
   type SampleSave,
 } from "./reviewer-sample";
 import { useWrite } from "./use-write";
@@ -127,11 +129,12 @@ function ReviewerHome() {
 
 function ReviewerQueue() {
   const [params] = useSearchParams();
+  const rows = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
   const mode = sampleSaveMode(params.get("save"));
   const search = `?save=${mode}`;
   return (
     <SampleQueue
-      rows={reviewerQueue}
+      rows={rows}
       mode={mode}
       search={search}
       changeTo={`/reviewer/save?save=${mode}`}
@@ -181,7 +184,8 @@ function ReviewerCategory() {
 }
 
 function ReviewerWaiting() {
-  const rows: ProjectWaitingRow[] = reviewerQueue
+  const queue = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
+  const rows: ProjectWaitingRow[] = queue
     .filter((row) => row.project_id != null && row.transaction_id != null)
     .map((row) => ({
       review_id: row.id,
@@ -210,12 +214,13 @@ function ReviewerWaiting() {
 
 function ReviewerProject() {
   const [params] = useSearchParams();
+  const queue = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
   if (params.get("empty") === "1") {
     return <ReviewEmpty search="" filtered backTo="/reviewer" homeTo="/reviewer" homeLabel="חזרה לפרויקט" />;
   }
   return (
     <SampleQueue
-      rows={reviewerQueue.filter((row) => row.project_id != null)}
+      rows={queue.filter((row) => row.project_id != null)}
       mode="ok"
       search=""
       changeTo="/reviewer/save?save=ok"
@@ -248,20 +253,24 @@ function ReviewerTransaction({ path }: { path: string }) {
 
 function ReviewerSave() {
   const [params] = useSearchParams();
+  const queue = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
   const mode = sampleSaveMode(params.get("save"));
-  const item = reviewerQueue.find((row) => row.id === params.get("item")) ?? reviewerQueue.find((row) => row.supplier_name === "צבעי הכרמל בע״מ");
+  const item = queue.find((row) => row.id === params.get("item")) ?? queue.find((row) => row.supplier_name === "צבעי הכרמל בע״מ");
+  const split = reviewIsSplit(item);
   const navigate = useNavigate();
-  const toast = useToast();
-  const [projectId, setProjectId] = useState(item?.project_id ?? "p-alon");
+  const [projectId, setProjectId] = useState(split ? "" : (item?.project_id ?? "p-alon"));
   const [categoryId, setCategoryId] = useState(item?.category_id ?? "");
   const [remember, setRemember] = useState(true);
+  const [hold, setHold] = useState("");
   const [projects, setProjects] = useState(reviewerProjectChoices);
   const write = useSampleWrite(mode, "השיוך נשמר", () => {
-    void navigate("/reviewer/review", { replace: true });
+    if (!split) void navigate("/reviewer/review", { replace: true });
   }, () => {
     void navigate(`/reviewer/split?save=${mode}`);
   });
   const amount = item?.amount_net == null ? reviewerWaitingPaintAgorot : (item.amount_net < 0n ? -item.amount_net : item.amount_net);
+  const baselineProject = split ? "" : (item?.project_id ?? "p-alon");
+  const baselineCategory = item?.category_id ?? "";
   return (
     <ChangeAssignment
       host="route"
@@ -273,13 +282,21 @@ function ReviewerSave() {
       categories={reviewerCategories}
       projectId={projectId}
       categoryId={categoryId}
-      suggestionProjectId={item?.project_id ?? "p-alon"}
+      suggestionProjectId={split ? "" : (item?.project_id ?? "p-alon")}
       suggestionCategoryId={item?.category_id ?? ""}
+      projectTitle={split && item ? reviewSplitTitle(item) : undefined}
+      projectNote={split ? "החלוקה תרד, והסכום כולו יעבור לפרויקט הזה." : undefined}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       remember={remember}
       onRemember={setRemember}
       pending={remember !== true}
+      hold={hold}
+      onDiscard={() => {
+        setProjectId(baselineProject);
+        setCategoryId(baselineCategory);
+        setHold("");
+      }}
       onCommitPick={async (kind, id) => {
         const previousProject = projectId;
         const previousCategory = categoryId;
@@ -292,14 +309,25 @@ function ReviewerSave() {
           setCategoryId(previousCategory);
           throw error;
         }
+        if (split && kind === "category" && item) {
+          const name = reviewerCategories.find((category) => category.id === id)?.name ?? "";
+          patchReviewerCategory(item.id, id, name);
+          setHold("");
+          return;
+        }
+        if (split) return;
         return "left";
       }}
       onCommitPending={async () => {
-        if (projectId === "" || categoryId === "") {
-          toast.show({ tone: "bad", message: "בחרו פרויקט וקטגוריה." });
+        const complete = split ? categoryId !== "" : projectId !== "" && categoryId !== "";
+        if (!complete) {
+          setHold(split ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           throw new Error("incomplete");
         }
-        await write.mutateAsync();
+        if (remember !== true) {
+          setHold("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
+          throw new Error("remember");
+        }
       }}
       onSplit={() => {
         void navigate(`/reviewer/split?save=${mode}`);

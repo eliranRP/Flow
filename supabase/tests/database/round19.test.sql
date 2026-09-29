@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(22);
+select plan(25);
 
 do $users$
 begin
@@ -111,6 +111,21 @@ select lives_ok(
     (select id from r19 where label = 'נמל')
   ),
   'the owner collapses the uneven split onto נמל'
+);
+select is(
+  (select share_bp from public.allocations where transaction_id = (select id from r19 where label = 'leasing') and project_id = (select id from r19 where label = 'נמל')),
+  10000,
+  'collapse puts the whole basis on נמל'
+);
+select is(
+  (select amount_net from public.allocations where transaction_id = (select id from r19 where label = 'leasing') and project_id = (select id from r19 where label = 'נמל')),
+  -200000::bigint,
+  'collapse puts the whole net on נמל'
+);
+select is(
+  (select count(*)::int from public.allocations where transaction_id = (select id from r19 where label = 'leasing') and project_id = (select id from r19 where label = 'אלון')),
+  0,
+  'collapse removes אלון before undo'
 );
 select lives_ok(
   format(
