@@ -49,3 +49,15 @@ Disconnect copies `sumit_company_id` onto `companies.last_sumit_company_id` and 
 When `set_transaction_category` closes an open `missing_category` item on a shared row with no allocations, it inserts an open `unallocated_shared` item in the same function. `undo_reassign` removes that follow-up when it reopens the missing-category item.
 
 The live check writes to SUMIT only when `SUMIT_CREATE_DOCUMENTS=1`. The default run is connect, two syncs, and the saved split. The helper allowlists read paths, counts every call, and expects zero writes. Flow Test 2 stays at 75 Operations. A screen-reader title draws no focus ring. The 2px ring stays on real controls.
+
+## r16 addendum
+
+The code review of r15 had no blocking items. This addendum amends point 2 and the N2 sentence above.
+
+On a shared cost with no allocations, the save button reads "שמירה" even when an open `missing_category` item will close. That save opens `unallocated_shared` in the same call, so the row stays in Review. "שמירה ואישור" stays when the shared row already has at least one allocation and the save closes the missing category. A project row is unchanged.
+
+`authenticated` no longer has table-level `UPDATE` on `companies`. The other columns are granted back. `last_sumit_company_id` is not. An owner update of that column raises `42501`. `disconnect_sumit` and `replace_sumit_connection` still write it, because they are security definer.
+
+A rejected key inside the connect sheet reads "החיבור נכשל. בדקו את המזהה ואת המפתח." Settings keeps its own sentence. `connectValidated` runs the `listfolders` read and calls the ledger write only after Status 0. The live check asserts Operations before equals after, and no longer pins 75.
+
+Backoff reads "SUMIT לא זמין כרגע." The auth screen says reconnect once: the red line is "החיבור ל-SUMIT נכשל.", the refresh hint is "המזהה או המפתח לא התקבלו" at full opacity, and the action stays "חיבור מחדש". The project loading bars use `var(--space-1)` for the 4px inset.

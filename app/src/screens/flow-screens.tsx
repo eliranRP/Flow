@@ -1282,7 +1282,7 @@ export function TransactionScreen({
   const splitRow = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
   const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
   const saveApproves = splitRow
-    ? txn.review_status === "open" && txn.review_reason === "missing_category"
+    ? txn.review_status === "open" && txn.review_reason === "missing_category" && (txn.allocations?.length ?? 0) > 0
     : txn.review_status === "open";
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
@@ -1682,7 +1682,10 @@ export function SettingsScreen({
     },
   });
   const connect = useWrite({
-    failure: (error) => hebrewSumitError(error.message) ?? "החיבור נכשל. בדקו את המזהה ואת המפתח.",
+    failure: (error) => {
+      const code = error.message === "sumit_auth" ? "connect_failed" : error.message;
+      return hebrewSumitError(code) ?? "החיבור נכשל. בדקו את המזהה ואת המפתח.";
+    },
     success: "SUMIT מחובר. המפתח נשאר בשרת.",
     keys: ["sumit", "dashboard"],
     onSuccess: () => {
@@ -1753,7 +1756,7 @@ export function SettingsScreen({
       <bdi className="ui-num" dir="ltr">{retry.clock}</bdi>
     </>
   );
-  const refreshHint = authReconnect ? "צריך לחבר מחדש את SUMIT" : retryHint;
+  const refreshHint = authReconnect ? "המזהה או המפתח לא התקבלו" : retryHint;
   const email = sample ? sample.email : session?.user.email;
   const projectCount = sample?.projectCount ?? dashboard.data?.projects.length;
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;

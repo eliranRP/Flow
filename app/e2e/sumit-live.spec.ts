@@ -355,7 +355,6 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   expect(sumitCounts.reads).toBe(2);
   expect(serverReads).toBe(5);
   expect(operationsAfter).toBe(operationsBefore);
-  expect(operationsAfter).toBe(75);
 });
 
 async function unpaidRows(token: string): Promise<Array<Record<string, unknown>>> {

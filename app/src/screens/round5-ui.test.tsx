@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -12,11 +13,19 @@ const rpc = vi.hoisted(() => ({
     Promise.resolve({ data: null, error: null }),
 }));
 
+const edge = vi.hoisted(() => ({
+  invoke: (_name: string, _body?: unknown): Promise<{ data: unknown; error: unknown }> =>
+    Promise.resolve({ data: null, error: null }),
+}));
+
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     rpc: (name: string, args?: unknown) => {
       rpc.calls.push({ name, args });
       return rpc.impl(name, args);
+    },
+    functions: {
+      invoke: (name: string, body?: unknown) => edge.invoke(name, body),
     },
   }),
 }));
@@ -335,6 +344,37 @@ describe("notification switches", () => {
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
   });
 
+  it("asks to check the id and the key when connect rejects the key", async () => {
+    edge.invoke = () => Promise.resolve({
+      data: null,
+      error: new FunctionsHttpError({ json: () => Promise.resolve({ error: "sumit_auth" }) }),
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: false,
+                  companyId: null,
+                  lastError: null,
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /חיבור SUMIT/ }));
+    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(screen.getByRole("button", { name: "חיבור", exact: true }));
+    expect(await screen.findByText("החיבור נכשל. בדקו את המזהה ואת המפתח.")).toBeInTheDocument();
+  });
+
   it("disables refresh until the retry time and asks to reconnect after a bad key", () => {
     const later = new Date(Date.now() + 60 * 60_000).toISOString();
     const { unmount } = render(
@@ -364,7 +404,7 @@ describe("notification switches", () => {
     expect(getComputedStyle(heldButton).opacity).toBe("1");
     expect(getComputedStyle(heldButton.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
     expect(getComputedStyle(heldButton.querySelector(".ui-row-icon") as Element).opacity).toBe("0.45");
-    expect(screen.getByText("SUMIT לא זמין כרגע")).toBeInTheDocument();
+    expect(screen.getByText("SUMIT לא זמין כרגע.")).toBeInTheDocument();
     expect(screen.queryByText(/נבדוק שוב מאוחר יותר/)).toBeNull();
     const hint = screen.getByText(/אפשר לנסות שוב ב-/);
     expect(hint.closest("button")).toBe(heldButton);
@@ -426,14 +466,15 @@ describe("notification switches", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText("החיבור ל-SUMIT נכשל. צריך לחבר מחדש.")).toBeInTheDocument();
+    expect(screen.getByText("החיבור ל-SUMIT נכשל.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "חיבור מחדש", exact: true })).toBeInTheDocument();
+    expect(screen.getAllByText(/מחדש/)).toHaveLength(1);
     const authRefresh = screen.getByRole("button", { name: /רענון עכשיו/ });
     expect(authRefresh).toBeDisabled();
     expect(authRefresh).toHaveClass("ui-row-clear-hint");
     expect(authRefresh.querySelector(".ui-row-chevron")).toBeNull();
     expect(getComputedStyle(authRefresh).opacity).toBe("1");
-    const authHint = screen.getByText("צריך לחבר מחדש את SUMIT");
+    const authHint = screen.getByText("המזהה או המפתח לא התקבלו");
     expect(authHint.closest("button")).toBe(authRefresh);
     expect(getComputedStyle(authHint).opacity).toBe("1");
     expect(getComputedStyle(authRefresh.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
@@ -662,6 +703,20 @@ describe("shared transaction category", () => {
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
     expect(await screen.findByRole("button", { name: "שמירה ואישור" })).toBeInTheDocument();
+  });
+
+  it("reads שמירה when a shared cost has no allocations", async () => {
+    mountShared({
+      review_status: "open",
+      review_reason: "missing_category",
+      category_id: null,
+      category_name: null,
+      allocations: [],
+    });
+    expect(await screen.findByText("עלות משותפת · טרם פוצלה")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
+    expect(await screen.findByRole("button", { name: "שמירה" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
   });
 });
 

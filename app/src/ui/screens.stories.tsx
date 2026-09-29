@@ -675,6 +675,45 @@ export const TransactionShared: Story = {
   ),
 };
 
+export const TransactionUnsplit: Story = {
+  name: "Unsplit shared",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "ביטוח אתר",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -1_180_000n,
+          amount_net: -1_000_000n,
+          vat_amount: -180_000n,
+          vat_status: "assumed",
+          doc_kind: "expense",
+          source: "sumit",
+          pnl_role: "shared",
+          project_id: null,
+          project_name: null,
+          category_id: null,
+          category_name: null,
+          supplier_name: "סוכנות הביטוח",
+          customer_name: null,
+          review_status: "open",
+          review_reason: "missing_category",
+          paid: true,
+          open_gross_agorot: null,
+          allocations: [],
+        }}
+        sampleCategories={[
+          { id: "c1", name: "ביטוח" },
+          { id: "c2", name: "הובלה" },
+        ]}
+      />
+    </StoryRoute>
+  ),
+};
+
 const splitProjects = [
   { id: "a", name: "בניין מגורים חולון", incomeAgorot: 20_000_000n },
   { id: "b", name: "מגדל משרדים פ\"ת", incomeAgorot: 15_000_000n },
