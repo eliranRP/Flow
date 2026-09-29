@@ -1,41 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
+import { connectValidated } from "../_shared/connect-order.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
-import { assertSumitUrl } from "../_shared/ledger.ts";
-import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
   serve(handler: (req: Request) => Promise<Response> | Response): void;
 };
-
-const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
-
-/** One read-only listfolders call. A non-zero Status never reaches the ledger. */
-async function validateSumitKey(companyId: number, apiKey: string): Promise<void> {
-  assertSumitUrl(LIST_FOLDERS);
-  const response = await fetch(LIST_FOLDERS, {
-    method: "POST",
-    redirect: "error",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ Credentials: { CompanyID: companyId, APIKey: apiKey } }),
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error("connect_failed");
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("connect_failed");
-  }
-  if (!parsed || typeof parsed !== "object") throw new Error("connect_failed");
-  const record = parsed as Record<string, unknown>;
-  if (record.Status !== 0) {
-    const userMessage = typeof record.UserErrorMessage === "string" ? record.UserErrorMessage : "";
-    console.error("sumit-connect rejected", userMessage.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]").slice(0, 200));
-    throw new Error(classifySumitStatus(userMessage));
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return empty();
@@ -66,19 +37,25 @@ Deno.serve(async (req) => {
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
     if (company.error || !company.data) return json({ error: "no company" }, 400);
 
-    await validateSumitKey(companyId, apiKey);
     const kekVersion = Deno.env.get("SUMIT_KEK_VERSION") || "1";
-    const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "2");
-    const saved = await admin.rpc("replace_sumit_connection", {
-      p_company: company.data.id,
-      p_sumit_company_id: companyId,
-      p_key_ciphertext: sealed.keyCiphertext,
-      p_key_nonce: sealed.keyNonce,
-      p_dek_ciphertext: sealed.dekCiphertext,
-      p_dek_nonce: sealed.dekNonce,
-      p_kek_version: sealed.kekVersion,
-      p_envelope_version: sealed.envelopeVersion,
-      p_validated: true,
+    const saved = await connectValidated({
+      companyId,
+      apiKey,
+      fetch,
+      write: async () => {
+        const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "2");
+        return admin.rpc("replace_sumit_connection", {
+          p_company: company.data.id,
+          p_sumit_company_id: companyId,
+          p_key_ciphertext: sealed.keyCiphertext,
+          p_key_nonce: sealed.keyNonce,
+          p_dek_ciphertext: sealed.dekCiphertext,
+          p_dek_nonce: sealed.dekNonce,
+          p_kek_version: sealed.kekVersion,
+          p_envelope_version: sealed.envelopeVersion,
+          p_validated: true,
+        });
+      },
     });
     if (saved.error) return json({ error: "could not store the connection" }, 500);
     return json({ connected: true, sumit_company_id: companyId, sumit_reads: 1 });

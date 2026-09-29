@@ -19,6 +19,7 @@ Apply, in order, on the hosted SQL editor or with `supabase db push`:
 11. `supabase/migrations/20260929140000_sumit_status_next_attempt_grant.sql`
 12. `supabase/migrations/20260929150000_review_0068.sql`
 13. `supabase/migrations/20260929160000_review_0068_addendum.sql`
+14. `supabase/migrations/20260929170000_review_0068_column.sql`
 
 Migrations are append-only from `20260929150000` on. Hosted Supabase had only the Phase 0 migration when `20260929120000` was edited in place, so that one edit stays. Do not edit a migration after it has been applied. Add a new file.
 

@@ -1974,7 +1974,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-skel-project-title-bar {
   inline-size: var(--skel-md);
-  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line) - 4px);
+  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line) - var(--space-1));
 }
 
 .ui-skel-project-period {
@@ -1983,7 +1983,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-skel-project-period-bar {
   inline-size: var(--skel-lg);
-  block-size: calc(var(--type-label-size) * var(--type-label-line) - 4px);
+  block-size: calc(var(--type-label-size) * var(--type-label-line) - var(--space-1));
 }
 
 .ui-skel-project-label {
