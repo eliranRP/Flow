@@ -276,6 +276,8 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
   const swiped = useRef(false);
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    // The sheet listens on document. A tap here must not become an outside click.
+    event.stopPropagation();
     if (event.pointerType === "mouse" && event.button !== 0) return;
     start.current = { x: event.clientX, y: event.clientY };
     swiped.current = false;
@@ -304,11 +306,17 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onClick={(event) => {
+        event.stopPropagation();
         if (swiped.current) {
           swiped.current = false;
           return;
         }
-        if (event.target instanceof Element && event.target.closest("button, .ui-toast-action")) return;
+        const node = event.target instanceof Element
+          ? event.target
+          : event.target instanceof Text
+            ? event.target.parentElement
+            : null;
+        if (node?.closest("button, .ui-toast-action")) return;
         onDismiss?.();
       }}
     >

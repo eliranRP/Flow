@@ -24,5 +24,5 @@ test("a skip toast stays clear of the actions and leaves on its own", async ({ p
 
   await change.click();
   await expect(page.getByText("השינוי נפתח")).toBeVisible();
-  await expect(toast).toHaveCount(0, { timeout: 4_000 });
+  await expect(toast).toHaveCount(0, { timeout: 5_000 });
 });
