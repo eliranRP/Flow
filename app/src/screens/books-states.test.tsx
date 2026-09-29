@@ -210,8 +210,10 @@ describe("rejected writes", () => {
 
   it("approves a review item and undo calls reopen_review", async () => {
     const calls: string[] = [];
-    rpc.impl = (name) => {
+    const args: unknown[] = [];
+    rpc.impl = (name, input) => {
       calls.push(name);
+      args.push(input);
       if (name === "list_review") {
         return Promise.resolve({
           data: [
@@ -224,12 +226,12 @@ describe("rejected writes", () => {
               amount_net: -100,
               vat_agorot: 18,
               direction: "expense",
-              reason: "missing_category",
+              reason: "suggested",
               project_id: "p1",
               category_id: "c1",
               project_name: "הרצל",
               category_name: "חומרים",
-              confidence: null,
+              confidence: 92,
               supplier_name: "מחסן",
               auto_approved_today: 0,
             },
@@ -241,9 +243,23 @@ describe("rejected writes", () => {
     };
     renderAt("/review");
     expect(await screen.findByText("הצעה")).toBeInTheDocument();
+    expect(screen.getByText("פרויקט")).toBeInTheDocument();
+    expect(screen.getByText("הרצל")).toBeInTheDocument();
+    expect(screen.getByText("קטגוריה")).toBeInTheDocument();
+    expect(screen.getByText("חומרים")).toBeInTheDocument();
+    expect(screen.queryByText("92%")).not.toBeInTheDocument();
     expect(screen.getByText(/חשבונית/)).toBeInTheDocument();
     expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(calls).toContain("resolve_review");
+    });
+    expect(args.find((entry) => isRecord(entry) && entry.p_action === "approved")).toMatchObject({
+      p_action: "approved",
+      p_remember: false,
+      p_project_id: "p1",
+      p_category_id: "c1",
+    });
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => {
       expect(calls).toContain("reopen_review");
@@ -251,4 +267,42 @@ describe("rejected writes", () => {
     expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
     expect(calls).toContain("resolve_review");
   });
+
+  it("disables approve when the card has no suggestion", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r1",
+              transaction_id: "t1",
+              description: "מלט",
+              doc_date: "2026-09-01",
+              amount_net: -100,
+              direction: "expense",
+              reason: "missing_category",
+              project_id: null,
+              category_id: null,
+              project_name: null,
+              category_name: null,
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("אין הצעה, בחרו בשינוי")).toBeInTheDocument();
+    const approve = screen.getByRole("button", { name: "אישור" });
+    expect(approve).toBeDisabled();
+    expect(getComputedStyle(approve).cursor).toBe("not-allowed");
+    fireEvent.click(approve);
+    expect(screen.queryByText(/אי אפשר לאשר/)).not.toBeInTheDocument();
+  });
 });
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}

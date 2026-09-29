@@ -35,9 +35,7 @@ function isJsonReader(value: unknown): value is { json: () => Promise<unknown> }
 }
 
 async function edgeErrorCode(error: unknown): Promise<string> {
-  if (!(error instanceof FunctionsHttpError)) {
-    return error instanceof Error ? error.message : "connect_failed";
-  }
+  if (!(error instanceof FunctionsHttpError)) return "connect_failed";
   const context: unknown = Reflect.get(error, "context");
   if (!isJsonReader(context)) return "connect_failed";
   try {
@@ -63,8 +61,9 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { Chip, StatusPill } from "../ui/chip";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
+import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
-import { BackIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
@@ -120,6 +119,7 @@ async function saveNewProject(
 
 export function OnboardingScreen() {
   const navigate = useNavigate();
+  const search = usePreviewSearch();
   const preview = useHomePreview();
   const toast = useToast();
   const [name, setName] = useState("");
@@ -160,7 +160,7 @@ export function OnboardingScreen() {
           }
         />
       </div>
-      <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." />
+      <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." backTo={`/sign-in${search}`} />
       <form className="ui-page-pad" onSubmit={submit}>
         <TextField label="שם העסק" value={name} onChange={(event) => { setName(event.target.value); }} required minLength={2} />
         <SegmentedControl
@@ -356,9 +356,7 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
         wordmark={false}
         example={example}
         leading={
-          <IconButton label="חזרה" to={`/projects${search}`} onBand>
-            <BackIcon />
-          </IconButton>
+          <BackButton fallback={`/projects${search}`} onBand />
         }
         trailing={
           <IconButton label="עוד" onBand onClick={() => { setMenu(true); }}>
@@ -446,9 +444,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
         wordmark={false}
         example={example}
         leading={
-          <IconButton label="חזרה" to={`/projects${search}`} onBand>
-            <BackIcon />
-          </IconButton>
+          <BackButton fallback={`/projects${search}`} onBand />
         }
         trailing={<ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
@@ -551,9 +547,7 @@ function LegacyEmptyProject() {
       <TopBand
         wordmark={false}
         leading={
-          <IconButton label="חזרה" to={`/projects${search}`} onBand>
-            <BackIcon />
-          </IconButton>
+          <BackButton fallback={`/projects${search}`} onBand />
         }
       >
         <BandHero>
@@ -688,6 +682,7 @@ export function ReviewQueue({
         p_action: "approved",
         ...(row.direction === "income" || row.project_id == null ? {} : { p_project_id: row.project_id }),
         p_category_id: row.category_id,
+        p_remember: false,
       }));
     },
     onSuccess: () => {
@@ -720,6 +715,11 @@ export function ReviewQueue({
   const change = `/review/change${search}${search ? "&" : "?"}item=${row.id}`;
   const auto = row.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(row);
+  const approvable = row.reason === "unallocated_shared"
+    ? row.transaction_id != null
+    : row.direction === "income"
+      ? row.category_id != null
+      : row.project_id != null && row.category_id != null;
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
@@ -765,14 +765,11 @@ export function ReviewQueue({
         <Button
           full
           busy={approve.isPending}
+          disabled={!approvable}
           onClick={() => {
-            if (sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (!approvable || sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
             if (row.reason === "unallocated_shared") {
               if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
-              return;
-            }
-            if (row.direction === "income" ? !row.category_id : !row.project_id || !row.category_id) {
-              toast.show({ tone: "bad", message: row.direction === "income" ? "בלי קטגוריה אי אפשר לאשר. בחרו בשינוי." : "בלי פרויקט וקטגוריה אי אפשר לאשר. בחרו בשינוי." });
               return;
             }
             approve.mutate();
@@ -833,7 +830,6 @@ function reviewSuggestion(row: ReviewRow) {
   return {
     ...(row.project_name ? { project: row.project_name } : {}),
     ...(row.category_name ? { category: row.category_name } : {}),
-    ...(row.confidence == null ? {} : { confidence: row.confidence }),
   };
 }
 
@@ -1029,6 +1025,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
 
 export function AddForm() {
   const search = usePreviewSearch();
+  const goBack = useGoBack();
   return (
     <RouteSheet
       title="הוספה"
@@ -1054,7 +1051,7 @@ export function AddForm() {
           onClick={() => undefined}
         />
       </div>
-      <Button variant="ghost" full to={`/${search}`}>ביטול</Button>
+      <Button variant="ghost" full onClick={() => { goBack(`/${search}`); }}>ביטול</Button>
     </RouteSheet>
   );
 }
@@ -1172,6 +1169,7 @@ export function TransactionScreen({
   const [menu, setMenu] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
+  const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen);
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
   const dashboard = useDashboardQuery(sample == null);
@@ -1192,6 +1190,7 @@ export function TransactionScreen({
     },
   });
   const txn = sample ?? detail.data;
+  const parent = transactionParent(txn?.project_id, search);
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -1216,7 +1215,7 @@ export function TransactionScreen({
     failure: CHANGE_SAVE_FAILURE,
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
-      setChangeOpen(false);
+      setChangeSheet(false);
       const id = undoId.current;
       if (sample) return;
       toast.show({
@@ -1249,7 +1248,7 @@ export function TransactionScreen({
     failure: CHANGE_SAVE_FAILURE,
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
-      setChangeOpen(false);
+      setChangeSheet(false);
       const id = undoId.current;
       if (sample) return;
       toast.show({
@@ -1276,9 +1275,9 @@ export function TransactionScreen({
     },
   });
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
-    return <ScreenState title="פרטי תנועה" backTo={`/${search}`} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
+    return <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
-  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={`/${search}`} />;
+  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
   const splitRow = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
   const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
   const saveApproves = splitRow
@@ -1311,7 +1310,7 @@ export function TransactionScreen({
       <ScreenHeader
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
-        leading={<IconButton label="חזרה" to={`/${search}`}><BackIcon /></IconButton>}
+        leading={<BackButton fallback={parent} />}
         trailing={<IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
@@ -1331,9 +1330,9 @@ export function TransactionScreen({
             void navigate(`/transactions/${txn.id}/split${search}`);
             return;
           }
-          setChangeOpen(true);
+          setChangeSheet(true);
         }} />
-        <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeOpen(true); }} />
+        <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
         <ListRow
           variant="button"
           title="חשבונית ותשלום"
@@ -1357,7 +1356,7 @@ export function TransactionScreen({
       <ChangeAssignment
         host="overlay"
         open={changeOpen}
-        onOpenChange={setChangeOpen}
+        onOpenChange={setChangeSheet}
         supplier={party}
         amount={formatIls(absAgorot(txn.amount_net))}
         direction={txn.direction === "income" ? "income" : "expense"}
@@ -1388,7 +1387,7 @@ export function TransactionScreen({
           reassign.mutate();
         }}
         onSplit={() => {
-          setChangeOpen(false);
+          setChangeSheet(false);
           void navigate(`/transactions/${txn.id}/split${search}`);
         }}
         onCreateProject={(name) => saveNewProject(name, preview, toast, (project) => {
@@ -1561,7 +1560,7 @@ export function SplitScreen({
         title="פיצול בין פרויקטים"
         subtitle={context}
         subtitleClassName="ui-split-context"
-        leading={<IconButton label="סגירה" to={`/transactions/${transactionId}${search}`}><CloseIcon /></IconButton>}
+        leading={<BackButton label="סגירה" fallback={`/transactions/${transactionId}${search}`}><CloseIcon /></BackButton>}
         trailing={example}
       />
       <p className="ui-page-pad ui-split-amount t-title-2"><BigNumber agorot={amount} /></p>
@@ -1654,6 +1653,8 @@ export function SettingsScreen({
   const [apiKey, setApiKey] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen);
+  const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const wantedOverhead = useRef(false);
@@ -1682,14 +1683,14 @@ export function SettingsScreen({
   });
   const connect = useWrite({
     failure: (error) => {
-      const code = error.message === "sumit_auth" ? "connect_failed" : error.message;
-      return hebrewSumitError(code) ?? "החיבור נכשל. בדקו את המזהה ואת המפתח.";
+      if (error.message === "sumit_auth") return "החיבור נכשל. בדקו את המזהה ואת המפתח.";
+      return hebrewSumitError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.";
     },
     success: "SUMIT מחובר. המפתח נשאר בשרת.",
     keys: ["sumit", "dashboard"],
     onSuccess: () => {
       setApiKey("");
-      setConnectOpen(false);
+      setConnectSheet(false);
     },
     run: async () => {
       await invokeEdge("sumit-connect", { companyId: Number(companyId), apiKey });
@@ -1711,7 +1712,7 @@ export function SettingsScreen({
     failure: "לא הצלחנו לנתק.",
     success: "החיבור נותק. הספרים נשארו.",
     keys: ["sumit"],
-    onSuccess: () => { setDisconnectOpen(false); },
+    onSuccess: () => { setDisconnectSheet(false); },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -1785,7 +1786,7 @@ export function SettingsScreen({
             icon={<RefreshIcon />}
           />
         ) : (
-          <ListRow variant="button" title="חיבור SUMIT" hint="מספר חברה ומפתח API" icon={<RefreshIcon />} chevron onClick={() => { setConnectOpen(true); }} />
+          <ListRow variant="button" title="חיבור SUMIT" hint="מספר חברה ומפתח API" icon={<RefreshIcon />} chevron onClick={() => { setConnectSheet(true); }} />
         )}
         {connected ? (
           <ListRow
@@ -1805,16 +1806,16 @@ export function SettingsScreen({
           />
         ) : null}
         {connected ? (
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectOpen(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
         ) : null}
       </List>
       {lastError && !emptyAccount ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
       {rawError === "sumit_auth" && !emptyAccount ? (
         <div className="ui-page-pad">
-          <Button variant="secondary" onClick={() => { setConnectOpen(true); }}>חיבור מחדש</Button>
+          <Button variant="secondary" onClick={() => { setConnectSheet(true); }}>חיבור מחדש</Button>
         </div>
       ) : null}
-      <Sheet open={connectOpen} onOpenChange={setConnectOpen} title="חיבור SUMIT">
+      <Sheet open={connectOpen} onOpenChange={setConnectSheet} title="חיבור SUMIT">
         <form
           className="ui-stack"
           onSubmit={(event) => {
@@ -1830,7 +1831,7 @@ export function SettingsScreen({
       </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
-        onOpenChange={setDisconnectOpen}
+        onOpenChange={setDisconnectSheet}
         title="לנתק את SUMIT?"
         consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
         confirmLabel="ניתוק"

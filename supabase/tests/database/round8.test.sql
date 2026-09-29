@@ -112,8 +112,8 @@ select lives_ok(
 );
 select is(
   (select category_id from public.transactions where id = (select id from r8 where label = 'shared')),
-  null,
-  'the previous category is back'
+  (select id from r8 where label = 'materials'),
+  'the previous category is the suggested default'
 );
 select is(
   (select count(*)::int from public.allocations where transaction_id = (select id from r8 where label = 'shared')),

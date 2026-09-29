@@ -18,7 +18,7 @@ describe("ScreenHeader", () => {
     const title = screen.getByRole("heading", { name: "עזרה" });
     expect(title).toHaveAttribute("tabindex", "-1");
     expect(title).toHaveClass("ui-focus-title");
-    expectTarget(screen.getByRole("link", { name: "חזרה" }));
+    expectTarget(screen.getByRole("button", { name: "חזרה" }));
   });
 
   it("stacks the title under the bar", () => {

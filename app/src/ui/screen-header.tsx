@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
+import { BackButton } from "./back";
 import { FocusTitle } from "./focus-title";
-import { IconButton } from "./icon-button";
-import { BackIcon } from "./icons";
 
 type HeaderChrome = {
   subtitle?: string;
@@ -43,11 +42,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const barOnly = props.barOnly === true;
   const stacked = props.layout === "stacked";
   const title = props.title;
-  const start = leading ?? (backTo ? (
-    <IconButton label="חזרה" to={backTo}>
-      <BackIcon />
-    </IconButton>
-  ) : null);
+  const start = leading ?? (backTo ? <BackButton fallback={backTo} /> : null);
   return (
     <header className={stacked ? "ui-page ui-page-stacked" : "ui-page"}>
       {kicker ? <p className="t-hint">{kicker}</p> : null}

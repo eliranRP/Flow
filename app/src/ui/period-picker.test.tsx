@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { dayLabel, formatDisplay, israelToday } from "./date-math";
 import { PeriodPicker, RangeSheet } from "./period-picker";
@@ -20,7 +21,7 @@ function Harness() {
 describe("PeriodPicker", () => {
   it("opens the period dialog from a 44px pill", () => {
     expectRtl();
-    render(<Harness />);
+    render(<MemoryRouter><Harness /></MemoryRouter>);
     const pill = screen.getByRole("button", { name: "כל התקופה" });
     expectTarget(pill);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -39,13 +40,15 @@ describe("RangeSheet", () => {
     expect(to <= today).toBe(true);
     let applied: [string, string] | null = null;
     render(
+      <MemoryRouter>
       <RangeSheet
         open
         onOpenChange={() => undefined}
         onApply={(nextFrom, nextTo) => {
           applied = [nextFrom, nextTo];
         }}
-      />,
+      />
+      </MemoryRouter>,
     );
     fireEvent.click(screen.getByRole("button", { name: dayLabel(from) }));
     fireEvent.click(screen.getByRole("button", { name: dayLabel(to) }));

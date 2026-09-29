@@ -24,9 +24,9 @@ export function HomeSkeleton({ preview = false, example }: { preview?: boolean; 
             open={open}
             onOpenChange={setOpen}
             options={[
-              { label: "החודש", hint: "התקופה הנוכחית", selected: true, onSelect: () => { setOpen(false); } },
-              { label: "חודש קודם", onSelect: () => { setOpen(false); } },
-              { label: "מתחילת השנה", onSelect: () => { setOpen(false); } },
+              { label: "החודש", hint: "התקופה הנוכחית", selected: true, onSelect: () => undefined },
+              { label: "חודש קודם", onSelect: () => undefined },
+              { label: "מתחילת השנה", onSelect: () => undefined },
             ]}
           />
         }

@@ -155,7 +155,7 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "עזרה" })).toBeInTheDocument();
     expect(screen.getByText("לעזרה בכניסה כותבים לנו.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: HELP_EMAIL })).toHaveAttribute("href", `mailto:${HELP_EMAIL}`);
-    const back = screen.getByRole("link", { name: "חזרה" });
+    const back = screen.getByRole("button", { name: "חזרה" });
     expect(back).toHaveClass("ui-text-link");
     expect(back).not.toHaveClass("ui-icon-btn");
     expect(back.closest(".ui-page-pad")).not.toBeNull();

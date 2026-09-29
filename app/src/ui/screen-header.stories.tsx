@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { BackButton } from "./back";
 import { IconButton } from "./icon-button";
-import { BackIcon, CloseIcon, MoreIcon } from "./icons";
+import { CloseIcon, MoreIcon } from "./icons";
 import { ScreenHeader } from "./screen-header";
 import { longHebrew, padded } from "./story-support";
 
@@ -24,7 +25,7 @@ export const Stacked: Story = {
       layout="stacked"
       title="פיצול בין פרויקטים"
       subtitle="מלט לקיר"
-      leading={<IconButton label="סגירה" to="/"><CloseIcon /></IconButton>}
+      leading={<BackButton label="סגירה" fallback="/"><CloseIcon /></BackButton>}
       trailing={<span className="t-hint">דוגמה</span>}
     />
   ),
@@ -36,7 +37,7 @@ export const Compact: Story = {
     <ScreenHeader
       title="הוצאה"
       size="compact"
-      leading={<IconButton label="חזרה" to="/"><BackIcon /></IconButton>}
+      leading={<BackButton fallback="/" />}
       trailing={<IconButton label="עוד" onClick={() => undefined}><MoreIcon /></IconButton>}
     />
   ),

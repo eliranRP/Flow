@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { homeSummarySchema } from "@flow/shared";
 import { AuthProvider, useAuth } from "./auth";
 import { HomeSkeleton } from "./screens/home-skeleton";
@@ -11,6 +11,7 @@ import { readSheetBackground } from "./sheet-background";
 import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen } from "./ui/install-screen";
+import { BackButton, ScrollMemory, useGoBack } from "./ui/back";
 import { ToastProvider } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
@@ -52,6 +53,7 @@ export function App() {
     <AuthProvider>
       <BooksProvider>
         <ThemeColor />
+        <ScrollMemory />
         <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
           <AppRoutes />
         </div>
@@ -89,6 +91,12 @@ function AppRoutes() {
             }
           />
           <Route path="/help" element={<HelpScreen />} />
+          {import.meta.env.DEV ? (
+            <>
+              <Route path="/e2e/project" element={<DevProject />} />
+              <Route path="/e2e/expense" element={<DevExpense />} />
+            </>
+          ) : null}
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>
               <Route path="onboarding" element={<OnboardingScreen />} />
@@ -152,21 +160,53 @@ function ReviewWithSheet() {
 }
 
 function InstallRoute() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const goBack = useGoBack();
   const search = location.search;
   if (isStandalone()) return <Navigate to={`/settings${search}`} replace />;
   return (
     <InstallScreen
       mode={detectInstallMode()}
       onDismiss={() => {
-        if (location.key !== "default") {
-          void navigate(-1);
-          return;
-        }
-        void navigate(`/settings${search}`, { replace: true });
+        goBack(`/settings${search}`);
       }}
     />
+  );
+}
+
+const devLinks: Array<[string, string]> = [
+  ["/e2e/expense", "הוצאה לבדיקה"],
+  ["/projects/herzl?preview=1", "פרויקט לדוגמה"],
+  ["/transactions/1?preview=1", "תנועה לדוגמה"],
+  ["/transactions/1/split?preview=1", "פיצול לדוגמה"],
+  ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
+  ["/notifications?preview=1", "התראות לדוגמה"],
+  ["/unpaid?preview=1", "חשבוניות לדוגמה"],
+  ["/onboarding?preview=1", "הצטרפות לדוגמה"],
+  ["/install?preview=1", "התקנה לדוגמה"],
+  ["/review/change?preview=1", "שינוי לדוגמה"],
+];
+
+function DevProject() {
+  return (
+    <main className="ui-page-pad">
+      <h1 className="t-title-1">פרויקט לבדיקה</h1>
+      <div style={{ blockSize: "1800px" }} />
+      <nav className="ui-stack">
+        {devLinks.map(([to, label]) => (
+          <Link key={to} to={to}>{label}</Link>
+        ))}
+      </nav>
+    </main>
+  );
+}
+
+function DevExpense() {
+  return (
+    <main className="ui-page-pad">
+      <h1 className="t-title-1">הוצאה לבדיקה</h1>
+      <BackButton fallback="/projects?preview=1" />
+    </main>
   );
 }
 

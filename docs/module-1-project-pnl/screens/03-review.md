@@ -22,7 +22,7 @@ When the filtered set is empty but the company queue is not, show the filter's e
 
 | Tap | Goes to |
 | --- | --- |
-| `אישור` | Approves the suggested project and category. Next card. |
+| `אישור` | Approves the suggested project and category shown on the card, in one tap. Disabled, with a not-allowed cursor, only when the card says there is no suggestion. |
 | `שינוי`, or a chip | Change sheet. On save, the row is approved and the next card shows. |
 | `פצל` | Split flow on the change sheet. |
 | `דלג` | Leaves the row suggested. It moves behind the other rows in this visit and will come back. |
@@ -31,7 +31,7 @@ When the filtered set is empty but the company queue is not, show the filter's e
 | Invoice candidates | Ticking invoices is part of the card when candidates exist. |
 | Back / nav | Leaves the queue. Skipped rows stay suggested. |
 
-`אישור` is disabled until both a project (or overhead) and a category are selected. A deposit with no project starts with an empty project chip and a disabled approve button.
+`אישור` is enabled when the card shows a complete suggestion, and disabled when it says `אין הצעה, בחרו בשינוי`. A deposit still needs a category. Overhead and an unsplit shared cost open Split instead of assigning one project.
 
 ## Elements and fields
 
@@ -45,8 +45,8 @@ Header `לאישור`. Subtitle `מה שה-AI לא היה בטוח בו`. Counte
 | Date | `dd/mm/yyyy` | Cash date. |
 | Amount | Net, whole or two decimals | [Detail display](../calculations.md#rounding). The big figure is net, neutral (it is not profit). |
 | VAT | `לפני מע״מ · מע״מ {amount}` | `vat_agorot`. When VAT is 0, the line is `פטור ממע״מ`. |
-| Project chip | `פרויקט` | Suggestion, or empty. Confidence percent is shown only for an AI guess (`92%` in the example). A rule match is not on this screen. |
-| Category chip | `קטגוריה` | Same. |
+| Project row | `פרויקט` | The suggested project. No confidence number. |
+| Category row | `קטגוריה` | The suggested category. A project without a category is filled from the supplier rule, then history, then the default category, so the row is approvable. |
 | Candidates | `חשבוניות אפשריות` | Unpaid invoices that might match. Each shows supplier, date, remaining net. |
 | Next | `הבא בתור` | A dimmed preview of the following row: name, source, date, amount. Not tappable. |
 | Transfer | `העברה בין חשבונות` | Text button under skip, bank rows only. |
