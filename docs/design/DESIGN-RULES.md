@@ -241,7 +241,7 @@ Source: [implementation-guide.md](../../design/system/implementation-guide.md). 
 
 Notifications (`13`) is a lock-screen reference, not an app screen. Guide §3.
 
-The band holds only the summary. Home: wordmark, period pill, greeting, "רווח נקי ב…", hero, change pill, income and expenses. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. Guide §3.2.
+The band holds only the summary. Home: one quiet period pill, one label, the hero number, and one explanation ("הכנסות פחות הוצאות, מ־…"). The label says "הפסד" when the figure is negative, and "החודש" when that period is selected. נכנס and יצא sit below the band, and the comparison sits under those rows. No greeting and no wordmark on Home. Project: back, project name, profit, income and expenses. Do not put the band on sheets, onboarding, or for emphasis. [0069](../decisions/0069-back-and-one-tap-review.md). Guide §3.2.
 
 ### 3.2 Layout grid and viewport
 
@@ -284,7 +284,7 @@ Guide §6.4 and §11.3. Do not use `Intl.NumberFormat('he-IL', {style:'currency'
 | Time | 24-hour `18:00` |
 | Relative | `היום`, `אתמול`, `לפני 3 ימים` |
 
-Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. Figure budget on Home: profit, change, income, expenses, pending count, unpaid total, and up to 3 projects. [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
+Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, נכנס, יצא, the comparison under those rows, the pending count, the unpaid total, and up to 3 projects. [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
 
 P&L figures are before VAT. [0041](../decisions/0041-amounts-before-vat.md), [0043](../decisions/0043-assumed-vat-on-expenses.md).
 
@@ -315,10 +315,10 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Empty: [es-01-home-first-run-light.png](../../design/states/es-01-home-first-run-light.png), [es-01-home-first-run-dark.png](../../design/states/es-01-home-first-run-dark.png).
 - Loading: [ld-01-home-skeleton-light.png](../../design/states/ld-01-home-skeleton-light.png), [ld-01-home-skeleton-dark.png](../../design/states/ld-01-home-skeleton-dark.png). Refresh: [ld-07](../../design/states/ld-07-pull-to-refresh-light.png).
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.24.
-- Steps: period pill opens 16. Pending card opens Review. A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
+- Steps: period pill opens 16. The hero is the label, the number, and one line that says income minus expenses. נכנס and יצא sit below the band. Pending card opens Review. A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
-- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור SUMIT", and the line says the profit appears once SUMIT is connected.
-- Error: skeleton while loading (`ld-01`, without a period pill in Phase 0). Offline is `ld-08`. A server load failure, the missing-name greeting, and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md).
+- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור SUMIT", and the line says the profit appears once SUMIT is connected. No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
+- Error: skeleton while loading (`ld-01`). The loading band matches the calm hero. Offline is `ld-08`. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
 
 ### 02 Project
 

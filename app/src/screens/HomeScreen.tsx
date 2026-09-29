@@ -10,18 +10,20 @@ import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
+import { FlowLines, Hero } from "../ui/hero";
 import { ChartIcon } from "../ui/icons";
-import { BandFigures, BandHero, SectionHead } from "../ui/layout";
+import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker, RangeSheet } from "../ui/period-picker";
 import { HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
-import { homeGreeting, profitBandLabel } from "../home-label";
+import { emptyHomeLabel } from "../home-label";
 import {
   allTime,
   comparisonWords,
   customRange,
+  heroExplanation,
   heroProfitLabel,
   lastMonth,
   periodHint,
@@ -35,14 +37,6 @@ import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 
-function readOwnerName(metadata: unknown): string | null {
-  if (typeof metadata !== "object" || metadata === null) return null;
-  const fullName = "full_name" in metadata ? metadata.full_name : undefined;
-  const name = "name" in metadata ? metadata.name : undefined;
-  const raw = fullName ?? name;
-  return typeof raw === "string" ? raw : null;
-}
-
 function changePercent(current: bigint, previous: bigint | null): number | null {
   if (previous == null || previous === 0n) return null;
   const currentShekels = wholeShekels(current);
@@ -55,7 +49,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const navigate = useNavigate();
-  const { status, session } = useAuth();
+  const { status } = useAuth();
   const previewing = preview !== "off";
   const books = useBooks();
   const dashboard = useDashboardQuery();
@@ -66,7 +60,6 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const loading = phase.kind === "loading" || (!previewing && status === "loading" && !showBooks);
   const failed = phase.kind === "error" || previewHidesBand(preview);
   const offline = phase.kind === "error" ? phase.offline : preview === "error";
-  const greeting = homeGreeting(readOwnerName(session?.user.user_metadata));
 
   useEffect(() => {
     if (!failed && showBooks) {
@@ -100,13 +93,8 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   if (!showBooks) {
     return (
       <div className="flex min-h-full min-w-0 flex-1 flex-col">
-        <TopBand preview={previewing} example={example}>
-          <BandHero>
-            <div className="ui-greet">
-              <p className="t-label">{greeting}</p>
-            </div>
-            <h1 className="ui-band-label t-label">{profitBandLabel(false)}</h1>
-          </BandHero>
+        <TopBand preview={previewing} example={example} wordmark={false}>
+          <Hero label={emptyHomeLabel} />
         </TopBand>
         <EmptyState
           icon={<ChartIcon />}
@@ -126,7 +114,6 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   return (
     <HomeBooks
       data={dashboard.data}
-      greeting={greeting}
       previewing={previewing}
       search={search}
       unpaidGross={unpaidPhase.kind === "ready" ? (unpaid.data ?? []).reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n) : 0n}
@@ -147,7 +134,6 @@ function hasBooks(data: Dashboard): boolean {
 
 export function HomeBooks({
   data,
-  greeting,
   previewing,
   search,
   unpaidGross,
@@ -161,7 +147,6 @@ export function HomeBooks({
   notice,
 }: {
   data: Dashboard;
-  greeting: string;
   previewing: boolean;
   search: string;
   unpaidGross: bigint;
@@ -201,7 +186,9 @@ export function HomeBooks({
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <TopBand
+        wordmark={false}
         preview={previewing}
+        example={example}
         status={refreshing ? (
           <div className="ui-ptr">
             <span className="ui-spinner" role="status" aria-label="מרענן" />
@@ -226,21 +213,17 @@ export function HomeBooks({
           />
         }
       >
-        <BandHero>
-          <div className="ui-greet">
-            <p className="t-label">{greeting}</p>
-            {example}
-          </div>
-          <p className="ui-band-label t-label">{heroProfitLabel(period)}</p>
-          <h1>
-            <BigNumber agorot={hero} size="hero" />
-          </h1>
-          {comparison && percent != null ? <ChangePill percent={percent} comparison={comparison} onBand /> : null}
-          <BandFigures income={formatIls(data.income_agorot)} expense={formatIls(data.expense_agorot)} />
-        </BandHero>
+        <Hero label={heroProfitLabel(period, hero)} agorot={hero} explanation={heroExplanation(period)} />
       </TopBand>
 
       {notice}
+
+      <FlowLines income={data.income_agorot} expense={data.expense_agorot} />
+      {comparison && percent != null ? (
+        <p className="ui-flow-note">
+          <ChangePill percent={percent} comparison={comparison} />
+        </p>
+      ) : null}
 
       {unpaidPhase === "error" ? (
         <div className="ui-page-pad">

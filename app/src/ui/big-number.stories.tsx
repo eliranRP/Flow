@@ -24,6 +24,20 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Summary: Story = { args: { agorot: "-7630000", size: "hero" } };
+
+/** On the violet band the figure stays white. Hero names a loss with הפסד. */
+export const OnBand: Story = {
+  args: { agorot: "-7630000", size: "hero" },
+  render: ({ agorot }) => (
+    <header className="ui-band">
+      <div className="ui-band-hero">
+        <h1 className="ui-hero-figure">
+          <BigNumber agorot={BigInt(agorot)} size="hero" />
+        </h1>
+      </div>
+    </header>
+  ),
+};
 export const DetailAgorot: Story = { args: { agorot: "-10050", presentation: "detail", size: "display" } };
 export const Loss: Story = { args: { agorot: "-2940000", loss: true, size: "list" } };
 export const LargeAmount: Story = { args: { agorot: String(largeAgorot), size: "hero" } };

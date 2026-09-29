@@ -1442,24 +1442,68 @@ a.ui-row,
 .ui-band-hero {
   min-width: 0;
   padding: var(--space-6) var(--space-side) 0;
+  text-align: start;
 }
 
-.ui-greet {
+.ui-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  text-align: start;
+}
+
+.ui-hero-figure {
+  margin: 0;
+  max-inline-size: 100%;
+  text-align: start;
+}
+
+.ui-hero-explain {
+  margin: 0;
+  max-inline-size: 100%;
+  color: var(--color-on-band-secondary);
+  text-align: start;
+}
+
+.ui-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-top: var(--space-section);
+  padding-inline: var(--space-side);
+  text-align: start;
+}
+
+.ui-flow-line {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  margin: 0;
+  min-block-size: var(--touch-min);
+}
+
+.ui-flow-label {
+  color: var(--color-text-secondary);
+}
+
+.ui-flow-note {
+  margin: var(--space-6) 0 0;
+  padding-inline: var(--space-side);
+  text-align: start;
 }
 
 .ui-example,
-.ui-greet .t-label,
 .ui-band-example {
   color: var(--color-on-band-secondary);
 }
 
 .ui-band-example {
   padding: var(--space-2) var(--space-side) 0;
-  text-align: end;
+  text-align: start;
 }
 
 .ui-example-bar {
@@ -1467,25 +1511,6 @@ a.ui-row,
   justify-content: flex-end;
   padding: var(--space-2) var(--space-side) 0;
   color: var(--color-text-muted);
-}
-
-.ui-skel-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  /* Four gaps, each 2px under the token, so a loading Home band matches the loaded band. */
-  gap: calc(var(--space-3) - 2px);
-  min-inline-size: 0;
-  max-inline-size: 100%;
-}
-
-.ui-skel-figures {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--space-6);
-  row-gap: var(--space-3);
-  min-inline-size: 0;
-  max-inline-size: 100%;
 }
 
 .ui-skeleton-hero {
@@ -1514,10 +1539,14 @@ a.ui-row,
 }
 
 .ui-band-label {
-  margin-top: var(--space-2);
-  padding-inline: var(--space-side);
-  padding-bottom: var(--space-2);
+  margin: var(--space-2) 0;
+  padding: 0;
   color: var(--color-on-band-secondary);
+  text-align: start;
+}
+
+.ui-hero .ui-band-label {
+  margin: 0;
 }
 
 .ui-preview-banner {
@@ -1960,16 +1989,13 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   gap: var(--space-2);
 }
 
-.ui-skel-greet-a { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
-.ui-skel-greet-b { inline-size: var(--skel-sm); block-size: var(--skel-block); }
 .ui-skel-label { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
 .ui-skel-hero-num { inline-size: var(--skel-lg); block-size: var(--skel-hero); border-radius: var(--radius-input); }
-.ui-skel-delta { display: flex; align-items: center; gap: var(--space-2); }
-.ui-skel-delta-a { inline-size: var(--skel-sm); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
-.ui-skel-delta-b { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
+.ui-skel-explain { inline-size: min(100%, 280px); block-size: var(--skel-block-lg); }
+.ui-skel-flow-label { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
 .ui-skel-figure { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
 
-/* Project loading only. Home keeps .ui-skel-stack. These boxes match the loaded project band. */
+/* Project loading only. These boxes match the loaded project band. */
 .ui-project-skel {
   display: flex;
   flex-direction: column;

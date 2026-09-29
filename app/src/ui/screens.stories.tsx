@@ -231,7 +231,6 @@ export const HomeBooksMonth: Story = {
     <StoryRoute entry="/" tabs reviewCount={7}>
       <HomeBooks
         data={sampleDashboard}
-        greeting="שלום, אלירן"
         previewing={false}
         search=""
         unpaidGross={2_340_000n}
@@ -500,7 +499,6 @@ export const HomeLongHero: Story = {
     <StoryRoute entry="/" tabs>
       <HomeBooks
         data={{ ...sampleDashboard, income_agorot: 12_345_678_900n, expense_agorot: 0n, net_profit_agorot: 12_345_678_900n }}
-        greeting="שלום, אלירן"
         previewing={false}
         search=""
         unpaidGross={0n}
@@ -942,7 +940,6 @@ function SampleHome({ refreshing = false, notice }: { refreshing?: boolean; noti
   return (
     <HomeBooks
       data={sampleDashboard}
-      greeting="בוקר טוב, אלירן"
       previewing={false}
       search=""
       unpaidGross={2_340_000n}
