@@ -12,7 +12,12 @@ import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen } from "./ui/install-screen";
 import { BackButton, ScrollMemory, useGoBack } from "./ui/back";
-import { ToastProvider } from "./ui/toast";
+import { Button } from "./ui/button";
+import { CheckIcon } from "./ui/icons";
+import { ProgressBar } from "./ui/progress-bar";
+import { ReviewCard } from "./ui/review-card";
+import { ScreenHeader } from "./ui/screen-header";
+import { ToastProvider, useToast } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
@@ -95,6 +100,7 @@ function AppRoutes() {
             <>
               <Route path="/e2e/project" element={<DevProject />} />
               <Route path="/e2e/expense" element={<DevExpense />} />
+              <Route path="/e2e/review" element={<DevReview />} />
             </>
           ) : null}
           <Route element={<RequireAuth />}>
@@ -207,6 +213,83 @@ function DevExpense() {
       <h1 className="t-title-1">הוצאה לבדיקה</h1>
       <BackButton fallback="/projects?preview=1" />
     </main>
+  );
+}
+
+const devReviewItems = [
+  {
+    id: "1",
+    supplier: "חומרי בניין השרון בע״מ",
+    project: "שיפוץ הרצל 12",
+    category: "חומרים",
+    netAgorot: -1_600_000n,
+  },
+  {
+    id: "2",
+    supplier: "הובלות הגליל",
+    project: "וילה רעננה",
+    category: "הובלה",
+    netAgorot: -400_000n,
+  },
+];
+
+/** A local queue so the skip toast can be tested without writing a review row. */
+function DevReview() {
+  const toast = useToast();
+  const [index, setIndex] = useState(0);
+  const [change, setChange] = useState(false);
+  const item = devReviewItems[index];
+  const total = devReviewItems.length;
+  return (
+    <div>
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
+      <div className="ui-review-meter">
+        <ProgressBar
+          variant="thin"
+          label="התקדמות התור"
+          value={Math.min(index + 1, total)}
+          max={total}
+          caption={
+            <span className="t-hint">
+              <bdi dir="ltr">{String(Math.min(index + 1, total))}</bdi>
+              {" מתוך "}
+              <bdi dir="ltr">{String(total)}</bdi>
+            </span>
+          }
+        />
+      </div>
+      {item ? (
+        <div className="ui-review-motion" data-motion={index === 0 ? undefined : "in"} key={item.id}>
+          <ReviewCard
+            supplier={item.supplier}
+            sourceLine="הוצאה · 20/06/2026"
+            netAgorot={item.netAgorot}
+            vatLine="לפני מע״מ"
+            suggestion={{ project: item.project, category: item.category }}
+          />
+        </div>
+      ) : (
+        <p className="ui-page-pad t-title-3">אין פריטים לאישור</p>
+      )}
+      <div className="ui-review-actions">
+        <Button full icon={<CheckIcon />} onClick={() => undefined}>אישור</Button>
+        <div className="ui-review-actions-row">
+          <Button variant="secondary" onClick={() => { setChange(true); }}>שינוי</Button>
+          <Button
+            variant="ghost"
+            disabled={!item}
+            onClick={() => {
+              if (!item) return;
+              toast.show({ message: "דילגנו על הפריט" });
+              setIndex((current) => current + 1);
+            }}
+          >
+            דלג
+          </Button>
+        </div>
+      </div>
+      {change ? <p className="ui-page-pad">השינוי נפתח</p> : null}
+    </div>
   );
 }
 

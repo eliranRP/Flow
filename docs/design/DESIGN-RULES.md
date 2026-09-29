@@ -171,7 +171,7 @@ Short, calm, functional. No bounce, no overshoot, no attention loops. Animate on
 | `--dur-sheet-in` | 280ms | Sheet up. Easing `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)` |
 | `--dur-sheet-out` | 220ms | Sheet down. Easing `--ease-exit` `cubic-bezier(0.4, 0, 1, 1)` |
 | `--dur-shimmer` | 1400ms linear | Skeleton sweep, right to left |
-| `--toast-duration` | 4000ms | Toast, pauses while focused |
+| `--toast-duration` | 2500ms | A confirmation. An error stays 4000ms. A pointer hover pauses it. [0069](../decisions/0069-back-and-one-tap-review.md) |
 
 Screen push is 250ms from the start side. Toast in 200ms / out 150ms.
 
@@ -203,7 +203,7 @@ Every control has pressed, disabled, focus, and selected or busy where it applie
 | Processing | progress, step list, "המשך ברקע" | Invoice `ld-06`. Bank `ld-05` is not a build task ([0065](../decisions/0065-review-round5.md) point 40) |
 | Pull to refresh | spinner over live content | `ld-07` |
 | Offline | full screen if nothing is cached (`ld-08`); tinted notice if cached (`ld-09`) | "ניסיון חוזר" |
-| Toast | inverts per mode, 4 seconds, undo | `role="status"` |
+| Toast | under the header, clear of the actions. 2.5 seconds, 4 for an error, tap or swipe to dismiss, one at a time | `role="status"`. The host ignores taps. [0069](../decisions/0069-back-and-one-tap-review.md) |
 | Date picker | field, single sheet, range sheet | Sunday first, א׳ on the right. [0027](../decisions/0027-date-picker.md) |
 | Period sheet | radio rows apply on tap, plus custom range | [0028](../decisions/0028-period-sheet-with-custom-range.md) |
 | Confirmation sheet | question, item, consequence, action, quiet ביטול | [0030](../decisions/0030-confirmation-sheets.md) |
@@ -336,7 +336,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Entry: tab לאישור, the Home pending card, or the 18:00 nudge. [0006](../decisions/0006-confirm-not-type.md), [0018](../decisions/0018-two-notifications.md).
 - Steps: one card. The suggestion is two short rows under הצעה, project and category, with no confidence number. אישור accepts that suggestion. It is disabled, with a not-allowed cursor, only when the card says אין הצעה. Change opens 06. A plain אישור does not write a supplier rule. [0069](../decisions/0069-back-and-one-tap-review.md). High-confidence rows never appear here. [0011](../decisions/0011-auto-approve-high-confidence.md).
 - Back: none on the tab. Change and Split close back to the card.
-- Success: the card leaves. The queue-done empty state when none remain. Approve shows a busy button (`ld-04`) then a toast.
+- Success: the card leaves and the visit meter advances. The queue-done empty state when none remain. A toast, when it shows, sits under the header and does not cover דלג. Approve can still offer ביטול on that toast. [0069](../decisions/0069-back-and-one-tap-review.md).
 - Error: save failure toast (`er-05`).
 
 ### 04 Add

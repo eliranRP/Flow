@@ -668,7 +668,33 @@ export function ReviewQueue({
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const [hideAuto, setHideAuto] = useState(false);
+  const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
+  const [motion, setMotion] = useState<"still" | "out" | "in">("still");
+  const visit = useRef({ total: rows.length, last: rows.length });
+  if (rows.length > visit.current.last) {
+    visit.current.total += rows.length - visit.current.last;
+  }
+  visit.current.last = rows.length;
   const row = rows[0];
+  const leaving = motion === "out";
+  useEffect(() => {
+    const next = rows[0] ?? null;
+    if (next?.id === shown?.id) return;
+    if (!shown) {
+      setShown(next);
+      setMotion("still");
+      return;
+    }
+    setMotion("out");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(() => {
+      setShown(next);
+      setMotion(next ? "in" : "still");
+    }, reduce ? 0 : 200);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [rows, shown]);
   const approve = useWrite({
     failure: "לא הצלחנו לאשר.",
     keys: ["review", "dashboard", "unpaid"],
@@ -711,15 +737,18 @@ export function ReviewQueue({
       }));
     },
   });
-  if (!row) return <ReviewEmpty search={search} />;
-  const change = `/review/change${search}${search ? "&" : "?"}item=${row.id}`;
-  const auto = row.auto_approved_today ?? 0;
-  const suggestion = reviewSuggestion(row);
-  const approvable = row.reason === "unallocated_shared"
+  const card = shown;
+  if (!card) return <ReviewEmpty search={search} />;
+  const change = `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
+  const auto = card.auto_approved_today ?? 0;
+  const suggestion = reviewSuggestion(card);
+  const total = Math.max(visit.current.total, 1);
+  const index = row ? total - rows.length + 1 : total;
+  const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
     ? row.transaction_id != null
     : row.direction === "income"
       ? row.category_id != null
-      : row.project_id != null && row.category_id != null;
+      : row.project_id != null && row.category_id != null);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
@@ -727,11 +756,11 @@ export function ReviewQueue({
         <ProgressBar
           variant="thin"
           label="התקדמות התור"
-          value={1}
-          max={rows.length}
+          value={index}
+          max={total}
           caption={
             <span className="t-hint">
-              <bdi dir="ltr">1</bdi> מתוך <bdi dir="ltr">{String(rows.length)}</bdi>
+              <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
             </span>
           }
         />
@@ -754,20 +783,22 @@ export function ReviewQueue({
           }
         />
       ) : null}
-      <ReviewCard
-        supplier={row.supplier_name ?? row.description}
-        sourceLine={`${docKindLabel(row.doc_kind)} · ${invoiceDate(row.doc_date)}`}
-        netAgorot={row.amount_net}
-        vatLine={reviewVatLine(row.vat_agorot)}
-        suggestion={suggestion}
-      />
+      <div className="ui-review-motion" data-motion={motion === "still" ? undefined : motion} key={card.id}>
+        <ReviewCard
+          supplier={card.supplier_name ?? card.description}
+          sourceLine={`${docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
+          netAgorot={card.amount_net}
+          vatLine={reviewVatLine(card.vat_agorot)}
+          suggestion={suggestion}
+        />
+      </div>
       <div className="ui-review-actions">
         <Button
           full
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (!approvable || sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (!approvable || !row || sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
             if (row.reason === "unallocated_shared") {
               if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
               return;
@@ -783,8 +814,9 @@ export function ReviewQueue({
           <Button
             variant="ghost"
             busy={skip.isPending}
+            disabled={leaving}
             onClick={() => {
-              if (sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              if (leaving || sample || blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
               skip.mutate();
             }}
           >
