@@ -101,7 +101,11 @@ async function sumit(path: string, body: Record<string, unknown>): Promise<Recor
 }
 
 function operationsUsed(payload: Record<string, unknown>): number {
-  const rows = Array.isArray(payload.Data) ? payload.Data : [];
+  const data = payload.Data;
+  const nested = data != null && typeof data === "object" && !Array.isArray(data)
+    ? (data as Record<string, unknown>).Data
+    : data;
+  const rows = Array.isArray(nested) ? nested : [];
   const match = rows.find((row) => {
     if (row == null || typeof row !== "object") return false;
     const record = row as Record<string, unknown>;
