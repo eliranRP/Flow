@@ -10,9 +10,10 @@ type CardArgs = {
   project?: string;
   category?: string;
   confidence?: number;
+  reason?: string;
 };
 
-function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence }: CardArgs) {
+function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason }: CardArgs) {
   const suggestion = project || category ? { project, category, confidence } : undefined;
   return (
     <ReviewCard
@@ -21,6 +22,7 @@ function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category,
       netAgorot={BigInt(netAgorot)}
       vatLine={vatLine}
       suggestion={suggestion}
+      reason={reason}
     />
   );
 }
@@ -56,6 +58,14 @@ export const MissingProject: Story = {
   args: {
     ...OneCard.args,
     category: "חומרים",
+  },
+};
+
+export const SharedCost: Story = {
+  args: {
+    ...OneCard.args,
+    category: "חומרים",
+    reason: "unallocated_shared",
   },
 };
 

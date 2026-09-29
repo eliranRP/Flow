@@ -572,6 +572,8 @@ export const ProjectDetail: Story = {
             { id: "c2", name: "קבלני משנה", amount_agorot: 22_000_000n },
             { id: "c3", name: "עבודה", amount_agorot: 12_000_000n },
           ],
+          pending_count: 1,
+          pending_agorot: 8_000_000n,
           transactions: [
             {
               id: "t1",

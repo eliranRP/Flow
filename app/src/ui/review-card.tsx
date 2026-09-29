@@ -13,16 +13,23 @@ type ReviewCardProps = {
   netAgorot: bigint;
   vatLine: string;
   suggestion?: ReviewSuggestion;
+  /** Queue reason. An unallocated shared cost is not a missing project. */
+  reason?: string | null;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
-export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestion }: ReviewCardProps) {
+export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestion, reason }: ReviewCardProps) {
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
   const lines = [
     suggestion?.project ? { label: "פרויקט", value: suggestion.project } : null,
     suggestion?.category ? { label: "קטגוריה", value: suggestion.category } : null,
   ].filter((line): line is { label: string; value: string } => line != null);
-  const missingProject = suggestion?.category != null && suggestion.project == null;
+  const shared = reason === "unallocated_shared";
+  const note = shared
+    ? "הוצאה משותפת · אישור יפתח חלוקה"
+    : suggestion?.category != null && suggestion.project == null
+      ? "חסר פרויקט, בחרו בשינוי"
+      : null;
   return (
     <article className="ui-review">
       <div className="ui-review-doc">
@@ -49,7 +56,11 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
               <span>{line.value}</span>
             </p>
           ))}
-          {missingProject ? <p className="t-label">חסר פרויקט, בחרו בשינוי</p> : null}
+          {note ? <p className="t-label">{note}</p> : null}
+        </div>
+      ) : note ? (
+        <div className="ui-review-ai">
+          <p className="t-label">{note}</p>
         </div>
       ) : (
         <div className="ui-review-ai">

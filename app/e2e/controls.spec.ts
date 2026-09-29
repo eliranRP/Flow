@@ -636,6 +636,9 @@ const sweepPages = [
   "/e2e/install-other",
 ];
 
+/** These routes open a sheet on load, so controls under the scrim are covered. */
+const sheetOnLoad = new Set(["/add?preview=1", "/review/change?preview=1"]);
+
 for (const url of sweepPages) {
   test(`no enabled control is a no-op on ${url}`, async ({ page }) => {
     test.setTimeout(180_000);
@@ -699,6 +702,7 @@ for (const url of sweepPages) {
       }
     }
     console.log(`no-op sweep ${url}: skipped ${String(skipped)} covered controls`);
+    if (!sheetOnLoad.has(url)) expect(skipped).toBe(0);
     expect(failures).toEqual([]);
   });
 }

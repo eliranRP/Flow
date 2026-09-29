@@ -1,3 +1,4 @@
+import type { ProjectDetail } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -32,6 +33,69 @@ const serverProject = {
   categories: [],
   transactions: [],
 };
+
+function renderProject(sample: NonNullable<ProjectDetail>) {
+  const client = new QueryClient();
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={["/projects/a"]}>
+          <Routes>
+            <Route path="/projects/:projectId" element={<ProjectDetailScreen sample={sample} />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
+const projectBase = {
+  id: "a",
+  name: "וילה רעננה",
+  status: "active" as const,
+  state_label: "פעיל",
+  budget_agorot: null,
+  income_agorot: 0n,
+  direct_agorot: 8_000n,
+  shared_agorot: 0n,
+  profit_agorot: -8_000n,
+  categories: [{ id: "h", name: "הובלה", amount_agorot: 3_000n }],
+  transactions: [],
+};
+
+describe("project category breakdown", () => {
+  it("adds a waiting line so the category list matches the project expenses", () => {
+    renderProject({
+      ...projectBase,
+      pending_count: 1,
+      pending_agorot: 5_000n,
+    });
+    expect(screen.getByText("הובלה")).toBeInTheDocument();
+    expect(screen.getByText("1 ממתינה לאישור")).toBeInTheDocument();
+    expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
+  });
+
+  it("keeps a project that is only waiting off the empty category sentence", () => {
+    renderProject({
+      ...projectBase,
+      categories: [],
+      pending_count: 2,
+      pending_agorot: 8_000n,
+    });
+    expect(screen.getByText("2 ממתינות לאישור")).toBeInTheDocument();
+    expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
+  });
+
+  it("says there are no classified expenses when nothing is waiting either", () => {
+    renderProject({
+      ...projectBase,
+      direct_agorot: 0n,
+      profit_agorot: 0n,
+      categories: [],
+    });
+    expect(screen.getByText("אין עדיין הוצאות מסווגות.")).toBeInTheDocument();
+  });
+});
 
 describe("project overhead hero", () => {
   it("shows profit after the allocated share when the switch is on", () => {

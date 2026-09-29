@@ -82,7 +82,7 @@ import { IconButton } from "../ui/icon-button";
 import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
-import { CHANGE_SAVE_FAILURE, ChangeAssignment, type ChangeChoice } from "../ui/change-sheet";
+import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
@@ -411,6 +411,40 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
   );
 }
 
+function pendingApprovalTitle(count: number): string {
+  return count === 1 ? "1 ממתינה לאישור" : `${String(count)} ממתינות לאישור`;
+}
+
+/** Confirmed categories, then the amount still waiting, so the lines match the project's expenses. */
+function ProjectCategories({ project }: { project: NonNullable<ProjectDetail> }) {
+  const pending = project.pending_count ?? 0;
+  const waiting = pending > 0;
+  if (project.categories.length === 0 && !waiting) {
+    return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
+  }
+  return (
+    <List>
+      {project.categories.map((category) => (
+        <ListRow
+          key={category.id ?? category.name}
+          variant="project"
+          title={category.name ?? "בלי קטגוריה"}
+          agorot={absAgorot(category.amount_agorot)}
+          loss={false}
+        />
+      ))}
+      {waiting ? (
+        <ListRow
+          variant="project"
+          title={pendingApprovalTitle(pending)}
+          agorot={absAgorot(project.pending_agorot ?? 0n)}
+          loss={false}
+        />
+      ) : null}
+    </List>
+  );
+}
+
 export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<ProjectDetail>; example?: ReactNode } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
@@ -508,19 +542,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
         </div>
       ) : null}
       <SectionHead title="הוצאות לפי קטגוריה" />
-      {project.categories.length === 0 ? <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p> : (
-        <List>
-          {project.categories.map((category) => (
-            <ListRow
-              key={category.id ?? category.name}
-              variant="project"
-              title={category.name ?? "בלי קטגוריה"}
-              agorot={absAgorot(category.amount_agorot)}
-              loss={false}
-            />
-          ))}
-        </List>
-      )}
+      <ProjectCategories project={project} />
       <p className="ui-page-pad ui-page-title-row">
         <TextLink to={`/settings/categories${search}`} tone="quiet">כל הקטגוריות</TextLink>
         <TextLink
@@ -858,6 +880,7 @@ export function ReviewQueue({
           netAgorot={card.amount_net}
           vatLine={reviewVatLine(card.vat_agorot)}
           suggestion={suggestion}
+          reason={card.reason}
         />
       </div>
       <div className="ui-review-actions">
@@ -1050,7 +1073,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
     row?.category_name,
   );
   const save = useWrite({
-    failure: CHANGE_SAVE_FAILURE,
+    failure: changeSaveFailure,
     success: "השיוך נשמר",
     keys: ["review", "dashboard"],
     onSuccess: () => {
@@ -1312,7 +1335,7 @@ export function TransactionScreen({
     },
   });
   const reassign = useWrite({
-    failure: CHANGE_SAVE_FAILURE,
+    failure: changeSaveFailure,
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
       setChangeSheet(false);
@@ -1344,7 +1367,7 @@ export function TransactionScreen({
     },
   });
   const setCategory = useWrite({
-    failure: CHANGE_SAVE_FAILURE,
+    failure: changeSaveFailure,
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
       setChangeSheet(false);
