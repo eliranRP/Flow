@@ -22,7 +22,7 @@ export function useToast(): ToastContextValue {
   return value;
 }
 
-/** A plain confirmation stays 4s. A toast with an action (ניסיון חוזר, ביטול) stays 5s. An error, or an info notice without an action, stays 4s. A pointer hover pauses it. Decision 0074. */
+/** A plain confirmation stays 4s. A toast with an action (ניסיון חוזר, ביטול) stays 5s. An error, or an info notice without an action, stays 4s. Hover, focus, and a press pause it. Decision 0074. */
 const OK_MS = 4000;
 const ACTION_MS = 5000;
 const BAD_MS = 4000;
@@ -100,7 +100,7 @@ function coversPageHeader(top: number, height: number, header: Element | null, s
   return rect.top < top + height && rect.bottom > top;
 }
 
-/** Sit just under the page or sheet header, clear of every control. A shrink stays tall enough for two lines and ביטול. */
+/** Sit just under the page header, or just above an open sheet, clear of every control. A shrink stays tall enough for two lines and ביטול, except it never covers a sheet header. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   if (toast instanceof HTMLElement) {
@@ -116,12 +116,32 @@ export function placeToast(layer: HTMLElement): void {
   const floor = window.innerHeight - gap;
   const boxes = toastControls(layer, sheet);
   const sheetTop = sheet instanceof HTMLElement ? sheet.getBoundingClientRect().top : null;
+  const pageHeader = document.querySelector("header.ui-page, header.ui-band");
+  if (sheet instanceof HTMLElement && sheetTop != null && height > 0) {
+    const above = sheetTop - gap - height;
+    if (
+      above >= safe
+      && above + height <= floor
+      && !toastHits(above, height, boxes)
+      && !coversPageHeader(above, height, pageHeader, sheet)
+    ) {
+      layer.style.top = `${String(above)}px`;
+      return;
+    }
+    const head = sheet.querySelector(".ui-sheet-head");
+    const limit = head instanceof HTMLElement ? head.getBoundingClientRect().top : sheetTop;
+    const room = limit - gap - safe;
+    if (toast instanceof HTMLElement && room > 0 && room < height) {
+      toast.style.maxHeight = `${String(room)}px`;
+      toast.style.overflow = "hidden";
+    }
+    layer.style.top = `${String(safe)}px`;
+    return;
+  }
   const candidates = [measured];
-  if (sheetTop != null) candidates.push(sheetTop - gap - height);
   for (const box of boxes) candidates.push(box.top - gap - height);
   for (const box of boxes) candidates.push(box.bottom + gap);
   candidates.push(safe);
-  const pageHeader = document.querySelector("header.ui-page, header.ui-band");
   if (height > 0) {
     for (const top of candidates) {
       if (top < safe || top + height > floor) continue;
@@ -274,23 +294,44 @@ type ToastProps = {
 export function Toast({ children, action, onAction, onDismiss, onPause, onResume, tone = "ok" }: ToastProps) {
   const start = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
+  const hold = useRef({ hover: false, focus: false, press: false });
+
+  function setHold(key: "hover" | "focus" | "press", on: boolean) {
+    const before = hold.current.hover || hold.current.focus || hold.current.press;
+    hold.current[key] = on;
+    const after = hold.current.hover || hold.current.focus || hold.current.press;
+    if (!before && after) onPause?.();
+    if (before && !after) onResume?.();
+  }
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     // The sheet listens on document. A tap here must not become an outside click.
     event.stopPropagation();
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    setHold("press", true);
     start.current = { x: event.clientX, y: event.clientY };
     swiped.current = false;
   }
 
   function onPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!start.current) return;
-    const dx = event.clientX - start.current.x;
-    const dy = event.clientY - start.current.y;
+    const origin = start.current;
     start.current = null;
-    if (Math.hypot(dx, dy) < SWIPE_PX) return;
-    swiped.current = true;
-    onDismiss?.();
+    if (origin) {
+      const dx = event.clientX - origin.x;
+      const dy = event.clientY - origin.y;
+      if (Math.hypot(dx, dy) >= SWIPE_PX) {
+        swiped.current = true;
+        hold.current.press = false;
+        onDismiss?.();
+        return;
+      }
+    }
+    setHold("press", false);
+  }
+
+  function onPointerCancel() {
+    start.current = null;
+    setHold("press", false);
   }
 
   const quiet = children == null || children === "";
@@ -299,12 +340,13 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
       className={quiet ? "ui-toast-live" : "ui-toast"}
       role="status"
       dir="rtl"
-      onMouseEnter={onPause}
-      onMouseLeave={onResume}
-      onFocus={onPause}
-      onBlur={onResume}
+      onMouseEnter={() => { setHold("hover", true); }}
+      onMouseLeave={() => { setHold("hover", false); }}
+      onFocus={() => { setHold("focus", true); }}
+      onBlur={() => { setHold("focus", false); }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onClick={(event) => {
         event.stopPropagation();
         if (swiped.current) {

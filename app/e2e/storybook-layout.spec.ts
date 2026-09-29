@@ -559,43 +559,36 @@ test("the categories hidden link wraps on the end side and does not truncate", a
 
 test("split stays calm and pins the save button", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-income&viewMode=story", { waitUntil: "domcontentloaded" });
+  await page.goto("/iframe.html?id=screens-routes--split-income-disabled&viewMode=story", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("אופן הפיצול")).toHaveCount(0);
   await expect(page.getByRole("switch")).toHaveCount(0);
-  const chip = page.locator(".ui-chip-scope");
-  await expect(chip).toBeVisible();
-  const chipPaint = await chip.evaluate((node) => getComputedStyle(node).backgroundColor);
-  expect(chipPaint).not.toBe("rgb(123, 63, 228)");
-  await expect(page.getByText(/100%/)).toBeVisible();
-  const save = page.getByRole("button", { name: "שמירת פיצול" });
+  await expect(page.locator(".ui-chip-scope")).toHaveCount(0);
+  const income = page.getByRole("radio", { name: /לפי הכנסות/ });
+  await expect(income).toBeDisabled();
+  const save = page.getByRole("button", { name: "שמירה" });
   const saveBox = await save.boundingBox();
   expect(saveBox).not.toBeNull();
-  if (saveBox) expect(saveBox.y + saveBox.height).toBeGreaterThan(800);
+  if (saveBox) {
+    expect(saveBox.y + saveBox.height).toBeGreaterThan(800);
+    expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(844);
+  }
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto("/iframe.html?id=screens-routes--split-long-hebrew&viewMode=story", { waitUntil: "domcontentloaded" });
-  const context = page.locator(".ui-split-context");
-  const clipped = await context.evaluate((node) => {
-    const style = getComputedStyle(node);
-    return style.textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1;
-  });
-  expect(clipped).toBe(true);
-  const segments = await page.locator(".ui-seg-label").evaluateAll((nodes) => nodes.map((node) => {
+  await page.goto("/iframe.html?id=screens-routes--split-default-320&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "שמירה" })).toBeVisible();
+  expect(await layoutProblems(page)).toEqual([]);
+  const titles = await page.locator(".ui-split-card .ui-row-title").evaluateAll((nodes) => nodes.map((node) => {
     const style = getComputedStyle(node);
     return {
-      nowrap: style.whiteSpace === "nowrap",
-      clipped: node.scrollWidth > node.clientWidth + 1,
       lines: node.getClientRects().length,
+      clipped: style.textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1,
     };
   }));
-  expect(segments.length).toBeGreaterThan(0);
-  for (const segment of segments) {
-    expect(segment.nowrap).toBe(true);
-    expect(segment.clipped).toBe(false);
-    expect(segment.lines).toBe(1);
+  expect(titles.length).toBeGreaterThan(0);
+  for (const title of titles) {
+    expect(title.lines).toBe(1);
+    expect(title.clipped).toBe(false);
   }
-  const name = await page.locator(".ui-split-list .ui-row-title").first().evaluate((node) => getComputedStyle(node).webkitLineClamp);
-  expect(name).toBe("2");
 });
 
 test("a title focused on open draws no ring", async ({ page }) => {

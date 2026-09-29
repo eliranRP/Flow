@@ -171,7 +171,7 @@ Short, calm, functional. No bounce, no overshoot, no attention loops. Animate on
 | `--dur-sheet-in` | 280ms | Sheet up. Easing `--ease-standard` `cubic-bezier(0.2, 0, 0, 1)` |
 | `--dur-sheet-out` | 220ms | Sheet down. Easing `--ease-exit` `cubic-bezier(0.4, 0, 1, 1)` |
 | `--dur-shimmer` | 1400ms linear | Skeleton sweep, right to left |
-| `--toast-duration` | 4000ms | A plain confirmation. A toast with an action (ניסיון חוזר, ביטול, לחלוקה) stays 5000ms. An error stays 4000ms. A preview notice uses the info tone, not the error tone, and also stays 4000ms when it has no action. A pointer hover pauses it. The two-line minimum applies only when the text shrinks or wraps, not to the container. A tap on the toast does not close a sheet underneath. [0069](../decisions/0069-back-and-one-tap-review.md), [0072](../decisions/0072-design-review-rulings.md), [0074](../decisions/0074-toast-and-remembered-supplier.md) |
+| `--toast-duration` | 4000ms | A plain confirmation. A toast with an action (ניסיון חוזר, ביטול, לחלוקה) stays 5000ms. An error stays 4000ms. A preview notice uses the info tone, not the error tone, and also stays 4000ms when it has no action. Hover, focus, and a press pause it. The two-line minimum applies only when the text shrinks or wraps, not to the container. Toast text uses `text-wrap: balance`. A tap on the toast does not close a sheet underneath. Over an open sheet the toast sits just above the sheet, and never over its header. [0069](../decisions/0069-back-and-one-tap-review.md), [0072](../decisions/0072-design-review-rulings.md), [0074](../decisions/0074-toast-and-remembered-supplier.md) |
 
 Screen push is 250ms from the start side. Toast in 200ms / out 150ms.
 

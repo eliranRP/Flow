@@ -480,6 +480,49 @@ describe("rejected writes", () => {
     expect(next).toHaveAttribute("aria-valuemax", "2");
     expect(await screen.findByRole("heading", { name: "הובלות הגליל" })).toBeInTheDocument();
   });
+
+  it("restores the visit meter when an approved card comes back", () => {
+    const row = (id: string, supplier: string): ReviewRow => ({
+      id,
+      transaction_id: id,
+      description: supplier,
+      doc_date: "2026-06-20",
+      amount_net: -1_000n,
+      direction: "expense",
+      reason: null,
+      project_id: "p",
+      category_id: "c",
+      supplier_name: supplier,
+      project_name: "אלפא",
+      category_name: "מלט",
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const rows = [row("a", "ספק א"), row("b", "ספק ב"), row("c", "ספק ג")];
+    function queue(listed: ReviewRow[]) {
+      return (
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <MemoryRouter>
+              <ReviewQueue rows={listed} search="" sample />
+            </MemoryRouter>
+          </ToastProvider>
+        </QueryClientProvider>
+      );
+    }
+    const { rerender } = render(queue(rows));
+    const meter = screen.getByRole("meter", { name: "התקדמות התור" });
+    expect(meter).toHaveAttribute("aria-valuenow", "1");
+    expect(meter).toHaveAttribute("aria-valuemax", "3");
+    rerender(queue(rows.slice(1)));
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
+    rerender(queue([rows[2]!]));
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "3");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
+    rerender(queue(rows));
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
+  });
 });
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sourceViolations, violations } from "./check-prod-bundle.mjs";
+import { reviewerNameViolations, sourceViolations, violations } from "./check-prod-bundle.mjs";
+import { rejectEmptyHostedSupabase } from "./hosted-env.mjs";
 
 test("flags a fixture module, a story, and a golden value", () => {
   const found = violations({
@@ -23,12 +24,32 @@ test("flags a fixture module, a story, and a golden value", () => {
 test("flags a dev route and a reviewer marker in the hosted bundle", () => {
   const found = violations({
     modules: ["/repo/app/src/reviewer-preview.tsx", "/repo/app/src/reviewer-sample.ts"],
-    files: [{ name: "app/dist/assets/index.js", body: "route /e2e/project-detail sampleSave reviewer-preview" }],
+    files: [{ name: "app/dist/assets/index.js", body: "route /e2e/project-detail sampleRun reviewerBooks reviewer-preview" }],
   });
   assert.ok(found.some((line) => line.includes("reviewer-preview")));
   assert.ok(found.some((line) => line.includes("reviewer-sample")));
   assert.ok(found.some((line) => line.includes("/e2e/")));
-  assert.ok(found.some((line) => line.includes("sampleSave")));
+  assert.ok(found.some((line) => line.includes("sampleRun")));
+  assert.ok(found.some((line) => line.includes("reviewerBooks")));
+});
+
+test("flags a Flow Test 2 name in the reviewer dist", () => {
+  const found = reviewerNameViolations([
+    { name: "app/dist/assets/reviewer.js", body: "שיפוץ הרצל 12 והובלות הגליל" },
+  ]);
+  assert.ok(found.some((line) => line.includes("שיפוץ הרצל")));
+  assert.ok(found.some((line) => line.includes("הובלות הגליל")));
+  assert.deepEqual(reviewerNameViolations([
+    { name: "app/dist/assets/reviewer.js", body: "בית הספר אלון" },
+  ]), []);
+});
+
+test("a hosted build rejects an empty Supabase URL or anon key", () => {
+  assert.deepEqual(rejectEmptyHostedSupabase({ VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "key" }, false), [
+    "VITE_SUPABASE_URL is set but empty",
+  ]);
+  assert.deepEqual(rejectEmptyHostedSupabase({ VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "" }, true), []);
+  assert.deepEqual(rejectEmptyHostedSupabase({ VITE_SUPABASE_URL: "https://example.supabase.co" }, false), []);
 });
 
 test("accepts the production modules and a bundle without the golden totals", () => {

@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(11);
+select plan(15);
 
 do $users$
 begin
@@ -141,6 +141,58 @@ update public.transactions
 set user_assigned = false, category_suggested = true
 where idempotency_key = 'r15:preflipped';
 
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, supplier_id, category_id, user_assigned, description
+)
+select c.id, 'expense', 'expense', 'project',
+  -140, -140, 0, 'unknown',
+  '2026-08-05', 'manual', 'r15:missing-rule', p.id, s.id, m.id, true, 'כלל בלי פרויקט'
+from r15 c
+join r15 p on p.label = 'alpha'
+join r15 s on s.label = 'paint'
+join r15 m on m.label = 'materials'
+where c.label = 'company';
+
+update public.transactions
+set user_assigned = false, category_suggested = false
+where idempotency_key = 'r15:missing-rule';
+
+insert into public.review_queue (
+  company_id, transaction_id, status, reason, prior_category_id, prior_user_assigned, prior_category_suggested
+)
+select t.company_id, t.id, 'open', 'missing_project', t.category_id, false, null
+from public.transactions t
+where t.idempotency_key = 'r15:missing-rule';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, supplier_id, category_id, user_assigned, description
+)
+select c.id, 'expense', 'expense', 'project',
+  -150, -150, 0, 'unknown',
+  '2026-08-06', 'manual', 'r15:pending-rule', p.id, s.id, m.id, true, 'כלל שממתין לביטול'
+from r15 c
+join r15 p on p.label = 'alpha'
+join r15 s on s.label = 'paint'
+join r15 m on m.label = 'materials'
+where c.label = 'company';
+
+update public.transactions
+set user_assigned = false, category_suggested = false
+where idempotency_key = 'r15:pending-rule';
+
+insert into public.reassign_undo (
+  company_id, transaction_id, prior_project_id, prior_category_id, prior_pnl_role,
+  prior_user_assigned, prior_category_suggested, prior_allocations, undone_at
+)
+select t.company_id, t.id, t.project_id, t.category_id, 'project',
+  false, null, '[]'::jsonb, null
+from public.transactions t
+where t.idempotency_key = 'r15:pending-rule';
+
 select private.restore_undone_suggestions();
 
 select is(
@@ -212,6 +264,40 @@ select is(
   ),
   1::bigint,
   'putting a rule row back writes an audit row'
+);
+
+select is(
+  (select category_suggested from public.transactions where idempotency_key = 'r15:missing-rule'),
+  false,
+  'a reopened missing-project rule row is untouched'
+);
+
+select is(
+  (
+    select q.prior_category_suggested
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id
+    where t.idempotency_key = 'r15:missing-rule'
+  ),
+  null,
+  'a reopened missing-project rule does not store the prior as a guess'
+);
+
+select is(
+  (select category_suggested from public.transactions where idempotency_key = 'r15:pending-rule'),
+  false,
+  'a pending-undo rule row is untouched'
+);
+
+select is(
+  (
+    select u.prior_category_suggested
+    from public.reassign_undo u
+    join public.transactions t on t.id = u.transaction_id
+    where t.idempotency_key = 'r15:pending-rule'
+  ),
+  null,
+  'a pending undo of a rule does not store the prior as a guess'
 );
 
 select private.restore_undone_suggestions();

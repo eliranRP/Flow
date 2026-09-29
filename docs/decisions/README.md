@@ -94,4 +94,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0071](0071-shared-cost-copy.md) | 2026-09-29 | Accepted | An unallocated shared cost says approval opens the split. A waiting line keeps the project category list honest |
 | [0072](0072-design-review-rulings.md) | 2026-09-29 | Accepted | Invalid split rows show their own percent. Preview notices are info. Unequal even parts name the whole amount. A filtered queue returns to its project |
 | [0073](0073-review-handoff.md) | 2026-09-29 | Accepted | From r23, a handoff includes a self-check. `/reviewer` is sample data on the dev server or a reviewers-only build with no hosted key. Only Blocking and Should items block a merge |
-| [0074](0074-toast-and-remembered-supplier.md) | 2026-09-29 | Accepted | A plain confirmation stays 4s and an action stays 5s. Remember-supplier shows the full name |
+| [0074](0074-toast-and-remembered-supplier.md) | 2026-09-29 | Accepted | A plain confirmation stays 4s and an action stays 5s. The supplier name wraps. A toast over a sheet sits above it |

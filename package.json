@@ -15,6 +15,7 @@
     "test:e2e": "pnpm --filter @flow/app test:e2e",
     "test:e2e:live": "pnpm --filter @flow/app test:e2e:live",
     "check:bundle": "node scripts/check-prod-bundle.mjs",
+    "check:reviewer-bundle": "node scripts/check-prod-bundle.mjs --reviewer",
     "storybook": "pnpm --filter @flow/app storybook",
     "build-storybook": "pnpm --filter @flow/app build-storybook",
     "test:storybook": "pnpm --filter @flow/app test:storybook",

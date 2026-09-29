@@ -6,7 +6,10 @@ import {
   reviewerBooks,
   reviewerCategories,
   reviewerFiled,
+  reviewerMaterialsPageAgorot,
+  reviewerOtherProjectName,
   reviewerProjectChoices,
+  reviewerProjectName,
   reviewerQueue,
   reviewerSharedAgorot,
   reviewerSplitProjects,
@@ -56,8 +59,8 @@ function ReviewerHome() {
   const books = reviewerBooks();
   const lines = [
     { label: "הכנסות", amount: books.income },
-    { label: "חומרים", amount: books.materials },
-    { label: "הובלה", amount: books.haul },
+    { label: "מלט", amount: books.materials },
+    { label: "שינוע", amount: books.haul },
     { label: "אושרו", amount: books.approved },
     { label: "ממתינות לאישור", amount: books.waiting },
     { label: "הוצאות הפרויקט", amount: books.projectExpenses },
@@ -73,7 +76,7 @@ function ReviewerHome() {
         subtitle="תור, שיוך מהיום, ושמירה שאפשר להצליח או להכשיל"
       />
       <section className="ui-page-pad">
-        <h2 className="t-title-3">שיפוץ הרצל 12</h2>
+        <h2 className="t-title-3">{reviewerProjectName}</h2>
         {lines.map((line) => (
           <p className="ui-review-line" key={line.label}>
             <span className="t-label">{line.label}</span>
@@ -81,7 +84,7 @@ function ReviewerHome() {
           </p>
         ))}
         <p className="t-hint">
-          אושרו הם חומרים ועוד הובלה. הוצאות הפרויקט הן אושרו ועוד ממתינות לאישור. הרווח הוא ההכנסות פחות הוצאות הפרויקט.
+          אושרו הם מלט ועוד שינוע. הוצאות הפרויקט הן אושרו ועוד ממתינות לאישור. הרווח הוא ההכנסות פחות הוצאות הפרויקט.
           {" "}
           <bdi className="ui-num" dir="ltr">{String(books.filedCount)}</bdi>
           {" תנועות שויכו היום, וזה מספר השורות ברשימה."}
@@ -92,7 +95,7 @@ function ReviewerHome() {
           <bdi className="ui-num" dir="ltr">{herzl ? money(herzl.agorot) : ""}</bdi>
           {" ו־"}
           <bdi className="ui-num" dir="ltr">{raanana ? money(raanana.agorot) : ""}</bdi>
-          {". וילה רעננה נכנסת רק במשקל החלוקה, "}
+          {`. ${reviewerOtherProjectName} נכנס רק במשקל החלוקה, `}
           <bdi className="ui-num" dir="ltr">{money(books.otherIncome)}</bdi>
           .
         </p>
@@ -103,7 +106,7 @@ function ReviewerHome() {
         <Button full variant="secondary" to="/reviewer/review?save=offline">תור, בלי חיבור</Button>
         <Button full variant="secondary" to="/reviewer/filed">שויכו היום</Button>
         <Button full variant="secondary" to="/reviewer/filed?empty=1">שויכו היום, אין תנועות</Button>
-        <Button full variant="secondary" to="/reviewer/category">קטגוריה, חומרים</Button>
+        <Button full variant="secondary" to="/reviewer/category">קטגוריה, מלט</Button>
         <Button full variant="secondary" to="/reviewer/category?empty=1">קטגוריה, אין תנועות</Button>
         <Button full variant="secondary" to="/reviewer/category?more=1">קטגוריה, עוד תנועות</Button>
         <Button full variant="secondary" to="/reviewer/waiting">לאישור בפרויקט</Button>
@@ -152,29 +155,38 @@ function ReviewerCategory() {
   const [params] = useSearchParams();
   const empty = params.get("empty") === "1";
   const more = params.get("more") === "1";
-  const sand = reviewerFiled.find((row) => row.category_name === "חומרים");
-  const haul = reviewerFiled.find((row) => row.category_name === "הובלה");
-  const rows = empty || sand == null ? [] : [
-    {
-      id: sand.id,
-      description: sand.description,
-      doc_date: sand.doc_date,
-      amount_net: sand.amount_net,
-    },
-    ...(more && haul != null ? [{
-      id: haul.id,
-      description: haul.description,
-      doc_date: haul.doc_date,
-      amount_net: haul.amount_net,
-    }] : []),
-  ];
+  const sand = reviewerFiled.find((row) => row.category_name === "מלט");
+  const [firstPart, secondPart] = reviewerMaterialsPageAgorot;
+  const rows = empty || sand == null || firstPart == null || secondPart == null ? [] : more
+    ? [
+      {
+        id: sand.id,
+        description: sand.description,
+        doc_date: sand.doc_date,
+        amount_net: -firstPart,
+      },
+      {
+        id: "t-sample-cement",
+        description: "מלט",
+        doc_date: sand.doc_date,
+        amount_net: -secondPart,
+      },
+    ]
+    : [
+      {
+        id: sand.id,
+        description: sand.description,
+        doc_date: sand.doc_date,
+        amount_net: sand.amount_net,
+      },
+    ];
   return (
     <ProjectCategoryScreen
       backTo="/reviewer"
       rowHref={(row) => `/reviewer/transaction/${row.id}`}
       sample={{
-        categoryName: "חומרים",
-        projectName: "שיפוץ הרצל 12",
+        categoryName: "מלט",
+        projectName: reviewerProjectName,
         pageSize: more ? 1 : undefined,
         rows,
       }}
@@ -205,7 +217,7 @@ function ReviewerWaiting() {
       backTo="/reviewer"
       hrefFor={(row) => row.review_id == null
         ? `/reviewer/transaction/${row.transaction_id}`
-        : "/reviewer/save?save=ok"}
+        : `/reviewer/save?save=ok&item=${row.review_id}`}
     />
   );
 }
@@ -251,10 +263,11 @@ function ReviewerTransaction({ path }: { path: string }) {
 function ReviewerSave() {
   const [params] = useSearchParams();
   const mode = sampleSaveMode(params.get("save"));
+  const item = reviewerQueue.find((row) => row.id === params.get("item")) ?? reviewerQueue.find((row) => row.supplier_name === "צבעי הכרמל בע״מ");
   const navigate = useNavigate();
   const toast = useToast();
-  const [projectId, setProjectId] = useState("p-herzl");
-  const [categoryId, setCategoryId] = useState("c-materials");
+  const [projectId, setProjectId] = useState(item?.project_id ?? "p-herzl");
+  const [categoryId, setCategoryId] = useState(item?.category_id ?? "");
   const [remember, setRemember] = useState(true);
   const [projects, setProjects] = useState(reviewerProjectChoices);
   const write = useSampleWrite(mode, "השיוך נשמר", () => {
@@ -262,19 +275,20 @@ function ReviewerSave() {
   }, () => {
     void navigate(`/reviewer/split?save=${mode}`);
   });
+  const amount = item?.amount_net == null ? reviewerWaitingPaintAgorot : (item.amount_net < 0n ? -item.amount_net : item.amount_net);
   return (
     <ChangeAssignment
       host="route"
       closeTo="/reviewer"
-      supplier="צבעי הגליל בע״מ"
-      amount={money(reviewerWaitingPaintAgorot)}
+      supplier={item?.supplier_name ?? "צבעי הכרמל בע״מ"}
+      amount={money(amount)}
       direction="expense"
       projects={projects}
       categories={reviewerCategories}
       projectId={projectId}
       categoryId={categoryId}
-      suggestionProjectId="p-herzl"
-      suggestionCategoryId="c-materials"
+      suggestionProjectId={item?.project_id ?? "p-herzl"}
+      suggestionCategoryId={item?.category_id ?? ""}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       remember={remember}
@@ -311,7 +325,7 @@ function ReviewerSplit() {
     <SplitScreen
       sampleAmount={reviewerSharedAgorot}
       sampleProjects={reviewerSplitProjects}
-      sampleMeta="מנופי המרכז בע״מ · 29/09/2026"
+      sampleMeta="עגורני החוף בע״מ · 29/09/2026"
       backTo={`/reviewer/review?save=${mode}`}
       onSave={() => {
         write.mutate();

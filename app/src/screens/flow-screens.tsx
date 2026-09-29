@@ -445,12 +445,13 @@ function ProjectCategories({
 }) {
   const pending = project.pending_count ?? 0;
   const waiting = pending > 0;
+  const shared = project.categories.some((category) => category.has_shared_share === true);
   if (project.categories.length === 0 && !waiting) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
   return (
     <>
-      {project.categories.length > 0 ? <SharedCostNote /> : null}
+      {shared ? <SharedCostNote /> : null}
       <List>
       {project.categories.map((category) => (
         <ListRow
@@ -914,11 +915,14 @@ export function ReviewQueue({
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
-  const visit = useRef({ total: rows.length, last: rows.length });
-  if (rows.length > visit.current.last) {
-    visit.current.total += rows.length - visit.current.last;
+  const visit = useRef({ total: rows.length, seen: new Set(rows.map((item) => item.id)) });
+  let added = 0;
+  for (const item of rows) {
+    if (visit.current.seen.has(item.id)) continue;
+    visit.current.seen.add(item.id);
+    added += 1;
   }
-  visit.current.last = rows.length;
+  if (added > 0) visit.current.total += added;
   const row = rows[0];
   const leaving = motion === "out";
   useEffect(() => {
@@ -1005,7 +1009,7 @@ export function ReviewQueue({
   });
   const card = shown;
   if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
-  const change = changeTo ?? `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
+  const change = changeTo ? withItem(changeTo, card.id) : `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
   const total = Math.max(visit.current.total, 1);
@@ -1100,6 +1104,13 @@ export function ReviewQueue({
       </div>
     </div>
   );
+}
+
+function withItem(to: string, id: string): string {
+  const [path, query = ""] = to.split("?");
+  const params = new URLSearchParams(query);
+  params.set("item", id);
+  return `${path}?${params.toString()}`;
 }
 
 function invoiceDate(iso: string): string {

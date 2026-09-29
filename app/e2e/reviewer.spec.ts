@@ -64,7 +64,7 @@ test("home links open a queue, a filed list, and each save", async ({ page }) =>
     ["תור, בלי חיבור", /\/reviewer\/review\?save=offline$/],
     ["שויכו היום", /\/reviewer\/filed$/],
     ["שויכו היום, אין תנועות", /\/reviewer\/filed\?empty=1$/],
-    ["קטגוריה, חומרים", /\/reviewer\/category$/],
+    ["קטגוריה, מלט", /\/reviewer\/category$/],
     ["קטגוריה, אין תנועות", /\/reviewer\/category\?empty=1$/],
     ["קטגוריה, עוד תנועות", /\/reviewer\/category\?more=1$/],
     ["לאישור בפרויקט", /\/reviewer\/waiting$/],
@@ -119,11 +119,11 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await held.click({ force: true });
   await expect(page.getByText("חסר קטגוריה, בחרו בשינוי")).toBeVisible();
   await page.getByRole("link", { name: "שינוי" }).click();
-  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok$/);
+  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
   await page.goto("/reviewer/review");
   await page.getByRole("button", { name: "דלג" }).click();
   await page.getByRole("button", { name: "דלג" }).click();
-  await expect(page.getByRole("heading", { name: "צבעי הגליל בע״מ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
   await expect(page.getByText("הכל מאושר")).toBeVisible();
@@ -149,8 +149,8 @@ test("a refused queue save has no retry, and a dropped connection does", async (
 test("the category page shows the materials line, and can be empty", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/category");
-  await expect(page.getByRole("heading", { name: "חומרים" })).toBeVisible();
-  await expect(page.getByText("שיפוץ הרצל 12")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "מלט" })).toBeVisible();
+  await expect(page.getByText("בית הספר אלון")).toBeVisible();
   await expect(page.getByText("₪220")).toBeVisible();
   await expectNoOverflow(page);
   await page.getByRole("button", { name: "חזרה" }).click();
@@ -180,13 +180,13 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/filed");
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /מחצבות השרון/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /הובלות הגליל/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /מחצבת הדקל/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /שינוע הנמל/ })).toBeVisible();
   await expectNoOverflow(page);
-  await page.getByRole("link", { name: /מחצבות השרון/ }).click();
+  await page.getByRole("link", { name: /מחצבת הדקל/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/transaction\/t-sample-sand$/);
   await expect(page.getByText("₪220")).toBeVisible();
-  await expect(page.getByText("שיפוץ הרצל 12 · חומרים")).toBeVisible();
+  await expect(page.getByText("בית הספר אלון · מלט")).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.goto("/reviewer/filed?empty=1");
@@ -224,6 +224,11 @@ test("a tap on the toast does not close the sheet under it", async ({ page }) =>
   await toast(page, offline);
   const sheet = page.getByRole("dialog", { name: "שינוי שיוך" });
   await expect(sheet).toBeVisible();
+  const toastBox = await page.locator(".ui-toast").boundingBox();
+  const sheetBox = await sheet.boundingBox();
+  expect(toastBox).not.toBeNull();
+  expect(sheetBox).not.toBeNull();
+  if (toastBox && sheetBox) expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(sheetBox.y + 1);
   await toastAction(page, "ניסיון חוזר").click();
   await expect(sheet).toBeVisible();
   await toast(page, offline);
@@ -242,34 +247,42 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
 
   await page.goto("/reviewer/category?more=1");
   await expect(page.getByRole("button", { name: "עוד תנועות" })).toBeVisible();
-  await expect(page.getByText("₪220")).toBeVisible();
-  await expect(page.getByText("₪180")).toHaveCount(0);
+  await expect(page.getByText("₪140")).toBeVisible();
+  await expect(page.getByText("₪80")).toHaveCount(0);
   await page.getByRole("button", { name: "עוד תנועות" }).click();
-  await expect(page.getByText("₪180")).toBeVisible();
+  await expect(page.getByText("₪140")).toBeVisible();
+  await expect(page.getByText("₪80")).toBeVisible();
+  await expect(page.getByText("₪180")).toHaveCount(0);
   await expectNoOverflow(page);
 
   await page.goto("/reviewer/waiting");
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
   await expect(page.getByText("₪150")).toBeVisible();
   await expect(page.getByText("₪300")).toBeVisible();
+  await page.getByRole("link", { name: /ברגים/ }).click();
+  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
+  await expect(page.getByText("ברגי העמק בע״מ · ₪150")).toBeVisible();
+  await page.goto("/reviewer/waiting");
   await page.getByRole("link", { name: /צבע/ }).click();
-  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok$/);
+  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-paint$/);
+  await expect(page.getByText("צבעי הכרמל בע״מ · ₪300")).toBeVisible();
 
   await page.goto("/reviewer/project");
   await page.getByRole("link", { name: "צפייה" }).click();
   await expect(page).toHaveURL(/\/reviewer\/filed$/);
   await page.goto("/reviewer/project");
   await page.getByRole("link", { name: "שינוי" }).click();
-  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok$/);
+  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
+  await expect(page.getByText("ברגי העמק בע״מ · ₪150")).toBeVisible();
   await page.goto("/reviewer/project");
   await page.getByRole("button", { name: "דלג" }).click();
   await toast(page, "דילגנו על הפריט");
-  await expect(page.getByRole("heading", { name: "צבעי הגליל בע״מ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
   await expect(toastAction(page, "ביטול")).toBeVisible();
   await toastAction(page, "ביטול").click();
-  await expect(page.getByRole("heading", { name: "צבעי הגליל בע״מ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "צבעי הכרמל בע״מ" })).toBeVisible();
   await expectNoOverflow(page);
 });
 
