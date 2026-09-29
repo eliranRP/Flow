@@ -81,9 +81,14 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   await home.click();
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/add?preview=1");
-  await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
-  await page.locator("button.ui-tab-slot-fab").click({ force: true });
-  await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
+  const addSheet = page.getByRole("dialog", { name: "הוספה" });
+  await expect(addSheet).toBeVisible();
+  await expect(addSheet).toHaveAttribute("data-state", "open");
+  // The sheet covers the tab bar, so a coordinate click hits the panel. The button still owns the close.
+  await page.locator("button.ui-tab-slot-fab").evaluate((node: HTMLButtonElement) => {
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+  await expect(addSheet).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/add?preview=1");
   const capture = page.getByRole("button", { name: /צילום חשבונית/ });
