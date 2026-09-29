@@ -91,6 +91,33 @@ function blockedPreview(preview: HomePreview, tell: (message: string) => void): 
   return true;
 }
 
+async function saveNewProject(
+  name: string,
+  preview: HomePreview,
+  toast: { show: (toast: { tone?: "bad"; message: string }) => void },
+  remember: (project: ChangeChoice) => void,
+  invalidate: (keys: readonly string[]) => Promise<void>,
+): Promise<ChangeChoice> {
+  if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  try {
+    const saved = await supabase.rpc("upsert_project", { p_name: name, p_status: "active" });
+    assertNoError(saved);
+    if (typeof saved.data !== "string") throw new Error("supabase");
+    const created = { id: saved.data, name, status: "active" as const };
+    remember(created);
+    await invalidate(["dashboard"]);
+    toast.show({ message: "הפרויקט נשמר" });
+    return created;
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "preview") {
+      toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפרויקט." });
+    }
+    throw error;
+  }
+}
+
 export function OnboardingScreen() {
   const navigate = useNavigate();
   const preview = useHomePreview();
@@ -947,23 +974,9 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   });
 
   async function createProject(name: string): Promise<ChangeChoice> {
-    if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
-    const supabase = getSupabase();
-    if (!supabase) throw new Error("supabase");
-    try {
-      const saved = await supabase.rpc("upsert_project", { p_name: name, p_status: "active" });
-      assertNoError(saved);
-      if (typeof saved.data !== "string") throw new Error("supabase");
-      const created = { id: saved.data, name, status: "active" as const };
-      setExtraProjects((list) => [...list, created]);
-      await invalidate(["dashboard"]);
-      toast.show({ message: "הפרויקט נשמר" });
-      return created;
-    } catch (error) {
-      if (error instanceof Error && error.message === "preview") throw error;
-      toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפרויקט." });
-      throw error;
-    }
+    return saveNewProject(name, preview, toast, (project) => {
+      setExtraProjects((list) => [...list, project]);
+    }, invalidate);
   }
 
   if (formPhase.kind !== "ready") {
@@ -1378,26 +1391,9 @@ export function TransactionScreen({
           setChangeOpen(false);
           void navigate(`/transactions/${txn.id}/split${search}`);
         }}
-        onCreateProject={async (name) => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
-          const supabase = getSupabase();
-          if (!supabase) throw new Error("supabase");
-          try {
-            const saved = await supabase.rpc("upsert_project", { p_name: name, p_status: "active" });
-            assertNoError(saved);
-            if (typeof saved.data !== "string") throw new Error("supabase");
-            const created = { id: saved.data, name, status: "active" as const };
-            setExtraProjects((list) => [...list, created]);
-            await invalidate(["dashboard"]);
-            toast.show({ message: "הפרויקט נשמר" });
-            return created;
-          } catch (error) {
-            if (!(error instanceof Error) || error.message !== "preview") {
-              toast.show({ tone: "bad", message: "לא הצלחנו לשמור את הפרויקט." });
-            }
-            throw error;
-          }
-        }}
+        onCreateProject={(name) => saveNewProject(name, preview, toast, (project) => {
+          setExtraProjects((list) => [...list, project]);
+        }, invalidate)}
       />
       <Sheet open={menu} onOpenChange={setMenu} title="עוד">
         {txn.source === "manual" ? (

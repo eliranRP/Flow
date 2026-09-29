@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(22);
+select plan(24);
 
 do $users$
 begin
@@ -78,8 +78,8 @@ from r9 where label = 'company';
 
 select tests.authenticate_as('r9_a');
 select throws_ok(
-  $$select public.replace_sumit_connection(
-    '00000000-0000-0000-0000-000000000001'::uuid, 1, '\x01', '\x0201', '\x03', '\x0401', '1', '2'
+    $$select public.replace_sumit_connection(
+    '00000000-0000-0000-0000-000000000001'::uuid, 1, '\x01', '\x0201', '\x03', '\x0401', '1', '2', true
   )$$,
   '42501',
   null,
@@ -87,7 +87,7 @@ select throws_ok(
 );
 select function_privs_are(
   'public', 'replace_sumit_connection',
-  array['uuid', 'bigint', 'text', 'text', 'text', 'text', 'text', 'text'],
+  array['uuid', 'bigint', 'text', 'text', 'text', 'text', 'text', 'text', 'boolean'],
   'anon', array[]::text[],
   'anon cannot replace the SUMIT connection'
 );
@@ -102,7 +102,7 @@ $$;
 
 select lives_ok(
   format(
-    $$select public.replace_sumit_connection(%L::uuid, 100, '\x01', '\x0201', '\x03', '\x0401', '1', '2')$$,
+    $$select public.replace_sumit_connection(%L::uuid, 100, '\x01', '\x0201', '\x03', '\x0401', '1', '2', true)$$,
     (select id from r9 where label = 'company')
   ),
   'connecting the same SUMIT company resets the backoff'
@@ -144,6 +144,13 @@ select is(
   'changed',
   'the missing-category item closes'
 );
+select is(
+  (select count(*)::int from public.review_queue
+    where transaction_id = (select id from r9 where label = 'missing')
+      and reason = 'unallocated_shared' and status = 'open'),
+  1,
+  'an unsplit shared cost opens an unallocated item'
+);
 
 reset role;
 select is(
@@ -165,6 +172,13 @@ select is(
   (select status::text from public.review_queue where id = (select id from r9 where label = 'missing_review')),
   'open',
   'the missing-category item is open again'
+);
+select is(
+  (select count(*)::int from public.review_queue
+    where transaction_id = (select id from r9 where label = 'missing')
+      and reason = 'unallocated_shared' and status = 'open'),
+  0,
+  'undo removes the follow-up unallocated item'
 );
 
 select lives_ok(
@@ -196,7 +210,7 @@ $$;
 
 select lives_ok(
   format(
-    $$select public.replace_sumit_connection(%L::uuid, 200, '\x01', '\x0201', '\x03', '\x0401', '1', '2')$$,
+    $$select public.replace_sumit_connection(%L::uuid, 200, '\x01', '\x0201', '\x03', '\x0401', '1', '2', true)$$,
     (select id from r9 where label = 'company')
   ),
   'a new SUMIT company retires the previous ledger'
