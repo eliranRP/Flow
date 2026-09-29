@@ -1219,12 +1219,25 @@ a.ui-row,
 }
 
 .ui-toast button {
+  position: relative;
   margin-inline-start: auto;
   border: 0;
+  padding: 0;
   background: transparent;
   color: inherit;
   font-weight: 600;
   text-decoration: underline;
+}
+
+/* The label stays its text size. The hit target is at least 44×44, centred on it. */
+.ui-toast button::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, var(--touch-min));
+  height: var(--touch-min);
+  transform: translate(-50%, -50%);
 }
 
 .ui-toast button:active {

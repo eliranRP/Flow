@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { isTransientWriteError } from "../use-write";
+import { isTransientWriteError, type WriteFailure } from "../use-write";
 import { Button } from "./button";
 import { IconButton } from "./icon-button";
 import { BackIcon, CheckIcon, PlusIcon, SplitIcon } from "./icons";
@@ -22,8 +22,10 @@ export const CHANGE_SAVE_REFUSAL = "לא נשמר. בדקו את הפרטים ו
 /** The database refuses one project on a shared cost. Say where the split happens. */
 export const SHARED_SPLIT_FAILURE = "עלות משותפת מחולקת במסך החלוקה.";
 
-export function changeSaveFailure(error: Error): string | { message: string; retry: false } {
-  if (error.message.includes("shared costs are split")) return { message: SHARED_SPLIT_FAILURE, retry: false };
+export function changeSaveFailure(error: Error): WriteFailure {
+  if (error.message.includes("shared costs are split")) {
+    return { message: SHARED_SPLIT_FAILURE, retry: false, tone: "info", action: "לחלוקה" };
+  }
   if (isTransientWriteError(error)) return CHANGE_SAVE_FAILURE;
   return { message: CHANGE_SAVE_REFUSAL, retry: false };
 }

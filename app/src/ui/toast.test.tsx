@@ -281,6 +281,68 @@ describe("placeToast", () => {
     host.remove();
   });
 
+  it("keeps an action, including an info action, for five seconds", () => {
+    vi.useFakeTimers();
+    function Action() {
+      const toast = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            toast.show({
+              tone: "info",
+              message: "עלות משותפת מחולקת במסך החלוקה.",
+              action: "לחלוקה",
+              onAction: () => undefined,
+            });
+          }}
+        >
+          הצגה
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Action />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    act(() => {
+      vi.advanceTimersByTime(4_000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("עלות משותפת מחולקת במסך החלוקה.");
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(document.querySelector(".ui-toast")).toBeNull();
+  });
+
+  it("sits fully above a short sheet instead of across its top edge", () => {
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    const header = document.createElement("div");
+    header.className = "ui-sheet-head";
+    const close = document.createElement("button");
+    sheet.append(header, close);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    sheet.getBoundingClientRect = () => box(700, 300);
+    header.getBoundingClientRect = () => box(460, 40);
+    close.getBoundingClientRect = () => box(500, 44);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(host.style.top).toBe("344px");
+    const top = Number.parseFloat(host.style.top);
+    expect(top + 48).toBeLessThanOrEqual(400);
+    sheet.remove();
+    host.remove();
+  });
+
   it("moves below a control it would cover", () => {
     const header = document.createElement("header");
     header.className = "ui-page";

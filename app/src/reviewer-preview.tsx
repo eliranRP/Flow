@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls } from "@flow/shared";
-import { FiledTodayScreen, ReviewQueue, SplitScreen } from "./screens/flow-screens";
+import { FiledTodayScreen, ProjectCategoryScreen, ReviewEmpty, ReviewQueue, SplitScreen } from "./screens/flow-screens";
 import {
   reviewerBooks,
   reviewerCategories,
@@ -34,6 +34,8 @@ export function ReviewerPreview() {
   if (path.includes("/transaction/")) page = <ReviewerTransaction path={path} />;
   else if (path.endsWith("/review")) page = <ReviewerQueue />;
   else if (path.endsWith("/filed")) page = <ReviewerFiled />;
+  else if (path.endsWith("/category")) page = <ReviewerCategory />;
+  else if (path.endsWith("/project")) page = <ReviewerProject />;
   else if (path.endsWith("/save")) page = <ReviewerSave />;
   else if (path.endsWith("/split")) page = <ReviewerSplit />;
   return (
@@ -99,6 +101,10 @@ function ReviewerHome() {
         <Button full variant="secondary" to="/reviewer/review?save=offline">תור, בלי חיבור</Button>
         <Button full variant="secondary" to="/reviewer/filed">שויכו היום</Button>
         <Button full variant="secondary" to="/reviewer/filed?empty=1">שויכו היום, אין תנועות</Button>
+        <Button full variant="secondary" to="/reviewer/category">קטגוריה, חומרים</Button>
+        <Button full variant="secondary" to="/reviewer/category?empty=1">קטגוריה, אין תנועות</Button>
+        <Button full variant="secondary" to="/reviewer/project">תור של הפרויקט</Button>
+        <Button full variant="secondary" to="/reviewer/project?empty=1">תור של הפרויקט, אין פריטים</Button>
         <Button full variant="secondary" to="/reviewer/save?save=ok">שמירה שמצליחה</Button>
         <Button full variant="secondary" to="/reviewer/save?save=fail">שמירה שנדחית</Button>
         <Button full variant="secondary" to="/reviewer/save?save=offline">שמירה בלי חיבור</Button>
@@ -142,6 +148,45 @@ function ReviewerFiled() {
       sample={empty ? [] : reviewerFiled}
       backTo="/reviewer"
       rowHref={(row) => `/reviewer/transaction/${row.id}`}
+    />
+  );
+}
+
+function ReviewerCategory() {
+  const [params] = useSearchParams();
+  const empty = params.get("empty") === "1";
+  const sand = reviewerFiled.find((row) => row.category_name === "חומרים");
+  return (
+    <ProjectCategoryScreen
+      backTo="/reviewer"
+      sample={{
+        categoryName: "חומרים",
+        projectName: "שיפוץ הרצל 12",
+        rows: empty || sand == null ? [] : [{
+          id: sand.id,
+          description: sand.description,
+          doc_date: sand.doc_date,
+          amount_net: sand.amount_net,
+        }],
+      }}
+    />
+  );
+}
+
+function ReviewerProject() {
+  const [params] = useSearchParams();
+  if (params.get("empty") === "1") {
+    return <ReviewEmpty search="" filtered backTo="/reviewer" homeTo="/reviewer" homeLabel="חזרה לפרויקט" />;
+  }
+  return (
+    <ReviewQueue
+      rows={reviewerQueue.filter((row) => row.project_id != null)}
+      search=""
+      sample
+      sampleSave="ok"
+      backTo="/reviewer"
+      homeTo="/reviewer"
+      homeLabel="חזרה לפרויקט"
     />
   );
 }

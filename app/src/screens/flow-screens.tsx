@@ -787,22 +787,31 @@ export function ReviewScreen() {
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const phase = screenPhase(preview, review);
   if (projectFilter != null && preview === "off") {
+    const back = `/projects/${projectFilter}`;
     const waitingPhase = screenPhase(preview, waiting);
     if (waitingPhase.kind === "loading" || waitingPhase.kind === "error") {
-      return <ScreenState title="לאישור" phase={waitingPhase} onRetry={() => { void waiting.refetch(); }} />;
+      return <ScreenState title="לאישור" backTo={back} phase={waitingPhase} onRetry={() => { void waiting.refetch(); }} />;
     }
     const held = waiting.data ?? [];
-    if (held.length === 0) return <ReviewEmpty search={search} filtered />;
+    if (held.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
     if (held.every((row) => row.review_id != null)) {
       if (phase.kind !== "ready") {
-        return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} />;
+        return <ScreenState title="לאישור" backTo={back} phase={phase} onRetry={() => { void review.refetch(); }} />;
       }
       const ids = new Set(held.map((row) => row.review_id));
       const rows = (review.data ?? []).filter((row) => ids.has(row.id));
-      if (rows.length === 0) return <ReviewEmpty search={search} filtered />;
-      return <ReviewQueue rows={rows} search={search} />;
+      if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
+      return (
+        <ReviewQueue
+          rows={rows}
+          search={search}
+          backTo={back}
+          homeTo={back}
+          homeLabel="חזרה לפרויקט"
+        />
+      );
     }
-    return <ProjectWaitingList rows={held} search={search} />;
+    return <ProjectWaitingList rows={held} search={search} backTo={back} />;
   }
   const rows = review.data ?? [];
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
@@ -814,10 +823,10 @@ export function ReviewScreen() {
   return <ReviewQueue rows={rows} search={search} />;
 }
 
-function ProjectWaitingList({ rows, search }: { rows: ProjectWaitingRow[]; search: string }) {
+function ProjectWaitingList({ rows, search, backTo }: { rows: ProjectWaitingRow[]; search: string; backTo?: string }) {
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" />
+      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
       <List>
         {rows.map((row) => (
           <ListRow
@@ -1122,7 +1131,7 @@ async function reopenReview(
   }
 }
 
-function ReviewEmpty({
+export function ReviewEmpty({
   search,
   filtered = false,
   homeTo,
@@ -1140,7 +1149,7 @@ function ReviewEmpty({
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       <EmptyState
         icon={<ReviewIcon />}
-        title={filtered ? "אין פריטים לפרויקט הזה" : "הכל מאושר"}
+        title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
         body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
         action={<Button variant="pill" to={homeTo ?? `/${search}`}>{homeLabel ?? "לדף הבית"}</Button>}
       />
@@ -1160,7 +1169,7 @@ type CategorySample = {
   rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
 };
 
-export function ProjectCategoryScreen({ sample }: { sample?: CategorySample } = {}) {
+export function ProjectCategoryScreen({ sample, backTo: backOverride }: { sample?: CategorySample; backTo?: string } = {}) {
   const { projectId = "", categoryId = "" } = useParams();
   const search = usePreviewSearch();
   const preview = useHomePreview();
@@ -1179,7 +1188,7 @@ export function ProjectCategoryScreen({ sample }: { sample?: CategorySample } = 
   const rows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   return (
     <div>
-      <ScreenHeader title={name} subtitle={projectName} backTo={sample ? `/e2e/project-detail${search}` : back} />
+      <ScreenHeader title={name} subtitle={projectName} backTo={backOverride ?? (sample ? `/e2e/project-detail${search}` : back)} />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
@@ -1299,6 +1308,10 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
     failure: changeSaveFailure,
     success: "השיוך נשמר",
     keys: ["review", "dashboard"],
+    onSplit: () => {
+      if (!row?.transaction_id) return;
+      void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });
+    },
     onSuccess: () => {
       void navigate(`/review${search}`);
     },
@@ -1572,6 +1585,9 @@ export function TransactionScreen({
   });
   const reassign = useWrite({
     failure: changeSaveFailure,
+    onSplit: () => {
+      void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+    },
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
       setChangeSheet(false);
@@ -1604,6 +1620,9 @@ export function TransactionScreen({
   });
   const setCategory = useWrite({
     failure: changeSaveFailure,
+    onSplit: () => {
+      void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+    },
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
       setChangeSheet(false);
