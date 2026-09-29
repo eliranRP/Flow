@@ -61,3 +61,7 @@ On a shared cost with no allocations, the save button reads "שמירה" even wh
 A rejected key inside the connect sheet reads "החיבור נכשל. בדקו את המזהה ואת המפתח." Settings keeps its own sentence. `connectValidated` runs the `listfolders` read and calls the ledger write only after Status 0. The live check asserts Operations before equals after, and no longer pins 75.
 
 Backoff reads "SUMIT לא זמין כרגע." The auth screen says reconnect once: the red line is "החיבור ל-SUMIT נכשל.", the refresh hint is "המזהה או המפתח לא התקבלו" at full opacity, and the action stays "חיבור מחדש". The project loading bars use `var(--space-1)` for the 4px inset.
+
+## r17 addendum
+
+`reassign_undo` enables row level security and has no policies. The table stays revoked from anon and authenticated. `reassign_transaction`, `set_transaction_category`, and `undo_reassign` are security definer, so they keep writing it as the owner, who bypasses row level security. pgTAP checks that the table has row level security and that no ordinary table in `public` has it off.
