@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+Decision [0068](decisions/0068-review-round9.md) r17 addendum. `reassign_undo` enables row level security with no policies. The definer reassign and undo functions still write it.
+
 Decision [0068](decisions/0068-review-round9.md) r16 addendum. An unsplit shared cost saves as "שמירה", the owner cannot write the remembered SUMIT company id, a bad key in the connect sheet asks to check the id and the key, and the auth screen says reconnect only on "חיבור מחדש".
 
 Decision [0068](decisions/0068-review-round9.md) addendum. A rejected SUMIT key puts "צריך לחבר מחדש את SUMIT" on the refresh row, and "חיבור מחדש" stays in place. Backoff says "SUMIT לא זמין כרגע" and keeps "אפשר לנסות שוב ב-HH:MM".
