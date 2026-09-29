@@ -56,7 +56,9 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Project | confirm אישור | Calls `upsert_project` with the other status. | never | the confirm button | toast "הפרויקט סומן כהסתיים" or "הפרויקט חזר לפעיל" | toast "לא הצלחנו לעדכן את הפרויקט." | pass |
 | Project | אחרי חלק בהוצאות כלליות | Calls `set_after_overhead` for this project. | never | the switch stays on the chosen side until the write fails | the profit figure follows the switch | toast "לא הצלחנו לשמור את התצוגה.", switch returns | pass |
 | Project | כל הקטגוריות | Opens categories. | never | no | route `/settings/categories` | none | pass |
-| Project | תנועות אחרונות | Reveals the project's recent transactions. Category amount rows are not links. | never | no | the transaction rows appear | none | pass |
+| Project | a category row | Opens that category's transactions for this project. | a category with no id | no | route `/projects/:id/categories/:categoryId` | none | pass |
+| Project | ממתינה לאישור | Opens the review queue filtered to this project. | the project has no suggested expenses | no | route `/review?project=:id` | none | pass |
+| Project | תנועות אחרונות | Reveals the project's recent transactions. | never | no | the transaction rows appear | none | pass |
 | Project | a transaction row | Opens that transaction. | never | no | route `/transactions/:id` | none | pass |
 | Project, empty | צילום חשבונית | Opens the add sheet. The capture row there is disabled. | never | no | route `/add` | none | pass |
 | Review | צפייה | Opens today's auto-assigned list. | never, and only rendered when the count is above zero | no | route `/review/filed`, title "שויכו היום" | the shared error state on that list. ניסיון חוזר refetches. A preview error opens the empty list | pass |
@@ -77,7 +79,7 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Change sheet | פרויקט חדש | Opens the name field, then `upsert_project`, and selects it. | never | שמירה is busy | toast "הפרויקט נשמר", the new project is selected | toast "לא הצלחנו לשמור את הפרויקט." | pass |
 | Change sheet | פיצול בין פרויקטים | Opens Split for this transaction. From the transaction sheet this replaces the history entry. Without a transaction id, a toast explains that. | never | no | route `/transactions/:id/split`, or the toast | none | pass |
 | Change sheet | remember toggle | Includes `p_remember` on save. Expense only. | never | no | the switch moves | none | pass |
-| Change sheet | שמירה ואישור | Calls `resolve_review` with action `changed`. | missing project (expense) or category; the click toasts "בחרו פרויקט וקטגוריה." or "בחרו קטגוריה." | the button is busy | toast "השיוך נשמר", back to review | toast "לא נשמר – אין חיבור" with ניסיון חוזר. A shared cost refused as one project toasts "עלות משותפת מחולקת במסך החלוקה." | pass |
+| Change sheet | שמירה ואישור | Calls `resolve_review` with action `changed`. A shared cost skips that call. | missing project (expense) or category; the click toasts "בחרו פרויקט וקטגוריה." or "בחרו קטגוריה." | the button is busy | toast "השיוך נשמר", back to review | toast "לא נשמר – אין חיבור" with ניסיון חוזר when the failure is a network or server error. A shared cost toasts "עלות משותפת מחולקת במסך החלוקה." with לחלוקה, which opens Split, and offers no ניסיון חוזר. | pass |
 | Add | צילום חשבונית | Does not run. Capture is not built. | always. Hint says camera or PDF. Cursor not-allowed. | no | none | none | pass |
 | Add | הזנה ידנית | Does not run. Manual entry is not built. | always. Hint says it is only when needed. Cursor not-allowed. | no | none | none | pass |
 | Add | ביטול and ✕ | Close the sheet back to the screen that opened it. | never | no | the sheet is gone | none | pass |
@@ -92,7 +94,7 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Transaction | category row | Opens the change sheet. | never | no | the change sheet | none | pass |
 | Transaction | חשבונית ותשלום | Expands the VAT line. | never | no | the VAT line is visible | none | pass |
 | Transaction | פיצול בין פרויקטים | Opens Split. | never | no | route `/transactions/:id/split` | none | pass |
-| Transaction change | שמירה / שמירה ואישור | `reassign_transaction`, or `set_transaction_category` when the row is shared. A closed row says שמירה. | missing project or category; the click toasts "בחרו פרויקט וקטגוריה." or "בחרו קטגוריה." | the button is busy | toast "השיוך נשמר", optional ביטול runs `undo_reassign` | toast "לא נשמר – אין חיבור". A shared cost refused as one project toasts "עלות משותפת מחולקת במסך החלוקה." | pass |
+| Transaction change | שמירה / שמירה ואישור | `reassign_transaction`, or `set_transaction_category` when the row is shared. A closed row says שמירה. | missing project or category; the click toasts "בחרו פרויקט וקטגוריה." or "בחרו קטגוריה." | the button is busy | toast "השיוך נשמר", optional ביטול runs `undo_reassign` | toast "לא נשמר – אין חיבור" with ניסיון חוזר when the failure is a network or server error. A shared cost refused as one project toasts "עלות משותפת מחולקת במסך החלוקה." with no ניסיון חוזר. | pass |
 | Split | ✕ | Closes to the transaction. | while saving | no | the transaction | none | pass |
 | Split | שווה בין כל הפרויקטים | Selects an even split and enables שמירה. | never | no | the summary is the even sentence, שמירה enabled | none | pass |
 | Split | שווה בין פרויקטים שאבחר | Opens the checklist. שמירה enables at two or more. | never | no | the checklist | none | pass |

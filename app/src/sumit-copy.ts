@@ -6,7 +6,7 @@ const SUMIT_ERRORS: Record<string, string> = {
   "SUMIT is not connected": "SUMIT לא מחובר.",
   sync_failed: "הרענון נכשל. נסו שוב.",
   sumit_rejected: "SUMIT לא זמין כרגע.",
-  sumit_auth: "החיבור ל-SUMIT נכשל.",
+  sumit_auth: "החיבור ל־SUMIT נכשל.",
   sync_page_cap: "יש יותר מדי מסמכים לרענון אחד. פנו לתמיכה.",
   sync_skipped: "הרענון דילג. אפשר שוב בעוד דקה.",
   sync_sweep_empty: "הרענון הגיע בלי מסמכים, אז הספרים לא נמחקו.",

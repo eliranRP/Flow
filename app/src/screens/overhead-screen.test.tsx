@@ -70,8 +70,8 @@ describe("project category breakdown", () => {
       pending_count: 1,
       pending_agorot: 5_000n,
     });
-    expect(screen.getByText("הובלה")).toBeInTheDocument();
-    expect(screen.getByText("1 ממתינה לאישור")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /הובלה/ })).toHaveAttribute("href", "/projects/a/categories/h");
+    expect(screen.getByRole("link", { name: /1 ממתינה לאישור/ })).toHaveAttribute("href", "/review?project=a");
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
   });
 

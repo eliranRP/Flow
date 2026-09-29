@@ -82,7 +82,7 @@ import { IconButton } from "../ui/icon-button";
 import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
-import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, type ChangeChoice } from "../ui/change-sheet";
+import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, SHARED_SPLIT_FAILURE, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
 import { MoneyField, PercentField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
@@ -107,14 +107,22 @@ function blockedPreview(preview: HomePreview, tell: (message: string) => void): 
   return true;
 }
 
+function useBlockedPreview(): (mode?: HomePreview) => boolean {
+  const preview = useHomePreview();
+  const toast = useToast();
+  return (mode?: HomePreview) => blockedPreview(mode ?? preview, (message) => {
+    toast.show({ tone: "info", message });
+  });
+}
+
 async function saveNewProject(
   name: string,
-  preview: HomePreview,
+  blocked: () => boolean,
   toast: { show: (toast: { tone?: "bad" | "info"; message: string }) => void },
   remember: (project: ChangeChoice) => void,
   invalidate: (keys: readonly string[]) => Promise<void>,
 ): Promise<ChangeChoice> {
-  if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) throw new Error("preview");
+  if (blocked()) throw new Error("preview");
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   try {
@@ -139,6 +147,7 @@ export function OnboardingScreen() {
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const save = useWrite({
@@ -156,7 +165,7 @@ export function OnboardingScreen() {
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+    if (blocked()) return;
     save.mutate();
   }
 
@@ -217,7 +226,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <EmptyState
         icon={<ProjectsIcon />}
         title="עוד אין פרויקטים"
-        body="פרויקטים מגיעים מ-SUMIT, ואפשר גם לפתוח אחד כאן."
+        body="פרויקטים מגיעים מ־SUMIT, ואפשר גם לפתוח אחד כאן."
         action={<Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
       />
       {sheet}
@@ -328,6 +337,7 @@ function ProjectsBody({
 function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: string }) {
   const preview = useHomePreview();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
   const save = useWrite({
@@ -350,7 +360,7 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+    if (blocked()) return;
     save.mutate();
   }
 
@@ -415,8 +425,14 @@ function pendingApprovalTitle(count: number): string {
   return count === 1 ? "1 ממתינה לאישור" : `${String(count)} ממתינות לאישור`;
 }
 
+function withParam(search: string, key: string, value: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.set(key, value);
+  return `?${params.toString()}`;
+}
+
 /** Confirmed categories, then the amount still waiting, so the lines match the project's expenses. */
-function ProjectCategories({ project }: { project: NonNullable<ProjectDetail> }) {
+function ProjectCategories({ project, search }: { project: NonNullable<ProjectDetail>; search: string }) {
   const pending = project.pending_count ?? 0;
   const waiting = pending > 0;
   if (project.categories.length === 0 && !waiting) {
@@ -431,6 +447,9 @@ function ProjectCategories({ project }: { project: NonNullable<ProjectDetail> })
           title={category.name ?? "בלי קטגוריה"}
           agorot={absAgorot(category.amount_agorot)}
           loss={false}
+          chevron={category.id != null}
+          href={category.id == null ? undefined : `/projects/${project.id}/categories/${category.id}${search}`}
+          state={{ project }}
         />
       ))}
       {waiting ? (
@@ -439,6 +458,8 @@ function ProjectCategories({ project }: { project: NonNullable<ProjectDetail> })
           title={pendingApprovalTitle(pending)}
           agorot={absAgorot(project.pending_agorot ?? 0n)}
           loss={false}
+          chevron
+          href={`/review${withParam(search, "project", project.id)}`}
         />
       ) : null}
     </List>
@@ -451,6 +472,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
   const detail = useProjectQuery(sample ? "" : projectId);
   const preview = useHomePreview();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const [moves, setMoves] = useState(false);
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
@@ -528,7 +550,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
               setOverheadOn(checked);
               return;
             }
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+            if (blocked()) return;
             const previous = overheadOn;
             setOverheadOn(checked);
             wantedOverhead.current = checked;
@@ -542,7 +564,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
         </div>
       ) : null}
       <SectionHead title="הוצאות לפי קטגוריה" />
-      <ProjectCategories project={project} />
+      <ProjectCategories project={project} search={search} />
       <p className="ui-page-pad ui-page-title-row">
         <TextLink to={`/settings/categories${search}`} tone="quiet">כל הקטגוריות</TextLink>
         <TextLink
@@ -623,6 +645,7 @@ function ProjectMenu({
 }) {
   const preview = useHomePreview();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const save = useWrite({
@@ -673,7 +696,7 @@ function ProjectMenu({
         destructive={!finished}
         busy={save.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+          if (blocked()) return;
           save.mutate();
         }}
       />
@@ -735,13 +758,18 @@ export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) 
 export function ReviewScreen() {
   const preview = useHomePreview();
   const search = usePreviewSearch();
+  const [params] = useSearchParams();
+  const projectFilter = params.get("project");
   const review = useReviewQuery();
   const phase = screenPhase(preview, review);
-  if (phase.kind === "empty") return <ReviewEmpty search={search} />;
+  const rows = (review.data ?? []).filter((row) => projectFilter == null || row.project_id === projectFilter);
+  if (phase.kind === "empty" || (phase.kind === "ready" && projectFilter != null && rows.length === 0)) {
+    return <ReviewEmpty search={search} filtered={projectFilter != null} />;
+  }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} />;
   }
-  return <ReviewQueue rows={review.data ?? []} search={search} />;
+  return <ReviewQueue rows={rows} search={search} />;
 }
 
 export function ReviewQueue({
@@ -756,6 +784,7 @@ export function ReviewQueue({
   const preview = useHomePreview();
   const navigate = useNavigate();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
@@ -889,7 +918,7 @@ export function ReviewQueue({
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (!approvable || !row || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "info", message }); })) return;
+            if (!approvable || !row || blocked(sample ? "empty" : preview)) return;
             if (row.reason === "unallocated_shared") {
               if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
               return;
@@ -907,7 +936,7 @@ export function ReviewQueue({
             busy={skip.isPending}
             disabled={leaving}
             onClick={() => {
-              if (leaving || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "info", message }); })) return;
+              if (leaving || blocked(sample ? "empty" : preview)) return;
               skip.mutate();
             }}
           >
@@ -979,16 +1008,58 @@ async function reopenReview(
   }
 }
 
-function ReviewEmpty({ search }: { search: string }) {
+function ReviewEmpty({ search, filtered = false }: { search: string; filtered?: boolean }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
       <EmptyState
         icon={<ReviewIcon />}
-        title="הכל מאושר"
-        body="אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."
+        title={filtered ? "אין פריטים לפרויקט הזה" : "הכל מאושר"}
+        body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
         action={<Button variant="pill" to={`/${search}`}>לדף הבית</Button>}
       />
+    </div>
+  );
+}
+
+export function ProjectCategoryScreen() {
+  const { projectId = "", categoryId = "" } = useParams();
+  const location = useLocation();
+  const search = usePreviewSearch();
+  const preview = useHomePreview();
+  const carried = (location.state as { project?: NonNullable<ProjectDetail> } | null)?.project;
+  const detail = useProjectQuery(carried?.id === projectId ? "" : projectId);
+  const phase = carried?.id === projectId ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
+  const back = `/projects/${projectId}${search}`;
+  if (phase.kind === "loading" || phase.kind === "error") {
+    return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void detail.refetch(); }} />;
+  }
+  const project = carried?.id === projectId ? carried : detail.data;
+  if (!project) return <ScreenHeader title="קטגוריה" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
+  const category = project.categories.find((row) => row.id === categoryId);
+  const name = category?.name ?? "קטגוריה";
+  const rows = project.transactions.filter((txn) => txn.category === category?.name);
+  return (
+    <div>
+      <ScreenHeader title={name} subtitle={project.name} backTo={back} />
+      {rows.length === 0 ? (
+        <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
+      ) : (
+        <List>
+          {rows.map((txn) => (
+            <ListRow
+              key={txn.id}
+              variant="transaction"
+              title={txn.description}
+              hint={formatDayMonth(txn.doc_date)}
+              agorot={txn.amount_net}
+              sign={txn.direction === "income" ? "in" : "out"}
+              source="invoice"
+              href={`/transactions/${txn.id}${search}`}
+            />
+          ))}
+        </List>
+      )}
     </div>
   );
 }
@@ -1018,6 +1089,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const preview = useHomePreview();
   const navigate = useNavigate();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
@@ -1093,7 +1165,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   });
 
   async function createProject(name: string): Promise<ChangeChoice> {
-    return saveNewProject(name, preview, toast, (project) => {
+    return saveNewProject(name, blocked, toast, (project) => {
       setExtraProjects((list) => [...list, project]);
     }, invalidate);
   }
@@ -1127,7 +1199,19 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       loading={sample?.loading}
       onSave={() => {
         if (sample) return;
-        if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+        if (blocked()) return;
+        if (row?.reason === "unallocated_shared" && row.transaction_id) {
+          const transactionId = row.transaction_id;
+          toast.show({
+            tone: "info",
+            message: SHARED_SPLIT_FAILURE,
+            action: "לחלוקה",
+            onAction: () => {
+              void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+            },
+          });
+          return;
+        }
         if (income ? categoryId === "" : projectId === "" || categoryId === "") {
           toast.show({ tone: "bad", message: income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
           return;
@@ -1247,7 +1331,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
         }}
         title="סימון כשולם"
       >
-        <p className="t-label">השורה תצא מהרשימה כש־SUMIT יראה את החשבונית כשולמה בסנכרון הבא. Flow לא מסמן תשלום ב-SUMIT.</p>
+        <p className="t-label">השורה תצא מהרשימה כש־SUMIT יראה את החשבונית כשולמה בסנכרון הבא. Flow לא מסמן תשלום ב־SUMIT.</p>
         <Button
           onClick={() => {
             if (marking) setHidden((current) => [...current, marking.id]);
@@ -1287,6 +1371,7 @@ export function TransactionScreen({
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -1492,7 +1577,7 @@ export function TransactionScreen({
         saving={splitRow ? setCategory.isPending : reassign.isPending}
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
         onSave={() => {
-          if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+          if (!sample && blocked()) return;
           if (splitRow) {
             if (categoryId === "") {
               toast.show({ tone: "bad", message: "בחרו קטגוריה." });
@@ -1511,7 +1596,7 @@ export function TransactionScreen({
           setChangeOpen(false);
           void navigate(`/transactions/${txn.id}/split${search}`, { replace: true });
         }}
-        onCreateProject={(name) => saveNewProject(name, preview, toast, (project) => {
+        onCreateProject={(name) => saveNewProject(name, blocked, toast, (project) => {
           setExtraProjects((list) => [...list, project]);
         }, invalidate)}
       />
@@ -1519,7 +1604,7 @@ export function TransactionScreen({
         {txn.source === "manual" ? (
           <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
         ) : (
-          <p className="t-hint">תנועה מ-SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
+          <p className="t-hint">תנועה מ־SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
         )}
       </Sheet>
       <ConfirmSheet
@@ -1532,7 +1617,7 @@ export function TransactionScreen({
         destructive
         busy={remove.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+          if (blocked()) return;
           remove.mutate();
         }}
       />
@@ -1593,6 +1678,7 @@ export function SplitScreen({
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const goBack = useGoBack();
   const dashboard = useDashboardQuery(sampleProjects == null);
   const txn = useTransactionQuery(sampleProjects ? "" : transactionId);
@@ -1741,7 +1827,7 @@ export function SplitScreen({
           return;
         }
         if (sampleProjects) return;
-        if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+        if (blocked()) return;
         save.mutate();
       }}
     >
@@ -1893,6 +1979,7 @@ export function SettingsScreen({
   const search = usePreviewSearch();
   const { session } = useAuth();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
@@ -2047,7 +2134,7 @@ export function SettingsScreen({
             disabled={refreshHeld}
             onClick={() => {
               if (refreshHeld) return;
-              if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+              if (blocked()) return;
               refresh.mutate();
             }}
           />
@@ -2067,7 +2154,7 @@ export function SettingsScreen({
           className="ui-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+            if (blocked()) return;
             connect.mutate();
           }}
         >
@@ -2085,7 +2172,7 @@ export function SettingsScreen({
         destructive
         busy={disconnect.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+          if (blocked()) return;
           disconnect.mutate();
         }}
       />
@@ -2097,7 +2184,7 @@ export function SettingsScreen({
             icon={<LogoutIcon />}
             busy={signOut.isPending}
             onClick={() => {
-              if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+              if (blocked()) return;
               signOut.mutate();
             }}
           />
@@ -2126,7 +2213,7 @@ export function SettingsScreen({
               setOverheadOn(checked);
               return;
             }
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+            if (blocked()) return;
             const previous = overheadOn;
             setOverheadOn(checked);
             wantedOverhead.current = checked;
@@ -2199,6 +2286,7 @@ export function CategoriesScreen({
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const toast = useToast();
+  const blocked = useBlockedPreview();
   const categories = useCategoriesQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
   const rows: Array<CategoryRow & { count?: number }> = sample ?? categories.data ?? [];
@@ -2399,7 +2487,7 @@ export function CategoriesScreen({
           <Button
             busy={createCategory.isPending}
             onClick={() => {
-              if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+              if (blocked()) return;
               createCategory.mutate();
             }}
           >
@@ -2419,7 +2507,7 @@ export function CategoriesScreen({
         destructive={hideTarget?.hidden !== true}
         busy={hide.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+          if (blocked()) return;
           hide.mutate();
         }}
       />
@@ -2433,7 +2521,7 @@ export function CategoriesScreen({
         destructive
         busy={merge.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
+          if (blocked()) return;
           merge.mutate();
         }}
       />

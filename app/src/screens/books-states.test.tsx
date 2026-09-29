@@ -202,7 +202,7 @@ describe("rejected writes", () => {
           error: null,
         });
       }
-      if (name === "resolve_review") return Promise.resolve({ data: null, error: { message: "no" } });
+      if (name === "resolve_review") return Promise.resolve({ data: null, error: { message: "Failed to fetch" } });
       return Promise.resolve({ data: [], error: null });
     };
     renderAt("/review");
@@ -311,7 +311,9 @@ describe("rejected writes", () => {
   });
 
   it("says a shared cost is split when one project is refused", async () => {
+    const calls: string[] = [];
     rpc.impl = (name) => {
+      calls.push(name);
       if (name === "get_dashboard") {
         return Promise.resolve({
           data: {
@@ -371,6 +373,10 @@ describe("rejected writes", () => {
     fireEvent.click(await screen.findByRole("button", { name: "שמירה ואישור" }));
     expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
     expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(calls).not.toContain("resolve_review");
+    fireEvent.click(screen.getByRole("button", { name: "לחלוקה", hidden: true }));
+    expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
   });
 
   it("says a project expense is missing a category", async () => {

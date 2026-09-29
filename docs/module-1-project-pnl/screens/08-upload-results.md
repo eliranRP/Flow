@@ -39,7 +39,7 @@ Title `דוח בנק הועלה`. File line: the real file name, then the min an
 | Matched | `{n} הותאמו לחשבוניות קיימות` | Unique invoice links. Auto-approved. Subtitle `ספק + סכום + תאריך תואמים` is replaced in the product by `הותאמו ואושרו`, because a date is not required for a unique amount match. |
 | Rules | `{n} סווגו לפי כללים שלמדנו` | Auto-approved by rule. Subtitle `ספקים שאישרת בעבר`. |
 | Transfers | `{n} העברות בין חשבונות שלך` | Removed. Subtitle `הוסרו – לא נספרות ברווח`. Dimmed. |
-| Review | `{n} ממתינות לאישור` | Suggested. Emphasized. Subtitle `ה-AI הציע שיוך – צריך את האישור שלך`. |
+| Review | `{n} ממתינות לאישור` | Suggested. Emphasized. Subtitle `ה־AI הציע שיוך – צריך את האישור שלך`. |
 | Already imported | `{n} כבר היו במערכת` | Overlap skips. Shown only when `n` > 0. |
 | Unpaid | `{n} חשבוניות עדיין לא שולמו – לא נספרות ברווח` | Documents, not rows from this file. Company-wide unpaid count, not only this file. |
 | Primary | `לאשר {n} פריטים` | |

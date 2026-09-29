@@ -31,6 +31,7 @@ import {
   ReviewQueue,
   OnboardingScreen,
   FiledTodayScreen,
+  ProjectCategoryScreen,
   ProjectDetailScreen,
   ProjectsScreen,
   ReviewScreen,
@@ -134,6 +135,7 @@ function AppRoutes() {
               </Route>
               <Route path="projects" element={<ProjectsScreen />} />
               <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
+              <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
               <Route element={<ReviewWithSheet />}>
                 <Route path="review" element={null} />
                 <Route path="review/change" element={<ChangeForm />} />
@@ -512,6 +514,8 @@ function DevProjectDetail() {
         profit_after_overhead_agorot: 600n,
         overhead_weighted: true,
         categories: [{ id: "c1", name: "חומרים", amount_agorot: 400n }],
+        pending_count: 1,
+        pending_agorot: 200n,
         transactions: [{
           id: "t1",
           description: "מלט",

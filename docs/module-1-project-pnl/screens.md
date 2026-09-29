@@ -317,7 +317,7 @@ Confirm what Flow did not auto-approve. One card at a time. Rows that already ma
 
 ### Main elements
 
-- Title `לאישור`, subtitle `מה שה-AI לא היה בטוח בו`.
+- Title `לאישור`, subtitle `מה שה־AI לא היה בטוח בו`.
 - Strip `12 אושרו אוטומטית` with `הצג`, separated from the queue by a light rule.
 - Position pill `3 מתוך 7` and a seven-segment progress bar with three segments filled.
 - One card:
@@ -362,7 +362,7 @@ The first review queue: one card, plus a dashed bulk action for high-confidence 
 
 ### Main elements
 
-- Title `לאישור`, subtitle `מה שה-AI לא היה בטוח בו`.
+- Title `לאישור`, subtitle `מה שה־AI לא היה בטוח בו`.
 - Position pill `3 מתוך 7` and a seven-segment progress bar with three segments filled.
 - The same invoice card as v2: `חומרי בניין השרון בע״מ`, `21/09/2026`, ₪8,500 net, VAT ₪1,530, chips `וילה רעננה` 92% and `חומרים` 95%.
 - Buttons `אישור` and `שינוי`, caption `אחרי שינוי – נזכור את הבחירה לספק הזה`.
@@ -397,7 +397,7 @@ The only way to bring new data in. The center `+` opens this sheet on top of wha
 
 - Scrim over the screen behind.
 - Sheet title `הוספה`.
-- Subtitle `ה-AI ישייך לפרויקט ולקטגוריה – אתה רק מאשר`.
+- Subtitle `ה־AI ישייך לפרויקט ולקטגוריה – אתה רק מאשר`.
 - Three large rows:
   - `צלם חשבונית` — `מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך`
   - `העלה דוח בנק/אשראי` — `קובץ Excel / CSV · התאמה אוטומטית`
@@ -577,7 +577,7 @@ Show what a Bank Hapoalim file became. High-confidence rows are already approved
 - Summary card: `42` and `שורות נקלטו`, plus a stacked bar.
 - Collapsed group `33 אושרו אוטומטית` with `הצג`. The caption under it is `18 הותאמו לחשבוניות · 15 לפי כללים`.
 - Dimmed row: `2` `העברות בין חשבונות שלך` — `הוסרו – לא נספרות ברווח`.
-- Emphasized row: `7` `ממתינות לאישור` — `ה-AI הציע שיוך – צריך את האישור שלך`.
+- Emphasized row: `7` `ממתינות לאישור` — `ה־AI הציע שיוך – צריך את האישור שלך`.
 - Note: `3 חשבוניות עדיין לא שולמו – לא נספרות ברווח`.
 - Primary button `לאשר 7 פריטים`. There is no secondary approve button.
 - Link `הצג את כל 42 השורות`.
@@ -857,7 +857,7 @@ Five phones on one board.
 - `רק מספר טלפון – בלי סיסמה.`
 - Field `מספר טלפון`, example `050-123-4567`, left to right.
 - Button `שלחו לי קוד`, drawn dimmed because the code step is already open.
-- `הזינו את הקוד שקיבלתם ב-SMS`, sent to `050-123-4567`.
+- `הזינו את הקוד שקיבלתם ב־SMS`, sent to `050-123-4567`.
 - Six code boxes. The example has `4 8 2 7` and a cursor in the fifth box.
 - `שליחה מחדש בעוד 0:42`.
 - A numeric keypad.
@@ -1317,14 +1317,14 @@ The owner's screen for company details, the lists they edit elsewhere, and the f
 Title `הגדרות`. Subtitle is the business name, example `א.ב. בנייה ושיפוצים בע״מ`. Bottom nav with `הגדרות` active.
 
 - **Company details** (`פרטי חברה`). `שם העסק`, company number `ח.פ` `51-234567-8`, and type `חברה בע״מ`.
-- **Phone sign-in** (`כניסה`). `טלפון` `050-123-4567 · קוד ב-SMS`.
+- **Phone sign-in** (`כניסה`). `טלפון` `050-123-4567 · קוד ב־SMS`.
 - **Bank Hapoalim** (`בנק הפועלים`). Status `מחובר`, example account `••4521`, last statement `דוח אחרון 30/09/2026`, and `העלה דוח`.
 - **Links.** `קטגוריות` and `פרויקטים`, each with a chevron.
 - **Recurring split rules** (`כללי פיצול`). One example row: `חומרי בניין השרון`, method `לפי הכנסה`, buttons `עריכה` and `מחיקה`.
 - **The two notifications** (`התראות`), both drawn on. `סיכום שבועי` · `יום ראשון · 08:00`. `תזכורת לאישור` · `18:00 · רק כשיש פריטים`.
 - **Auto-approve** (`אישור אוטומטי`), drawn on. Subline `חשבונית יחידה או כלל קיים`.
 - **After-overhead default** (`רווח אחרי חלק מהתקורה`), drawn off. Subline `כבוי כברירת מחדל`. This default is decided ([0022](../decisions/0022-after-overhead-starts-off.md)).
-- **Data export** (`נתונים`). `ייצוא לאקסל` and `ייצוא ל-CSV`.
+- **Data export** (`נתונים`). `ייצוא לאקסל` and `ייצוא ל־CSV`.
 - **Log out.** `התנתקות`.
 - **Version line.** `Flow · 0.1.0`. Example text, not a versioning rule.
 
@@ -1338,7 +1338,7 @@ Title `הגדרות`. Subtitle is the business name, example `א.ב. בנייה 
 - The two notification switches are drawn on. [0018](../decisions/0018-two-notifications.md) defines the two sends and did not add a settings screen for them. Until this image is approved, those sends stay as 0018 describes, and these switches are not a change to that decision.
 - `אישור אוטומטי` is drawn on, which matches what the product does today. [0011](../decisions/0011-auto-approve-high-confidence.md) rejected a switch to turn auto-approve off. Until this image is approved, that control is not built.
 - `רווח אחרי חלק מהתקורה` starts off. It is the same preference as the switch on Home and the project screen ([0022](../decisions/0022-after-overhead-starts-off.md)).
-- `ייצוא לאקסל` downloads the counting lines. `ייצוא ל-CSV` is the same rows in CSV. The column list is the one in the [Settings draft](settings.md). Hashavshevet stays out of scope.
+- `ייצוא לאקסל` downloads the counting lines. `ייצוא ל־CSV` is the same rows in CSV. The column list is the one in the [Settings draft](settings.md). Hashavshevet stays out of scope.
 - `התנתקות` ends the session and returns to the SMS sign-in.
 
 ### States

@@ -11,6 +11,7 @@ type Common = {
   eyebrow?: string;
   hint?: ReactNode;
   href?: string;
+  state?: unknown;
   action?: ReactNode;
   /** The action sits under the row, on the end side. */
   actionBelow?: boolean;
@@ -124,7 +125,7 @@ export function ListRow(props: ListRowProps) {
 
   const className = props.variant === "project" ? "ui-row ui-row-project ui-hit" : "ui-row ui-hit";
   const row = props.href ? (
-    <Link to={props.href} className={className}>
+    <Link to={props.href} state={props.state} className={className}>
       {body}
     </Link>
   ) : (

@@ -60,7 +60,7 @@ On a shared cost with no allocations, the save button reads "שמירה" even wh
 
 A rejected key inside the connect sheet reads "החיבור נכשל. בדקו את המזהה ואת המפתח." Settings keeps its own sentence. `connectValidated` runs the `listfolders` read and calls the ledger write only after Status 0. The live check asserts Operations before equals after, and no longer pins 75.
 
-Backoff reads "SUMIT לא זמין כרגע." The auth screen says reconnect once: the red line is "החיבור ל-SUMIT נכשל.", the refresh hint is "המזהה או המפתח לא התקבלו" at full opacity, and the action stays "חיבור מחדש". The project loading bars use `var(--space-1)` for the 4px inset.
+Backoff reads "SUMIT לא זמין כרגע." The auth screen says reconnect once: the red line is "החיבור ל־SUMIT נכשל.", the refresh hint is "המזהה או המפתח לא התקבלו" at full opacity, and the action stays "חיבור מחדש". The project loading bars use `var(--space-1)` for the 4px inset.
 
 ## r17 addendum
 

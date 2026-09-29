@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
           const message = error instanceof Error ? error.message : "sync failed";
           if (message !== "sumit_rejected" && message !== "sumit_auth") {
             const code = message === "sync_page_cap" ? "sync_page_cap" : "sync_failed";
-            await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", row.company_id);
+            await noteSyncFailure(admin, row.company_id, code);
           }
           console.error("sumit-sync cron", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]"));
         }
@@ -155,9 +155,17 @@ async function syncCompany(
       const noted = await admin.rpc("note_sumit_rejection", { p_company: companyId, p_code: code });
       if (noted.error) throw new Error("sync_failed");
     } else {
-      await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", companyId);
+      await noteSyncFailure(admin, companyId, code);
     }
     throw new Error(code);
+  }
+}
+
+/** Wait 15 minutes after sync_failed or sync_page_cap so a stuck page cannot fill the drain. */
+async function noteSyncFailure(admin: SupabaseClient, companyId: string, code: string): Promise<void> {
+  const noted = await admin.rpc("note_sync_failure", { p_company: companyId, p_code: code });
+  if (noted.error) {
+    await admin.from("sumit_connections").update({ last_error: code }).eq("company_id", companyId);
   }
 }
 

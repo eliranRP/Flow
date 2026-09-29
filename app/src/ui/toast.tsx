@@ -34,37 +34,87 @@ function toastMs(input: ToastInput): number {
   return OK_MS;
 }
 
-const TOAST_GAP = 8;
+function cssPx(name: string): number {
+  const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+  return Number.isFinite(value) ? value : 0;
+}
 
-/** Sit just under the page or sheet header, inside the viewport, and clear of a control. */
-export function placeToast(layer: HTMLElement): void {
-  const toast = layer.querySelector(".ui-toast");
-  const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
+/** The open sheet, or the page header, and the spacing tokens that sit the toast under it. */
+export function toastAnchor(): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
   const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
   const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
     ?? document.querySelector("header.ui-page, header.ui-band");
-  const safe = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--safe-top")) || 0;
+  return { sheet, anchor, gap: cssPx("--space-2"), inset: cssPx("--space-4") };
+}
+
+type ToastBox = { top: number; bottom: number };
+
+function toastControls(layer: HTMLElement, sheet: Element | null): ToastBox[] {
+  const boxes: ToastBox[] = [];
+  for (const control of document.querySelectorAll("button, a[href], input, textarea, select")) {
+    if (!(control instanceof HTMLElement) || layer.contains(control)) continue;
+    if (sheet instanceof Element && !sheet.contains(control)) continue;
+    const rect = control.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+    boxes.push({ top: rect.top, bottom: rect.bottom });
+  }
+  boxes.sort((left, right) => left.top - right.top);
+  return boxes;
+}
+
+function toastHits(top: number, height: number, boxes: ToastBox[]): boolean {
+  const bottom = top + height;
+  return boxes.some((box) => box.top < bottom && box.bottom > top);
+}
+
+/** Sit just under the page or sheet header, clear of every control. Shrinks into a free gap when the full toast does not fit. */
+export function placeToast(layer: HTMLElement): void {
+  const toast = layer.querySelector(".ui-toast");
+  if (toast instanceof HTMLElement) {
+    toast.style.maxHeight = "";
+    toast.style.overflow = "";
+  }
+  const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
+  const { sheet, anchor, gap, inset } = toastAnchor();
+  const safe = cssPx("--safe-top");
   const measured = anchor instanceof HTMLElement
-    ? anchor.getBoundingClientRect().bottom + TOAST_GAP
-    : safe + 16;
-  const limit = window.innerHeight - height - TOAST_GAP;
-  let top = Math.min(Math.max(safe, measured), Math.max(safe, limit));
-  const settled = measured <= limit;
-  if (settled && toast instanceof HTMLElement && height > 0) {
-    const controls = document.querySelectorAll("button, a[href], input, textarea");
-    for (const control of controls) {
-      if (!(control instanceof HTMLElement) || layer.contains(control)) continue;
-      if (sheet instanceof Element && !sheet.contains(control)) continue;
-      const rect = control.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) continue;
-      const covers = rect.top < top + height && rect.bottom > top;
-      if (!covers) continue;
-      const below = rect.bottom + TOAST_GAP;
-      if (below + height <= window.innerHeight - TOAST_GAP) top = below;
-      break;
+    ? anchor.getBoundingClientRect().bottom + gap
+    : safe + inset;
+  const floor = window.innerHeight - gap;
+  const boxes = toastControls(layer, sheet);
+  const candidates = [measured];
+  for (const box of boxes) candidates.push(box.top - gap - height);
+  for (const box of boxes) candidates.push(box.bottom + gap);
+  candidates.push(safe);
+  if (height > 0) {
+    for (const top of candidates) {
+      if (top < safe || top + height > floor) continue;
+      if (!toastHits(top, height, boxes)) {
+        layer.style.top = `${String(top)}px`;
+        return;
+      }
     }
   }
-  layer.style.top = `${String(top)}px`;
+  const edges = [safe, floor];
+  for (const box of boxes) edges.push(box.top, box.bottom);
+  edges.sort((left, right) => left - right);
+  let bestTop = safe;
+  let bestRoom = 0;
+  for (let index = 0; index < edges.length - 1; index += 1) {
+    const start = Math.max(edges[index] ?? safe, safe);
+    const end = Math.min(edges[index + 1] ?? floor, floor);
+    if (boxes.some((box) => start < box.bottom && end > box.top)) continue;
+    const room = end - start;
+    if (room > bestRoom) {
+      bestRoom = room;
+      bestTop = start;
+    }
+  }
+  if (toast instanceof HTMLElement && height > bestRoom) {
+    toast.style.maxHeight = `${String(Math.max(bestRoom, 0))}px`;
+    toast.style.overflow = "hidden";
+  }
+  layer.style.top = `${String(Math.max(safe, bestTop))}px`;
 }
 
 /** One toast under the page header. A new show replaces it. The host does not catch taps. */
@@ -133,9 +183,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const layer = node;
     const place = () => { placeToast(layer); };
     place();
-    const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
-    const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
-      ?? document.querySelector("header.ui-page, header.ui-band");
+    const { sheet, anchor } = toastAnchor();
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(place);

@@ -1,6 +1,5 @@
--- reopen_review restores the prior category. The fill trigger clears
--- category_suggested when that category is non-null and different, and it
--- recomputes the flag only when the restored category is null.
+-- reopen_review restores the prior category and whether it was a suggestion.
+-- A null category is filled again, and that fill stays a suggestion.
 
 begin;
 
@@ -83,8 +82,8 @@ select is(
 );
 select is(
   (select category_suggested from public.transactions where idempotency_key = 'r12:distinct'),
-  false,
-  'a non-null restored category clears category_suggested'
+  true,
+  'a restored guess stays suggested'
 );
 
 reset role;

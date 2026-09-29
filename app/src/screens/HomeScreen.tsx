@@ -99,7 +99,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="הרווח יופיע כאן אחרי ש-SUMIT מחובר."
+          body="הרווח יופיע כאן אחרי ש־SUMIT מחובר."
           action={
             <Button variant="pill" to={`/settings${search}`}>
               חיבור SUMIT
