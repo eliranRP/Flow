@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-29
+
+Decision [0068](decisions/0068-review-round9.md) r18. Switching to a different SUMIT company releases the retired document keys, party ids, and budget section ids, so the next sync cannot resurrect the previous ledger or fail on those ids.
+
 ## 2026-09-28
 
 Decision [0068](decisions/0068-review-round9.md) r17 addendum. A sheet panel draws no focus ring, Split labels stay on one line at 320, and the overhead hint wording stays as it is. `reassign_undo` enables row level security with no policies.
