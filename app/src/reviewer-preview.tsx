@@ -258,6 +258,7 @@ function ReviewerSave() {
   const item = queue.find((row) => row.id === params.get("item")) ?? queue.find((row) => row.supplier_name === "צבעי הכרמל בע״מ");
   const split = reviewIsSplit(item);
   const navigate = useNavigate();
+  const toast = useToast();
   const [projectId, setProjectId] = useState(split ? "" : (item?.project_id ?? "p-alon"));
   const [categoryId, setCategoryId] = useState(item?.category_id ?? "");
   const [remember, setRemember] = useState(true);
