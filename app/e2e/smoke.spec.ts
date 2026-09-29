@@ -5,7 +5,8 @@ test("preview home is the first-run empty state", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?preview=1");
   await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
-  await expect(page.getByText("שלום", { exact: true })).toBeVisible();
+  await expect(page.getByText("שלום", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Flow", { exact: true })).toHaveCount(0);
   await expect(page.getByText("עוד אין נתונים")).toBeVisible();
   await expect(page.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר.")).toBeVisible();
   await expect(page.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings?preview=1");
