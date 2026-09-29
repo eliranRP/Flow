@@ -101,6 +101,7 @@ function AppRoutes() {
               <Route path="/e2e/project" element={<DevProject />} />
               <Route path="/e2e/expense" element={<DevExpense />} />
               <Route path="/e2e/review" element={<DevReview />} />
+              <Route path="/e2e/split" element={<DevSplit />} />
             </>
           ) : null}
           <Route element={<RequireAuth />}>
@@ -232,6 +233,25 @@ const devReviewItems = [
     netAgorot: -400_000n,
   },
 ];
+
+/** A local split so each mode can be saved without writing a ledger row. */
+function DevSplit() {
+  const [saved, setSaved] = useState("");
+  return (
+    <>
+      <SplitScreen
+        sampleAmount={1001n}
+        sampleProjects={[
+          { id: "a", name: "שיפוץ הרצל 12", incomeAgorot: 3_000n },
+          { id: "b", name: "שיפוץ דירה ביאליק 8 חולון", incomeAgorot: 1_000n },
+          { id: "c", name: "פרגולה בית כהן", incomeAgorot: 1_000n },
+        ]}
+        onSave={(rows) => { setSaved(JSON.stringify(rows)); }}
+      />
+      <div id="e2e-split-saved" hidden>{saved}</div>
+    </>
+  );
+}
 
 /** A local queue so the skip toast can be tested without writing a review row. */
 function DevReview() {

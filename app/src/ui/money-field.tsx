@@ -73,11 +73,16 @@ type PercentFieldProps = {
   onValueChange: (raw: string) => void;
   /** The row already names the project. The label stays for the input. */
   hideLabel?: boolean;
+  /** Stable id. Callers pass flow-share-{projectId} so the field is not a contact. */
+  id?: string;
+  name?: string;
 };
 
 /** A percent share. The stored value is digits, the same way MoneyField stores an amount. */
-export function PercentField({ label, value, onValueChange, hideLabel = false }: PercentFieldProps) {
-  const fieldId = useId();
+export function PercentField({ label, value, onValueChange, hideLabel = false, id, name }: PercentFieldProps) {
+  const generated = useId().replace(/:/g, "");
+  const fieldId = id ?? `flow-share-${generated}`;
+  const fieldName = name ?? fieldId;
   return (
     <div className="ui-field ui-percent-field">
       <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
@@ -87,11 +92,16 @@ export function PercentField({ label, value, onValueChange, hideLabel = false }:
         <span className="ui-money-ltr" dir="ltr">
           <input
             id={fieldId}
+            name={fieldName}
             dir="ltr"
             inputMode="decimal"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             type="text"
             value={value}
-            size={Math.max(value.length, 1)}
+            size={Math.max(value.length, 6)}
             onChange={(event) => {
               onValueChange(digitsOnly(event.target.value));
             }}

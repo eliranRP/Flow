@@ -183,7 +183,7 @@ describe("transaction reassignment", () => {
 });
 
 describe("split monthly rule", () => {
-  it("hides the monthly toggle and shows a full income split as done", () => {
+  it("hides the monthly toggle and starts from an even split", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -205,9 +205,9 @@ describe("split monthly rule", () => {
     expect(screen.queryByRole("switch", { name: "לפצל כך כל חודש" })).not.toBeInTheDocument();
     expect(screen.queryByText("כלל חודשי יגיע בהמשך")).not.toBeInTheDocument();
     expect(screen.queryByText("אופן הפיצול")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/הכנסות/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/הכנסות החודש/)).not.toBeInTheDocument();
-    expect(screen.getByText(/100%/)).toBeInTheDocument();
+    expect(screen.queryByText("נותר לשייך")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByText(/לכל אחד מ־/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שמירת פיצול" })).toBeEnabled();
   });
 
@@ -232,8 +232,13 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.queryByText(/100%/)).not.toBeInTheDocument();
+    expect(screen.getByText("נותר לשייך")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שמירת פיצול" })).toBeDisabled();
+    const share = screen.getByRole("textbox", { name: "אחוז, חולון" });
+    expect(share).toHaveAttribute("autocomplete", "off");
+    expect(share.getAttribute("name") ?? "").toBe("flow-share-p1");
+    fireEvent.click(screen.getByText("וילה"));
+    expect(screen.getByRole("textbox", { name: "אחוז, וילה" })).toHaveFocus();
   });
 
   it("saves only the shares", async () => {
@@ -590,7 +595,7 @@ describe("shared transaction category", () => {
     );
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /מפוצל · 2 פרויקטים/ }));
-    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
   });
 
   it("saves a shared category without calling reassign", async () => {
@@ -692,7 +697,7 @@ describe("shared transaction category", () => {
     });
     expect(await screen.findByText("עלות משותפת · טרם פוצלה")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /עלות משותפת · טרם פוצלה/ }));
-    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
   });
 
   it("names the single project on a one-share row", async () => {

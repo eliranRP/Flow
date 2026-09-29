@@ -2440,7 +2440,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-split {
   min-height: 100dvh;
-  padding-block-end: calc(var(--control-height) + var(--space-4) + var(--space-4) + var(--safe-bottom));
+  padding-block-end: calc(var(--control-height) + var(--space-8) + var(--space-6) + var(--safe-bottom));
 }
 
 .ui-split-context {
@@ -2525,13 +2525,80 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   color: var(--color-good);
 }
 
-.ui-split-list .ui-percent-field {
-  inline-size: 5.5rem;
+.ui-percent-field {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 8.75rem;
+  max-inline-size: 100%;
 }
 
-.ui-split-list .ui-percent-control {
+.ui-percent-control {
+  inline-size: auto;
+  width: auto;
+  min-inline-size: 8.75rem;
   block-size: var(--touch-min);
   height: var(--touch-min);
+}
+
+.ui-percent-field .ui-money-ltr {
+  inline-size: 100%;
+  justify-content: flex-end;
+}
+
+.ui-percent-field .ui-money-field input {
+  flex: 1 1 auto;
+  inline-size: 6.5ch;
+  min-inline-size: 6.5ch;
+  field-sizing: content;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.ui-split-manual {
+  cursor: pointer;
+}
+
+.ui-split-manual .ui-row-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-split-pick {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-split-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  text-align: start;
+}
+
+.ui-split-ask .ui-split-amount {
+  margin-top: 0;
+}
+
+.ui-split-choices {
+  margin-top: var(--space-6);
+  padding-inline: var(--space-side);
+}
+
+.ui-split-choices .ui-radio-row {
+  min-block-size: 3.5rem;
+}
+
+.ui-split-link {
+  margin-top: var(--space-6);
+}
+
+.ui-split-summary {
+  margin: 0;
+  text-align: start;
 }
 
 .ui-split-cta {
@@ -2539,6 +2606,9 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   z-index: 15;
   inset-inline: 0;
   bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   box-sizing: border-box;
   max-inline-size: var(--content-max);
   margin-inline: auto;
