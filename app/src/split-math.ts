@@ -8,7 +8,7 @@ export type SplitProject = {
   status?: "active" | "finished";
 };
 
-export type SplitMethod = "equal" | "chosen" | "income" | "manual";
+export type SplitMethod = "equal" | "chosen" | "income" | "manual" | "one";
 
 export type AllocatedPart = {
   id: string;

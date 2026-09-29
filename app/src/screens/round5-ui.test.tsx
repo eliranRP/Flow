@@ -908,6 +908,205 @@ describe("shared transaction category", () => {
     expect(screen.getByRole("radio", { name: "הובלה" })).toHaveAttribute("aria-checked", "true");
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
+
+  it("unsplits from the change-sheet project picker and can undo", async () => {
+    rpc.calls.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_transaction") {
+        return Promise.resolve({
+          data: {
+            ...expense,
+            amount_gross: -1_180_000,
+            amount_net: -1_000_000,
+            vat_amount: -180_000,
+            project_id: null,
+            project_name: null,
+            pnl_role: "shared",
+            allocations: [
+              { project_id: "p1", project_name: "חולון", share_bp: 6000, amount_net: -600_000 },
+              { project_id: "p2", project_name: "וילה", share_bp: 4000, amount_net: -400_000 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: "c",
+            name: "אלפא",
+            vat_registered: true,
+            basis: "invoiced",
+            from: "2026-09-01",
+            to: "2026-09-28",
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 2,
+            review_count: 0,
+            projects: [project("p1", "חולון"), project("p2", "וילה")],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
+            { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+          ],
+          error: null,
+        });
+      }
+      if (name === "collapse_split") return Promise.resolve({ data: "undo-collapse", error: null });
+      if (name === "undo_reassign") return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/transactions/tx"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /פרויקט: מפוצל · 2 פרויקטים/ }));
+    expect(await screen.findByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "וילה" }));
+    await waitFor(() => {
+      expect(rpc.calls.find((call) => call.name === "collapse_split")?.args).toEqual({
+        p_id: "tx",
+        p_project_id: "p2",
+      });
+    });
+    expect(rpc.calls.some((call) => call.name === "save_split" || call.name === "reassign_transaction")).toBe(false);
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה, שינוי" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-collapse")).toBe(true);
+    });
+  });
+
+  it("collapses a split from לפרויקט אחד and does not call save_split", async () => {
+    rpc.calls.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_transaction") {
+        return Promise.resolve({
+          data: {
+            ...expense,
+            amount_gross: -1_180_000,
+            amount_net: -1_000_000,
+            vat_amount: -180_000,
+            project_id: null,
+            project_name: null,
+            pnl_role: "shared",
+            allocations: [
+              { project_id: "p1", project_name: "חולון", share_bp: 6000, amount_net: -600_000 },
+              { project_id: "p2", project_name: "וילה", share_bp: 4000, amount_net: -400_000 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: "c",
+            name: "אלפא",
+            vat_registered: true,
+            basis: "invoiced",
+            from: "2026-09-01",
+            to: "2026-09-28",
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 2,
+            review_count: 0,
+            projects: [project("p1", "חולון"), project("p2", "וילה")],
+          },
+          error: null,
+        });
+      }
+      if (name === "collapse_split") return Promise.resolve({ data: "undo-one", error: null });
+      if (name === "undo_reassign") return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/transactions/tx/split"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+                <Route path="/transactions/:transactionId/split" element={<SplitScreen />} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("radio", { name: "לפרויקט אחד" }));
+    expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
+    expect(screen.getByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "חולון" }));
+    await waitFor(() => {
+      expect(rpc.calls.find((call) => call.name === "collapse_split")?.args).toEqual({
+        p_id: "tx",
+        p_project_id: "p1",
+      });
+    });
+    expect(rpc.calls.some((call) => call.name === "save_split")).toBe(false);
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-one")).toBe(true);
+    });
+  });
+
+  it("stays open when לפרויקט אחד has no project yet", async () => {
+    rpc.calls.length = 0;
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SplitScreen
+                sampleAmount={1_000n}
+                sampleProjects={[
+                  { id: "p1", name: "חולון" },
+                  { id: "p2", name: "וילה" },
+                ]}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "לפרויקט אחד" }));
+    fireEvent.click(await screen.findByRole("button", { name: "חזרה" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(screen.getByText("בחרו פרויקט.")).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "collapse_split" || call.name === "save_split")).toBe(false);
+  });
 });
 
 function mountShared(extra: Record<string, unknown>) {

@@ -316,7 +316,7 @@ test("a shared-cost save offers לחלוקה and stays on the sheet", async ({ p
 });
 
 test("reviewer screens stay inside the viewport at 320 in both themes", async ({ page }) => {
-  const routes = ["/reviewer", "/reviewer/review", "/reviewer/waiting", "/reviewer/category?more=1", "/reviewer/save?save=ok", "/reviewer/split-expense"];
+  const routes = ["/reviewer", "/reviewer/review", "/reviewer/waiting", "/reviewer/category?more=1", "/reviewer/save?save=ok", "/reviewer/split-expense", "/reviewer/unsplit"];
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     for (const route of routes) {
@@ -357,4 +357,41 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /שינוע/ })).toBeVisible();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
+});
+
+test("a split returns to one project and the project totals follow", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/unsplit");
+  await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "לפרויקט אחד" })).toBeVisible();
+  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
+  const alon = page.getByRole("article", { name: "בית הספר אלון" });
+  const namal = page.getByRole("article", { name: "מחסן הנמל" });
+  await expect(alon.getByText("₪533.44")).toBeVisible();
+  await page.getByRole("radio", { name: "לפרויקט אחד" }).click();
+  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
+  await expect(page.getByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeVisible();
+  await page.getByRole("radio", { name: "בית הספר אלון" }).click();
+  await toast(page, "השיוך נשמר");
+  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(0);
+  await expect(alon.getByText("₪3,200")).toBeVisible();
+  await expect(namal.getByText("₪0")).toBeVisible();
+  await expect(page.getByText("מפוצל · 6 פרויקטים")).toHaveCount(0);
+  await toastAction(page, "ביטול").click();
+  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
+  await expect(alon.getByText("₪533.44")).toBeVisible();
+
+  await page.getByRole("button", { name: /מלט/ }).click();
+  await page.getByRole("button", { name: /פרויקט: מפוצל · 6 פרויקטים/ }).click();
+  await expect(page.getByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeVisible();
+  await page.getByRole("radio", { name: "מחסן הנמל" }).click();
+  await toast(page, "השיוך נשמר");
+  await expect(page.getByRole("button", { name: "פרויקט: מחסן הנמל, שינוי" })).toBeVisible();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(namal.getByText("₪3,200")).toBeVisible();
+  await expect(alon.getByText("₪0")).toBeVisible();
+  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(0);
+  await toastAction(page, "ביטול").click();
+  await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
+  await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
 });

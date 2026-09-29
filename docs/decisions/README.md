@@ -96,3 +96,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0073](0073-review-handoff.md) | 2026-09-29 | Accepted | From r23, a handoff includes a self-check. `/reviewer` is sample data on the dev server or a reviewers-only build with no hosted key. Only Blocking and Should items block a merge |
 | [0074](0074-toast-and-remembered-supplier.md) | 2026-09-29 | Accepted | A plain confirmation stays 4s and an action stays 5s. The supplier name wraps. A toast over a sheet sits above it |
 | [0075](0075-save-on-tap-and-on-leave.md) | 2026-09-29 | Accepted | A change-sheet tap saves immediately, and leaving saves anything still pending. The summary save button is gone. The new-project name keeps שמירה |
+| [0076](0076-collapse-split-to-one-project.md) | 2026-09-29 | Accepted | A split can return to one project. The choice is לפרויקט אחד, the note says the split will go, and ביטול restores it |

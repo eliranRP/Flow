@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+Decision [0076](decisions/0076-collapse-split-to-one-project.md), Accepted. A split can return to one project. The split screen adds לפרויקט אחד, which opens the project picker. The note is "החלוקה תרד, והסכום כולו יעבור לפרויקט הזה." `collapse_split` moves the full net, removes the other shares, and returns an undo id. The change-sheet project picker does the same on a split, including an unallocated shared cost. Project totals and "כולל חלק מהוצאות משותפות" follow the move. This amends [0075](decisions/0075-save-on-tap-and-on-leave.md) and [0071](decisions/0071-shared-cost-copy.md).
+
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), Accepted. A category or project tap in Change assignment saves immediately, including a split, and a failed tap rolls the check back. Leaving the sheet or the split screen saves a valid pending change and stays open when the change is invalid. The summary save button is removed. The new-project name still has שמירה, because the name is typed. `set_transaction_category` was already keeping the shares; the check had never been written.
 
 Decision [0073](decisions/0073-review-handoff.md) point 2. The reviewer guard also rejects id 2375135516, the totals with thousands commas and a leading ₪, פ"ת, ת"א, and פתח תקווה. The hosted check reads quoted URL and key values, checks their shape, adds the project ref, and fails when `app/.env.production` is missing or has fewer than those two values.
