@@ -11,7 +11,7 @@ export type WriteFailure = string | { message: string; retry?: boolean };
 
 /** A database refusal is final. Retry is for a dropped connection or a server error. */
 export function isTransientWriteError(error: Error): boolean {
-  return /failed to fetch|networkerror|network request failed|load failed|timeout|econnreset|econnrefused|bad gateway|gateway|502|503|504/i.test(error.message);
+  return /failed to fetch|networkerror|network request failed|load failed|timeout|econnreset|econnrefused|bad gateway|gateway|internal server error|\b500\b|\b502\b|\b503\b|\b504\b/i.test(error.message);
 }
 
 function failureMessage(failure: WriteFailure): string {

@@ -438,7 +438,7 @@ test("categories filter, hide, merge, and create", async ({ page }) => {
   await toast(page, previewToast);
 });
 
-test("a failed category save offers a retry", async ({ page }) => {
+test("a category save with no client reports the failure without a retry", async ({ page }) => {
   await page.route("**/*", (route) => {
     if (route.request().url().includes("43123")) return route.continue();
     return route.abort();
@@ -448,9 +448,7 @@ test("a failed category save offers a retry", async ({ page }) => {
   await page.getByRole("button", { name: "שמירה" }).click();
   const note = page.locator(".ui-toast");
   await expect(note.getByText("לא הצלחנו ליצור את הקטגוריה.")).toBeVisible();
-  await note.hover();
-  await page.locator(".ui-toast button", { hasText: "ניסיון חוזר" }).click();
-  await expect(note.getByText("לא הצלחנו ליצור את הקטגוריה.")).toBeVisible();
+  await expect(note.locator("button", { hasText: "ניסיון חוזר" })).toHaveCount(0);
 });
 
 test("install, notifications, onboarding, and legal screens", async ({ page }) => {

@@ -44,6 +44,23 @@ describe("useWrite", () => {
     expect(screen.getByText("לא נשמר – אין חיבור")).toBeInTheDocument();
   });
 
+  it("does not offer a retry when the client is missing", async () => {
+    renderSave(async () => {
+      throw new Error("supabase");
+    }, "לא הצלחנו ליצור את הקטגוריה.");
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("לא הצלחנו ליצור את הקטגוריה.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+  });
+
+  it("offers a retry for a server error", async () => {
+    renderSave(async () => {
+      throw new Error("Internal Server Error");
+    }, "לא הצלחנו ליצור את הקטגוריה.");
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+  });
+
   it("does not offer a retry for another deterministic refusal", async () => {
     renderSave(async () => {
       throw new Error("category kind must match the direction");
