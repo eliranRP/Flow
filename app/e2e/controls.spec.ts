@@ -330,10 +330,12 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
   await page.getByRole("button", { name: /פרויקט:/ }).click();
   await page.getByRole("radio", { name: "וילה רעננה" }).click();
+  await toast(page, "השיוך נשמר");
   await expect(page.getByRole("button", { name: /וילה רעננה/ })).toBeVisible();
   await page.getByRole("button", { name: /קטגוריה:/ }).click();
   await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
+  await toast(page, "השיוך נשמר");
   const remember = page.getByRole("switch", { name: "לזכור לספק הזה" });
   await remember.click();
   await expect(remember).not.toBeChecked();
@@ -344,9 +346,7 @@ test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
   await page.getByRole("button", { name: "פרויקט חדש" }).click();
   await page.getByRole("textbox", { name: "שם" }).fill("גג חדש");
   await page.getByRole("button", { name: "שמירה" }).click();
-  await toast(page, "הפרויקט נשמר");
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
-  await toast(page, "השיוך נשמר");
+  await expect(page.getByRole("button", { name: /גג חדש/ })).toBeVisible();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/review\?preview=1$/);
 });
@@ -374,8 +374,11 @@ test("a transaction expands, changes, and confirms delete", async ({ page }) => 
   await page.getByRole("button", { name: "ביטול" }).click();
   await page.getByRole("button", { name: /פרויקט/ }).click();
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
-  await page.getByRole("button", { name: "שמירה", exact: true }).click();
+  await page.getByRole("button", { name: /קטגוריה:/ }).click();
+  await page.getByRole("radio", { name: "הובלה" }).click();
   await toast(page, "השיוך נשמר");
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("button", { name: /הובלה/ })).toBeVisible();
   await page.getByRole("link", { name: "פיצול בין פרויקטים" }).click();
   await expect(page).toHaveURL(/\/transactions\/t-manual\/split/);
 });
@@ -587,9 +590,9 @@ test("a toast dismisses on tap", async ({ page }) => {
 
 test("split choices, manual percents, and close", async ({ page }) => {
   await page.goto("/e2e/split");
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
+  await expect(page.getByText("בחרו איך לחלק")).toBeVisible();
   await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeEnabled();
   await page.getByRole("button", { name: "הצגת הפירוט" }).click();
   await expect(page.getByRole("button", { name: "הסתרת הפירוט" })).toBeVisible();
   await page.getByRole("radio", { name: "לפי הכנסות" }).click();
@@ -601,8 +604,15 @@ test("split choices, manual percents, and close", async ({ page }) => {
   const field = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
   await field.fill("120");
   await expect(page.getByText("עד 100%")).toBeVisible();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).toHaveURL(/\/e2e\/split$/);
+  await expect(page.getByText("עד 100%")).toBeVisible();
   await page.getByRole("button", { name: "חזרה לאפשרויות" }).click();
   await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toBeVisible();
+  await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.locator("#e2e-split-saved")).not.toHaveText("");
+  await expect(page).toHaveURL(/\/e2e\/split$/);
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/transactions\//);
 });

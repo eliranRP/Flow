@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
-import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen } from "./screens/flow-screens";
+import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen } from "./screens/flow-screens";
 import {
   reviewerBooks,
   reviewerCategories,
@@ -41,6 +41,7 @@ export function ReviewerPreview() {
   else if (path.endsWith("/waiting")) page = <ReviewerWaiting />;
   else if (path.endsWith("/project")) page = <ReviewerProject />;
   else if (path.endsWith("/save")) page = <ReviewerSave />;
+  else if (path.endsWith("/split-expense")) page = <ReviewerSplitExpense />;
   else if (path.endsWith("/split")) page = <ReviewerSplit />;
   return (
     <>
@@ -115,6 +116,7 @@ function ReviewerHome() {
         <Button full variant="secondary" to="/reviewer/save?save=fail">שמירה שנדחית</Button>
         <Button full variant="secondary" to="/reviewer/save?save=offline">שמירה בלי חיבור</Button>
         <Button full variant="secondary" to="/reviewer/save?save=shared">שמירה, עלות משותפת</Button>
+        <Button full variant="secondary" to="/reviewer/split-expense">הוצאה מפוצלת, שינוי קטגוריה</Button>
       </div>
     </>
   );
@@ -252,7 +254,7 @@ function ReviewerSave() {
   const [remember, setRemember] = useState(true);
   const [projects, setProjects] = useState(reviewerProjectChoices);
   const write = useSampleWrite(mode, "השיוך נשמר", () => {
-    void navigate("/reviewer/review");
+    void navigate("/reviewer/review", { replace: true });
   }, () => {
     void navigate(`/reviewer/split?save=${mode}`);
   });
@@ -274,13 +276,27 @@ function ReviewerSave() {
       onCategoryId={setCategoryId}
       remember={remember}
       onRemember={setRemember}
-      saving={write.isPending}
-      onSave={() => {
+      pending={remember !== true}
+      onCommitPick={async (kind, id) => {
+        const previousProject = projectId;
+        const previousCategory = categoryId;
+        if (kind === "project") setProjectId(id);
+        else setCategoryId(id);
+        try {
+          await write.mutateAsync();
+        } catch (error) {
+          setProjectId(previousProject);
+          setCategoryId(previousCategory);
+          throw error;
+        }
+        return "left";
+      }}
+      onCommitPending={async () => {
         if (projectId === "" || categoryId === "") {
           toast.show({ tone: "bad", message: "בחרו פרויקט וקטגוריה." });
-          return;
+          throw new Error("incomplete");
         }
-        write.mutate();
+        await write.mutateAsync();
       }}
       onSplit={() => {
         void navigate(`/reviewer/split?save=${mode}`);
@@ -291,6 +307,50 @@ function ReviewerSave() {
         toast.show({ message: "הפרויקט נשמר" });
         return Promise.resolve(created);
       }}
+    />
+  );
+}
+
+function ReviewerSplitExpense() {
+  const projects = [
+    { id: "p-alon", name: reviewerProjectName },
+    { id: "p-raanana", name: reviewerOtherProjectName },
+    { id: "p-north", name: "מגרש הצפון" },
+    { id: "p-south", name: "מחסן הדרום" },
+    { id: "p-east", name: "גג המזרח" },
+    { id: "p-west", name: "חניון המערב" },
+  ];
+  const net = -320_000n;
+  const shares = [1667, 1667, 1667, 1667, 1666, 1666];
+  return (
+    <TransactionScreen
+      sample={{
+        id: "t-leasing",
+        description: "ליסינג",
+        direction: "expense",
+        doc_date: "2026-07-01",
+        amount_gross: -377_600n,
+        amount_net: net,
+        vat_amount: -57_600n,
+        vat_status: "source",
+        source: "sumit",
+        pnl_role: "shared",
+        review_status: "approved",
+        project_id: null,
+        project_name: null,
+        category_id: "c-materials",
+        category_name: "מלט",
+        supplier_name: "ליסינג הדרך בע״מ",
+        customer_name: null,
+        allocations: projects.map((project, index) => ({
+          project_id: project.id,
+          project_name: project.name,
+          share_bp: shares[index] ?? 0,
+          amount_net: (net * BigInt(shares[index] ?? 0)) / 10_000n,
+        })),
+      }}
+      sampleProjects={projects}
+      sampleCategories={reviewerCategories}
     />
   );
 }
@@ -308,8 +368,8 @@ function ReviewerSplit() {
       sampleProjects={reviewerSplitProjects}
       sampleMeta="עגורני החוף בע״מ · 29/09/2026"
       backTo={`/reviewer/review?save=${mode}`}
-      onSave={() => {
-        write.mutate();
+      onSave={async () => {
+        await write.mutateAsync();
       }}
     />
   );

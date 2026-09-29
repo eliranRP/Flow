@@ -370,7 +370,8 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review/change?item=r1");
-    fireEvent.click(await screen.findByRole("button", { name: "שמירה ואישור" }));
+    fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הרצל" }));
     expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
     expect(screen.queryByText("לא נשמר – אין חיבור")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();

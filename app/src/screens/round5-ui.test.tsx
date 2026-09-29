@@ -169,14 +169,16 @@ describe("transaction reassignment", () => {
     fireEvent.click(screen.getByRole("button", { name: /חולון/ }));
     fireEvent.click(await screen.findByRole("button", { name: "פרויקט: חולון, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
-    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
-    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    fireEvent.click(await screen.findByRole("button", { name: "שמירה ואישור" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
     });
-    const saved = rpc.calls.find((call) => call.name === "reassign_transaction");
-    expect(saved?.args).toEqual({ p_id: "tx", p_project_id: "p2", p_category_id: "c2" });
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    await waitFor(() => {
+      const saved = rpc.calls.filter((call) => call.name === "reassign_transaction");
+      expect(saved.at(-1)?.args).toEqual({ p_id: "tx", p_project_id: "p2", p_category_id: "c2" });
+    });
+    expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
     expect(rpc.calls.filter((call) => call.name === "get_transaction").length).toBeGreaterThan(1);
     expect(await screen.findByText("השיוך נשמר")).toBeInTheDocument();
   });
@@ -210,9 +212,9 @@ describe("split monthly rule", () => {
     const idle = screen.getByText("בחרו איך לחלק");
     expect(idle).toBeInTheDocument();
     expect(idle).not.toHaveClass("ui-split-summary-idle");
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" }));
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
+    expect(screen.queryByText("בחרו איך לחלק")).not.toBeInTheDocument();
   });
 
   it("disables save while a manual split is only partly allocated", () => {
@@ -237,7 +239,10 @@ describe("split monthly rule", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText(/נשארו/)).toHaveClass("ui-split-summary-idle");
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(screen.getByText(/נשארו/)).toBeInTheDocument();
     const share = screen.getByRole("textbox", { name: "אחוז, חולון" });
     expect(share).toHaveAttribute("autocomplete", "off");
     expect(share.getAttribute("name") ?? "").toBe("split-pct-p1");
@@ -366,7 +371,7 @@ describe("split monthly rule", () => {
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
-    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "save_split")).toBe(true);
     });
@@ -503,7 +508,7 @@ describe("notification switches", () => {
     expect(getComputedStyle(heldButton.querySelector(".ui-row-icon") as Element).opacity).toBe("0.45");
     expect(screen.getByText("SUMIT לא זמין כרגע.")).toBeInTheDocument();
     expect(screen.queryByText(/נבדוק שוב מאוחר יותר/)).toBeNull();
-    const hint = screen.getByText(/אפשר לנסות שוב ב-/);
+    const hint = screen.getByText(/אפשר לנסות שוב/);
     expect(hint.closest("button")).toBe(heldButton);
     expect(hint.querySelector("bdi")).toHaveAttribute("dir", "ltr");
     expect(getComputedStyle(hint).opacity).toBe("1");
@@ -734,22 +739,27 @@ describe("shared transaction category", () => {
     fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    fireEvent.click(await screen.findByRole("button", { name: "שמירה" }));
-    await waitFor(() => {
-      expect(rpc.calls.some((call) => call.name === "set_transaction_category")).toBe(true);
-    });
+    expect(await screen.findByRole("button", { name: "קטגוריה: הובלה, שינוי" })).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
     expect(rpc.calls.find((call) => call.name === "set_transaction_category")?.args).toEqual({
       p_id: "tx",
       p_category_id: "c2",
     });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /הובלה/ })).toBeInTheDocument();
+    expect(rpc.calls.filter((call) => call.name === "set_transaction_category")).toHaveLength(1);
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-9")).toBe(true);
     });
   });
 
-  it("labels an unsplit shared cost, one share, and asks to save without approving", async () => {
+  it("labels an unsplit shared cost and opens the split", async () => {
     mountShared({
       review_status: "open",
       review_reason: "unallocated_shared",
@@ -769,24 +779,7 @@ describe("shared transaction category", () => {
     expect(screen.queryByText(/טרם פוצלה/)).not.toBeInTheDocument();
   });
 
-  it("reads שמירה while an unallocated shared cost still needs a split", async () => {
-    mountShared({
-      review_status: "open",
-      review_reason: "unallocated_shared",
-      category_id: "c1",
-      category_name: "חומרים",
-      allocations: [
-        { project_id: "p1", project_name: "חולון", share_bp: 6000, amount_net: -600_000 },
-        { project_id: "p2", project_name: "וילה", share_bp: 4000, amount_net: -400_000 },
-      ],
-    });
-    expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
-    expect(await screen.findByRole("button", { name: "שמירה" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
-  });
-
-  it("reads שמירה ואישור when a category save closes a missing category", async () => {
+  it("saves a missing category on a split from the tap, and keeps no summary save button", async () => {
     mountShared({
       review_status: "open",
       review_reason: "missing_category",
@@ -799,21 +792,121 @@ describe("shared transaction category", () => {
     });
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
-    expect(await screen.findByRole("button", { name: "שמירה ואישור" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר, שינוי" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "set_transaction_category" && (call.args as { p_category_id?: string }).p_category_id === "c2")).toBe(true);
+    });
+    expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
 
-  it("reads שמירה when a shared cost has no allocations", async () => {
-    mountShared({
-      review_status: "open",
-      review_reason: "missing_category",
-      category_id: null,
-      category_name: null,
-      allocations: [],
+  it("rolls a failed split category back and retries that same category", async () => {
+    let fail = true;
+    let release: (() => void) | null = null;
+    rpc.calls.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_transaction") {
+        return Promise.resolve({
+          data: {
+            ...expense,
+            amount_gross: -1_180_000,
+            amount_net: -1_000_000,
+            vat_amount: -180_000,
+            project_id: null,
+            project_name: null,
+            pnl_role: "shared",
+            allocations: [
+              { project_id: "p1", project_name: "חולון", share_bp: 6000, amount_net: -600_000 },
+              { project_id: "p2", project_name: "וילה", share_bp: 4000, amount_net: -400_000 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: "c",
+            name: "אלפא",
+            vat_registered: true,
+            basis: "invoiced",
+            from: "2026-09-01",
+            to: "2026-09-28",
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 2,
+            review_count: 0,
+            projects: [project("p1", "חולון"), project("p2", "וילה")],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
+            { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+          ],
+          error: null,
+        });
+      }
+      if (name === "set_transaction_category") {
+        if (fail) {
+          return new Promise((resolve) => {
+            release = () => {
+              resolve({ data: null, error: { message: "Failed to fetch" } });
+            };
+          });
+        }
+        return Promise.resolve({ data: "undo-9", error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/transactions/tx"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    const saving = await screen.findByRole("radio", { name: "הובלה" });
+    expect(saving).toHaveAttribute("aria-busy", "true");
+    expect(getComputedStyle(saving).cursor).toBe("progress");
+    expect(screen.getByRole("radio", { name: "חומרים" })).toBeDisabled();
+    expect(getComputedStyle(screen.getByRole("radio", { name: "חומרים" })).cursor).toBe("not-allowed");
+    await act(async () => {
+      release?.();
     });
-    expect(await screen.findByText("עלות משותפת · טרם פוצלה")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
-    expect(await screen.findByRole("button", { name: "שמירה" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "הובלה" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("radio", { name: "חומרים" })).toHaveAttribute("aria-checked", "true");
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר", hidden: true }));
+    await waitFor(() => {
+      const calls = rpc.calls.filter((call) => call.name === "set_transaction_category");
+      expect(calls).toHaveLength(2);
+      expect(calls[1]?.args).toEqual({ p_id: "tx", p_category_id: "c2" });
+    });
+    expect(screen.getByRole("radio", { name: "הובלה" })).toHaveAttribute("aria-checked", "true");
+    expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
 });
 

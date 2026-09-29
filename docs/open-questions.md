@@ -202,3 +202,11 @@ Open: does the accountant's export need a specific import format, or is generic 
 ## More than one user
 
 Already decided. [0013](decisions/0013-single-user-owner.md) is a single owner for this phase. The plan's question does not reopen that.
+
+## Remember after the assignment, and a split that is in review for another reason
+
+Noted from [0075](decisions/0075-save-on-tap-and-on-leave.md). Not in this round.
+
+`resolve_review` is the only write that stores "לזכור לספק הזה", and it runs with the assignment. Flipping the switch after that tap cannot be written again. The sheet stays open and says to turn the switch back. A separate write for the supplier rule would close this.
+
+A review item that is a split for a reason other than `unallocated_shared` still uses `resolve_review` on a tap. That call replaces the shares with one project. The transaction sheet uses `set_transaction_category` and keeps the shares. Those two paths should do the same thing.

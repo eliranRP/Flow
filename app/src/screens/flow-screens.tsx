@@ -1313,6 +1313,13 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const [projectId, setProjectId] = useState(sample?.projectId ?? sample?.suggestionId ?? "");
   const [categoryId, setCategoryId] = useState(sample?.categoryId ?? sample?.suggestionCategoryId ?? "");
   const [remember, setRemember] = useState(true);
+  const [hold, setHold] = useState("");
+  const [leaveNote, setLeaveNote] = useState("");
+  const [savedRemember, setSavedRemember] = useState(true);
+  const wroteReview = useRef(false);
+  const picked = useRef({ projectId, categoryId, remember });
+  const sharedTx = useRef<string | null>(null);
+  sharedTx.current = row?.transaction_id ?? null;
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const seeded = useRef(false);
   const toasted = useRef(false);
@@ -1322,6 +1329,14 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const direction = sample?.direction ?? row?.direction ?? "expense";
   const formPhase = phase.kind === "ready" && sample == null && row == null ? ({ kind: "empty" } as const) : phase;
   const income = direction === "income";
+  useEffect(() => {
+    if (hold === "") return;
+    const complete = income ? categoryId !== "" : projectId !== "" && categoryId !== "";
+    if (complete) setHold("");
+  }, [hold, income, projectId, categoryId]);
+  useEffect(() => {
+    if (leaveNote !== "" && remember === savedRemember) setLeaveNote("");
+  }, [leaveNote, remember, savedRemember]);
   useEffect(() => {
     if (sample || !row || seeded.current) return;
     seeded.current = true;
@@ -1366,17 +1381,39 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });
     },
     onSuccess: () => {
-      void navigate(`/review${search}`);
+      setSavedRemember(picked.current.remember);
+      setProjectId(picked.current.projectId);
+      setCategoryId(picked.current.categoryId);
+      wroteReview.current = true;
     },
     run: async () => {
       const supabase = getSupabase();
+      const next = picked.current;
       if (!supabase || item === "") throw new Error("supabase");
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",
-        ...(income ? {} : { p_project_id: projectId }),
-        p_category_id: categoryId,
-        p_remember: remember,
+        ...(income ? {} : { p_project_id: next.projectId }),
+        p_category_id: next.categoryId,
+        p_remember: next.remember,
+      }));
+    },
+  });
+  const setSharedCategory = useWrite({
+    failure: changeSaveFailure,
+    success: "השיוך נשמר",
+    keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    onSuccess: () => {
+      setCategoryId(picked.current.categoryId);
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      const transactionId = sharedTx.current;
+      const nextCategory = picked.current.categoryId;
+      if (!supabase || transactionId == null || nextCategory === "") throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_transaction_category", {
+        p_id: transactionId,
+        p_category_id: nextCategory,
       }));
     },
   });
@@ -1411,29 +1448,57 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       {...(income ? {} : { remember, onRemember: setRemember })}
-      saving={save.isPending}
+      hold={hold || leaveNote}
+      pending={!income && remember !== savedRemember}
       initialQuery={sample?.initialQuery}
       loading={sample?.loading}
-      onSave={() => {
+      onCommitPick={async (kind, id) => {
         if (sample) return;
-        if (blocked()) return;
-        if (row?.reason === "unallocated_shared" && row.transaction_id) {
-          const transactionId = row.transaction_id;
-          toast.show({
-            tone: "info",
-            message: SHARED_SPLIT_FAILURE,
-            action: "לחלוקה",
-            onAction: () => {
-              void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
-            },
-          });
+        if (blocked()) throw new Error("preview");
+        const nextProject = kind === "project" ? id : projectId;
+        const nextCategory = kind === "category" ? id : categoryId;
+        picked.current = { projectId: nextProject, categoryId: nextCategory, remember };
+        if (row?.reason === "unallocated_shared") {
+          if (kind === "project" || !row.transaction_id) {
+            const transactionId = row.transaction_id;
+            toast.show({
+              tone: "info",
+              message: SHARED_SPLIT_FAILURE,
+              action: "לחלוקה",
+              onAction: () => {
+                if (!transactionId) return;
+                void navigate(`/transactions/${transactionId}/split${search}`, { replace: true });
+              },
+            });
+            throw new Error("shared");
+          }
+          await setSharedCategory.mutateAsync();
           return;
         }
-        if (income ? categoryId === "" : projectId === "" || categoryId === "") {
-          toast.show({ tone: "bad", message: income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
+        const complete = income ? nextCategory !== "" : nextProject !== "" && nextCategory !== "";
+        if (!complete) {
+          setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           return;
         }
-        save.mutate();
+        setHold("");
+        await save.mutateAsync();
+      }}
+      onCommitPending={async () => {
+        if (sample) return;
+        if (blocked()) throw new Error("preview");
+        const complete = income ? categoryId !== "" : projectId !== "" && categoryId !== "";
+        if (!complete) {
+          setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+          throw new Error("incomplete");
+        }
+        if (remember !== savedRemember && (wroteReview.current || row?.reason === "unallocated_shared")) {
+          setLeaveNote("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
+          throw new Error("remember");
+        }
+        if (wroteReview.current || row?.reason === "unallocated_shared") return;
+        setHold("");
+        picked.current = { projectId, categoryId, remember };
+        await save.mutateAsync();
       }}
       onSplit={() => {
         if (row?.transaction_id) {
@@ -1594,7 +1659,8 @@ export function TransactionScreen({
   const [menu, setMenu] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
-  const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen);
+  const leaveChange = useRef<() => Promise<boolean>>(async () => true);
+  const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
   const dashboard = useDashboardQuery(sample == null);
@@ -1620,16 +1686,53 @@ export function TransactionScreen({
   const [categoryName, setCategoryName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [hold, setHold] = useState("");
+  const writeTarget = useRef({ projectId: "", categoryId: "" });
+  const committed = useRef({ projectId: "", categoryId: "" });
+  const namesRef = useRef({
+    projects: [] as Array<{ id: string; name: string }>,
+    categories: [] as Array<{ id: string; name: string }>,
+  });
+  namesRef.current = {
+    projects: sample
+      ? [...(sampleProjects ?? []), ...extraProjects]
+      : [...(dashboard.data?.projects ?? []), ...extraProjects],
+    categories: sample ? (sampleCategories ?? []) : (categories.data ?? []),
+  };
+  const applyRef = useRef<() => void>(() => undefined);
+  applyRef.current = () => {
+    const next = writeTarget.current;
+    committed.current = next;
+    setProjectId(next.projectId);
+    setCategoryId(next.categoryId);
+    const namedProject = namesRef.current.projects.find((project) => project.id === next.projectId);
+    if (namedProject) setProjectName(namedProject.name);
+    const namedCategory = namesRef.current.categories.find((category) => category.id === next.categoryId);
+    if (namedCategory) setCategoryName(namedCategory.name);
+  };
   useEffect(() => {
     if (changeOpen || !txn) return;
-    setProjectId(txn.project_id ?? "");
-    setCategoryId(txn.category_id ?? "");
+    setProjectId(committed.current.projectId !== "" ? committed.current.projectId : (txn.project_id ?? ""));
+    setCategoryId(committed.current.categoryId !== "" ? committed.current.categoryId : (txn.category_id ?? ""));
   }, [changeOpen, txn]);
+  useEffect(() => {
+    if (hold === "" || !txn) return;
+    const splitLike = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
+    const complete = (splitLike || txn.direction === "income")
+      ? categoryId !== ""
+      : projectId !== "" && categoryId !== "";
+    if (complete) setHold("");
+  }, [hold, txn, categoryId, projectId]);
   const undoId = useRef<string | null>(null);
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
     keys: ["txn", "dashboard", "project", "review"],
     success: "השיוך הקודם חזר",
+    onSuccess: () => {
+      committed.current = { projectId: "", categoryId: "" };
+      setProjectName("");
+      setCategoryName("");
+    },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase || undoId.current == null) throw new Error("supabase");
@@ -1643,7 +1746,7 @@ export function TransactionScreen({
     },
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
-      setChangeSheet(false);
+      applyRef.current();
       const id = undoId.current;
       toast.show({
         message: "השיוך נשמר",
@@ -1652,20 +1755,14 @@ export function TransactionScreen({
     },
     run: async () => {
       const current = sample ?? detail.data;
+      const next = writeTarget.current;
       if (!current) throw new Error("supabase");
-      const nextProject = [...(sampleProjects ?? []), ...extraProjects].find((project) => project.id === projectId);
-      const nextCategory = (sampleCategories ?? []).find((category) => category.id === categoryId);
-      if (sample) {
-        if (nextProject) setProjectName(nextProject.name);
-        if (nextCategory) setCategoryName(nextCategory.name);
-        return;
-      }
       const supabase = getSupabase();
-      if (!supabase || projectId === "" && current.direction !== "income" || categoryId === "") throw new Error("supabase");
+      if (!supabase || next.projectId === "" && current.direction !== "income" || next.categoryId === "") throw new Error("supabase");
       const saved = await supabase.rpc("reassign_transaction", {
         p_id: current.id,
-        p_project_id: current.direction === "income" ? (null as unknown as string) : projectId,
-        p_category_id: categoryId,
+        p_project_id: current.direction === "income" ? (null as unknown as string) : next.projectId,
+        p_category_id: next.categoryId,
       });
       assertNoError(saved);
       undoId.current = typeof saved.data === "string" ? saved.data : null;
@@ -1678,7 +1775,7 @@ export function TransactionScreen({
     },
     keys: ["txn", "dashboard", "project", "review"],
     onSuccess: () => {
-      setChangeSheet(false);
+      applyRef.current();
       const id = undoId.current;
       toast.show({
         message: "השיוך נשמר",
@@ -1687,17 +1784,13 @@ export function TransactionScreen({
     },
     run: async () => {
       const current = sample ?? detail.data;
+      const nextCategory = writeTarget.current.categoryId;
       if (!current) throw new Error("supabase");
-      const nextCategory = (sampleCategories ?? []).find((category) => category.id === categoryId);
-      if (sample) {
-        if (nextCategory) setCategoryName(nextCategory.name);
-        return;
-      }
       const supabase = getSupabase();
-      if (!supabase || categoryId === "") throw new Error("supabase");
+      if (!supabase || nextCategory === "") throw new Error("supabase");
       const saved = await supabase.rpc("set_transaction_category", {
         p_id: current.id,
-        p_category_id: categoryId,
+        p_category_id: nextCategory,
       });
       assertNoError(saved);
       undoId.current = typeof saved.data === "string" ? saved.data : null;
@@ -1707,12 +1800,42 @@ export function TransactionScreen({
     return <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
   if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
-  const splitRow = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
+  const detailRow = txn;
+  const splitRow = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
   const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
-  const saveApproves = splitRow
-    ? txn.review_status === "open" && txn.review_reason === "missing_category" && (txn.allocations?.length ?? 0) > 0
-    : txn.review_status === "open";
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
+  async function commitPick(kind: "project" | "category", id: string) {
+    const previous = { projectId, categoryId };
+    const next = {
+      projectId: kind === "project" ? id : previous.projectId,
+      categoryId: kind === "category" ? id : previous.categoryId,
+    };
+    writeTarget.current = next;
+    const complete = splitRow
+      ? next.categoryId !== ""
+      : detailRow.direction === "income"
+        ? next.categoryId !== ""
+        : next.projectId !== "" && next.categoryId !== "";
+    if (!complete) {
+      setHold(detailRow.direction === "income" || splitRow ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+      return;
+    }
+    setHold("");
+    try {
+      if (sample) {
+        applyRef.current();
+        toast.show({ message: "השיוך נשמר" });
+        return;
+      }
+      if (blocked()) throw new Error("preview");
+      if (splitRow) await setCategory.mutateAsync();
+      else await reassign.mutateAsync();
+    } catch (error) {
+      setProjectId(previous.projectId);
+      setCategoryId(previous.categoryId);
+      throw error;
+    }
+  }
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
   const changeProjects = withChoice(
     [
@@ -1796,25 +1919,10 @@ export function TransactionScreen({
         onProjectId={setProjectId}
         onCategoryId={setCategoryId}
         categoryOnly={splitRow}
-        approves={saveApproves}
-        saving={splitRow ? setCategory.isPending : reassign.isPending}
+        hold={hold}
+        leave={leaveChange}
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
-        onSave={() => {
-          if (!sample && blocked()) return;
-          if (splitRow) {
-            if (categoryId === "") {
-              toast.show({ tone: "bad", message: "בחרו קטגוריה." });
-              return;
-            }
-            setCategory.mutate();
-            return;
-          }
-          if (txn.direction === "income" ? categoryId === "" : projectId === "" || categoryId === "") {
-            toast.show({ tone: "bad", message: txn.direction === "income" ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
-            return;
-          }
-          reassign.mutate();
-        }}
+        onCommitPick={commitPick}
         onSplit={() => {
           setChangeOpen(false);
           void navigate(`/transactions/${txn.id}/split${search}`, { replace: true });
@@ -1895,7 +2003,7 @@ export function SplitScreen({
   sampleChosen?: string[];
   /** The saving story. Rows, fields, the link, and ✕ stay disabled. */
   sampleSaving?: boolean;
-  onSave?: (rows: Array<{ project_id: string; share_bp: number }>) => void;
+  onSave?: (rows: Array<{ project_id: string; share_bp: number }>) => void | boolean | Promise<void | boolean>;
   example?: ReactNode;
   /** Where back goes when this screen was opened directly. */
   backTo?: string;
@@ -1903,9 +2011,13 @@ export function SplitScreen({
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
   const search = usePreviewSearch();
+  const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const blocked = useBlockedPreview();
   const goBack = useGoBack();
+  const hereRef = useRef("");
+  hereRef.current = `${location.pathname}${location.search}${location.hash}`;
   const dashboard = useDashboardQuery(sampleProjects == null);
   const txn = useTransactionQuery(sampleProjects ? "" : transactionId);
   const phase = sampleProjects ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, txn));
@@ -1975,11 +2087,16 @@ export function SplitScreen({
           ? !overRange && splitIsValid(manualParts)
           : false;
   rowsRef.current = sharesForSave(valid ? parts : []);
+  const baseline = useRef<string | null>(sampleProjects ? "[]" : null);
+  if (seeded && baseline.current == null) baseline.current = JSON.stringify(rowsRef.current);
+  const dirty = method != null && (!valid || JSON.stringify(rowsRef.current) !== (baseline.current ?? "[]"));
+  const popLeave = useRef(false);
   const save = useWrite({
     failure: () => "החלוקה לא נשמרה",
     success: "החלוקה נשמרה",
     keys: ["dashboard", "txn", "project"],
     onSuccess: () => {
+      if (popLeave.current) return;
       goBack(fallback);
     },
     run: async () => {
@@ -1989,6 +2106,69 @@ export function SplitScreen({
     },
   });
   const busy = sampleSaving || save.isPending;
+  const gate = useRef({ method, valid, dirty });
+  gate.current = { method, valid, dirty };
+  async function leave() {
+    if (busy) return;
+    if (gate.current.method != null && !gate.current.valid) return;
+    if (gate.current.dirty && gate.current.valid) {
+      if (onSave) {
+        try {
+          const saved = await onSave(rowsRef.current);
+          if (saved === false) return;
+        } catch {
+          return;
+        }
+        baseline.current = JSON.stringify(rowsRef.current);
+        return;
+      }
+      if (blocked()) return;
+      if (sampleProjects) {
+        goBack(fallback);
+        return;
+      }
+      try {
+        await save.mutateAsync();
+      } catch {
+        return;
+      }
+      return;
+    }
+    goBack(fallback);
+  }
+  useEffect(() => {
+    function onPop() {
+      const splitUrl = hereRef.current;
+      const now = gate.current;
+      if (now.method != null && !now.valid) {
+        void navigate(splitUrl);
+        return;
+      }
+      if (!now.dirty || !now.valid) return;
+      popLeave.current = true;
+      void (async () => {
+        try {
+          if (onSave) {
+            const saved = await onSave(rowsRef.current);
+            if (saved === false) {
+              popLeave.current = false;
+              void navigate(splitUrl);
+            }
+            return;
+          }
+          if (sampleProjects || blocked()) return;
+          await save.mutateAsync();
+        } catch {
+          popLeave.current = false;
+          void navigate(splitUrl);
+        }
+      })();
+    }
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+    };
+  }, [blocked, navigate, onSave, sampleProjects, save]);
   function openManual() {
     if (busy) return;
     if (method !== "manual") priorMethod.current = method;
@@ -2047,20 +2227,13 @@ export function SplitScreen({
       autoComplete="off"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!valid || busy) return;
-        if (onSave) {
-          onSave(rowsRef.current);
-          return;
-        }
-        if (sampleProjects) return;
-        if (blocked()) return;
-        save.mutate();
+        void leave();
       }}
     >
       <ScreenHeader
         layout="stacked"
         title="חלוקה בין פרויקטים"
-        leading={<BackButton label="סגירה" fallback={fallback} disabled={busy}><CloseIcon /></BackButton>}
+        leading={<IconButton label="סגירה" disabled={busy} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
         trailing={example}
       />
       <div className="ui-split-amount">
@@ -2168,7 +2341,7 @@ export function SplitScreen({
         {method === "manual" && valid ? <p className="ui-split-remain t-label">הסך 100%</p> : null}
       </fieldset>
       <div className="ui-split-cta">
-        <p className={summaryIdle ? "ui-split-summary t-body ui-split-summary-idle" : "ui-split-summary t-body"}>
+        <p className={summaryIdle ? "ui-split-summary t-body ui-split-summary-idle" : "ui-split-summary t-body"} role={summaryIdle ? "status" : undefined}>
           {method === "manual" && manualLeft < 0 ? (
             <>
               {"הסך "}
@@ -2177,7 +2350,6 @@ export function SplitScreen({
             </>
           ) : summary}
         </p>
-        <Button type="submit" full disabled={!valid} busy={busy}>{busy ? "שומר…" : "שמירה"}</Button>
       </div>
     </form>
   );

@@ -23,7 +23,7 @@ async function readSaved(page: Page) {
 }
 
 async function saveAndCheck(page: Page) {
-  await page.getByRole("button", { name: "שמירה" }).click();
+  await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.locator("#e2e-split-saved")).not.toHaveText("");
   const rows = await readSaved(page);
   const result = settled(rows);
@@ -40,10 +40,9 @@ test.beforeEach(async ({ page }) => {
 
 test("nothing is selected until one tap on every project", async ({ page }) => {
   await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
   await expect(page.getByText("בחרו איך לחלק")).toBeVisible();
   await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeEnabled();
   const rows = await saveAndCheck(page);
   expect(rows.map((row) => row.share_bp)).toEqual([3334, 3333, 3333]);
 });
@@ -52,7 +51,10 @@ test("chosen projects need two ticks and then split evenly", async ({ page }) =>
   await page.getByRole("radio", { name: "שווה בין פרויקטים שאבחר" }).click();
   await page.getByRole("button", { name: "שיפוץ הרצל 12" }).click();
   await expect(page.getByText("בחרו לפחות 2 פרויקטים")).toBeVisible();
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).toHaveURL(/\/e2e\/split$/);
+  await expect(page.getByText("בחרו לפחות 2 פרויקטים")).toBeVisible();
+  await expect(page.locator("#e2e-split-saved")).toHaveText("");
   await page.getByRole("button", { name: "פרגולה בית כהן" }).click();
   const rows = await saveAndCheck(page);
   expect(rows.map((row) => row.project_id)).toEqual(["c", "a"]);
@@ -114,5 +116,5 @@ test("light and dark both show the question", async ({ page }) => {
   expect(light.toLowerCase()).toBe("#ffffff");
   expect(dark.toLowerCase()).toBe("#15111e");
   await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
 });

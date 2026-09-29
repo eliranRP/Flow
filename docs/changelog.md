@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), Accepted. A category or project tap in Change assignment saves immediately, including a split, and a failed tap rolls the check back. Leaving the sheet or the split screen saves a valid pending change and stays open when the change is invalid. The summary save button is removed. The new-project name still has שמירה, because the name is typed. `set_transaction_category` was already keeping the shares; the check had never been written.
+
 Decision [0073](decisions/0073-review-handoff.md) point 2. The reviewer guard also rejects id 2375135516, the totals with thousands commas and a leading ₪, פ"ת, ת"א, and פתח תקווה. The hosted check reads quoted URL and key values, checks their shape, adds the project ref, and fails when `app/.env.production` is missing or has fewer than those two values.
 
 Decision [0074](decisions/0074-toast-and-remembered-supplier.md), amended. The shared-cost sentence uses the muted hint colour. The review card supplier wraps, and it is not cut. The remember arrow stays on the destination's line. A toast above a tall sheet keeps its minimum height and does not cover the header.
