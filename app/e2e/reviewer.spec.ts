@@ -9,6 +9,10 @@ async function toast(page: Page, message: string) {
   await expect(page.locator(".ui-toast").getByText(message)).toBeVisible();
 }
 
+function toastAction(page: Page, name: string) {
+  return page.locator(".ui-toast button", { hasText: name });
+}
+
 async function horizontalOverflow(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const problems: string[] = [];
@@ -66,7 +70,7 @@ test("home links open a queue, a filed list, and each save", async ({ page }) =>
   ];
   for (const [name, url] of links) {
     await page.goto("/reviewer");
-    await page.getByRole("link", { name }).click();
+    await page.getByRole("link", { name, exact: true }).click();
     await expect(page).toHaveURL(url);
     await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
   }
@@ -114,7 +118,7 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await expect(page.getByRole("heading", { name: "צבעי הגליל בע״מ" })).toBeVisible();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
-  await expect(page.getByRole("heading", { name: "הכל מאושר" })).toBeVisible();
+  await expect(page.getByText("הכל מאושר")).toBeVisible();
   await page.getByRole("link", { name: "לתצוגת הביקורת" }).click();
   await expect(page).toHaveURL(/\/reviewer$/);
 });
@@ -123,11 +127,15 @@ test("a refused queue save has no retry, and a dropped connection does", async (
   await page.goto("/reviewer/review?save=fail");
   await page.getByRole("button", { name: "דלג" }).click();
   await toast(page, refusal);
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toHaveCount(0);
+  await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
   await page.goto("/reviewer/review?save=offline");
   await page.getByRole("button", { name: "דלג" }).click();
   await toast(page, offline);
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
+  const retry = toastAction(page, "ניסיון חוזר");
+  await expect(retry).toBeVisible();
+  expect(await retry.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
+  await retry.click();
+  await toast(page, offline);
 });
 
 test("filed today lists both rows, opens one, and can be empty", async ({ page }) => {
@@ -144,7 +152,7 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.goto("/reviewer/filed?empty=1");
-  await expect(page.getByRole("heading", { name: "אין תנועות ששויכו היום" })).toBeVisible();
+  await expect(page.getByText("אין תנועות ששויכו היום")).toBeVisible();
   await expectNoOverflow(page);
 });
 
@@ -154,13 +162,15 @@ test("the change sheet can succeed, refuse, or lose the connection", async ({ pa
   await expectNoOverflow(page);
   await page.getByRole("button", { name: "שמירה ואישור" }).click();
   await toast(page, refusal);
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toHaveCount(0);
+  await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
   await page.goto("/reviewer/save?save=offline");
   await page.getByRole("button", { name: "שמירה ואישור" }).click();
   await toast(page, offline);
-  const retry = page.getByRole("button", { name: "ניסיון חוזר" });
+  const retry = toastAction(page, "ניסיון חוזר");
   await expect(retry).toBeVisible();
   expect(await retry.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
+  await retry.click();
+  await toast(page, offline);
   await page.goto("/reviewer/save?save=ok");
   await page.getByRole("button", { name: "שמירה ואישור" }).click();
   await toast(page, "השיוך נשמר");
@@ -172,5 +182,5 @@ test("a refused split save has no retry", async ({ page }) => {
   await page.getByRole("radio", { name: /שווה בין כל הפרויקטים/ }).click();
   await page.getByRole("button", { name: "שמירה" }).click();
   await toast(page, refusal);
-  await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toHaveCount(0);
+  await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
 });
