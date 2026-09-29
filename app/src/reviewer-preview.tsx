@@ -22,7 +22,8 @@ import { useToast } from "./ui/toast";
 
 /**
  * Dev-server preview for a design or PR review.
- * Imported only from the `import.meta.env.DEV` route. The hosted build drops this module.
+ * Imported from the dev server, or from a build with VITE_REVIEWER_BUILD=1.
+ * The hosted build leaves that unset and drops this module.
  * Every screen carries the sample mark. Nothing here is written to a ledger.
  */
 const exampleMark = "נתוני דוגמה · Example data";
