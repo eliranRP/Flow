@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSheetHistory } from "./back";
 import { Button } from "./button";
 import { Chip } from "./chip";
@@ -36,7 +36,18 @@ type PeriodPickerProps = {
 
 export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: PeriodPickerProps) {
   const custom = useRef(false);
+  const onCustomRef = useRef(onCustom);
+  onCustomRef.current = onCustom;
   const setOpen = useSheetHistory("period", open, onOpenChange);
+  useEffect(() => {
+    if (open || !custom.current) return;
+    const id = window.setTimeout(() => {
+      if (!custom.current) return;
+      custom.current = false;
+      onCustomRef.current?.();
+    }, 320);
+    return () => window.clearTimeout(id);
+  }, [open]);
   return (
     <>
       <button
@@ -52,16 +63,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
           <ChevronDownIcon />
         </span>
       </button>
-      <Sheet
-        open={open}
-        onOpenChange={setOpen}
-        title="תקופה"
-        onClosed={() => {
-          if (!custom.current) return;
-          custom.current = false;
-          onCustom?.();
-        }}
-      >
+      <Sheet open={open} onOpenChange={setOpen} title="תקופה">
         <div role="radiogroup" aria-label="תקופה">
           {options.map((option) => (
             <RadioRow
@@ -70,6 +72,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
               hint={option.hint}
               selected={option.selected ?? option.label === pill}
               onSelect={() => {
+                custom.current = false;
                 option.onSelect();
                 setOpen(false);
               }}

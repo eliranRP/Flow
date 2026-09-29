@@ -446,6 +446,7 @@ a.ui-row,
   overflow-x: hidden;
   overflow-y: auto;
   overflow-wrap: anywhere;
+  max-height: calc(100dvh - var(--sheet-gap) - 11rem);
   padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -1589,6 +1590,14 @@ a.ui-row,
   padding-top: var(--space-2);
 }
 
+button.ui-tab-slot {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .ui-tab-slot {
   display: flex;
   width: var(--tab-slot);
@@ -2136,6 +2145,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-switch-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -2181,10 +2191,19 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-switch-row input {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+  z-index: 1;
+  width: var(--size-switch);
+  height: var(--switch-track-h);
+  margin: 0;
+  opacity: 0;
+  inset-inline-end: 0;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.ui-switch-row input:disabled {
+  cursor: not-allowed;
 }
 
 .ui-switch-row input:checked + .ui-switch {

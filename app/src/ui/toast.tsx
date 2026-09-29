@@ -185,7 +185,7 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
       </span>
       <span className="ui-toast-text" dir="rtl">{children}</span>
       {action && onAction ? (
-        <button type="button" onClick={onAction}>
+        <button type="button" aria-label={action} onClick={onAction}>
           {action}
         </button>
       ) : null}

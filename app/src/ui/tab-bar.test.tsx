@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { TabBar } from "./tab-bar";
 import { expectRtl, expectTarget } from "./test-support";
@@ -84,12 +84,18 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("highlights no tab on add", () => {
+  it("highlights no tab on add and closes the sheet from +", async () => {
     render(
       <MemoryRouter initialEntries={["/add"]}>
         <TabBar />
+        <Routes>
+          <Route path="/" element={<h1>בית</h1>} />
+          <Route path="/add" element={<h1>גיליון</h1>} />
+        </Routes>
       </MemoryRouter>,
     );
     expect(document.querySelector('[aria-current="page"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "הוספה" }));
+    expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
   });
 });
