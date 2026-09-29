@@ -1,11 +1,11 @@
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useGoBack } from "./back";
 import { Sheet } from "./sheet";
 
 /**
  * The sheet is a real route (`/add`, `/review/change`). Opening it pushes
- * history. Closing plays the exit animation, then pops that entry, so the
- * screen underneath is the one that opened the sheet.
+ * history. Closing pops that entry at once, so the screen underneath is the
+ * one that opened the sheet. A deep link replaces itself with `closeTo`.
  */
 export function RouteSheet({
   title,
@@ -34,7 +34,8 @@ export function RouteSheet({
   onBeforeClose?: () => void;
   children?: ReactNode;
 }) {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
+  const leaving = useRef(false);
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
@@ -50,12 +51,10 @@ export function RouteSheet({
   }, [returnFocusRef]);
 
   function leave() {
-    const idx = historyIndex();
-    if (idx != null && idx > 0) {
-      void navigate(-1);
-      return;
-    }
-    void navigate(closeTo, { replace: true });
+    if (leaving.current) return;
+    leaving.current = true;
+    setOpen(false);
+    goBack(closeTo);
   }
 
   return (
@@ -71,18 +70,10 @@ export function RouteSheet({
       onEscape={onEscape}
       onBeforeClose={onBeforeClose}
       onOpenChange={(next) => {
-        if (!next) setOpen(false);
+        if (!next) leave();
       }}
-      onClosed={leave}
     >
       {children}
     </Sheet>
   );
-}
-
-function historyIndex(): number | null {
-  const state: unknown = window.history.state;
-  if (typeof state !== "object" || state === null || !("idx" in state)) return null;
-  const idx = state.idx;
-  return typeof idx === "number" ? idx : null;
 }

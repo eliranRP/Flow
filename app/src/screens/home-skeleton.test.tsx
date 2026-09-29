@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { HomeSkeleton } from "./home-skeleton";
 import { expectRtl } from "../ui/test-support";
@@ -6,7 +7,7 @@ import { expectRtl } from "../ui/test-support";
 describe("HomeSkeleton", () => {
   it("matches the home loading chrome and hides the preview label", () => {
     expectRtl();
-    render(<HomeSkeleton />);
+    render(<MemoryRouter><HomeSkeleton /></MemoryRouter>);
     expect(screen.getByRole("status")).toHaveTextContent("טוען…");
     expect(screen.getByRole("heading", { name: "פרויקטים מובילים" })).toBeInTheDocument();
     expect(screen.queryByText("מצב תצוגה")).not.toBeInTheDocument();
@@ -26,7 +27,7 @@ describe("HomeSkeleton", () => {
   });
 
   it("keeps the preview label on a preview load", () => {
-    render(<HomeSkeleton preview />);
+    render(<MemoryRouter><HomeSkeleton preview /></MemoryRouter>);
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
   });
 });

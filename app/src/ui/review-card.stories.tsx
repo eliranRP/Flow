@@ -34,6 +34,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+export const NoSuggestion: Story = {
+  args: {
+    supplier: "חומרי בניין השרון בע״מ",
+    sourceLine: "הוצאה · 12/04/2026",
+    netAgorot: "-2200000",
+    vatLine: "לפני מע״מ · מע״מ ₪3,960",
+  },
+};
+
 export const OneCard: Story = {
   args: {
     supplier: "חומרי בניין השרון בע״מ",

@@ -11,7 +11,7 @@ const SUMIT_ERRORS: Record<string, string> = {
   sync_skipped: "הרענון דילג. אפשר שוב בעוד דקה.",
   sync_sweep_empty: "הרענון הגיע בלי מסמכים, אז הספרים לא נמחקו.",
   sync_sweep_suspicious: "הרענון נראה חלקי, אז מסמכים ישנים לא נמחקו.",
-  connect_failed: "החיבור נכשל. בדקו את המזהה ואת המפתח.",
+  connect_failed: "לא הצלחנו להתחבר. נסו שוב.",
   method: "החיבור נכשל.",
 };
 

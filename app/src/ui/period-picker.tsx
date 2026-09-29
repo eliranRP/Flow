@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useSheetHistory } from "./back";
 import { Button } from "./button";
 import { Chip } from "./chip";
 import {
@@ -35,6 +36,7 @@ type PeriodPickerProps = {
 
 export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: PeriodPickerProps) {
   const custom = useRef(false);
+  const setOpen = useSheetHistory("period", open, onOpenChange);
   return (
     <>
       <button
@@ -42,7 +44,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
         className="ui-band-period ui-hit"
         aria-label={pill}
         onClick={() => {
-          onOpenChange(true);
+          setOpen(true);
         }}
       >
         <span className="ui-period-label">{pill}</span>
@@ -52,7 +54,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
       </button>
       <Sheet
         open={open}
-        onOpenChange={onOpenChange}
+        onOpenChange={setOpen}
         title="תקופה"
         onClosed={() => {
           if (!custom.current) return;
@@ -69,7 +71,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
               selected={option.selected ?? option.label === pill}
               onSelect={() => {
                 option.onSelect();
-                onOpenChange(false);
+                setOpen(false);
               }}
             />
           ))}
@@ -80,7 +82,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
             className="ui-radio-row"
             onClick={() => {
               custom.current = true;
-              onOpenChange(false);
+              setOpen(false);
             }}
           >
             <CalendarIcon size={20} />
@@ -106,6 +108,7 @@ type RangeSheetProps = {
 
 /** Opens only after the period sheet has closed, so the two sheets never stack. */
 export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
+  const setOpen = useSheetHistory("period-range", open, onOpenChange);
   const today = israelToday();
   const spans = useMemo(
     () => ({ month: monthSpan(), previous: previousMonthSpan(), year: yearSpan() }),
@@ -145,14 +148,14 @@ export function RangeSheet({ open, onOpenChange, onApply }: RangeSheetProps) {
   return (
     <Sheet
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={setOpen}
       title="טווח מותאם"
       action={
         <Button
           full
           onClick={() => {
             onApply(from, to);
-            onOpenChange(false);
+            setOpen(false);
           }}
         >
           {rangeLengthLabel(inclusiveDays(from, to))}

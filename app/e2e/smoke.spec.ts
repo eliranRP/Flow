@@ -85,7 +85,7 @@ test("help links are at least 44px and sign-in help does not grow the stack", as
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/help");
   const mail = page.getByRole("link", { name: HELP_EMAIL });
-  const back = page.getByRole("link", { name: "חזרה" });
+  const back = page.getByRole("button", { name: "חזרה" });
   expect((await mail.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   const backBox = await back.boundingBox();
   expect(backBox?.height).toBeGreaterThanOrEqual(44);

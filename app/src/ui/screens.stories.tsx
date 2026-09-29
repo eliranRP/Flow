@@ -244,11 +244,30 @@ export const HomeBooksMonth: Story = {
   ),
 };
 
+const bareReview: ReviewRow = {
+  ...sampleReview,
+  id: "r0",
+  project_id: null,
+  category_id: null,
+  project_name: null,
+  category_name: null,
+  confidence: null,
+};
+
 export const ReviewCardQueue: Story = {
   render: () => (
     <StoryRoute entry="/review" tabs reviewCount={1}>
       <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewWithoutSuggestion: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[bareReview]} search="" sample />
     </StoryRoute>
   ),
 };

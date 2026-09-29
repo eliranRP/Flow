@@ -326,7 +326,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Empty: [es-02](../../design/states/es-02-project-empty-light.png). Loading: [ld-02](../../design/states/ld-02-project-skeleton-light.png).
 - Entry: a project row on Home or in the projects list.
 - Steps: band header, overhead switch (same preference as Home), optional budget ([0014](../decisions/0014-optional-project-budget.md)), categories. With the switch on: before, overhead share, after. [0032](../decisions/0032-home-hero-stays-company-net-profit.md).
-- Back: chevron, "חזרה".
+- Back: chevron, "חזרה", from one shared control. It returns to the screen that opened this one, and a fresh visit opens the parent. Browser back does the same. [0069](../decisions/0069-back-and-one-tap-review.md).
 - Error: same loading and offline pattern as Home.
 
 ### 03 Review queue
@@ -334,7 +334,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Mockups: [03-review-light.png](../../design/screens/03-review-light.png), [03-review-dark.png](../../design/screens/03-review-dark.png).
 - Done: [es-03-review-done-light.png](../../design/states/es-03-review-done-light.png), [es-03-review-done-dark.png](../../design/states/es-03-review-done-dark.png). "הכל מאושר".
 - Entry: tab לאישור, the Home pending card, or the 18:00 nudge. [0006](../decisions/0006-confirm-not-type.md), [0018](../decisions/0018-two-notifications.md).
-- Steps: one card. Approve, Change (opens 06), or Split (opens 11). High-confidence rows never appear here. [0011](../decisions/0011-auto-approve-high-confidence.md).
+- Steps: one card. The suggestion is two short rows under הצעה, project and category, with no confidence number. אישור accepts that suggestion. It is disabled, with a not-allowed cursor, only when the card says אין הצעה. Change opens 06. A plain אישור does not write a supplier rule. [0069](../decisions/0069-back-and-one-tap-review.md). High-confidence rows never appear here. [0011](../decisions/0011-auto-approve-high-confidence.md).
 - Back: none on the tab. Change and Split close back to the card.
 - Success: the card leaves. The queue-done empty state when none remain. Approve shows a busy button (`ld-04`) then a toast.
 - Error: save failure toast (`er-05`).

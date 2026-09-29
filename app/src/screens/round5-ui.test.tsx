@@ -375,6 +375,38 @@ describe("notification switches", () => {
     expect(await screen.findByText("החיבור נכשל. בדקו את המזהה ואת המפתח.")).toBeInTheDocument();
   });
 
+  it("asks to retry when connect fails before SUMIT answers", async () => {
+    edge.invoke = () => Promise.resolve({
+      data: null,
+      error: new Error("Failed to fetch"),
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: false,
+                  companyId: null,
+                  lastError: null,
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /חיבור SUMIT/ }));
+    fireEvent.change(await screen.findByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(screen.getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(screen.getByRole("button", { name: /^חיבור$/ }));
+    expect(await screen.findByText("לא הצלחנו להתחבר. נסו שוב.")).toBeInTheDocument();
+    expect(screen.queryByText(/בדקו/)).not.toBeInTheDocument();
+  });
+
   it("disables refresh until the retry time and asks to reconnect after a bad key", () => {
     const later = new Date(Date.now() + 60 * 60_000).toISOString();
     const { unmount } = render(

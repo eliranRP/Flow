@@ -60,7 +60,7 @@ select is(
         'external_id', '1',
         'direction', 'expense',
         'doc_kind', 'expense',
-        'pnl_role', 'shared',
+        'pnl_role', 'project',
         'amount_gross', '-10001',
         'amount_net', '-10001',
         'vat_amount', '0',
