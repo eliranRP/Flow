@@ -35,7 +35,7 @@ When the filtered set is empty but the company queue is not, show the filter's e
 
 ## Elements and fields
 
-Header `לאישור`. Subtitle `מה שה-AI לא היה בטוח בו`. Counter `{i} מתוך {n}` and a progress bar of `n` segments, `i` filled. `n` is the length of this visit's queue. Skip does not reduce `n`.
+Header `לאישור`. Subtitle `מה שה-AI לא היה בטוח בו`. Counter `{i} מתוך {n}` and a progress bar of `n` segments, `i` filled. `n` is the length of this visit's queue. Skip does not reduce `n`. The card leaves and the counter advances. "דילגנו על הפריט", when it shows, sits under the header and dismisses itself. It does not cover דלג.
 
 | Element | Hebrew | Source and format |
 | --- | --- | --- |

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
+import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
@@ -10,6 +11,7 @@ import {
   CategoriesScreen,
   ProjectDetailScreen,
   ProjectsScreen,
+  ReviewQueue,
   ReviewScreen,
   SettingsScreen,
   SplitScreen,
@@ -300,6 +302,44 @@ describe("rejected writes", () => {
     expect(getComputedStyle(approve).cursor).toBe("not-allowed");
     fireEvent.click(approve);
     expect(screen.queryByText(/אי אפשר לאשר/)).not.toBeInTheDocument();
+  });
+
+  it("advances the visit meter without shrinking the queue", async () => {
+    const row = (id: string, supplier: string): ReviewRow => ({
+      id,
+      transaction_id: id,
+      description: supplier,
+      doc_date: "2026-06-20",
+      amount_net: -1_600_000n,
+      direction: "expense",
+      reason: null,
+      project_id: "p",
+      category_id: "c",
+      supplier_name: supplier,
+      project_name: "שיפוץ הרצל 12",
+      category_name: "חומרים",
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    function queue(rows: ReviewRow[]) {
+      return (
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <MemoryRouter>
+              <ReviewQueue rows={rows} search="" sample />
+            </MemoryRouter>
+          </ToastProvider>
+        </QueryClientProvider>
+      );
+    }
+    const { rerender } = render(queue([row("a", "חומרי בניין השרון"), row("b", "הובלות הגליל")]));
+    const meter = screen.getByRole("meter", { name: "התקדמות התור" });
+    expect(meter).toHaveAttribute("aria-valuenow", "1");
+    expect(meter).toHaveAttribute("aria-valuemax", "2");
+    rerender(queue([row("b", "הובלות הגליל")]));
+    const next = screen.getByRole("meter", { name: "התקדמות התור" });
+    expect(next).toHaveAttribute("aria-valuenow", "2");
+    expect(next).toHaveAttribute("aria-valuemax", "2");
+    expect(await screen.findByRole("heading", { name: "הובלות הגליל" })).toBeInTheDocument();
   });
 });
 

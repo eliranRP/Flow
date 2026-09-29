@@ -18,10 +18,11 @@ The r17 review also left six nits: the companies UPDATE grant was wider than the
 5. `authenticated` may update `name`, `tax_id`, `vat_rate_bp`, `vat_registered`, `after_overhead`, and `updated_at` on `companies`. `id`, `owner_id`, `created_at`, `is_demo`, and `last_sumit_company_id` stay revoked.
 6. A rejected key still says "החיבור נכשל. בדקו את המזהה ואת המפתח." A network or server failure says "לא הצלחנו להתחבר. נסו שוב."
 7. The default live check does not create SUMIT documents. Creates stay behind `SUMIT_CREATE_DOCUMENTS=1`.
+8. A toast sits under the page header, below the safe area, and never over the bottom actions. The host is `pointer-events: none`; only the toast itself takes a tap. A confirmation leaves after about 2.5 seconds, an error after about 4. A tap or a swipe dismisses it, and a new toast replaces the one on screen. Hover with a pointer still pauses the timer. This amends the "above the tab bar" and 4-second sentences in the implementation guide, and the sheet-padding sentence in [0067](0067-review-round8.md) point 8. On לאישור, skip and approve move the card out and advance `{i} מתוך {n}` for this visit. The toast is only the words.
 
 ## Alternatives rejected
 
-A per-screen back link. Auto-approving the default category, which would hide a guess the owner has not confirmed. Showing the confidence percent on a rule that is not an AI score. Leaving אישור enabled so it can toast. Granting UPDATE on the whole companies row.
+A per-screen back link. Auto-approving the default category, which would hide a guess the owner has not confirmed. Showing the confidence percent on a rule that is not an AI score. Leaving אישור enabled so it can toast. Granting UPDATE on the whole companies row. Leaving the toast above the tab bar, where it covers דלג. Stacking toasts.
 
 ## Consequences
 

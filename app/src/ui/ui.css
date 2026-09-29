@@ -1167,11 +1167,14 @@ a.ui-row,
   display: flex;
   align-items: center;
   gap: var(--toast-gap);
+  inline-size: 100%;
+  max-inline-size: var(--content-max);
   border-radius: var(--radius-button);
   padding: var(--space-3) var(--space-4);
   background: var(--color-toast-bg);
   color: var(--color-toast-text);
   font-size: var(--type-label-size);
+  pointer-events: auto;
 }
 
 .ui-toast button {
@@ -1248,6 +1251,31 @@ a.ui-row,
   border-radius: var(--radius-card);
   background: var(--color-surface);
   box-sizing: border-box;
+}
+
+.ui-review-motion[data-motion="in"] {
+  animation: ui-review-in var(--dur-base) var(--ease-standard);
+}
+
+.ui-review-motion[data-motion="out"] {
+  animation: ui-review-out var(--dur-base) var(--ease-exit) forwards;
+}
+
+@keyframes ui-review-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ui-review-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-review-motion[data-motion="in"],
+  .ui-review-motion[data-motion="out"] {
+    animation: none;
+  }
 }
 
 .ui-review-copy {
@@ -2367,18 +2395,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 .ui-toast-host {
   position: fixed;
   z-index: 40;
-  inset-inline: var(--space-side);
-  bottom: calc(var(--tabbar-height) + var(--space-3));
-  margin-inline: auto;
-  max-width: var(--content-max);
-}
-
-body:has([data-vaul-drawer][data-state="open"]) .ui-toast-host {
-  bottom: calc(var(--sheet-foot-h) + var(--space-3));
-}
-
-body:has(.ui-toast):has([data-vaul-drawer][data-state="open"]) [data-vaul-drawer][data-state="open"] .ui-sheet-body {
-  padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px) + 3.5rem + var(--space-3));
+  inset-inline: 0;
+  top: calc(var(--safe-top) + 6rem);
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--space-side);
+  pointer-events: none;
 }
 
 .ui-day-range {

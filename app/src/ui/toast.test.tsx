@@ -2,13 +2,13 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, useToast } from "./toast";
 
-function Probe() {
+function Probe({ tone, message = "הפריט אושר" }: { tone?: "ok" | "bad"; message?: string }) {
   const toast = useToast();
   return (
     <button
       type="button"
       onClick={() => {
-        toast.show({ message: "הפריט אושר" });
+        toast.show({ message, tone });
       }}
     >
       הצגה
@@ -30,20 +30,74 @@ describe("Toast", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
     expect(screen.getByRole("status")).toHaveTextContent("הפריט אושר");
-    fireEvent.mouseEnter(screen.getByRole("status").parentElement ?? screen.getByRole("status"));
+    fireEvent.mouseEnter(screen.getByRole("status"));
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
     expect(screen.getByRole("status")).toBeInTheDocument();
-    fireEvent.mouseLeave(screen.getByRole("status").parentElement ?? screen.getByRole("status"));
+    fireEvent.mouseLeave(screen.getByRole("status"));
     act(() => {
-      vi.advanceTimersByTime(3_999);
+      vi.advanceTimersByTime(2_499);
     });
     expect(screen.getByRole("status")).toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(20);
     });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("leaves an error up longer, and a new toast replaces the one on screen", () => {
+    vi.useFakeTimers();
+    function Two() {
+      const toast = useToast();
+      return (
+        <>
+          <button type="button" onClick={() => { toast.show({ message: "הפריט אושר" }); }}>אישור</button>
+          <button type="button" onClick={() => { toast.show({ tone: "bad", message: "לא נשמר" }); }}>כשל</button>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Two />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(screen.getByRole("status")).toHaveTextContent("הפריט אושר");
+    fireEvent.click(screen.getByRole("button", { name: "כשל" }));
+    expect(screen.getByRole("status")).toHaveTextContent("לא נשמר");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(2_500);
+    });
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(1_500);
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("dismisses on tap and on a swipe, and does not cover the page", () => {
+    render(
+      <ToastProvider>
+        <Probe />
+        <button type="button">דלג</button>
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    const status = screen.getByRole("status");
+    expect(status.parentElement).toHaveClass("ui-toast-host");
+    expect(getComputedStyle(status.parentElement ?? status).pointerEvents).toBe("none");
+    expect(getComputedStyle(status).pointerEvents).toBe("auto");
+    fireEvent.click(status);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    const again = screen.getByRole("status");
+    fireEvent.pointerDown(again, { clientX: 20, clientY: 20, pointerType: "touch" });
+    fireEvent.pointerUp(again, { clientX: 120, clientY: 20, pointerType: "touch" });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "דלג" })).toBeEnabled();
   });
 
   it("runs a toast action once when the tap is repeated before the toast closes", () => {
