@@ -21,7 +21,7 @@ function renderQueue(row: ReviewRow, sampleSave: "ok" | "fail" | "offline") {
               path="/reviewer/review"
               element={<ReviewQueue rows={[row]} search="" sample sampleSave={sampleSave} />}
             />
-            <Route path="/reviewer/split" element={<p>חלוקה לדוגמה</p>} />
+            <Route path="/transactions/:transactionId/split" element={<p>חלוקה לדוגמה</p>} />
           </Routes>
         </MemoryRouter>
       </ToastProvider>

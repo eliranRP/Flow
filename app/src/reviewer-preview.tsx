@@ -109,6 +109,7 @@ function ReviewerHome() {
 
 function ReviewerQueue() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const mode = sampleSaveMode(params.get("save"));
   const [rows, setRows] = useState(reviewerQueue);
   const search = `?save=${mode}`;
@@ -122,6 +123,10 @@ function ReviewerQueue() {
       filedTo="/reviewer/filed"
       backTo="/reviewer"
       homeTo="/reviewer"
+      homeLabel="לתצוגת הביקורת"
+      onShared={() => {
+        void navigate(`/reviewer/split${search}`);
+      }}
       onSampleDone={(id) => {
         setRows((current) => current.filter((row) => row.id !== id));
       }}

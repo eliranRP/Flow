@@ -848,6 +848,8 @@ export function ReviewQueue({
   filedTo,
   backTo,
   homeTo,
+  homeLabel,
+  onShared,
 }: {
   rows: ReviewRow[];
   search: string;
@@ -865,6 +867,10 @@ export function ReviewQueue({
   backTo?: string;
   /** Reviewer preview returns an empty queue to its index. */
   homeTo?: string;
+  /** Label for that return. The product queue says לדף הבית. */
+  homeLabel?: string;
+  /** Reviewer preview opens its own split instead of the ledger split. */
+  onShared?: (transactionId: string) => void;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -958,7 +964,7 @@ export function ReviewQueue({
     },
   });
   const card = shown;
-  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} backTo={backTo} />;
+  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
   const change = changeTo ?? `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
@@ -1023,10 +1029,11 @@ export function ReviewQueue({
             if (sampleSave == null && blocked(sample ? "empty" : preview)) return;
             if (row.reason === "unallocated_shared") {
               if (!row.transaction_id) return;
-              const target = sampleSave != null
-                ? `/reviewer/split${search}`
-                : `/transactions/${row.transaction_id}/split${search}`;
-              void navigate(target);
+              if (onShared) {
+                onShared(row.transaction_id);
+                return;
+              }
+              void navigate(`/transactions/${row.transaction_id}/split${search}`);
               return;
             }
             approve.mutate();
@@ -1119,11 +1126,13 @@ function ReviewEmpty({
   search,
   filtered = false,
   homeTo,
+  homeLabel,
   backTo,
 }: {
   search: string;
   filtered?: boolean;
   homeTo?: string;
+  homeLabel?: string;
   backTo?: string;
 }) {
   return (
@@ -1133,7 +1142,7 @@ function ReviewEmpty({
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לפרויקט הזה" : "הכל מאושר"}
         body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
-        action={<Button variant="pill" to={homeTo ?? `/${search}`}>{homeTo ? "לתצוגת הביקורת" : "לדף הבית"}</Button>}
+        action={<Button variant="pill" to={homeTo ?? `/${search}`}>{homeLabel ?? "לדף הבית"}</Button>}
       />
     </div>
   );
