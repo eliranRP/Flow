@@ -21,6 +21,7 @@ Apply, in order, on the hosted SQL editor or with `supabase db push`:
 13. `supabase/migrations/20260929160000_review_0068_addendum.sql`
 14. `supabase/migrations/20260929170000_review_0068_column.sql`
 15. `supabase/migrations/20260929180000_reassign_undo_rls.sql`
+16. `supabase/migrations/20260929190000_review_0068_retire_keys.sql`
 
 Migrations are append-only from `20260929150000` on. Hosted Supabase had only the Phase 0 migration when `20260929120000` was edited in place, so that one edit stays. Do not edit a migration after it has been applied. Add a new file.
 
@@ -48,7 +49,7 @@ Each Google user has their own Flow company. Both can point at SUMIT CompanyID *
 
 The key is not returned to the browser. ניתוק deletes the ciphertext, leaves the ledger, and keeps the last SUMIT company id on the Flow company.
 
-Connecting again always clears `reject_attempts`, `next_attempt_at`, and `last_sync_at`. `sumit-connect` calls `listfolders` once before it stores the key. A failed check leaves the ledger and the previous connection alone. When the SUMIT company id differs from the live connection, or from the id remembered by ניתוק, that same transaction retires the previous company's `source = 'sumit'` rows and closes their open review items, so Home does not mix two companies. A manual row stays. Flow Test 2 (`2393153301`) can use a fresh Flow company, or an existing one: Disconnect, then Connect, compares the remembered id and retires the old ledger after that one successful read. Disconnect still keeps the books.
+Connecting again always clears `reject_attempts`, `next_attempt_at`, and `last_sync_at`. `sumit-connect` calls `listfolders` once before it stores the key. A failed check leaves the ledger and the previous connection alone. When the SUMIT company id differs from the live connection, or from the id remembered by ניתוק, that same transaction retires the previous company's `source = 'sumit'` rows, closes their open review items, and releases their document keys, party ids, and budget section ids, so the next sync cannot resurrect those rows or fail on the old ids. A manual row stays. Reconnecting the same SUMIT company keeps the keys and the ids. Flow Test 2 (`2393153301`) can use a fresh Flow company, or an existing one: Disconnect, then Connect, compares the remembered id and retires the old ledger after that one successful read. Disconnect still keeps the books.
 
 There is no SQL seed for the Flow Test documents. `pnpm seed:demo` refuses to run. The sync writes the rows. Do not insert `demo-data.json` into the hosted database.
 
