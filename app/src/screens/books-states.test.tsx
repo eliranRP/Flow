@@ -168,7 +168,7 @@ describe("rejected reads", () => {
     renderAt("/");
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.queryByText("הכל שולם")).not.toBeInTheDocument();
-    expect(screen.getByText("הכנסות")).toBeInTheDocument();
+    expect(screen.getByText("נכנס")).toBeInTheDocument();
   });
 
   it("shows the split form error instead of an empty project list when projects fail", async () => {
