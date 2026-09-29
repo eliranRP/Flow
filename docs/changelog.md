@@ -2,6 +2,8 @@
 
 ## 2026-09-28
 
+Decision [0068](decisions/0068-review-round9.md) addendum. A rejected SUMIT key puts "צריך לחבר מחדש את SUMIT" on the refresh row, and "חיבור מחדש" stays in place. Backoff says "SUMIT לא זמין כרגע" and keeps "אפשר לנסות שוב ב-HH:MM".
+
 Decision [0068](decisions/0068-review-round9.md) further addendum. Disconnect keeps the last SUMIT company id, and the next connect retires that company's ledger only after one successful listfolders read. Saving a category on an unsplit shared cost opens the unallocated item in the same call. The live SUMIT check is read-only unless `SUMIT_CREATE_DOCUMENTS=1`.
 
 Decision [0068](decisions/0068-review-round9.md) addendum. The retry clock stays in the hint colour at full opacity, and only the refresh row's title and icon fade. The Project Detail loading band matches the loaded band. Home's loading band is unchanged. A direct `/install` visit replaces itself with Settings.

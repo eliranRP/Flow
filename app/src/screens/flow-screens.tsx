@@ -1744,14 +1744,16 @@ export function SettingsScreen({
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
   const lastError = hebrewSumitError(rawError);
-  const retry = rawError === "sumit_auth" ? null : retryClockParts(retrySource, clockNow);
-  const refreshHeld = rawError === "sumit_auth" || retry != null;
+  const authReconnect = rawError === "sumit_auth";
+  const retry = authReconnect ? null : retryClockParts(retrySource, clockNow);
+  const refreshHeld = authReconnect || retry != null;
   const retryHint = retry == null ? undefined : (
     <>
       {retry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
       <bdi className="ui-num" dir="ltr">{retry.clock}</bdi>
     </>
   );
+  const refreshHint = authReconnect ? "צריך לחבר מחדש את SUMIT" : retryHint;
   const email = sample ? sample.email : session?.user.email;
   const projectCount = sample?.projectCount ?? dashboard.data?.projects.length;
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
@@ -1787,10 +1789,10 @@ export function SettingsScreen({
           <ListRow
             variant="button"
             title="רענון עכשיו"
-            hint={retryHint}
+            hint={refreshHint}
             icon={<RefreshIcon />}
             chevron
-            clearHint={retry != null}
+            clearHint={authReconnect || retry != null}
             busy={refresh.isPending}
             disabled={refreshHeld}
             onClick={() => {
