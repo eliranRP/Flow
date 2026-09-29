@@ -46,7 +46,11 @@ test("the cron drain opens the sync path and rejects a bad secret", async () => 
   }).select("company_id");
   expect(connection.error, connection.error?.message).toBeNull();
 
-  const marker = await admin.from("sumit_refresh_requests").insert({ company_id: companyId }).select("id").single();
+  // Oldest first, so leftover failed rows cannot fill the drain page of 20.
+  const marker = await admin.from("sumit_refresh_requests").insert({
+    company_id: companyId,
+    requested_at: "2000-01-01T00:00:00.000Z",
+  }).select("id").single();
   expect(marker.error, marker.error?.message).toBeNull();
   const markerId = marker.data?.id as number;
 
