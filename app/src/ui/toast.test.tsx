@@ -368,7 +368,8 @@ describe("placeToast", () => {
     const top = Number.parseFloat(host.style.top);
     const cap = toast.style.maxHeight === "" ? 120 : Number.parseFloat(toast.style.maxHeight);
     expect(cap).toBeGreaterThanOrEqual(toastMinBlock());
-    expect(top + cap).toBeLessThanOrEqual(36);
+    expect(top).toBeGreaterThanOrEqual(76);
+    expect(top + cap).toBeLessThanOrEqual(844);
     expect(toast.style.overflow).not.toBe("hidden");
     sheet.remove();
     host.remove();

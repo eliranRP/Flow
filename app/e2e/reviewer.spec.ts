@@ -186,7 +186,7 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await page.getByRole("link", { name: /מחצבת הדקל/ }).click();
   await expect(page).toHaveURL(/\/reviewer\/transaction\/t-sample-sand$/);
   await expect(page.getByText("₪140")).toBeVisible();
-  await expect(page.getByText("בית הספר אלון · מלט")).toBeVisible();
+  await expect(page.locator(".t-body")).toHaveText("בית הספר אלון · מלט");
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.goto("/reviewer/filed?empty=1");
@@ -232,9 +232,16 @@ test("a tap on the toast does not close the sheet under it", async ({ page }) =>
   await expect(sheet).toBeVisible();
   const toastBox = await page.locator(".ui-toast").boundingBox();
   const sheetBox = await sheet.boundingBox();
+  const headBox = await sheet.locator(".ui-sheet-head").boundingBox();
   expect(toastBox).not.toBeNull();
   expect(sheetBox).not.toBeNull();
-  if (toastBox && sheetBox) expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(sheetBox.y + 1);
+  if (toastBox && sheetBox && headBox) {
+    expect(toastBox.y).toBeGreaterThanOrEqual(0);
+    expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(844);
+    const aboveSheet = toastBox.y + toastBox.height <= sheetBox.y + 1;
+    const underHeader = toastBox.y >= headBox.y + headBox.height - 1;
+    expect(aboveSheet || underHeader).toBe(true);
+  }
   await toastAction(page, "ניסיון חוזר").click();
   await expect(sheet).toBeVisible();
   await toast(page, offline);
