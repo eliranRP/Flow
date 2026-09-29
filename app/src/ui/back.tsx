@@ -107,6 +107,7 @@ export function useSheetHistory(
   name: string,
   open: boolean,
   onOpenChange: (open: boolean) => void,
+  allowClose?: () => boolean | Promise<boolean>,
 ): (next: boolean) => void {
   const navigate = useNavigate();
   const location = useLocation();
@@ -116,6 +117,8 @@ export function useSheetHistory(
   onOpenChangeRef.current = onOpenChange;
   const layer = layerName(location.state);
   const pushed = useRef(false);
+  const allowRef = useRef(allowClose);
+  allowRef.current = allowClose;
 
   useEffect(() => {
     if (!open) {
@@ -140,14 +143,25 @@ export function useSheetHistory(
   useEffect(() => {
     function onPop() {
       if (!openRef.current) return;
-      pushed.current = false;
-      onOpenChangeRef.current(false);
+      void (async () => {
+        const allowed = allowRef.current ? await allowRef.current() : true;
+        if (!allowed) {
+          pushed.current = true;
+          const prev = isRecord(window.history.state) ? window.history.state : {};
+          void navigate(`${location.pathname}${location.search}${location.hash}`, {
+            state: { ...prev, flowLayer: name },
+          });
+          return;
+        }
+        pushed.current = false;
+        onOpenChangeRef.current(false);
+      })();
     }
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
     };
-  }, [name]);
+  }, [name, navigate, location.pathname, location.search, location.hash]);
 
   return useCallback((next: boolean) => {
     if (next) {

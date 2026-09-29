@@ -31,7 +31,7 @@ export function RouteSheet({
   footClassName?: string;
   titleRef?: RefObject<HTMLHeadingElement | null>;
   onEscape?: () => void;
-  onBeforeClose?: () => void;
+  onBeforeClose?: () => void | boolean | Promise<void | boolean>;
   children?: ReactNode;
 }) {
   const goBack = useGoBack();

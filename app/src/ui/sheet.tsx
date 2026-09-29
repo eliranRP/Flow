@@ -89,21 +89,31 @@ export function Sheet({
   titleRef?: RefObject<HTMLHeadingElement | null>;
   /** When set, Escape stays in the sheet and runs this instead of closing. */
   onEscape?: () => void;
-  /** Runs once when the sheet starts to close. Picker history is dropped here. */
-  onBeforeClose?: () => void;
+  /**
+   * Runs when the sheet starts to close. Return false to stay open.
+   * Picker history is dropped here, after a pending edit has been saved.
+   */
+  onBeforeClose?: () => void | boolean | Promise<void | boolean>;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const localTitle = useRef<HTMLHeadingElement>(null);
   const titleRef = titleRefProp ?? localTitle;
   const closing = useRef(false);
+  const deciding = useRef(false);
   useEffect(() => {
     if (open) closing.current = false;
   }, [open]);
-  function requestClose() {
-    if (closing.current) return;
-    closing.current = true;
-    onBeforeClose?.();
-    onOpenChange(false);
+  async function requestClose() {
+    if (closing.current || deciding.current) return;
+    deciding.current = true;
+    try {
+      const verdict = await onBeforeClose?.();
+      if (verdict === false) return;
+      closing.current = true;
+      onOpenChange(false);
+    } finally {
+      deciding.current = false;
+    }
   }
   function keepOpenForToast(event: { preventDefault: () => void; target: EventTarget | null; detail?: { originalEvent?: { target: EventTarget | null } } }) {
     const nodes = [event.target, event.detail?.originalEvent?.target];

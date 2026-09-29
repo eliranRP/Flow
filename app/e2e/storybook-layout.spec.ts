@@ -226,7 +226,7 @@ test("change sheet picks a project and a category, then offers save", async ({ p
   await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.getByRole("radio", { name: "הובלה" }).click();
   await expect(page.getByRole("button", { name: "קטגוריה: הובלה, שינוי" })).toBeVisible();
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
 });
 
@@ -557,7 +557,7 @@ test("the categories hidden link wraps on the end side and does not truncate", a
   expect(motion.transform).not.toBe("none");
 });
 
-test("split stays calm and pins the save button", async ({ page }) => {
+test("split stays calm and pins the summary", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=screens-routes--split-income-disabled&viewMode=story", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("אופן הפיצול")).toHaveCount(0);
@@ -565,17 +565,18 @@ test("split stays calm and pins the save button", async ({ page }) => {
   await expect(page.locator(".ui-chip-scope")).toHaveCount(0);
   const income = page.getByRole("radio", { name: /לפי הכנסות/ });
   await expect(income).toBeDisabled();
-  const save = page.getByRole("button", { name: "שמירה" });
-  const saveBox = await save.boundingBox();
-  expect(saveBox).not.toBeNull();
-  if (saveBox) {
-    expect(saveBox.y + saveBox.height).toBeGreaterThan(800);
-    expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(844);
+  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
+  const summary = page.locator(".ui-split-cta");
+  const summaryBox = await summary.boundingBox();
+  expect(summaryBox).not.toBeNull();
+  if (summaryBox) {
+    expect(summaryBox.y + summaryBox.height).toBeGreaterThan(800);
+    expect(summaryBox.y + summaryBox.height).toBeLessThanOrEqual(844);
   }
 
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/iframe.html?id=screens-routes--split-default-320&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "שמירה" })).toBeVisible();
+  await expect(page.locator(".ui-split-summary")).toBeVisible();
   expect(await layoutProblems(page)).toEqual([]);
   const titles = await page.locator(".ui-split-card .ui-row-title").evaluateAll((nodes) => nodes.map((node) => {
     const style = getComputedStyle(node);

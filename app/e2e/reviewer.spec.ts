@@ -99,13 +99,12 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await approve.click();
   await expect(page).toHaveURL(/\/reviewer\/split\?save=ok$/);
   await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
-  const save = page.getByRole("button", { name: "שמירה" });
-  await expect(save).toBeDisabled();
-  expect(await save.evaluate((node) => getComputedStyle(node).cursor)).toBe("not-allowed");
+  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
+  await expect(page.getByText("בחרו איך לחלק")).toBeVisible();
+  const close = page.getByRole("button", { name: "סגירה" });
+  expect(await close.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await page.getByRole("radio", { name: /שווה בין כל הפרויקטים/ }).click();
-  await expect(save).toBeEnabled();
-  expect(await save.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
-  await save.click();
+  await close.click();
   await toast(page, "החלוקה נשמרה");
   await expect(page).toHaveURL(/\/reviewer\/review\?save=ok$/);
 
@@ -195,25 +194,31 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await expectNoOverflow(page);
 });
 
+async function pickCategory(page: Page, name: string) {
+  await page.getByRole("button", { name: /קטגוריה:/ }).click();
+  await page.getByRole("radio", { name }).click();
+}
+
 test("the change sheet can succeed, refuse, or lose the connection", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/save?save=fail");
   await expectNoOverflow(page);
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await pickCategory(page, "שינוע");
   await toast(page, refusal);
   await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "שינוע" })).toHaveAttribute("aria-checked", "false");
   await page.goto("/reviewer/save?save=offline");
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await pickCategory(page, "שינוע");
   await toast(page, offline);
-  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   const retry = toastAction(page, "ניסיון חוזר");
   await expect(retry).toBeVisible();
   expect(await retry.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await retry.click();
   await toast(page, offline);
-  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
   await page.goto("/reviewer/save?save=ok");
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await pickCategory(page, "שינוע");
   await toast(page, "השיוך נשמר");
   await expect(page).toHaveURL(/\/reviewer\/review$/);
 });
@@ -221,9 +226,9 @@ test("the change sheet can succeed, refuse, or lose the connection", async ({ pa
 test("a tap on the toast does not close the sheet under it", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/save?save=offline");
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await pickCategory(page, "שינוע");
   await toast(page, offline);
-  const sheet = page.getByRole("dialog", { name: "שינוי שיוך" });
+  const sheet = page.getByRole("dialog", { name: "בחירת קטגוריה" });
   await expect(sheet).toBeVisible();
   const toastBox = await page.locator(".ui-toast").boundingBox();
   const sheetBox = await sheet.boundingBox();
@@ -290,9 +295,11 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
 test("a shared-cost save offers לחלוקה and stays on the sheet", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/save?save=shared");
-  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await page.getByRole("button", { name: /פרויקט:/ }).click();
+  await page.getByRole("radio", { name: "מחסן הנמל" }).click();
   await toast(page, "עלות משותפת מחולקת במסך החלוקה.");
-  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "מחסן הנמל" })).toHaveAttribute("aria-checked", "false");
   const split = toastAction(page, "לחלוקה");
   await expect(split).toBeVisible();
   expect(await split.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
@@ -302,7 +309,7 @@ test("a shared-cost save offers לחלוקה and stays on the sheet", async ({ p
 });
 
 test("reviewer screens stay inside the viewport at 320 in both themes", async ({ page }) => {
-  const routes = ["/reviewer", "/reviewer/review", "/reviewer/waiting", "/reviewer/category?more=1", "/reviewer/save?save=ok"];
+  const routes = ["/reviewer", "/reviewer/review", "/reviewer/waiting", "/reviewer/category?more=1", "/reviewer/save?save=ok", "/reviewer/split-expense"];
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     for (const route of routes) {
@@ -317,7 +324,30 @@ test("reviewer screens stay inside the viewport at 320 in both themes", async ({
 test("a refused split save has no retry", async ({ page }) => {
   await page.goto("/reviewer/split?save=fail");
   await page.getByRole("radio", { name: /שווה בין כל הפרויקטים/ }).click();
-  await page.getByRole("button", { name: "שמירה" }).click();
+  await page.getByRole("button", { name: "סגירה" }).click();
   await toast(page, refusal);
   await expect(toastAction(page, "ניסיון חוזר")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+});
+
+test("a split expense saves the category on the tap and keeps it after close", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/split-expense");
+  await expect(page.getByText("ליסינג הדרך בע״מ")).toBeVisible();
+  await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
+  await expect(page.getByText("01/07/2026")).toBeVisible();
+  await expect(page.getByText("₪3,200")).toBeVisible();
+  await page.getByRole("button", { name: /מלט/ }).click();
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "שמירה ואישור" })).toHaveCount(0);
+  const category = page.getByRole("button", { name: "קטגוריה: מלט, שינוי" });
+  await category.click();
+  await page.getByRole("radio", { name: "שינוע" }).click();
+  await toast(page, "השיוך נשמר");
+  await expect(page.getByRole("button", { name: "קטגוריה: שינוע, שינוי" })).toBeVisible();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /שינוע/ })).toBeVisible();
+  await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
 });

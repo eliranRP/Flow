@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { isTransientWriteError, type WriteFailure } from "../use-write";
 import { Button } from "./button";
 import { IconButton } from "./icon-button";
-import { BackIcon, CheckIcon, PlusIcon, SplitIcon } from "./icons";
+import { BackIcon, PlusIcon, SplitIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { RadioRow } from "./radio-row";
 import { RouteSheet } from "./route-sheet";
@@ -58,12 +58,22 @@ type Shared = {
   /** Omitted when the save cannot store a supplier rule. */
   remember?: boolean;
   onRemember?: (value: boolean) => void;
-  onSave: () => void;
-  saving?: boolean;
+  /**
+   * A project or category tap. Resolves after the write. Rejects to roll the check back.
+   * "left" means the screen already navigated, so the picker must not pop history.
+   * Omitted in a story, which only updates the local choice.
+   */
+  onCommitPick?: (kind: "project" | "category", id: string) => Promise<void | "left">;
+  /** A pending edit that is not a pick, such as the remember switch. Rejects to stay open. */
+  onCommitPending?: () => Promise<void>;
+  /** True when leaving should write onCommitPending. */
+  pending?: boolean;
+  /** An incomplete edit. Leaving stays open and this sentence shows on the summary. */
+  hold?: string;
+  /** The history pop of an overlay sheet. The same check as the backdrop and the X. */
+  leave?: { current: () => Promise<boolean> };
   /** A split already has its projects. The sheet changes the category only. */
   categoryOnly?: boolean;
-  /** False when this save closes no review item. The button then reads שמירה. */
-  approves?: boolean;
   onSplit: () => void;
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
@@ -120,6 +130,8 @@ export function ChangeAssignment(props: Props) {
   const [newName, setNewName] = useState("");
   const [nameError, setNameError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const settled = useRef(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const projectBtn = useRef<HTMLButtonElement>(null);
   const categoryBtn = useRef<HTMLButtonElement>(null);
@@ -128,6 +140,7 @@ export function ChangeAssignment(props: Props) {
   const depth = useRef(0);
   const ignorePop = useRef(0);
   const afterPop = useRef<(() => void) | null>(null);
+  const guardPop = useRef<((here: typeof location) => Promise<boolean>) | null>(null);
   const locationRef = useRef(location);
   locationRef.current = location;
 
@@ -136,6 +149,11 @@ export function ChangeAssignment(props: Props) {
     : urlPick === "project" || urlPick === "category"
       ? urlPick
       : "summary";
+  const sheetOpen = props.host === "overlay" ? props.open : true;
+
+  useEffect(() => {
+    if (sheetOpen) settled.current = false;
+  }, [sheetOpen]);
 
   useEffect(() => {
     function onPop() {
@@ -144,6 +162,11 @@ export function ChangeAssignment(props: Props) {
         const run = afterPop.current;
         afterPop.current = null;
         run?.();
+        return;
+      }
+      if (depth.current === 0 && guardPop.current) {
+        const here = locationRef.current;
+        void guardPop.current(here);
         return;
       }
       depth.current = Math.max(0, depth.current - 1);
@@ -234,13 +257,30 @@ export function ChangeAssignment(props: Props) {
     void navigate(-1);
   }
 
-  function choose(kind: "project" | "category", id: string) {
+  async function commitChoice(kind: "project" | "category", id: string, previous: string): Promise<boolean> {
+    if (!props.onCommitPick) return true;
+    setSavingId(id);
+    try {
+      const outcome = await props.onCommitPick(kind, id);
+      setSavingId(null);
+      return outcome !== "left";
+    } catch {
+      setSavingId(null);
+      if (kind === "project") props.onProjectId(previous);
+      else props.onCategoryId(previous);
+      return false;
+    }
+  }
+
+  async function choose(kind: "project" | "category", id: string) {
+    const previous = kind === "project" ? props.projectId : props.categoryId;
     if (kind === "project") props.onProjectId(id);
     else props.onCategoryId(id);
     opener.current = kind;
     pendingFocus.current = kind;
     setCreatingNew(false);
-    closePickLevel();
+    const stay = await commitChoice(kind, id, previous);
+    if (stay) closePickLevel();
   }
 
   async function submitNew(event: SubmitEvent) {
@@ -252,13 +292,15 @@ export function ChangeAssignment(props: Props) {
     }
     setNameError("");
     setCreating(true);
+    const previous = props.projectId;
     try {
       const created = await props.onCreateProject(clean);
       props.onProjectId(created.id);
       opener.current = "project";
       pendingFocus.current = "project";
       setCreatingNew(false);
-      closePickLevel();
+      const stay = await commitChoice("project", created.id, previous);
+      if (stay) closePickLevel();
     } catch {
       setCreating(false);
       return;
@@ -284,12 +326,39 @@ export function ChangeAssignment(props: Props) {
       <BackIcon />
     </IconButton>
   );
-  const action = view === "summary" ? (
-    <Button full iconEnd={<CheckIcon />} busy={props.saving} onClick={props.onSave}>
-      {props.approves === false ? "שמירה" : "שמירה ואישור"}
-    </Button>
-  ) : undefined;
   const showRemember = !income && props.remember != null && props.onRemember != null;
+  const propsRef = useRef(props);
+  propsRef.current = props;
+
+  async function allowClose(): Promise<boolean> {
+    if (settled.current) return true;
+    const current = propsRef.current;
+    if (current.hold) return false;
+    if (savingId != null) return false;
+    if (current.pending && current.onCommitPending) {
+      try {
+        await current.onCommitPending();
+      } catch {
+        return false;
+      }
+    }
+    settled.current = true;
+    discardPicker();
+    return true;
+  }
+
+  if (props.leave) props.leave.current = allowClose;
+  if (props.host === "route") {
+    guardPop.current = async (here) => {
+      const ok = await allowClose();
+      if (ok) return true;
+      void navigate(
+        { pathname: here.pathname, search: here.search, hash: here.hash },
+        { state: keptState(here) },
+      );
+      return false;
+    };
+  }
 
   const body = (
     <div key={view} className="ui-change-swap">
@@ -328,6 +397,7 @@ export function ChangeAssignment(props: Props) {
               }}
             />
           </div>
+          {props.hold ? <p className="t-hint" role="status">{props.hold}</p> : null}
           {showRemember ? (
             <Toggle
               label="לזכור לספק הזה"
@@ -358,8 +428,9 @@ export function ChangeAssignment(props: Props) {
           listed={listed}
           selectedId={pickerKind === "project" ? props.projectId : props.categoryId}
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : (props.suggestionCategoryId ?? "")}
+          savingId={savingId}
           onSelect={(id) => {
-            choose(pickerKind, id);
+            void choose(pickerKind, id);
           }}
           onCreate={pickerKind === "project" ? () => {
             setNewName("");
@@ -390,12 +461,11 @@ export function ChangeAssignment(props: Props) {
   const chrome = {
     title,
     leading,
-    action,
     titleRef,
     panelClassName: view === "summary" ? "ui-sheet-fit" : "ui-sheet-tall",
     footClassName: view === "summary" ? "ui-sheet-foot-safe" : undefined,
     onEscape: view === "summary" ? undefined : back,
-    onBeforeClose: discardPicker,
+    onBeforeClose: allowClose,
     children: body,
   };
 
@@ -413,6 +483,7 @@ function Picker({
   listed,
   selectedId,
   suggestionId,
+  savingId,
   onSelect,
   onCreate,
   onSplit,
@@ -424,6 +495,7 @@ function Picker({
   listed: ChangeChoice[];
   selectedId: string;
   suggestionId: string;
+  savingId: string | null;
   onSelect: (id: string) => void;
   onCreate?: () => void;
   onSplit?: () => void;
@@ -461,6 +533,8 @@ function Picker({
                   date={needle === "" ? option.recent : undefined}
                   tag={option.id === suggestionId ? "הצעה" : undefined}
                   selected={option.id === selectedId}
+                  busy={option.id === savingId}
+                  disabled={savingId != null && option.id !== savingId}
                   onSelect={() => {
                     onSelect(option.id);
                   }}

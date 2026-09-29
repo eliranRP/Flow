@@ -594,11 +594,11 @@ function DevChange() {
       onCategoryId={setCategoryId}
       remember={remember}
       onRemember={setRemember}
-      onSave={() => {
-        if (projectId === "" || categoryId === "") {
-          toast.show({ tone: "bad", message: "בחרו פרויקט וקטגוריה." });
-          return;
-        }
+      pending={remember !== true}
+      onCommitPick={async () => {
+        toast.show({ message: "השיוך נשמר" });
+      }}
+      onCommitPending={async () => {
         toast.show({ message: "השיוך נשמר" });
       }}
       onSplit={() => {
@@ -653,8 +653,8 @@ function DevTransaction() {
         open_gross_agorot: null,
         allocations: [],
       }}
-      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }]}
-      sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }, { id: "p2", name: "וילה רעננה" }]}
+      sampleCategories={[{ id: "c1", name: "חומרים" }, { id: "c2", name: "הובלה" }]}
     />
   );
 }

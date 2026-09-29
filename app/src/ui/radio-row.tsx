@@ -18,6 +18,8 @@ type RadioRowProps = {
   disabled?: boolean;
   /** Replaces the description while the row cannot be chosen. */
   disabledReason?: string;
+  /** The row is writing. The cursor is progress and the check stays. */
+  busy?: boolean;
   selected: boolean;
   onSelect: () => void;
 };
@@ -33,6 +35,7 @@ export function RadioRow({
   marker = "end",
   disabled = false,
   disabledReason,
+  busy = false,
   selected,
   onSelect,
 }: RadioRowProps) {
@@ -63,12 +66,13 @@ export function RadioRow({
       className={picker ? "ui-radio-row ui-pick-row" : marker === "start" ? "ui-radio-row ui-radio-start" : "ui-radio-row"}
       role="radio"
       aria-checked={selected}
-      aria-disabled={off || undefined}
+      aria-disabled={off || busy || undefined}
+      aria-busy={busy || undefined}
       aria-label={label}
       aria-describedby={sub ? descId : undefined}
-      disabled={off}
+      disabled={off || busy}
       onClick={() => {
-        if (!off) onSelect();
+        if (!off && !busy) onSelect();
       }}
     >
       {marker === "start" ? radio : null}
