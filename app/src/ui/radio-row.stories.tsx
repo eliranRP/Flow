@@ -39,6 +39,16 @@ export const DisabledWithReasonDark: Story = {
   args: DisabledWithReason.args,
   globals: { theme: "dark" },
 };
+export const Saving: Story = {
+  args: {
+    label: "שווה בין כל הפרויקטים",
+    description: "₪250 לכל אחד מ־4 פרויקטים",
+    marker: "start",
+    selected: true,
+    busy: true,
+    onSelect: () => undefined,
+  },
+};
 export const DisabledWithReason320: Story = {
   args: DisabledWithReason.args,
   parameters: { viewport: { defaultViewport: "flow320" } },

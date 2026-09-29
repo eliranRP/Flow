@@ -521,6 +521,116 @@ describe("rejected writes", () => {
       expect(calls).toContain("collapse_split");
     });
     expect(calls).not.toContain("resolve_review");
+    const saved = await screen.findByText("השיוך נשמר");
+    const toast = saved.closest(".ui-toast");
+    expect(toast).not.toBeNull();
+    const undo = toast?.querySelector("button");
+    expect(undo).toHaveTextContent("ביטול");
+    if (!undo) throw new Error("undo missing");
+    fireEvent.click(undo);
+    await waitFor(() => {
+      expect(calls).toContain("undo_reassign");
+    });
+  });
+
+  it("reassigns an income review with a null project on the second pick", async () => {
+    let open = true;
+    let projectArg: unknown = "missing";
+    rpc.impl = (name, args) => {
+      if (name === "list_review") {
+        if (!open) return Promise.resolve({ data: [], error: null });
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "תקבול",
+            doc_date: "2026-09-01",
+            amount_net: 100,
+            direction: "income",
+            reason: "missing_category",
+            project_id: null,
+            category_id: null,
+            project_name: null,
+            category_name: null,
+            supplier_name: "לקוח",
+          }],
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [
+            { id: "c1", name: "תקבול מלקוח", kind: "income", hidden: false, is_default: true },
+            { id: "c2", name: "הכנסה אחרת", kind: "income", hidden: false, is_default: false },
+          ],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") return Promise.resolve({ data: emptyDashboard, error: null });
+      if (name === "resolve_review") {
+        open = false;
+        return Promise.resolve({ data: null, error: null });
+      }
+      if (name === "reassign_transaction") {
+        projectArg = (args as { p_project_id?: unknown } | undefined)?.p_project_id;
+        return Promise.resolve({ data: "undo-income", error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review/change?item=r1");
+    fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "תקבול מלקוח" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /קטגוריה: תקבול מלקוח/ })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "הכנסה אחרת" }));
+    await waitFor(() => {
+      expect(projectArg).toBeNull();
+    });
+  });
+
+  it("shows a split's category on the queue card and does not ask for a project", () => {
+    const row = (category: string | null): ReviewRow => ({
+      id: "r1",
+      transaction_id: "t1",
+      description: "מנוף",
+      doc_date: "2026-09-29",
+      amount_net: -100_000n,
+      direction: "expense",
+      reason: "missing_category",
+      pnl_role: "shared",
+      share_count: 2,
+      project_id: null,
+      category_id: category == null ? null : "c1",
+      supplier_name: "עגורני החוף בע״מ",
+      project_name: null,
+      category_name: category,
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={[row(null)]} search="" sample />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    expect(screen.getByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    rerender(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={[row("שינוע")]} search="" sample />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("שינוע")).toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
   });
 
   it("says a project expense is missing a category", async () => {

@@ -81,6 +81,8 @@ export const reviewerQueue: ReviewRow[] = [
     amount_net: -reviewerSharedAgorot,
     direction: "expense",
     reason: "unallocated_shared",
+    pnl_role: "shared",
+    share_count: 0,
     project_id: null,
     category_id: null,
     supplier_name: "עגורני החוף בע״מ",
@@ -98,6 +100,8 @@ export const reviewerQueue: ReviewRow[] = [
     amount_net: -reviewerWaitingBoltsAgorot,
     direction: "expense",
     reason: "missing_category",
+    pnl_role: "shared",
+    share_count: 2,
     project_id: "p-alon",
     category_id: null,
     supplier_name: "ברגי העמק בע״מ",
@@ -125,6 +129,31 @@ export const reviewerQueue: ReviewRow[] = [
     auto_approved_today: reviewerFiled.length,
   },
 ];
+
+type CategoryPatch = { category_id: string; category_name: string };
+
+const categoryPatches = new Map<string, CategoryPatch>();
+const queueListeners = new Set<() => void>();
+
+/** The queue the reviewer is showing, including a category saved on a split. */
+export function reviewerQueueView(): ReviewRow[] {
+  return reviewerQueue.map((row) => {
+    const patch = categoryPatches.get(row.id);
+    return patch ? { ...row, ...patch } : row;
+  });
+}
+
+export function patchReviewerCategory(id: string, categoryId: string, categoryName: string): void {
+  categoryPatches.set(id, { category_id: categoryId, category_name: categoryName });
+  for (const listener of queueListeners) listener();
+}
+
+export function subscribeReviewerQueue(listener: () => void): () => void {
+  queueListeners.add(listener);
+  return () => {
+    queueListeners.delete(listener);
+  };
+}
 
 export type SampleSave = "ok" | "fail" | "offline" | "shared";
 

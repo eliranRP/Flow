@@ -220,6 +220,7 @@ describe("placeToast", () => {
 
   afterEach(() => {
     Object.defineProperty(window, "innerHeight", { configurable: true, value: innerHeight });
+    document.documentElement.style.removeProperty("--safe-top");
   });
 
   function box(bottom: number, height: number): DOMRect {
@@ -348,13 +349,16 @@ describe("placeToast", () => {
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
-  it("keeps a tall toast above the sheet instead of under the header", () => {
+  it("keeps a tall toast at its full height in the safe area when the gap is too small", () => {
     const sheet = document.createElement("div");
     sheet.setAttribute("data-vaul-drawer", "");
     sheet.setAttribute("data-state", "open");
+    const surface = document.createElement("div");
+    surface.className = "ui-sheet-surface";
     const header = document.createElement("div");
     header.className = "ui-sheet-head";
-    sheet.appendChild(header);
+    surface.appendChild(header);
+    sheet.appendChild(surface);
     const host = document.createElement("div");
     const toast = document.createElement("div");
     toast.className = "ui-toast";
@@ -365,12 +369,58 @@ describe("placeToast", () => {
     header.getBoundingClientRect = () => box(76, 40);
     toast.getBoundingClientRect = () => box(120, 120);
     placeToast(host);
-    const top = Number.parseFloat(host.style.top);
-    const cap = toast.style.maxHeight === "" ? 120 : Number.parseFloat(toast.style.maxHeight);
-    const sheetTop = 36;
-    expect(top).toBeGreaterThanOrEqual(0);
-    expect(top + cap).toBeLessThanOrEqual(sheetTop);
-    expect(top).toBeLessThan(76);
+    expect(host.style.top).toBe("0px");
+    expect(toast.style.maxHeight).toBe("");
+    expect(toast.style.overflow).not.toBe("hidden");
+    sheet.remove();
+    host.remove();
+  });
+
+  it("keeps a 59px refusal and a two-line toast intact under a 47px safe area", () => {
+    document.documentElement.style.setProperty("--safe-top", "47px");
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    const surface = document.createElement("div");
+    surface.className = "ui-sheet-surface";
+    const header = document.createElement("div");
+    header.className = "ui-sheet-head";
+    const close = document.createElement("button");
+    close.setAttribute("aria-label", "סגירה");
+    header.appendChild(close);
+    surface.appendChild(header);
+    sheet.appendChild(surface);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    toast.textContent = "לא נשמר. בדקו את הפרטים ונסו שוב.";
+    const retry = document.createElement("button");
+    retry.textContent = "ניסיון חוזר";
+    toast.appendChild(retry);
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 693 });
+    // Sheet top 56 leaves about 1px once the 47px safe area and the 8px gap are removed.
+    sheet.getBoundingClientRect = () => box(456, 400);
+    header.getBoundingClientRect = () => box(120, 64);
+    close.getBoundingClientRect = () => box(110, 44);
+    toast.getBoundingClientRect = () => box(59, 59);
+    placeToast(host);
+    expect(host.style.top).toBe("47px");
+    expect(toast.style.maxHeight).toBe("");
+    expect(toast.style.overflow).not.toBe("hidden");
+    expect(Number.parseFloat(host.style.top)).toBeGreaterThan(0);
+    expect(toast.textContent).toContain("לא נשמר");
+    expect(toast.textContent).toContain("ניסיון חוזר");
+    const pad = Number.parseFloat(surface.dataset.toastPad ?? "");
+    expect(pad).toBeGreaterThan(0);
+    expect(surface.style.paddingTop).toBe(`${String(pad)}px`);
+
+    toast.getBoundingClientRect = () => box(toastMinBlock() + 8, toastMinBlock() + 8);
+    placeToast(host);
+    expect(toast.style.maxHeight).toBe("");
+    expect(toast.style.overflow).not.toBe("hidden");
+    expect(Number.parseFloat(host.style.top)).toBe(47);
     sheet.remove();
     host.remove();
   });

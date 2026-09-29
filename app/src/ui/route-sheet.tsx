@@ -19,6 +19,7 @@ export function RouteSheet({
   titleRef,
   onEscape,
   onBeforeClose,
+  onRequestClose,
   children,
 }: {
   title: string;
@@ -32,6 +33,7 @@ export function RouteSheet({
   titleRef?: RefObject<HTMLHeadingElement | null>;
   onEscape?: () => void;
   onBeforeClose?: () => void | boolean | Promise<void | boolean>;
+  onRequestClose?: RefObject<(() => void) | null>;
   children?: ReactNode;
 }) {
   const goBack = useGoBack();
@@ -69,6 +71,7 @@ export function RouteSheet({
       titleRef={titleRef}
       onEscape={onEscape}
       onBeforeClose={onBeforeClose}
+      onRequestClose={onRequestClose}
       onOpenChange={(next) => {
         if (!next) leave();
       }}

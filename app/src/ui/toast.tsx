@@ -100,7 +100,49 @@ function coversPageHeader(top: number, height: number, header: Element | null, s
   return rect.top < top + height && rect.bottom > top;
 }
 
-/** Sit just under the page header, or just above an open sheet, clear of every control. A toast too tall for the gap above a sheet stays in the safe area above that sheet, with the text balanced, and does not slide under the header. */
+function sheetSurface(sheet: Element): HTMLElement | null {
+  const surface = sheet.querySelector(".ui-sheet-surface");
+  return surface instanceof HTMLElement ? surface : null;
+}
+
+/** Drop the padding a previous toast added so a control could clear it. */
+export function clearToastPad(sheet: Element | null = document.querySelector("[data-vaul-drawer][data-state='open']")): void {
+  if (!(sheet instanceof Element)) return;
+  const surface = sheetSurface(sheet);
+  if (!surface) return;
+  surface.style.paddingTop = "";
+  delete surface.dataset.toastPad;
+}
+
+/**
+ * The toast may cover the grabber and the top of the header. A tappable
+ * control moves down with the sheet content until it is clear. The pad is
+ * measured from the unpadded position so a second layout pass does not grow it.
+ */
+function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap: number): void {
+  const surface = sheetSurface(sheet);
+  if (!surface) return;
+  const applied = Number.parseFloat(surface.dataset.toastPad ?? "") || 0;
+  const toastBottom = top + height + gap;
+  let need = 0;
+  for (const control of sheet.querySelectorAll("button, a[href], input, textarea, select")) {
+    if (!(control instanceof HTMLElement)) continue;
+    const rect = control.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+    const naturalTop = rect.top - applied;
+    const naturalBottom = rect.bottom - applied;
+    if (naturalTop >= toastBottom || naturalBottom <= top) continue;
+    need = Math.max(need, toastBottom - naturalTop);
+  }
+  if (need <= 0) {
+    clearToastPad(sheet);
+    return;
+  }
+  surface.dataset.toastPad = String(need);
+  surface.style.paddingTop = `${String(need)}px`;
+}
+
+/** Sit just under the page header, or just above an open sheet, clear of every control. A toast that cannot fit in the gap keeps its full height at the top safe area. It may cover the grabber or the top of the header, and the sheet content pads down so it never covers a tappable control. The text is never clipped. Decision 0075. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   if (toast instanceof HTMLElement) {
@@ -125,40 +167,15 @@ export function placeToast(layer: HTMLElement): void {
       && !toastHits(above, height, boxes)
       && !coversPageHeader(above, height, pageHeader, sheet)
     ) {
+      clearToastPad(sheet);
       layer.style.top = `${String(above)}px`;
       return;
     }
-    // Too tall for the gap. Stay in the safe area above the sheet so the toast
-    // never covers a control under the header. Decision 0075.
-    const head = sheet.querySelector(".ui-sheet-head");
-    const headTop = head instanceof HTMLElement ? head.getBoundingClientRect().top : sheetTop;
-    const headBottom = head instanceof HTMLElement ? head.getBoundingClientRect().bottom : sheetTop;
-    const headerVisible = headBottom > sheetTop && headTop < floor;
-    const gapRoom = sheetTop - gap - safe;
-    if (!headerVisible && gapRoom >= height) {
-      layer.style.top = `${String(Math.max(safe, sheetTop - gap - height))}px`;
-      return;
-    }
-    const room = Math.max(0, gapRoom);
-    if (toast instanceof HTMLElement && room > 0 && height > room) {
-      toast.style.maxHeight = `${String(room)}px`;
-      toast.style.overflow = "hidden";
-    }
-    const used = toast instanceof HTMLElement && toast.style.maxHeight !== ""
-      ? Number.parseFloat(toast.style.maxHeight)
-      : height;
-    let top = safe;
-    if (toastHits(top, used, boxes)) {
-      for (const box of boxes) {
-        const candidate = box.bottom + gap;
-        if (candidate < safe || candidate + used > sheetTop - gap) continue;
-        if (toastHits(candidate, used, boxes)) continue;
-        if (coversPageHeader(candidate, used, pageHeader, sheet)) continue;
-        top = candidate;
-        break;
-      }
-    }
+    // The gap above the sheet is shorter than the toast. Keep the full height
+    // at the safe area, even when that overlaps the grabber or the header top.
+    const top = Math.max(safe, 0);
     layer.style.top = `${String(top)}px`;
+    padSheetUnderToast(sheet, top, height, gap);
     return;
   }
   const candidates = [measured];
@@ -268,6 +285,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const place = () => { placeToast(layer); };
     place();
     const { sheet, anchor } = toastAnchor();
+    const openSheet = sheet;
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined") {
       observer = new ResizeObserver(place);
@@ -278,6 +296,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const timers = [50, 150, 320, 500].map((ms) => window.setTimeout(place, ms));
     window.addEventListener("resize", place);
     return () => {
+      clearToastPad(openSheet);
       observer?.disconnect();
       sheet?.removeEventListener("transitionend", place);
       for (const timer of timers) window.clearTimeout(timer);

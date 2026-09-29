@@ -935,7 +935,19 @@ export function ReviewQueue({
   const leaving = motion === "out";
   useEffect(() => {
     const next = rows[0] ?? null;
-    if (next?.id === shown?.id) return;
+    if (next?.id === shown?.id) {
+      if (
+        next != null
+        && shown != null
+        && (next.category_name !== shown.category_name
+          || next.category_id !== shown.category_id
+          || next.project_name !== shown.project_name
+          || next.share_count !== shown.share_count)
+      ) {
+        setShown(next);
+      }
+      return;
+    }
     if (!shown) {
       setShown(next);
       setMotion("still");
@@ -1151,6 +1163,12 @@ function vatStatusLabel(status: string): string {
 }
 
 function reviewSuggestion(row: ReviewRow) {
+  if (reviewIsSplit(row)) {
+    return {
+      project: reviewSplitTitle(row),
+      ...(row.category_name ? { category: row.category_name } : {}),
+    };
+  }
   if (!row.project_name && !row.category_name) return undefined;
   return {
     ...(row.project_name ? { project: row.project_name } : {}),
@@ -1298,6 +1316,9 @@ type ChangeSample = {
   initialQuery?: string;
   loading?: boolean;
   saveError?: boolean;
+  /** A split in the queue. The sheet does not ask for a project. */
+  split?: boolean;
+  splitTitle?: string;
 };
 
 function withChoice(options: ChangeChoice[], id: string, name: string | null | undefined): ChangeChoice[] {
@@ -1305,12 +1326,12 @@ function withChoice(options: ChangeChoice[], id: string, name: string | null | u
   return [{ id, name }, ...options];
 }
 
-function reviewIsSplit(row: { reason?: string | null; pnl_role?: string | null; share_count?: number | null } | null | undefined): boolean {
+export function reviewIsSplit(row: { reason?: string | null; pnl_role?: string | null; share_count?: number | null } | null | undefined): boolean {
   if (!row) return false;
   return row.pnl_role === "shared" || (row.share_count ?? 0) > 1 || row.reason === "unallocated_shared";
 }
 
-function reviewSplitTitle(row: { project_name?: string | null; share_count?: number | null; reason?: string | null }): string {
+export function reviewSplitTitle(row: { project_name?: string | null; share_count?: number | null; reason?: string | null }): string {
   if ((row.share_count ?? 0) > 1) return `מפוצל · ${String(row.share_count)} פרויקטים`;
   if (row.project_name) return row.project_name;
   return "עלות משותפת · טרם פוצלה";
@@ -1356,7 +1377,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const direction = sample?.direction ?? row?.direction ?? "expense";
   const formPhase = phase.kind === "ready" && sample == null && row == null ? ({ kind: "empty" } as const) : phase;
   const income = direction === "income";
-  const splitReview = reviewIsSplit(row);
+  const splitReview = sample?.split === true || reviewIsSplit(row);
   useEffect(() => {
     if (hold === "") return;
     const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
@@ -1472,10 +1493,11 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       const supabase = getSupabase();
       const next = picked.current;
       const transactionId = sharedTx.current;
-      if (!supabase || transactionId == null || next.projectId === "" || next.categoryId === "") throw new Error("supabase");
+      if (!supabase || transactionId == null || next.categoryId === "") throw new Error("supabase");
+      if (!income && next.projectId === "") throw new Error("supabase");
       assertNoError(await supabase.rpc("reassign_transaction", {
         p_id: transactionId,
-        p_project_id: next.projectId,
+        p_project_id: income ? (null as unknown as string) : next.projectId,
         p_category_id: next.categoryId,
       }));
     },
@@ -1529,7 +1551,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       hold={hold || leaveNote}
       pending={!income && remember !== savedRemember}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}
-      projectTitle={splitReview && row ? reviewSplitTitle(row) : undefined}
+      projectTitle={sample?.splitTitle ?? (splitReview && row ? reviewSplitTitle(row) : undefined)}
       initialQuery={sample?.initialQuery}
       loading={sample?.loading}
       onDiscard={() => {
@@ -2349,7 +2371,8 @@ export function SplitScreen({
       oneUndoId.current = await collapseSplit(transactionId, collapseTarget.current);
     },
   });
-  const busy = sampleSaving || save.isPending || collapseOne.isPending;
+  const [saving, setSaving] = useState(false);
+  const busy = sampleSaving || saving || save.isPending || collapseOne.isPending;
   const oneProjectRef = useRef(oneProject);
   oneProjectRef.current = oneProject;
   const gate = useRef({ method, valid, dirty, oneProject, manual, chosen });
@@ -2465,6 +2488,7 @@ export function SplitScreen({
     if (gate.current.dirty && gate.current.valid) {
       rememberDraft();
       if (onSave) {
+        setSaving(true);
         try {
           const work = Promise.resolve(onSave(rowsRef.current));
           inflight.current = work;
@@ -2475,6 +2499,7 @@ export function SplitScreen({
           return;
         } finally {
           inflight.current = null;
+          setSaving(false);
         }
         clearSplitDraft(draftId);
         baseline.current = JSON.stringify(rowsRef.current);
@@ -2676,13 +2701,14 @@ export function SplitScreen({
       <h2 className="ui-split-question t-title-3">איך לחלק?</h2>
       <fieldset className="ui-split-body" disabled={busy}>
         <div className="ui-split-card" role="radiogroup" aria-label="איך לחלק?">
-          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} busy={busy && method === "equal"} onSelect={() => { setMethod("equal"); }} />
-          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} onSelect={() => { setMethod("chosen"); }} />
+          <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} busy={busy && method === "equal"} disabled={busy && method !== "equal"} onSelect={() => { setMethod("equal"); }} />
+          <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} disabled={busy && method !== "chosen"} onSelect={() => { setMethod("chosen"); }} />
           <RadioRow
             marker="start"
             label="לפי הכנסות"
             description={hasIncome ? "לפי ההכנסות של כל פרויקט בתקופה" : undefined}
             disabledReason={hasIncome ? undefined : "אין הכנסות בתקופה הזו"}
+            disabled={busy && method !== "income"}
             selected={method === "income"}
             busy={busy && method === "income"}
             onSelect={() => { setMethod("income"); }}
@@ -2691,6 +2717,7 @@ export function SplitScreen({
             marker="start"
             label={ONE_PROJECT_OPTION}
             description={ONE_PROJECT_DETAIL}
+            disabled={busy && method !== "one"}
             selected={method === "one"}
             busy={busy && method === "one"}
             onSelect={() => {
@@ -2787,7 +2814,7 @@ export function SplitScreen({
       </fieldset>
       <div className="ui-split-cta">
         <div className={summaryIdle ? "ui-hold-line" : undefined}>
-          <p className={summaryIdle ? "ui-split-summary t-body ui-split-summary-idle" : "ui-split-summary t-body"} role={summaryIdle ? "status" : undefined}>
+          <p className={summaryIdle ? "ui-split-summary t-hint ui-split-summary-idle" : "ui-split-summary t-body"} role={summaryIdle ? "status" : undefined}>
             {method === "manual" && manualLeft < 0 ? (
               <>
                 {"הסך "}
@@ -2796,7 +2823,7 @@ export function SplitScreen({
               </>
             ) : summary}
           </p>
-          {summaryIdle ? <TextLink chevron={false} onClick={abandon}>ביטול השינוי</TextLink> : null}
+          {summaryIdle ? <TextLink tone="quiet" chevron={false} onClick={abandon}>ביטול השינוי</TextLink> : null}
         </div>
       </div>
     </form>
