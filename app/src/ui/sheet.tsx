@@ -105,6 +105,11 @@ export function Sheet({
     onBeforeClose?.();
     onOpenChange(false);
   }
+  function keepOpenForToast(event: { preventDefault: () => void; target: EventTarget | null; detail?: { originalEvent?: { target: EventTarget | null } } }) {
+    const nodes = [event.target, event.detail?.originalEvent?.target];
+    const onToast = nodes.some((node) => node instanceof Element && node.closest(".ui-toast, .ui-toast-host") != null);
+    if (onToast) event.preventDefault();
+  }
   return (
     <Drawer.Root
       open={open}
@@ -126,6 +131,15 @@ export function Sheet({
           onOpenAutoFocus={(event) => {
             event.preventDefault();
             titleRef.current?.focus({ preventScroll: true });
+          }}
+          onPointerDownOutside={(event) => {
+            keepOpenForToast(event);
+          }}
+          onInteractOutside={(event) => {
+            keepOpenForToast(event);
+          }}
+          onFocusOutside={(event) => {
+            keepOpenForToast(event);
           }}
           onEscapeKeyDown={(event) => {
             if (!onEscape) return;

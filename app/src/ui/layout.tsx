@@ -45,6 +45,11 @@ export function FigureLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Category lines include this project's share of a shared cost. */
+export function SharedCostNote() {
+  return <p className="ui-page-pad t-hint">כולל חלק מהוצאות משותפות</p>;
+}
+
 export function SectionHead({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="ui-section-head">

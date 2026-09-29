@@ -22,6 +22,8 @@ const modulePatterns = [
   /[/\\]demo[^/\\]*\.(tsx?|jsx?|mjs)/,
   /@flow[/\\]shared[/\\]testing/,
   /[/\\]testing\.ts$/,
+  /[/\\]reviewer-preview\./,
+  /[/\\]reviewer-sample\./,
 ];
 
 /**
@@ -63,6 +65,10 @@ export function violations(input) {
       if (file.body.includes(value)) found.push(`${file.name} contains golden value ${value}`);
     }
     if (file.body.includes("Example data")) found.push(`${file.name} contains Example data`);
+    if (file.body.includes("/e2e/")) found.push(`${file.name} contains /e2e/`);
+    for (const marker of ["sampleSave", "runSampleSave", "reviewer-preview", "reviewer-sample"]) {
+      if (file.body.includes(marker)) found.push(`${file.name} contains ${marker}`);
+    }
     if (file.body.includes("new-")) found.push(`${file.name} contains a story id prefix`);
     if (file.body.includes("draft:")) found.push(`${file.name} contains a story id prefix`);
   }

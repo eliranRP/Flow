@@ -82,7 +82,7 @@ import { EmptyState } from "../ui/empty-state";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, FigureLine, FormError, SectionHead } from "../ui/layout";
+import { BandFigures, BandHero, FigureLine, FormError, SectionHead, SharedCostNote } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, SHARED_SPLIT_FAILURE, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
@@ -449,7 +449,9 @@ function ProjectCategories({
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
   return (
-    <List>
+    <>
+      {project.categories.length > 0 ? <SharedCostNote /> : null}
+      <List>
       {project.categories.map((category) => (
         <ListRow
           key={category.id ?? category.name}
@@ -472,10 +474,20 @@ function ProjectCategories({
         />
       ) : null}
     </List>
+    </>
   );
 }
 
-export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<ProjectDetail>; example?: ReactNode } = {}) {
+export function ProjectDetailScreen({
+  sample,
+  example,
+  categoryTo,
+}: {
+  sample?: NonNullable<ProjectDetail>;
+  example?: ReactNode;
+  /** Dev fixtures send a category row here. Production builds the project route. */
+  categoryTo?: string;
+} = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
   const detail = useProjectQuery(sample ? "" : projectId);
@@ -576,7 +588,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
       <ProjectCategories
         project={project}
         search={search}
-        categoryTo={sample?.id === "p1" ? `/e2e/project-category${search}` : undefined}
+        categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
       />
       <p className="ui-page-pad ui-page-title-row">
         <TextLink to={`/settings/categories${search}`} tone="quiet">כל הקטגוריות</TextLink>
@@ -823,7 +835,17 @@ export function ReviewScreen() {
   return <ReviewQueue rows={rows} search={search} />;
 }
 
-function ProjectWaitingList({ rows, search, backTo }: { rows: ProjectWaitingRow[]; search: string; backTo?: string }) {
+export function ProjectWaitingList({
+  rows,
+  search,
+  backTo,
+  hrefFor,
+}: {
+  rows: ProjectWaitingRow[];
+  search: string;
+  backTo?: string;
+  hrefFor?: (row: ProjectWaitingRow) => string;
+}) {
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
@@ -837,9 +859,11 @@ function ProjectWaitingList({ rows, search, backTo }: { rows: ProjectWaitingRow[
             agorot={row.amount_net}
             sign="out"
             source="invoice"
-            href={row.review_id == null
-              ? `/transactions/${row.transaction_id}${search}`
-              : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
+            href={hrefFor
+              ? hrefFor(row)
+              : row.review_id == null
+                ? `/transactions/${row.transaction_id}${search}`
+                : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
           />
         ))}
       </List>
@@ -847,12 +871,17 @@ function ProjectWaitingList({ rows, search, backTo }: { rows: ProjectWaitingRow[
   );
 }
 
+export type ReviewPreviewWrite = {
+  run: () => Promise<void>;
+  onDone: (id: string) => void;
+  onUndo: (id: string) => void;
+};
+
 export function ReviewQueue({
   rows,
   search,
   sample = false,
-  sampleSave,
-  onSampleDone,
+  previewWrite,
   changeTo,
   filedTo,
   backTo,
@@ -863,22 +892,18 @@ export function ReviewQueue({
   rows: ReviewRow[];
   search: string;
   sample?: boolean;
-  /**
-   * Reviewer preview only. ok toasts success and drops the row.
-   * fail is a refusal with no retry. offline is a dropped connection.
-   */
-  sampleSave?: "ok" | "fail" | "offline";
-  onSampleDone?: (id: string) => void;
-  /** Reviewer preview sends שינוי to its own save screen. */
+  /** Injected by the dev and reviewer previews. The hosted queue does not set it. */
+  previewWrite?: ReviewPreviewWrite;
+  /** Preview sends שינוי to its own save screen. */
   changeTo?: string;
-  /** Reviewer preview sends צפייה to its own filed list. */
+  /** Preview sends צפייה to its own filed list. */
   filedTo?: string;
   backTo?: string;
-  /** Reviewer preview returns an empty queue to its index. */
+  /** Preview returns an empty queue to its index. */
   homeTo?: string;
   /** Label for that return. The product queue says לדף הבית. */
   homeLabel?: string;
-  /** Reviewer preview opens its own split instead of the ledger split. */
+  /** Preview opens its own split instead of the ledger split. */
   onShared?: (transactionId: string) => void;
 }) {
   const preview = useHomePreview();
@@ -915,12 +940,11 @@ export function ReviewQueue({
     };
   }, [rows, shown]);
   const approve = useWrite({
-    failure: sampleSave ? changeSaveFailure : "לא הצלחנו לאשר.",
-    success: sampleSave ? "הפריט אושר" : undefined,
-    keys: ["review", "dashboard", "unpaid"],
+    failure: previewWrite ? changeSaveFailure : "לא הצלחנו לאשר.",
+    keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting"],
     run: async () => {
-      if (sampleSave) {
-        await runSampleSave(sampleSave);
+      if (previewWrite) {
+        await previewWrite.run();
         return;
       }
       if (!row?.category_id) throw new Error("missing");
@@ -937,11 +961,18 @@ export function ReviewQueue({
     },
     onSuccess: () => {
       if (!row) return;
-      if (sampleSave) {
-        onSampleDone?.(row.id);
+      const id = row.id;
+      if (previewWrite) {
+        previewWrite.onDone(id);
+        toast.show({
+          message: "הפריט אושר",
+          action: "ביטול",
+          onAction: () => {
+            previewWrite.onUndo(id);
+          },
+        });
         return;
       }
-      const id = row.id;
       toast.show({
         message: "הפריט אושר",
         action: "ביטול",
@@ -952,12 +983,12 @@ export function ReviewQueue({
     },
   });
   const skip = useWrite({
-    failure: sampleSave ? changeSaveFailure : "לא הצלחנו לדלג.",
+    failure: previewWrite ? changeSaveFailure : "לא הצלחנו לדלג.",
     success: "דילגנו על הפריט",
-    keys: ["review"],
+    keys: ["review", "project", "project-category", "project-waiting"],
     run: async () => {
-      if (sampleSave) {
-        await runSampleSave(sampleSave);
+      if (previewWrite) {
+        await previewWrite.run();
         return;
       }
       if (!row) throw new Error("missing");
@@ -969,7 +1000,7 @@ export function ReviewQueue({
       }));
     },
     onSuccess: () => {
-      if (sampleSave && row) onSampleDone?.(row.id);
+      if (previewWrite && row) previewWrite.onDone(row.id);
     },
   });
   const card = shown;
@@ -1035,7 +1066,7 @@ export function ReviewQueue({
           disabled={!approvable}
           onClick={() => {
             if (!approvable || !row) return;
-            if (sampleSave == null && blocked(sample ? "empty" : preview)) return;
+            if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
             if (row.reason === "unallocated_shared") {
               if (!row.transaction_id) return;
               if (onShared) {
@@ -1059,7 +1090,7 @@ export function ReviewQueue({
             disabled={leaving}
             onClick={() => {
               if (leaving) return;
-              if (sampleSave == null && blocked(sample ? "empty" : preview)) return;
+              if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
               skip.mutate();
             }}
           >
@@ -1117,7 +1148,7 @@ async function reopenReview(
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
-    await invalidate(["review", "dashboard"]);
+    await invalidate(["review", "dashboard", "project", "project-category", "project-waiting"]);
     toast.show({ message: "הפריט חזר לתור, והשיוך הקודם שוחזר." });
   } catch {
     toast.show({
@@ -1157,24 +1188,29 @@ export function ReviewEmpty({
   );
 }
 
-function runSampleSave(mode: "ok" | "fail" | "offline"): Promise<void> {
-  if (mode === "fail") return Promise.reject(new Error("category kind must match the direction"));
-  if (mode === "offline") return Promise.reject(new Error("Failed to fetch"));
-  return Promise.resolve();
-}
-
 type CategorySample = {
   categoryName: string;
   projectName: string;
   rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
+  /** Shows עוד תנועות until the rest of the sample rows are revealed. */
+  pageSize?: number;
 };
 
-export function ProjectCategoryScreen({ sample, backTo: backOverride }: { sample?: CategorySample; backTo?: string } = {}) {
+export function ProjectCategoryScreen({
+  sample,
+  backTo: backOverride,
+  rowHref,
+}: {
+  sample?: CategorySample;
+  backTo?: string;
+  rowHref?: (row: { id: string }) => string;
+} = {}) {
   const { projectId = "", categoryId = "" } = useParams();
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
+  const [sampleOpen, setSampleOpen] = useState(false);
   const back = `/projects/${projectId}${search}`;
   if (phase.kind === "loading" || phase.kind === "error") {
     return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
@@ -1185,10 +1221,12 @@ export function ProjectCategoryScreen({ sample, backTo: backOverride }: { sample
   }
   const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
   const projectName = sample?.projectName ?? first?.project_name ?? "";
-  const rows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
+  const allRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
+  const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
+  const more = sample?.pageSize != null ? !sampleOpen && allRows.length > sample.pageSize : !sample && category.hasNextPage;
   return (
     <div>
-      <ScreenHeader title={name} subtitle={projectName} backTo={backOverride ?? (sample ? `/e2e/project-detail${search}` : back)} />
+      <ScreenHeader title={name} subtitle={projectName} backTo={backOverride ?? back} />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
@@ -1202,24 +1240,28 @@ export function ProjectCategoryScreen({ sample, backTo: backOverride }: { sample
               agorot={txn.amount_net}
               sign="out"
               source="invoice"
-              href={`/transactions/${txn.id}${search}`}
+              href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
             />
           ))}
         </List>
       )}
-      {sample || !category.hasNextPage ? null : (
+      {more ? (
         <div className="ui-page-pad">
           <Button
             variant="pill"
-            busy={category.isFetchingNextPage}
+            busy={!sample && category.isFetchingNextPage}
             onClick={() => {
+              if (sample) {
+                setSampleOpen(true);
+                return;
+              }
               void category.fetchNextPage();
             }}
           >
             עוד תנועות
           </Button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1307,7 +1349,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const save = useWrite({
     failure: changeSaveFailure,
     success: "השיוך נשמר",
-    keys: ["review", "dashboard"],
+    keys: ["review", "dashboard", "project", "project-category", "project-waiting"],
     onSplit: () => {
       if (!row?.transaction_id) return;
       void navigate(`/transactions/${row.transaction_id}/split${search}`, { replace: true });

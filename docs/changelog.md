@@ -2,7 +2,11 @@
 
 ## 2026-09-29
 
-A reviewers-only build sets `VITE_REVIEWER_BUILD=1` so `/reviewer` is in that bundle. The hosted build leaves it unset.
+Decision [0074](decisions/0074-toast-and-remembered-supplier.md), Accepted. A toast with an action stays 5 seconds. A plain confirmation stays 4 seconds. The two-line minimum applies only when the text shrinks or wraps. A tap on a toast does not close the sheet under it. "לזכור לספק הזה" shows the supplier's full name, with an ellipsis when it does not fit. This amends [0069](decisions/0069-back-and-one-tap-review.md).
+
+Decision [0071](decisions/0071-shared-cost-copy.md) point 6, amended. A category that matches the supplier's remembered rule is an assignment, not a guess. The backfill leaves those rows alone, puts back a rule row an earlier backfill already flipped, and writes an audit row for every flip.
+
+A reviewers-only build sets `VITE_REVIEWER_BUILD=1` and leaves the Supabase URL and anon key empty, so it uses the sample names and not the hosted key. The hosted build leaves the flag unset. `pnpm check:bundle` fails on `/e2e/` and on a reviewer marker.
 
 Decision [0072](decisions/0072-design-review-rulings.md) points 2, 14, 15, and 16. A toast action keeps a text-sized label and a hit area of at least 44×44, and a tap there runs the action. When the slot under an open sheet covers a control, the toast sits fully above the sheet instead of across its top edge. A shared cost refused before the write or by the database uses the info tone, לחלוקה, and 5 seconds. The queue opened from a project goes back to that project, and its empty state says "חזרה לפרויקט". An empty category says "אין תנועות בקטגוריה הזו", and an empty filtered queue says "אין פריטים לאישור בפרויקט הזה". The reviewer preview and the stories show the category page and that filtered queue.
 

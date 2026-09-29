@@ -37,7 +37,7 @@ describe("Toast", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
     fireEvent.mouseLeave(screen.getByRole("status"));
     act(() => {
-      vi.advanceTimersByTime(2_499);
+      vi.advanceTimersByTime(3_999);
     });
     expect(screen.getByRole("status")).toBeInTheDocument();
     act(() => {
@@ -88,6 +88,7 @@ describe("Toast", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
     const status = screen.getByRole("status");
+    expect(getComputedStyle(status).minBlockSize).not.toMatch(/calc|69/);
     expect(status.parentElement).toHaveClass("ui-toast-host");
     expect(getComputedStyle(status.parentElement ?? status).pointerEvents).toBe("none");
     expect(getComputedStyle(status).pointerEvents).toBe("auto");

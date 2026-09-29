@@ -22,8 +22,8 @@ export function useToast(): ToastContextValue {
   return value;
 }
 
-/** A confirmation leaves on its own. ביטול stays long enough to tap without a hover pause. An error stays long enough to read the retry. */
-const OK_MS = 2500;
+/** A plain confirmation stays 4s. A toast with an action (ניסיון חוזר, ביטול) stays 5s. An error, or an info notice without an action, stays 4s. A pointer hover pauses it. Decision 0074. */
+const OK_MS = 4000;
 const ACTION_MS = 5000;
 const BAD_MS = 4000;
 const SWIPE_PX = 48;

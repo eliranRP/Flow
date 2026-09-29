@@ -66,11 +66,14 @@ test("home links open a queue, a filed list, and each save", async ({ page }) =>
     ["שויכו היום, אין תנועות", /\/reviewer\/filed\?empty=1$/],
     ["קטגוריה, חומרים", /\/reviewer\/category$/],
     ["קטגוריה, אין תנועות", /\/reviewer\/category\?empty=1$/],
+    ["קטגוריה, עוד תנועות", /\/reviewer\/category\?more=1$/],
+    ["לאישור בפרויקט", /\/reviewer\/waiting$/],
     ["תור של הפרויקט", /\/reviewer\/project$/],
     ["תור של הפרויקט, אין פריטים", /\/reviewer\/project\?empty=1$/],
     ["שמירה שמצליחה", /\/reviewer\/save\?save=ok$/],
     ["שמירה שנדחית", /\/reviewer\/save\?save=fail$/],
     ["שמירה בלי חיבור", /\/reviewer\/save\?save=offline$/],
+    ["שמירה, עלות משותפת", /\/reviewer\/save\?save=shared$/],
   ];
   for (const [name, url] of links) {
     await page.goto("/reviewer");
@@ -104,6 +107,7 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   expect(await save.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await save.click();
   await toast(page, "החלוקה נשמרה");
+  await expect(page).toHaveURL(/\/reviewer\/review\?save=ok$/);
 
   await page.goto("/reviewer/review");
   await page.getByRole("button", { name: "דלג" }).click();
@@ -200,15 +204,100 @@ test("the change sheet can succeed, refuse, or lose the connection", async ({ pa
   await page.goto("/reviewer/save?save=offline");
   await page.getByRole("button", { name: "שמירה ואישור" }).click();
   await toast(page, offline);
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
   const retry = toastAction(page, "ניסיון חוזר");
   await expect(retry).toBeVisible();
   expect(await retry.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
   await retry.click();
   await toast(page, offline);
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
   await page.goto("/reviewer/save?save=ok");
   await page.getByRole("button", { name: "שמירה ואישור" }).click();
   await toast(page, "השיוך נשמר");
   await expect(page).toHaveURL(/\/reviewer\/review$/);
+});
+
+test("a tap on the toast does not close the sheet under it", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/save?save=offline");
+  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await toast(page, offline);
+  const sheet = page.getByRole("dialog", { name: "שינוי שיוך" });
+  await expect(sheet).toBeVisible();
+  await toastAction(page, "ניסיון חוזר").click();
+  await expect(sheet).toBeVisible();
+  await toast(page, offline);
+  await page.locator(".ui-toast-text").click();
+  await expect(page.locator(".ui-toast")).toHaveCount(0);
+  await expect(sheet).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("category, project queue, and waiting stay inside the sample", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/category");
+  await page.getByRole("link", { name: /חול/ }).click();
+  await expect(page).toHaveURL(/\/reviewer\/transaction\/t-sample-sand$/);
+  await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
+
+  await page.goto("/reviewer/category?more=1");
+  await expect(page.getByRole("button", { name: "עוד תנועות" })).toBeVisible();
+  await expect(page.getByText("₪220")).toBeVisible();
+  await expect(page.getByText("₪180")).toHaveCount(0);
+  await page.getByRole("button", { name: "עוד תנועות" }).click();
+  await expect(page.getByText("₪180")).toBeVisible();
+  await expectNoOverflow(page);
+
+  await page.goto("/reviewer/waiting");
+  await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
+  await expect(page.getByText("₪150")).toBeVisible();
+  await expect(page.getByText("₪300")).toBeVisible();
+  await page.getByRole("link", { name: /צבע/ }).click();
+  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok$/);
+
+  await page.goto("/reviewer/project");
+  await page.getByRole("link", { name: "צפייה" }).click();
+  await expect(page).toHaveURL(/\/reviewer\/filed$/);
+  await page.goto("/reviewer/project");
+  await page.getByRole("link", { name: "שינוי" }).click();
+  await expect(page).toHaveURL(/\/reviewer\/save\?save=ok$/);
+  await page.goto("/reviewer/project");
+  await page.getByRole("button", { name: "דלג" }).click();
+  await toast(page, "דילגנו על הפריט");
+  await expect(page.getByRole("heading", { name: "צבעי הגליל בע״מ" })).toBeVisible();
+  await page.getByRole("button", { name: "אישור" }).click();
+  await toast(page, "הפריט אושר");
+  await expect(toastAction(page, "ביטול")).toBeVisible();
+  await toastAction(page, "ביטול").click();
+  await expect(page.getByRole("heading", { name: "צבעי הגליל בע״מ" })).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("a shared-cost save offers לחלוקה and stays on the sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/save?save=shared");
+  await page.getByRole("button", { name: "שמירה ואישור" }).click();
+  await toast(page, "עלות משותפת מחולקת במסך החלוקה.");
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  const split = toastAction(page, "לחלוקה");
+  await expect(split).toBeVisible();
+  expect(await split.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
+  await split.click();
+  await expect(page).toHaveURL(/\/reviewer\/split\?save=shared$/);
+  await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
+});
+
+test("reviewer screens stay inside the viewport at 320 in both themes", async ({ page }) => {
+  const routes = ["/reviewer", "/reviewer/review", "/reviewer/waiting", "/reviewer/category?more=1", "/reviewer/save?save=ok"];
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    for (const route of routes) {
+      await page.setViewportSize({ width: 320, height: 844 });
+      await page.goto(route);
+      await expect(page.getByText("נתוני דוגמה · Example data")).toBeVisible();
+      await expectNoOverflow(page);
+    }
+  }
 });
 
 test("a refused split save has no retry", async ({ page }) => {

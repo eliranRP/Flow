@@ -43,7 +43,7 @@ Before the handoff, self-review against the PR reviewer's checklist and the UI d
 - the cursor rules: pointer when it can be used, not-allowed when it cannot, progress while it is busy
 - the numbers add up to the line they came from
 
-`/reviewer` on the dev server is sample data for that review: a queue that includes a shared cost, the filed-today list, and saves that succeed or fail on demand (`?save=ok`, `?save=fail`, `?save=offline`). Every screen says "נתוני דוגמה · Example data". The route exists only in the dev build. Do not import that module from production code. `pnpm check:bundle` fails if the hosted bundle contains "Example data".
+`/reviewer` is sample data for a design or PR review: a queue that includes a shared cost, the filed-today list, and saves that succeed or fail on demand (`?save=ok`, `?save=fail`, `?save=offline`). Every screen says "נתוני דוגמה · Example data". The dev server has the route. A reviewers-only build sets `VITE_REVIEWER_BUILD=1` and leaves `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` empty. That build uses the sample names (שיפוץ הרצל 12, וילה רעננה). It must not use a Flow Test 2 name or the hosted key. The hosted build leaves the flag unset. Do not import that module from hosted code. `pnpm check:bundle` fails if the hosted bundle contains "Example data", an `/e2e/` route, or a reviewer marker.
 
 Only a Blocking item or a Should item blocks the merge. A nit is written down and fixed in the next batch. It does not block the handoff it was found in.
 

@@ -105,11 +105,6 @@ function ordered(options: ChangeChoice[], suggestionId: string, currentId: strin
   return [...(suggestion ? [suggestion] : []), ...recent, ...others];
 }
 
-function shortSupplier(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return parts[parts.length - 1] ?? name;
-}
-
 function SuggestTag() {
   return <span className="ui-suggest-tag">הצעה</span>;
 }
@@ -339,15 +334,15 @@ export function ChangeAssignment(props: Props) {
               checked={props.remember === true}
               onChange={props.onRemember ?? (() => undefined)}
               hint={
-                <>
-                  {shortSupplier(props.supplier)}
-                  {" "}
+                <span className="ui-remember-line">
+                  <span className="ui-remember-supplier">{props.supplier}</span>
                   <bdi dir="ltr">←</bdi>
-                  {" "}
-                  {projectName === "" ? "פרויקט" : projectName}
-                  {" · "}
-                  {categoryName === "" ? "קטגוריה" : categoryName}
-                </>
+                  <span>
+                    {projectName === "" ? "פרויקט" : projectName}
+                    {" · "}
+                    {categoryName === "" ? "קטגוריה" : categoryName}
+                  </span>
+                </span>
               }
             />
           ) : null}

@@ -20,6 +20,17 @@ test("flags a fixture module, a story, and a golden value", () => {
   assert.ok(found.some((line) => line.includes("37700")));
 });
 
+test("flags a dev route and a reviewer marker in the hosted bundle", () => {
+  const found = violations({
+    modules: ["/repo/app/src/reviewer-preview.tsx", "/repo/app/src/reviewer-sample.ts"],
+    files: [{ name: "app/dist/assets/index.js", body: "route /e2e/project-detail sampleSave reviewer-preview" }],
+  });
+  assert.ok(found.some((line) => line.includes("reviewer-preview")));
+  assert.ok(found.some((line) => line.includes("reviewer-sample")));
+  assert.ok(found.some((line) => line.includes("/e2e/")));
+  assert.ok(found.some((line) => line.includes("sampleSave")));
+});
+
 test("accepts the production modules and a bundle without the golden totals", () => {
   const found = violations({
     modules: ["/repo/app/src/main.tsx", "/repo/packages/shared/src/money.ts", "/repo/app/src/screens/HomeScreen.tsx"],
