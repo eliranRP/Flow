@@ -110,11 +110,11 @@ function blockedPreview(preview: HomePreview, tell: (message: string) => void): 
 async function saveNewProject(
   name: string,
   preview: HomePreview,
-  toast: { show: (toast: { tone?: "bad"; message: string }) => void },
+  toast: { show: (toast: { tone?: "bad" | "info"; message: string }) => void },
   remember: (project: ChangeChoice) => void,
   invalidate: (keys: readonly string[]) => Promise<void>,
 ): Promise<ChangeChoice> {
-  if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) throw new Error("preview");
+  if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) throw new Error("preview");
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   try {
@@ -156,7 +156,7 @@ export function OnboardingScreen() {
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+    if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
     save.mutate();
   }
 
@@ -350,7 +350,7 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+    if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
     save.mutate();
   }
 
@@ -528,7 +528,7 @@ export function ProjectDetailScreen({ sample, example }: { sample?: NonNullable<
               setOverheadOn(checked);
               return;
             }
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
             const previous = overheadOn;
             setOverheadOn(checked);
             wantedOverhead.current = checked;
@@ -673,7 +673,7 @@ function ProjectMenu({
         destructive={!finished}
         busy={save.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
           save.mutate();
         }}
       />
@@ -712,7 +712,7 @@ export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) 
       backTo={`/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
-      empty={<EmptyState icon={<ReviewIcon />} title="אין תנועות ששויכו היום" body="כש-SUMIT משייך תנועה בלי תור, היא תופיע כאן." />}
+      empty={<EmptyState icon={<ReviewIcon />} title="אין תנועות ששויכו היום" body="כש־SUMIT משייך תנועה בלי תור, היא תופיע כאן." />}
     >
       <List>
         {rows.map((row) => (
@@ -889,7 +889,7 @@ export function ReviewQueue({
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (!approvable || !row || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (!approvable || !row || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "info", message }); })) return;
             if (row.reason === "unallocated_shared") {
               if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
               return;
@@ -907,7 +907,7 @@ export function ReviewQueue({
             busy={skip.isPending}
             disabled={leaving}
             onClick={() => {
-              if (leaving || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              if (leaving || blockedPreview(sample ? "empty" : preview, (message) => { toast.show({ tone: "info", message }); })) return;
               skip.mutate();
             }}
           >
@@ -1127,7 +1127,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       loading={sample?.loading}
       onSave={() => {
         if (sample) return;
-        if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+        if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
         if (income ? categoryId === "" : projectId === "" || categoryId === "") {
           toast.show({ tone: "bad", message: income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה." });
           return;
@@ -1247,7 +1247,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
         }}
         title="סימון כשולם"
       >
-        <p className="t-label">השורה תצא מהרשימה כש-SUMIT יראה את החשבונית כשולמה בסנכרון הבא. Flow לא מסמן תשלום ב-SUMIT.</p>
+        <p className="t-label">השורה תצא מהרשימה כש־SUMIT יראה את החשבונית כשולמה בסנכרון הבא. Flow לא מסמן תשלום ב-SUMIT.</p>
         <Button
           onClick={() => {
             if (marking) setHidden((current) => [...current, marking.id]);
@@ -1492,7 +1492,7 @@ export function TransactionScreen({
         saving={splitRow ? setCategory.isPending : reassign.isPending}
         loading={sample == null && (dashboard.isLoading || categories.isLoading)}
         onSave={() => {
-          if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (!sample && blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
           if (splitRow) {
             if (categoryId === "") {
               toast.show({ tone: "bad", message: "בחרו קטגוריה." });
@@ -1532,7 +1532,7 @@ export function TransactionScreen({
         destructive
         busy={remove.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
           remove.mutate();
         }}
       />
@@ -1540,14 +1540,13 @@ export function TransactionScreen({
   );
 }
 
-function evenSentence(parts: AllocatedPart[]): string {
+function evenSentence(parts: AllocatedPart[], total: bigint): string {
   const first = parts[0];
   if (!first) return "";
   if (parts.length === 1) return `${formatShare(first.agorot)} לפרויקט אחד`;
-  const money = formatShare(first.agorot);
-  const same = parts.every((part) => formatShare(part.agorot) === money);
-  const shown = same ? money : formatShare(parts.find((part) => formatShare(part.agorot) === money)?.agorot ?? first.agorot);
-  return `${shown} לכל אחד מ־${String(parts.length)} פרויקטים`;
+  const same = parts.every((part) => part.agorot === first.agorot);
+  if (same) return `${formatShare(first.agorot)} לכל אחד מ־${String(parts.length)} פרויקטים`;
+  return `${formatShare(total)} מתחלק שווה בין ${String(parts.length)} פרויקטים`;
 }
 
 function percentWords(bp: number): string {
@@ -1706,8 +1705,8 @@ export function SplitScreen({
     );
   }
   const meta = sampleMeta ?? [txn.data?.supplier_name, txn.data?.doc_date ? formatDisplay(txn.data.doc_date) : ""].filter(Boolean).join(" · ");
-  const allLine = evenSentence(evenParts);
-  const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתחלק שווה" : evenSentence(chosenParts);
+  const allLine = evenSentence(evenParts, amount);
+  const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתחלק שווה" : evenSentence(chosenParts, amount);
   const manualLeft = 10000 - manualUsed;
   const manualStatus = manualLeft > 0
     ? `נשארו ${percentWords(manualLeft)}% לחלק`
@@ -1727,7 +1726,7 @@ export function SplitScreen({
           : method === "income"
             ? `לפי הכנסות · ${String(incomeParts.length)} פרויקטים`
             : allLine;
-  const summaryIdle = !valid;
+  const summaryIdle = method != null && !valid;
   const showDetail = method === "equal" || (method === "income" && hasIncome);
   const detailParts = method === "income" ? incomeParts : evenParts;
   return (
@@ -1742,7 +1741,7 @@ export function SplitScreen({
           return;
         }
         if (sampleProjects) return;
-        if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+        if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
         save.mutate();
       }}
     >
@@ -2048,7 +2047,7 @@ export function SettingsScreen({
             disabled={refreshHeld}
             onClick={() => {
               if (refreshHeld) return;
-              if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
               refresh.mutate();
             }}
           />
@@ -2068,7 +2067,7 @@ export function SettingsScreen({
           className="ui-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
             connect.mutate();
           }}
         >
@@ -2086,7 +2085,7 @@ export function SettingsScreen({
         destructive
         busy={disconnect.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
           disconnect.mutate();
         }}
       />
@@ -2098,7 +2097,7 @@ export function SettingsScreen({
             icon={<LogoutIcon />}
             busy={signOut.isPending}
             onClick={() => {
-              if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
               signOut.mutate();
             }}
           />
@@ -2127,7 +2126,7 @@ export function SettingsScreen({
               setOverheadOn(checked);
               return;
             }
-            if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+            if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
             const previous = overheadOn;
             setOverheadOn(checked);
             wantedOverhead.current = checked;
@@ -2400,7 +2399,7 @@ export function CategoriesScreen({
           <Button
             busy={createCategory.isPending}
             onClick={() => {
-              if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+              if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
               createCategory.mutate();
             }}
           >
@@ -2420,7 +2419,7 @@ export function CategoriesScreen({
         destructive={hideTarget?.hidden !== true}
         busy={hide.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
           hide.mutate();
         }}
       />
@@ -2434,7 +2433,7 @@ export function CategoriesScreen({
         destructive
         busy={merge.isPending}
         onConfirm={() => {
-          if (blockedPreview(preview, (message) => { toast.show({ tone: "bad", message }); })) return;
+          if (blockedPreview(preview, (message) => { toast.show({ tone: "info", message }); })) return;
           merge.mutate();
         }}
       />

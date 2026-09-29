@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider, useToast } from "./toast";
+import { placeToast, ToastProvider, useToast } from "./toast";
 
-function Probe({ tone, message = "הפריט אושר" }: { tone?: "ok" | "bad"; message?: string }) {
+function Probe({ tone, message = "הפריט אושר" }: { tone?: "ok" | "bad" | "info"; message?: string }) {
   const toast = useToast();
   return (
     <button
@@ -174,5 +174,78 @@ describe("Toast", () => {
     });
     expect(screen.queryByRole("button", { name: "ביטול" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).not.toHaveTextContent("השיוך נשמר");
+  });
+
+  it("keeps an info notice out of the error colour", () => {
+    render(
+      <ToastProvider>
+        <Probe tone="info" message="במצב תצוגה זה לא נשמר." />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("במצב תצוגה זה לא נשמר.");
+    expect(status.querySelector(".ui-toast-bad")).toBeNull();
+  });
+});
+
+describe("placeToast", () => {
+  function box(bottom: number, height: number): DOMRect {
+    return {
+      x: 0,
+      y: bottom - height,
+      width: 120,
+      height,
+      top: bottom - height,
+      right: 120,
+      bottom,
+      left: 0,
+      toJSON: () => ({}),
+    };
+  }
+
+  it("clamps a toast measured below the viewport, then sits under the header once the sheet settles", () => {
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    const header = document.createElement("div");
+    header.className = "ui-sheet-head";
+    sheet.appendChild(header);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
+    header.getBoundingClientRect = () => box(820, 40);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(Number.parseFloat(host.style.top) + 48).toBeLessThanOrEqual(700);
+    header.getBoundingClientRect = () => box(120, 40);
+    placeToast(host);
+    expect(host.style.top).toBe("128px");
+    sheet.remove();
+    host.remove();
+  });
+
+  it("moves below a control it would cover", () => {
+    const header = document.createElement("header");
+    header.className = "ui-page";
+    const button = document.createElement("button");
+    button.textContent = "אישור";
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(header, button, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
+    header.getBoundingClientRect = () => box(40, 40);
+    button.getBoundingClientRect = () => box(90, 40);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(host.style.top).toBe("98px");
+    header.remove();
+    button.remove();
+    host.remove();
   });
 });

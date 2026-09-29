@@ -3,7 +3,7 @@ import { CheckIcon, InfoIcon } from "./icons";
 
 type ToastInput = {
   message: string;
-  tone?: "ok" | "bad";
+  tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
 };
@@ -29,9 +29,42 @@ const BAD_MS = 4000;
 const SWIPE_PX = 48;
 
 function toastMs(input: ToastInput): number {
-  if (input.tone === "bad") return BAD_MS;
+  if (input.tone === "bad" || input.tone === "info") return BAD_MS;
   if (input.action && input.onAction) return ACTION_MS;
   return OK_MS;
+}
+
+const TOAST_GAP = 8;
+
+/** Sit just under the page or sheet header, inside the viewport, and clear of a control. */
+export function placeToast(layer: HTMLElement): void {
+  const toast = layer.querySelector(".ui-toast");
+  const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
+  const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
+  const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
+    ?? document.querySelector("header.ui-page, header.ui-band");
+  const safe = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--safe-top")) || 0;
+  const measured = anchor instanceof HTMLElement
+    ? anchor.getBoundingClientRect().bottom + TOAST_GAP
+    : safe + 16;
+  const limit = window.innerHeight - height - TOAST_GAP;
+  let top = Math.min(Math.max(safe, measured), Math.max(safe, limit));
+  const settled = measured <= limit;
+  if (settled && toast instanceof HTMLElement && height > 0) {
+    const controls = document.querySelectorAll("button, a[href], input, textarea");
+    for (const control of controls) {
+      if (!(control instanceof HTMLElement) || layer.contains(control)) continue;
+      if (sheet instanceof Element && !sheet.contains(control)) continue;
+      const rect = control.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      const covers = rect.top < top + height && rect.bottom > top;
+      if (!covers) continue;
+      const below = rect.bottom + TOAST_GAP;
+      if (below + height <= window.innerHeight - TOAST_GAP) top = below;
+      break;
+    }
+  }
+  layer.style.top = `${String(top)}px`;
 }
 
 /** One toast under the page header. A new show replaces it. The host does not catch taps. */
@@ -98,20 +131,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const node = host.current;
     if (!toast || !node) return;
     const layer = node;
-    function place() {
-      const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
-      const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
-        ?? document.querySelector("header.ui-page, header.ui-band");
-      if (!(anchor instanceof HTMLElement)) {
-        layer.style.removeProperty("top");
-        return;
-      }
-      const gap = 8;
-      layer.style.top = `${Math.max(0, anchor.getBoundingClientRect().bottom + gap)}px`;
-    }
+    const place = () => { placeToast(layer); };
     place();
+    const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
+    const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
+      ?? document.querySelector("header.ui-page, header.ui-band");
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(place);
+      if (sheet instanceof Element) observer.observe(sheet);
+      if (anchor instanceof Element) observer.observe(anchor);
+    }
+    sheet?.addEventListener("transitionend", place);
+    const timers = [50, 150, 320, 500].map((ms) => window.setTimeout(place, ms));
     window.addEventListener("resize", place);
     return () => {
+      observer?.disconnect();
+      sheet?.removeEventListener("transitionend", place);
+      for (const timer of timers) window.clearTimeout(timer);
       window.removeEventListener("resize", place);
     };
   }, [toast]);
@@ -142,7 +179,7 @@ type ToastProps = {
   onDismiss?: () => void;
   onPause?: () => void;
   onResume?: () => void;
-  tone?: "ok" | "bad";
+  tone?: "ok" | "bad" | "info";
 };
 
 export function Toast({ children, action, onAction, onDismiss, onPause, onResume, tone = "ok" }: ToastProps) {
@@ -189,7 +226,7 @@ export function Toast({ children, action, onAction, onDismiss, onPause, onResume
       {quiet ? null : (
         <>
           <span className={tone === "bad" ? "ui-toast-mark ui-toast-icon ui-toast-bad" : "ui-toast-mark ui-toast-icon"} aria-hidden="true">
-            {tone === "bad" ? <InfoIcon size={18} /> : <CheckIcon size={18} />}
+            {tone === "ok" ? <CheckIcon size={18} /> : <InfoIcon size={18} />}
           </span>
           <span className="ui-toast-text" dir="rtl">{children}</span>
           {action && onAction ? (

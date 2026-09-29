@@ -207,7 +207,9 @@ describe("split monthly rule", () => {
     expect(screen.queryByText("אופן הפיצול")).not.toBeInTheDocument();
     expect(screen.queryByText("נותר לשייך")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByText("בחרו איך לחלק")).toBeInTheDocument();
+    const idle = screen.getByText("בחרו איך לחלק");
+    expect(idle).toBeInTheDocument();
+    expect(idle).not.toHaveClass("ui-split-summary-idle");
     expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" }));
     expect(screen.getByRole("button", { name: "שמירה" })).toBeEnabled();
@@ -234,13 +236,68 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText(/נשארו/)).toBeInTheDocument();
+    expect(screen.getByText(/נשארו/)).toHaveClass("ui-split-summary-idle");
     expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
     const share = screen.getByRole("textbox", { name: "אחוז, חולון" });
     expect(share).toHaveAttribute("autocomplete", "off");
     expect(share.getAttribute("name") ?? "").toBe("split-pct-p1");
     fireEvent.click(screen.getByText("וילה"));
     expect(screen.getByRole("textbox", { name: "אחוז, וילה" })).toHaveFocus();
+  });
+
+  it("shows each typed percent of the amount, and the invalid summary, when the total is not 100%", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+          <MemoryRouter>
+            <SplitScreen
+              sampleMethod="manual"
+              sampleShares={{ a: "70", b: "50" }}
+              sampleProjects={[
+                { id: "a", name: "חולון" },
+                { id: "b", name: "וילה" },
+              ]}
+              sampleAmount={100_000n}
+              sampleMeta="חשמל"
+            />
+          </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("₪700")).toBeInTheDocument();
+    expect(screen.getByText("₪500")).toBeInTheDocument();
+    expect(screen.queryByText("₪300")).not.toBeInTheDocument();
+    expect(screen.queryByText(/−₪/)).not.toBeInTheDocument();
+    expect(screen.getByText(/צריך 100%/)).toBeInTheDocument();
+  });
+
+  it("says an even split is shared when the shekel parts are not exactly equal", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+          <MemoryRouter>
+            <SplitScreen
+              sampleMethod="chosen"
+              sampleChosen={["a", "b", "c"]}
+              sampleProjects={[
+                { id: "a", name: "חולון" },
+                { id: "b", name: "וילה" },
+                { id: "c", name: "רעננה" },
+                { id: "d", name: "כפר סבא" },
+              ]}
+              sampleAmount={100_000n}
+              sampleMeta="חשמל"
+            />
+          </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getAllByText("₪1,000 מתחלק שווה בין 3 פרויקטים").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/לכל אחד מ־3/)).not.toBeInTheDocument();
   });
 
   it("saves only the shares", async () => {

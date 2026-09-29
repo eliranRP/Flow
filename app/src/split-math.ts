@@ -104,18 +104,21 @@ export function incomeBasis(projects: SplitProject[]): Record<string, number> {
 /**
  * Shekel parts for a signed or absolute amount.
  * Each part is amount * bp / 10000, truncating toward zero.
- * Leftover agorot is added to the last positive share so the parts match the amount.
+ * Leftover agorot moves to the last share only when the basis points sum to 10000.
+ * An incomplete or over-full split shows each row's own share, with no remainder.
  */
 export function allocate(amount: bigint, ordered: Array<{ id: string; bp: number }>): AllocatedPart[] {
   const rows = ordered.filter((row) => row.bp > 0);
   let assigned = 0n;
+  let basis = 0;
   const parts: AllocatedPart[] = rows.map((row) => {
     const agorot = (amount * BigInt(row.bp)) / 10000n;
     assigned += agorot;
+    basis += row.bp;
     return { id: row.id, bp: row.bp, agorot };
   });
   const last = parts[parts.length - 1];
-  if (last && assigned !== amount) {
+  if (last && basis === 10000 && assigned !== amount) {
     parts[parts.length - 1] = { ...last, agorot: last.agorot + (amount - assigned) };
   }
   return parts;
