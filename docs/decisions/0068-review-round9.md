@@ -36,7 +36,9 @@ The Settings hint "אפשר לנסות שוב ב-HH:MM" sits in the hint colour 
 
 The Project Detail loading band uses its own boxes for the name, the period line, the profit line, the figure, and the income and expense row. Those boxes follow the loaded band, including the wrap of the figure row at 320. Home still uses `.ui-skel-stack`. The Home trim in [0067](0067-review-round8.md) point 9 is unchanged.
 
-Skipped, because the copy and the placement are still open: the auth row does not repeat "חיבור מחדש" on the refresh row, and the backoff screen keeps both the red status line and the grey clock. `design/system/design-system.md` already diffs as text. The shared-cost labels from point 1 already cover zero and one allocations.
+Skipped at first, because the copy and the placement were still open: the auth row did not repeat "חיבור מחדש" on the refresh row, and the backoff screen kept both the red status line and the grey clock. `design/system/design-system.md` already diffs as text. The shared-cost labels from point 1 already cover zero and one allocations.
+
+N2 and N3 are closed. When "רענון עכשיו" is disabled because the key was rejected, the row's own hint is "צריך לחבר מחדש את SUMIT" at full opacity. "חיבור מחדש" stays where it is. In backoff the red line is "SUMIT לא זמין כרגע", and the grey hint stays "אפשר לנסות שוב ב-HH:MM". "נבדוק שוב מאוחר יותר" is dropped. This replaces the backoff sentence in [0066](0066-review-round7.md) point 4.
 
 ## Further addendum
 

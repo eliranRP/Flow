@@ -364,6 +364,8 @@ describe("notification switches", () => {
     expect(getComputedStyle(heldButton).opacity).toBe("1");
     expect(getComputedStyle(heldButton.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
     expect(getComputedStyle(heldButton.querySelector(".ui-row-icon") as Element).opacity).toBe("0.45");
+    expect(screen.getByText("SUMIT לא זמין כרגע")).toBeInTheDocument();
+    expect(screen.queryByText(/נבדוק שוב מאוחר יותר/)).toBeNull();
     const hint = screen.getByText(/אפשר לנסות שוב ב-/);
     expect(hint.closest("button")).toBe(heldButton);
     expect(hint.querySelector("bdi")).toHaveAttribute("dir", "ltr");
@@ -425,12 +427,16 @@ describe("notification switches", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("החיבור ל-SUMIT נכשל. צריך לחבר מחדש.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חיבור מחדש", exact: true })).toBeInTheDocument();
     const authRefresh = screen.getByRole("button", { name: /רענון עכשיו/ });
     expect(authRefresh).toBeDisabled();
-    expect(authRefresh).not.toHaveClass("ui-row-clear-hint");
+    expect(authRefresh).toHaveClass("ui-row-clear-hint");
     expect(authRefresh.querySelector(".ui-row-chevron")).toBeNull();
-    expect(getComputedStyle(authRefresh).opacity).toBe("0.45");
+    expect(getComputedStyle(authRefresh).opacity).toBe("1");
+    const authHint = screen.getByText("צריך לחבר מחדש את SUMIT");
+    expect(authHint.closest("button")).toBe(authRefresh);
+    expect(getComputedStyle(authHint).opacity).toBe("1");
+    expect(getComputedStyle(authRefresh.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
   });
 });
 
