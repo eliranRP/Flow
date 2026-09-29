@@ -43,7 +43,8 @@ describe("Toast", () => {
     act(() => {
       vi.advanceTimersByTime(20);
     });
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent("הפריט אושר");
+    expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
   it("leaves an error up longer, and a new toast replaces the one on screen", () => {
@@ -74,7 +75,8 @@ describe("Toast", () => {
     act(() => {
       vi.advanceTimersByTime(1_500);
     });
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent("לא נשמר");
+    expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
   it("dismisses on tap and on a swipe, and does not cover the page", () => {
@@ -90,13 +92,15 @@ describe("Toast", () => {
     expect(getComputedStyle(status.parentElement ?? status).pointerEvents).toBe("none");
     expect(getComputedStyle(status).pointerEvents).toBe("auto");
     fireEvent.click(status);
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent("הפריט אושר");
+    expect(document.querySelector(".ui-toast")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
     const again = screen.getByRole("status");
     fireEvent.pointerDown(again, { clientX: 20, clientY: 20, pointerType: "touch" });
     fireEvent.pointerUp(again, { clientX: 120, clientY: 20, pointerType: "touch" });
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent("הפריט אושר");
+    expect(document.querySelector(".ui-toast")).toBeNull();
     expect(screen.getByRole("button", { name: "דלג" })).toBeEnabled();
   });
 
@@ -131,6 +135,44 @@ describe("Toast", () => {
     fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
     expect(calls).toBe(1);
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent("לא נשמר");
+    expect(document.querySelector(".ui-toast")).toBeNull();
+  });
+
+  it("keeps an undo action for about five seconds", () => {
+    vi.useFakeTimers();
+    function Undo() {
+      const toast = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            toast.show({ message: "השיוך נשמר", action: "ביטול", onAction: () => undefined });
+          }}
+        >
+          הצגה
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Undo />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+    expect(screen.getByRole("status")).toHaveTextContent("השיוך נשמר");
+    act(() => {
+      vi.advanceTimersByTime(2_500);
+    });
+    expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(2_499);
+    });
+    expect(screen.getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(screen.queryByRole("button", { name: "ביטול" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).not.toHaveTextContent("השיוך נשמר");
   });
 });

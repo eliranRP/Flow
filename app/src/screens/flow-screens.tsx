@@ -18,6 +18,7 @@ import {
   formatShare,
   incomeBasis,
   percentToBp,
+  sharesForSave,
   splitIsValid,
   type AllocatedPart,
   type SplitMethod,
@@ -1484,8 +1485,8 @@ export function TransactionScreen({
           reassign.mutate();
         }}
         onSplit={() => {
-          setChangeSheet(false);
-          void navigate(`/transactions/${txn.id}/split${search}`);
+          setChangeOpen(false);
+          void navigate(`/transactions/${txn.id}/split${search}`, { replace: true });
         }}
         onCreateProject={(name) => saveNewProject(name, preview, toast, (project) => {
           setExtraProjects((list) => [...list, project]);
@@ -1639,7 +1640,7 @@ export function SplitScreen({
         : method === "manual"
           ? !overRange && splitIsValid(manualParts)
           : false;
-  rowsRef.current = (valid ? parts : []).map((part) => ({ project_id: part.id, share_bp: part.bp }));
+  rowsRef.current = sharesForSave(valid ? parts : []);
   const save = useWrite({
     failure: () => "החלוקה לא נשמרה",
     success: "החלוקה נשמרה",

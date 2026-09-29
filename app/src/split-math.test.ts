@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { allocate, basisToPercents, bpToPercent, evenBasis, incomeBasis, percentToBp, splitIsValid, summaryKind } from "./split-math";
+import { allocate, basisToPercents, bpToPercent, evenBasis, incomeBasis, percentToBp, sharesForSave, splitIsValid, summaryKind } from "./split-math";
+
+/** The same integer division as save_split: leftover agorot land on the first element. */
+function saveSplitAmounts(amount: bigint, shares: Array<{ project_id: string; share_bp: number }>): Map<string, bigint> {
+  let assigned = 0n;
+  let first: string | null = null;
+  const amounts = new Map<string, bigint>();
+  for (const share of shares) {
+    const part = (amount * BigInt(share.share_bp)) / 10000n;
+    assigned += part;
+    if (first == null) first = share.project_id;
+    amounts.set(share.project_id, (amounts.get(share.project_id) ?? 0n) + part);
+  }
+  if (first != null && assigned !== amount) {
+    amounts.set(first, (amounts.get(first) ?? 0n) + (amount - assigned));
+  }
+  return amounts;
+}
 
 describe("split math", () => {
   it("round-trips percents that have to sum to 10000", () => {
@@ -18,7 +35,7 @@ describe("split math", () => {
     expect(bpToPercent(10000)).toBe("100");
   });
 
-  it("puts leftover agorot on the first share so the parts equal the amount", () => {
+  it("puts leftover agorot on the last share so the parts equal the amount", () => {
     const parts = allocate(1001n, [
       { id: "a", bp: 3333 },
       { id: "b", bp: 3333 },
@@ -34,6 +51,22 @@ describe("split math", () => {
         { agorot: 335n, count: 1 },
       ],
     });
+  });
+
+  it("reverses the payload so save_split stores the agorot on screen", () => {
+    for (const amount of [1001n, -1001n]) {
+      const parts = allocate(amount, [
+        { id: "a", bp: 3333 },
+        { id: "b", bp: 3333 },
+        { id: "c", bp: 3334 },
+      ]);
+      const payload = sharesForSave(parts);
+      expect(payload.map((row) => row.project_id)).toEqual(["c", "b", "a"]);
+      const stored = saveSplitAmounts(amount, payload);
+      for (const part of parts) {
+        expect(stored.get(part.id)).toBe(part.agorot);
+      }
+    }
   });
 
   it("splits income by weight and names an even pair as each", () => {

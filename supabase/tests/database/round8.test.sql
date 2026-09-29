@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(31);
+select plan(32);
 
 do $users$
 begin
@@ -108,12 +108,19 @@ where transaction_id = (select id from r8 where label = 'shared') and undone_at 
 select tests.authenticate_as('r8_a');
 select lives_ok(
   format('select public.undo_reassign(%L::uuid)', (select id from r8 where label = 'undo')),
-  'undo restores the category'
+  'undo restores the suggested default category'
 );
 select is(
   (select category_id from public.transactions where id = (select id from r8 where label = 'shared')),
   (select id from r8 where label = 'materials'),
   'the previous category is the suggested default'
+);
+-- The restored category is not null and differs from the one undo replaced,
+-- so the trigger clears category_suggested instead of filling it again.
+select is(
+  (select category_suggested from public.transactions where id = (select id from r8 where label = 'shared')),
+  false,
+  'undo of a different category clears the suggestion flag'
 );
 select is(
   (select count(*)::int from public.allocations where transaction_id = (select id from r8 where label = 'shared')),

@@ -2,6 +2,8 @@
 
 ## 2026-09-29
 
+Decision [0070](decisions/0070-split-remainder-and-undo-log.md), Accepted. The split the owner sees is the split that is saved: the leftover agora stays on the last project, and the payload is reversed so `save_split` stores those same agorot. `SELECT` on `reassign_undo` is revoked from `authenticated` again. Income suggestions are filed and are not queued. A project's category breakdown omits a category the owner has not confirmed. A toast with ביטול stays about 5 seconds, and the status region stays mounted. This amends [0069](decisions/0069-back-and-one-tap-review.md) points 4, 8, and 10.
+
 Decision [0069](decisions/0069-back-and-one-tap-review.md), Accepted. Back returns to the screen that opened this one, and a fresh visit opens the parent. אישור accepts the project and category on the card. A SUMIT expense with no category takes a rule, then history, then the default, and stays in the queue until that tap. The companies UPDATE grant drops id, owner, created_at, and is_demo. A network failure asks for a retry, and the default live check does not create documents. A toast sits under the header, leaves after 2.5 seconds (4 for an error), and does not cover דלג. Skip and approve move the card on and advance the visit meter. The Home hero keeps a label, the number, and one explanation. נכנס and יצא sit below the band. A loss says הפסד, and החודש is named in the label. Split v2 leads with presets: same percent for every project, or for the projects he ticks, in one tap. Nothing is selected until that tap. Manual percents sit behind "חלוקה ידנית", with no shekel typing. Eliran approved that direction on 2026-09-29. This amends DESIGN-RULES §11. צפייה on the review banner opens today's auto-assigned transactions. Each row can be opened and changed, and back returns to the queue. A tap anywhere in a text, amount, or percent field focuses it. ₪ sits outside the digits, `9,999,999.99` stays visible at 320px, and iOS does not offer AutoFill Contact.
 
 Decision [0068](decisions/0068-review-round9.md) r17 addendum. A sheet panel draws no focus ring, Split labels stay on one line at 320, and the overhead hint wording stays as it is. `reassign_undo` enables row level security with no policies.
@@ -18,7 +20,7 @@ Decision [0068](decisions/0068-review-round9.md), Accepted. An unsplit shared co
 
 A screen or sheet title focused for a screen reader never draws a focus ring. The ring stays on keyboard focus of real controls. This amends [0067](decisions/0067-review-round8.md) point 10.
 
-The production bundle scan also rejects company `2393153301`. `SUMIT_NO_DOCUMENTS=1` runs the live check as connect, two syncs, and the saved split, without creating a SUMIT document. `sumit_status` can read `next_attempt_at`, so Settings loads for the owner.
+The production bundle scan also rejects company `2393153301`. The live check does not create a SUMIT document unless `SUMIT_CREATE_DOCUMENTS=1`. `sumit_status` can read `next_attempt_at`, so Settings loads for the owner.
 
 ## 2026-09-28
 

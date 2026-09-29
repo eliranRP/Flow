@@ -67,7 +67,7 @@ select is(
         'vat_status', 'derived',
         'doc_date', '2026-04-01',
         'cash_date', '2026-04-01',
-        'description', 'עלות משותפת: פועלים',
+        'description', 'עלות פרויקט: פועלים',
         'party_name', 'כוח אדם',
         'party_kind', 'supplier',
         'party_external_id', '9'

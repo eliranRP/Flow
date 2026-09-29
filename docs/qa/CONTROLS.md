@@ -75,7 +75,7 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Change sheet | a picker radio | Selects that row and returns to the summary. | never | no | the summary shows the name | none | pass |
 | Change sheet | picker חזרה | Returns to the summary without a new choice. | never | no | the summary | none | pass |
 | Change sheet | פרויקט חדש | Opens the name field, then `upsert_project`, and selects it. | never | שמירה is busy | toast "הפרויקט נשמר", the new project is selected | toast "לא הצלחנו לשמור את הפרויקט." | pass |
-| Change sheet | פיצול בין פרויקטים | Opens Split for this transaction. Without a transaction id, a toast explains that. | never | no | route `/transactions/:id/split`, or the toast | none | pass |
+| Change sheet | פיצול בין פרויקטים | Opens Split for this transaction. From the transaction sheet this replaces the history entry. Without a transaction id, a toast explains that. | never | no | route `/transactions/:id/split`, or the toast | none | pass |
 | Change sheet | remember toggle | Includes `p_remember` on save. Expense only. | never | no | the switch moves | none | pass |
 | Change sheet | שמירה ואישור | Calls `resolve_review` with action `changed`. | missing project (expense) or category; the click toasts "בחרו פרויקט וקטגוריה." or "בחרו קטגוריה." | the button is busy | toast "השיוך נשמר", back to review | toast "לא נשמר – אין חיבור" with ניסיון חוזר | pass |
 | Add | צילום חשבונית | Does not run. Capture is not built. | always. Hint says camera or PDF. Cursor not-allowed. | no | none | none | pass |

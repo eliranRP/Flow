@@ -1,4 +1,4 @@
--- reassign_undo stays invisible to the owner. Catalogue flags are not the check.
+-- reassign_undo stays revoked from the owner. Row level security is still checked in round9_rls.
 
 begin;
 
@@ -32,10 +32,11 @@ from public.transactions t
 where t.idempotency_key = 'r10:undo-row';
 
 select tests.authenticate_as('r10_rls');
-select is(
-  (select count(*)::int from public.reassign_undo),
-  0,
-  'an authenticated owner selects no undo rows'
+select throws_ok(
+  $$select 1 from public.reassign_undo$$,
+  '42501',
+  null,
+  'an authenticated owner cannot select the undo log'
 );
 select throws_ok(
   $$insert into public.reassign_undo (company_id, transaction_id, prior_user_assigned, prior_allocations)

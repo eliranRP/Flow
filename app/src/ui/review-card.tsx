@@ -22,6 +22,7 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
     suggestion?.project ? { label: "פרויקט", value: suggestion.project } : null,
     suggestion?.category ? { label: "קטגוריה", value: suggestion.category } : null,
   ].filter((line): line is { label: string; value: string } => line != null);
+  const missingProject = suggestion?.category != null && suggestion.project == null;
   return (
     <article className="ui-review">
       <div className="ui-review-doc">
@@ -48,6 +49,7 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
               <span>{line.value}</span>
             </p>
           ))}
+          {missingProject ? <p className="t-label">חסר פרויקט, בחרו בשינוי</p> : null}
         </div>
       ) : (
         <div className="ui-review-ai">

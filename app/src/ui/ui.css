@@ -2486,6 +2486,19 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   pointer-events: none;
 }
 
+.ui-toast-live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+
 .ui-day-range {
   background: var(--color-tint);
 }

@@ -352,6 +352,21 @@ test("a transaction expands, changes, and confirms delete", async ({ page }) => 
   await expect(page).toHaveURL(/\/transactions\/t-manual\/split/);
 });
 
+test("the transaction change sheet opens split in place", async ({ page }) => {
+  await page.goto("/e2e/txn?preview=1");
+  await page.getByRole("button", { name: /פרויקט/ }).click();
+  const sheet = page.getByRole("dialog", { name: "שינוי שיוך" });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole("button", { name: /פרויקט:/ }).click();
+  await expect(page.getByRole("heading", { name: "בחירת פרויקט" })).toBeVisible();
+  await sheet.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
+  await expect(page).toHaveURL(/\/transactions\/t-manual\/split$/);
+  await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/e2e\/txn\?preview=1$/);
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toHaveCount(0);
+});
+
 test("settings connect, refresh, categories, and disabled notices", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "חיבור SUMIT" }).click();
@@ -563,6 +578,15 @@ async function fingerprint(page: Page) {
   }));
 }
 
+function hitTarget(el: Element): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  const rect = el.getBoundingClientRect();
+  const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + Math.min(rect.height / 2, Math.max(rect.height - 1, 0)));
+  if (!hit) return false;
+  const label = el.closest("label");
+  return el === hit || el.contains(hit) || hit.contains(el) || (label != null && label === hit.closest("label"));
+}
+
 function sameUrl(href: string, current: string) {
   if (href === "" || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("http")) return false;
   const next = new URL(href, current);
@@ -615,6 +639,7 @@ for (const url of sweepPages) {
     await page.goto(url);
     const found = await describeControls(page);
     const failures: string[] = [];
+    let skipped = 0;
     for (const control of found) {
       if (control.name.includes("המשך עם Google")) continue;
       if (control.href.startsWith("mailto:") || control.href.startsWith("tel:") || control.href.startsWith("http")) continue;
@@ -633,14 +658,26 @@ for (const url of sweepPages) {
         continue;
       }
       if (control.checked === "true") continue;
-      const reachable = await target.evaluate((el) => {
-        const rect = el.getBoundingClientRect();
-        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + Math.min(rect.height / 2, rect.height - 1));
-        if (!hit) return false;
-        const label = el.closest("label");
-        return el === hit || el.contains(hit) || hit.contains(el) || (label != null && label === hit.closest("label"));
-      });
-      if (!reachable) continue;
+      await target.scrollIntoViewIfNeeded();
+      let reachable = await target.evaluate(hitTarget);
+      if (!reachable) {
+        await target.evaluate((el) => {
+          el.scrollIntoView({ block: "center", inline: "nearest" });
+        });
+        reachable = await target.evaluate(hitTarget);
+      }
+      if (!reachable) {
+        const coveredTab = await target.evaluate((el) => {
+          const sheet = document.querySelector("[data-vaul-drawer][data-state='open'], [role='dialog'][data-state='open']");
+          return sheet != null && el.closest(".ui-tabbar") != null;
+        });
+        if (coveredTab) {
+          skipped += 1;
+          continue;
+        }
+        failures.push(`${control.name || control.tag} at ${url} stayed unclickable`);
+        continue;
+      }
       const before = await fingerprint(page);
       try {
         await target.click({ timeout: 2_000 });
@@ -658,6 +695,7 @@ for (const url of sweepPages) {
         if (!invalid) failures.push(`${control.name || control.tag} at ${url} did nothing`);
       }
     }
+    console.log(`no-op sweep ${url}: skipped ${String(skipped)} covered controls`);
     expect(failures).toEqual([]);
   });
 }
