@@ -580,8 +580,20 @@ test("split stays calm and pins the save button", async ({ page }) => {
     return style.textOverflow === "ellipsis" && node.scrollWidth > node.clientWidth + 1;
   });
   expect(clipped).toBe(true);
-  const segment = await page.locator(".ui-seg-label").first().evaluate((node) => getComputedStyle(node).textOverflow);
-  expect(segment).not.toBe("ellipsis");
+  const segments = await page.locator(".ui-seg-label").evaluateAll((nodes) => nodes.map((node) => {
+    const style = getComputedStyle(node);
+    return {
+      nowrap: style.whiteSpace === "nowrap",
+      clipped: node.scrollWidth > node.clientWidth + 1,
+      lines: node.getClientRects().length,
+    };
+  }));
+  expect(segments.length).toBeGreaterThan(0);
+  for (const segment of segments) {
+    expect(segment.nowrap).toBe(true);
+    expect(segment.clipped).toBe(false);
+    expect(segment.lines).toBe(1);
+  }
   const name = await page.locator(".ui-split-list .ui-row-title").first().evaluate((node) => getComputedStyle(node).webkitLineClamp);
   expect(name).toBe("2");
 });
@@ -621,6 +633,21 @@ test("a title focused on open draws no ring", async ({ page }) => {
       return "";
     });
     if (problem) failures.push(`${story.id}: ${problem}`);
+    const sheetProblem = await page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>(".ui-sheet-panel");
+      if (!panel) return "";
+      panel.focus();
+      const style = getComputedStyle(panel);
+      if (style.outlineStyle !== "none") {
+        return `sheet outline ${style.outlineWidth} ${style.outlineStyle}`;
+      }
+      const control = panel.querySelector<HTMLElement>("button:not([disabled]), a[href], input:not([disabled])");
+      if (!control) return "sheet has no control";
+      control.focus();
+      if (getComputedStyle(control).outlineStyle === "none") return "a control inside the sheet draws no ring";
+      return "";
+    });
+    if (sheetProblem) failures.push(`${story.id}: ${sheetProblem}`);
   }
   expect(failures).toEqual([]);
 

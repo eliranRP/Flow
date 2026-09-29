@@ -1570,7 +1570,6 @@ export function SplitScreen({
           label="אופן הפיצול"
           showLabel={false}
           radius="input"
-          wrap
           value={method}
           onChange={setMethod}
           options={[

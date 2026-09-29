@@ -179,7 +179,7 @@ Screen push is 250ms from the start side. Toast in 200ms / out 150ms.
 
 Boards: [ds-4](../../design/system/ds-4-controls-light.png) controls, [ds-5](../../design/system/ds-5-content-light.png) content, [ds-6](../../design/system/ds-6-band-light.png) band, [ds-7](../../design/system/ds-7-empty-loading-light.png) empty and loading, [ds-8](../../design/system/ds-8-pickers-sheets-light.png) pickers and sheets. Each has a `-dark.png` twin. [design-system.md](../../design/system/design-system.md), guide §7 and §8.5.
 
-Every control has pressed, disabled, focus, and selected or busy where it applies. Pressed is instant, 100ms. Focus is a 2px ring, `--color-focus`, offset 2px. Inside the band the ring is white. A screen-reader title (`tabindex=-1`) draws no ring. The 2px ring stays on real controls for `:focus-visible`.
+Every control has pressed, disabled, focus, and selected or busy where it applies. Pressed is instant, 100ms. Focus is a 2px ring, `--color-focus`, offset 2px. Inside the band the ring is white. A screen-reader title (`tabindex=-1`) draws no ring. A sheet panel (`role=dialog`, `tabindex=-1`) draws no ring either. The 2px ring stays on real controls for `:focus-visible`.
 
 | Component | States | Rule |
 |---|---|---|

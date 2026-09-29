@@ -2,7 +2,7 @@
 
 ## 2026-09-28
 
-Decision [0068](decisions/0068-review-round9.md) r17 addendum. `reassign_undo` enables row level security with no policies. The definer reassign and undo functions still write it.
+Decision [0068](decisions/0068-review-round9.md) r17 addendum. A sheet panel draws no focus ring, Split labels stay on one line at 320, and the overhead hint wording stays as it is. `reassign_undo` enables row level security with no policies.
 
 Decision [0068](decisions/0068-review-round9.md) r16 addendum. An unsplit shared cost saves as "שמירה", the owner cannot write the remembered SUMIT company id, a bad key in the connect sheet asks to check the id and the key, and the auth screen says reconnect only on "חיבור מחדש".
 

@@ -620,25 +620,6 @@ a.ui-row,
   border-radius: var(--radius-input);
 }
 
-.ui-seg-wrap .ui-seg-btn {
-  block-size: auto;
-  height: auto;
-  min-block-size: var(--size-chip);
-  white-space: normal;
-}
-
-.ui-seg-wrap .ui-seg-label {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-}
-
-@media (max-width: 359px) {
-  .ui-seg-wrap .ui-seg-btn {
-    font-size: var(--type-label-size);
-  }
-}
-
 .ui-seg-btn {
   position: relative;
   block-size: var(--size-chip);
@@ -1687,6 +1668,12 @@ a.ui-row,
   outline: none;
 }
 
+/* A dialog focused for the screen reader is not a control, so it never draws a ring. */
+.ui-sheet-panel:focus,
+.ui-sheet-panel:focus-visible {
+  outline: none;
+}
+
 /*
   §2.7, pinned to Vaul 1.1.2. Its injected sheet is 500ms, and these selectors
   outrank it with !important and :has(). Drag release writes an inline transition.
@@ -2422,6 +2409,10 @@ body:has(.ui-toast):has([data-vaul-drawer][data-state="open"]) [data-vaul-drawer
 
 .ui-split-method {
   margin-top: var(--space-6);
+}
+
+.ui-split-method .ui-seg-btn {
+  padding-inline: var(--space-1);
 }
 
 .ui-split-scope {

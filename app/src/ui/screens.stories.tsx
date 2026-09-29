@@ -716,7 +716,7 @@ export const TransactionUnsplit: Story = {
 
 const splitProjects = [
   { id: "a", name: "בניין מגורים חולון", incomeAgorot: 20_000_000n },
-  { id: "b", name: "מגדל משרדים פ\"ת", incomeAgorot: 15_000_000n },
+  { id: "b", name: "מגדל משרדים פ״ת", incomeAgorot: 15_000_000n },
   { id: "c", name: "וילה רעננה", incomeAgorot: 10_000_000n },
   { id: "d", name: "בית פרטי כפר סבא", incomeAgorot: 5_000_000n },
 ];
