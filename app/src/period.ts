@@ -1,4 +1,4 @@
-import { HEBREW_MONTHS, formatDisplay, monthSpan, previousMonthSpan, yearSpan } from "./ui/date-math";
+import { HEBREW_MONTHS, formatDisplay, israelToday, monthSpan, previousMonthSpan, yearSpan } from "./ui/date-math";
 
 export type PeriodKind = "month" | "lastMonth" | "ytd" | "all" | "custom";
 
@@ -57,24 +57,44 @@ export function customRange(from: string, to: string): PeriodChoice {
   return { kind: "custom", from, to };
 }
 
-export function heroProfitLabel(period: PeriodChoice): string {
+/** The word matches the figure. A loss says הפסד. החודש is named when that period is selected. */
+export function heroProfitLabel(period: PeriodChoice, profitAgorot: bigint): string {
+  const word = profitAgorot < 0n ? "הפסד" : "רווח נקי";
   switch (period.kind) {
-    case "all":
-      return "רווח נקי בכל התקופה";
-    case "ytd":
-      return "רווח נקי מתחילת השנה";
-    case "custom":
-      return "רווח נקי בטווח שנבחר";
     case "month":
-    case "lastMonth": {
-      const name = period.from ? (HEBREW_MONTHS[Number(period.from.slice(5, 7)) - 1] ?? "") : "";
-      return `רווח נקי ב${name}`;
-    }
+      return `${word} החודש`;
+    case "lastMonth":
+      return `${word} בחודש קודם`;
+    case "ytd":
+      return `${word} מתחילת השנה`;
+    case "all":
+      return `${word} בכל התקופה`;
+    case "custom":
+      return `${word} בטווח שנבחר`;
     default: {
       const unreachable: never = period.kind;
       return unreachable;
     }
   }
+}
+
+function hebrewDay(iso: string, now: Date): string {
+  const day = String(Number(iso.slice(8, 10)));
+  const month = HEBREW_MONTHS[Number(iso.slice(5, 7)) - 1] ?? "";
+  const spoken = `${day} ב${month}`;
+  const year = iso.slice(0, 4);
+  if (year !== israelToday(now).slice(0, 4)) return `${spoken} ${year}`;
+  return spoken;
+}
+
+/** One plain line for the hero. A range that ends today says עד היום. */
+export function heroExplanation(period: PeriodChoice, now = new Date()): string {
+  const lead = "הכנסות פחות הוצאות";
+  if (period.kind === "all" || period.from == null) return `${lead}, בכל התקופה`;
+  const today = israelToday(now);
+  const start = hebrewDay(period.from, now);
+  const end = period.to == null || period.to === today ? "היום" : hebrewDay(period.to, now);
+  return `${lead}, מ־${start} עד ${end}`;
 }
 
 export function periodHint(period: PeriodChoice): string | undefined {

@@ -21,6 +21,7 @@ export { MonthGrid } from "./month-grid";
 export { ScreenState } from "./screen-state";
 export { PeriodPicker, RangeSheet } from "./period-picker";
 export { MoneyField } from "./money-field";
+export { FlowLines, Hero } from "./hero";
 export { BandFigures, BandHero, FormError, HelpBack, HelpMail, Section, SectionHead, SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInHelp, SignInPanel, SignInPrivacy, SignInTagline } from "./layout";
 export { ScreenHeader } from "./screen-header";
 export type { PeriodOption } from "./period-picker";

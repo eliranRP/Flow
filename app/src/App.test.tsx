@@ -21,7 +21,8 @@ describe("App", () => {
   it("shows the first-run Home in preview, without a fake profit", () => {
     renderAt("/?preview=1");
     expect(screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
-    expect(screen.getByText("שלום")).toBeInTheDocument();
+    expect(screen.queryByText("שלום")).not.toBeInTheDocument();
+    expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
     expect(screen.getByText("הרווח יופיע כאן אחרי ש-SUMIT מחובר.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings?preview=1");
@@ -61,7 +62,7 @@ describe("App", () => {
     expect(document.querySelector(".ui-skel-project-num")).not.toBeNull();
     expect(document.querySelectorAll(".ui-project-skel .ui-skel-project-figure")).toHaveLength(2);
     expect(document.querySelector(".ui-project-skel .ui-band-figures")).not.toBeNull();
-    expect(document.querySelector(".ui-skel-stack")).toBeNull();
+    expect(document.querySelector(".ui-hero")).toBeNull();
   });
 
   it("shows the ld-01 loading skeleton from preview=loading", () => {
@@ -72,7 +73,9 @@ describe("App", () => {
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(document.querySelectorAll(".ui-project-list .ui-row")).toHaveLength(3);
     expect(document.querySelector(".ui-project-skel")).toBeNull();
-    expect(document.querySelector(".ui-skel-stack")).not.toBeNull();
+    expect(document.querySelector(".ui-band .ui-hero")).not.toBeNull();
+    expect(document.querySelector(".ui-flow")).not.toBeNull();
+    expect(screen.queryByText("Flow")).not.toBeInTheDocument();
   });
 
   it("opens Add as a sheet over Home and keeps the tab bar", async () => {

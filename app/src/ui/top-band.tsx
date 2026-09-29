@@ -10,7 +10,7 @@ type TopBandProps = {
   /** Example tag sits on the band, not in a strip above it. */
   example?: ReactNode;
   preview?: boolean;
-  /** Project hides the wordmark. Home keeps it. */
+  /** Home and Project hide it. The default stays for the band chrome stories. */
   wordmark?: boolean;
 };
 

@@ -122,7 +122,8 @@ describe("auth guard when Supabase is configured", () => {
       emit("INITIAL_SESSION", session);
     });
     expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
-    expect(screen.getByText("שלום, דנה")).toBeInTheDocument();
+    expect(screen.queryByText("שלום, דנה")).not.toBeInTheDocument();
+    expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     act(() => {
       emit("SIGNED_OUT", null);
     });

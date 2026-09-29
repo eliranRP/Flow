@@ -1,0 +1,77 @@
+import type { Dashboard } from "@flow/shared";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it } from "vitest";
+import { HomeBooks } from "./HomeScreen";
+import { heroExplanation, lastMonth, thisMonth } from "../period";
+
+function books(overrides: Partial<Dashboard> = {}): Dashboard {
+  return {
+    company_id: "co",
+    name: "Flow Test",
+    vat_registered: true,
+    basis: "invoiced",
+    from: "2026-09-01",
+    to: "2026-09-28",
+    income_agorot: 47_200_000n,
+    direct_agorot: 43_283_600n,
+    shared_agorot: 0n,
+    overhead_agorot: 0n,
+    expense_agorot: 43_283_600n,
+    net_profit_agorot: 3_916_400n,
+    prev_income_agorot: 40_000_000n,
+    prev_expense_agorot: 38_000_000n,
+    prev_net_agorot: 2_000_000n,
+    active_projects: 0,
+    review_count: 0,
+    projects: [],
+    ...overrides,
+  };
+}
+
+function renderHome(data: Dashboard, period = thisMonth()) {
+  return render(
+    <MemoryRouter>
+      <HomeBooks
+        data={data}
+        previewing={false}
+        search=""
+        unpaidGross={0n}
+        unpaidCount={0}
+        period={period}
+        onPeriod={() => undefined}
+      />
+    </MemoryRouter>,
+  );
+}
+
+describe("Home hero", () => {
+  it("shows one label, the figure, and the explanation, and keeps income outside the band", () => {
+    renderHome(books());
+    expect(screen.queryByText("Flow")).not.toBeInTheDocument();
+    expect(screen.queryByText(/שלום/)).not.toBeInTheDocument();
+    const label = screen.getByText("רווח נקי החודש");
+    expect(label).toHaveClass("ui-band-label");
+    const style = getComputedStyle(label);
+    expect(style.paddingInlineStart === "0px" || style.paddingInlineStart === "0").toBe(true);
+    expect(style.paddingInlineEnd === "0px" || style.paddingInlineEnd === "0").toBe(true);
+    expect(style.textAlign === "start" || style.textAlign === "right").toBe(true);
+    expect(screen.getByRole("heading", { name: "₪39,164" })).toBeInTheDocument();
+    expect(screen.getByText(heroExplanation(thisMonth()))).toBeInTheDocument();
+    const income = screen.getByText("נכנס");
+    const spent = screen.getByText("יצא");
+    expect(income.closest(".ui-band")).toBeNull();
+    expect(spent.closest(".ui-band")).toBeNull();
+    expect(document.querySelector(".ui-band .ui-band-figures")).toBeNull();
+    expect(screen.getByText("מחודש שעבר").closest(".ui-band")).toBeNull();
+    expect(screen.getByRole("button", { name: "החודש" }).closest(".ui-band")).not.toBeNull();
+  });
+
+  it("names a loss in the label", () => {
+    const period = lastMonth();
+    renderHome(books({ income_agorot: 10_000_000n, expense_agorot: 20_000_000n, net_profit_agorot: -10_000_000n }), period);
+    expect(screen.getByText("הפסד בחודש קודם")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "−₪100,000" })).toBeInTheDocument();
+    expect(screen.getByText(heroExplanation(period))).toBeInTheDocument();
+  });
+});

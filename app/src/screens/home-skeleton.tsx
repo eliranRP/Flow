@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { BandHero, SectionHead } from "../ui/layout";
-import { ListRow } from "../ui/list-row";
 import { PeriodPicker } from "../ui/period-picker";
+import { ListRow } from "../ui/list-row";
 import { Skeleton } from "../ui/skeleton";
 import { TopBand } from "../ui/top-band";
 
@@ -16,6 +16,7 @@ export function HomeSkeleton({ preview = false, example }: { preview?: boolean; 
         טוען…
       </p>
       <TopBand
+        wordmark={false}
         preview={preview}
         example={example}
         trailing={
@@ -32,24 +33,23 @@ export function HomeSkeleton({ preview = false, example }: { preview?: boolean; 
         }
       >
         <BandHero>
-          <div className="ui-skel-stack">
-            <span className="ui-greet">
-              <Skeleton tone="band" className="ui-skel-greet-a" />
-              <Skeleton tone="band" className="ui-skel-greet-b" />
-            </span>
+          <div className="ui-hero" aria-hidden="true">
             <Skeleton tone="band" className="ui-skel-label" />
             <Skeleton tone="band" className="ui-skeleton-hero ui-skel-hero-num" />
-            <span className="ui-skel-delta">
-              <Skeleton tone="band" className="ui-skel-delta-a" />
-              <Skeleton tone="band" className="ui-skel-delta-b" />
-            </span>
-            <span className="ui-skel-figures">
-              <Skeleton tone="band" className="ui-skel-figure" />
-              <Skeleton tone="band" className="ui-skel-figure" />
-            </span>
+            <Skeleton tone="band" className="ui-skel-explain" />
           </div>
         </BandHero>
       </TopBand>
+      <div className="ui-flow" aria-hidden="true">
+        <span className="ui-flow-line">
+          <Skeleton className="ui-skel-flow-label" />
+          <Skeleton className="ui-skel-figure" />
+        </span>
+        <span className="ui-flow-line">
+          <Skeleton className="ui-skel-flow-label" />
+          <Skeleton className="ui-skel-figure" />
+        </span>
+      </div>
       <div className="ui-skel-card">
         <Skeleton className="ui-skel-dot" />
         <span className="ui-skel-copy">

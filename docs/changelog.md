@@ -2,7 +2,7 @@
 
 ## 2026-09-29
 
-Decision [0069](decisions/0069-back-and-one-tap-review.md), Accepted. Back returns to the screen that opened this one, and a fresh visit opens the parent. אישור accepts the project and category on the card. A SUMIT expense with no category takes a rule, then history, then the default, and stays in the queue until that tap. The companies UPDATE grant drops id, owner, created_at, and is_demo. A network failure asks for a retry, and the default live check does not create documents. A toast sits under the header, leaves after 2.5 seconds (4 for an error), and does not cover דלג. Skip and approve move the card on and advance the visit meter.
+Decision [0069](decisions/0069-back-and-one-tap-review.md), Accepted. Back returns to the screen that opened this one, and a fresh visit opens the parent. אישור accepts the project and category on the card. A SUMIT expense with no category takes a rule, then history, then the default, and stays in the queue until that tap. The companies UPDATE grant drops id, owner, created_at, and is_demo. A network failure asks for a retry, and the default live check does not create documents. A toast sits under the header, leaves after 2.5 seconds (4 for an error), and does not cover דלג. Skip and approve move the card on and advance the visit meter. The Home hero keeps a label, the number, and one explanation. נכנס and יצא sit below the band. A loss says הפסד, and החודש is named in the label.
 
 Decision [0068](decisions/0068-review-round9.md) r17 addendum. A sheet panel draws no focus ring, Split labels stay on one line at 320, and the overhead hint wording stays as it is. `reassign_undo` enables row level security with no policies.
 
