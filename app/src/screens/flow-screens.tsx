@@ -732,7 +732,17 @@ function devFiledFixture(sampleFlag: string | null): FiledTodayRow[] | undefined
   }];
 }
 
-export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) {
+export function FiledTodayScreen({
+  sample,
+  backTo,
+  rowHref,
+}: {
+  sample?: FiledTodayRow[];
+  /** Overrides the queue as the parent. The reviewer preview uses its own index. */
+  backTo?: string;
+  /** Overrides the transaction route. The reviewer preview stays on sample screens. */
+  rowHref?: (row: FiledTodayRow) => string;
+} = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const [params] = useSearchParams();
@@ -745,7 +755,7 @@ export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) 
     <ScreenState
       title="שויכו היום"
       subtitle="אפשר לפתוח כל תנועה ולשנות את השיוך"
-      backTo={`/review${search}`}
+      backTo={backTo ?? `/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
       empty={<EmptyState icon={<ReviewIcon />} title="אין תנועות ששויכו היום" body="כש־SUMIT משייך תנועה בלי תור, היא תופיע כאן." />}
@@ -760,7 +770,7 @@ export function FiledTodayScreen({ sample }: { sample?: FiledTodayRow[] } = {}) 
             agorot={row.amount_net}
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
-            href={`/transactions/${row.id}${search}`}
+            href={rowHref ? rowHref(row) : `/transactions/${row.id}${search}`}
           />
         ))}
       </List>
@@ -832,10 +842,29 @@ export function ReviewQueue({
   rows,
   search,
   sample = false,
+  sampleSave,
+  onSampleDone,
+  changeTo,
+  filedTo,
+  backTo,
+  homeTo,
 }: {
   rows: ReviewRow[];
   search: string;
   sample?: boolean;
+  /**
+   * Reviewer preview only. ok toasts success and drops the row.
+   * fail is a refusal with no retry. offline is a dropped connection.
+   */
+  sampleSave?: "ok" | "fail" | "offline";
+  onSampleDone?: (id: string) => void;
+  /** Reviewer preview sends שינוי to its own save screen. */
+  changeTo?: string;
+  /** Reviewer preview sends צפייה to its own filed list. */
+  filedTo?: string;
+  backTo?: string;
+  /** Reviewer preview returns an empty queue to its index. */
+  homeTo?: string;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -871,9 +900,14 @@ export function ReviewQueue({
     };
   }, [rows, shown]);
   const approve = useWrite({
-    failure: "לא הצלחנו לאשר.",
+    failure: sampleSave ? changeSaveFailure : "לא הצלחנו לאשר.",
+    success: sampleSave ? "הפריט אושר" : undefined,
     keys: ["review", "dashboard", "unpaid"],
     run: async () => {
+      if (sampleSave) {
+        await runSampleSave(sampleSave);
+        return;
+      }
       if (!row?.category_id) throw new Error("missing");
       if (row.direction !== "income" && !row.project_id) throw new Error("missing");
       const supabase = getSupabase();
@@ -888,6 +922,10 @@ export function ReviewQueue({
     },
     onSuccess: () => {
       if (!row) return;
+      if (sampleSave) {
+        onSampleDone?.(row.id);
+        return;
+      }
       const id = row.id;
       toast.show({
         message: "הפריט אושר",
@@ -899,10 +937,14 @@ export function ReviewQueue({
     },
   });
   const skip = useWrite({
-    failure: "לא הצלחנו לדלג.",
+    failure: sampleSave ? changeSaveFailure : "לא הצלחנו לדלג.",
     success: "דילגנו על הפריט",
     keys: ["review"],
     run: async () => {
+      if (sampleSave) {
+        await runSampleSave(sampleSave);
+        return;
+      }
       if (!row) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -911,10 +953,13 @@ export function ReviewQueue({
         p_action: "skipped",
       }));
     },
+    onSuccess: () => {
+      if (sampleSave && row) onSampleDone?.(row.id);
+    },
   });
   const card = shown;
-  if (!card) return <ReviewEmpty search={search} />;
-  const change = `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
+  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} backTo={backTo} />;
+  const change = changeTo ?? `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
   const total = Math.max(visit.current.total, 1);
@@ -926,7 +971,7 @@ export function ReviewQueue({
       : row.project_id != null && row.category_id != null);
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       <div className="ui-review-meter">
         <ProgressBar
           variant="thin"
@@ -950,7 +995,7 @@ export function ReviewQueue({
           }
           action={
             <>
-              <TextLink to={`/review/filed${search}`}>צפייה</TextLink>
+              <TextLink to={filedTo ?? `/review/filed${search}`}>צפייה</TextLink>
               <IconButton label="סגירה" onClick={() => { setHideAuto(true); }}>
                 <CloseIcon />
               </IconButton>
@@ -974,9 +1019,14 @@ export function ReviewQueue({
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (!approvable || !row || blocked(sample ? "empty" : preview)) return;
+            if (!approvable || !row) return;
+            if (sampleSave == null && blocked(sample ? "empty" : preview)) return;
             if (row.reason === "unallocated_shared") {
-              if (row.transaction_id) void navigate(`/transactions/${row.transaction_id}/split${search}`);
+              if (!row.transaction_id) return;
+              const target = sampleSave != null
+                ? `/reviewer/split${search}`
+                : `/transactions/${row.transaction_id}/split${search}`;
+              void navigate(target);
               return;
             }
             approve.mutate();
@@ -992,7 +1042,8 @@ export function ReviewQueue({
             busy={skip.isPending}
             disabled={leaving}
             onClick={() => {
-              if (leaving || blocked(sample ? "empty" : preview)) return;
+              if (leaving) return;
+              if (sampleSave == null && blocked(sample ? "empty" : preview)) return;
               skip.mutate();
             }}
           >
@@ -1064,18 +1115,34 @@ async function reopenReview(
   }
 }
 
-function ReviewEmpty({ search, filtered = false }: { search: string; filtered?: boolean }) {
+function ReviewEmpty({
+  search,
+  filtered = false,
+  homeTo,
+  backTo,
+}: {
+  search: string;
+  filtered?: boolean;
+  homeTo?: string;
+  backTo?: string;
+}) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       <EmptyState
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לפרויקט הזה" : "הכל מאושר"}
         body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
-        action={<Button variant="pill" to={`/${search}`}>לדף הבית</Button>}
+        action={<Button variant="pill" to={homeTo ?? `/${search}`}>{homeTo ? "לתצוגת הביקורת" : "לדף הבית"}</Button>}
       />
     </div>
   );
+}
+
+function runSampleSave(mode: "ok" | "fail" | "offline"): Promise<void> {
+  if (mode === "fail") return Promise.reject(new Error("category kind must match the direction"));
+  if (mode === "offline") return Promise.reject(new Error("Failed to fetch"));
+  return Promise.resolve();
 }
 
 type CategorySample = {
@@ -1734,6 +1801,7 @@ export function SplitScreen({
   sampleSaving = false,
   onSave,
   example,
+  backTo,
 }: {
   sampleProjects?: SplitProject[];
   sampleAmount?: bigint;
@@ -1748,6 +1816,8 @@ export function SplitScreen({
   sampleSaving?: boolean;
   onSave?: (rows: Array<{ project_id: string; share_bp: number }>) => void;
   example?: ReactNode;
+  /** Where back goes when this screen was opened directly. */
+  backTo?: string;
 } = {}) {
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
@@ -1773,7 +1843,7 @@ export function SplitScreen({
   const manualEdited = useRef(sampleShares != null);
   const priorMethod = useRef<SplitMethod | null>(sampleMethod === "manual" ? null : (sampleMethod ?? null));
   const rowsRef = useRef<Array<{ project_id: string; share_bp: number }>>([]);
-  const fallback = `/transactions/${transactionId}${search}`;
+  const fallback = backTo ?? `/transactions/${transactionId}${search}`;
   const activeKey = active.map((project) => `${project.id}:${project.incomeAgorot ?? 0n}`).join("|");
   useEffect(() => {
     if (seeded || sampleProjects || !txn.data?.allocations?.length || active.length === 0) return;

@@ -93,3 +93,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0070](0070-split-remainder-and-undo-log.md) | 2026-09-29 | Accepted | The saved split matches the screen. `reassign_undo` is revoked from the owner again. Income is filed without a queue, and an unconfirmed category stays out of the project breakdown |
 | [0071](0071-shared-cost-copy.md) | 2026-09-29 | Accepted | An unallocated shared cost says approval opens the split. A waiting line keeps the project category list honest |
 | [0072](0072-design-review-rulings.md) | 2026-09-29 | Accepted | Invalid split rows show their own percent. Preview notices are info. Unequal even parts name the whole amount |
+| [0073](0073-review-handoff.md) | 2026-09-29 | Accepted | From r23, a handoff includes a self-check. `/reviewer` is sample data on the dev server only. Only Blocking and Should items block a merge |

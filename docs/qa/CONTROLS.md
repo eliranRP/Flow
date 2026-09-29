@@ -6,6 +6,8 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 
 `result` is the Playwright pass on 2026-09-29. Every row below passed.
 
+The reviewer preview at the end is dev-server only. It is not in the hosted build. Decision [0073](../decisions/0073-review-handoff.md).
+
 | screen | control | expected | disabled when | busy | success | error | result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Tab bar | בית | Opens Home. Stays on Home when already there. | never | no | route `/` | none | pass |
@@ -130,3 +132,25 @@ Preview mode does not write. A save there toasts "במצב תצוגה זה לא 
 | Install | ✕ and לא עכשיו and הבנתי | Dismiss, back to settings. | never | no | route `/settings` | none | pass |
 | Install | התקנה | Runs the browser install prompt. Android prompt only. | never | no | the browser sheet | none | pass |
 | Install | העתקת קישור | Copies the page URL. Other-browser iPhone only. | never | no | toast "הקישור הועתק" | toast "לא הצלחנו להעתיק את הקישור." | pass |
+
+## Reviewer preview
+
+Dev server only (`/reviewer`). Sample data, marked "נתוני דוגמה · Example data". Not a hosted screen. Saves do not call the ledger. `?save=fail` toasts "לא נשמר. בדקו את הפרטים ונסו שוב." with no ניסיון חוזר. `?save=offline` toasts "לא נשמר – אין חיבור" with ניסיון חוזר. `?save=ok` succeeds.
+
+| screen | control | expected | disabled when | busy | success | error | result |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Reviewer index | each section link | Opens that sample screen. | never | no | the named route | none | pass |
+| Reviewer queue | אישור on a shared cost | Opens the sample split. | never, while the card can be approved | no | route `/reviewer/split` | none | pass |
+| Reviewer queue | אישור on a missing category | Does not run. The card says "חסר קטגוריה, בחרו בשינוי". | no project and category. Cursor not-allowed. | no | none | none | pass |
+| Reviewer queue | אישור on a ready card | Sample save for `?save=`. | while the card is leaving | the button is busy | toast "הפריט אושר", the card leaves. `ok` only | refusal with no retry, or the connection toast with ניסיון חוזר | pass |
+| Reviewer queue | דלג | Same sample save, then the next card. | while the card is leaving | the button is busy | toast "דילגנו על הפריט" | the same save errors | pass |
+| Reviewer queue | שינוי | Opens the sample change sheet. | never | no | route `/reviewer/save` | none | pass |
+| Reviewer queue | צפייה | Opens the sample filed list. | never | no | route `/reviewer/filed` | none | pass |
+| Reviewer queue | סגירה | Hides the banner for this visit. | never | no | the banner is gone | none | pass |
+| Reviewer queue | חזרה | Returns to the reviewer index. | never | no | route `/reviewer` | none | pass |
+| Reviewer queue | לתצוגת הביקורת | Returns to the index after the last card. | never | no | route `/reviewer` | none | pass |
+| Reviewer filed | a row | Opens that sample transaction. | never | no | the supplier, the amount, and the assignment | none | pass |
+| Reviewer filed | חזרה | Returns to the filed list, or from the list to the index. | never | no | the previous sample screen | none | pass |
+| Reviewer save | שמירה ואישור | Sample save for `?save=`. | never | the button is busy | toast "השיוך נשמר", route `/reviewer/review` | refusal with no retry, or the connection toast with ניסיון חוזר | pass |
+| Reviewer split | שמירה | Sample save after a valid choice. | no valid choice. Cursor not-allowed. | the button is busy | toast "החלוקה נשמרה" | refusal with no retry on `?save=fail` | pass |
+| Reviewer split | שווה בין כל הפרויקטים | Selects the even split. Cursor pointer. | never | no | שמירה enables | none | pass |

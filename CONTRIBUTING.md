@@ -30,6 +30,23 @@ Do not rewrite history by editing an accepted decision into a different one.
 4. Update the index: the old row becomes `Superseded`, the new row is `Accepted`.
 5. Add a changelog entry that names both numbers.
 
+## Review handoff
+
+From r23 on, this is how a change is handed off. Decision [0073](docs/decisions/0073-review-handoff.md). Eliran approved it.
+
+Before the handoff, self-review against the PR reviewer's checklist and the UI design reviewer's checklist. Put that self-check in the handoff summary. Cover:
+
+- [DESIGN-RULES](docs/design/DESIGN-RULES.md)
+- [CONTROLS.md](docs/qa/CONTROLS.md), with pass or fail on each new or changed control
+- a 320px clipping and overflow sweep
+- a no-op-control sweep: an enabled control navigates, opens something, changes state, or calls the API
+- the cursor rules: pointer when it can be used, not-allowed when it cannot, progress while it is busy
+- the numbers add up to the line they came from
+
+`/reviewer` on the dev server is sample data for that review: a queue that includes a shared cost, the filed-today list, and saves that succeed or fail on demand (`?save=ok`, `?save=fail`, `?save=offline`). Every screen says "נתוני דוגמה · Example data". The route exists only in the dev build. Do not import that module from production code. `pnpm check:bundle` fails if the hosted bundle contains "Example data".
+
+Only a Blocking item or a Should item blocks the merge. A nit is written down and fixed in the next batch. It does not block the handoff it was found in.
+
 ## Wireframes
 
 Wireframes for Module 1 live in [docs/module-1-project-pnl/wireframes/](docs/module-1-project-pnl/wireframes/README.md).
