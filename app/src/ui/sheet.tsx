@@ -107,7 +107,10 @@ export function Sheet({
   }
   function keepOpenForToast(event: { preventDefault: () => void; target: EventTarget | null; detail?: { originalEvent?: { target: EventTarget | null } } }) {
     const nodes = [event.target, event.detail?.originalEvent?.target];
-    const onToast = nodes.some((node) => node instanceof Element && node.closest(".ui-toast, .ui-toast-host") != null);
+    const onToast = nodes.some((node) => {
+      const element = node instanceof Element ? node : node instanceof Text ? node.parentElement : null;
+      return element?.closest(".ui-toast, .ui-toast-host") != null;
+    });
     if (onToast) event.preventDefault();
   }
   return (
