@@ -214,7 +214,7 @@ test("the install screen pins the action under the icon", async ({ page }) => {
   expect(lines).toBe(1);
 });
 
-test("change sheet picks a project and a category, then offers save", async ({ page }) => {
+test("change sheet picks a project and a category without a summary save", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=screens-routes--change-sheet&viewMode=story", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "פרויקט: בניין מגורים חולון, שינוי" }).click();

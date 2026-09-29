@@ -2120,6 +2120,7 @@ export function SplitScreen({
           return;
         }
         baseline.current = JSON.stringify(rowsRef.current);
+        gate.current = { method: gate.current.method, valid: true, dirty: false };
         return;
       }
       if (blocked()) return;

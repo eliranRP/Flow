@@ -130,6 +130,7 @@ export function placeToast(layer: HTMLElement): void {
     }
     const head = sheet.querySelector(".ui-sheet-head");
     const limit = head instanceof HTMLElement ? head.getBoundingClientRect().top : sheetTop;
+    const headBottom = head instanceof HTMLElement ? head.getBoundingClientRect().bottom : sheetTop;
     const room = limit - gap - safe;
     const minBlock = toastMinBlock();
     if (toast instanceof HTMLElement && room >= minBlock && height > room) {
@@ -139,8 +140,27 @@ export function placeToast(layer: HTMLElement): void {
       return;
     }
     if (room < minBlock) {
-      const used = Math.max(height, minBlock);
-      layer.style.top = `${String(Math.min(safe, limit - gap - used))}px`;
+      // A scrolled sheet reports its header above the viewport. Follow the visible
+      // sheet instead, so ניסיון חוזר stays on screen.
+      const headerVisible = headBottom > sheetTop && limit < floor;
+      if (!headerVisible) {
+        const gapRoom = sheetTop - gap - safe;
+        if (gapRoom >= height) {
+          layer.style.top = `${String(Math.max(safe, sheetTop - gap - height))}px`;
+          return;
+        }
+      }
+      const below = (headerVisible ? headBottom : sheetTop) + gap;
+      const available = floor - below;
+      if (available >= minBlock) {
+        if (toast instanceof HTMLElement && height > available) {
+          toast.style.maxHeight = `${String(available)}px`;
+          toast.style.overflow = "hidden";
+        }
+        layer.style.top = `${String(Math.max(safe, below))}px`;
+        return;
+      }
+      layer.style.top = `${String(safe)}px`;
       return;
     }
     layer.style.top = `${String(safe)}px`;
