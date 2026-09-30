@@ -71,7 +71,7 @@ type Shared = {
    * "left" means the screen already navigated, so the picker must not pop history.
    * Omitted in a story, which only updates the local choice.
    */
-  onCommitPick?: (kind: "project" | "category", id: string) => Promise<void | "left">;
+  onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left">;
   /**
    * Runs on every close. Rejects with "incomplete" or "remember" to stay open.
    * It must not write. A write belongs in onCommitPending, and only when pending.

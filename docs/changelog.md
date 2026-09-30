@@ -2,6 +2,10 @@
 
 ## 2026-09-30
 
+CI runs on a pull request and on a push to `main`: typecheck, lint, unit tests, both bundle guards, Storybook, pgTAP, and the main Playwright suite against local Supabase. A push to `main` deploys only after lint, check, and e2e succeed on that commit. The hosted build is stamped and checked before the read-only preflight and the migration push, then Cloudflare Pages project `flow-app` is updated. The hosted bundle check requires the public Supabase URL and anon key in the dist, and it refuses `service_role` and `sb_secret_`. The three deploy secrets live only on the `production` environment, which is limited to `main`. A missing secret fails the deploy. Decision [0077](decisions/0077-deploy-after-ci.md). Secrets and rollback are in [CI and CD](runbooks/ci-cd.md).
+
+The strict lint findings that were already in the app are fixed in place. Unused imports and unused hook calls are removed, callbacks that only returned a promise now return that promise directly, and `void` is no longer written inside a union. Screen behavior is unchanged.
+
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. A toast is placed from the sheet's resting top, after the open scroll and transform, and it stays invisible until that position is final. At safe area 0 or 20 the sheet keeps its own padding. At 47, ✕ sits `--space-2` under the toast. Above a short sheet the gap is `--space-2`, with the pad already gone. The change sheet tags a project only when `project_suggested` is true. Approving a categorised split puts it on שויכו היום with its shares, and ביטול takes it off.
 
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. The toast pad moves for 200ms and the toast fades in after that move. A later toast keeps the pad. Resize, rotation, and the keyboard place a visible toast again. The timer waits until the toast is on screen. `list_review` returns `project_suggested`. הצעה on a project line follows that flag. `approve_split_review` locks the open review, and a foreign company cannot close it.

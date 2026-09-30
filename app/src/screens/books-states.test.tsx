@@ -944,7 +944,9 @@ describe("rejected writes", () => {
     rerender(queue(rows.slice(1)));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
-    rerender(queue([rows[2]!]));
+    const third = rows[2];
+    if (third == null) throw new Error("review row missing");
+    rerender(queue([third]));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "3");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
     rerender(queue(rows));
@@ -1075,6 +1077,12 @@ describe("an unchanged complete review", () => {
       expect(screen.queryByRole("dialog", { name: "שינוי שיוך" })).not.toBeInTheDocument();
     });
     expect(writes(calls)).toEqual([]);
+    // Vaul clears its drag flag 200ms after the swipe. Let that run before the file ends.
+    await act(async () => {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 250);
+      });
+    });
   });
 
   it("commits a remember change when ✕ closes", async () => {

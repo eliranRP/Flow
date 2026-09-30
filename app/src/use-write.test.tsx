@@ -6,7 +6,7 @@ import { changeSaveFailure } from "./ui/change-sheet";
 import { useWrite } from "./use-write";
 
 vi.mock("./use-books", () => ({
-  useInvalidateBooks: () => async () => undefined,
+  useInvalidateBooks: () => () => Promise.resolve(),
 }));
 
 function Save({
@@ -40,9 +40,7 @@ function renderSave(
 describe("useWrite", () => {
   it("offers לחלוקה, not a retry, when the database refuses a shared cost", async () => {
     const onSplit = vi.fn();
-    renderSave(async () => {
-      throw new Error("shared costs are split, not assigned to one project");
-    }, changeSaveFailure, onSplit);
+    renderSave(() => Promise.reject(new Error("shared costs are split, not assigned to one project")), changeSaveFailure, onSplit);
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("עלות משותפת מחולקת במסך החלוקה.")).toBeInTheDocument();
     expect(document.querySelector(".ui-toast-bad")).toBeNull();
@@ -52,35 +50,27 @@ describe("useWrite", () => {
   });
 
   it("offers a retry when the network fails", async () => {
-    renderSave(async () => {
-      throw new Error("Failed to fetch");
-    });
+    renderSave(() => Promise.reject(new Error("Failed to fetch")));
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.getByText("לא נשמר – אין חיבור")).toBeInTheDocument();
   });
 
   it("does not offer a retry when the client is missing", async () => {
-    renderSave(async () => {
-      throw new Error("supabase");
-    }, "לא הצלחנו ליצור את הקטגוריה.");
+    renderSave(() => Promise.reject(new Error("supabase")), "לא הצלחנו ליצור את הקטגוריה.");
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText("לא הצלחנו ליצור את הקטגוריה.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
   });
 
   it("offers a retry for a server error", async () => {
-    renderSave(async () => {
-      throw new Error("Internal Server Error");
-    }, "לא הצלחנו ליצור את הקטגוריה.");
+    renderSave(() => Promise.reject(new Error("Internal Server Error")), "לא הצלחנו ליצור את הקטגוריה.");
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
   });
 
   it("does not offer a retry for another deterministic refusal", async () => {
-    renderSave(async () => {
-      throw new Error("category kind must match the direction");
-    });
+    renderSave(() => Promise.reject(new Error("category kind must match the direction")));
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => {
       expect(screen.getByText("לא נשמר. בדקו את הפרטים ונסו שוב.")).toBeInTheDocument();

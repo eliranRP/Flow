@@ -18,7 +18,8 @@ test("a skip toast stays clear of the actions and leaves on its own", async ({ p
   const skipBox = await skip.boundingBox();
   expect(toastBox).not.toBeNull();
   expect(skipBox).not.toBeNull();
-  expect(toastBox!.y + toastBox!.height).toBeLessThan(skipBox!.y);
+  if (toastBox == null || skipBox == null) throw new Error("toast or skip box missing");
+  expect(toastBox.y + toastBox.height).toBeLessThan(skipBox.y);
   await expect(page.locator(".ui-toast-host")).toHaveCSS("pointer-events", "none");
   await expect(toast).toHaveCSS("pointer-events", "auto");
 

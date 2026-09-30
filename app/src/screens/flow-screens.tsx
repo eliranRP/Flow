@@ -83,7 +83,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, FigureLine, FormError, SectionHead, SharedCostNote } from "../ui/layout";
+import { BandFigures, BandHero, FormError, SectionHead, SharedCostNote } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
@@ -156,8 +156,6 @@ async function saveNewProject(
 export function OnboardingScreen() {
   const navigate = useNavigate();
   const search = usePreviewSearch();
-  const preview = useHomePreview();
-  const toast = useToast();
   const blocked = useBlockedPreview();
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
@@ -346,8 +344,6 @@ function ProjectsBody({
 }
 
 function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: string }) {
-  const preview = useHomePreview();
-  const toast = useToast();
   const blocked = useBlockedPreview();
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
@@ -502,7 +498,6 @@ export function ProjectDetailScreen({
   const search = usePreviewSearch();
   const detail = useProjectQuery(sample ? "" : projectId);
   const preview = useHomePreview();
-  const toast = useToast();
   const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const [moves, setMoves] = useState(false);
@@ -678,8 +673,6 @@ function ProjectMenu({
   budget: bigint | null;
   finished: boolean;
 }) {
-  const preview = useHomePreview();
-  const toast = useToast();
   const blocked = useBlockedPreview();
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -1043,12 +1036,11 @@ export function ReviewQueue({
   const index = row ? total - rows.length + 1 : total;
   const splitCard = reviewIsSplit(row);
   const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
-    ? row.transaction_id != null
-    : splitCard
+    || (splitCard
       ? row.category_id != null
       : row.direction === "income"
         ? row.category_id != null
-        : row.project_id != null && row.category_id != null);
+        : row.project_id != null && row.category_id != null));
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
@@ -1099,7 +1091,7 @@ export function ReviewQueue({
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (!approvable || !row) return;
+            if (row == null || !approvable) return;
             if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
             if (row.reason === "unallocated_shared") {
               if (!row.transaction_id) return;
@@ -1140,7 +1132,7 @@ function withItem(to: string, id: string): string {
   const [path, query = ""] = to.split("?");
   const params = new URLSearchParams(query);
   params.set("item", id);
-  return `${path}?${params.toString()}`;
+  return `${String(path)}?${params.toString()}`;
 }
 
 function invoiceDate(iso: string): string {
@@ -1581,7 +1573,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
         setLeaveNote("");
       }}
       onCommitPick={async (kind, id) => {
-        if (sample) return;
+        if (sample) return undefined;
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
@@ -1590,36 +1582,38 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
           if (kind === "project") {
             if (!row?.transaction_id || id === "") throw new Error("supabase");
             await collapseShared.mutateAsync();
-            return;
+            return undefined;
           }
           if (!row?.transaction_id) throw new Error("supabase");
           await setSharedCategory.mutateAsync();
-          return;
+          return undefined;
         }
         const complete = income ? nextCategory !== "" : nextProject !== "" && nextCategory !== "";
         if (!complete) {
           setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-          return;
+          return undefined;
         }
         setHold("");
         if (closedReview.current) {
           await reassignClosed.mutateAsync();
-          return;
+          return undefined;
         }
         await save.mutateAsync();
+        return undefined;
       }}
-      onCloseCheck={async () => {
-        if (sample) return;
-        if (blocked()) throw new Error("preview");
+      onCloseCheck={() => {
+        if (sample) return Promise.resolve();
+        if (blocked()) return Promise.reject(new Error("preview"));
         const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
         if (!complete) {
           setHold(income || splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-          throw new Error("incomplete");
+          return Promise.reject(new Error("incomplete"));
         }
         if (!splitReview && remember !== savedRemember && (wroteReview.current || closedReview.current)) {
           setLeaveNote("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
-          throw new Error("remember");
+          return Promise.reject(new Error("remember"));
         }
+        return Promise.resolve();
       }}
       onCommitPending={async () => {
         if (sample) return;
@@ -1795,7 +1789,7 @@ export function TransactionScreen({
   const [menu, setMenu] = useState(false);
   const [docOpen, setDocOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
-  const leaveChange = useRef<() => Promise<boolean>>(async () => true);
+  const leaveChange = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
@@ -1992,7 +1986,7 @@ export function TransactionScreen({
           : next.projectId !== "" && next.categoryId !== "";
     if (!complete) {
       setHold(collapsing ? COLLAPSE_PICK_HOLD : detailRow.direction === "income" || splitRow ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-      return;
+      return undefined;
     }
     setHold("");
     try {
@@ -2013,10 +2007,10 @@ export function TransactionScreen({
               onSampleUndo?.();
             },
           });
-          return;
+          return undefined;
         }
         toast.show({ message: "השיוך נשמר" });
-        return;
+        return undefined;
       }
       if (blocked()) throw new Error("preview");
       if (collapsing) await collapse.mutateAsync();
@@ -2027,6 +2021,7 @@ export function TransactionScreen({
       setCategoryId(previous.categoryId);
       throw error;
     }
+    return undefined;
   }
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
   const changeProjects = withChoice(
@@ -2207,11 +2202,17 @@ function readSplitDraft(id: string): SplitDraft | null {
   try {
     const raw = sessionStorage.getItem(splitDraftKey(id));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<SplitDraft>;
+    const parsed = JSON.parse(raw) as {
+      method?: unknown;
+      manual?: SplitDraft["manual"];
+      chosen?: SplitDraft["chosen"];
+      oneProject?: string;
+    };
     const method = parsed.method;
     if (method != null && method !== "equal" && method !== "chosen" && method !== "income" && method !== "manual" && method !== "one") return null;
+    const known = method === "equal" || method === "chosen" || method === "income" || method === "manual" || method === "one" ? method : null;
     return {
-      method: method ?? null,
+      method: known,
       manual: parsed.manual ?? {},
       chosen: parsed.chosen ?? [],
       oneProject: parsed.oneProject ?? "",
@@ -2255,9 +2256,9 @@ export function SplitScreen({
   sampleChosen?: string[];
   /** The saving story. Rows, fields, the link, and ✕ stay disabled. */
   sampleSaving?: boolean;
-  onSave?: (rows: Array<{ project_id: string; share_bp: number }>) => void | boolean | Promise<void | boolean>;
+  onSave?: (rows: Array<{ project_id: string; share_bp: number }>) => undefined | boolean | Promise<undefined | boolean>;
   /** One project. "left" means the caller already moved on, so this screen does not toast or go back. */
-  onOneProject?: (projectId: string) => void | boolean | "left" | Promise<void | boolean | "left">;
+  onOneProject?: (projectId: string) => undefined | boolean | "left" | Promise<undefined | boolean | "left">;
   example?: ReactNode;
   /** Where back goes when this screen was opened directly. */
   backTo?: string;
@@ -2265,7 +2266,6 @@ export function SplitScreen({
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
   const search = usePreviewSearch();
-  const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
   const blocked = useBlockedPreview();
@@ -2300,8 +2300,11 @@ export function SplitScreen({
   const priorMethod = useRef<SplitMethod | null>(sampleMethod === "manual" ? null : (sampleMethod ?? null));
   const rowsRef = useRef<Array<{ project_id: string; share_bp: number }>>([]);
   const fallback = backTo ?? `/transactions/${transactionId}${search}`;
-  const activeKey = active.map((project) => `${project.id}:${project.incomeAgorot ?? 0n}`).join("|");
+  const activeKey = active.map((project) => `${project.id}:${String(project.incomeAgorot ?? 0n)}`).join("|");
+  const activeRef = useRef(active);
+  activeRef.current = active;
   useEffect(() => {
+    const active = activeRef.current;
     if (seeded || sampleProjects || !txn.data?.allocations?.length || active.length === 0) return;
     const saved: Record<string, number> = {};
     for (const row of txn.data.allocations) saved[row.project_id] = row.share_bp;
@@ -2431,7 +2434,7 @@ export function SplitScreen({
     await invalidate(["txn", "dashboard", "project", "project-category", "project-waiting", "review"]);
     toast.show({ message: "השיוך הקודם חזר" });
   }
-  async function collapseNow(projectId: string): Promise<void | "left"> {
+  async function collapseNow(projectId: string): Promise<undefined | "left"> {
     if (projectId === "") throw new Error("supabase");
     if (onOneProject) {
       const outcome = await onOneProject(projectId);
@@ -2452,7 +2455,7 @@ export function SplitScreen({
           setMethod(null);
         },
       });
-      return;
+      return undefined;
     }
     if (blocked()) throw new Error("preview");
     collapseTarget.current = projectId;
@@ -2904,7 +2907,6 @@ export function SettingsScreen({
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const { session } = useAuth();
-  const toast = useToast();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
@@ -3211,7 +3213,6 @@ export function CategoriesScreen({
 } = {}) {
   const search = usePreviewSearch();
   const preview = useHomePreview();
-  const toast = useToast();
   const blocked = useBlockedPreview();
   const categories = useCategoriesQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);

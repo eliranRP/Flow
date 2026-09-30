@@ -437,7 +437,17 @@ describe("placeToast", () => {
     close.getBoundingClientRect = () => {
       const applied = Number.parseFloat(surface.dataset.toastPad ?? "") || 0;
       const base = box(110, 44);
-      return { ...base, y: base.y + applied, top: base.top + applied, bottom: base.bottom + applied };
+      return {
+        x: base.x,
+        y: base.y + applied,
+        width: base.width,
+        height: base.height,
+        top: base.top + applied,
+        right: base.right,
+        bottom: base.bottom + applied,
+        left: base.left,
+        toJSON: () => ({}),
+      };
     };
     toast.getBoundingClientRect = () => box(59, 59);
     placeToast(host);

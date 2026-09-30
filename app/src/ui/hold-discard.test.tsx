@@ -26,7 +26,7 @@ function SheetHarness({
 }: {
   hold?: string;
   category?: string;
-  onCommitPick?: (kind: "project" | "category", id: string) => Promise<void | "left">;
+  onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left">;
   onCloseCheck?: () => Promise<void>;
   onDiscard?: () => void;
 }) {
@@ -60,14 +60,15 @@ function SheetHarness({
             onDiscard?.();
           }}
           onCommitPick={onCommitPick}
-          onCloseCheck={onCloseCheck ?? (async () => {
+          onCloseCheck={onCloseCheck ?? (() => {
             if (projectId === "" || categoryId === "") {
               setReason("בחרו פרויקט וקטגוריה.");
-              throw new Error("incomplete");
+              return Promise.reject(new Error("incomplete"));
             }
+            return Promise.resolve();
           })}
           onSplit={() => undefined}
-          onCreateProject={async (name) => ({ id: "new", name })}
+          onCreateProject={(name) => Promise.resolve({ id: "new", name })}
         />
       {open ? null : (
         <button type="button" onClick={() => { setReason(hold); setOpen(true); }}>פתיחה</button>
@@ -143,8 +144,8 @@ describe("change sheet discard", () => {
   it("waits for an in-flight save and then closes without discarding it", async () => {
     let finish: () => void = () => undefined;
     const onDiscard = vi.fn();
-    const onCommitPick = vi.fn(() => new Promise<void>((resolve) => {
-      finish = resolve;
+    const onCommitPick = vi.fn(() => new Promise<undefined>((resolve) => {
+      finish = () => { resolve(undefined); };
     }));
     renderSheet({ onDiscard, onCommitPick, hold: "" });
     fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
@@ -152,8 +153,9 @@ describe("change sheet discard", () => {
     closeSheet();
     expect(screen.getByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
     expect(onDiscard).not.toHaveBeenCalled();
-    await act(async () => {
+    await act(() => {
       finish();
+      return Promise.resolve();
     });
     await waitFor(() => {
       expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
@@ -164,7 +166,7 @@ describe("change sheet discard", () => {
 });
 
 describe("split discard", () => {
-  function renderSplit(onSave?: () => Promise<void | boolean>) {
+  function renderSplit(onSave?: () => Promise<undefined | boolean>) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return render(
       <QueryClientProvider client={client}>
@@ -207,8 +209,8 @@ describe("split discard", () => {
 
   it("waits for an in-flight save and then leaves", async () => {
     let finish: (() => void) | null = null;
-    const onSave = vi.fn(() => new Promise<void>((resolve) => {
-      finish = resolve;
+    const onSave = vi.fn(() => new Promise<undefined>((resolve) => {
+      finish = () => { resolve(undefined); };
     }));
     renderSplit(onSave);
     fireEvent.click(await screen.findByRole("radio", { name: "שווה בין כל הפרויקטים" }));
@@ -226,8 +228,9 @@ describe("split discard", () => {
     expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-busy", "true");
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
-    await act(async () => {
+    await act(() => {
       finish?.();
+      return Promise.resolve();
     });
     expect(await screen.findByRole("heading", { name: "התור" })).toBeInTheDocument();
   });

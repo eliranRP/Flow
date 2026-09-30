@@ -20,7 +20,8 @@ describe("sumit-connect", () => {
       write,
     })).rejects.toThrow("sumit_auth");
     expect(fetcher).toHaveBeenCalledOnce();
-    expect(String(fetcher.mock.calls[0]?.[0])).toBe(LIST_FOLDERS);
+    const called = fetcher.mock.calls[0]?.[0];
+    expect(typeof called === "string" ? called : "").toBe(LIST_FOLDERS);
     expect(write).not.toHaveBeenCalled();
   });
 
