@@ -1,8 +1,11 @@
-// flow-mcp cycle 1. Stateless MCP 2025-06-18, plus mint, revoke, and status.
-// Decision 0080. No ledger tools. tools/list is empty. verify_jwt is false.
+// flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status.
+// Decision 0080. Cycle 2 lists the six read tools. verify_jwt is false.
+// The signed pass uses the credential row. The signing key has no user identity.
+
+import { callTool, toolsFor } from "./tools.ts";
+import { signUserJwt, type SigningKey } from "./sign.ts";
 
 const PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
-
 const PROTOCOL = "2025-06-18";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -92,6 +95,20 @@ function publishableKey(deps: Deps): string {
   return deps.env("SUPABASE_ANON_KEY") ?? "";
 }
 
+function signingKey(deps: Deps): SigningKey | null {
+  const raw = deps.env("FLOW_MCP_SIGNING_KEY");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<SigningKey>;
+    if (parsed.kty !== "EC" || parsed.crv !== "P-256") return null;
+    if (typeof parsed.kid !== "string" || typeof parsed.d !== "string") return null;
+    if (typeof parsed.x !== "string" || typeof parsed.y !== "string") return null;
+    return { kty: "EC", crv: "P-256", alg: "ES256", kid: parsed.kid, d: parsed.d, x: parsed.x, y: parsed.y };
+  } catch {
+    return null;
+  }
+}
+
 type Pepper = { kid: string; bytes: Uint8Array };
 
 const PEPPER_TOKEN = /^[A-Za-z0-9_-]+$/;
@@ -177,6 +194,30 @@ async function rpc(deps: Deps, name: string, body: Record<string, unknown>): Pro
       json = JSON.parse(text);
     } catch {
       json = { message: "The write was refused." };
+    }
+  }
+  return { status: response.status, json };
+}
+
+async function userRpc(deps: Deps, jwt: string, name: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown }> {
+  const url = deps.env("SUPABASE_URL") ?? "";
+  const key = publishableKey(deps);
+  const response = await deps.fetch(`${url}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${jwt}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  let json: unknown = null;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = null;
     }
   }
   return { status: response.status, json };
@@ -306,6 +347,8 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     found?: unknown;
     id?: unknown;
     user_id?: unknown;
+    company_id?: unknown;
+    scope?: unknown;
     expires_at?: unknown;
     revoked_at?: unknown;
   } | null = null;
@@ -320,6 +363,8 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
       found?: unknown;
       id?: unknown;
       user_id?: unknown;
+      company_id?: unknown;
+      scope?: unknown;
       expires_at?: unknown;
       revoked_at?: unknown;
     } | null;
@@ -370,7 +415,41 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     }, 200);
   }
   if (method === "ping") return jsonResponse(req, { jsonrpc: "2.0", id, result: {} }, 200);
-  if (method === "tools/list") return jsonResponse(req, { jsonrpc: "2.0", id, result: { tools: [] } }, 200);
+  const scope = Array.isArray(row.scope) ? row.scope.filter((item): item is string => typeof item === "string") : [];
+  if (method === "tools/list") {
+    return jsonResponse(req, { jsonrpc: "2.0", id, result: { tools: toolsFor(scope) } }, 200);
+  }
+  if (method === "tools/call") {
+    const params = body.params;
+    const record = params != null && typeof params === "object" && !Array.isArray(params)
+      ? params as Record<string, unknown>
+      : null;
+    const name = typeof record?.name === "string" ? record.name : "";
+    const key = signingKey(deps);
+    const userId = typeof row.user_id === "string" ? row.user_id : "";
+    const companyId = typeof row.company_id === "string" ? row.company_id : "";
+    if (!key || !userId || !companyId) return jsonResponse(req, { error: "unavailable" }, 503);
+    const signed = await signUserJwt(key, {
+      issuer: `${deps.env("SUPABASE_URL") ?? ""}/auth/v1`,
+      sub: userId,
+      companyId,
+      scope,
+      mcpTid: row.id,
+      jti: crypto.randomUUID(),
+      now: Math.floor(Date.now() / 1000),
+    });
+    const result = await callTool(name, record?.arguments, scope, (rpcName, rpcBody) => userRpc(deps, signed, rpcName, rpcBody));
+    const text = JSON.stringify(result.structuredContent);
+    return jsonResponse(req, {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [{ type: "text", text }],
+        structuredContent: result.structuredContent,
+        isError: result.isError,
+      },
+    }, 200);
+  }
   return jsonResponse(req, { jsonrpc: "2.0", id, error: { code: -32601, message: "Method not found" } }, 200);
 }
 

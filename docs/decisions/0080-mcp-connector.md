@@ -48,16 +48,22 @@ Before cycle 2 the owner chooses standby with the guards below, or the legacy fa
 3. Criterion 1 checks that status. A count of keys in the JWKS is not the check.
 4. The runbook warns never to rotate that key into use.
 
+On 2026-09-30 the owner chose standby, with those four guards. Cycle 2 ships the spike that reads standby status from the Management API and can prove criterion 3 while the key is still standby. Criterion 3 has not been run, because the standby key is not created yet. The path in this cycle is standby. `FLOW_JWT_LEGACY` is not set. If criterion 3 fails when the owner runs the spike, the fallback is that function secret, in the Supabase dashboard only, and it is a dependency to retire before the end of 2026. This record does not take that fallback in advance.
+
+#### Who the pass belongs to
+
+The connector is multi-user. Nothing is hardcoded to one owner or one company. Each user mints a connection code from their own עוזר row. The function signs the 60-second pass from that user's credential row only: `sub` is `user_id`, the company is `company_id`, and the scope is `scope`. Those three are not read from config, from the environment, or from the request body. The signing key is one server secret, shared by every user, and it carries no user identity. A token minted for one user cannot read another user's company. A test covers two users, two companies, and two tokens.
+
 #### Secrets and deploy
 
-The production deploy job checks the pepper's shape, then, before migrations and Pages, runs `supabase secrets list` for project `sxqpnetmtufkzowutduq`. That probe is what proves the access token. A prefix check does not. There is no skip path: a missing, invalid, or expired token fails the whole deploy before migrations and Pages. The job then sets `FLOW_MCP_PEPPER` from an env file and deploys `flow-mcp`. Cycle 1 does not set a signing key.
+The production deploy job checks the pepper's shape, then, before migrations and Pages, runs `supabase functions list` for project `sxqpnetmtufkzowutduq`. That probe is what proves the access token. A prefix check does not. There is no skip path: a missing, invalid, or expired token fails the whole deploy before migrations and Pages. The pepper file is written only in the function step, after Pages, and that step deletes it. The job then sets `FLOW_MCP_PEPPER` from that file and deploys `flow-mcp`. The signing key is not a GitHub secret.
 
 | GitHub environment `production` | Function secret | First release |
 | --- | --- | --- |
 | `FLOW_MCP_PEPPER` | same, with its `kid` | yes |
 | `FLOW_MCP_CONFIRM_KEY` | same, its own `kid` | no, deferred with bulk |
 
-`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. That is not a claim that the environment is free of equivalent access. `SUPABASE_DB_URL` is in the same environment, and `SUPABASE_ACCESS_TOKEN` can read Edge Function Secrets, including the injected `SUPABASE_SECRET_KEYS`. The token is scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and it expires in 30 days. The expiry date is kept in the [CI and CD](../runbooks/ci-cd.md#access-token-expiry) runbook, and a renewal reminder fires about 5 days before. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
+`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. That is not a claim that the environment is free of equivalent access. `SUPABASE_DB_URL` is in the same environment, and `SUPABASE_ACCESS_TOKEN` can read Edge Function Secrets, including the injected `SUPABASE_SECRET_KEYS`. The token is scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and it expires in 30 days. The created token starts with `sbp_fc5`. A classic token whose shape is `sbp_` plus 40 hex characters is rejected. The expiry date is kept in the [CI and CD](../runbooks/ci-cd.md#access-token-expiry) runbook. A renewal reminder for 2026-10-26 is scheduled by the owner's assistant, about 5 days before the 2026-10-30 expiry. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
 
 #### Credential wrappers
 
@@ -124,7 +130,7 @@ Section עוזר, directly under the SUMIT block, uses the same list row and the
 
 The connect sheet has two steps. [0075](0075-save-on-tap-and-on-leave.md) does not apply: this sheet creates a secret, so a tap on a choice does not mint.
 
-1. A `RadioRow` offers "קריאה וכתיבה" (selected) and "קריאה בלבד". A tap only selects. One primary button, "יצירת קוד", mints. The button is busy while minting and does not mint twice. A failure shows an error line, and the same button retries.
+1. A `RadioRow` offers "קריאה וכתיבה" (selected) and "קריאה בלבד". A tap only selects. One primary button, "יצירת קוד", mints. The button is busy while minting and does not mint twice. While it is minting, both rows are disabled and the reason is "יוצרים קוד. אי אפשר לשנות עכשיו." A failure shows "לא הצלחנו להתחבר. נסו שוב.", and the same button retries. Closing the sheet while minting revokes that code if it lands, so at most one unused token remains.
 2. The secret is shown once, with "העתקה". The chosen scope is a read-only line. The scope is locked once minted. Changing it is ניתוק, then a new connect.
 
 | State | What the owner sees |
@@ -158,7 +164,7 @@ Those tools add no schema in this record. `private.mcp_writes` is part of the fi
 - The ` · בעוזר` marker, and a 15-second poll while the document is visible. Realtime stays off.
 - `split_expense`, `collapse_expense`, `create_project`, `rename_project`, and `finish_project`.
 
-Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke.
+Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke. If criterion 3 fails and `FLOW_JWT_LEGACY` is set as a function secret, retire that secret before the HS256 deprecation at the end of 2026. It is not set while standby is the path.
 
 ### Noted for the first release
 

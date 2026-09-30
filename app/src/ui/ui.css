@@ -504,6 +504,10 @@ a.ui-row,
   line-height: var(--type-hint-line);
 }
 
+.ui-secret-value {
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+}
+
 .ui-field-control {
   width: 100%;
   max-width: 100%;
