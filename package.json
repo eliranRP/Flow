@@ -11,7 +11,7 @@
     "build": "pnpm --filter @flow/app build",
     "typecheck": "tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter \"!flow\" typecheck",
     "lint": "eslint .",
-    "test": "node --test scripts/check-prod-bundle.test.mjs && pnpm -r --if-present test",
+    "test": "node --test scripts/*.test.mjs && pnpm -r --if-present test",
     "test:e2e": "pnpm --filter @flow/app test:e2e",
     "test:e2e:live": "pnpm --filter @flow/app test:e2e:live",
     "check:bundle": "node scripts/check-prod-bundle.mjs",
