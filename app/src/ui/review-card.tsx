@@ -1,5 +1,6 @@
 import { formatAmount } from "./big-number";
 import { DocumentIcon } from "./icons";
+import { SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
   project?: string;
@@ -64,7 +65,7 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
               <span className="t-label">{line.label}</span>
               <span>
                 {line.value}
-                {line.suggested ? <span className="ui-suggest-tag">הצעה</span> : null}
+                {line.suggested ? <SuggestTag /> : null}
               </span>
             </p>
           ))}

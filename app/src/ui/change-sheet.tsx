@@ -9,6 +9,7 @@ import { ListRow } from "./list-row";
 import { RadioRow } from "./radio-row";
 import { RouteSheet } from "./route-sheet";
 import { SearchField } from "./search-field";
+import { SuggestTag } from "./suggest-tag";
 import { Sheet } from "./sheet";
 import { Skeleton } from "./skeleton";
 import { TextField } from "./text-field";
@@ -139,10 +140,6 @@ function ordered(options: ChangeChoice[], suggestionId: string, currentId: strin
   const recent = rest.filter((option) => option.recent);
   const others = rest.filter((option) => !option.recent);
   return [...(suggestion ? [suggestion] : []), ...recent, ...others];
-}
-
-function SuggestTag() {
-  return <span className="ui-suggest-tag">הצעה</span>;
 }
 
 export function ChangeAssignment(props: Props) {

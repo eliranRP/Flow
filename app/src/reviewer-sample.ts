@@ -39,6 +39,14 @@ function expenseVat(net: bigint): bigint {
   return -((abs * 18n) / 100n);
 }
 
+/** An approved split. Its amount stays out of the אושרו total; the list shows the shares. */
+export const reviewerApprovedSplitId = "t-sample-split";
+
+export const reviewerApprovedShares = [
+  { name: reviewerProjectName, bp: 6000, amount: 12_000n },
+  { name: reviewerOtherProjectName, bp: 4000, amount: 8_000n },
+] as const;
+
 export const reviewerFiled: FiledTodayRow[] = [
   {
     id: "t-sample-sand",
@@ -68,6 +76,16 @@ export const reviewerFiled: FiledTodayRow[] = [
     direction: "expense",
     supplier_name: "שינוע הנמל בע״מ",
     project_name: reviewerProjectName,
+    category_name: "שינוע",
+  },
+  {
+    id: reviewerApprovedSplitId,
+    description: "ליסינג",
+    doc_date: "2026-09-29",
+    amount_net: -20_000n,
+    direction: "expense",
+    supplier_name: "ליסינג הדרך בע״מ",
+    project_name: "מפוצל · 2 פרויקטים",
     category_name: "שינוע",
   },
 ];
@@ -124,6 +142,8 @@ export const reviewerQueue: ReviewRow[] = [
     supplier_name: "צבעי הכרמל בע״מ",
     project_name: reviewerProjectName,
     category_name: "מלט",
+    project_suggested: true,
+    category_suggested: true,
     doc_kind: "invoice",
     vat_agorot: expenseVat(-reviewerWaitingPaintAgorot),
     auto_approved_today: reviewerFiled.length,
@@ -173,7 +193,9 @@ export function sampleSaveMode(value: string | null): SampleSave {
 
 export function reviewerBooks() {
   const approved = reviewerMaterialsAgorot + reviewerHaulAgorot;
-  const filed = reviewerFiled.reduce((sum, row) => sum - row.amount_net, 0n);
+  const filed = reviewerFiled
+    .filter((row) => row.id !== reviewerApprovedSplitId)
+    .reduce((sum, row) => sum - row.amount_net, 0n);
   const waiting = reviewerWaitingBoltsAgorot + reviewerWaitingPaintAgorot;
   const projectExpenses = approved + waiting;
   const profit = reviewerIncomeAgorot - projectExpenses;

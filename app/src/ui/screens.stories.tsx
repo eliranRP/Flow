@@ -73,6 +73,8 @@ const sampleReview: ReviewRow = {
   category_id: "c1",
   project_name: "וילה רעננה",
   category_name: "חומרים",
+  project_suggested: true,
+  category_suggested: true,
   confidence: 92,
   supplier_name: "חומרי בניין השרון בע״מ",
   auto_approved_today: filedTodayCount,

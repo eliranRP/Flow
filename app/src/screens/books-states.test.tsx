@@ -238,6 +238,8 @@ describe("rejected writes", () => {
               category_name: "חומרים",
               confidence: 92,
               supplier_name: "מחסן",
+              project_suggested: true,
+              category_suggested: true,
               auto_approved_today: 0,
             },
           ],
@@ -710,22 +712,28 @@ describe("rejected writes", () => {
       project_name: "הרצל",
       category_name: "חומרים",
       category_suggested: false,
+      project_suggested: true,
     };
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
+    const queue = (item: typeof row) => (
       <QueryClientProvider client={client}>
         <ToastProvider>
           <MemoryRouter>
-            <ReviewQueue rows={[row]} search="" sample />
+            <ReviewQueue rows={[item]} search="" sample />
           </MemoryRouter>
         </ToastProvider>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
+    const { rerender } = render(queue(row));
     const project = screen.getByText("הרצל").closest("p");
     const category = screen.getByText("חומרים").closest("p");
     if (!(project instanceof HTMLElement) || !(category instanceof HTMLElement)) throw new Error("line missing");
     expect(within(project).getByText("הצעה")).toBeInTheDocument();
     expect(within(category).queryByText("הצעה")).not.toBeInTheDocument();
+    rerender(queue({ ...row, project_suggested: false }));
+    const owned = screen.getByText("הרצל").closest("p");
+    if (!(owned instanceof HTMLElement)) throw new Error("line missing");
+    expect(within(owned).queryByText("הצעה")).not.toBeInTheDocument();
   });
 
   it("clears the category הצעה after the owner picks it", async () => {

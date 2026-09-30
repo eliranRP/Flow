@@ -943,6 +943,7 @@ export function ReviewQueue({
         && (next.category_name !== shown.category_name
           || next.category_id !== shown.category_id
           || next.category_suggested !== shown.category_suggested
+          || next.project_suggested !== shown.project_suggested
           || next.project_name !== shown.project_name
           || next.share_count !== shown.share_count)
       ) {
@@ -1177,7 +1178,7 @@ function reviewSuggestion(row: ReviewRow) {
   const category = row.category_name || undefined;
   if (!project && !category) return undefined;
   const categorySuggested = Boolean(category) && row.category_suggested !== false;
-  const projectSuggested = !split && Boolean(row.project_name);
+  const projectSuggested = !split && row.project_suggested === true;
   return {
     ...(project ? { project } : {}),
     ...(category ? { category } : {}),
