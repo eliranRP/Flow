@@ -2,7 +2,7 @@
 
 ## 2026-09-30
 
-CI runs typecheck, lint, unit tests, both bundle guards, Storybook, pgTAP, and the main Playwright suite against local Supabase. CD on `main` pushes pending migrations through the session pooler after a read-only preflight, then deploys the hosted build to Cloudflare Pages project `flow-app`. The three deploy secrets are repository Actions secrets. The `production` environment is the approval gate and does not hold them. Secrets and rollback are in [CI and CD](runbooks/ci-cd.md).
+CI runs on a pull request and on a push to `main`: typecheck, lint, unit tests, both bundle guards, Storybook, pgTAP, and the main Playwright suite against local Supabase. A push to `main` deploys only after lint, check, and e2e succeed on that commit. The hosted build is stamped and checked before the read-only preflight and the migration push, then Cloudflare Pages project `flow-app` is updated. The hosted bundle check requires the public Supabase URL and anon key in the dist, and it refuses `service_role` and `sb_secret_`. The three deploy secrets live only on the `production` environment, which is limited to `main`. A missing secret fails the deploy. Decision [0077](decisions/0077-deploy-after-ci.md). Secrets and rollback are in [CI and CD](runbooks/ci-cd.md).
 
 The strict lint findings that were already in the app are fixed in place. Unused imports and unused hook calls are removed, callbacks that only returned a promise now return that promise directly, and `void` is no longer written inside a union. Screen behavior is unchanged.
 
