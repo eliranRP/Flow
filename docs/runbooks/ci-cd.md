@@ -24,7 +24,7 @@ If any secret below is missing, the job fails before the build and before any mi
 When the secrets are present, in this order:
 
 1. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`. A failed build or a failed check stops the job. The database is unchanged and the previous app stays live.
-2. A read-only preflight opens the session pooler. It refuses the session unless the last line of the read-only check is `on`. It runs `scripts/preflight-r23.sql` and requires one row of eleven integer counts. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run`. Supabase CLI 2.118.0 must print `DRY RUN: migrations will *not* be pushed to the database.` and either `Remote database is up to date.`, `Local database is up to date.`, or `Would push these migrations:`. The hosted pooler says remote. A URL on the local stack host and database port says local. Anything else fails the job. Nothing is pushed.
+2. A read-only preflight opens the session pooler. It refuses the session unless the last line of the read-only check is `on`. It reads versions `20260929240000`, `20260929250000`, and `20260929260000`. When all three are recorded, it skips `scripts/preflight-r23.sql`. When any is missing, it runs that query and continues only when `rule_transactions_at_risk` and `rule_undo_rows_at_risk` are both 0. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run` and classifies the output with `--target remote`. Supabase CLI 2.118.0 must print `DRY RUN: migrations will *not* be pushed to the database.` and either the whole line `Remote database is up to date.` or `Would push these migrations:` plus a migration file. A local preflight passes `--target local` and accepts only the whole line `Local database is up to date.` A `.sql` line next to an up-to-date line fails. Nothing is pushed.
 3. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code.
 4. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile. Success is the command's exit code.
 5. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag.
@@ -38,9 +38,15 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction
   -c "SELECT current_setting('transaction_read_only');"
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
   -c "SET TRANSACTION READ ONLY" \
+  -c "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ('20260929240000', '20260929250000', '20260929260000') ORDER BY version;"
+# When any of those three versions is missing:
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
+  -c "SET TRANSACTION READ ONLY" \
   -f scripts/preflight-r23.sql
 supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run
 ```
+
+The script then classifies that dry-run with `node scripts/cd-output.mjs dry-run --target remote`.
 
 The e2e job runs the same script against local Supabase, including a dry-run that lists one fixture migration and checks it was not applied.
 

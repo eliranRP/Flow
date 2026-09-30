@@ -34,7 +34,7 @@ if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run >"$log" 2>&1; 
   exit 1
 fi
 redact <"$log"
-if ! kind="$(node scripts/cd-output.mjs dry-run <"$log")"; then
+if ! kind="$(node scripts/cd-output.mjs dry-run --target local --expect pending <"$log")"; then
   echo "Pending dry-run output did not match Supabase CLI 2.118.0."
   exit 1
 fi

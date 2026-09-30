@@ -45,19 +45,37 @@ if ! node scripts/cd-output.mjs read-only <"$psql_out"; then
   exit 1
 fi
 
-echo "Preflight: running scripts/preflight-r23.sql"
+echo "Preflight: reading versions 20260929240000, 20260929250000, and 20260929260000."
 if ! run_psql \
   -c "SET TRANSACTION READ ONLY" \
-  -f scripts/preflight-r23.sql
+  -c "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ('20260929240000', '20260929250000', '20260929260000') ORDER BY version;"
 then
   redact <"$psql_out" >&2
-  echo "Preflight failed. Migrations were not pushed."
+  echo "preflight-r23.sql could not read migration history. Migrations were not pushed."
   exit 1
 fi
-if ! node scripts/cd-output.mjs counts <"$psql_out"; then
-  redact <"$psql_out" >&2
-  echo "Preflight counts were not readable. Migrations were not pushed."
-  exit 1
+if node scripts/cd-output.mjs backfill-recorded <"$psql_out"; then
+  echo "Preflight: 20260929240000, 20260929250000, and 20260929260000 are recorded. scripts/preflight-r23.sql was skipped."
+else
+  echo "Preflight: a backfill version is pending. Running scripts/preflight-r23.sql."
+  if ! run_psql \
+    -c "SET TRANSACTION READ ONLY" \
+    -f scripts/preflight-r23.sql
+  then
+    redact <"$psql_out" >&2
+    echo "preflight-r23.sql failed. Migrations were not pushed."
+    exit 1
+  fi
+  if ! node scripts/cd-output.mjs counts <"$psql_out"; then
+    redact <"$psql_out" >&2
+    echo "preflight-r23.sql did not return eleven counts. Migrations were not pushed."
+    exit 1
+  fi
+  if ! node scripts/cd-output.mjs rule-risk <"$psql_out"; then
+    redact <"$psql_out" >&2
+    echo "preflight-r23.sql: rule_transactions_at_risk or rule_undo_rows_at_risk is not zero. Migrations were not pushed."
+    exit 1
+  fi
 fi
 
 echo "Preflight: supabase db push --dry-run (no changes applied)"
@@ -67,9 +85,16 @@ if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run >"$dry_log" 2>
   exit 1
 fi
 redact <"$dry_log"
-if ! kind="$(node scripts/cd-output.mjs dry-run <"$dry_log")"; then
-  echo "Preflight did not return a readable dry-run. Migrations were not pushed."
-  exit 1
+if [[ "${FLOW_CD_PREFLIGHT_LOCAL:-}" == "1" ]]; then
+  if ! kind="$(node scripts/cd-output.mjs dry-run --target local <"$dry_log")"; then
+    echo "Preflight did not return a readable dry-run. Migrations were not pushed."
+    exit 1
+  fi
+else
+  if ! kind="$(node scripts/cd-output.mjs dry-run --target remote <"$dry_log")"; then
+    echo "Preflight did not return a readable dry-run. Migrations were not pushed."
+    exit 1
+  fi
 fi
 case "$kind" in
   "up-to-date remote")

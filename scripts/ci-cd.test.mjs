@@ -86,9 +86,17 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(preflight, /-q -At -F '\|'/);
   assert.match(preflight, /cd-output.mjs read-only/);
   assert.match(preflight, /cd-output.mjs counts/);
-  assert.match(preflight, /cd-output.mjs dry-run/);
+  assert.match(preflight, /cd-output.mjs dry-run --target remote/);
   assert.match(preflight, /--dry-run/);
   assert.match(preflight, /preflight-r23.sql/);
+  assert.match(preflight, /backfill-recorded/);
+  assert.match(preflight, /rule-risk/);
   assert.equal(preflight.includes("tr -d"), false);
+  assert.equal(preflight.includes("Preflight failed"), false);
+  const owners = readFileSync(new URL("../.github/CODEOWNERS", import.meta.url), "utf8");
+  assert.match(owners, /^supabase\/migrations\/ @eliranRP$/m);
+  assert.match(owners, /^supabase\/migrations\.lock @eliranRP$/m);
+  assert.match(owners, /^scripts\/cd-\* @eliranRP$/m);
+  assert.match(owners, /^\.github\/workflows\/ @eliranRP$/m);
   assert.match(readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8"), /cd-output\.mjs" equals/);
 });

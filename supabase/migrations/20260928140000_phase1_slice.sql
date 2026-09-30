@@ -1,5 +1,5 @@
 -- Phase 1 slice: onboarding, dashboard P&L, review, manual entry, SUMIT status.
--- Apply after 20260928080538_schema_v1.sql.
+-- Apply after 20260927120000_schema_v1.sql.
 -- New functions are not executable until this file grants them.
 -- Decision 0047 cash basis is the default. 0043 VAT. 0049 SUMIT refresh queue.
 
