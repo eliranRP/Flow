@@ -33,23 +33,31 @@ Cycle 1 starts with a spike. The builder owns it. Pass means all of these:
 1. The project has an additional asymmetric JWT signing key. It is not the key Auth uses to sign session tokens.
 2. The function signs a 60-second JWT with that key: `role` `authenticated`, a known user's `sub`, `iss`, `jti`, and `mcp_tid`. The header carries `kid`.
 3. PostgREST accepts it. An RPC runs as that user and returns that user's company. The same call does not return another company's rows.
-4. The function request includes `cf-connecting-ip`.
+4. The function request includes `cf-connecting-ip`. If it does not, criterion 4 fails and the spike stops. A missing header is not a pass.
 
 If the only key PostgREST will accept is the in-use Auth signing key, the spike stops. The function does not hold Auth's own private key. The fallback is the legacy HS256 secret, set as the function secret `FLOW_JWT_LEGACY` in the Supabase dashboard. That name is never a GitHub secret. The signer still sets only `role` `authenticated`. The legacy shared secret is deprecated by the end of 2026. This record does not treat that date as the day it is deleted. The fallback is a dependency to retire before that deprecation leaves the secret unusable. It can mint any role, which is why it is not the normal path. Supabase rejects secret names that start with `SUPABASE_`.
 
-On a pass, the function secret is `FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` is not created.
+#### Spike result, 2026-09-30
+
+The spike stopped on criterion 1. The hosted JWKS contained one key, kid `985184ff-0c58-4ffd-a4a5-d7322027aee6`, Auth's in-use key. Standby is unproven, because Supabase's documentation lists only the current key as accepted. Criterion 3 was not run. The project has one standby slot, and the dashboard action "Rotate keys" would turn that slot into Auth's in-use key. That is the S21 trap. Cycle 1 does not create `FLOW_MCP_SIGNING_KEY` and does not create `FLOW_JWT_LEGACY`.
+
+Before cycle 2 the owner chooses standby with the guards below, or the legacy fallback. The guards for standby are:
+
+1. Prove criterion 3 while the key is still in standby.
+2. Verify standby status through the Management API before any secret is set.
+3. Criterion 1 checks that status. A count of keys in the JWKS is not the check.
+4. The runbook warns never to rotate that key into use.
 
 #### Secrets and deploy
 
-The production deploy job deploys `flow-mcp` and then sets function secrets from the GitHub environment `production`:
+The production deploy job checks the pepper's shape, then, before migrations and Pages, runs `supabase secrets list` for project `sxqpnetmtufkzowutduq`. That probe is what proves the access token. A prefix check does not. There is no skip path: a missing, invalid, or expired token fails the whole deploy before migrations and Pages. The job then sets `FLOW_MCP_PEPPER` from an env file and deploys `flow-mcp`. Cycle 1 does not set a signing key.
 
 | GitHub environment `production` | Function secret | First release |
 | --- | --- | --- |
-| `FLOW_MCP_SIGNING_KEY` | same | yes, after the spike passes |
 | `FLOW_MCP_PEPPER` | same, with its `kid` | yes |
 | `FLOW_MCP_CONFIRM_KEY` | same, its own `kid` | no, deferred with bulk |
 
-`FLOW_JWT_LEGACY` is not in that environment and is not in the workflow. There is no service_role-equivalent key in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`. The function uses that injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
+`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. That is not a claim that the environment is free of equivalent access. `SUPABASE_DB_URL` is in the same environment, and `SUPABASE_ACCESS_TOKEN` can read Edge Function Secrets, including the injected `SUPABASE_SECRET_KEYS`. The token is scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and it expires in 30 days. The expiry date is kept in the [CI and CD](../runbooks/ci-cd.md#access-token-expiry) runbook, and a renewal reminder fires about 5 days before. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
 
 #### Credential wrappers
 
@@ -57,21 +65,21 @@ The production deploy job deploys `flow-mcp` and then sets function secrets from
 
 | Function | Used by |
 | --- | --- |
-| `public.store_mcp_credential(p_user uuid, p_token_hash text, p_scope text[], p_expires_at timestamptz) returns uuid` | Mint. `company_id` is the company owned by `p_user`. One active token: revoke the current row, then insert |
+| `public.store_mcp_credential(p_user uuid, p_token_hash text, p_scope text[], p_expires_at timestamptz, p_pepper_kid text) returns uuid` | Mint. `company_id` is the company owned by `p_user`. One active token: revoke the current row, then insert. `p_pepper_kid` is stored with the hash |
 | `public.revoke_mcp_credential(p_user uuid, p_id uuid)` | ניתוק and a reconnect. Sets `revoked_at` only when that row's user is `p_user`. Otherwise `not_found` |
 | `public.mcp_credential_status(p_user uuid)` | That user's row only: empty, connected, or expired, plus `last_used_at` and scope |
-| `public.lookup_mcp_credential(text)` | Resolve the HMAC |
+| `public.lookup_mcp_credential(text, text)` | Resolve the HMAC for that pepper kid |
 | `public.touch_mcp_credential(uuid)` | Set `last_used_at` |
 | `public.bump_mcp_rate(uuid, uuid, text)` | One atomic increment for the token and the user |
 | `public.note_auth_failure(text)` | Count a failed secret for the throttle address |
 
-`p_user` is the id from the verified `getUser` call in the function. Mint, revoke, and status never read a user id from the request body. Mint verifies the app's user JWT by calling GoTrue `getUser` (`GET /auth/v1/user`). GoTrue validates that JWT. The function does not call `getClaims`, and it does not validate the JWT against JWKS itself. A payload decoded in the function, with no `getUser` call, is rejected. The pepper never leaves the function. The secret is `flow_mcp_` plus 43 base64url characters. At rest it is HMAC-SHA256 with `FLOW_MCP_PEPPER`. It is returned once. `expires_at` is 90 days.
+`p_user` is the id from the verified `getUser` call in the function. Mint, revoke, and status never read a user id from the request body. Mint verifies the app's user JWT by calling GoTrue `getUser` (`GET /auth/v1/user`). GoTrue validates that JWT. The function does not call `getClaims`, and it does not validate the JWT against JWKS itself. A payload decoded in the function, with no `getUser` call, is rejected. The pepper never leaves the function. The secret is `flow_mcp_` plus 43 base64url characters. At rest it is HMAC-SHA256 with the current pepper, and the row stores that pepper's `kid`. `FLOW_MCP_PEPPER` is JSON: `kid`, and `secret` of at least 32 bytes. Both use only letters, digits, underscore, and hyphen. A shorter secret, or any other character, is rejected. `previous` is an optional array of the same shape. Lookup tries the current kid and then each previous kid, so replacing the current pepper does not by itself make an existing token fail. Dropping a kid does. It is returned once. `expires_at` is 90 days. A `bump_mcp_rate` error fails closed and the response is `unavailable`.
 
 Write functions in this release are granted to `authenticated` only, not to `service_role`.
 
 #### Limits and audit
 
-Scopes are checked before the JWT is signed. A read tool needs `read`. A write tool needs `write`, and a miss returns `forbidden`. Unknown, revoked, expired, and bad secrets are HTTP 401. Over the limit, and the failure throttle, are HTTP 429 with `retry_after_seconds`. One token: 60 reads and 20 writes a minute. One user: 120 reads and 40 writes a minute. The throttle counts only a request whose secret check failed, keyed by `cf-connecting-ip`, the client IP Cloudflare sets and the client cannot choose. The signing spike confirms that header reaches the function. There is no `unknown` bucket. A missing header skips the IP throttle for that request. A bad secret is still 401. A request with a valid token is not counted and is not rejected by that throttle, so failures from the same address cannot lock the owner out. `x-forwarded-for` is not the throttle key.
+Scopes are checked before the JWT is signed. A read tool needs `read`. A write tool needs `write`, and a miss returns `forbidden`. Unknown, revoked, expired, and bad secrets are HTTP 401. Over the limit, and the failure throttle, are HTTP 429 with `retry_after_seconds`. One token: 60 reads and 20 writes a minute. One user: 120 reads and 40 writes a minute. The throttle counts only a request whose secret check failed, keyed by `cf-connecting-ip`, the client IP Cloudflare sets and the client cannot choose. One address is limited to 30 failed secrets a minute. The signing spike confirms that header reaches the function. There is no `unknown` bucket. A missing header skips the IP throttle for that request. A bad secret is still 401. A request with a valid token is not counted and is not rejected by that throttle, so failures from the same address cannot lock the owner out. `x-forwarded-for` is not the throttle key.
 
 A write wrapper reads `mcp_tid` from `request.jwt.claims`. That claim is not an argument. The audit row stores it. `channel` is `mcp` only when the claim is present. The same wrapper stores the idempotency key in `private.mcp_idempotency`, written from the definer, not from PostgREST. The same key and hash return the stored response. A different hash is `conflict`.
 
@@ -90,7 +98,7 @@ An assistant write sets `user_assigned` true. `upsert_sumit_documents` keeps pro
 
 `transactions_touch` sets `updated_at` on every update, and the sync's `ON CONFLICT DO UPDATE` has no `WHERE`, so a later sync changes `updated_at` even when the assignment columns stay. Undo does not compare `updated_at`.
 
-The write wrapper inserts `private.mcp_writes` in the same transaction. RLS is on, there are no policies, and `authenticated` has no grant. The row stores the token id, the user, the transaction id and the review id, `kind` (`review` or `reassign`), and the post-write snapshot of `project_id`, `category_id`, `pnl_role`, and the shares (`project_id`, `share_bp`).
+The write wrapper inserts `private.mcp_writes` in the same transaction. RLS is on, there are no policies, and `authenticated` has no grant. The row stores the token id, the user, the transaction id and the review id, `kind` (`review` or `reassign`), the post-write snapshot of `project_id`, `category_id`, `pnl_role`, and the shares (`project_id`, `share_bp`), and `undone_at`. Undo sets `undone_at`. A row that already has `undone_at` is single-use and is `not_found`.
 
 Undo accepts only an id recorded there for this user. Any other id is `not_found`, including an approval the owner made in the app, so the tool cannot reopen it. When the id is recorded, the wrapper compares the current project, category, `pnl_role`, and shares with that snapshot. Equal means proceed, including after a SUMIT sync that only bumped `updated_at`. Any difference is `conflict` and the later edit stays. pgTAP covers both undo kinds, and these three cases: a sync then undo succeeds; a real owner edit then undo is `conflict`; an unknown id is `not_found`.
 
@@ -138,7 +146,7 @@ Each cycle is usable without the later ones.
 
 | Cycle | What ships | Hours |
 | --- | --- | --- |
-| 1 | The signing spike, the function, the public wrappers, mint, revoke, and status routes, the pepper, and the rate limit. A test mints a token without the screen | 6 |
+| 1 | The signing spike (stopped on 2026-09-30; no signing key in this cycle), the function, the public wrappers, mint, revoke, and status routes, the pepper, and the rate limit. A test mints a token without the screen | 6 |
 | 2 | The עוזר row, including scope, ניתוק, and the copy above, and the six read and search tools. The owner can connect. The assistant can read | 6 |
 | 3 | `assign_expense`, `set_expense_category`, typed undo, `private.mcp_writes`, and its pgTAP, the SUMIT overwrite test, אישור's shown-values check and the two toasts, the focus refetch, the hold, the visit counter, and שויכו היום. If the cycle runs long it splits into 3a (the writes, undo, pgTAP, and the SUMIT test) and 3b (the אישור check, the toasts, the refetch, the hold, the counter, and שויכו היום). Together they stay about 6 hours | 6 |
 
@@ -150,7 +158,7 @@ Those tools add no schema in this record. `private.mcp_writes` is part of the fi
 - The ` · בעוזר` marker, and a 15-second poll while the document is visible. Realtime stays off.
 - `split_expense`, `collapse_expense`, `create_project`, `rename_project`, and `finish_project`.
 
-Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself).
+Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke.
 
 ### Noted for the first release
 
@@ -168,7 +176,9 @@ Putting the credential functions in `private` and expecting PostgREST to call th
 
 Holding Auth's signing key inside the function when the spike shows no other key works.
 
-Putting `FLOW_JWT_LEGACY`, `FLOW_SECRET_KEY`, or any service_role-equivalent key in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`.
+Putting `FLOW_JWT_LEGACY` or `FLOW_SECRET_KEY` in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`. Treating that as "nothing in GitHub can read those keys" is wrong: the deploy token can, and `SUPABASE_DB_URL` sits in the same environment.
+
+Rotating a standby signing key into use. That makes it Auth's session key.
 
 Taking the credential user id from the request body.
 
