@@ -188,6 +188,14 @@ test("filed today lists both rows, opens one, and can be empty", async ({ page }
   await expect(page.getByText("₪140")).toBeVisible();
   await expect(page.locator(".t-body")).toHaveText("בית הספר אלון · מלט");
   await page.getByRole("button", { name: "חזרה" }).click();
+  await page.getByRole("link", { name: /ליסינג הדרך/ }).click();
+  await expect(page).toHaveURL(/\/reviewer\/transaction\/t-sample-split$/);
+  await expect(page.getByRole("list", { name: "חלוקה" })).toBeVisible();
+  await expect(page.getByText("60%")).toBeVisible();
+  await expect(page.getByText("40%")).toBeVisible();
+  await expect(page.getByText("בית הספר אלון")).toBeVisible();
+  await expect(page.getByText("מחסן הנמל")).toBeVisible();
+  await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.goto("/reviewer/filed?empty=1");
   await expect(page.getByText("אין תנועות ששויכו היום")).toBeVisible();

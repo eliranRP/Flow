@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(21);
+select plan(28);
 
 do $users$
 begin
@@ -219,13 +219,89 @@ select throws_ok(
   'an unallocated shared cost is refused'
 );
 
+reset role;
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, supplier_id,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, description, category_id
+)
+select id, 'expense', 'expense', 'shared', (select id from r20 where label = 'supplier'),
+  -236000, -200000, -36000, 'source',
+  '2026-07-05', 'manual', 'r20:foreign', 'ליסינג זר',
+  (select id from r20 where label = 'materials')
+from r20 where label = 'company';
+insert into r20 (label, id)
+select 'foreign', id from public.transactions where idempotency_key = 'r20:foreign';
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select
+  (select id from r20 where label = 'company'),
+  (select id from r20 where label = 'foreign'),
+  (select id from r20 where label = 'אלון'),
+  6500, -130000;
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select
+  (select id from r20 where label = 'company'),
+  (select id from r20 where label = 'foreign'),
+  (select id from r20 where label = 'נמל'),
+  3500, -70000;
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select (select id from r20 where label = 'company'), (select id from r20 where label = 'foreign'), 'open', 'missing_category';
+insert into r20 (label, id)
+select 'foreign-review', id from public.review_queue where transaction_id = (select id from r20 where label = 'foreign');
+
 select tests.authenticate_as('r20_b');
 select lives_ok($$select public.create_company('סבב 20 ב', true)$$, 'the other owner creates a company');
 select throws_ok(
-  format('select public.approve_split_review(%L::uuid)', (select id from r20 where label = 'review')),
+  format('select public.approve_split_review(%L::uuid)', (select id from r20 where label = 'foreign-review')),
   'P0001',
   'review item not found',
   'a foreign company cannot approve the split'
+);
+
+reset role;
+select is(
+  (select status::text from public.review_queue where id = (select id from r20 where label = 'foreign-review')),
+  'open',
+  'the foreign attempt leaves the split review open'
+);
+select is(
+  (select share_bp from public.allocations
+    where transaction_id = (select id from r20 where label = 'foreign')
+      and project_id = (select id from r20 where label = 'אלון')),
+  6500,
+  'the foreign attempt leaves אלון basis points'
+);
+select is(
+  (select share_bp from public.allocations
+    where transaction_id = (select id from r20 where label = 'foreign')
+      and project_id = (select id from r20 where label = 'נמל')),
+  3500,
+  'the foreign attempt leaves נמל basis points'
+);
+
+select tests.authenticate_as('r20_a');
+select lives_ok(
+  format('select public.reopen_review(%L::uuid)', (select id from r20 where label = 'review')),
+  'undo reopens the approved split'
+);
+select is(
+  (select status::text from public.review_queue where id = (select id from r20 where label = 'review')),
+  'open',
+  'undo puts the split review back on the queue'
+);
+select is(
+  (select share_bp from public.allocations
+    where transaction_id = (select id from r20 where label = 'leasing')
+      and project_id = (select id from r20 where label = 'אלון')),
+  7000,
+  'undo puts אלון basis points back'
+);
+select is(
+  (select share_bp from public.allocations
+    where transaction_id = (select id from r20 where label = 'leasing')
+      and project_id = (select id from r20 where label = 'נמל')),
+  3000,
+  'undo puts נמל basis points back'
 );
 
 select * from finish();

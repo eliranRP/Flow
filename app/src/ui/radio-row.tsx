@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { SuggestTag } from "./suggest-tag";
 
 type RadioRowProps = {
   label: string;
@@ -51,7 +52,7 @@ export function RadioRow({
   const text = picker ? (
     <span className="ui-pick-name">
       <span className="ui-pick-label">{label}</span>
-      {tag ? <span className="ui-suggest-tag">{tag}</span> : null}
+      {tag === "הצעה" ? <SuggestTag /> : tag ? <span className="ui-suggest-tag">{tag}</span> : null}
     </span>
   ) : (
     <span className="ui-row-text">

@@ -28,6 +28,7 @@ export { ScreenHeader } from "./screen-header";
 export type { PeriodOption } from "./period-picker";
 export { RadioRow } from "./radio-row";
 export { ReviewCard } from "./review-card";
+export { SuggestTag } from "./suggest-tag";
 export { SearchField } from "./search-field";
 export { BudgetBar, ProgressBar } from "./progress-bar";
 export { RouteSheet } from "./route-sheet";

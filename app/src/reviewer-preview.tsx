@@ -6,6 +6,8 @@ import {
   patchReviewerCategory,
   reviewerBooks,
   reviewerCategories,
+  reviewerApprovedShares,
+  reviewerApprovedSplitId,
   reviewerFiled,
   reviewerOtherProjectName,
   reviewerProjectChoices,
@@ -238,6 +240,7 @@ function ReviewerTransaction({ path }: { path: string }) {
   if (!row) {
     return <ScreenHeader title="תנועה" subtitle="השורה לא ברשימת הדוגמה" backTo="/reviewer/filed" />;
   }
+  const shares = row.id === reviewerApprovedSplitId ? reviewerApprovedShares : null;
   return (
     <>
       <ScreenHeader title="הוצאה" subtitle={row.supplier_name ?? row.description} backTo="/reviewer/filed" />
@@ -247,6 +250,19 @@ function ReviewerTransaction({ path }: { path: string }) {
       <p className="ui-page-pad t-body">
         {row.project_name} · {row.category_name}
       </p>
+      {shares ? (
+        <ul className="ui-page-pad" aria-label="חלוקה">
+          {shares.map((share) => (
+            <li className="t-body" key={share.name}>
+              {share.name}
+              {" · "}
+              <bdi className="ui-num" dir="ltr">{`${String(share.bp / 100)}%`}</bdi>
+              {" · "}
+              <bdi className="ui-num" dir="ltr">{money(share.amount)}</bdi>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </>
   );
 }

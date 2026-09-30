@@ -14,7 +14,16 @@ type CardArgs = {
 };
 
 function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason }: CardArgs) {
-  const suggestion = project || category ? { project, category, confidence } : undefined;
+  const shared = reason === "unallocated_shared";
+  const suggestion = project || category
+    ? {
+        project,
+        category,
+        confidence,
+        projectSuggested: Boolean(project) && !shared,
+        categorySuggested: Boolean(category),
+      }
+    : undefined;
   return (
     <ReviewCard
       supplier={supplier}
