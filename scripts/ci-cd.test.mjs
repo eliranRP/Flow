@@ -30,6 +30,10 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e\n/);
+  assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);
+  assert.match(job("e2e"), /bash scripts\/cd-dry-run-pending.sh/);
+  assert.match(job("e2e"), /FLOW_CD_PREFLIGHT_LOCAL=1/);
+  assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
   assert.equal(ci.includes("test:e2e:live"), false);
   assert.equal(ci.includes("playwright.drain.config.ts"), false);
   assert.equal(ci.includes("sumit-live"), false);
@@ -78,6 +82,12 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.equal(push.includes("--include-seed"), false);
   assert.equal(push.includes("db reset"), false);
   assert.match(preflight, /SET TRANSACTION READ ONLY/);
+  assert.match(preflight, /-q -At -F '\|'/);
+  assert.match(preflight, /cd-output.mjs read-only/);
+  assert.match(preflight, /cd-output.mjs counts/);
+  assert.match(preflight, /cd-output.mjs dry-run/);
   assert.match(preflight, /--dry-run/);
   assert.match(preflight, /preflight-r23.sql/);
+  assert.equal(preflight.includes("tr -d"), false);
+  assert.match(readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8"), /cd-output\.mjs" equals/);
 });

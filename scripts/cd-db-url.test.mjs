@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkSessionPoolerUrl } from "./cd-db-url.mjs";
+import { checkLocalPreflightUrl, checkSessionPoolerUrl } from "./cd-db-url.mjs";
 
 const good = "postgresql://postgres.sxqpnetmtufkzowutduq:s3cret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require";
 
@@ -29,4 +29,15 @@ test("rejects a missing secret, the wrong project, and a write-capable pooler po
   ];
   assert.equal(JSON.stringify(reasons).includes("s3cret"), false);
   assert.equal(JSON.stringify(reasons).includes("other-secret"), false);
+});
+
+test("the local preflight accepts loopback and refuses the hosted project", () => {
+  const local = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+  assert.deepEqual(checkLocalPreflightUrl(local), { ok: true });
+  assert.equal(checkLocalPreflightUrl(local.replace("127.0.0.1", "localhost")).ok, true);
+  assert.match(checkLocalPreflightUrl(good).reason, /hosted project/);
+  assert.match(checkLocalPreflightUrl(local.replace("127.0.0.1", "db.example.com")).reason, /loopback/);
+  assert.match(checkLocalPreflightUrl(local.replace(":54322", ":5432")).reason, /54322/);
+  assert.match(checkLocalPreflightUrl(local.replace("postgres:postgres", "postgres.sxqpnetmtufkzowutduq:postgres")).reason, /hosted project/);
+  assert.equal(checkSessionPoolerUrl(local).ok, false);
 });

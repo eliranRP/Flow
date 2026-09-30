@@ -24,10 +24,25 @@ If any secret below is missing, the job fails before the build and before any mi
 When the secrets are present, in this order:
 
 1. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`. A failed build or a failed check stops the job. The database is unchanged and the previous app stays live.
-2. A read-only preflight opens the session pooler, refuses the session unless it is read-only, and runs `scripts/preflight-r23.sql`. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run`. If that check cannot be read, the job fails and nothing is pushed.
-3. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset.
-4. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile.
-5. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that `build.txt` and the homepage both serve that commit SHA.
+2. A read-only preflight opens the session pooler. It refuses the session unless the last line of the read-only check is `on`. It runs `scripts/preflight-r23.sql` and requires one row of eleven integer counts. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run`. Supabase CLI 2.118.0 must print `DRY RUN: migrations will *not* be pushed to the database.` and either `Remote database is up to date.` or `Would push these migrations:`. Anything else fails the job. Nothing is pushed.
+3. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code.
+4. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile. Success is the command's exit code.
+5. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag.
+
+To run only the read-only preflight against production, set `SUPABASE_DB_URL` to the session pooler URL and run `bash scripts/cd-preflight.sh`. That script does not apply migrations. Its commands are:
+
+```bash
+node scripts/cd-db-url.mjs
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
+  -c "SET TRANSACTION READ ONLY" \
+  -c "SELECT current_setting('transaction_read_only');"
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
+  -c "SET TRANSACTION READ ONLY" \
+  -f scripts/preflight-r23.sql
+supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run
+```
+
+The e2e job runs the same script against local Supabase, including a dry-run that lists one fixture migration and checks it was not applied.
 
 The reviewers-only build is not deployed. The deploy does not run the live SUMIT specs and does not call an API that writes product data.
 
