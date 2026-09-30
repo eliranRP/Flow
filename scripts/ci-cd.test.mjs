@@ -33,6 +33,8 @@ test("CD uses the session pooler, the production environment, and the hosted dis
   assert.match(cd, /--branch=main/);
   assert.match(cd, /cd-smoke.sh/);
   assert.match(cd, /CD skipped/);
+  assert.match(cd, /repository Actions secrets/);
+  assert.equal(cd.includes("production environment"), false);
   assert.equal(cd.includes("VITE_REVIEWER_BUILD"), true);
   assert.equal(cd.includes("reviewer-dist"), false);
   assert.equal(cd.includes("sumit-live"), false);

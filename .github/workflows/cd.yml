@@ -35,7 +35,7 @@ jobs:
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "CD skipped. Missing production secrets: ${missing[*]}."
             echo "No migration was pushed and the hosted build was not deployed."
-            echo "Add the secrets to the repository, or to the production environment, and push to main again."
+            echo "Add the missing repository Actions secrets, and push to main again."
             echo "::notice title=CD skipped::Missing production secrets: ${missing[*]}. No migration was pushed and the hosted build was not deployed."
             echo "deploy=false" >> "$GITHUB_OUTPUT"
           else
