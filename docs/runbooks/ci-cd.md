@@ -1,37 +1,39 @@
 # CI and CD
 
-GitHub Actions runs the checks and the production deploy. The workflows are `.github/workflows/ci.yml` and `.github/workflows/cd.yml`. Secrets stay in GitHub. They are not written in the repo.
+GitHub Actions runs the checks and the production deploy from `.github/workflows/ci.yml`. Secrets stay in GitHub. They are not written in the repo.
 
 ## What CI runs
 
-On every pull request and every push (a same-repo pull request is not run twice):
+On every pull request, and on a push to `main`:
 
 - `pnpm install --frozen-lockfile`, typecheck, lint (its own job), and unit tests for `@flow/app` and `@flow/shared`
 - the hosted build, `pnpm check:bundle`, the reviewers-only build, and `pnpm check:reviewer-bundle`
 - Storybook's browser tests, the Storybook build, and the layout tests
 - local Supabase (`supabase start`, CLI 2.118.0), then `supabase test db`, then the main Playwright suite pointed at that local API
 
-The main Playwright command does not run `sumit-live` or the drain spec. Those stay on `pnpm test:e2e:live` and `playwright.drain.config.ts`. CI caches the pnpm store and the Playwright browsers. A pull request uploads three artifacts: `hosted-dist`, `reviewer-dist`, and `storybook-static`.
+The jobs are `lint`, `check`, and `e2e`. The main Playwright command does not run `sumit-live` or the drain spec. Those stay on `pnpm test:e2e:live` and `playwright.drain.config.ts`. CI caches the pnpm store and the Playwright browsers. A pull request uploads three artifacts: `hosted-dist`, `reviewer-dist`, and `storybook-static`.
 
-## What CD runs
+`pnpm check:bundle` requires the hosted Supabase URL and anon key in the dist. The key must decode to role `anon` and ref `sxqpnetmtufkzowutduq`. The dist must not contain `service_role` or an `sb_secret_` key. The quoted `sb_secret_` prefix that supabase-js uses to refuse a secret key is allowed. A reviewers-only build fails that check, so it is not what gets deployed.
 
-CD runs only on a push to `main`, in the GitHub environment `production`.
+## What the deploy runs
 
-If any repository secret below is missing, the job stops after a notice and succeeds. It does not push migrations and it does not deploy. Add the secret on the repository and push to `main` again.
+Deploy is the `deploy` job in the same workflow. It runs only on a push to `main`, and only after `lint`, `check`, and `e2e` have succeeded on that commit. It uses the GitHub environment `production`.
 
-When the secrets are present:
+If any secret below is missing, the job fails before the build and before any migration. It does not record a successful production deployment. Add the secret on the `production` environment and push to `main` again.
 
-1. A read-only preflight opens the session pooler, refuses the session unless it is read-only, and runs `scripts/preflight-r23.sql`. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run`. If that check cannot be read, the job fails and nothing is pushed.
-2. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset.
-3. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`.
-4. `wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`.
+When the secrets are present, in this order:
+
+1. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`. A failed build or a failed check stops the job. The database is unchanged and the previous app stays live.
+2. A read-only preflight opens the session pooler, refuses the session unless it is read-only, and runs `scripts/preflight-r23.sql`. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run`. If that check cannot be read, the job fails and nothing is pushed.
+3. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset.
+4. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile.
 5. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that `build.txt` and the homepage both serve that commit SHA.
 
-The reviewers-only build is not deployed. CD does not run the live SUMIT specs and does not call an API that writes product data.
+The reviewers-only build is not deployed. The deploy does not run the live SUMIT specs and does not call an API that writes product data.
 
 ## Secrets
 
-These are repository Actions secrets. The deploy job uses `environment: production` as an approval gate, and it still reads the repository secrets. Do not put them only on that environment.
+These three secrets live only on the GitHub environment `production`. The repository copies are deleted. The environment is restricted to `main` and has no required reviewer. The deploy job selects that environment, which is how it can read them. A job that does not select `production` cannot see them.
 
 | Name | What it is |
 | --- | --- |
@@ -41,8 +43,6 @@ These are repository Actions secrets. The deploy job uses `environment: producti
 
 There is no `SUPABASE_ACCESS_TOKEN` in this workflow. The public anon key is already in `app/.env.production`. Do not add the service-role key.
 
-Required reviewers, when set on the `production` environment, must approve before a push to `main` migrates or deploys. That environment does not need its own copies of these secrets.
-
 ## Roll back a Pages deploy
 
 The previous production deployment stays in the Cloudflare Pages project `flow-app`.
@@ -50,16 +50,16 @@ The previous production deployment stays in the Cloudflare Pages project `flow-a
 1. Open the project, then Deployments.
 2. On the last good production deployment, choose Rollback.
 
-Or list deployments, then roll back in the dashboard:
+Or, from a checkout with the lockfile installed, list deployments and then roll back in the dashboard:
 
 ```bash
-npx --yes wrangler@4.144.0 pages deployment list --project-name=flow-app
+pnpm exec wrangler pages deployment list --project-name=flow-app
 ```
 
-Rolling back Pages does not roll back the database.
+That command needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment. Rolling back Pages does not roll back the database.
 
 ## Roll back a migration
 
-Do not run `supabase db reset` against the hosted project. Migrations are forward-only. To undo a change that already landed, add a new migration that reverses it and push that through CD. Do not edit a migration file after it has been applied.
+Do not run `supabase db reset` against the hosted project. Migrations are forward-only. To undo a change that already landed, add a new migration that reverses it and push that through the deploy job. Do not edit a migration file after it has been applied.
 
-If a push fails halfway, read the CD log (the database URL is redacted). Fix the migration with a new file, or repair history only from the Supabase dashboard when a migration was recorded without being applied. Then push to `main` again. The preflight runs first.
+If a push fails halfway, read the deploy log (the database URL is redacted). Fix the migration with a new file, or repair history only from the Supabase dashboard when a migration was recorded without being applied. Then push to `main` again. The hosted bundle is checked before the preflight.

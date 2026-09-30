@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Apply pending migrations after the read-only preflight has passed.
+# The workflow builds and checks the hosted dist before it calls this script.
 # Does not reset the database, include seed, or repair migration history.
 set -euo pipefail
 

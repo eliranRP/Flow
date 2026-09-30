@@ -167,16 +167,16 @@ export const flowTest2Names = [
  * Quoted values are accepted. The URL must be https://<ref>.supabase.co and the key a JWT.
  * A missing file, or fewer than the URL and the key, fails closed.
  * @param {string} [file]
- * @returns {{ markers: string[], problems: string[] }}
+ * @returns {{ markers: string[], problems: string[], url: string, key: string }}
  */
 export function hostedClientMarkers(file = path.join(root, "app/.env.production")) {
-  if (!existsSync(file)) return { markers: [], problems: ["app/.env.production is missing"] };
+  if (!existsSync(file)) return { markers: [], problems: ["app/.env.production is missing"], url: "", key: "" };
   return parseHostedClient(readFileSync(file, "utf8"));
 }
 
 /**
  * @param {string} text
- * @returns {{ markers: string[], problems: string[] }}
+ * @returns {{ markers: string[], problems: string[], url: string, key: string }}
  */
 export function parseHostedClient(text) {
   /** @type {Record<string, string>} */
@@ -199,7 +199,7 @@ export function parseHostedClient(text) {
   if (urlMatch) markers.push(url, urlMatch[1]);
   if (keyOk) markers.push(key);
   if (!urlMatch || !keyOk) problems.push("app/.env.production must contain the hosted Supabase URL and anon key");
-  return { markers, problems };
+  return { markers, problems, url, key };
 }
 
 /** @param {string} value */
@@ -238,6 +238,64 @@ export function reviewerNameViolations(files, hosted) {
   return found;
 }
 
+const hostedUrl = "https://sxqpnetmtufkzowutduq.supabase.co";
+const hostedRef = "sxqpnetmtufkzowutduq";
+
+/**
+ * @param {string} token
+ * @returns {Record<string, unknown> | null}
+ */
+function decodeJwtPayload(token) {
+  const part = token.split(".")[1];
+  if (!part) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(part, "base64url").toString("utf8"));
+    if (!payload || typeof payload !== "object") return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The hosted dist must contain the public URL and anon key, and no service credential.
+ * The key's payload must be role anon for project sxqpnetmtufkzowutduq. The signature is not checked.
+ * @param {{ name: string, body: string }[]} files
+ * @param {{ url: string, key: string }} client
+ * @returns {string[]}
+ */
+export function hostedPresenceViolations(files, client) {
+  /** @type {string[]} */
+  const problems = [];
+  const payload = decodeJwtPayload(client.key);
+  if (!payload || payload.role !== "anon" || payload.ref !== hostedRef) {
+    problems.push("hosted anon key must decode to role anon and ref sxqpnetmtufkzowutduq");
+  }
+  if (client.url !== hostedUrl) {
+    problems.push("hosted Supabase URL must be https://sxqpnetmtufkzowutduq.supabase.co");
+  }
+  if (client.url && !files.some((file) => file.body.includes(client.url))) {
+    problems.push("hosted dist is missing the Supabase URL");
+  }
+  if (client.key && !files.some((file) => file.body.includes(client.key))) {
+    problems.push("hosted dist is missing the Supabase anon key");
+  }
+  for (const file of files) {
+    if (file.body.includes("service_role")) problems.push(`${file.name} contains service_role`);
+    // supabase-js inlines startsWith("sb_secret_") so the client can refuse a secret key.
+    // A real key continues past that prefix. The quoted prefix alone is not a credential.
+    if (/sb_secret_[A-Za-z0-9_-]/.test(file.body)) problems.push(`${file.name} contains sb_secret_`);
+    for (const token of file.body.matchAll(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g)) {
+      const embedded = decodeJwtPayload(token[0]);
+      if (embedded?.role === "service_role") {
+        problems.push(`${file.name} contains a service_role token`);
+        break;
+      }
+    }
+  }
+  return problems;
+}
+
 export function checkReviewerBundle() {
   const dist = path.join(root, "app/dist");
   if (!existsSync(dist)) return ["app/dist is missing. Build the reviewers-only bundle first."];
@@ -247,21 +305,26 @@ export function checkReviewerBundle() {
 export function checkProductionBundle() {
   const dist = path.join(root, "app/dist");
   const graphPath = path.join(root, "app/bundle-graph.json");
+  const client = hostedClientMarkers();
+  const distFiles = existsSync(dist) ? scanDist(dist) : [];
+  const presence = hostedPresenceViolations(distFiles, client);
   /** @type {string[]} */
   const problems = [];
   if (!existsSync(dist)) problems.push("app/dist is missing. Run pnpm build before this check.");
   if (!existsSync(graphPath)) {
     problems.push("app/bundle-graph.json is missing. The production build must record its module graph outside dist.");
-    return problems;
+    return [...problems, ...presence];
   }
   const modules = JSON.parse(readFileSync(graphPath, "utf8"));
   if (!Array.isArray(modules)) {
     problems.push("bundle-graph.json is not a list of module ids");
-    return problems;
+    return [...problems, ...presence];
   }
   return [
-    ...violations({ modules, files: scanDist(dist) }),
+    ...problems,
+    ...violations({ modules, files: distFiles }),
     ...sourceViolations(scanTree(path.join(root, "supabase/functions"), /\.(ts|tsx|js|mjs)$/)),
+    ...presence,
   ];
 }
 
@@ -275,5 +338,5 @@ if (isMain) {
   }
   console.log(reviewer
     ? "reviewer dist has no Flow Test 2 names, golden ids, or the hosted client"
-    : "production graph and dist have no fixtures or golden values");
+    : "production graph and dist have no fixtures or golden values, and the hosted client is present");
 }
