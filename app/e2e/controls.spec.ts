@@ -471,7 +471,12 @@ test("categories filter, hide, merge, and create", async ({ page }) => {
 
 test("a category save with no client reports the failure without a retry", async ({ page }) => {
   await page.route("**/*", (route) => {
-    if (route.request().url().includes("43123")) return route.continue();
+    const url = route.request().url();
+    // The app, and the local Supabase API when CI points the suite at it.
+    // Anything else, including the hosted project, is aborted.
+    if (url.includes("43123") || url.includes("127.0.0.1:54321") || url.includes("localhost:54321")) {
+      return route.continue();
+    }
     return route.abort();
   });
   await page.goto("/e2e/categories");
