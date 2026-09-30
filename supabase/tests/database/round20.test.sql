@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(28);
+select plan(32);
 
 do $users$
 begin
@@ -279,7 +279,31 @@ select is(
   'the foreign attempt leaves נמל basis points'
 );
 
+-- Approve stored the snapshot and did not change the shares. Move them now, so a
+-- reopen that ignores prior_allocations still shows 1111 and the test fails.
+update public.allocations
+set share_bp = 1111, amount_net = -111
+where transaction_id = (select id from r20 where label = 'leasing')
+  and project_id = (select id from r20 where label = 'אלון');
+update public.transactions
+set source = 'sumit'
+where id = (select id from r20 where label = 'leasing');
+
 select tests.authenticate_as('r20_a');
+select is(
+  (select share_bp from public.allocations
+    where transaction_id = (select id from r20 where label = 'leasing')
+      and project_id = (select id from r20 where label = 'אלון')),
+  1111,
+  'the shares changed after approve, away from the snapshot'
+);
+select is(
+  (select count(*)::int
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'id' = (select id::text from r20 where label = 'leasing')),
+  1,
+  'an approved sumit split is on שויכו היום'
+);
 select lives_ok(
   format('select public.reopen_review(%L::uuid)', (select id from r20 where label = 'review')),
   'undo reopens the approved split'
@@ -302,6 +326,20 @@ select is(
       and project_id = (select id from r20 where label = 'נמל')),
   3000,
   'undo puts נמל basis points back'
+);
+select is(
+  (select amount_net from public.allocations
+    where transaction_id = (select id from r20 where label = 'leasing')
+      and project_id = (select id from r20 where label = 'אלון')),
+  -140000::bigint,
+  'undo puts אלון amount back from the snapshot'
+);
+select is(
+  (select count(*)::int
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'id' = (select id::text from r20 where label = 'leasing')),
+  0,
+  'undo takes the split off שויכו היום'
 );
 
 select * from finish();

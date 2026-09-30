@@ -75,7 +75,8 @@ function toastControls(layer: HTMLElement, sheet: Element | null): ToastBox[] {
     if (sheet instanceof Element && !sheet.contains(control)) continue;
     const rect = control.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
-    boxes.push({ top: rect.top, bottom: rect.bottom });
+    const top = sheet instanceof HTMLElement ? restingControlTop(control, sheet) : rect.top;
+    boxes.push({ top, bottom: top + rect.height });
   }
   boxes.sort((left, right) => left.top - right.top);
   return boxes;
@@ -103,6 +104,36 @@ function coversPageHeader(top: number, height: number, header: Element | null, s
 function sheetSurface(sheet: Element): HTMLElement | null {
   const surface = sheet.querySelector(".ui-sheet-surface");
   return surface instanceof HTMLElement ? surface : null;
+}
+
+/** The drawer's own translate, so a measurement ignores the open animation. */
+function translateY(node: Element): number {
+  if (!(node instanceof HTMLElement)) return 0;
+  const value = getComputedStyle(node).transform;
+  if (!value || value === "none") return 0;
+  return new DOMMatrixReadOnly(value).m42;
+}
+
+/**
+ * Where the sheet's top edge sits once the open animation and the toast pad
+ * are finished. A fit sheet is bottom-anchored, so the pad lifts that edge.
+ * A tall sheet has a fixed height, so the pad does not move it.
+ */
+function restingSheetTop(sheet: HTMLElement): number {
+  const surface = sheetSurface(sheet);
+  const lifts = surface != null && !sheet.classList.contains("ui-sheet-tall") ? shiftPad(surface) : 0;
+  return sheet.getBoundingClientRect().top - translateY(sheet) + lifts;
+}
+
+/**
+ * Where a control sits once the panel scroll is pinned and the pad is off.
+ * Mid-animation the panel can be scrolled, which reports ✕ far above the sheet.
+ * On a tall sheet the pad pushes the control down; on a fit sheet it does not.
+ */
+function restingControlTop(control: HTMLElement, sheet: HTMLElement): number {
+  const surface = sheetSurface(sheet);
+  const pushed = surface != null && sheet.classList.contains("ui-sheet-tall") ? shiftPad(surface) : 0;
+  return control.getBoundingClientRect().top - translateY(sheet) + sheet.scrollTop - pushed;
 }
 
 /** Padding above the header must stay on screen. The panel is not the scroller. */
@@ -159,8 +190,8 @@ function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap
     if (!(control instanceof HTMLElement)) continue;
     const rect = control.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
-    const naturalTop = rect.top - applied;
-    const naturalBottom = rect.bottom - applied;
+    const naturalTop = restingControlTop(control, sheet);
+    const naturalBottom = naturalTop + rect.height;
     if (naturalTop >= toastBottom || naturalBottom <= top) continue;
     need = Math.max(need, toastBottom - naturalTop);
   }
@@ -194,7 +225,7 @@ export function placeToast(layer: HTMLElement): void {
     : safe + inset;
   const floor = window.innerHeight - gap;
   const boxes = toastControls(layer, sheet);
-  const sheetTop = sheet instanceof HTMLElement ? sheet.getBoundingClientRect().top : null;
+  const sheetTop = sheet instanceof HTMLElement ? restingSheetTop(sheet) : null;
   const pageHeader = document.querySelector("header.ui-page, header.ui-band");
   if (sheet instanceof HTMLElement && sheetTop != null && height > 0) {
     const minTop = Math.max(safe, 0) + gap;
@@ -283,13 +314,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, ms);
   }, []);
 
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  /** A toast that is already on screen is placed in this frame. A new one waits until the sheet shape stops changing, so it is never shown at a position it will leave. */
+  const revealNow = useRef(false);
+
   const show = useCallback(
     (input: ToastInput) => {
       acting.current = false;
       seq.current += 1;
       clearTimer();
       remaining.current = toastMs(input);
-      setPhase("measure");
+      const current = phaseRef.current;
+      revealNow.current = current === "pad" || current === "fade" || current === "in";
+      if (!revealNow.current) setPhase("measure");
       setToast({ ...input, id: seq.current });
     },
     [],
@@ -369,6 +407,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     let resizeObserver: ResizeObserver | null = null;
     let mutationObserver: MutationObserver | null = null;
     let onViewport: (() => void) | null = null;
+    let settling = false;
+    let settleFrame = 0;
 
     function snap() {
       const sheet = toastAnchor().sheet;
@@ -391,6 +431,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
 
     function onSheetChange() {
+      if (settling) return;
       const sheet = toastAnchor().sheet;
       if (!(sheet instanceof Element)) return;
       const next = sheetContentKey(sheet);
@@ -483,19 +524,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }, 220);
     }
 
-    function begin() {
-      generation += 1;
-      const gen = generation;
-      waiting = false;
-      hold = true;
-      window.clearTimeout(fallback);
-      removeEnd?.();
-      removeEnd = null;
+    function sheetShape(): string {
+      const sheet = toastAnchor().sheet;
+      if (!(sheet instanceof Element)) return "none";
+      return sheet.classList.contains("ui-sheet-tall") ? "tall" : "fit";
+    }
+
+    function commitPlacement(gen: number) {
+      if (gen !== generation) return;
+      settling = false;
       const sheet = toastAnchor().sheet;
       const surface = sheet instanceof Element ? sheetSurface(sheet) : null;
       const before = surface ? shiftPad(surface) : 0;
-      if (surface) surface.style.transition = "";
+      if (surface) surface.style.transition = reduce ? "none" : "";
       placeToast(layer);
+      if (surface) {
+        void surface.offsetHeight;
+        pinSheetScroll(surface);
+        if (reduce) surface.style.transition = "";
+      }
       rememberSheet();
       watchSheet();
       const target = surface ? Number.parseFloat(surface.dataset.toastPad ?? "") || 0 : 0;
@@ -518,14 +565,46 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         }, 220);
         return;
       }
-      if (reduce && surface) {
-        surface.style.transition = "none";
-        placeToast(layer);
-        void surface.offsetHeight;
-        surface.style.transition = "";
-        rememberSheet();
-      }
       showNow(gen);
+    }
+
+    function begin() {
+      generation += 1;
+      const gen = generation;
+      waiting = false;
+      hold = true;
+      window.clearTimeout(fallback);
+      removeEnd?.();
+      removeEnd = null;
+      window.cancelAnimationFrame(settleFrame);
+      // A replacement (ניסיון חוזר) is already on screen. Place it in this frame.
+      // With no sheet, there is no shape change to wait for. A new toast over a
+      // sheet waits until the shape is the same across three frames, so a pick
+      // that returns to the summary does not flash the tall position.
+      if (revealNow.current || !(toastAnchor().sheet instanceof Element)) {
+        commitPlacement(gen);
+        return;
+      }
+      settling = true;
+      let previous = "";
+      let stable = 0;
+      const step = () => {
+        if (gen !== generation) return;
+        const shape = sheetShape();
+        if (shape === previous) stable += 1;
+        else {
+          previous = shape;
+          stable = 0;
+        }
+        // Two frames in a row. A category pick pops back to the summary on the
+        // next frame, and the toast must not paint on the tall sheet first.
+        if (stable >= 2) {
+          commitPlacement(gen);
+          return;
+        }
+        settleFrame = requestAnimationFrame(step);
+      };
+      settleFrame = requestAnimationFrame(step);
     }
 
     begin();
@@ -534,6 +613,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       generation += 1;
       waiting = false;
       hold = true;
+      settling = false;
+      window.cancelAnimationFrame(settleFrame);
       window.clearTimeout(fallback);
       removeEnd?.();
       resizeObserver?.disconnect();

@@ -8,8 +8,8 @@ type RadioRowProps = {
   code?: string;
   /** Relative last use, at the inline end. */
   date?: string;
-  /** Tint after the name. The suggestion row uses "הצעה". */
-  tag?: string;
+  /** Tint הצעה after the name. The suggestion row sets this. */
+  tag?: boolean;
   /** Name, code, and date on one line. The change picker uses this. */
   layout?: "picker";
   /** Live result under the title. Split uses this. */
@@ -40,7 +40,7 @@ export function RadioRow({
   selected,
   onSelect,
 }: RadioRowProps) {
-  const picker = layout === "picker" || code != null || date != null || tag != null;
+  const picker = layout === "picker" || code != null || date != null || tag === true;
   const descId = useId();
   const off = disabled || disabledReason != null;
   const sub = off && disabledReason ? disabledReason : description;
@@ -52,7 +52,7 @@ export function RadioRow({
   const text = picker ? (
     <span className="ui-pick-name">
       <span className="ui-pick-label">{label}</span>
-      {tag === "הצעה" ? <SuggestTag /> : tag ? <span className="ui-suggest-tag">{tag}</span> : null}
+      {tag ? <SuggestTag /> : null}
     </span>
   ) : (
     <span className="ui-row-text">
