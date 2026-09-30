@@ -774,6 +774,39 @@ describe("rejected writes", () => {
     expect(within(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).getByText("הצעה")).toBeInTheDocument();
   });
 
+  it("does not tag an owner-picked project when project_suggested is false", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/review/change"]}>
+            <BooksProvider>
+              <ChangeForm
+                sample={{
+                  supplier: "מחסן",
+                  amount: "₪100",
+                  suggestionId: "p1",
+                  suggestionCategoryId: "c1",
+                  projectId: "p1",
+                  categoryId: "c1",
+                  projects: [{ id: "p1", name: "הרצל" }],
+                  categories: [{ id: "c1", name: "חומרים", hidden: false }],
+                  categorySuggested: false,
+                  project_suggested: false,
+                }}
+              />
+            </BooksProvider>
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const project = await screen.findByRole("button", { name: "פרויקט: הרצל, שינוי" });
+    expect(within(project).queryByText("הצעה")).not.toBeInTheDocument();
+    fireEvent.click(project);
+    const row = await screen.findByRole("radio", { name: "הרצל" });
+    expect(within(row).queryByText("הצעה")).not.toBeInTheDocument();
+  });
+
   it("says a project expense is missing a category", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") {

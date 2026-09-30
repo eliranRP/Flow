@@ -670,7 +670,7 @@ function Picker({
                   label={option.name}
                   code={option.code}
                   date={needle === "" ? option.recent : undefined}
-                  tag={option.id === suggestionId ? "הצעה" : undefined}
+                  tag={option.id === suggestionId}
                   selected={option.id === selectedId}
                   busy={option.id === savingId}
                   disabled={savingId != null && option.id !== savingId}

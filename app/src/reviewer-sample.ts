@@ -47,6 +47,14 @@ export const reviewerApprovedShares = [
   { name: reviewerOtherProjectName, bp: 4000, amount: 8_000n },
 ] as const;
 
+/** ברגי העמק is ₪150 across the two sample projects, half each. */
+export const reviewerBoltsShares = [
+  { name: reviewerProjectName, bp: 5000, amount: 7_500n },
+  { name: reviewerOtherProjectName, bp: 5000, amount: 7_500n },
+] as const;
+
+export type ReviewerShare = { name: string; bp: number; amount: bigint };
+
 export const reviewerFiled: FiledTodayRow[] = [
   {
     id: "t-sample-sand",
@@ -182,6 +190,69 @@ export function subscribeReviewerQueue(listener: () => void): () => void {
   return () => {
     queueListeners.delete(listener);
   };
+}
+
+const filedExtras: FiledTodayRow[] = [];
+const filedShares = new Map<string, readonly ReviewerShare[]>();
+let filedViewCache: FiledTodayRow[] | null = null;
+const filedListeners = new Set<() => void>();
+
+function notifyFiled(): void {
+  filedViewCache = null;
+  for (const listener of filedListeners) listener();
+}
+
+/** The filed list, including a split approved during this visit. */
+export function reviewerFiledView(): FiledTodayRow[] {
+  if (filedViewCache) return filedViewCache;
+  filedViewCache = [...filedExtras, ...reviewerFiled];
+  return filedViewCache;
+}
+
+export function reviewerSharesFor(id: string): readonly ReviewerShare[] | null {
+  if (id === reviewerApprovedSplitId) return reviewerApprovedShares;
+  return filedShares.get(id) ?? null;
+}
+
+export function subscribeReviewerFiled(listener: () => void): () => void {
+  filedListeners.add(listener);
+  return () => {
+    filedListeners.delete(listener);
+  };
+}
+
+/** An approved split joins שויכו היום with its shares. A plain approval is already represented by the sample rows. */
+export function fileReviewerApproval(reviewId: string): void {
+  const row = reviewerQueueView().find((item) => item.id === reviewId);
+  if (!row) return;
+  const split = row.pnl_role === "shared" || (row.share_count ?? 0) > 1;
+  if (!split || row.reason === "unallocated_shared") return;
+  const id = row.transaction_id ?? row.id;
+  if (filedExtras.some((item) => item.id === id)) return;
+  const count = row.share_count ?? 0;
+  filedExtras.unshift({
+    id,
+    description: row.description,
+    doc_date: row.doc_date,
+    amount_net: row.amount_net,
+    direction: row.direction,
+    supplier_name: row.supplier_name ?? null,
+    project_name: count > 1 ? `מפוצל · ${String(count)} פרויקטים` : (row.project_name ?? null),
+    category_name: row.category_name ?? null,
+  });
+  if (id === "t-bolts") filedShares.set(id, reviewerBoltsShares);
+  notifyFiled();
+}
+
+/** ביטול takes that split back off שויכו היום. */
+export function unfileReviewerApproval(reviewId: string): void {
+  const row = reviewerQueue.find((item) => item.id === reviewId);
+  const id = row?.transaction_id ?? reviewId;
+  const index = filedExtras.findIndex((item) => item.id === id);
+  if (index < 0) return;
+  filedExtras.splice(index, 1);
+  filedShares.delete(id);
+  notifyFiled();
 }
 
 export type SampleSave = "ok" | "fail" | "offline" | "shared";

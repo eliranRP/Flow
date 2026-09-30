@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -36,17 +36,30 @@ type ToastFrame = {
   tall: boolean;
   covers: boolean;
   gapOk: boolean;
-  close: { top: number; bottom: number } | null;
-  back: { top: number; bottom: number } | null;
 };
 
-async function setSafe(page: import("@playwright/test").Page, safe: number): Promise<void> {
+/**
+ * Viewport client rects, origin at the layout viewport.
+ * Toast: `.ui-toast`. Sheet: `[data-vaul-drawer][data-state=open]`.
+ * ✕: `button[aria-label="סגירה"]` inside that sheet. Padding: `.ui-sheet-surface` padding-top.
+ */
+type SettledToast = {
+  pad: number;
+  toastTop: number;
+  toastBottom: number;
+  sheetTop: number;
+  closeTop: number;
+};
+
+const GAP = 8;
+
+async function setSafe(page: Page, safe: number): Promise<void> {
   await page.evaluate((inset) => {
     document.documentElement.style.setProperty("--safe-top", `${String(inset)}px`);
   }, safe);
 }
 
-async function armSampler(page: import("@playwright/test").Page, safe: number, ms: number): Promise<void> {
+async function armSampler(page: Page, safe: number, ms: number): Promise<void> {
   await page.evaluate(({ inset, duration }) => {
     document.documentElement.style.setProperty("--safe-top", `${String(inset)}px`);
     const samples: ToastFrame[] = [];
@@ -68,8 +81,6 @@ async function armSampler(page: import("@playwright/test").Page, safe: number, m
       let opacity = 0;
       let covers = false;
       let gapOk = true;
-      let close: { top: number; bottom: number } | null = null;
-      let back: { top: number; bottom: number } | null = null;
       const root = sheet ?? document;
       const controlRect = (label: string) => {
         const control = root.querySelector(`button[aria-label="${label}"]`)
@@ -81,8 +92,6 @@ async function armSampler(page: import("@playwright/test").Page, safe: number, m
       };
       const closeRect = controlRect("סגירה");
       const backRect = controlRect("חזרה");
-      if (closeRect) close = { top: closeRect.top, bottom: closeRect.bottom };
-      if (backRect) back = { top: backRect.top, bottom: backRect.bottom };
       if (toastNode instanceof HTMLElement) {
         const toastStyle = getComputedStyle(toastNode);
         opacity = Number.parseFloat(toastStyle.opacity) || 0;
@@ -108,8 +117,6 @@ async function armSampler(page: import("@playwright/test").Page, safe: number, m
         tall: sheet instanceof Element && sheet.classList.contains("ui-sheet-tall"),
         covers,
         gapOk,
-        close,
-        back,
       });
       if (performance.now() - start < duration) requestAnimationFrame(frame);
       else (window as unknown as { __toastFrames?: ToastFrame[] }).__toastFrames = samples;
@@ -119,11 +126,65 @@ async function armSampler(page: import("@playwright/test").Page, safe: number, m
   }, { inset: safe, duration: ms });
 }
 
-async function readFrames(page: import("@playwright/test").Page): Promise<ToastFrame[]> {
+async function readFrames(page: Page): Promise<ToastFrame[]> {
   await page.waitForFunction(() => (window as unknown as { __toastFrames?: ToastFrame[] }).__toastFrames != null);
   const samples = await page.evaluate(() => (window as unknown as { __toastFrames?: ToastFrame[] }).__toastFrames);
   if (!samples || samples.length < 8) throw new Error("frame sample missed the toast");
   return samples;
+}
+
+async function readSettled(page: Page): Promise<SettledToast> {
+  await expect(page.locator(".ui-toast-host")).toHaveAttribute("data-phase", "in");
+  await page.waitForFunction(() => {
+    const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
+    if (!(sheet instanceof HTMLElement)) return false;
+    const transform = getComputedStyle(sheet).transform;
+    const still = transform === "none" || transform === "matrix(1, 0, 0, 1, 0, 0)";
+    return still && sheet.scrollTop === 0;
+  });
+  return page.evaluate(() => {
+    const toast = document.querySelector(".ui-toast");
+    const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
+    const surface = document.querySelector(".ui-sheet-surface");
+    const close = sheet?.querySelector("button[aria-label='סגירה']");
+    if (!(toast instanceof HTMLElement) || !(sheet instanceof HTMLElement) || !(surface instanceof HTMLElement) || !(close instanceof HTMLElement)) {
+      throw new Error("settled toast geometry is missing");
+    }
+    const toastRect = toast.getBoundingClientRect();
+    const closeRect = close.getBoundingClientRect();
+    return {
+      pad: Number.parseFloat(getComputedStyle(surface).paddingTop) || 0,
+      toastTop: toastRect.top,
+      toastBottom: toastRect.bottom,
+      sheetTop: sheet.getBoundingClientRect().top,
+      closeTop: closeRect.top,
+    };
+  });
+}
+
+function assertVisiblePosition(samples: ToastFrame[]): void {
+  const shown = samples.filter((sample) => sample.opacity > 0.02 && sample.top != null);
+  expect(shown.length).toBeGreaterThan(0);
+  const finalTop = shown[shown.length - 1]?.top ?? 0;
+  for (const sample of shown) {
+    expect(Math.abs((sample.top ?? 0) - finalTop)).toBeLessThanOrEqual(1);
+  }
+  expect(samples.some((sample) => sample.covers)).toBe(false);
+  expect(samples.every((sample) => sample.gapOk)).toBe(true);
+}
+
+function assertPadGeometry(settled: SettledToast, padNeeded: boolean): void {
+  if (padNeeded) {
+    expect(settled.pad).toBeGreaterThan(GAP + 1);
+    expect(Math.abs(settled.closeTop - (settled.toastBottom + GAP))).toBeLessThanOrEqual(1);
+    return;
+  }
+  expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
+}
+
+function assertAboveSheet(settled: SettledToast): void {
+  expect(Math.abs(settled.toastBottom - (settled.sheetTop - GAP))).toBeLessThanOrEqual(1);
+  expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
 }
 
 function padMove(samples: ToastFrame[]): { start: number; final: number; moveStart: number; settledAt: number; reversals: number; peak: number } {
@@ -141,122 +202,136 @@ function padMove(samples: ToastFrame[]): { start: number; final: number; moveSta
     if (pad < previous - 1) reversals += 1;
     if (moveStart < 0 && pad > start + 0.5) moveStart = samples[index]?.t ?? 0;
   }
-  // The pad phase ends when the fade starts (transitionend or the 220ms fallback).
-  // The ease reaches the last pixel before that, so the clock is the fade, not 0.5px.
   if (moveStart >= 0 && fadeAt >= moveStart) settledAt = fadeAt;
   return { start, final, moveStart, settledAt, reversals, peak };
 }
 
-for (const viewport of [
+async function openCategory(page: Page, safe: number): Promise<void> {
+  await setSafe(page, safe);
+  await page.getByRole("button", { name: /קטגוריה:/ }).click();
+  await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
+}
+
+const viewports = [
   { width: 320, height: 693 },
   { width: 390, height: 844 },
-] as const) {
+] as const;
+
+for (const viewport of viewports) {
   for (const safe of [0, 20, 47] as const) {
     const label = `${String(viewport.width)}×${String(viewport.height)} safe ${String(safe)}`;
+    const padNeeded = safe === 47;
 
-    test(`first toast pad rises for 150–250ms at ${label}`, async ({ page }) => {
+    test(`first show immediately after open at ${label}`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/reviewer/save?save=offline");
-      await page.getByRole("button", { name: /קטגוריה:/ }).click();
-      await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
+      await openCategory(page, safe);
       await armSampler(page, safe, 1200);
       await page.getByRole("radio", { name: "שינוע" }).click();
       const samples = await readFrames(page);
+      const settled = await readSettled(page);
+      assertVisiblePosition(samples);
+      assertPadGeometry(settled, padNeeded);
+      if (!padNeeded) return;
       const move = padMove(samples);
       expect(move.final).toBeGreaterThan(move.start + 1);
       expect(move.reversals).toBe(0);
       expect(move.peak).toBeLessThanOrEqual(move.final + 1);
-      expect(move.settledAt).toBeGreaterThanOrEqual(0);
       const duration = move.settledAt - Math.max(move.moveStart, 0);
       expect(duration).toBeGreaterThanOrEqual(150);
       expect(duration).toBeLessThanOrEqual(250);
       expect(samples.some((sample) => sample.pad > move.start + 1 && sample.pad < move.final - 1)).toBe(true);
-      expect(samples.some((sample) => sample.covers)).toBe(false);
-      expect(samples.every((sample) => sample.gapOk)).toBe(true);
-      const atFade = samples.find((sample) => sample.t >= move.settledAt);
-      expect(Math.abs((atFade?.pad ?? 0) - move.final)).toBeLessThanOrEqual(1);
       const before = samples.filter((sample) => sample.t < move.settledAt - 16);
       expect(before.every((sample) => sample.opacity <= 0.02)).toBe(true);
-      const fading = samples.filter((sample) => sample.t >= move.settledAt && sample.opacity > 0.05 && sample.opacity < 0.95);
-      expect(fading.length).toBeGreaterThan(0);
-      const shown = samples.filter((sample) => sample.opacity > 0.02 && sample.top != null);
-      expect(shown.length).toBeGreaterThan(0);
-      for (const sample of shown) {
-        expect(sample.top ?? 0).toBeGreaterThanOrEqual(safe + 8 - 1);
-      }
     });
 
-    test(`retry keeps the pad and never covers ✕ at ${label}`, async ({ page }) => {
+    test(`first show after the sheet settles at ${label}`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/reviewer/save?save=offline");
-      await setSafe(page, safe);
-      await page.getByRole("button", { name: /קטגוריה:/ }).click();
+      await openCategory(page, safe);
+      await page.waitForTimeout(400);
+      await armSampler(page, safe, 1200);
+      await page.getByRole("radio", { name: "שינוע" }).click();
+      const samples = await readFrames(page);
+      const settled = await readSettled(page);
+      assertVisiblePosition(samples);
+      assertPadGeometry(settled, padNeeded);
+    });
+
+    test(`retry keeps the settled geometry at ${label}`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.goto("/reviewer/save?save=offline");
+      await openCategory(page, safe);
+      await page.waitForTimeout(400);
       await page.getByRole("radio", { name: "שינוע" }).click();
       const toast = page.locator(".ui-toast");
       await expect(page.locator(".ui-toast-host")).toHaveAttribute("data-phase", "in");
       const retry = toast.getByRole("button", { name: "ניסיון חוזר", includeHidden: true });
       await expect(retry).toBeVisible();
-      const before = await page.evaluate(() => {
-        const surface = document.querySelector(".ui-sheet-surface");
-        return surface instanceof HTMLElement ? Number.parseFloat(getComputedStyle(surface).paddingTop) || 0 : 0;
-      });
-      expect(before).toBeGreaterThan(8);
       await armSampler(page, safe, 1000);
       await retry.click();
       const samples = await readFrames(page);
-      expect(samples.some((sample) => sample.covers)).toBe(false);
-      expect(samples.every((sample) => sample.gapOk)).toBe(true);
-      const finalPad = samples[samples.length - 1]?.pad ?? 0;
-      const floor = Math.min(before, finalPad);
+      const settled = await readSettled(page);
+      assertVisiblePosition(samples);
+      assertPadGeometry(settled, padNeeded);
+      const floor = Math.min(samples[0]?.pad ?? settled.pad, settled.pad);
       for (const sample of samples) {
         expect(sample.pad).toBeGreaterThanOrEqual(floor - 1);
       }
-      await expect(retry).toBeVisible();
     });
 
-    test(`tall to short places the toast and the pad in one frame at ${label}`, async ({ page }) => {
+    test(`tall to short sits --space-2 above the sheet at ${label}`, async ({ page }) => {
       await page.setViewportSize(viewport);
-      await page.goto("/reviewer/save?save=offline");
-      await setSafe(page, safe);
-      await page.getByRole("button", { name: /קטגוריה:/ }).click();
+      await page.goto("/reviewer/save?item=q-bolts");
+      await openCategory(page, safe);
+      await page.waitForTimeout(400);
+      await armSampler(page, safe, 1000);
       await page.getByRole("radio", { name: "שינוע" }).click();
-      await expect(page.locator(".ui-toast-host")).toHaveAttribute("data-phase", "in");
-      await armSampler(page, safe, 800);
-      await page.getByRole("button", { name: "חזרה" }).click();
       await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
       const samples = await readFrames(page);
-      expect(samples.some((sample) => sample.close != null && sample.back != null)).toBe(true);
-      expect(samples.some((sample) => sample.covers)).toBe(false);
-      expect(samples.every((sample) => sample.gapOk)).toBe(true);
-      const short = samples.filter((sample) => !sample.tall);
-      expect(short.length).toBeGreaterThan(2);
-      const final = short[short.length - 1];
-      if (!final) throw new Error("short sheet missing");
-      for (const sample of short) {
-        expect(Math.abs(sample.pad - final.pad)).toBeLessThanOrEqual(1);
-        expect(Math.abs((sample.top ?? 0) - (final.top ?? 0))).toBeLessThanOrEqual(1);
-      }
+      const settled = await readSettled(page);
+      assertVisiblePosition(samples);
+      assertAboveSheet(settled);
+      expect(settled.sheetTop).toBeGreaterThan(200);
     });
   }
 }
 
-test("reduced motion places the pad at once and never covers a control", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.setViewportSize({ width: 320, height: 693 });
-  await page.goto("/reviewer/save?save=offline");
-  await page.getByRole("button", { name: /קטגוריה:/ }).click();
-  await expect(page.getByRole("heading", { name: "בחירת קטגוריה" })).toBeVisible();
-  await armSampler(page, 47, 800);
-  await page.getByRole("radio", { name: "שינוע" }).click();
-  const samples = await readFrames(page);
-  const move = padMove(samples);
-  expect(move.final).toBeGreaterThan(move.start + 1);
-  expect(move.settledAt - Math.max(move.moveStart, 0)).toBeLessThan(50);
-  expect(samples.some((sample) => sample.covers)).toBe(false);
-  expect(samples.every((sample) => sample.gapOk)).toBe(true);
-  const partial = samples.filter((sample) => sample.opacity > 0.02 && sample.opacity < 0.9);
-  expect(partial).toHaveLength(0);
-  for (const sample of samples) {
-    if (sample.opacity > 0.02) expect(Math.abs(sample.pad - move.final)).toBeLessThanOrEqual(1);
+for (const viewport of viewports) {
+  for (const safe of [0, 20, 47] as const) {
+    const label = `${String(viewport.width)}×${String(viewport.height)} safe ${String(safe)}`;
+    const padNeeded = safe === 47;
+
+    test(`reduced motion settles without a pad blip at ${label}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.setViewportSize(viewport);
+      await page.goto("/reviewer/save?save=offline");
+      await openCategory(page, safe);
+      await page.waitForTimeout(50);
+      await armSampler(page, safe, 800);
+      await page.getByRole("radio", { name: "שינוע" }).click();
+      const first = await readFrames(page);
+      const settled = await readSettled(page);
+      assertVisiblePosition(first);
+      assertPadGeometry(settled, padNeeded);
+      const partial = first.filter((sample) => sample.opacity > 0.02 && sample.opacity < 0.9);
+      expect(partial).toHaveLength(0);
+      if (padNeeded) {
+        const move = padMove(first);
+        expect(move.settledAt - Math.max(move.moveStart, 0)).toBeLessThan(50);
+      } else {
+        expect(first.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
+      }
+      await armSampler(page, safe, 600);
+      await page.getByRole("button", { name: "חזרה" }).click();
+      await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
+      const back = await readFrames(page);
+      const above = await readSettled(page);
+      const short = back.filter((sample) => !sample.tall);
+      expect(short.length).toBeGreaterThan(0);
+      assertVisiblePosition(short);
+      assertAboveSheet(above);
+      expect(short.every((sample) => sample.pad <= Math.max(above.pad, GAP) + 1)).toBe(true);
+    });
   }
-});
+}

@@ -410,6 +410,7 @@ describe("placeToast", () => {
     const sheet = document.createElement("div");
     sheet.setAttribute("data-vaul-drawer", "");
     sheet.setAttribute("data-state", "open");
+    sheet.className = "ui-sheet-tall";
     const surface = document.createElement("div");
     surface.className = "ui-sheet-surface";
     const header = document.createElement("div");
@@ -462,6 +463,64 @@ describe("placeToast", () => {
     expect(closeTop + grown).toBeGreaterThanOrEqual(55 + toastMinBlock() + 8);
     placeToast(host);
     expect(surface.dataset.toastPad).toBe(String(grown));
+    sheet.remove();
+    host.remove();
+  });
+
+  it("ignores a scrolled header and does not pad when ✕ is already clear", () => {
+    document.documentElement.style.setProperty("--safe-top", "0px");
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    sheet.className = "ui-sheet-tall";
+    Object.defineProperty(sheet, "scrollTop", { configurable: true, writable: true, value: 196 });
+    const surface = document.createElement("div");
+    surface.className = "ui-sheet-surface";
+    const close = document.createElement("button");
+    close.setAttribute("aria-label", "סגירה");
+    surface.appendChild(close);
+    sheet.appendChild(surface);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    sheet.getBoundingClientRect = () => box(844, 788);
+    // Scrolled up into the toast. Pinning the scroll puts ✕ back below it.
+    close.getBoundingClientRect = () => box(64, 44);
+    toast.getBoundingClientRect = () => box(54.5, 46.5);
+    placeToast(host);
+    expect(host.style.top).toBe("8px");
+    expect(surface.dataset.toastPad).toBeUndefined();
+    expect(surface.style.getPropertyValue("--toast-pad")).toBe("");
+    sheet.remove();
+    host.remove();
+  });
+
+  it("places a short sheet from the top it will have once the pad is gone", () => {
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    sheet.className = "ui-sheet-fit";
+    const surface = document.createElement("div");
+    surface.className = "ui-sheet-surface";
+    surface.style.setProperty("--toast-pad", "16.5px");
+    const close = document.createElement("button");
+    sheet.append(surface, close);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    // Visual top is 16.5px high because the pad is still lifting a fit sheet.
+    sheet.getBoundingClientRect = () => box(844, 319.6875);
+    close.getBoundingClientRect = () => box(622, 44);
+    toast.getBoundingClientRect = () => box(46.5, 46.5);
+    placeToast(host);
+    expect(host.style.top).toBe("486.3125px");
+    expect(surface.style.getPropertyValue("--toast-pad")).toBe("0px");
     sheet.remove();
     host.remove();
   });

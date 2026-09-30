@@ -3,21 +3,24 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
 import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen, reviewIsSplit, reviewSplitTitle } from "./screens/flow-screens";
 import {
+  fileReviewerApproval,
   patchReviewerCategory,
   reviewerBooks,
   reviewerCategories,
-  reviewerApprovedShares,
-  reviewerApprovedSplitId,
   reviewerFiled,
+  reviewerFiledView,
   reviewerOtherProjectName,
   reviewerProjectChoices,
   reviewerProjectName,
   reviewerQueueView,
   reviewerSharedAgorot,
+  reviewerSharesFor,
   reviewerSplitProjects,
   reviewerWaitingPaintAgorot,
   sampleSaveMode,
+  subscribeReviewerFiled,
   subscribeReviewerQueue,
+  unfileReviewerApproval,
   type SampleSave,
 } from "./reviewer-sample";
 import { useWrite } from "./use-write";
@@ -150,10 +153,11 @@ function ReviewerQueue() {
 
 function ReviewerFiled() {
   const [params] = useSearchParams();
+  const filed = useSyncExternalStore(subscribeReviewerFiled, reviewerFiledView, reviewerFiledView);
   const empty = params.get("empty") === "1";
   return (
     <FiledTodayScreen
-      sample={empty ? [] : reviewerFiled}
+      sample={empty ? [] : filed}
       backTo="/reviewer"
       rowHref={(row) => `/reviewer/transaction/${row.id}`}
     />
@@ -236,11 +240,12 @@ function ReviewerProject() {
 
 function ReviewerTransaction({ path }: { path: string }) {
   const id = path.split("/").pop() ?? "";
-  const row = reviewerFiled.find((item) => item.id === id);
+  const filed = useSyncExternalStore(subscribeReviewerFiled, reviewerFiledView, reviewerFiledView);
+  const row = filed.find((item) => item.id === id);
   if (!row) {
     return <ScreenHeader title="תנועה" subtitle="השורה לא ברשימת הדוגמה" backTo="/reviewer/filed" />;
   }
-  const shares = row.id === reviewerApprovedSplitId ? reviewerApprovedShares : null;
+  const shares = reviewerSharesFor(row.id);
   return (
     <>
       <ScreenHeader title="הוצאה" subtitle={row.supplier_name ?? row.description} backTo="/reviewer/filed" />
@@ -586,9 +591,11 @@ function SampleQueue({
       previewWrite={{
         run: () => sampleRun(mode),
         onDone: (id) => {
+          fileReviewerApproval(id);
           setRows((current) => current.filter((row) => row.id !== id));
         },
         onUndo: (id) => {
+          unfileReviewerApproval(id);
           const original = initial.find((row) => row.id === id);
           if (!original) return;
           setRows((current) => (current.some((row) => row.id === id) ? current : [original, ...current]));

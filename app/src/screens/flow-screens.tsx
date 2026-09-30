@@ -968,7 +968,7 @@ export function ReviewQueue({
   }, [rows, shown]);
   const approve = useWrite({
     failure: previewWrite ? changeSaveFailure : "לא הצלחנו לאשר.",
-    keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting"],
+    keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
     run: async () => {
       if (previewWrite) {
         await previewWrite.run();
@@ -1196,7 +1196,7 @@ async function reopenReview(
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
-    await invalidate(["review", "dashboard", "project", "project-category", "project-waiting"]);
+    await invalidate(["review", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
     toast.show({ message: "הפריט חזר לתור, והשיוך הקודם שוחזר." });
   } catch {
     toast.show({
@@ -1332,6 +1332,8 @@ type ChangeSample = {
   splitTitle?: string;
   /** False when the category is the owner's, so the sheet does not call it a suggestion. */
   categorySuggested?: boolean;
+  /** False when the project is the owner's or a remembered rule, so it is not הצעה. */
+  project_suggested?: boolean;
 };
 
 function withChoice(options: ChangeChoice[], id: string, name: string | null | undefined): ChangeChoice[] {
@@ -1418,7 +1420,9 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       onAction: () => undefined,
     });
   }, [sample?.saveError, toast]);
-  const suggestionProjectId = sample?.suggestionId ?? row?.project_id ?? "";
+  const suggestionProjectId = sample
+    ? (sample.project_suggested === false ? "" : (sample.suggestionId ?? ""))
+    : (row?.project_suggested === true ? (row.project_id ?? "") : "");
   const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? row?.category_id ?? "";
   const projectOptions = withChoice(
     [...(sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({
