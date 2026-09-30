@@ -6,7 +6,7 @@ GitHub Actions runs the checks and the production deploy. The workflows are `.gi
 
 On every pull request and every push (a same-repo pull request is not run twice):
 
-- `pnpm install --frozen-lockfile`, typecheck, lint, and unit tests for `@flow/app` and `@flow/shared`
+- `pnpm install --frozen-lockfile`, typecheck, lint (its own job), and unit tests for `@flow/app` and `@flow/shared`
 - the hosted build, `pnpm check:bundle`, the reviewers-only build, and `pnpm check:reviewer-bundle`
 - Storybook's browser tests, the Storybook build, and the layout tests
 - local Supabase (`supabase start`, CLI 2.118.0), then `supabase test db`, then the main Playwright suite pointed at that local API

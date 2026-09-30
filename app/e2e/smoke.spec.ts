@@ -103,6 +103,12 @@ test("signed-out home redirects to sign-in", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page).toHaveURL(/\/sign-in/);
-  await expect(page.getByRole("button", { name: "המשך עם Google" })).toBeDisabled();
+  const google = page.getByRole("button", { name: "המשך עם Google" });
+  // An empty client disables the button. Local Supabase in CI configures it.
+  if (await page.getByText("הגדרת השרת אינה תקינה").count()) {
+    await expect(google).toBeDisabled();
+  } else {
+    await expect(google).toBeEnabled();
+  }
   await expect(page.getByRole("link", { name: "תנאי שימוש" })).toBeVisible();
 });
