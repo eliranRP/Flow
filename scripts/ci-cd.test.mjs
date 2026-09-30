@@ -30,6 +30,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e\n/);
+  assert.match(ci, /node scripts\/check-migration-order.mjs/);
   assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);
   assert.match(job("e2e"), /bash scripts\/cd-dry-run-pending.sh/);
   assert.match(job("e2e"), /FLOW_CD_PREFLIGHT_LOCAL=1/);

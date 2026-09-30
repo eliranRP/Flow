@@ -37,6 +37,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Migration filenames are append-only
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          if git cat-file -e origin/main:supabase/migrations.lock 2>/dev/null; then
+            base="$(mktemp)"
+            git show origin/main:supabase/migrations.lock > "$base"
+            node scripts/check-migration-order.mjs --base "$base"
+            rm -f "$base"
+          else
+            node scripts/check-migration-order.mjs
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       # Root bundle tests, then @flow/app and @flow/shared unit tests.
