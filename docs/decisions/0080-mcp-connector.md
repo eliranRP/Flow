@@ -39,7 +39,7 @@ If the only key PostgREST will accept is the in-use Auth signing key, the spike 
 
 #### Spike result, 2026-09-30
 
-The spike stopped on criterion 1. The hosted JWKS contained one key, kid `985184ff-0c58-4ffd-a4a5-d7322027aee6`, Auth's in-use key. Standby is unproven, because Supabase's documentation lists only the current key as accepted. Criterion 3 was not run. The project has one standby slot, and the dashboard action "Rotate keys" would turn that slot into Auth's in-use key. That is the S21 trap. Cycle 1 does not create `FLOW_MCP_SIGNING_KEY` and does not create `FLOW_JWT_LEGACY`.
+The cycle 1 spike stopped on criterion 1. The hosted JWKS contained one key, kid `985184ff-0c58-4ffd-a4a5-d7322027aee6`, Auth's in-use key. Standby was unproven then, because Supabase's documentation lists only the current key as accepted. Criterion 3 was not run in that spike. The project has one standby slot, and the dashboard action "Rotate keys" would turn that slot into Auth's in-use key. That is the S21 trap. Cycle 1 does not create `FLOW_MCP_SIGNING_KEY` and does not create `FLOW_JWT_LEGACY`. The cycle 2 run below passed while the new key was still standby.
 
 Before cycle 2 the owner chooses standby with the guards below, or the legacy fallback. The guards for standby are:
 
@@ -48,7 +48,18 @@ Before cycle 2 the owner chooses standby with the guards below, or the legacy fa
 3. Criterion 1 checks that status. A count of keys in the JWKS is not the check.
 4. The runbook warns never to rotate that key into use.
 
-On 2026-09-30 the owner chose standby, with those four guards. Cycle 2 ships the spike that reads standby status from the Management API and can prove criterion 3 while the key is still standby. Criterion 3 has not been run, because the standby key is not created yet. The path in this cycle is standby. `FLOW_JWT_LEGACY` is not set. If criterion 3 fails when the owner runs the spike, the fallback is that function secret, in the Supabase dashboard only, and it is a dependency to retire before the end of 2026. This record does not take that fallback in advance.
+On 2026-09-30 the owner chose standby, with those four guards. Cycle 2 ships the spike that reads standby status from the Management API and can prove criterion 3 while the key is still standby. The path is standby. The result of the owner's run is the next section. `FLOW_JWT_LEGACY` is not set.
+
+#### Spike result, 2026-09-30, about 18:10 IDT
+
+The standby path passed. Production read tools use this signer after merge.
+
+1. An ES256 key, kid `46a0230c-733c-401d-a3fb-4a2d9ee7de72`, was imported through the dashboard. Its status is standby. The current key is still `985184ff-0c58-4ffd-a4a5-d7322027aee6`. The legacy HS256 key `df08281f` is previous. The new kid appears in the hosted JWKS. Standby status was read from the dashboard's JWT Keys list. It was not read through the Management API, because there was no local management token.
+2. The function secret `FLOW_MCP_SIGNING_KEY` is set in Supabase only. `FLOW_JWT_LEGACY` is not set, and it is not needed.
+3. A 60-second ES256 pass signed with the standby key, for the owner of Flow Test, got `get_dashboard` 200 with that company's id. A pass for the Erie owner got 200 with the Erie company, not Flow Test's.
+4. GET `flow-mcp` returns 405, and the response includes `x-flow-cf-connecting-ip`.
+
+The local copy of the private key is deleted. The only copy is in Supabase: the standby key and the function secret. Do not rotate the standby key into use.
 
 #### Who the pass belongs to
 
@@ -164,7 +175,7 @@ Those tools add no schema in this record. `private.mcp_writes` is part of the fi
 - The ` · בעוזר` marker, and a 15-second poll while the document is visible. Realtime stays off.
 - `split_expense`, `collapse_expense`, `create_project`, `rename_project`, and `finish_project`.
 
-Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke. If criterion 3 fails and `FLOW_JWT_LEGACY` is set as a function secret, retire that secret before the HS256 deprecation at the end of 2026. It is not set while standby is the path.
+Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke. The 18:10 IDT spike passed on standby, so `FLOW_JWT_LEGACY` is not set. If a later change sets that function secret, retire it before the HS256 deprecation at the end of 2026.
 
 ### Noted for the first release
 
