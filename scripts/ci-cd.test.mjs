@@ -87,6 +87,8 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(preflight, /cd-output.mjs read-only/);
   assert.match(preflight, /cd-output.mjs counts/);
   assert.match(preflight, /cd-output.mjs dry-run --target remote/);
+  assert.match(preflight, /db push --db-url "\$SUPABASE_DB_URL" --dry-run --output-format json/);
+  assert.match(readFileSync(new URL("./cd-dry-run-pending.sh", import.meta.url), "utf8"), /--output-format json/);
   assert.match(preflight, /--dry-run/);
   assert.match(preflight, /preflight-r23.sql/);
   assert.match(preflight, /backfill-recorded/);

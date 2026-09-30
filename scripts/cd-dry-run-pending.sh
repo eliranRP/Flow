@@ -28,7 +28,7 @@ trap cleanup EXIT
 
 printf '%s\n' "-- CI dry-run fixture. This file is deleted and must not be applied." >"$file"
 
-if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run >"$log" 2>&1; then
+if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run --output-format json >"$log" 2>&1; then
   redact <"$log"
   echo "Pending dry-run failed. The fixture migration was not pushed."
   exit 1
