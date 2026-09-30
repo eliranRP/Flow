@@ -2,6 +2,8 @@
 
 ## 2026-09-30
 
+Decision [0080](decisions/0080-mcp-connector.md), Proposed. An MCP connector tags the ledger by calling the RPCs the app already calls. The assistant does not share the app's session: each call signs a 60-second JWT after a scoped secret check. A bulk apply requires a signed preview. Tool names and payloads are in [MCP tools](mcp/TOOLS.md). No application code ships with the record. This amends [0006](decisions/0006-confirm-not-type.md), [0011](decisions/0011-auto-approve-high-confidence.md), [0069](decisions/0069-back-and-one-tap-review.md) points 8 and 11, and the empty sentence in [0072](decisions/0072-design-review-rulings.md) point 11.
+
 Deploys stay automatic. After both reviewer bots approve and CI is green, a push to `main` deploys without a person. The `production` environment has no required reviewer, and required pull request approvals stay at 0. `.github/CODEOWNERS` is ownership and notification only. It does not enforce review. Eliran accepts that owner risk. Decision [0079](decisions/0079-automatic-deploy-owner-risk.md).
 
 The dry-run classifier accepts only the JSON result. The log must contain the DRY RUN line and exactly one object with `dryRun: true`. Malformed JSON fails, and so does a JSON line whose `dryRun` is not true. A pending text list next to `upToDate: true` fails. Pending JSON next to an up-to-date text line fails. When the JSON `migrations` list and a text `.sql` list are both present, the names must be equal. There is no plain-text success path. `.github/CODEOWNERS` lists `@eliranRP` on the migration, preflight, workflow, package, and config paths. That file is ownership and notification only. It does not enforce review. Decision [0078](decisions/0078-schema-v1-rename.md).

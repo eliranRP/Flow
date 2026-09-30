@@ -1,7 +1,7 @@
 # Confirm, don't type
 
 **Date:** 2026-09-26
-**Status:** Accepted. [0050](0050-demo-splits-and-review.md) amends this for SUMIT rows that are already in the books: they stay in the P&L while they wait in Review.
+**Status:** Accepted. [0050](0050-demo-splits-and-review.md) amends this for SUMIT rows that are already in the books: they stay in the P&L while they wait in Review. [0080](0080-mcp-connector.md) (proposed) amends the confirmation: an MCP `approve_review` is the owner's confirmation, because the connector runs as the owner at the owner's request. An MCP assignment on an open review item stays a suggestion until that confirmation.
 
 [0011](0011-auto-approve-high-confidence.md) decides what happens to a high-confidence row. [0021](0021-shared-costs-and-overhead.md) adds a split across active projects and a recurring split rule. This record stays Accepted for confirm-not-type. A one-project remember rule is unchanged.
 
@@ -26,5 +26,7 @@ The product suggests a project and a category. The owner confirms. The daily ope
 A type-first flow: the owner fills project and category on every row, with suggestions as an optional hint.
 
 ## Consequences
+
+An MCP `approve_review` counts as the tap in this record. `assign_expense` and `set_expense_category`, while a review item is open, do not. The card stays in לאישור with הצעה, and אישור stays one tap. [0080](0080-mcp-connector.md).
 
 The review card, the change sheet, and the rule are core product, not settings buried in a menu. The success metric "at least 80% of AI suggestions accepted unchanged after month one" depends on rules accumulating. A wrong default on the remember toggle would write bad rules, so the sheet shows the rule it is about to save (supplier, project, category) while the toggle is on. Zero untagged transactions means every approved row has a project or overhead, and a category, before it enters a report.

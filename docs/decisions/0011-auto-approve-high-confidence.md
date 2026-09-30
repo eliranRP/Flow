@@ -1,7 +1,7 @@
 # Auto-approve high-confidence items
 
 **Date:** 2026-09-26
-**Status:** Accepted
+**Status:** Accepted. [0080](0080-mcp-connector.md) (proposed) amends this: an MCP suggestion is not high confidence and does not skip the queue.
 
 ## Context
 
@@ -16,7 +16,7 @@ High-confidence items are auto-approved by default. High confidence means either
 
 Those items skip the review queue (`לאישור`) and count in reports immediately. After the batch, the owner sees a short summary of what was auto-approved. Any item in that summary can be reopened and changed.
 
-Lower-confidence rows, including an AI guess that is not backed by an invoice match or a rule, still go to the review queue one card at a time.
+Lower-confidence rows, including an AI guess that is not backed by an invoice match or a rule, still go to the review queue one card at a time. An MCP `assign_expense` or `set_expense_category` on an open review item is that kind of guess. It does not auto-approve. Only `approve_review`, or the owner's אישור, closes the item. [0080](0080-mcp-connector.md).
 
 ## Alternatives rejected
 
