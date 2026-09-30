@@ -204,6 +204,21 @@ jobs:
           node scripts/stamp-build.mjs "$GITHUB_SHA"
           pnpm check:bundle
 
+      - name: Probe the access token and stage the function secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FLOW_MCP_PEPPER: ${{ secrets.FLOW_MCP_PEPPER }}
+        run: |
+          set -euo pipefail
+          umask 077
+          envfile="$(mktemp "$RUNNER_TEMP/flow-mcp-secrets.XXXXXX")"
+          echo "FLOW_MCP_ENV_FILE=$envfile" >> "$GITHUB_ENV"
+          trap 'rm -f "$envfile"' EXIT INT TERM
+          printf 'FLOW_MCP_PEPPER=%s\n' "$FLOW_MCP_PEPPER" > "$envfile"
+          printf 'FLOW_MCP_APP_ORIGINS=%s\n' 'https://flow-app-dx5.pages.dev' >> "$envfile"
+          supabase secrets list --project-ref sxqpnetmtufkzowutduq >/dev/null
+          trap - EXIT INT TERM
+
       - name: Read-only preflight and migration push
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -223,16 +238,19 @@ jobs:
       - name: Set flow-mcp secrets, then deploy the function
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          FLOW_MCP_PEPPER: ${{ secrets.FLOW_MCP_PEPPER }}
         run: |
           set -euo pipefail
-          umask 077
-          envfile="$(mktemp)"
-          trap 'rm -f "$envfile"' EXIT
-          printf 'FLOW_MCP_PEPPER=%s\n' "$FLOW_MCP_PEPPER" > "$envfile"
-          printf 'FLOW_MCP_APP_ORIGINS=%s\n' 'https://flow-app-dx5.pages.dev' >> "$envfile"
-          supabase secrets set --project-ref sxqpnetmtufkzowutduq --env-file "$envfile"
+          test -n "${FLOW_MCP_ENV_FILE:-}"
+          test -f "$FLOW_MCP_ENV_FILE"
+          supabase secrets set --project-ref sxqpnetmtufkzowutduq --env-file "$FLOW_MCP_ENV_FILE"
           supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq
 
       - name: Smoke the production hostname
         run: bash scripts/cd-smoke.sh "$GITHUB_SHA"
+
+      - name: Remove the staged function secrets file
+        if: always()
+        run: |
+          if [ -n "${FLOW_MCP_ENV_FILE:-}" ]; then
+            rm -f "$FLOW_MCP_ENV_FILE"
+          fi

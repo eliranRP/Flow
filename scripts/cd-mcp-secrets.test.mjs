@@ -8,7 +8,7 @@ test("the pepper must be JSON with a kid and a secret of at least 32 bytes", () 
   assert.equal(pepperProblem(undefined), "is empty");
   assert.equal(pepperProblem("raw-pepper"), "must be JSON with a kid and a secret of at least 32 bytes");
   assert.match(pepperProblem(JSON.stringify({ kid: "mcp-pepper-1", secret: "a".repeat(31) })) ?? "", /32 bytes/);
-  assert.match(pepperProblem(JSON.stringify({ kid: "mcp-pepper-1", secret: `${"a".repeat(32)}\n` })) ?? "", /single line/);
+  assert.match(pepperProblem(JSON.stringify({ kid: "mcp-pepper-1", secret: `${"a".repeat(32)}+` })) ?? "", /letters, digits/);
   assert.equal(pepperProblem(JSON.stringify({ kid: "mcp-pepper-1", secret })), null);
   assert.equal(
     pepperProblem(JSON.stringify({
@@ -31,5 +31,6 @@ test("the pepper must be JSON with a kid and a secret of at least 32 bytes", () 
 test("the access token must be a scoped personal access token", () => {
   assert.equal(accessTokenProblem(""), "is empty");
   assert.match(accessTokenProblem("sbp_classicexampletokenvalue") ?? "", /classic/);
+  assert.equal(accessTokenProblem("sbp_fc"), null);
   assert.equal(accessTokenProblem(`sbp_fc_${"b".repeat(20)}`), null);
 });

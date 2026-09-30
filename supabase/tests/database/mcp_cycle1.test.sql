@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(34);
+select plan(35);
 
 do $users$
 begin
@@ -291,6 +291,15 @@ select
   '[]'::jsonb
 from private.mcp_credentials
 where token_hash = 'hash-owner-rate-cccc';
+
+select is(
+  private.consume_mcp_undo(
+    (select id from auth.users where email = 'mcp-other@test.flow'),
+    (select id from private.mcp_writes)
+  ),
+  false,
+  'another user cannot consume this undo'
+);
 
 select is(
   private.consume_mcp_undo(

@@ -3,7 +3,8 @@
 // Prints no secret values.
 import { pathToFileURL } from "node:url";
 
-const SCOPED_TOKEN = /^sbp_fc_[A-Za-z0-9_-]{16,}$/;
+const SCOPED_TOKEN = /^sbp_fc/;
+const PEPPER_TOKEN = /^[A-Za-z0-9_-]+$/;
 
 /**
  * @param {unknown} value
@@ -16,13 +17,13 @@ function entryProblem(value, kids) {
   }
   const kid = /** @type {{ kid?: unknown }} */ (value).kid;
   const secret = /** @type {{ secret?: unknown }} */ (value).secret;
-  if (typeof kid !== "string" || kid.trim() === "" || kid.trim().length > 64 || /[\r\n]/.test(kid)) {
-    return "needs a kid";
+  if (typeof kid !== "string" || !PEPPER_TOKEN.test(kid) || kid.length > 64) return "needs a kid";
+  if (kids.has(kid)) return "repeats a kid";
+  if (typeof secret !== "string" || !PEPPER_TOKEN.test(secret)) {
+    return "must use only letters, digits, underscore, and hyphen";
   }
-  if (kids.has(kid.trim())) return "repeats a kid";
-  if (typeof secret !== "string" || /[\r\n]/.test(secret)) return "must be a single line";
   if (Buffer.byteLength(secret) < 32) return "needs a secret of at least 32 bytes";
-  kids.add(kid.trim());
+  kids.add(kid);
   return null;
 }
 
@@ -79,9 +80,6 @@ function main() {
   const missing = required.filter((name) => !process.env[name]);
   if (missing.length > 0) {
     fail(`Deploy failed. Missing production environment secrets: ${missing.join(" ")}.`);
-  }
-  if (process.env.FLOW_MCP_SIGNING_KEY) {
-    fail("Deploy failed. FLOW_MCP_SIGNING_KEY is not a cycle 1 secret.");
   }
   const token = accessTokenProblem(process.env.SUPABASE_ACCESS_TOKEN);
   if (token) fail(`Deploy failed. SUPABASE_ACCESS_TOKEN ${token}.`);

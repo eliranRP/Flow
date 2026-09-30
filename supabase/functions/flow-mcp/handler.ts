@@ -94,13 +94,17 @@ function publishableKey(deps: Deps): string {
 
 type Pepper = { kid: string; bytes: Uint8Array };
 
+const PEPPER_TOKEN = /^[A-Za-z0-9_-]+$/;
+
 function pepperEntry(value: unknown): Pepper | null {
   if (value == null || typeof value !== "object" || Array.isArray(value)) return null;
   const kid = (value as { kid?: unknown }).kid;
   const secret = (value as { secret?: unknown }).secret;
-  if (typeof kid !== "string" || kid.trim() === "" || kid.trim().length > 64 || /[\r\n]/.test(kid)) return null;
-  if (typeof secret !== "string" || /[\r\n]/.test(secret) || new TextEncoder().encode(secret).byteLength < 32) return null;
-  return { kid: kid.trim(), bytes: new TextEncoder().encode(secret) };
+  if (typeof kid !== "string" || !PEPPER_TOKEN.test(kid) || kid.length > 64) return null;
+  if (typeof secret !== "string" || !PEPPER_TOKEN.test(secret) || new TextEncoder().encode(secret).byteLength < 32) {
+    return null;
+  }
+  return { kid, bytes: new TextEncoder().encode(secret) };
 }
 
 /** Current pepper first, then previous kids. A rotation keeps old tokens working. */
@@ -335,7 +339,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   });
   const limit = limited.json as { allowed?: unknown; retry_after_seconds?: unknown } | null;
   if (limited.status >= 400 || typeof limit?.allowed !== "boolean") {
-    return jsonResponse(req, { error: "rate_limited" }, 503);
+    return jsonResponse(req, { error: "unavailable" }, 503);
   }
   if (limit.allowed !== true) {
     const retry = typeof limit.retry_after_seconds === "number" ? limit.retry_after_seconds : 1;
@@ -416,10 +420,3 @@ function finish(route: Route, response: Response): Response {
   return new Response(response.body, { status: response.status, headers });
 }
 
-/** Criterion 4. A missing cf-connecting-ip is a failed spike, not a pass. */
-export function criterion4(header: string | null): { ok: boolean; message: string } {
-  if (header == null || header.trim() === "" || header === "absent") {
-    return { ok: false, message: "criterion 4 failed: cf-connecting-ip did not reach the function" };
-  }
-  return { ok: true, message: "criterion 4 passed: cf-connecting-ip reached the function" };
-}

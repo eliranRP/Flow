@@ -86,10 +86,14 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const publish = deploy.indexOf("pnpm exec wrangler");
   const smoke = deploy.indexOf("cd-smoke.sh");
   const validate = deploy.indexOf("cd-mcp-secrets.mjs");
+  const probe = deploy.indexOf("secrets list");
   const secretsFile = deploy.indexOf("--env-file");
   const fn = deploy.indexOf("functions deploy flow-mcp");
   assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
-  assert.ok(validate >= 0 && validate < migrate && publish < secretsFile && secretsFile < fn && fn < smoke);
+  assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < secretsFile && secretsFile < fn && fn < smoke);
+  assert.match(deploy, /mktemp "\$RUNNER_TEMP\/flow-mcp-secrets\.XXXXXX"/);
+  assert.match(deploy, /trap 'rm -f "\$envfile"' EXIT INT TERM/);
+  assert.match(deploy, /if: always\(\)/);
 
   assert.match(push, /cd-preflight.sh/);
   assert.match(push, /db push --db-url/);

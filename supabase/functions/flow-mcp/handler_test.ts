@@ -1,4 +1,5 @@
-import { criterion4, handle, hmacSecret } from "./handler.ts";
+import { handle, hmacSecret } from "./handler.ts";
+import { criterion4 } from "../../../scripts/mcp-signing-spike.mjs";
 import { decodeJwtPart, signUserJwt, type SigningKey } from "./sign.ts";
 
 function assert(condition: unknown, message: string): void {
@@ -98,7 +99,7 @@ Deno.test("mint takes p_user from getUser and ignores a body user id", async () 
   assertEquals(store.authorization, "Bearer secret-key", "dictionary key");
 });
 
-Deno.test("a foreign origin cannot mint, and a failed clipboard path is not this route", async () => {
+Deno.test("a foreign origin cannot mint", async () => {
   const calls: Call[] = [];
   const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp/mint", {
     method: "POST",
@@ -382,6 +383,7 @@ Deno.test("the rate limit fails closed when bump_mcp_rate errors", async () => {
     },
   }, { statuses: { bump_mcp_rate: 500 } }));
   assertEquals(response.status, 503, "closed");
+  assertEquals((await response.json()).error, "unavailable", "unavailable");
   assert(calls.every((call) => !call.url.endsWith("/note_auth_failure")), "not a failed secret");
   assert(calls.every((call) => !call.url.endsWith("/touch_mcp_credential")), "not touched");
 });

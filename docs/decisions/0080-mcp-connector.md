@@ -50,14 +50,14 @@ Before cycle 2 the owner chooses standby with the guards below, or the legacy fa
 
 #### Secrets and deploy
 
-The production deploy job checks secret shape before migrations and Pages, sets `FLOW_MCP_PEPPER` from an env file, then deploys `flow-mcp`. Cycle 1 does not set a signing key.
+The production deploy job checks the pepper's shape, then, before migrations and Pages, runs `supabase secrets list` for project `sxqpnetmtufkzowutduq`. That probe is what proves the access token. A prefix check does not. There is no skip path: a missing, invalid, or expired token fails the whole deploy before migrations and Pages. The job then sets `FLOW_MCP_PEPPER` from an env file and deploys `flow-mcp`. Cycle 1 does not set a signing key.
 
 | GitHub environment `production` | Function secret | First release |
 | --- | --- | --- |
 | `FLOW_MCP_PEPPER` | same, with its `kid` | yes |
 | `FLOW_MCP_CONFIRM_KEY` | same, its own `kid` | no, deferred with bulk |
 
-`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. It does store `SUPABASE_DB_URL` in the same environment, and `SUPABASE_ACCESS_TOKEN`. A token that can read Edge Function Secrets can read the keys Supabase injects into the function, including `SUPABASE_SECRET_KEYS`. The token is therefore scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and to the shortest expiry. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
+`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. That is not a claim that the environment is free of equivalent access. `SUPABASE_DB_URL` is in the same environment, and `SUPABASE_ACCESS_TOKEN` can read Edge Function Secrets, including the injected `SUPABASE_SECRET_KEYS`. The token is scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and it expires in 30 days. The expiry date is kept in the [CI and CD](../runbooks/ci-cd.md#access-token-expiry) runbook, and a renewal reminder fires about 5 days before. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
 
 #### Credential wrappers
 
@@ -73,7 +73,7 @@ The production deploy job checks secret shape before migrations and Pages, sets 
 | `public.bump_mcp_rate(uuid, uuid, text)` | One atomic increment for the token and the user |
 | `public.note_auth_failure(text)` | Count a failed secret for the throttle address |
 
-`p_user` is the id from the verified `getUser` call in the function. Mint, revoke, and status never read a user id from the request body. Mint verifies the app's user JWT by calling GoTrue `getUser` (`GET /auth/v1/user`). GoTrue validates that JWT. The function does not call `getClaims`, and it does not validate the JWT against JWKS itself. A payload decoded in the function, with no `getUser` call, is rejected. The pepper never leaves the function. The secret is `flow_mcp_` plus 43 base64url characters. At rest it is HMAC-SHA256 with the current pepper, and the row stores that pepper's `kid`. `FLOW_MCP_PEPPER` is JSON: `kid`, and `secret` of at least 32 bytes. A shorter secret is rejected. `previous` is an optional array of the same shape. Lookup tries the current kid and then each previous kid, so replacing the current pepper does not by itself make an existing token fail. Dropping a kid does. It is returned once. `expires_at` is 90 days. A `bump_mcp_rate` error fails closed.
+`p_user` is the id from the verified `getUser` call in the function. Mint, revoke, and status never read a user id from the request body. Mint verifies the app's user JWT by calling GoTrue `getUser` (`GET /auth/v1/user`). GoTrue validates that JWT. The function does not call `getClaims`, and it does not validate the JWT against JWKS itself. A payload decoded in the function, with no `getUser` call, is rejected. The pepper never leaves the function. The secret is `flow_mcp_` plus 43 base64url characters. At rest it is HMAC-SHA256 with the current pepper, and the row stores that pepper's `kid`. `FLOW_MCP_PEPPER` is JSON: `kid`, and `secret` of at least 32 bytes. Both use only letters, digits, underscore, and hyphen. A shorter secret, or any other character, is rejected. `previous` is an optional array of the same shape. Lookup tries the current kid and then each previous kid, so replacing the current pepper does not by itself make an existing token fail. Dropping a kid does. It is returned once. `expires_at` is 90 days. A `bump_mcp_rate` error fails closed and the response is `unavailable`.
 
 Write functions in this release are granted to `authenticated` only, not to `service_role`.
 
@@ -158,7 +158,7 @@ Those tools add no schema in this record. `private.mcp_writes` is part of the fi
 - The ` · בעוזר` marker, and a 15-second poll while the document is visible. Realtime stays off.
 - `split_expense`, `collapse_expense`, `create_project`, `rename_project`, and `finish_project`.
 
-Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself).
+Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke.
 
 ### Noted for the first release
 
