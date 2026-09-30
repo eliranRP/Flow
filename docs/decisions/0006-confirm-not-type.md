@@ -27,4 +27,6 @@ A type-first flow: the owner fills project and category on every row, with sugge
 
 ## Consequences
 
+An assistant connection is specified in [0080](0080-mcp-connector.md). The confirm-not-type rules above are unchanged.
+
 The review card, the change sheet, and the rule are core product, not settings buried in a menu. The success metric "at least 80% of AI suggestions accepted unchanged after month one" depends on rules accumulating. A wrong default on the remember toggle would write bad rules, so the sheet shows the rule it is about to save (supplier, project, category) while the toggle is on. Zero untagged transactions means every approved row has a project or overhead, and a category, before it enters a report.
