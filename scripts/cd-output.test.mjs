@@ -75,10 +75,18 @@ test("dry-run text matches whole lines for the expected target", () => {
     "",
     "Finished supabase db push.",
   ].join("\n");
-  assert.deepEqual(classifyDryRun(pending, "remote"), { ok: true, kind: "pending" });
+  assert.deepEqual(classifyDryRun(pending, "remote"), {
+    ok: true,
+    kind: "pending",
+    migrations: ["20990101000000_ci_dry_run_pending.sql"],
+  });
   const localPending = pending.replace("remote database", "local database");
   assert.equal(classifyDryRun(localPending, "local").ok, false);
-  assert.deepEqual(classifyDryRun(localPending, "local", "pending"), { ok: true, kind: "pending" });
+  assert.deepEqual(classifyDryRun(localPending, "local", "pending"), {
+    ok: true,
+    kind: "pending",
+    migrations: ["20990101000000_ci_dry_run_pending.sql"],
+  });
 
   assert.equal(classifyDryRun(localUpToDateLog, "remote").ok, false);
   assert.match(classifyDryRun(localUpToDateLog, "remote").reason ?? "", /Local/);
@@ -92,4 +100,41 @@ test("dry-run text matches whole lines for the expected target", () => {
   assert.equal(classifyDryRun(`${upToDate}\n${localUpToDate}`, "remote").ok, false);
   assert.equal(classifyDryRun(upToDate, "hosted").ok, false);
   assert.equal(classifyDryRun(upToDate).ok, false);
+});
+
+test("dry-run JSON from CLI 2.118.0 wins over the plain-text lines", () => {
+  const remoteJson = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Remote database is up to date."}';
+  const hosted = [dryRunHeadsUp, "Connecting to remote database...", remoteJson].join("\n");
+  assert.deepEqual(classifyDryRun(hosted, "remote"), { ok: true, kind: "up-to-date", target: "remote" });
+  assert.deepEqual(classifyDryRun(remoteJson, "remote"), { ok: true, kind: "up-to-date", target: "remote" });
+  assert.equal(classifyDryRun(remoteJson, "local").ok, false);
+
+  const localJson = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Local database is up to date."}';
+  assert.deepEqual(classifyDryRun(localJson, "local"), { ok: true, kind: "up-to-date", target: "local" });
+  assert.equal(classifyDryRun(localJson, "remote").ok, false);
+
+  const pendingJson = '{"upToDate":false,"dryRun":true,"migrations":["20990101000000_ci_dry_run_pending.sql"],"seeds":[],"roles":[],"message":"Finished supabase db push."}';
+  assert.deepEqual(classifyDryRun(pendingJson, "remote"), {
+    ok: true,
+    kind: "pending",
+    migrations: ["20990101000000_ci_dry_run_pending.sql"],
+  });
+  assert.equal(classifyDryRun(pendingJson, "local").ok, false);
+  assert.deepEqual(classifyDryRun(pendingJson, "local", "pending"), {
+    ok: true,
+    kind: "pending",
+    migrations: ["20990101000000_ci_dry_run_pending.sql"],
+  });
+  assert.deepEqual(classifyDryRun(`${pendingJson}\n${remoteUpToDate}`, "remote"), {
+    ok: true,
+    kind: "pending",
+    migrations: ["20990101000000_ci_dry_run_pending.sql"],
+  });
+
+  const listed = '{"upToDate":true,"dryRun":true,"migrations":["20990101000000_ci_dry_run_pending.sql"],"seeds":[],"roles":[],"message":"Remote database is up to date."}';
+  assert.equal(classifyDryRun(listed, "remote").ok, false);
+  const seeded = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":["seed.sql"],"roles":[],"message":"Remote database is up to date."}';
+  assert.equal(classifyDryRun(seeded, "remote").ok, false);
+  const otherMessage = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Finished supabase db push."}';
+  assert.equal(classifyDryRun(otherMessage, "remote").ok, false);
 });

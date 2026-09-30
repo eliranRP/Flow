@@ -101,15 +101,67 @@ export function ruleRiskIsZero(counts) {
 }
 
 /**
+ * A whole trimmed line that is a JSON object with `dryRun: true`.
+ * CLI 2.118.0 writes this from `output.success` when the format is json.
+ * @param {string} line
+ * @returns {Record<string, unknown> | null}
+ */
+function dryRunJson(line) {
+  if (!line.startsWith("{") || !line.endsWith("}")) return null;
+  try {
+    const value = JSON.parse(line);
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    if (value.dryRun !== true) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+/** @param {unknown} value */
+function emptyArray(value) {
+  return Array.isArray(value) && value.length === 0;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string[] | null}
+ */
+function migrationNames(value) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  /** @type {string[]} */
+  const names = [];
+  for (const item of value) {
+    if (typeof item !== "string" || item.trim() === "") return null;
+    names.push(item);
+  }
+  return names;
+}
+
+/** @param {string[]} lines */
+function listedSql(lines) {
+  /** @type {string[]} */
+  const names = [];
+  for (const line of lines) {
+    const found = line.match(/[A-Za-z0-9_.-]+\.sql/g);
+    if (found) names.push(...found);
+  }
+  return names;
+}
+
+/**
  * Fail closed. `target` is the database the command was aimed at.
- * Prod mode (`remote`) accepts only the exact line `Remote database is up to date.`
- * Local mode accepts only `Local database is up to date.`
- * A trimmed line is a match. A longer line that contains the sentence is not.
+ * A JSON line with `dryRun: true` wins. Up to date requires `upToDate === true`
+ * and empty `migrations`, `seeds`, and `roles`. Prod mode also requires `message` to start with `Remote`.
+ * Local mode requires `message` to start with `Local`.
+ * Pending is a non-empty `migrations` array. Those names are returned.
+ * Plain text is used only when no JSON line is present. A trimmed line is a match.
+ * Prod text accepts only `Remote database is up to date.`. Local text accepts only `Local database is up to date.`.
  * `expect` `auto` allows a pending listing on remote only. `pending` requires that listing.
  * @param {string} text
  * @param {string} target
  * @param {"auto" | "pending"} [expect]
- * @returns {{ ok: true, kind: "up-to-date", target: "remote" | "local" } | { ok: true, kind: "pending" } | { ok: false, reason: string }}
+ * @returns {{ ok: true, kind: "up-to-date", target: "remote" | "local" } | { ok: true, kind: "pending", migrations: string[] } | { ok: false, reason: string }}
  */
 export function classifyDryRun(text, target, expect = "auto") {
   if (target !== "remote" && target !== "local") {
@@ -119,12 +171,53 @@ export function classifyDryRun(text, target, expect = "auto") {
     return { ok: false, reason: "dry-run expect must be auto or pending" };
   }
   const lines = trimmedLines(text);
+  /** @type {Record<string, unknown>[]} */
+  const jsonLines = [];
+  for (const line of lines) {
+    const parsed = dryRunJson(line);
+    if (parsed) jsonLines.push(parsed);
+  }
+  if (jsonLines.length > 1) {
+    return { ok: false, reason: "dry-run output contained more than one JSON result" };
+  }
+  const json = jsonLines[0];
+  if (json) {
+    const message = typeof json.message === "string" ? json.message : "";
+    const names = migrationNames(json.migrations);
+    const upToDate = json.upToDate === true
+      && emptyArray(json.migrations)
+      && emptyArray(json.seeds)
+      && emptyArray(json.roles);
+    if (upToDate) {
+      if (target === "remote" && !message.startsWith("Remote")) {
+        return { ok: false, reason: "dry-run JSON message did not start with Remote" };
+      }
+      if (target === "local" && !message.startsWith("Local")) {
+        return { ok: false, reason: "dry-run JSON message did not start with Local" };
+      }
+      if (expect === "pending") {
+        return { ok: false, reason: "dry-run output did not match Supabase CLI 2.118.0" };
+      }
+      return { ok: true, kind: "up-to-date", target };
+    }
+    if (json.upToDate === true) {
+      return { ok: false, reason: "dry-run JSON said up to date and also listed migrations, seeds, or roles" };
+    }
+    if (names) {
+      if (target === "local" && expect !== "pending") {
+        return { ok: false, reason: "dry-run listed pending migrations against a local target" };
+      }
+      return { ok: true, kind: "pending", migrations: names };
+    }
+    return { ok: false, reason: "dry-run JSON did not match Supabase CLI 2.118.0" };
+  }
+
   const has = (sentence) => lines.includes(sentence);
   const headsUp = has(dryRunHeadsUp);
   const remote = has(remoteUpToDate);
   const local = has(localUpToDate);
   const pending = has(wouldPushMigrations);
-  const sqlListed = lines.some((line) => line.includes(".sql"));
+  const sqlNames = listedSql(lines);
   const expectedSentence = target === "remote" ? remoteUpToDate : localUpToDate;
   const otherSentence = target === "remote" ? localUpToDate : remoteUpToDate;
   const otherName = target === "remote" ? "Local" : "Remote";
@@ -132,21 +225,21 @@ export function classifyDryRun(text, target, expect = "auto") {
   if (has(otherSentence)) {
     return { ok: false, reason: `dry-run reported ${otherName} but the target is ${target}` };
   }
-  if ((remote || local) && sqlListed) {
+  if ((remote || local) && sqlNames.length > 0) {
     return { ok: false, reason: "dry-run listed a migration file alongside an up-to-date line" };
   }
   if ((remote || local) && pending) {
     return { ok: false, reason: "dry-run reported both up to date and pending migrations" };
   }
 
-  const upToDate = headsUp && has(expectedSentence) && !sqlListed && !pending;
-  const pendingOk = headsUp && pending && sqlListed && !remote && !local;
+  const upToDate = headsUp && has(expectedSentence) && sqlNames.length === 0 && !pending;
+  const pendingOk = headsUp && pending && sqlNames.length > 0 && !remote && !local;
   if (expect === "pending") {
-    if (pendingOk) return { ok: true, kind: "pending" };
+    if (pendingOk) return { ok: true, kind: "pending", migrations: sqlNames };
     return { ok: false, reason: "dry-run output did not match Supabase CLI 2.118.0" };
   }
   if (upToDate) return { ok: true, kind: "up-to-date", target };
-  if (target === "remote" && pendingOk) return { ok: true, kind: "pending" };
+  if (target === "remote" && pendingOk) return { ok: true, kind: "pending", migrations: sqlNames };
   if (target === "local" && pending && headsUp) {
     return { ok: false, reason: "dry-run listed pending migrations against a local target" };
   }
@@ -188,7 +281,12 @@ if (isMain) {
       console.error(result.reason);
       process.exit(1);
     }
-    console.log(result.kind === "up-to-date" ? `up-to-date ${result.target}` : result.kind);
+    if (result.kind === "pending") {
+      for (const name of result.migrations) console.error(`pending migration: ${name}`);
+      console.log("pending");
+    } else {
+      console.log(`up-to-date ${result.target}`);
+    }
   } else if (mode === "backfill-recorded") {
     if (!backfillVersionsRecorded(text)) process.exit(1);
   } else if (mode === "rule-risk") {

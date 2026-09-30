@@ -79,7 +79,7 @@ else
 fi
 
 echo "Preflight: supabase db push --dry-run (no changes applied)"
-if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run >"$dry_log" 2>&1; then
+if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run --output-format json >"$dry_log" 2>&1; then
   redact <"$dry_log"
   echo "Preflight dry-run failed. Migrations were not pushed."
   exit 1
