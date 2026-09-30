@@ -19,6 +19,7 @@ trap 'rm -f "$body" "$headers"' EXIT
 
 code="$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' -X GET "$base")"
 test "$code" = "405"
+grep -qi '^allow: POST' "$headers"
 grep -qi '^x-flow-cf-connecting-ip: absent' "$headers"
 
 code="$(curl -sS -o "$body" -w '%{http_code}' -X POST "$base" \

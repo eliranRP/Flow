@@ -1,11 +1,7 @@
 // flow-mcp cycle 1. Stateless MCP 2025-06-18, plus mint, revoke, and status.
 // Decision 0080. No ledger tools. tools/list is empty. verify_jwt is false.
 
-const APP_ORIGINS = new Set([
-  "http://127.0.0.1:43123",
-  "http://localhost:43123",
-  "https://flow-app-dx5.pages.dev",
-]);
+const PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
 
 const PROTOCOL = "2025-06-18";
 
@@ -42,6 +38,11 @@ function clientIp(req: Request): string | null {
   return value.trim();
 }
 
+function methodNotAllowed(req: Request, route: Route): Response {
+  const allow = route === "mcp" ? "POST" : "POST, OPTIONS";
+  return jsonResponse(req, { error: "method" }, 405, { allow });
+}
+
 function jsonResponse(req: Request, body: unknown, status: number, extra?: HeadersInit): Response {
   const headers = new Headers(extra);
   headers.set("content-type", "application/json");
@@ -76,9 +77,13 @@ function readJsonKey(raw: string | undefined, field: string): string {
 }
 
 function secretKey(deps: Deps): string {
-  const fromDictionary = readJsonKey(deps.env("SUPABASE_SECRET_KEYS"), "default");
-  if (fromDictionary) return fromDictionary;
-  return deps.env("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  return readJsonKey(deps.env("SUPABASE_SECRET_KEYS"), "default");
+}
+
+function appOrigins(deps: Deps): Set<string> {
+  const raw = deps.env("FLOW_MCP_APP_ORIGINS");
+  if (raw == null || raw.trim() === "") return new Set([PRODUCTION_ORIGIN]);
+  return new Set(raw.split(",").map((item) => item.trim()).filter((item) => item.length > 0));
 }
 
 function publishableKey(deps: Deps): string {
@@ -87,15 +92,40 @@ function publishableKey(deps: Deps): string {
   return deps.env("SUPABASE_ANON_KEY") ?? "";
 }
 
-function pepperBytes(deps: Deps): Uint8Array | null {
-  const raw = deps.env("FLOW_MCP_PEPPER") ?? "";
-  if (!raw) return null;
-  let secret = raw;
-  if (raw.trim().startsWith("{")) {
-    secret = readJsonKey(raw, "secret");
+type Pepper = { kid: string; bytes: Uint8Array };
+
+function pepperEntry(value: unknown): Pepper | null {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return null;
+  const kid = (value as { kid?: unknown }).kid;
+  const secret = (value as { secret?: unknown }).secret;
+  if (typeof kid !== "string" || kid.trim() === "" || kid.trim().length > 64 || /[\r\n]/.test(kid)) return null;
+  if (typeof secret !== "string" || /[\r\n]/.test(secret) || new TextEncoder().encode(secret).byteLength < 32) return null;
+  return { kid: kid.trim(), bytes: new TextEncoder().encode(secret) };
+}
+
+/** Current pepper first, then previous kids. A rotation keeps old tokens working. */
+function peppersOf(raw: string | undefined): Pepper[] | null {
+  if (raw == null || raw.trim() === "") return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
   }
-  if (!secret) return null;
-  return new TextEncoder().encode(secret);
+  const current = pepperEntry(parsed);
+  if (!current) return null;
+  const previousRaw = (parsed as { previous?: unknown }).previous;
+  const previous = previousRaw == null ? [] : previousRaw;
+  if (!Array.isArray(previous)) return null;
+  const all = [current];
+  const kids = new Set([current.kid]);
+  for (const item of previous) {
+    const entry = pepperEntry(item);
+    if (!entry || kids.has(entry.kid)) return null;
+    kids.add(entry.kid);
+    all.push(entry);
+  }
+  return all;
 }
 
 function base64url(bytes: Uint8Array): string {
@@ -157,8 +187,15 @@ async function getUserId(deps: Deps, jwt: string): Promise<string | null> {
     headers: { apikey: key, authorization: `Bearer ${jwt}` },
   });
   if (!response.ok) return null;
-  const body = (await response.json()) as { id?: unknown };
-  return typeof body.id === "string" ? body.id : null;
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return null;
+  }
+  if (body == null || typeof body !== "object" || Array.isArray(body)) return null;
+  const id = (body as { id?: unknown }).id;
+  return typeof id === "string" && id.length > 0 ? id : null;
 }
 
 function bearer(req: Request): string {
@@ -167,10 +204,10 @@ function bearer(req: Request): string {
   return match?.[1] ?? "";
 }
 
-function appOrigin(req: Request): string | null {
+function appOrigin(req: Request, deps: Deps): string | null {
   const origin = req.headers.get("origin");
   if (origin == null) return null;
-  return APP_ORIGINS.has(origin) ? origin : null;
+  return appOrigins(deps).has(origin) ? origin : null;
 }
 
 async function noteFailure(deps: Deps, req: Request): Promise<{ throttled: boolean; retry: number }> {
@@ -216,15 +253,17 @@ async function handleMint(req: Request, deps: Deps, userId: string): Promise<Res
   if (body == null) return jsonResponse(req, { error: "validation" }, 400);
   const scope = scopeList(body.scope);
   if (!scope) return jsonResponse(req, { error: "validation" }, 400);
-  const pepper = pepperBytes(deps);
+  const peppers = peppersOf(deps.env("FLOW_MCP_PEPPER"));
+  const pepper = peppers?.[0];
   if (!pepper) return jsonResponse(req, { error: "server is missing a secret" }, 500);
   const secret = mintSecret();
-  const tokenHash = await hmacSecret(secret, pepper);
+  const tokenHash = await hmacSecret(secret, pepper.bytes);
   const expires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
   const stored = await rpc(deps, "store_mcp_credential", {
     p_user: userId,
     p_token_hash: tokenHash,
     p_scope: scope,
+    p_pepper_kid: pepper.kid,
     p_expires_at: expires,
   });
   if (stored.status >= 400) {
@@ -257,19 +296,36 @@ async function handleStatus(deps: Deps, req: Request, userId: string): Promise<R
 async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   const token = bearer(req);
   if (!token.startsWith("flow_mcp_")) return unauthorized(req, await noteFailure(deps, req));
-  const pepper = pepperBytes(deps);
-  if (!pepper) return jsonResponse(req, { error: "server is missing a secret" }, 500);
-  const tokenHash = await hmacSecret(token, pepper);
-  const found = await rpc(deps, "lookup_mcp_credential", { p_token_hash: tokenHash });
-  const row = found.json as {
+  const peppers = peppersOf(deps.env("FLOW_MCP_PEPPER"));
+  if (!peppers) return jsonResponse(req, { error: "server is missing a secret" }, 500);
+  let row: {
     found?: unknown;
     id?: unknown;
     user_id?: unknown;
     expires_at?: unknown;
     revoked_at?: unknown;
-  } | null;
+  } | null = null;
+  for (const pepper of peppers) {
+    const tokenHash = await hmacSecret(token, pepper.bytes);
+    const found = await rpc(deps, "lookup_mcp_credential", {
+      p_token_hash: tokenHash,
+      p_pepper_kid: pepper.kid,
+    });
+    if (found.status >= 400) return jsonResponse(req, { error: "could not read the credential" }, 500);
+    const candidate = found.json as {
+      found?: unknown;
+      id?: unknown;
+      user_id?: unknown;
+      expires_at?: unknown;
+      revoked_at?: unknown;
+    } | null;
+    if (candidate?.found === true) {
+      row = candidate;
+      break;
+    }
+  }
   const expired = typeof row?.expires_at === "string" && Date.parse(row.expires_at) <= Date.now();
-  if (found.status >= 400 || row?.found !== true || row.revoked_at != null || expired || typeof row.id !== "string") {
+  if (row?.found !== true || row.revoked_at != null || expired || typeof row.id !== "string") {
     return unauthorized(req, await noteFailure(deps, req));
   }
   const limited = await rpc(deps, "bump_mcp_rate", {
@@ -278,7 +334,10 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     p_kind: "read",
   });
   const limit = limited.json as { allowed?: unknown; retry_after_seconds?: unknown } | null;
-  if (limit?.allowed === false) {
+  if (limited.status >= 400 || typeof limit?.allowed !== "boolean") {
+    return jsonResponse(req, { error: "rate_limited" }, 503);
+  }
+  if (limit.allowed !== true) {
     const retry = typeof limit.retry_after_seconds === "number" ? limit.retry_after_seconds : 1;
     return jsonResponse(req, { error: "rate_limited", retry_after_seconds: retry }, 429, {
       "retry-after": String(retry),
@@ -314,39 +373,46 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
 export async function handle(req: Request, deps: Deps = defaultDeps): Promise<Response> {
   const url = new URL(req.url);
   const route = routeOf(url);
-  if (req.method === "GET") return jsonResponse(req, { error: "method" }, 405);
+  if (req.method === "GET") return finish(route, methodNotAllowed(req, route));
   if (req.method === "OPTIONS") {
-    if (route === "mcp") return jsonResponse(req, { error: "method" }, 405);
-    const origin = appOrigin(req);
+    if (route === "mcp") return methodNotAllowed(req, route);
+    const origin = appOrigin(req, deps);
     if (!origin) return jsonResponse(req, { error: "origin" }, 403);
-    return emptyResponse(req, 204, cors(origin));
+    return finish(route, emptyResponse(req, 204, cors(origin)));
   }
-  if (req.method !== "POST") return jsonResponse(req, { error: "method" }, 405);
+  if (req.method !== "POST") return finish(route, methodNotAllowed(req, route));
 
   if (route === "mcp") {
     if (req.headers.get("origin") != null) return jsonResponse(req, { error: "origin" }, 403);
     return handleMcp(req, deps);
   }
 
-  const origin = appOrigin(req);
+  const origin = appOrigin(req, deps);
   if (!origin) return jsonResponse(req, { error: "origin" }, 403);
   const userId = await getUserId(deps, bearer(req));
-  if (!userId) return jsonResponse(req, { error: "unauthorized" }, 401, cors(origin));
+  if (!userId) return finish(route, jsonResponse(req, { error: "unauthorized" }, 401, cors(origin)));
   if (route === "mint") {
     const response = await handleMint(req, deps, userId);
-    const headers = new Headers(response.headers);
-    for (const [key, value] of Object.entries(cors(origin))) headers.set(key, value);
-    return new Response(response.body, { status: response.status, headers });
+    return finish(route, withCors(response, origin));
   }
   if (route === "revoke") {
     const response = await handleRevoke(req, deps, userId);
-    const headers = new Headers(response.headers);
-    for (const [key, value] of Object.entries(cors(origin))) headers.set(key, value);
-    return new Response(response.body, { status: response.status, headers });
+    return withCors(response, origin);
   }
   const response = await handleStatus(deps, req, userId);
+  return withCors(response, origin);
+}
+
+function withCors(response: Response, origin: string): Response {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(cors(origin))) headers.set(key, value);
+  return new Response(response.body, { status: response.status, headers });
+}
+
+function finish(route: Route, response: Response): Response {
+  if (route !== "mint") return response;
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "no-store");
   return new Response(response.body, { status: response.status, headers });
 }
 

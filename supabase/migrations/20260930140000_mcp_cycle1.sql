@@ -6,7 +6,8 @@ create table private.mcp_credentials (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   company_id uuid not null references public.companies (id) on delete cascade,
-  token_hash text not null unique,
+  token_hash text not null,
+  pepper_kid text not null,
   scope text[] not null,
   expires_at timestamptz not null,
   revoked_at timestamptz,
@@ -15,7 +16,13 @@ create table private.mcp_credentials (
 );
 
 comment on table private.mcp_credentials is
-  'One assistant token per user. The hash is HMAC-SHA256 with the function pepper. Decision 0080.';
+  'One assistant token per user. The hash is HMAC-SHA256 with the pepper named by pepper_kid. Decision 0080.';
+
+comment on column private.mcp_credentials.pepper_kid is
+  'The pepper that produced token_hash. Lookup matches this kid, so a new pepper does not resolve an old hash.';
+
+create unique index mcp_credentials_hash_kid_idx
+  on private.mcp_credentials (token_hash, pepper_kid);
 
 create index mcp_credentials_user_open_idx
   on private.mcp_credentials (user_id, created_at desc)
@@ -106,7 +113,8 @@ create or replace function public.store_mcp_credential(
   p_user uuid,
   p_token_hash text,
   p_scope text[],
-  p_expires_at timestamptz
+  p_expires_at timestamptz,
+  p_pepper_kid text
 ) returns uuid
 language plpgsql
 security definer
@@ -118,6 +126,9 @@ declare
   new_id uuid;
 begin
   if p_user is null or p_token_hash is null or length(p_token_hash) < 16 or p_expires_at is null then
+    raise exception 'validation';
+  end if;
+  if p_pepper_kid is null or btrim(p_pepper_kid) = '' or length(p_pepper_kid) > 64 then
     raise exception 'validation';
   end if;
   if p_scope is null or cardinality(p_scope) = 0 or cardinality(p_scope) > 2 then
@@ -144,8 +155,8 @@ begin
   where user_id = p_user
     and revoked_at is null;
 
-  insert into private.mcp_credentials (user_id, company_id, token_hash, scope, expires_at)
-  values (p_user, company, p_token_hash, p_scope, p_expires_at)
+  insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
+  values (p_user, company, p_token_hash, btrim(p_pepper_kid), p_scope, p_expires_at)
   returning id into new_id;
   return new_id;
 end;
@@ -201,7 +212,7 @@ begin
 end;
 $$;
 
-create or replace function public.lookup_mcp_credential(p_token_hash text)
+create or replace function public.lookup_mcp_credential(p_token_hash text, p_pepper_kid text)
 returns jsonb
 language plpgsql
 stable
@@ -213,7 +224,8 @@ declare
 begin
   select * into row
   from private.mcp_credentials
-  where token_hash = p_token_hash;
+  where token_hash = p_token_hash
+    and pepper_kid = p_pepper_kid;
   if not found then
     return jsonb_build_object('found', false);
   end if;
@@ -319,18 +331,18 @@ begin
 end;
 $$;
 
-revoke all on function public.store_mcp_credential(uuid, text, text[], timestamptz) from public, anon, authenticated;
+revoke all on function public.store_mcp_credential(uuid, text, text[], timestamptz, text) from public, anon, authenticated;
 revoke all on function public.revoke_mcp_credential(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.mcp_credential_status(uuid) from public, anon, authenticated;
-revoke all on function public.lookup_mcp_credential(text) from public, anon, authenticated;
+revoke all on function public.lookup_mcp_credential(text, text) from public, anon, authenticated;
 revoke all on function public.touch_mcp_credential(uuid) from public, anon, authenticated;
 revoke all on function public.bump_mcp_rate(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.note_auth_failure(text) from public, anon, authenticated;
 
-grant execute on function public.store_mcp_credential(uuid, text, text[], timestamptz) to service_role;
+grant execute on function public.store_mcp_credential(uuid, text, text[], timestamptz, text) to service_role;
 grant execute on function public.revoke_mcp_credential(uuid, uuid) to service_role;
 grant execute on function public.mcp_credential_status(uuid) to service_role;
-grant execute on function public.lookup_mcp_credential(text) to service_role;
+grant execute on function public.lookup_mcp_credential(text, text) to service_role;
 grant execute on function public.touch_mcp_credential(uuid) to service_role;
 grant execute on function public.bump_mcp_rate(uuid, uuid, text) to service_role;
 grant execute on function public.note_auth_failure(text) to service_role;
