@@ -17,7 +17,7 @@ The main Playwright command does not run `sumit-live` or the drain spec. Those s
 
 CD runs only on a push to `main`, in the GitHub environment `production`.
 
-If any production secret is missing, the job stops after a notice and succeeds. It does not push migrations and it does not deploy. Add the secrets and push to `main` again.
+If any repository secret below is missing, the job stops after a notice and succeeds. It does not push migrations and it does not deploy. Add the secret on the repository and push to `main` again.
 
 When the secrets are present:
 
@@ -31,17 +31,17 @@ The reviewers-only build is not deployed. CD does not run the live SUMIT specs a
 
 ## Secrets
 
-Add these on the repository, or on the `production` environment. A secret stored only on the environment is visible to the deploy job, which is the job that uses them.
+These are repository Actions secrets. The deploy job uses `environment: production` as an approval gate, and it still reads the repository secrets. Do not put them only on that environment.
 
 | Name | What it is |
 | --- | --- |
 | `SUPABASE_DB_URL` | Session pooler URL for project `sxqpnetmtufkzowutduq`. Shape: `postgresql://postgres.sxqpnetmtufkzowutduq:<password>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require`. Percent-encode the password. Port 5432 is the session pooler. |
-| `CLOUDFLARE_API_TOKEN` | API token that can edit Cloudflare Pages project `flow-app`. |
+| `CLOUDFLARE_API_TOKEN` | API token with Pages Edit on Cloudflare Pages project `flow-app`. |
 | `CLOUDFLARE_ACCOUNT_ID` | The Cloudflare account that owns `flow-app`. |
 
 There is no `SUPABASE_ACCESS_TOKEN` in this workflow. The public anon key is already in `app/.env.production`. Do not add the service-role key.
 
-The `production` environment is the deploy gate. Required reviewers, when set on that environment, must approve before a push to `main` migrates or deploys.
+Required reviewers, when set on the `production` environment, must approve before a push to `main` migrates or deploys. That environment does not need its own copies of these secrets.
 
 ## Roll back a Pages deploy
 
