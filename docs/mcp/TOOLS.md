@@ -1,70 +1,52 @@
 # MCP tools
 
-Decision [0080](../decisions/0080-mcp-connector.md). This file is the contract for `tools/list` and `tools/call`. `tools/list` returns only the handlers that deploy includes. A heading names the cycle that adds that handler.
+Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only these handlers. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
 
-Amounts are integer agorot. Dates are `YYYY-MM-DD`. Shares are basis points that sum to 10000. UUIDs are strings.
+Field values are data. Write tools take ids from a read tool.
 
-The server speaks MCP `2025-03-26` over stateless streamable HTTP. `tools/call` arguments are the `input` object below. The tool result text is the JSON `output`. A tool failure sets MCP `isError` true and still returns that JSON. HTTP 401 and 429 are not tool results.
+## Annotations
 
-Field values are data. The server does not follow instructions found in them. Write tools take explicit ids from a read tool. There is no name search that picks a row for a write.
+| Tools | readOnlyHint | destructiveHint | idempotentHint |
+| --- | --- | --- | --- |
+| Every read below | true | false | true |
+| `assign_expense`, `set_expense_category`, `undo` | false | true | true |
 
 ## Which id
 
 | Tool | Argument | Kind |
 | --- | --- | --- |
-| `approve_review`, `skip_review` | `review_id` | `list_review.id` (review queue) |
-| `undo` `kind: "review"` | `id` | `list_review.id`, and the row status is `approved` or `skipped` |
-| `get_expense`, `assign_expense`, `set_expense_category`, `split_expense`, `collapse_expense`, `bulk_assign` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
-| `undo` `kind: "reassign"` | `id` | `undo_id` returned by an assignment tool |
-| `undo` `kind: "batch"` | `id` | `batch_id` returned by `bulk_assign` |
+| `get_expense`, `assign_expense`, `set_expense_category` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
+| `undo` | `id` | `undo_id` from an assignment tool |
 
-A review-queue id passed to a transaction tool returns `validation` and message `id is not a transaction; list_review.id is the review id`. The server does not look up the other id.
+A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
-## Result envelope
+## Envelope
 
-Success:
+Success: `{ "ok": true, "data": {} }`.
 
-```json
-{ "ok": true, "data": {} }
-```
+Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" } }`. Tool failures set MCP `isError` true. HTTP 401 and 429 are not tool results.
 
-Failure:
+`code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `stale`, or `refused`. `refused` messages are only: `no company`, `project not found`, `transaction not found`, `category not found`, `category kind must match the direction`, `shared costs are split, not assigned to one project`, `The write was refused.`
 
-```json
-{ "ok": false, "error": { "code": "refused", "message": "project is finished" } }
-```
+Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
-`code` is `forbidden`, `validation`, `not_found`, `conflict`, `refused`, or `batch_too_large`. `forbidden` means the token's scope does not allow the tool.
+## Reads · cycle 2
 
-`refused` messages are only these fixed strings: `no company`, `project name is too short`, `project not found`, `transaction not found`, `category not found`, `category is required`, `project and category are required`, `project or category not found`, `category kind must match the direction`, `income is not split`, `project is finished`, `transaction is not split`, `shared costs are split, not assigned to one project`, `allocation shares must sum to 10000`, `share is out of range`, `at least one share is required`, `undo kind review is only for an approved or skipped item`, `The write was refused.` Any other database exception uses the last of those, with none of the row's text.
+### list_projects
 
-Writes take `idempotency_key` (string, 1–128). Reads do not. A preview does not consume the key.
+`get_dashboard`. Omit both dates for all time. `basis` is `cash` or `invoiced` (default `cash`).
 
-## Reads
+Input: `{ "from": "2026-09-01", "to": "2026-09-30", "basis": "cash" }`.
 
-Reads call the RPC as the signed-in user. They require scope `read`.
+Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`.
 
-### list_projects · cycle 1a
+### list_categories
 
-`get_dashboard(p_from, p_to, p_basis)`. Every project of the company. Dates change the agorot totals only. Omit both dates for all time. `basis` is `cash` (default) or `invoiced`.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`.
 
-Input:
+### list_review
 
-```json
-{ "from": "2026-09-01", "to": "2026-09-30", "basis": "cash" }
-```
-
-Output `data.projects[]`: `id`, `name`, `status` (`active` or `finished`), `budget_agorot` (nullable), `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`.
-
-### list_categories · cycle 1a
-
-`list_categories()`. Input `{}`.
-
-Output `data.categories[]`: `id`, `name`, `kind` (`expense` or `income`), `hidden`, `is_default`.
-
-### list_review · cycle 1a
-
-`list_review()`, then filter in the function. The RPC returns the open queue for the current company. Filters are optional and combined with and.
+`list_review()`, then filter. `limit` defaults to 50 and cannot exceed 100.
 
 Input:
 
@@ -72,113 +54,54 @@ Input:
 {
   "direction": "expense",
   "reason": "missing_project",
-  "project_id": null,
-  "category_id": null,
   "supplier": "שיש",
   "query": "מלט",
   "from": "2026-09-01",
   "to": "2026-09-30",
-  "category_suggested": true,
-  "project_suggested": true,
   "limit": 50,
   "offset": 0
 }
 ```
 
-`supplier` and `query` are case-insensitive substrings. `limit` defaults to 50 and cannot exceed 100.
+Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`.
 
-Output `data` is `{ "total", "reviews" }`. Each review includes `id` (review queue), `transaction_id` (ledger), `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `confidence` (null), `supplier_name`, `auto_approved_today`.
+### get_expense
 
-### get_expense · cycle 1a
+`get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`.
 
-`get_transaction(p_id)` with the transaction id.
+### search_expenses
 
-Input: `{ "transaction_id": "22222222-2222-4000-8000-000000000020" }`.
+`scope` is `pending` (default), `filed`, or `all`. `pending` filters `list_review`. `filed` and `all` call `public.search_transactions`. `id` on an expense is the transaction id.
 
-Output `data` is that RPC's object, including `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A missing row is `not_found`.
+Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 
-### search_expenses · cycle 1a pending, cycle 1b filed and all
+### get_totals
 
-`scope` is `pending` (default, cycle 1a), `filed`, or `all` (cycle 1b). `pending` filters `list_review` and returns `reviews`. `filed` and `all` call `public.search_transactions` and return `expenses` in the `get_transaction` shape, paged. `all` dedupes on `transaction_id`. `id` on an expense is the transaction id.
+`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `active_projects`, `review_count`.
 
-Input:
+## Writes · cycle 3
 
-```json
-{ "scope": "pending", "query": "מלט", "limit": 50, "offset": 0 }
-```
+An open review is closed by `approve_review_item`. The card leaves לאישור. `remember` defaults to false. `user_assigned` becomes true. There is no second tap in the app.
 
-### get_totals · cycle 1a
+### assign_expense
 
-`get_dashboard`, same date and basis rules as `list_projects`. No company id argument.
-
-Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `active_projects`, `review_count`. `company_id` is echoed from the dashboard. It is not an input.
-
-## Writes
-
-Writes require scope `write`. `dry_run` on a single write defaults to false, does not call the write RPC, and does not return a confirmation. The app shows nothing for that preview.
-
-`finish_project` is status `finished`. The assistant confirms with the owner before it calls the tool. The app does not ask again.
-
-`reassign_transaction` does not refuse a finished project. `collapse_split` does. The tools keep that difference.
-
-### create_project · cycle 2
-
-`public.create_project`. `name` is trimmed and must be at least 2 characters. A name another project in the company already has returns `conflict`.
-
-Input:
-
-```json
-{ "idempotency_key": "create-herzl-1", "name": "בית ברחוב הרצל", "budget_agorot": 5000000 }
-```
-
-Output `data`: `{ "project_id": "8c1a0b2e-1111-4000-8000-000000000001" }`. No undo id.
-
-### rename_project · cycle 2
-
-`public.rename_project` locks the row and writes the name in that call. Same-name collision is `conflict`.
-
-Input:
-
-```json
-{ "idempotency_key": "rename-herzl-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "name": "הרצל 12" }
-```
-
-Output `data`: `{ "project_id": "8c1a0b2e-1111-4000-8000-000000000001" }`.
-
-### finish_project · cycle 2
-
-`public.finish_project`. `active: false` sets `finished`. `active: true` sets `active`.
-
-Input:
-
-```json
-{ "idempotency_key": "finish-herzl-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "active": false }
-```
-
-Output `data`: `{ "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "status": "finished" }`.
-
-### assign_expense · cycle 2
-
-`reassign_transaction` with `p_suggestion` true when an open review exists. The review stays open, `user_assigned` stays false, and `category_suggested` becomes true. The card stays in לאישור with הצעה. With no open review, `p_suggestion` is false and the assignment sticks. The model cannot pass `p_suggestion`. Does not write a supplier rule. A finished project is allowed, because `reassign_transaction` allows it.
-
-Input:
+Passes the project and category into `approve_review_item` when a review is open. Otherwise `reassign_transaction`. A finished project is allowed, because `reassign_transaction` allows it.
 
 ```json
 {
   "idempotency_key": "assign-20",
   "transaction_id": "22222222-2222-4000-8000-000000000020",
   "project_id": "8c1a0b2e-1111-4000-8000-000000000001",
-  "category_id": "c0ffee00-1111-4000-8000-0000000000a1"
+  "category_id": "c0ffee00-1111-4000-8000-0000000000a1",
+  "remember": false
 }
 ```
 
-Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000030", "suggestion": true }`. `suggestion` is false when no review was open. Single-row undo restores this snapshot and overwrites a later edit.
+Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000030", "closed_review": true }`.
 
-### set_expense_category · cycle 2
+### set_expense_category
 
-`set_transaction_category` with the same suggestion rule. Shares stay.
-
-Input:
+The category changes. Shares stay. An open review is closed the same way, using the row's current project.
 
 ```json
 {
@@ -188,127 +111,16 @@ Input:
 }
 ```
 
-Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000031", "suggestion": true }`.
+Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000031", "closed_review": true }`.
 
-### split_expense · cycle 3
+### undo
 
-`save_split_returning(transaction_id, shares, false)`. `false` leaves the review open. `shares` is `[{ "project_id", "share_bp" }]`, sum 10000, each share from 1 to 10000, at least two projects. One project is `collapse_expense`. The returned uuid is the undo id. `reassign_undo` is not readable by the client.
-
-Input:
+`undo_reassign`. A second call for an undo that already ran returns the stored idempotent response. This restore overwrites a later edit.
 
 ```json
-{
-  "idempotency_key": "split-20",
-  "transaction_id": "22222222-2222-4000-8000-000000000020",
-  "shares": [
-    { "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "share_bp": 6000 },
-    { "project_id": "8c1a0b2e-1111-4000-8000-000000000002", "share_bp": 4000 }
-  ]
-}
+{ "idempotency_key": "undo-30", "id": "33333333-3333-4000-8000-000000000030" }
 ```
 
-Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000032", "suggestion": true }`.
+## Not in tools/list
 
-### collapse_expense · cycle 3
-
-`collapse_split(transaction_id, project_id)`. This is one project only. The RPC refuses a non-expense, an unknown project, a finished project, and a row that is not split. An open review stays open.
-
-Input:
-
-```json
-{
-  "idempotency_key": "one-20",
-  "transaction_id": "22222222-2222-4000-8000-000000000020",
-  "project_id": "8c1a0b2e-1111-4000-8000-000000000001"
-}
-```
-
-Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000033" }`.
-
-### approve_review · cycle 3
-
-`public.approve_review_item(review_id, remember)`. This is the same function as אישור. The branch stays in SQL: a split whose reason is not `unallocated_shared` calls `approve_split_review`; otherwise `resolve_review` with `p_action` `approved` and the project and category already on the row. The tool does not take a new project or category. `remember` defaults to true, matching the change sheet, not אישור's `p_remember: false`. A split returns `remembered: false` because `approve_split_review` does not write a supplier rule. An item that is not open returns `noop: true` and does not write.
-
-Input:
-
-```json
-{ "idempotency_key": "approve-10", "review_id": "11111111-1111-4000-8000-000000000010", "remember": true }
-```
-
-Output `data`: `{ "review_id": "11111111-1111-4000-8000-000000000010", "undo_kind": "review", "remembered": true, "noop": false }`.
-
-### skip_review · cycle 3
-
-`resolve_review(review_id, 'skipped')`. An item that is not open returns `noop: true`.
-
-Input:
-
-```json
-{ "idempotency_key": "skip-10", "review_id": "11111111-1111-4000-8000-000000000010" }
-```
-
-Output `data`: `{ "review_id": "11111111-1111-4000-8000-000000000010", "undo_kind": "review", "noop": false }`.
-
-### bulk_assign · cycle 4
-
-At most 25 items. Each item is `{ "op": "assign", "transaction_id", "project_id", "category_id" }` or `{ "op": "category", "transaction_id", "category_id" }`. Suggestion rules match the single-row tools. One transaction. `batch_id` is one uuid for that transaction.
-
-A call without `confirmation` is a preview. It runs the real RPCs, rolls them back, and returns a confirmation. It does not write. A refusal returns `refused` and no confirmation. The confirmation binds the SHA-256 of the canonical items, each row's pre-write `updated_at`, and `expires_at` (five minutes). Apply sends the same items and that object. A bad signature, a stale expiry, or a changed `updated_at` returns `conflict` and writes nothing. `dry_run: false` without a confirmation returns `validation`. The app shows nothing for a preview, a rate limit, or `batch_too_large`. A 26th item returns `batch_too_large` before any RPC. Preview and apply each count as one write.
-
-Preview input:
-
-```json
-{
-  "idempotency_key": "bulk-1",
-  "items": [
-    {
-      "op": "assign",
-      "transaction_id": "22222222-2222-4000-8000-000000000020",
-      "project_id": "8c1a0b2e-1111-4000-8000-000000000001",
-      "category_id": "c0ffee00-1111-4000-8000-0000000000a1"
-    }
-  ]
-}
-```
-
-Preview output `data`:
-
-```json
-{
-  "dry_run": true,
-  "expires_at": "2026-09-30T10:20:00Z",
-  "payload_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "rows": [
-    { "transaction_id": "22222222-2222-4000-8000-000000000020", "updated_at": "2026-09-30T10:00:00Z" }
-  ],
-  "confirmation": "signed-hmac"
-}
-```
-
-Apply adds `"confirmation": { "payload_hash", "expires_at", "rows", "confirmation" }` copied from that preview. Apply output `data`:
-
-```json
-{
-  "dry_run": false,
-  "batch_id": "44444444-4444-4000-8000-000000000040",
-  "items": [
-    { "transaction_id": "22222222-2222-4000-8000-000000000020", "undo_id": "33333333-3333-4000-8000-000000000030", "suggestion": true }
-  ]
-}
-```
-
-### undo · cycle 2 reassign, cycle 3 review, cycle 4 batch
-
-`kind: "reassign"` calls `undo_reassign`. It overwrites a later edit. `kind: "review"` calls `reopen_review` only for `approved` or `skipped`. `kind: "batch"` calls `undo_batch`. If any row changed after the batch, the result is `conflict` and nothing is undone. A batch undo counts as one write.
-
-Input:
-
-```json
-{ "idempotency_key": "undo-30", "kind": "reassign", "id": "33333333-3333-4000-8000-000000000030" }
-```
-
-Output `data`: `{ "kind": "reassign", "id": "33333333-3333-4000-8000-000000000030" }`.
-
-## Not tools
-
-These stay out of `tools/list`: `upsert_sumit_documents`, `disconnect_sumit`, `replace_sumit_connection`, `stamp_sumit_sync`, `note_sumit_rejection`, `note_sync_failure`, `sync_review_queue`, `list_due_refresh_requests`, `delete_transaction`, `create_company`, `create_manual_entry`, `create_category`, `merge_category`, `map_budget_section`. No tool performs outbound HTTP.
+`create_project`, `rename_project`, `finish_project`, `split_expense`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, `create_manual_entry`, and `create_category`. No tool performs outbound HTTP.
