@@ -105,19 +105,20 @@ function sheetSurface(sheet: Element): HTMLElement | null {
   return surface instanceof HTMLElement ? surface : null;
 }
 
-/** Drop the padding a previous toast added so a control could clear it. */
+/** Drop the extra pad. Setting it to zero lets the motion token ease it back. */
 export function clearToastPad(sheet: Element | null = document.querySelector("[data-vaul-drawer][data-state='open']")): void {
   if (!(sheet instanceof Element)) return;
   const surface = sheetSurface(sheet);
   if (!surface) return;
-  surface.style.paddingTop = "";
+  if ((surface.dataset.toastPad ?? "") === "" && surface.style.getPropertyValue("--toast-pad") === "") return;
+  surface.style.setProperty("--toast-pad", "0px");
   delete surface.dataset.toastPad;
 }
 
 /**
- * The toast may cover the grabber and the top of the header. A tappable
- * control moves down with the sheet content until it is clear. The pad is
- * measured from the unpadded position so a second layout pass does not grow it.
+ * Pad only when the toast would cover a control. The grabber and the empty
+ * header may stay underneath. --toast-pad is added to the surface padding, so
+ * a second pass measures the same natural position and does not jump again.
  */
 function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap: number): void {
   const surface = sheetSurface(sheet);
@@ -134,15 +135,16 @@ function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap
     if (naturalTop >= toastBottom || naturalBottom <= top) continue;
     need = Math.max(need, toastBottom - naturalTop);
   }
-  if (need <= 0) {
-    clearToastPad(sheet);
+  if (need <= 0.5) {
+    if (applied > 0) clearToastPad(sheet);
     return;
   }
+  if (Math.abs(need - applied) < 1) return;
   surface.dataset.toastPad = String(need);
-  surface.style.paddingTop = `${String(need)}px`;
+  surface.style.setProperty("--toast-pad", `${String(need)}px`);
 }
 
-/** Sit just under the page header, or just above an open sheet, clear of every control. A toast that cannot fit in the gap keeps its full height at the top safe area. It may cover the grabber or the top of the header, and the sheet content pads down so it never covers a tappable control. The text is never clipped. Decision 0075. */
+/** Sit just under the page header, or just above an open sheet, clear of every control. A toast that cannot fit in the gap keeps its full height a small gap below the safe area. It may cover the grabber and the empty top of the sheet. It never covers a header control or any other control: only then does the sheet content pad down, once. The text is never clipped. Decision 0075. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   if (toast instanceof HTMLElement) {
@@ -172,8 +174,9 @@ export function placeToast(layer: HTMLElement): void {
       return;
     }
     // The gap above the sheet is shorter than the toast. Keep the full height
-    // at the safe area, even when that overlaps the grabber or the header top.
-    const top = Math.max(safe, 0);
+    // a gap below the safe area, so it never sits flush with the screen edge.
+    // It may cover the grabber and the empty header. A control pads down once.
+    const top = Math.max(safe, 0) + gap;
     layer.style.top = `${String(top)}px`;
     padSheetUnderToast(sheet, top, height, gap);
     return;

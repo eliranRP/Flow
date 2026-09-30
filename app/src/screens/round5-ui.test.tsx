@@ -238,7 +238,7 @@ describe("split monthly rule", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText(/נשארו/)).toHaveClass("ui-split-summary-idle");
+    expect(screen.getByText(/נשארו/)).toHaveClass("t-hint");
     expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();

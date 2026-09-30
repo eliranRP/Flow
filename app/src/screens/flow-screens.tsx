@@ -79,6 +79,7 @@ import { CheckRow } from "../ui/check-row";
 import { StatusPill } from "../ui/chip";
 import { formatDayMonth, formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
+import { HoldLine } from "../ui/hold-line";
 import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
@@ -941,6 +942,7 @@ export function ReviewQueue({
         && shown != null
         && (next.category_name !== shown.category_name
           || next.category_id !== shown.category_id
+          || next.category_suggested !== shown.category_suggested
           || next.project_name !== shown.project_name
           || next.share_count !== shown.share_count)
       ) {
@@ -1034,11 +1036,14 @@ export function ReviewQueue({
   const suggestion = reviewSuggestion(card);
   const total = Math.max(visit.current.total, 1);
   const index = row ? total - rows.length + 1 : total;
+  const splitCard = reviewIsSplit(row);
   const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
     ? row.transaction_id != null
-    : row.direction === "income"
+    : splitCard
       ? row.category_id != null
-      : row.project_id != null && row.category_id != null);
+      : row.direction === "income"
+        ? row.category_id != null
+        : row.project_id != null && row.category_id != null);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
@@ -1163,16 +1168,19 @@ function vatStatusLabel(status: string): string {
 }
 
 function reviewSuggestion(row: ReviewRow) {
+  const categoryOwned = row.category_suggested === false && row.category_name != null && row.category_name !== "";
   if (reviewIsSplit(row)) {
     return {
       project: reviewSplitTitle(row),
       ...(row.category_name ? { category: row.category_name } : {}),
+      ...(categoryOwned ? { categoryOwned: true } : {}),
     };
   }
   if (!row.project_name && !row.category_name) return undefined;
   return {
     ...(row.project_name ? { project: row.project_name } : {}),
     ...(row.category_name ? { category: row.category_name } : {}),
+    ...(categoryOwned ? { categoryOwned: true } : {}),
   };
 }
 
@@ -1319,6 +1327,8 @@ type ChangeSample = {
   /** A split in the queue. The sheet does not ask for a project. */
   split?: boolean;
   splitTitle?: string;
+  /** False when the category is the owner's, so the sheet does not call it a suggestion. */
+  categorySuggested?: boolean;
 };
 
 function withChoice(options: ChangeChoice[], id: string, name: string | null | undefined): ChangeChoice[] {
@@ -1547,9 +1557,10 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       suggestionCategoryId={suggestionCategoryId}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
-      {...(income ? {} : { remember, onRemember: setRemember })}
+      {...(income || splitReview ? {} : { remember, onRemember: setRemember })}
+      categorySuggested={sample ? sample.categorySuggested !== false : row?.category_suggested !== false}
       hold={hold || leaveNote}
-      pending={!income && remember !== savedRemember}
+      pending={!income && !splitReview && remember !== savedRemember && !wroteReview.current && !closedReview.current}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}
       projectTitle={sample?.splitTitle ?? (splitReview && row ? reviewSplitTitle(row) : undefined)}
       initialQuery={sample?.initialQuery}
@@ -1590,7 +1601,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
         }
         await save.mutateAsync();
       }}
-      onCommitPending={async () => {
+      onCloseCheck={async () => {
         if (sample) return;
         if (blocked()) throw new Error("preview");
         const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
@@ -1598,11 +1609,14 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
           setHold(income || splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           throw new Error("incomplete");
         }
-        if (remember !== savedRemember && (wroteReview.current || splitReview || closedReview.current)) {
+        if (!splitReview && remember !== savedRemember && (wroteReview.current || closedReview.current)) {
           setLeaveNote("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
           throw new Error("remember");
         }
-        if (wroteReview.current || splitReview || closedReview.current) return;
+      }}
+      onCommitPending={async () => {
+        if (sample) return;
+        if (blocked()) throw new Error("preview");
         setHold("");
         picked.current = { projectId, categoryId, remember };
         await save.mutateAsync();
@@ -2813,8 +2827,8 @@ export function SplitScreen({
         {method === "manual" && valid ? <p className="ui-split-remain t-label">הסך 100%</p> : null}
       </fieldset>
       <div className="ui-split-cta">
-        <div className={summaryIdle ? "ui-hold-line" : undefined}>
-          <p className={summaryIdle ? "ui-split-summary t-hint ui-split-summary-idle" : "ui-split-summary t-body"} role={summaryIdle ? "status" : undefined}>
+        {summaryIdle ? (
+          <HoldLine onDiscard={abandon}>
             {method === "manual" && manualLeft < 0 ? (
               <>
                 {"הסך "}
@@ -2822,9 +2836,10 @@ export function SplitScreen({
                 {". צריך 100%."}
               </>
             ) : summary}
-          </p>
-          {summaryIdle ? <TextLink tone="quiet" chevron={false} onClick={abandon}>ביטול השינוי</TextLink> : null}
-        </div>
+          </HoldLine>
+        ) : (
+          <p className="ui-split-summary t-body">{summary}</p>
+        )}
       </div>
     </form>
     <ChangeAssignment

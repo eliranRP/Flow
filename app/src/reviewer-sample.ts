@@ -130,7 +130,7 @@ export const reviewerQueue: ReviewRow[] = [
   },
 ];
 
-type CategoryPatch = { category_id: string; category_name: string };
+type CategoryPatch = { category_id: string; category_name: string; category_suggested: false };
 
 const categoryPatches = new Map<string, CategoryPatch>();
 const queueListeners = new Set<() => void>();
@@ -152,7 +152,7 @@ export function reviewerQueueView(): ReviewRow[] {
 }
 
 export function patchReviewerCategory(id: string, categoryId: string, categoryName: string): void {
-  categoryPatches.set(id, { category_id: categoryId, category_name: categoryName });
+  categoryPatches.set(id, { category_id: categoryId, category_name: categoryName, category_suggested: false });
   queueViewCache = null;
   for (const listener of queueListeners) listener();
 }
