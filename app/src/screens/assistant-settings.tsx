@@ -76,7 +76,7 @@ async function mintCode(scope: AssistantScope): Promise<Minted> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   const response = await supabase.functions.invoke<Minted>("flow-mcp/mint", { body: { scope } });
-  if (response.error || response.data?.secret == null || response.data.id == null) throw new Error("mint");
+  if (response.error || response.data == null) throw new Error("mint");
   return response.data;
 }
 
