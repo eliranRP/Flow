@@ -98,6 +98,12 @@ describe("change sheet discard", () => {
     const onDiscard = vi.fn();
     renderSheet({ onDiscard });
     expect(await screen.findByRole("button", { name: "ביטול השינוי" })).toHaveClass("ui-text-link-quiet");
+    const hold = document.querySelector(".ui-hold-line");
+    if (!(hold instanceof HTMLElement)) throw new Error("hold line missing");
+    expect(hold.getAttribute("role")).toBeNull();
+    const status = hold.querySelector("[role='status']");
+    expect(status).toHaveTextContent("בחרו פרויקט וקטגוריה.");
+    expect(status).not.toHaveTextContent("ביטול השינוי");
     fireEvent.click(screen.getByRole("button", { name: "ביטול השינוי" }));
     await waitFor(() => {
       expect(onDiscard).toHaveBeenCalledOnce();

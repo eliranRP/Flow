@@ -2,6 +2,8 @@
 
 ## 2026-09-30
 
+Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. אישור on a categorised split calls `approve_split_review` and leaves the shares in place. A toast measures its height once, pads the sheet in one 200ms move, and fades in only after that move. The gap is `--space-2`. הצעה is per line: a split line is not a suggestion, and an owner pick clears it.
+
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. Closing an unchanged change sheet does not write. A split hides לזכור לספק הזה. A tall toast keeps a gap from the screen edge, may cover the grabber and the empty top of a sheet, and never covers a header control. The sheet pads only when a control would be covered, and that pad moves once. A category the owner picked is not labelled הצעה, and אישור is enabled after a split category is saved. `list_review` returns `category_suggested`.
 
 ## 2026-09-29

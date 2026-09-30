@@ -349,6 +349,33 @@ describe("placeToast", () => {
     expect(document.querySelector(".ui-toast")).toBeNull();
   });
 
+  it("does not sit a one-line toast at y=1.5 above a tall sheet", () => {
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    const surface = document.createElement("div");
+    surface.className = "ui-sheet-surface";
+    const header = document.createElement("div");
+    header.className = "ui-sheet-head";
+    surface.appendChild(header);
+    sheet.appendChild(surface);
+    const host = document.createElement("div");
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 693 });
+    // Sheet top 57.5, toast 48, gap 8. The old above position was 1.5.
+    sheet.getBoundingClientRect = () => box(697.5, 640);
+    header.getBoundingClientRect = () => box(120, 62.5);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(host.style.top).toBe("8px");
+    expect(Number.parseFloat(host.style.top)).toBeGreaterThanOrEqual(8);
+    sheet.remove();
+    host.remove();
+  });
+
   it("keeps a tall toast at its full height in the safe area when the gap is too small", () => {
     const sheet = document.createElement("div");
     sheet.setAttribute("data-vaul-drawer", "");

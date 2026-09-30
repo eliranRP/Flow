@@ -5,8 +5,10 @@ export type ReviewSuggestion = {
   project?: string;
   category?: string;
   confidence?: number;
-  /** The owner chose this category. It is not labelled הצעה. */
-  categoryOwned?: boolean;
+  /** This project line is a guess. A split line is never a suggestion. */
+  projectSuggested?: boolean;
+  /** This category line is a guess. A rule or an owner pick is not. */
+  categorySuggested?: boolean;
 };
 
 type ReviewCardProps = {
@@ -23,9 +25,13 @@ type ReviewCardProps = {
 export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestion, reason }: ReviewCardProps) {
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
   const lines = [
-    suggestion?.project ? { label: "פרויקט", value: suggestion.project } : null,
-    suggestion?.category ? { label: "קטגוריה", value: suggestion.category } : null,
-  ].filter((line): line is { label: string; value: string } => line != null);
+    suggestion?.project
+      ? { label: "פרויקט", value: suggestion.project, suggested: suggestion.projectSuggested === true }
+      : null,
+    suggestion?.category
+      ? { label: "קטגוריה", value: suggestion.category, suggested: suggestion.categorySuggested === true }
+      : null,
+  ].filter((line): line is { label: string; value: string; suggested: boolean } => line != null);
   const shared = reason === "unallocated_shared";
   const note = shared
     ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה"
@@ -53,11 +59,13 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
       <p className="t-hint">{vatLine}</p>
       {lines.length > 0 ? (
         <div className="ui-review-ai">
-          {suggestion?.categoryOwned ? null : <p className="t-hint">הצעה</p>}
           {lines.map((line) => (
             <p className="ui-review-line" key={line.label}>
               <span className="t-label">{line.label}</span>
-              <span>{line.value}</span>
+              <span>
+                {line.value}
+                {line.suggested ? <span className="ui-suggest-tag">הצעה</span> : null}
+              </span>
             </p>
           ))}
           {note ? <p className="t-label">{note}</p> : null}

@@ -974,9 +974,13 @@ export function ReviewQueue({
         return;
       }
       if (!row?.category_id) throw new Error("missing");
-      if (row.direction !== "income" && !row.project_id) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      if (reviewIsSplit(row) && row.reason !== "unallocated_shared") {
+        assertNoError(await supabase.rpc("approve_split_review", { p_id: row.id }));
+        return;
+      }
+      if (row.direction !== "income" && !row.project_id) throw new Error("missing");
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: row.id,
         p_action: "approved",
@@ -1168,19 +1172,17 @@ function vatStatusLabel(status: string): string {
 }
 
 function reviewSuggestion(row: ReviewRow) {
-  const categoryOwned = row.category_suggested === false && row.category_name != null && row.category_name !== "";
-  if (reviewIsSplit(row)) {
-    return {
-      project: reviewSplitTitle(row),
-      ...(row.category_name ? { category: row.category_name } : {}),
-      ...(categoryOwned ? { categoryOwned: true } : {}),
-    };
-  }
-  if (!row.project_name && !row.category_name) return undefined;
+  const split = reviewIsSplit(row);
+  const project = split ? reviewSplitTitle(row) : row.project_name || undefined;
+  const category = row.category_name || undefined;
+  if (!project && !category) return undefined;
+  const categorySuggested = Boolean(category) && row.category_suggested !== false;
+  const projectSuggested = !split && Boolean(row.project_name);
   return {
-    ...(row.project_name ? { project: row.project_name } : {}),
-    ...(row.category_name ? { category: row.category_name } : {}),
-    ...(categoryOwned ? { categoryOwned: true } : {}),
+    ...(project ? { project } : {}),
+    ...(category ? { category } : {}),
+    ...(projectSuggested ? { projectSuggested: true } : {}),
+    ...(categorySuggested ? { categorySuggested: true } : {}),
   };
 }
 

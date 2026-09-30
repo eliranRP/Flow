@@ -393,7 +393,10 @@ isOneToOne: true
                 }
           }
           Functions: {
-            "collapse_split":
+            "approve_split_review":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"collapse_split":
 { Args: { "p_id": string,"p_project_id": string }; Returns: string
                            },
 "company_pnl":

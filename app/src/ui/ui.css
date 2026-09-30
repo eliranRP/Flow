@@ -2548,6 +2548,22 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   pointer-events: none;
 }
 
+/* Hidden until the pad has finished. No pad: the host is already "in". */
+.ui-toast-host[data-phase="measure"] .ui-toast,
+.ui-toast-host[data-phase="pad"] .ui-toast {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.ui-toast-host[data-phase="in"] .ui-toast {
+  visibility: visible;
+  opacity: 1;
+}
+
+.ui-toast-host[data-fade="1"] .ui-toast {
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
 .ui-toast-live {
   position: absolute;
   inline-size: 1px;
