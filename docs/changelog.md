@@ -2,6 +2,8 @@
 
 ## 2026-09-30
 
+Decision [0080](decisions/0080-mcp-connector.md). Credential wrappers take the user id from GoTrue `getUser` inside the function, never from the request body, and set `search_path` to `''`. Undo compares a `private.mcp_writes` snapshot of project, category, role, and shares, not `updated_at`, and an id that was not an assistant write is `not_found`. No service_role-equivalent key is in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`. The connect sheet is two steps: a `RadioRow`, then "יצירת קוד". [0006](decisions/0006-confirm-not-type.md), [0011](decisions/0011-auto-approve-high-confidence.md), and [0069](decisions/0069-back-and-one-tap-review.md) say this record extends them.
+
 Decision [0080](decisions/0080-mcp-connector.md), Accepted for a first release of 18 hours in three cycles. Flow accepts an assistant write with no confirmation of its own. Undo of a closed review calls `reopen_review`. The עוזר row is cycle 2. The app's אישור check, the visit counter, and שויכו היום are cycle 3, with the writes. [0006](decisions/0006-confirm-not-type.md), [0011](decisions/0011-auto-approve-high-confidence.md), and [0069](decisions/0069-back-and-one-tap-review.md) only point at this record.
 
 Deploys stay automatic. After both reviewer bots approve and CI is green, a push to `main` deploys without a person. The `production` environment has no required reviewer, and required pull request approvals stay at 0. `.github/CODEOWNERS` is ownership and notification only. It does not enforce review. Eliran accepts that owner risk. Decision [0079](decisions/0079-automatic-deploy-owner-risk.md).
