@@ -71,7 +71,7 @@ enabled = true
 SUMIT_KEK = "env(SUMIT_KEK)"
 CRON_SECRET = "env(CRON_SECRET)"
 FLOW_MCP_PEPPER = "env(FLOW_MCP_PEPPER)"
-FLOW_MCP_SIGNING_KEY = "env(FLOW_MCP_SIGNING_KEY)"
+FLOW_MCP_APP_ORIGINS = "http://127.0.0.1:43123,http://localhost:43123,https://flow-app-dx5.pages.dev"
 
 # The cron drain sends x-flow-cron and has no user JWT. The function checks that secret itself.
 [functions.sumit-sync]

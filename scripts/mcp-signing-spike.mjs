@@ -65,7 +65,7 @@ async function main() {
   const fourth = criterion4(header);
   console.log(fourth.message);
   if (!fourth.ok) process.exit(4);
-  console.log("spike passed criteria 1 and 4. PostgREST acceptance still requires SPIKE_USER_ID and a standby key that is not rotated into use.");
+  console.log("spike passed criteria 1 and 4 on this run. Criterion 3 is still required before any signing key is used.");
 }
 
 const invoked = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";

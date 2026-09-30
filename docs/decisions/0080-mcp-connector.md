@@ -37,19 +37,27 @@ Cycle 1 starts with a spike. The builder owns it. Pass means all of these:
 
 If the only key PostgREST will accept is the in-use Auth signing key, the spike stops. The function does not hold Auth's own private key. The fallback is the legacy HS256 secret, set as the function secret `FLOW_JWT_LEGACY` in the Supabase dashboard. That name is never a GitHub secret. The signer still sets only `role` `authenticated`. The legacy shared secret is deprecated by the end of 2026. This record does not treat that date as the day it is deleted. The fallback is a dependency to retire before that deprecation leaves the secret unusable. It can mint any role, which is why it is not the normal path. Supabase rejects secret names that start with `SUPABASE_`.
 
-On a pass, the function secret is `FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` is not created.
+#### Spike result, 2026-09-30
+
+The spike stopped on criterion 1. The hosted JWKS contained one key, kid `985184ff-0c58-4ffd-a4a5-d7322027aee6`, Auth's in-use key. Standby is unproven, because Supabase's documentation lists only the current key as accepted. Criterion 3 was not run. The project has one standby slot, and the dashboard action "Rotate keys" would turn that slot into Auth's in-use key. That is the S21 trap. Cycle 1 does not create `FLOW_MCP_SIGNING_KEY` and does not create `FLOW_JWT_LEGACY`.
+
+Before cycle 2 the owner chooses standby with the guards below, or the legacy fallback. The guards for standby are:
+
+1. Prove criterion 3 while the key is still in standby.
+2. Verify standby status through the Management API before any secret is set.
+3. Criterion 1 checks that status. A count of keys in the JWKS is not the check.
+4. The runbook warns never to rotate that key into use.
 
 #### Secrets and deploy
 
-The production deploy job deploys `flow-mcp` and then sets function secrets from the GitHub environment `production`:
+The production deploy job checks secret shape before migrations and Pages, sets `FLOW_MCP_PEPPER` from an env file, then deploys `flow-mcp`. Cycle 1 does not set a signing key.
 
 | GitHub environment `production` | Function secret | First release |
 | --- | --- | --- |
-| `FLOW_MCP_SIGNING_KEY` | same | yes, after the spike passes |
 | `FLOW_MCP_PEPPER` | same, with its `kid` | yes |
 | `FLOW_MCP_CONFIRM_KEY` | same, its own `kid` | no, deferred with bulk |
 
-`FLOW_JWT_LEGACY` is not in that environment and is not in the workflow. There is no service_role-equivalent key in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`. The function uses that injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
+`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. It does store `SUPABASE_DB_URL` in the same environment, and `SUPABASE_ACCESS_TOKEN`. A token that can read Edge Function Secrets can read the keys Supabase injects into the function, including `SUPABASE_SECRET_KEYS`. The token is therefore scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and to the shortest expiry. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
 
 #### Credential wrappers
 
@@ -57,15 +65,15 @@ The production deploy job deploys `flow-mcp` and then sets function secrets from
 
 | Function | Used by |
 | --- | --- |
-| `public.store_mcp_credential(p_user uuid, p_token_hash text, p_scope text[], p_expires_at timestamptz) returns uuid` | Mint. `company_id` is the company owned by `p_user`. One active token: revoke the current row, then insert |
+| `public.store_mcp_credential(p_user uuid, p_token_hash text, p_scope text[], p_expires_at timestamptz, p_pepper_kid text) returns uuid` | Mint. `company_id` is the company owned by `p_user`. One active token: revoke the current row, then insert. `p_pepper_kid` is stored with the hash |
 | `public.revoke_mcp_credential(p_user uuid, p_id uuid)` | ניתוק and a reconnect. Sets `revoked_at` only when that row's user is `p_user`. Otherwise `not_found` |
 | `public.mcp_credential_status(p_user uuid)` | That user's row only: empty, connected, or expired, plus `last_used_at` and scope |
-| `public.lookup_mcp_credential(text)` | Resolve the HMAC |
+| `public.lookup_mcp_credential(text, text)` | Resolve the HMAC for that pepper kid |
 | `public.touch_mcp_credential(uuid)` | Set `last_used_at` |
 | `public.bump_mcp_rate(uuid, uuid, text)` | One atomic increment for the token and the user |
 | `public.note_auth_failure(text)` | Count a failed secret for the throttle address |
 
-`p_user` is the id from the verified `getUser` call in the function. Mint, revoke, and status never read a user id from the request body. Mint verifies the app's user JWT by calling GoTrue `getUser` (`GET /auth/v1/user`). GoTrue validates that JWT. The function does not call `getClaims`, and it does not validate the JWT against JWKS itself. A payload decoded in the function, with no `getUser` call, is rejected. The pepper never leaves the function. The secret is `flow_mcp_` plus 43 base64url characters. At rest it is HMAC-SHA256 with `FLOW_MCP_PEPPER`. It is returned once. `expires_at` is 90 days.
+`p_user` is the id from the verified `getUser` call in the function. Mint, revoke, and status never read a user id from the request body. Mint verifies the app's user JWT by calling GoTrue `getUser` (`GET /auth/v1/user`). GoTrue validates that JWT. The function does not call `getClaims`, and it does not validate the JWT against JWKS itself. A payload decoded in the function, with no `getUser` call, is rejected. The pepper never leaves the function. The secret is `flow_mcp_` plus 43 base64url characters. At rest it is HMAC-SHA256 with the current pepper, and the row stores that pepper's `kid`. `FLOW_MCP_PEPPER` is JSON: `kid`, and `secret` of at least 32 bytes. A shorter secret is rejected. `previous` is an optional array of the same shape. Lookup tries the current kid and then each previous kid, so replacing the current pepper does not by itself make an existing token fail. Dropping a kid does. It is returned once. `expires_at` is 90 days. A `bump_mcp_rate` error fails closed.
 
 Write functions in this release are granted to `authenticated` only, not to `service_role`.
 
@@ -138,7 +146,7 @@ Each cycle is usable without the later ones.
 
 | Cycle | What ships | Hours |
 | --- | --- | --- |
-| 1 | The signing spike, the function, the public wrappers, mint, revoke, and status routes, the pepper, and the rate limit. A test mints a token without the screen | 6 |
+| 1 | The signing spike (stopped on 2026-09-30; no signing key in this cycle), the function, the public wrappers, mint, revoke, and status routes, the pepper, and the rate limit. A test mints a token without the screen | 6 |
 | 2 | The עוזר row, including scope, ניתוק, and the copy above, and the six read and search tools. The owner can connect. The assistant can read | 6 |
 | 3 | `assign_expense`, `set_expense_category`, typed undo, `private.mcp_writes`, and its pgTAP, the SUMIT overwrite test, אישור's shown-values check and the two toasts, the focus refetch, the hold, the visit counter, and שויכו היום. If the cycle runs long it splits into 3a (the writes, undo, pgTAP, and the SUMIT test) and 3b (the אישור check, the toasts, the refetch, the hold, the counter, and שויכו היום). Together they stay about 6 hours | 6 |
 
@@ -168,7 +176,9 @@ Putting the credential functions in `private` and expecting PostgREST to call th
 
 Holding Auth's signing key inside the function when the spike shows no other key works.
 
-Putting `FLOW_JWT_LEGACY`, `FLOW_SECRET_KEY`, or any service_role-equivalent key in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`.
+Putting `FLOW_JWT_LEGACY` or `FLOW_SECRET_KEY` in GitHub. Hosted functions already receive `SUPABASE_SECRET_KEYS`. Treating that as "nothing in GitHub can read those keys" is wrong: the deploy token can, and `SUPABASE_DB_URL` sits in the same environment.
+
+Rotating a standby signing key into use. That makes it Auth's session key.
 
 Taking the credential user id from the request body.
 

@@ -453,7 +453,7 @@ isOneToOne: true
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "lookup_mcp_credential":
-{ Args: { "p_token_hash": string }; Returns: Json
+{ Args: { "p_pepper_kid": string,"p_token_hash": string }; Returns: Json
                            },
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
@@ -510,7 +510,7 @@ isOneToOne: true
 { Args: { "p_company": string }; Returns: undefined
                            },
 "store_mcp_credential":
-{ Args: { "p_expires_at": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
+{ Args: { "p_expires_at": string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
                            },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json

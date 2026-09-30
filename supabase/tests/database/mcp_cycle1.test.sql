@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(31);
+select plan(34);
 
 do $users$
 begin
@@ -19,14 +19,14 @@ select tests.authenticate_as('mcp_other');
 select lives_ok($$select public.create_company('אחר', true)$$, 'other owner creates a company');
 
 select ok(
-  not has_function_privilege('anon', 'public.store_mcp_credential(uuid, text, text[], timestamptz)', 'execute')
-  and not has_function_privilege('authenticated', 'public.store_mcp_credential(uuid, text, text[], timestamptz)', 'execute')
+  not has_function_privilege('anon', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text)', 'execute')
   and not has_function_privilege('anon', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and not has_function_privilege('authenticated', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and not has_function_privilege('anon', 'public.mcp_credential_status(uuid)', 'execute')
   and not has_function_privilege('authenticated', 'public.mcp_credential_status(uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.lookup_mcp_credential(text)', 'execute')
-  and not has_function_privilege('authenticated', 'public.lookup_mcp_credential(text)', 'execute')
+  and not has_function_privilege('anon', 'public.lookup_mcp_credential(text, text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.lookup_mcp_credential(text, text)', 'execute')
   and not has_function_privilege('anon', 'public.touch_mcp_credential(uuid)', 'execute')
   and not has_function_privilege('authenticated', 'public.touch_mcp_credential(uuid)', 'execute')
   and not has_function_privilege('anon', 'public.bump_mcp_rate(uuid, uuid, text)', 'execute')
@@ -37,7 +37,7 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('service_role', 'public.store_mcp_credential(uuid, text, text[], timestamptz)', 'execute')
+  has_function_privilege('service_role', 'public.store_mcp_credential(uuid, text, text[], timestamptz, text)', 'execute')
   and has_function_privilege('service_role', 'public.revoke_mcp_credential(uuid, uuid)', 'execute')
   and has_function_privilege('service_role', 'public.mcp_credential_status(uuid)', 'execute'),
   'service_role can store, revoke, and read status'
@@ -60,18 +60,22 @@ select is(
       )
       and exists (
         select 1 from unnest(coalesce(p.proconfig, array[]::text[])) as cfg
-        where cfg like 'search_path=%'
+        where cfg = 'search_path=""'
+      )
+      and not exists (
+        select 1 from unnest(coalesce(p.proconfig, array[]::text[])) as cfg
+        where cfg like 'search_path=%' and cfg <> 'search_path=""'
       )
   ),
   7::bigint,
-  'each wrapper sets search_path'
+  'each wrapper sets search_path to the empty string'
 );
 
 reset role;
 
 select throws_ok(
   format(
-    $$select public.store_mcp_credential(%L::uuid, 'hash-no-company-0001', array['read'], now() + interval '1 day')$$,
+    $$select public.store_mcp_credential(%L::uuid, 'hash-no-company-0001', array['read'], now() + interval '1 day', 'pepper-1')$$,
     (select id from auth.users where email = 'mcp-none@test.flow')
   ),
   'P0001',
@@ -81,7 +85,7 @@ select throws_ok(
 
 select lives_ok(
   format(
-    $$select public.store_mcp_credential(%L::uuid, 'hash-owner-one-aaaa', array['read','write'], now() + interval '90 days')$$,
+    $$select public.store_mcp_credential(%L::uuid, 'hash-owner-one-aaaa', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
     (select id from auth.users where email = 'mcp-owner@test.flow')
   ),
   'store mints the owner token'
@@ -95,14 +99,14 @@ select is(
 
 select lives_ok(
   format(
-    $$select public.store_mcp_credential(%L::uuid, 'hash-owner-two-bbbb', array['read'], now() + interval '90 days')$$,
+    $$select public.store_mcp_credential(%L::uuid, 'hash-owner-two-bbbb', array['read'], now() + interval '90 days', 'pepper-1')$$,
     (select id from auth.users where email = 'mcp-owner@test.flow')
   ),
   'a second store replaces the active token'
 );
 
 select is(
-  (public.lookup_mcp_credential('hash-owner-one-aaaa') ->> 'revoked_at') is not null,
+  (public.lookup_mcp_credential('hash-owner-one-aaaa', 'pepper-1') ->> 'revoked_at') is not null,
   true,
   'the previous token is revoked'
 );
@@ -114,9 +118,31 @@ select is(
 );
 
 select is(
-  (public.lookup_mcp_credential('hash-owner-two-bbbb') ->> 'company_id'),
+  (public.lookup_mcp_credential('hash-owner-two-bbbb', 'pepper-1') ->> 'company_id'),
   (select id::text from public.companies where name = 'עוזר'),
   'company_id is the company owned by p_user'
+);
+
+select is(
+  (
+    select pepper_kid
+    from private.mcp_credentials
+    where token_hash = 'hash-owner-two-bbbb'
+  ),
+  'pepper-1',
+  'the pepper kid is stored with the hash'
+);
+
+select is(
+  (public.lookup_mcp_credential('hash-owner-two-bbbb', 'other-kid') ->> 'found')::boolean,
+  false,
+  'a different pepper kid does not resolve the hash'
+);
+
+select is(
+  (public.mcp_credential_status((select id from auth.users where email = 'mcp-other@test.flow')) ->> 'state'),
+  'empty',
+  'another user does not see this token'
 );
 
 select is(
@@ -149,7 +175,7 @@ select is(
 
 select lives_ok(
   format(
-    $$select public.store_mcp_credential(%L::uuid, 'hash-owner-rate-cccc', array['read','write'], now() + interval '1 day')$$,
+    $$select public.store_mcp_credential(%L::uuid, 'hash-owner-rate-cccc', array['read','write'], now() + interval '1 day', 'pepper-1')$$,
     (select id from auth.users where email = 'mcp-owner@test.flow')
   ),
   'store a token for the rate limit'
@@ -159,7 +185,7 @@ select is(
   (
     select bool_and(
       (public.bump_mcp_rate(
-        (public.lookup_mcp_credential('hash-owner-rate-cccc') ->> 'id')::uuid,
+        (public.lookup_mcp_credential('hash-owner-rate-cccc', 'pepper-1') ->> 'id')::uuid,
         (select id from auth.users where email = 'mcp-owner@test.flow'),
         'read'
       ) ->> 'allowed')::boolean
@@ -173,7 +199,7 @@ select is(
 select lives_ok(
   format(
     $$select public.touch_mcp_credential(%L::uuid)$$,
-    (public.lookup_mcp_credential('hash-owner-rate-cccc') ->> 'id')
+    (public.lookup_mcp_credential('hash-owner-rate-cccc', 'pepper-1') ->> 'id')
   ),
   'touch records last use'
 );
@@ -187,7 +213,7 @@ select is(
 select is(
   (
     public.bump_mcp_rate(
-      (public.lookup_mcp_credential('hash-owner-rate-cccc') ->> 'id')::uuid,
+      (public.lookup_mcp_credential('hash-owner-rate-cccc', 'pepper-1') ->> 'id')::uuid,
       (select id from auth.users where email = 'mcp-owner@test.flow'),
       'read'
     ) ->> 'allowed'

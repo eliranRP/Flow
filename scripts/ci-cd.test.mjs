@@ -56,11 +56,14 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /SUPABASE_DB_URL/);
   assert.match(deploy, /CLOUDFLARE_API_TOKEN/);
   assert.match(deploy, /CLOUDFLARE_ACCOUNT_ID/);
-  assert.match(deploy, /exit 1/);
+  assert.match(readFileSync(new URL("./cd-mcp-secrets.mjs", import.meta.url), "utf8"), /process\.exit\(1\)/);
   assert.match(deploy, /SUPABASE_ACCESS_TOKEN/);
-  assert.match(deploy, /FLOW_MCP_SIGNING_KEY/);
+  assert.equal(deploy.includes("FLOW_MCP_SIGNING_KEY"), false);
   assert.match(deploy, /FLOW_MCP_PEPPER/);
+  assert.match(deploy, /node scripts\/cd-mcp-secrets\.mjs/);
+  assert.match(deploy, /--env-file/);
   assert.match(deploy, /functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq/);
+  assert.match(job("check"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
   assert.equal(deploy.includes("service_role"), false);
@@ -82,7 +85,11 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const migrate = deploy.indexOf("cd-push.sh");
   const publish = deploy.indexOf("pnpm exec wrangler");
   const smoke = deploy.indexOf("cd-smoke.sh");
+  const validate = deploy.indexOf("cd-mcp-secrets.mjs");
+  const secretsFile = deploy.indexOf("--env-file");
+  const fn = deploy.indexOf("functions deploy flow-mcp");
   assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
+  assert.ok(validate >= 0 && validate < migrate && publish < secretsFile && secretsFile < fn && fn < smoke);
 
   assert.match(push, /cd-preflight.sh/);
   assert.match(push, /db push --db-url/);
