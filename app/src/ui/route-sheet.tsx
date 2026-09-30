@@ -32,7 +32,7 @@ export function RouteSheet({
   footClassName?: string;
   titleRef?: RefObject<HTMLHeadingElement | null>;
   onEscape?: () => void;
-  onBeforeClose?: () => void | boolean | Promise<void | boolean>;
+  onBeforeClose?: () => undefined | boolean | Promise<undefined | boolean>;
   onRequestClose?: RefObject<(() => void) | null>;
   children?: ReactNode;
 }) {

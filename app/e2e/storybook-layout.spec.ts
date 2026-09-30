@@ -13,6 +13,14 @@ type StoryIndex = {
 
 const widths = [390, 320];
 
+/** A missing edge stays NaN, so a short list does not fail the slack check. */
+function edgeDelta(left: readonly number[], right: readonly number[]): number {
+  return Math.max(...left.map((value, index) => {
+    const other = right[index];
+    return other === undefined ? Number.NaN : Math.abs(value - other);
+  }));
+}
+
 function isStressStory(story: StoryEntry): boolean {
   if (story.type !== "story") return false;
   if (story.name === "Long Hebrew" || story.name === "Large Amount") return true;
@@ -374,8 +382,8 @@ test("a row tint is wider than its content by the spacing token on both sides", 
         const active = await read();
         await page.mouse.up();
         const slack = 0.6;
-        const tintDelta = Math.max(...active.tint.map((value, index) => Math.abs(value - hovered.tint[index]!)));
-        const boxDelta = Math.max(...active.box.map((value, index) => Math.abs(value - hovered.box[index]!)));
+        const tintDelta = edgeDelta(active.tint, hovered.tint);
+        const boxDelta = edgeDelta(active.box, hovered.box);
         if (tintDelta > slack) failures.push(`${item.id}: hover and active tint boxes differ by ${String(tintDelta)}px`);
         if (boxDelta > slack) failures.push(`${item.id}: the row box moves on press`);
         if (active.geometry.join("|") !== hovered.geometry.join("|")) failures.push(`${item.id}: press changes margin, padding, border, or transform`);
@@ -420,7 +428,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
     if (byKeyboard.color === "rgba(0, 0, 0, 0)") failures.push("focus tint is transparent");
     await focusRow.hover();
     const byHover = await read();
-    const delta = Math.max(...byKeyboard.tint.map((value, index) => Math.abs(value - byHover.tint[index]!)));
+    const delta = edgeDelta(byKeyboard.tint, byHover.tint);
     if (delta > 0.6) failures.push(`focus tint differs from hover by ${String(delta)}px`);
   }
   expect(failures, failures.join("\n")).toEqual([]);
@@ -462,7 +470,7 @@ test("pressed buttons and chips keep the hover box", async ({ page }) => {
     await page.mouse.down();
     const active = await read();
     await page.mouse.up();
-    const delta = Math.max(...active.box.map((value, index) => Math.abs(value - hovered.box[index]!)));
+    const delta = edgeDelta(active.box, hovered.box);
     if (delta > 0.6) failures.push(`${id}: press moves the box by ${String(delta)}px`);
     if (active.geometry.join("|") !== hovered.geometry.join("|")) failures.push(`${id}: press changes margin, padding, border, radius, or transform`);
   }
@@ -497,7 +505,6 @@ test("the categories hidden link wraps on the end side and does not truncate", a
 
   await page.goto("/iframe.html?id=screens-routes--categories-long-hebrew&viewMode=story", { waitUntil: "domcontentloaded" });
   const foot = page.locator(".ui-cat-foot");
-  const add = foot.getByRole("button", { name: "קטגוריה חדשה" });
   const hidden = foot.getByRole("button", { name: /מוסתרות/ });
   await expect(hidden).toBeVisible();
   const placed = await foot.evaluate((node) => {

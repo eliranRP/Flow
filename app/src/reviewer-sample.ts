@@ -227,7 +227,7 @@ export function fileReviewerApproval(reviewId: string): void {
   if (!row) return;
   const split = row.pnl_role === "shared" || (row.share_count ?? 0) > 1;
   if (!split || row.reason === "unallocated_shared") return;
-  const id = row.transaction_id ?? row.id;
+  const id = row.transaction_id;
   if (filedExtras.some((item) => item.id === id)) return;
   const count = row.share_count ?? 0;
   filedExtras.unshift({

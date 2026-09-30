@@ -745,8 +745,9 @@ describe("shared transaction category", () => {
       p_id: "tx",
       p_category_id: "c2",
     });
-    await act(async () => {
+    await act(() => {
       fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+      return Promise.resolve();
     });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -894,8 +895,9 @@ describe("shared transaction category", () => {
     expect(getComputedStyle(saving).cursor).toBe("progress");
     expect(screen.getByRole("radio", { name: "חומרים" })).toBeDisabled();
     expect(getComputedStyle(screen.getByRole("radio", { name: "חומרים" })).cursor).toBe("not-allowed");
-    await act(async () => {
+    await act(() => {
       release?.();
+      return Promise.resolve();
     });
     expect(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "הובלה" })).toHaveAttribute("aria-checked", "false");

@@ -34,7 +34,7 @@ export function MoneyField({ label, value, onValueChange, error, id, disabled = 
   const fieldId = flowControlName("flow-amount", generated, id);
   const errorId = `${fieldId}-error`;
   const shown = grouped(value);
-  const shellStyle = { "--money-digits": `${shown.length}ch` } as CSSProperties;
+  const shellStyle = { "--money-digits": `${String(shown.length)}ch` } as CSSProperties;
   return (
     <div className={error ? "ui-field ui-field-error" : "ui-field"}>
       <label className="ui-field-label" htmlFor={fieldId}>
