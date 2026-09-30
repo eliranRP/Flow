@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
+  backfillVersions,
+  backfillVersionsRecorded,
   classifyDryRun,
   dryRunHeadsUp,
   lastNonEmptyLine,
@@ -10,6 +12,7 @@ import {
   preflightCounts,
   readOnlySession,
   remoteUpToDate,
+  ruleRiskIsZero,
   wouldPushMigrations,
 } from "./cd-output.mjs";
 
@@ -33,25 +36,36 @@ test("preflight counts are the eleven integers on the last line, in SQL order", 
     assert.equal(parsed.counts.backfill_240000_transactions, 0);
     assert.equal(parsed.counts.backfill_260000_review_priors, 10);
     assert.equal(Object.keys(parsed.counts).length, 11);
+    assert.equal(ruleRiskIsZero(parsed.counts), false);
   }
+  const clear = preflightCounts("0|0|0|0|0|0|0|0|0|0|0");
+  assert.equal(clear.ok, true);
+  if (clear.ok) assert.equal(ruleRiskIsZero(clear.counts), true);
   assert.equal(preflightCounts("SET0|1|2|3|4|5|6|7|8|9|10").ok, false);
   assert.equal(preflightCounts("0 1 2 3 4 5 6 7 8 9 10").ok, false);
   assert.equal(preflightCounts("0|1|2").ok, false);
 });
 
-test("dry-run text matches Supabase CLI 2.118.0 for up to date and pending", () => {
+test("recorded backfill versions are the three whole lines, and a risk count blocks", () => {
+  assert.equal(backfillVersionsRecorded(`${backfillVersions.join("\n")}\n`), true);
+  assert.equal(backfillVersionsRecorded(backfillVersions[0]), false);
+  assert.equal(backfillVersionsRecorded(`${backfillVersions.join("\n")}\nextra`), false);
+  assert.equal(backfillVersionsRecorded(`note ${backfillVersions[0]}`), false);
+});
+
+test("dry-run text matches whole lines for the expected target", () => {
   const upToDate = [
     dryRunHeadsUp,
     "Connecting to remote database...",
     remoteUpToDate,
   ].join("\n");
-  assert.deepEqual(classifyDryRun(upToDate), { ok: true, kind: "up-to-date", target: "remote" });
+  assert.deepEqual(classifyDryRun(upToDate, "remote"), { ok: true, kind: "up-to-date", target: "remote" });
   const localUpToDateLog = [
     dryRunHeadsUp,
     "Connecting to local database...",
     localUpToDate,
   ].join("\n");
-  assert.deepEqual(classifyDryRun(localUpToDateLog), { ok: true, kind: "up-to-date", target: "local" });
+  assert.deepEqual(classifyDryRun(localUpToDateLog, "local"), { ok: true, kind: "up-to-date", target: "local" });
 
   const pending = [
     dryRunHeadsUp,
@@ -61,11 +75,21 @@ test("dry-run text matches Supabase CLI 2.118.0 for up to date and pending", () 
     "",
     "Finished supabase db push.",
   ].join("\n");
-  assert.deepEqual(classifyDryRun(pending), { ok: true, kind: "pending" });
+  assert.deepEqual(classifyDryRun(pending, "remote"), { ok: true, kind: "pending" });
+  const localPending = pending.replace("remote database", "local database");
+  assert.equal(classifyDryRun(localPending, "local").ok, false);
+  assert.deepEqual(classifyDryRun(localPending, "local", "pending"), { ok: true, kind: "pending" });
 
-  assert.equal(classifyDryRun("Local database is up to date.").ok, false);
-  assert.equal(classifyDryRun("Schema migrations are up to date.").ok, false);
-  assert.equal(classifyDryRun(dryRunHeadsUp).ok, false);
-  assert.equal(classifyDryRun(`${upToDate}\n${wouldPushMigrations}`).ok, false);
-  assert.equal(classifyDryRun(`${upToDate}\n${localUpToDate}`).ok, false);
+  assert.equal(classifyDryRun(localUpToDateLog, "remote").ok, false);
+  assert.match(classifyDryRun(localUpToDateLog, "remote").reason ?? "", /Local/);
+  assert.equal(classifyDryRun(`${upToDate}\n • 20990101000000_ci_dry_run_pending.sql`, "remote").ok, false);
+  assert.equal(classifyDryRun(`${dryRunHeadsUp}\nRemote database is up to date. extra`, "remote").ok, false);
+  assert.equal(classifyDryRun(`${dryRunHeadsUp}\nnote ${remoteUpToDate}`, "remote").ok, false);
+  assert.equal(classifyDryRun("Local database is up to date.", "local").ok, false);
+  assert.equal(classifyDryRun("Schema migrations are up to date.", "remote").ok, false);
+  assert.equal(classifyDryRun(dryRunHeadsUp, "remote").ok, false);
+  assert.equal(classifyDryRun(`${upToDate}\n${wouldPushMigrations}`, "remote").ok, false);
+  assert.equal(classifyDryRun(`${upToDate}\n${localUpToDate}`, "remote").ok, false);
+  assert.equal(classifyDryRun(upToDate, "hosted").ok, false);
+  assert.equal(classifyDryRun(upToDate).ok, false);
 });

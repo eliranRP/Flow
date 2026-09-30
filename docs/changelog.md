@@ -2,6 +2,8 @@
 
 ## 2026-09-30
 
+The dry-run classifier takes `--target remote` on the production path and `--target local` when `FLOW_CD_PREFLIGHT_LOCAL=1`. It matches whole trimmed lines. Production accepts only `Remote database is up to date.` A local run accepts only `Local database is up to date.` A `.sql` line next to an up-to-date line fails. `scripts/preflight-r23.sql` runs only when `20260929240000`, `20260929250000`, or `20260929260000` is not recorded, and then only when `rule_transactions_at_risk` and `rule_undo_rows_at_risk` are both 0. `supabase/migrations.lock` stores a sha256 per file. The comment in `20260928140000_phase1_slice.sql` again says `Apply after 20260927120000_schema_v1.sql.` `.github/CODEOWNERS` names `@eliranRP` for migrations, `scripts/cd-*`, and workflows. Decision [0078](decisions/0078-schema-v1-rename.md).
+
 `schema_v1` is `supabase/migrations/20260928080538_schema_v1.sql`, the version recorded in hosted history. The file bytes are unchanged. Hosted history is not repaired. `supabase/migrations.lock` makes CI fail when a migration filename is renamed, removed, or reordered.
 
 The deploy preflight reads the last line of psql output. A `SET` tag on its own line is no longer glued onto `on`. The same check requires the eleven `preflight-r23.sql` counts, and it accepts the Supabase CLI 2.118.0 dry-run text for "Remote database is up to date.", "Local database is up to date.", and a pending migration. The e2e job runs that preflight against local Supabase.
