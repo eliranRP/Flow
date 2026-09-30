@@ -4,7 +4,7 @@ Store the Vault rows before `supabase db push` when the migration should schedul
 
 ## 1. Migration
 
-Apply, in order, on the hosted SQL editor or with `supabase db push`:
+A push to `main` applies pending files through CD after a read-only preflight ([CI and CD](ci-cd.md)). Applying them by hand is the repair path. Apply, in order, on the hosted SQL editor or with `supabase db push`:
 
 1. `supabase/migrations/20260927120000_schema_v1.sql`
 2. `supabase/migrations/20260928140000_phase1_slice.sql`

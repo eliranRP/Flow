@@ -53,13 +53,13 @@ cp .env.example .env
 pnpm dev
 ```
 
-The dev server listens on port 43123. `/reviewer` is sample data for a design or PR review: a queue with a shared cost, today's filed list, a category drill-down, the queue filtered to one project, and saves that succeed (`?save=ok`), that are refused (`?save=fail`), or that drop the connection (`?save=offline`). Every screen says נתוני דוגמה · Example data. The hosted build omits the route. A reviewers-only build sets `VITE_REVIEWER_BUILD=1` and is not the hosted app. Decision [0073](docs/decisions/0073-review-handoff.md). Signed-out visitors go to the sign-in screen. Component review is Storybook (`pnpm storybook`, port 6006), not an app route. Decision [0058](docs/decisions/0058-storybook.md). The library rule is [0057](docs/decisions/0057-component-library.md). `/?preview=1` opens Home in demo mode without a session. `?preview=loading`, `?preview=empty`, `?preview=error`, and `?preview=error-server` show those Home states. Sign-in help writes to `HELP_EMAIL` in `app/src/config.ts`. The help page and its test import that constant. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). Migrations are not applied from this repo's automation; review them, then run `supabase link` and `supabase db push` yourself.
+The dev server listens on port 43123. `/reviewer` is sample data for a design or PR review: a queue with a shared cost, today's filed list, a category drill-down, the queue filtered to one project, and saves that succeed (`?save=ok`), that are refused (`?save=fail`), or that drop the connection (`?save=offline`). Every screen says נתוני דוגמה · Example data. The hosted build omits the route. A reviewers-only build sets `VITE_REVIEWER_BUILD=1` and is not the hosted app. Decision [0073](docs/decisions/0073-review-handoff.md). Signed-out visitors go to the sign-in screen. Component review is Storybook (`pnpm storybook`, port 6006), not an app route. Decision [0058](docs/decisions/0058-storybook.md). The library rule is [0057](docs/decisions/0057-component-library.md). `/?preview=1` opens Home in demo mode without a session. `?preview=loading`, `?preview=empty`, `?preview=error`, and `?preview=error-server` show those Home states. Sign-in help writes to `HELP_EMAIL` in `app/src/config.ts`. The help page and its test import that constant. Sign-in uses Supabase Auth with the Google provider. Create the OAuth client in Google Cloud and paste the client id and secret into the Supabase dashboard (Authentication → Providers → Google). Until that exists, the sign-in screen renders and the button reports that the provider is not ready. The hosted project is `sxqpnetmtufkzowutduq` in `eu-central-1` (Postgres 17). A push to `main` applies pending migrations and deploys the hosted build. The secrets, the read-only preflight, and how to roll back are in [CI and CD](docs/runbooks/ci-cd.md).
 
 ```bash
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0 and runs supabase db start first.
+pnpm db:test          # pgTAP via the Supabase CLI. Needs Docker. CI pins CLI 2.118.0, runs supabase start, then this suite.
 pnpm db:test:local    # same suite with pg_prove --verbose on local Postgres 17. Migration first, then pgTAP. No Docker.
 pnpm check:bundle     # after pnpm build: the client graph and dist import no fixture JSON
 pnpm build-storybook && pnpm test:storybook:smoke   # every static story opens with no console error
@@ -97,6 +97,7 @@ The migration revokes the default `EXECUTE` privilege from `PUBLIC` for every fu
 | [Technical plan](docs/tech/tech-plan.md) | Supabase pilot. The Cloudflare version is superseded |
 | [Decisions](docs/decisions/README.md) | Decision records 0001–0043 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
+| [CI and CD](docs/runbooks/ci-cd.md) | GitHub Actions checks, production deploy, secrets, and rollback |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |
 
