@@ -482,14 +482,14 @@ isOneToOne: true
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
-"revoke_mcp_credential":
-{ Args: { "p_id": string,"p_user": string }; Returns: Json
-                           },
 "replace_sumit_connection":
 { Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number,"p_validated": boolean }; Returns: undefined
                            },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean }; Returns: undefined
+                           },
+"revoke_mcp_credential":
+{ Args: { "p_id": string,"p_user": string }; Returns: Json
                            },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
@@ -510,7 +510,7 @@ isOneToOne: true
 { Args: { "p_company": string }; Returns: undefined
                            },
 "store_mcp_credential":
-{ Args: { "p_expires_at": string,"p_scope": string[],"p_token_hash": string,"p_user": string }; Returns: string
+{ Args: { "p_expires_at": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
                            },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json
