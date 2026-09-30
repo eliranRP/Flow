@@ -57,7 +57,13 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /CLOUDFLARE_API_TOKEN/);
   assert.match(deploy, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(deploy, /exit 1/);
-  assert.equal(deploy.includes("SUPABASE_ACCESS_TOKEN"), false);
+  assert.match(deploy, /SUPABASE_ACCESS_TOKEN/);
+  assert.match(deploy, /FLOW_MCP_SIGNING_KEY/);
+  assert.match(deploy, /FLOW_MCP_PEPPER/);
+  assert.match(deploy, /functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq/);
+  assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
+  assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
+  assert.equal(deploy.includes("service_role"), false);
   assert.equal(deploy.includes("SUPABASE_DB_PASSWORD"), false);
   assert.equal(deploy.includes("npx"), false);
   assert.equal(deploy.includes("VITE_REVIEWER_BUILD"), false);

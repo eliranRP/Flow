@@ -70,7 +70,13 @@ enabled = true
 [edge_runtime.secrets]
 SUMIT_KEK = "env(SUMIT_KEK)"
 CRON_SECRET = "env(CRON_SECRET)"
+FLOW_MCP_PEPPER = "env(FLOW_MCP_PEPPER)"
+FLOW_MCP_SIGNING_KEY = "env(FLOW_MCP_SIGNING_KEY)"
 
 # The cron drain sends x-flow-cron and has no user JWT. The function checks that secret itself.
 [functions.sumit-sync]
+verify_jwt = false
+
+# The bearer is the MCP secret or the app JWT, checked inside the function.
+[functions.flow-mcp]
 verify_jwt = false
