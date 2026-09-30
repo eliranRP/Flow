@@ -100,3 +100,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0077](0077-deploy-after-ci.md) | 2026-09-30 | Accepted | Production deploy is a CI job on a push to main, after lint, check, and e2e. The hosted build is checked before the migration |
 | [0078](0078-schema-v1-rename.md) | 2026-09-30 | Accepted | Renaming schema_v1 to 20260928080538 is a one-time exception. The lock stores a sha256, and applied SQL stays byte-identical |
 | [0079](0079-automatic-deploy-owner-risk.md) | 2026-09-30 | Accepted | Deploys stay automatic after the reviewer bots and green CI. No required production reviewer, and 0 required PR approvals. CODEOWNERS notifies only |
+| [0080](0080-mcp-connector.md) | 2026-09-30 | Proposed | An MCP connector tags projects and expenses through the existing RPCs. The app stays the display. Open questions remain |

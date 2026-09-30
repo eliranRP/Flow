@@ -19,7 +19,7 @@ The r18 and r19 design reviews of Split v2 and the review screen asked for a fix
 8. These open questions stay as built: manual rows are taller than 64px because the shekel line sits under the field (O1); one ticked project says "₪X לפרויקט אחד" (O2); an unchecked checklist row has no value (O3); the extra Split sentences in the product stay (O4); whether iOS offers AutoFill from a Hebrew "שם" label stays a device check, and the field attributes stay as they are (O6).
 9. The preview notice "במצב תצוגה זה לא נשמר." uses the info tone, not the error tone. It still stays long enough to read.
 10. When an even split's shekel parts are not exactly equal, the subline and the summary say "₪1,000 מתחלק שווה בין 3 פרויקטים". "₪X לכל אחד" stays only when every part is the same amount.
-11. The empty שויכו היום copy stays, with a maqaf: "כש־SUMIT".
+11. The empty שויכו היום copy stays, with a maqaf: "כש־SUMIT". [0080](0080-mcp-connector.md) (proposed) adds the assistant to that sentence so the copy stays true when the list includes an assistant filing.
 12. The שויכו היום story uses the same tab bar as the app route. The banner count and the sample list are the same number of rows.
 13. A Hebrew prefix before a Latin word uses a maqaf: כש־SUMIT, ב־SUMIT, מ־SUMIT, ל־SUMIT, מ־Google. An ASCII hyphen is not that join.
 14. "לא נשמר – אין חיבור" is only a network or server error, and it offers ניסיון חוזר. A refusal the database will repeat says "לא נשמר. בדקו את הפרטים ונסו שוב." and offers no retry. A shared cost, whether the screen refuses it before the write or the database refuses one project, says "עלות משותפת מחולקת במסך החלוקה." in the info tone, with לחלוקה, and it stays 5 seconds. It offers no ניסיון חוזר.
