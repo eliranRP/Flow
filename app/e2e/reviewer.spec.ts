@@ -407,13 +407,17 @@ test("a saved split category is not a suggestion and אישור is enabled", asy
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/project");
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+  await expect(page.getByText("מפוצל · 2 פרויקטים")).toBeVisible();
+  await expect(page.getByText("הצעה")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/item=q-bolts/);
   await expect(page.getByRole("switch", { name: "לזכור לספק הזה" })).toHaveCount(0);
+  await expect(page.getByText("הצעה")).toHaveCount(0);
   await pickCategory(page, "שינוע");
   await toast(page, "השיוך נשמר");
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "קטגוריה: שינוע, שינוי" })).toBeVisible();
   await expect(page.getByText("הצעה")).toHaveCount(0);
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page).toHaveURL(/\/reviewer\/project/);

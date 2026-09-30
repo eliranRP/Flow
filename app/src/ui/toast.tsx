@@ -105,6 +105,15 @@ function sheetSurface(sheet: Element): HTMLElement | null {
   return surface instanceof HTMLElement ? surface : null;
 }
 
+/** The sheet's own content. Padding from the toast pad does not change this. */
+function sheetContentKey(sheet: Element): string {
+  const body = sheet.querySelector(".ui-sheet-body");
+  const text = body instanceof HTMLElement ? body.innerText : "";
+  const controls = body instanceof HTMLElement ? body.querySelectorAll("button, a, input, [role='radio']").length : 0;
+  const shape = sheet.classList.contains("ui-sheet-tall") ? "tall" : "fit";
+  return `${shape}|${String(controls)}|${text}`;
+}
+
 /** Drop the extra pad. Setting it to zero lets the motion token ease it back. */
 export function clearToastPad(sheet: Element | null = document.querySelector("[data-vaul-drawer][data-state='open']")): void {
   if (!(sheet instanceof Element)) return;
@@ -144,7 +153,7 @@ function padSheetUnderToast(sheet: HTMLElement, top: number, height: number, gap
   surface.style.setProperty("--toast-pad", `${String(need)}px`);
 }
 
-/** Sit just under the page header, or just above an open sheet, clear of every control. A toast that cannot fit in the gap keeps its full height a small gap below the safe area. It may cover the grabber and the empty top of the sheet. It never covers a header control or any other control: only then does the sheet content pad down, once. The text is never clipped. Decision 0075. */
+/** Sit just under the page header, or just above an open sheet, clear of every control. A toast that cannot fit in the gap keeps its full height `--space-2` below the safe area. It may cover the grabber and the empty top of the sheet. It never covers a header control or any other control: only then does the sheet content pad down, once. The text is never clipped. Decision 0075. */
 export function placeToast(layer: HTMLElement): void {
   const toast = layer.querySelector(".ui-toast");
   if (toast instanceof HTMLElement) {
@@ -162,9 +171,10 @@ export function placeToast(layer: HTMLElement): void {
   const sheetTop = sheet instanceof HTMLElement ? sheet.getBoundingClientRect().top : null;
   const pageHeader = document.querySelector("header.ui-page, header.ui-band");
   if (sheet instanceof HTMLElement && sheetTop != null && height > 0) {
+    const minTop = Math.max(safe, 0) + gap;
     const above = sheetTop - gap - height;
     if (
-      above >= safe
+      above >= minTop
       && above + height <= floor
       && !toastHits(above, height, boxes)
       && !coversPageHeader(above, height, pageHeader, sheet)
@@ -173,10 +183,11 @@ export function placeToast(layer: HTMLElement): void {
       layer.style.top = `${String(above)}px`;
       return;
     }
-    // The gap above the sheet is shorter than the toast. Keep the full height
-    // a gap below the safe area, so it never sits flush with the screen edge.
-    // It may cover the grabber and the empty header. A control pads down once.
-    const top = Math.max(safe, 0) + gap;
+    // The gap above the sheet is shorter than the toast, or it would sit closer
+    // than --space-2 to the screen edge. Keep the full height --space-2 below
+    // the safe area. It may cover the grabber and the empty header. A control
+    // pads down once.
+    const top = minTop;
     layer.style.top = `${String(top)}px`;
     padSheetUnderToast(sheet, top, height, gap);
     return;
@@ -224,6 +235,8 @@ export function placeToast(layer: HTMLElement): void {
 /** One toast under the page header. A new show replaces it. The host does not catch taps. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);
+  const [phase, setPhase] = useState<"off" | "measure" | "pad" | "in">("off");
+  const [fade, setFade] = useState(false);
   const host = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
@@ -249,6 +262,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (input: ToastInput) => {
       acting.current = false;
       seq.current += 1;
+      setFade(false);
+      setPhase("measure");
       setToast({ ...input, id: seq.current });
       arm(toastMs(input));
     },
@@ -258,6 +273,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const dismiss = useCallback(() => {
     acting.current = false;
     clearTimer();
+    setFade(false);
+    setPhase("off");
     setToast(null);
   }, []);
 
@@ -266,6 +283,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     acting.current = true;
     const action = toast.onAction;
     clearTimer();
+    setFade(false);
+    setPhase("off");
     setToast(null);
     action();
   }
@@ -285,32 +304,120 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const node = host.current;
     if (!toast || !node) return;
     const layer = node;
-    const place = () => { placeToast(layer); };
-    place();
-    const { sheet, anchor } = toastAnchor();
-    const openSheet = sheet;
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(place);
-      if (sheet instanceof Element) observer.observe(sheet);
-      if (anchor instanceof Element) observer.observe(anchor);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let generation = 0;
+    let waiting = false;
+    let fallback = 0;
+    let contentKey = "";
+    const openSheet = toastAnchor().sheet;
+
+    function reveal(top: string, animate: boolean) {
+      waiting = false;
+      window.clearTimeout(fallback);
+      layer.style.top = top;
+      setFade(animate);
+      setPhase("in");
     }
-    sheet?.addEventListener("transitionend", place);
-    const timers = [50, 150, 320, 500].map((ms) => window.setTimeout(place, ms));
-    window.addEventListener("resize", place);
+
+    function placeOnce() {
+      generation += 1;
+      const gen = generation;
+      waiting = false;
+      window.clearTimeout(fallback);
+      setFade(false);
+      setPhase("measure");
+      placeToast(layer);
+      const sheet = toastAnchor().sheet;
+      const surface = sheet instanceof Element ? sheetSurface(sheet) : null;
+      const pad = surface ? Number.parseFloat(surface.dataset.toastPad ?? "") || 0 : 0;
+      const targetTop = layer.style.top;
+      contentKey = sheet instanceof Element ? sheetContentKey(sheet) : "";
+      if (pad > 0.5 && !reduce && surface) {
+        waiting = true;
+        layer.style.top = "-10000px";
+        setPhase("pad");
+        const onEnd = (event: Event) => {
+          if (gen !== generation || !waiting) return;
+          if (!(event instanceof TransitionEvent) || event.propertyName !== "padding-top") return;
+          if (event.target !== surface) return;
+          reveal(targetTop, true);
+        };
+        surface.addEventListener("transitionend", onEnd);
+        fallback = window.setTimeout(() => {
+          if (gen !== generation || !waiting) return;
+          surface.removeEventListener("transitionend", onEnd);
+          reveal(targetTop, true);
+        }, 220);
+        return () => {
+          surface.removeEventListener("transitionend", onEnd);
+        };
+      }
+      layer.style.top = targetTop;
+      setPhase("in");
+      return () => undefined;
+    }
+
+    let removeWait = placeOnce();
+
+    function relayout() {
+      const sheet = toastAnchor().sheet;
+      if (!(sheet instanceof Element)) return;
+      const next = sheetContentKey(sheet);
+      if (next === contentKey) return;
+      contentKey = next;
+      generation += 1;
+      waiting = false;
+      window.clearTimeout(fallback);
+      removeWait?.();
+      const surface = sheetSurface(sheet);
+      if (surface) {
+        const previous = surface.style.transition;
+        surface.style.transition = "none";
+        surface.style.setProperty("--toast-pad", "0px");
+        delete surface.dataset.toastPad;
+        void surface.offsetHeight;
+        placeToast(layer);
+        void surface.offsetHeight;
+        surface.style.transition = previous;
+      } else {
+        placeToast(layer);
+      }
+      setFade(false);
+      setPhase("in");
+    }
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && openSheet instanceof Element) {
+      observer = new ResizeObserver(() => {
+        relayout();
+      });
+      const head = openSheet.querySelector(".ui-sheet-head");
+      const body = openSheet.querySelector(".ui-sheet-body");
+      if (head instanceof Element) observer.observe(head);
+      if (body instanceof Element) observer.observe(body);
+    }
+
     return () => {
-      clearToastPad(openSheet);
+      generation += 1;
+      waiting = false;
+      window.clearTimeout(fallback);
+      removeWait?.();
       observer?.disconnect();
-      sheet?.removeEventListener("transitionend", place);
-      for (const timer of timers) window.clearTimeout(timer);
-      window.removeEventListener("resize", place);
+      const surface = openSheet instanceof Element ? sheetSurface(openSheet) : null;
+      if (surface) surface.style.transition = "";
+      clearToastPad(openSheet);
     };
   }, [toast]);
 
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className="ui-toast-host" ref={host}>
+      <div
+        className="ui-toast-host"
+        data-phase={phase === "off" ? undefined : phase}
+        data-fade={fade ? "1" : undefined}
+        ref={host}
+      >
         <Toast
           tone={toast?.tone ?? "ok"}
           action={toast?.action}

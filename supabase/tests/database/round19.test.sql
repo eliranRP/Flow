@@ -102,9 +102,10 @@ select is(
   2,
   'list_review reports the share count'
 );
-select ok(
-  (public.list_review() -> 0) ? 'category_suggested',
-  'list_review reports whether the category is a suggestion'
+select is(
+  (public.list_review() -> 0 ->> 'category_suggested'),
+  'false',
+  'list_review reports the category is not a suggestion'
 );
 
 select lives_ok(

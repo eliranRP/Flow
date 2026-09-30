@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -247,7 +247,7 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("הצעה")).toBeInTheDocument();
+    expect(await screen.findAllByText("הצעה")).toHaveLength(2);
     expect(screen.getByText("פרויקט")).toBeInTheDocument();
     expect(screen.getByText("הרצל")).toBeInTheDocument();
     expect(screen.getByText("קטגוריה")).toBeInTheDocument();
@@ -309,6 +309,52 @@ describe("rejected writes", () => {
     fireEvent.click(approve);
     expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
     expect(calls).not.toContain("resolve_review");
+    expect(calls).not.toContain("approve_split_review");
+  });
+
+  it("approves a categorised split without collapsing it", async () => {
+    const calls: string[] = [];
+    const args: unknown[] = [];
+    rpc.impl = (name, input) => {
+      calls.push(name);
+      args.push(input);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r-split",
+              transaction_id: "t-split",
+              description: "ליסינג",
+              doc_date: "2026-09-01",
+              doc_kind: "invoice",
+              amount_net: -200000,
+              direction: "expense",
+              reason: "missing_category",
+              pnl_role: "shared",
+              share_count: 2,
+              project_id: null,
+              category_id: "c1",
+              project_name: null,
+              category_name: "חומרים",
+              category_suggested: false,
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(calls).toContain("approve_split_review");
+    });
+    expect(calls).not.toContain("resolve_review");
+    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-split" });
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
   });
 
   it("unsplits an unallocated shared cost from the project picker", async () => {
@@ -620,6 +666,7 @@ describe("rejected writes", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.getByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
     expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
     rerender(
@@ -646,6 +693,77 @@ describe("rejected writes", () => {
     expect(screen.getByText("שינוע")).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+  });
+
+  it("labels a guessed project and not a rule-owned category", () => {
+    const row = {
+      id: "r1",
+      transaction_id: "t1",
+      description: "מלט",
+      doc_date: "2026-09-29",
+      amount_net: -100_000n,
+      direction: "expense" as const,
+      reason: "suggested",
+      project_id: "p1",
+      category_id: "c1",
+      supplier_name: "מחסן",
+      project_name: "הרצל",
+      category_name: "חומרים",
+      category_suggested: false,
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={[row]} search="" sample />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const project = screen.getByText("הרצל").closest("p");
+    const category = screen.getByText("חומרים").closest("p");
+    if (!(project instanceof HTMLElement) || !(category instanceof HTMLElement)) throw new Error("line missing");
+    expect(within(project).getByText("הצעה")).toBeInTheDocument();
+    expect(within(category).queryByText("הצעה")).not.toBeInTheDocument();
+  });
+
+  it("clears the category הצעה after the owner picks it", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/review/change"]}>
+            <BooksProvider>
+              <ChangeForm
+                sample={{
+                  supplier: "מחסן",
+                  amount: "₪100",
+                  suggestionId: "p1",
+                  suggestionCategoryId: "c1",
+                  projectId: "p1",
+                  categoryId: "c1",
+                  projects: [{ id: "p1", name: "הרצל" }],
+                  categories: [
+                    { id: "c1", name: "חומרים", hidden: false },
+                    { id: "c2", name: "שינוע", hidden: false },
+                  ],
+                  categorySuggested: true,
+                }}
+              />
+            </BooksProvider>
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const category = await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" });
+    expect(within(category).getByText("הצעה")).toBeInTheDocument();
+    expect(within(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).getByText("הצעה")).toBeInTheDocument();
+    fireEvent.click(category);
+    fireEvent.click(await screen.findByRole("radio", { name: /חומרים/ }));
+    const cleared = await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" });
+    expect(within(cleared).queryByText("הצעה")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).getByText("הצעה")).toBeInTheDocument();
   });
 
   it("says a project expense is missing a category", async () => {
@@ -881,13 +999,19 @@ describe("an unchanged complete review", () => {
 
   it("does not write when back is pressed on an unchanged sheet", async () => {
     const calls = await openComplete();
+    const before = writes(calls);
     await act(async () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
-      await Promise.resolve();
-      await Promise.resolve();
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 50);
+      });
     });
-    expect(writes(calls)).toEqual([]);
+    expect(writes(calls)).toEqual(before);
     expect(screen.getByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: הרצל, שינוי" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "לזכור לספק הזה" })).toBeChecked();
+    expect(screen.queryByText("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.")).not.toBeInTheDocument();
+    expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
   });
 
   it("does not write when a swipe closes an unchanged sheet", async () => {
