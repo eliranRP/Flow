@@ -396,6 +396,9 @@ isOneToOne: true
             "approve_split_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"bump_mcp_rate":
+{ Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
+                           },
 "collapse_split":
 { Args: { "p_id": string,"p_project_id": string }; Returns: string
                            },
@@ -449,11 +452,20 @@ isOneToOne: true
 "list_unpaid":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"lookup_mcp_credential":
+{ Args: { "p_pepper_kid": string,"p_token_hash": string }; Returns: Json
+                           },
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
+"mcp_credential_status":
+{ Args: { "p_user": string }; Returns: Json
+                           },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
+                           },
+"note_auth_failure":
+{ Args: { "p_address": string }; Returns: Json
                            },
 "note_sumit_rejection":
 { Args: { "p_code": string,"p_company": string }; Returns: Json
@@ -476,6 +488,9 @@ isOneToOne: true
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean }; Returns: undefined
                            },
+"revoke_mcp_credential":
+{ Args: { "p_id": string,"p_user": string }; Returns: Json
+                           },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
                            },
@@ -494,11 +509,17 @@ isOneToOne: true
 "stamp_sumit_sync":
 { Args: { "p_company": string }; Returns: undefined
                            },
+"store_mcp_credential":
+{ Args: { "p_expires_at": string,"p_pepper_kid": string,"p_scope": (string)[],"p_token_hash": string,"p_user": string }; Returns: string
+                           },
 "sumit_status":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "sync_review_queue":
 { Args: { "p_company_id": string }; Returns: number
+                           },
+"touch_mcp_credential":
+{ Args: { "p_id": string }; Returns: undefined
                            },
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined
