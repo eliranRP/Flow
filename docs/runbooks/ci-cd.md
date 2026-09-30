@@ -56,7 +56,7 @@ The reviewers-only build is not deployed. The deploy does not run the live SUMIT
 
 These three secrets live only on the GitHub environment `production`. The repository copies are deleted. The environment is restricted to `main` and has no required reviewer. The deploy job selects that environment, which is how it can read them. A job that does not select `production` cannot see them.
 
-A merge to `main` requires 0 approving reviews. `.github/CODEOWNERS` notifies `@eliranRP` and does not block. Both reviewer bots are expected to approve the pull request, and CI on that pull request is expected to be green, before merge. GitHub does not require those approvals. The push then deploys on its own after `lint`, `check`, and `e2e`. Decision [0079](../decisions/0079-automatic-deploy-owner-risk.md) records that as an accepted owner risk.
+Required approving reviews on `main` stay at 0. `.github/CODEOWNERS` notifies `@eliranRP` and does not block. Both reviewer bots are expected to approve the pull request, and CI on that pull request is expected to be green, before merge. GitHub does not require those approvals. The push then deploys on its own after `lint`, `check`, and `e2e`. Decision [0079](../decisions/0079-automatic-deploy-owner-risk.md) records that as an accepted owner risk.
 
 | Name | What it is |
 | --- | --- |
