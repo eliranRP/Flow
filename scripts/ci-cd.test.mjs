@@ -99,6 +99,12 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(owners, /^supabase\/migrations\/ @eliranRP$/m);
   assert.match(owners, /^supabase\/migrations\.lock @eliranRP$/m);
   assert.match(owners, /^scripts\/cd-\* @eliranRP$/m);
+  assert.match(owners, /^scripts\/check-migration-order\.mjs @eliranRP$/m);
+  assert.match(owners, /^scripts\/preflight-r23\.sql @eliranRP$/m);
   assert.match(owners, /^\.github\/workflows\/ @eliranRP$/m);
+  assert.match(owners, /^\.github\/CODEOWNERS @eliranRP$/m);
+  assert.match(owners, /^package\.json @eliranRP$/m);
+  assert.match(owners, /^pnpm-lock\.yaml @eliranRP$/m);
+  assert.match(owners, /^supabase\/config\.toml @eliranRP$/m);
   assert.match(readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8"), /cd-output\.mjs" equals/);
 });

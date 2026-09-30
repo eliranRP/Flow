@@ -101,21 +101,24 @@ export function ruleRiskIsZero(counts) {
 }
 
 /**
- * A whole trimmed line that is a JSON object with `dryRun: true`.
- * CLI 2.118.0 writes this from `output.success` when the format is json.
+ * A whole trimmed line. Both preflight scripts pass `--output-format json`, so a `{` or `[`
+ * line must parse. `dryRun: true` is the only accepted result object.
  * @param {string} line
- * @returns {Record<string, unknown> | null}
+ * @returns {{ ok: true, value: Record<string, unknown> } | { ok: false, reason: "not-json" | "malformed" | "dry-run-not-true" }}
  */
 function dryRunJson(line) {
-  if (!line.startsWith("{") || !line.endsWith("}")) return null;
+  if (!line.startsWith("{") && !line.startsWith("[")) return { ok: false, reason: "not-json" };
+  /** @type {unknown} */
+  let value;
   try {
-    const value = JSON.parse(line);
-    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-    if (value.dryRun !== true) return null;
-    return value;
+    value = JSON.parse(line);
   } catch {
-    return null;
+    return { ok: false, reason: "malformed" };
   }
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.dryRun !== true) {
+    return { ok: false, reason: "dry-run-not-true" };
+  }
+  return { ok: true, value };
 }
 
 /** @param {unknown} value */
@@ -150,14 +153,15 @@ function listedSql(lines) {
 }
 
 /**
- * Fail closed. `target` is the database the command was aimed at.
- * A JSON line with `dryRun: true` wins. Up to date requires `upToDate === true`
- * and empty `migrations`, `seeds`, and `roles`. Prod mode also requires `message` to start with `Remote`.
- * Local mode requires `message` to start with `Local`.
- * Pending is a non-empty `migrations` array. Those names are returned.
- * Plain text is used only when no JSON line is present. A trimmed line is a match.
- * Prod text accepts only `Remote database is up to date.`. Local text accepts only `Local database is up to date.`.
- * `expect` `auto` allows a pending listing on remote only. `pending` requires that listing.
+ * Fail closed. Both preflight scripts pass `--output-format json`.
+ * The log must contain the DRY RUN line and exactly one JSON object with `dryRun: true`.
+ * Malformed JSON fails. A parsed JSON line whose `dryRun` is not `true` fails.
+ * There is no plain-text success path.
+ * Up to date requires `upToDate === true` and empty `migrations`, `seeds`, and `roles`.
+ * Prod mode also requires `message` to start with `Remote`. Local mode requires `Local`.
+ * A pending text list next to `upToDate: true` fails. Pending JSON next to an up-to-date text line fails.
+ * When the JSON `migrations` list and a text `.sql` list are both present, the names must be equal.
+ * `expect` `auto` allows pending on remote only. `pending` requires that listing.
  * @param {string} text
  * @param {string} target
  * @param {"auto" | "pending"} [expect]
@@ -171,79 +175,83 @@ export function classifyDryRun(text, target, expect = "auto") {
     return { ok: false, reason: "dry-run expect must be auto or pending" };
   }
   const lines = trimmedLines(text);
+  let malformed = false;
+  let dryRunNotTrue = false;
   /** @type {Record<string, unknown>[]} */
-  const jsonLines = [];
+  const jsonValues = [];
+  /** @type {string[]} */
+  const textLines = [];
   for (const line of lines) {
     const parsed = dryRunJson(line);
-    if (parsed) jsonLines.push(parsed);
+    if (!parsed.ok && parsed.reason === "not-json") {
+      textLines.push(line);
+      continue;
+    }
+    if (!parsed.ok && parsed.reason === "malformed") {
+      malformed = true;
+      continue;
+    }
+    if (!parsed.ok) {
+      dryRunNotTrue = true;
+      continue;
+    }
+    jsonValues.push(parsed.value);
   }
-  if (jsonLines.length > 1) {
-    return { ok: false, reason: "dry-run output contained more than one JSON result" };
+  if (malformed) return { ok: false, reason: "dry-run output contained malformed JSON" };
+  if (dryRunNotTrue) return { ok: false, reason: "dry-run JSON did not set dryRun to true" };
+  if (jsonValues.length !== 1) {
+    return { ok: false, reason: "dry-run output did not contain exactly one JSON result" };
   }
-  const json = jsonLines[0];
-  if (json) {
-    const message = typeof json.message === "string" ? json.message : "";
-    const names = migrationNames(json.migrations);
-    const upToDate = json.upToDate === true
-      && emptyArray(json.migrations)
-      && emptyArray(json.seeds)
-      && emptyArray(json.roles);
-    if (upToDate) {
-      if (target === "remote" && !message.startsWith("Remote")) {
-        return { ok: false, reason: "dry-run JSON message did not start with Remote" };
-      }
-      if (target === "local" && !message.startsWith("Local")) {
-        return { ok: false, reason: "dry-run JSON message did not start with Local" };
-      }
-      if (expect === "pending") {
-        return { ok: false, reason: "dry-run output did not match Supabase CLI 2.118.0" };
-      }
-      return { ok: true, kind: "up-to-date", target };
-    }
-    if (json.upToDate === true) {
-      return { ok: false, reason: "dry-run JSON said up to date and also listed migrations, seeds, or roles" };
-    }
-    if (names) {
-      if (target === "local" && expect !== "pending") {
-        return { ok: false, reason: "dry-run listed pending migrations against a local target" };
-      }
-      return { ok: true, kind: "pending", migrations: names };
-    }
-    return { ok: false, reason: "dry-run JSON did not match Supabase CLI 2.118.0" };
+  if (!textLines.includes(dryRunHeadsUp)) {
+    return { ok: false, reason: "dry-run output did not contain the DRY RUN line" };
   }
 
-  const has = (sentence) => lines.includes(sentence);
-  const headsUp = has(dryRunHeadsUp);
-  const remote = has(remoteUpToDate);
-  const local = has(localUpToDate);
-  const pending = has(wouldPushMigrations);
-  const sqlNames = listedSql(lines);
-  const expectedSentence = target === "remote" ? remoteUpToDate : localUpToDate;
-  const otherSentence = target === "remote" ? localUpToDate : remoteUpToDate;
-  const otherName = target === "remote" ? "Local" : "Remote";
+  const json = jsonValues[0];
+  const message = typeof json.message === "string" ? json.message : "";
+  const names = migrationNames(json.migrations);
+  const upToDate = json.upToDate === true
+    && emptyArray(json.migrations)
+    && emptyArray(json.seeds)
+    && emptyArray(json.roles);
+  const wouldPush = textLines.includes(wouldPushMigrations);
+  const textNames = listedSql(textLines);
+  const upToDateText = textLines.includes(remoteUpToDate) || textLines.includes(localUpToDate);
 
-  if (has(otherSentence)) {
-    return { ok: false, reason: `dry-run reported ${otherName} but the target is ${target}` };
+  if (json.upToDate === true && wouldPush) {
+    return { ok: false, reason: "dry-run listed pending migrations alongside an up-to-date result" };
   }
-  if ((remote || local) && sqlNames.length > 0) {
-    return { ok: false, reason: "dry-run listed a migration file alongside an up-to-date line" };
+  if (json.upToDate === true && textNames.length > 0) {
+    return { ok: false, reason: "dry-run listed a migration file alongside an up-to-date result" };
   }
-  if ((remote || local) && pending) {
-    return { ok: false, reason: "dry-run reported both up to date and pending migrations" };
+  if (names && upToDateText) {
+    return { ok: false, reason: "dry-run JSON listed migrations alongside an up-to-date line" };
+  }
+  if (names && textNames.length > 0 && names.join("\n") !== textNames.join("\n")) {
+    return { ok: false, reason: "dry-run JSON migrations did not match the text list" };
   }
 
-  const upToDate = headsUp && has(expectedSentence) && sqlNames.length === 0 && !pending;
-  const pendingOk = headsUp && pending && sqlNames.length > 0 && !remote && !local;
-  if (expect === "pending") {
-    if (pendingOk) return { ok: true, kind: "pending", migrations: sqlNames };
-    return { ok: false, reason: "dry-run output did not match Supabase CLI 2.118.0" };
+  if (upToDate) {
+    if (target === "remote" && !message.startsWith("Remote")) {
+      return { ok: false, reason: "dry-run JSON message did not start with Remote" };
+    }
+    if (target === "local" && !message.startsWith("Local")) {
+      return { ok: false, reason: "dry-run JSON message did not start with Local" };
+    }
+    if (expect === "pending") {
+      return { ok: false, reason: "dry-run JSON was up to date and pending was required" };
+    }
+    return { ok: true, kind: "up-to-date", target };
   }
-  if (upToDate) return { ok: true, kind: "up-to-date", target };
-  if (target === "remote" && pendingOk) return { ok: true, kind: "pending", migrations: sqlNames };
-  if (target === "local" && pending && headsUp) {
-    return { ok: false, reason: "dry-run listed pending migrations against a local target" };
+  if (json.upToDate === true) {
+    return { ok: false, reason: "dry-run JSON said up to date and also listed migrations, seeds, or roles" };
   }
-  return { ok: false, reason: "dry-run output did not match Supabase CLI 2.118.0" };
+  if (names) {
+    if (target === "local" && expect !== "pending") {
+      return { ok: false, reason: "dry-run listed pending migrations against a local target" };
+    }
+    return { ok: true, kind: "pending", migrations: names };
+  }
+  return { ok: false, reason: "dry-run JSON did not match Supabase CLI 2.118.0" };
 }
 
 /** @param {string[]} argv @param {string} name */
