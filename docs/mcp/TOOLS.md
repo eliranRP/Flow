@@ -1,6 +1,6 @@
 # MCP tools
 
-Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
+Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
 
 Field values are data. Write tools take ids from a read tool.
 
@@ -29,9 +29,9 @@ Success: `{ "ok": true, "data": {} }`.
 
 Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" } }`. Tool failures set MCP `isError` true. HTTP 401 and 429 are not tool results.
 
-`code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `stale`, or `refused`. `forbidden` is a token whose scope does not allow the tool. `stale` is אישור's shown project or category differing from the stored row. `conflict` is an undo whose transaction changed after the assistant's write.
+`code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, or `refused`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `undo not found`, and `The write was refused.`
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -120,7 +120,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 ### undo
 
-`kind` `review` calls `reopen_review`. The card returns to לאישור, and a supplier rule this approval wrote is restored. `kind` `reassign` calls `undo_reassign`. If the transaction's `updated_at` moved after the assistant's write, the result is `conflict` and the later edit stays. A repeated idempotency key returns the stored response.
+`kind` `review` calls `reopen_review`. The card returns to לאישור, and a supplier rule this approval wrote is restored. `kind` `reassign` calls `undo_reassign`. Undo accepts only an id stored in `private.mcp_writes` for this user. Anything else is `not_found`. If the current project, category, `pnl_role`, or shares differ from that snapshot, the result is `conflict` and the later edit stays. A SUMIT sync that only changes `updated_at` still undoes. Returning the card to the open set makes the visit counter's `n` grow by one, and `h` does not decrease. That growth is intended. A repeated idempotency key returns the stored response.
 
 ```json
 { "idempotency_key": "undo-30", "kind": "review", "id": "11111111-1111-4000-8000-000000000010" }
