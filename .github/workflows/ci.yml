@@ -37,6 +37,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Migration filenames are append-only
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          if git cat-file -e origin/main:supabase/migrations.lock 2>/dev/null; then
+            base="$(mktemp)"
+            git show origin/main:supabase/migrations.lock > "$base"
+            node scripts/check-migration-order.mjs --base "$base"
+            rm -f "$base"
+          else
+            node scripts/check-migration-order.mjs
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       # Root bundle tests, then @flow/app and @flow/shared unit tests.
@@ -118,6 +130,17 @@ jobs:
       - name: pgTAP
         run: supabase test db supabase/tests/database
       - run: bash scripts/check-db-types.sh
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Deploy preflight against local Supabase
+        run: |
+          set -euo pipefail
+          db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
+          log="$(mktemp)"
+          FLOW_CD_PREFLIGHT_LOCAL=1 SUPABASE_DB_URL="$db_url" bash scripts/cd-preflight.sh | tee "$log"
+          grep -F "Preflight passed. Local database is up to date." "$log"
+          rm -f "$log"
+          FLOW_CD_PREFLIGHT_LOCAL=1 SUPABASE_DB_URL="$db_url" bash scripts/cd-dry-run-pending.sh
       - name: Main Playwright suite against local Supabase
         run: |
           set -euo pipefail

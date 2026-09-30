@@ -1,0 +1,10 @@
+supabase/migrations/ @eliranRP
+supabase/migrations.lock @eliranRP
+scripts/cd-* @eliranRP
+scripts/check-migration-order.mjs @eliranRP
+scripts/preflight-r23.sql @eliranRP
+.github/workflows/ @eliranRP
+.github/CODEOWNERS @eliranRP
+package.json @eliranRP
+pnpm-lock.yaml @eliranRP
+supabase/config.toml @eliranRP

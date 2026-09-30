@@ -7,7 +7,7 @@ import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./categor
 const migration = readFileSync(
   join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../supabase/migrations/20260927120000_schema_v1.sql",
+    "../../../supabase/migrations/20260928080538_schema_v1.sql",
   ),
   "utf8",
 );

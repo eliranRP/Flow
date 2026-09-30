@@ -26,4 +26,4 @@ Exiting 0 when a secret is missing. That records a successful production deploym
 
 ## Consequences
 
-A pull request runs lint, check, and e2e, and skips deploy. A push to `main` deploys only after those three succeed on that commit. A missing secret fails the deploy job. Pages rollback still does not roll back the database. Required reviewers are not set on `production`.
+A pull request runs lint, check, and e2e, and skips deploy. A push to `main` deploys only after those three succeed on that commit. A missing secret fails the deploy job. Pages rollback still does not roll back the database. Required reviewers are not set on `production`. Decision [0079](0079-automatic-deploy-owner-risk.md) accepts that, and accepts 0 required pull request approvals.
