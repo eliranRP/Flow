@@ -53,88 +53,128 @@ test("recorded backfill versions are the three whole lines, and a risk count blo
   assert.equal(backfillVersionsRecorded(`note ${backfillVersions[0]}`), false);
 });
 
-test("dry-run text matches whole lines for the expected target", () => {
-  const upToDate = [
-    dryRunHeadsUp,
-    "Connecting to remote database...",
-    remoteUpToDate,
-  ].join("\n");
-  assert.deepEqual(classifyDryRun(upToDate, "remote"), { ok: true, kind: "up-to-date", target: "remote" });
-  const localUpToDateLog = [
-    dryRunHeadsUp,
-    "Connecting to local database...",
-    localUpToDate,
-  ].join("\n");
-  assert.deepEqual(classifyDryRun(localUpToDateLog, "local"), { ok: true, kind: "up-to-date", target: "local" });
+const remoteJson = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Remote database is up to date."}';
+const localJson = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Local database is up to date."}';
+const pendingName = "20990101000000_ci_dry_run_pending.sql";
+const pendingJson = `{"upToDate":false,"dryRun":true,"migrations":["${pendingName}"],"seeds":[],"roles":[],"message":"Finished supabase db push."}`;
 
-  const pending = [
-    dryRunHeadsUp,
-    "Connecting to remote database...",
-    wouldPushMigrations,
-    " • \u001b[1m20990101000000_ci_dry_run_pending.sql\u001b[22m",
-    "",
-    "Finished supabase db push.",
-  ].join("\n");
-  assert.deepEqual(classifyDryRun(pending, "remote"), {
-    ok: true,
-    kind: "pending",
-    migrations: ["20990101000000_ci_dry_run_pending.sql"],
-  });
-  const localPending = pending.replace("remote database", "local database");
-  assert.equal(classifyDryRun(localPending, "local").ok, false);
-  assert.deepEqual(classifyDryRun(localPending, "local", "pending"), {
-    ok: true,
-    kind: "pending",
-    migrations: ["20990101000000_ci_dry_run_pending.sql"],
-  });
+/** @param {string} json @param {string[]} [extra] */
+function jsonLog(json, extra = []) {
+  return [dryRunHeadsUp, "Connecting to remote database...", ...extra, json].join("\n");
+}
 
-  assert.equal(classifyDryRun(localUpToDateLog, "remote").ok, false);
-  assert.match(classifyDryRun(localUpToDateLog, "remote").reason ?? "", /Local/);
-  assert.equal(classifyDryRun(`${upToDate}\n • 20990101000000_ci_dry_run_pending.sql`, "remote").ok, false);
-  assert.equal(classifyDryRun(`${dryRunHeadsUp}\nRemote database is up to date. extra`, "remote").ok, false);
-  assert.equal(classifyDryRun(`${dryRunHeadsUp}\nnote ${remoteUpToDate}`, "remote").ok, false);
-  assert.equal(classifyDryRun("Local database is up to date.", "local").ok, false);
-  assert.equal(classifyDryRun("Schema migrations are up to date.", "remote").ok, false);
-  assert.equal(classifyDryRun(dryRunHeadsUp, "remote").ok, false);
-  assert.equal(classifyDryRun(`${upToDate}\n${wouldPushMigrations}`, "remote").ok, false);
-  assert.equal(classifyDryRun(`${upToDate}\n${localUpToDate}`, "remote").ok, false);
-  assert.equal(classifyDryRun(upToDate, "hosted").ok, false);
-  assert.equal(classifyDryRun(upToDate).ok, false);
+test("remote JSON up to date requires the DRY RUN line and an empty result", () => {
+  assert.deepEqual(classifyDryRun(jsonLog(remoteJson), "remote"), { ok: true, kind: "up-to-date", target: "remote" });
 });
 
-test("dry-run JSON from CLI 2.118.0 wins over the plain-text lines", () => {
-  const remoteJson = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Remote database is up to date."}';
-  const hosted = [dryRunHeadsUp, "Connecting to remote database...", remoteJson].join("\n");
-  assert.deepEqual(classifyDryRun(hosted, "remote"), { ok: true, kind: "up-to-date", target: "remote" });
-  assert.deepEqual(classifyDryRun(remoteJson, "remote"), { ok: true, kind: "up-to-date", target: "remote" });
-  assert.equal(classifyDryRun(remoteJson, "local").ok, false);
+test("local JSON up to date accepts only a Local message", () => {
+  assert.deepEqual(classifyDryRun(jsonLog(localJson), "local"), { ok: true, kind: "up-to-date", target: "local" });
+});
 
-  const localJson = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Local database is up to date."}';
-  assert.deepEqual(classifyDryRun(localJson, "local"), { ok: true, kind: "up-to-date", target: "local" });
-  assert.equal(classifyDryRun(localJson, "remote").ok, false);
+test("pending JSON reports the migration names when they match the text list", () => {
+  const log = jsonLog(pendingJson, [wouldPushMigrations, ` • \u001b[1m${pendingName}\u001b[22m`]);
+  assert.deepEqual(classifyDryRun(log, "remote"), { ok: true, kind: "pending", migrations: [pendingName] });
+});
 
-  const pendingJson = '{"upToDate":false,"dryRun":true,"migrations":["20990101000000_ci_dry_run_pending.sql"],"seeds":[],"roles":[],"message":"Finished supabase db push."}';
-  assert.deepEqual(classifyDryRun(pendingJson, "remote"), {
-    ok: true,
-    kind: "pending",
-    migrations: ["20990101000000_ci_dry_run_pending.sql"],
-  });
-  assert.equal(classifyDryRun(pendingJson, "local").ok, false);
-  assert.deepEqual(classifyDryRun(pendingJson, "local", "pending"), {
-    ok: true,
-    kind: "pending",
-    migrations: ["20990101000000_ci_dry_run_pending.sql"],
-  });
-  assert.deepEqual(classifyDryRun(`${pendingJson}\n${remoteUpToDate}`, "remote"), {
-    ok: true,
-    kind: "pending",
-    migrations: ["20990101000000_ci_dry_run_pending.sql"],
-  });
+test("local pending JSON is accepted only when pending is expected", () => {
+  const log = jsonLog(pendingJson, [wouldPushMigrations, `• ${pendingName}`]);
+  assert.deepEqual(classifyDryRun(log, "local", "pending"), { ok: true, kind: "pending", migrations: [pendingName] });
+});
 
-  const listed = '{"upToDate":true,"dryRun":true,"migrations":["20990101000000_ci_dry_run_pending.sql"],"seeds":[],"roles":[],"message":"Remote database is up to date."}';
-  assert.equal(classifyDryRun(listed, "remote").ok, false);
+test("plain text without a JSON result fails", () => {
+  const textOnly = [dryRunHeadsUp, "Connecting to remote database...", remoteUpToDate].join("\n");
+  const result = classifyDryRun(textOnly, "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /exactly one JSON result/);
+});
+
+test("malformed JSON fails", () => {
+  const result = classifyDryRun(jsonLog("{not json"), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /malformed JSON/);
+});
+
+test("JSON whose dryRun is not true fails", () => {
+  const result = classifyDryRun(jsonLog('{"dryRun":false,"upToDate":true,"migrations":[],"seeds":[],"roles":[],"message":"Remote database is up to date."}'), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /dryRun to true/);
+});
+
+test("two JSON results fail", () => {
+  const result = classifyDryRun(`${jsonLog(remoteJson)}\n${remoteJson}`, "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /exactly one JSON result/);
+});
+
+test("a JSON result without the DRY RUN line fails", () => {
+  const result = classifyDryRun(remoteJson, "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /DRY RUN line/);
+});
+
+test("an up-to-date JSON result fails when the text would push migrations", () => {
+  const result = classifyDryRun(jsonLog(remoteJson, [wouldPushMigrations]), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /pending migrations alongside an up-to-date result/);
+});
+
+test("an up-to-date JSON result fails when the text lists a sql file", () => {
+  const result = classifyDryRun(jsonLog(remoteJson, [`• ${pendingName}`]), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /migration file alongside an up-to-date result/);
+});
+
+test("pending JSON fails alongside an up-to-date text line", () => {
+  const result = classifyDryRun(jsonLog(pendingJson, [wouldPushMigrations, `• ${pendingName}`, remoteUpToDate]), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /alongside an up-to-date line/);
+});
+
+test("JSON migration names must equal the text list", () => {
+  const result = classifyDryRun(jsonLog(pendingJson, [wouldPushMigrations, "• other.sql"]), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /did not match the text list/);
+});
+
+test("local mode rejects pending JSON unless pending is expected", () => {
+  const result = classifyDryRun(jsonLog(pendingJson, [`• ${pendingName}`]), "local");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /local target/);
+});
+
+test("prod mode rejects an up-to-date JSON message that does not start with Remote", () => {
+  const result = classifyDryRun(jsonLog(localJson), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /start with Remote/);
+});
+
+test("local mode rejects an up-to-date JSON message that does not start with Local", () => {
+  const result = classifyDryRun(jsonLog(remoteJson), "local");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /start with Local/);
+});
+
+test("up-to-date JSON that also lists migrations fails", () => {
+  const listed = `{"upToDate":true,"dryRun":true,"migrations":["${pendingName}"],"seeds":[],"roles":[],"message":"Remote database is up to date."}`;
+  const result = classifyDryRun(jsonLog(listed), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /also listed migrations, seeds, or roles/);
+});
+
+test("up-to-date JSON that also lists seeds fails", () => {
   const seeded = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":["seed.sql"],"roles":[],"message":"Remote database is up to date."}';
-  assert.equal(classifyDryRun(seeded, "remote").ok, false);
-  const otherMessage = '{"upToDate":true,"dryRun":true,"migrations":[],"seeds":[],"roles":[],"message":"Finished supabase db push."}';
-  assert.equal(classifyDryRun(otherMessage, "remote").ok, false);
+  const result = classifyDryRun(jsonLog(seeded), "remote");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /also listed migrations, seeds, or roles/);
+});
+
+test("a missing or unknown dry-run target fails", () => {
+  assert.equal(classifyDryRun(jsonLog(remoteJson), "hosted").ok, false);
+  assert.equal(classifyDryRun(jsonLog(remoteJson)).ok, false);
+});
+
+test("pending is not accepted from an up-to-date JSON result", () => {
+  const result = classifyDryRun(jsonLog(remoteJson), "remote", "pending");
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /pending was required/);
 });
