@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useAuth } from "../auth";
 import { Banner } from "../ui/banner";
-import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";

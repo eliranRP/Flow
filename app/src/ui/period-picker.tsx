@@ -46,7 +46,9 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
       custom.current = false;
       onCustomRef.current?.();
     }, 320);
-    return () => window.clearTimeout(id);
+    return () => {
+      window.clearTimeout(id);
+    };
   }, [open]);
   return (
     <>

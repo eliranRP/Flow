@@ -41,6 +41,8 @@ export type InstallMode = "android-prompt" | "android-steps" | "iphone" | "iphon
 export function detectInstallMode(): InstallMode {
   if (typeof navigator === "undefined") return "android-steps";
   const ua = navigator.userAgent;
+  // iPadOS Safari still reports a Mac platform, and it has no userAgentData.
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- platform is the iPadOS signal that keeps the iPad steps
   const ipad = /iPad/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (ipad) return "ipad";
   if (/iPhone/.test(ua)) {

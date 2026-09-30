@@ -285,9 +285,10 @@ function DevSplit() {
           { id: "b", name: "שיפוץ דירה ביאליק 8 חולון", incomeAgorot: 1_000n },
           { id: "c", name: "פרגולה בית כהן", incomeAgorot: 1_000n },
         ]}
-        onSave={async (rows) => {
+        onSave={(rows) => {
           if (fail) throw new Error("save");
           setSaved(JSON.stringify(rows));
+          return undefined;
         }}
       />
       <div id="e2e-split-saved" hidden>{saved}</div>
@@ -600,12 +601,14 @@ function DevChange() {
       onCategoryId={setCategoryId}
       remember={remember}
       onRemember={setRemember}
-      pending={remember !== true}
-      onCommitPick={async () => {
+      pending={!remember}
+      onCommitPick={() => {
         toast.show({ message: "השיוך נשמר" });
+        return Promise.resolve(undefined);
       }}
-      onCommitPending={async () => {
+      onCommitPending={() => {
         toast.show({ message: "השיוך נשמר" });
+        return Promise.resolve();
       }}
       onSplit={() => {
         toast.show({ message: "הפיצול נעשה ממסך התנועה, אחרי השיוך." });

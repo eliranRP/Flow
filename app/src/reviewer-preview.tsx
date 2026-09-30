@@ -192,10 +192,10 @@ function ReviewerCategory() {
 function ReviewerWaiting() {
   const queue = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
   const rows: ProjectWaitingRow[] = queue
-    .filter((row) => row.project_id != null && row.transaction_id != null)
+    .filter((row) => row.project_id != null)
     .map((row) => ({
       review_id: row.id,
-      transaction_id: row.transaction_id ?? row.id,
+      transaction_id: row.transaction_id,
       description: row.description,
       doc_date: row.doc_date,
       amount_net: row.amount_net,
@@ -335,21 +335,22 @@ function ReviewerSave() {
           const name = reviewerCategories.find((category) => category.id === id)?.name ?? "";
           patchReviewerCategory(item.id, id, name);
           setHold("");
-          return;
+          return undefined;
         }
-        if (split) return;
+        if (split) return undefined;
         return "left";
       }}
-      onCloseCheck={async () => {
+      onCloseCheck={() => {
         const complete = split ? categoryId !== "" : projectId !== "" && categoryId !== "";
         if (!complete) {
           setHold(split ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-          throw new Error("incomplete");
+          return Promise.reject(new Error("incomplete"));
         }
-        if (!split && remember !== true) {
+        if (!split && !remember) {
           setHold("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
-          throw new Error("remember");
+          return Promise.reject(new Error("remember"));
         }
+        return Promise.resolve();
       }}
       onSplit={() => {
         void navigate(`/reviewer/split?save=${mode}`);
@@ -419,7 +420,7 @@ function ReviewerUnsplit() {
           sampleProjects={projects}
           sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
           backTo="/reviewer"
-          onOneProject={async (id): Promise<"left"> => {
+          onOneProject={(id) => {
             setCollapsed(id);
             setShowSplit(false);
             toast.show({
@@ -427,7 +428,7 @@ function ReviewerUnsplit() {
               action: "ביטול",
               onAction: () => { setCollapsed(null); },
             });
-            return "left";
+            return Promise.resolve("left" as const);
           }}
         />
       ) : (
@@ -539,6 +540,7 @@ function ReviewerSplit() {
           // useWrite already toasted. Returning false keeps that toast and the screen.
           return false;
         }
+        return undefined;
       }}
     />
   );

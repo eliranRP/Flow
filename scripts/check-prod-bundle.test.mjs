@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { goldenValues, hostedClientMarkers, parseHostedClient, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
+import { goldenValues, hostedClientMarkers, hostedPresenceViolations, parseHostedClient, reviewerNameViolations, sourceViolations, violations, writtenGoldenForms } from "./check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "./hosted-env.mjs";
 
 test("flags a fixture module, a story, and a golden value", () => {
@@ -112,6 +112,55 @@ test("the hosted client check fails closed", () => {
   assert.ok(real.markers.includes("sxqpnetmtufkzowutduq"));
   assert.equal(real.markers.length, 3);
 });
+
+test("the hosted dist must contain the public anon client and no service credential", () => {
+  const real = hostedClientMarkers();
+  const url = "https://sxqpnetmtufkzowutduq.supabase.co";
+  assert.equal(real.url, url);
+  const key = real.key;
+  assert.match(key, /^eyJ/);
+  assert.deepEqual(hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: `${url}\n${key}` },
+  ], { url, key }), []);
+
+  const missingUrl = hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: key },
+  ], { url, key });
+  assert.ok(missingUrl.some((line) => line.includes("missing the Supabase URL")));
+
+  const service = jwt({ iss: "supabase", ref: "sxqpnetmtufkzowutduq", role: "service_role" });
+  const badRole = hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: `${url} ${service}` },
+  ], { url, key: service });
+  assert.ok(badRole.some((line) => line.includes("role anon")));
+
+  const otherProject = jwt({ iss: "supabase", ref: "otherproject", role: "anon" });
+  const badRef = hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: `${url} ${otherProject}` },
+  ], { url, key: otherProject });
+  assert.ok(badRef.some((line) => line.includes("sxqpnetmtufkzowutduq")));
+
+  const leaked = hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: `${url} ${key} service_role sb_secret_example` },
+  ], { url, key });
+  assert.ok(leaked.some((line) => line.includes("contains service_role")));
+  assert.ok(leaked.some((line) => line.includes("contains sb_secret_")));
+
+  const hidden = hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: `${url} ${key} ${service}` },
+  ], { url, key });
+  assert.ok(hidden.some((line) => line.includes("service_role token")));
+
+  assert.deepEqual(hostedPresenceViolations([
+    { name: "app/dist/assets/index.js", body: `${url}\n${key}\ne.startsWith("sb_secret_")` },
+  ], { url, key }), []);
+});
+
+/** @param {Record<string, string>} payload */
+function jwt(payload) {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${body}.sig`;
+}
 
 test("a hosted build rejects an empty Supabase URL or anon key", () => {
   assert.deepEqual(rejectEmptyHostedSupabase({ VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "key" }, false), [
