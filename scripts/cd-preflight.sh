@@ -72,8 +72,11 @@ if ! kind="$(node scripts/cd-output.mjs dry-run <"$dry_log")"; then
   exit 1
 fi
 case "$kind" in
-  up-to-date)
+  "up-to-date remote")
     echo "Preflight passed. Remote database is up to date."
+    ;;
+  "up-to-date local")
+    echo "Preflight passed. Local database is up to date."
     ;;
   pending)
     echo "Preflight passed. Pending migrations were listed and not applied."

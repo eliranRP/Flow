@@ -5,6 +5,7 @@ import {
   classifyDryRun,
   dryRunHeadsUp,
   lastNonEmptyLine,
+  localUpToDate,
   preflightCountNames,
   preflightCounts,
   readOnlySession,
@@ -44,7 +45,13 @@ test("dry-run text matches Supabase CLI 2.118.0 for up to date and pending", () 
     "Connecting to remote database...",
     remoteUpToDate,
   ].join("\n");
-  assert.deepEqual(classifyDryRun(upToDate), { ok: true, kind: "up-to-date" });
+  assert.deepEqual(classifyDryRun(upToDate), { ok: true, kind: "up-to-date", target: "remote" });
+  const localUpToDateLog = [
+    dryRunHeadsUp,
+    "Connecting to local database...",
+    localUpToDate,
+  ].join("\n");
+  assert.deepEqual(classifyDryRun(localUpToDateLog), { ok: true, kind: "up-to-date", target: "local" });
 
   const pending = [
     dryRunHeadsUp,
@@ -60,4 +67,5 @@ test("dry-run text matches Supabase CLI 2.118.0 for up to date and pending", () 
   assert.equal(classifyDryRun("Schema migrations are up to date.").ok, false);
   assert.equal(classifyDryRun(dryRunHeadsUp).ok, false);
   assert.equal(classifyDryRun(`${upToDate}\n${wouldPushMigrations}`).ok, false);
+  assert.equal(classifyDryRun(`${upToDate}\n${localUpToDate}`).ok, false);
 });
