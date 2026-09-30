@@ -94,7 +94,7 @@ export function Sheet({
    * Runs when the sheet starts to close. Return false to stay open.
    * Picker history is dropped here, after a pending edit has been saved.
    */
-  onBeforeClose?: () => void | boolean | Promise<void | boolean>;
+  onBeforeClose?: () => undefined | boolean | Promise<undefined | boolean>;
   /** The sheet's own close. Callers use this instead of the first dialog's ✕. */
   onRequestClose?: RefObject<(() => void) | null>;
 }) {
@@ -143,7 +143,7 @@ export function Sheet({
       dismissible
       modal={modal}
       onOpenChange={(next) => {
-        if (!next) requestClose();
+        if (!next) void requestClose();
         else onOpenChange(true);
       }}
       onAnimationEnd={(stillOpen) => {
@@ -183,7 +183,9 @@ export function Sheet({
             closeRef={closeRef}
             titleRef={titleRef}
             footClassName={footClassName}
-            onClose={requestClose}
+            onClose={() => {
+              void requestClose();
+            }}
           >
             {children}
           </SheetSurface>

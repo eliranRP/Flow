@@ -4,6 +4,8 @@
 
 CI runs typecheck, lint, unit tests, both bundle guards, Storybook, pgTAP, and the main Playwright suite against local Supabase. CD on `main` pushes pending migrations through the session pooler after a read-only preflight, then deploys the hosted build to Cloudflare Pages project `flow-app`. The three deploy secrets are repository Actions secrets. The `production` environment is the approval gate and does not hold them. Secrets and rollback are in [CI and CD](runbooks/ci-cd.md).
 
+The strict lint findings that were already in the app are fixed in place. Unused imports and unused hook calls are removed, callbacks that only returned a promise now return that promise directly, and `void` is no longer written inside a union. Screen behavior is unchanged.
+
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. A toast is placed from the sheet's resting top, after the open scroll and transform, and it stays invisible until that position is final. At safe area 0 or 20 the sheet keeps its own padding. At 47, ✕ sits `--space-2` under the toast. Above a short sheet the gap is `--space-2`, with the pad already gone. The change sheet tags a project only when `project_suggested` is true. Approving a categorised split puts it on שויכו היום with its shares, and ביטול takes it off.
 
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. The toast pad moves for 200ms and the toast fades in after that move. A later toast keeps the pad. Resize, rotation, and the keyboard place a visible toast again. The timer waits until the toast is on screen. `list_review` returns `project_suggested`. הצעה on a project line follows that flag. `approve_split_review` locks the open review, and a foreign company cannot close it.

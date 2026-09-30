@@ -193,8 +193,7 @@ async function stableBox(shell: Locator) {
     await shell.page().waitForTimeout(50);
     const next = await shell.boundingBox();
     const key = next ? `${next.x.toFixed(1)}:${next.y.toFixed(1)}:${next.height.toFixed(1)}` : "";
-    const inView = next != null && next.y >= 0 && next.y + next.height <= limit + 1;
-    if (key === previous && inView && next) return next;
+    if (next != null && key === previous && next.y >= 0 && next.y + next.height <= limit + 1) return next;
     previous = key;
     box = next;
   }
@@ -534,7 +533,7 @@ test("install, notifications, onboarding, and legal screens", async ({ page }) =
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-async function overlaps(left: { x: number; y: number; width: number; height: number }, right: { x: number; y: number; width: number; height: number }): Promise<boolean> {
+function overlaps(left: { x: number; y: number; width: number; height: number }, right: { x: number; y: number; width: number; height: number }): boolean {
   return left.y < right.y + right.height && left.y + left.height > right.y
     && left.x < right.x + right.width && left.x + left.width > right.x;
 }
@@ -551,7 +550,7 @@ test("a preview toast stays clear of the onboarding business-type controls", asy
     const registered = await page.getByRole("radio", { name: "עוסק מורשה" }).boundingBox();
     const exempt = await page.getByRole("radio", { name: "עוסק פטור" }).boundingBox();
     if (!toast || !registered || !exempt) return true;
-    return (await overlaps(toast, registered)) || (await overlaps(toast, exempt));
+    return overlaps(toast, registered) || overlaps(toast, exempt);
   }).toBe(false);
 });
 
@@ -641,8 +640,10 @@ async function describeControls(page: Page): Promise<Control[]> {
       if (style.display === "none" || style.visibility === "hidden" || rect.width === 0 || rect.height === 0) return [];
       if (el.getAttribute("aria-hidden") === "true") return [];
       const input = el as HTMLInputElement;
-      const disabled = input.disabled === true || el.getAttribute("aria-disabled") === "true";
-      if (disabled || input.type === "hidden") return [];
+      const disabled = input.disabled || el.getAttribute("aria-disabled") === "true";
+      const rawType = (el as { type?: unknown }).type;
+      const type = typeof rawType === "string" ? rawType : "";
+      if (disabled || type === "hidden") return [];
       const name = (el.getAttribute("aria-label") || el.innerText || el.getAttribute("placeholder") || "").replace(/\s+/g, " ").trim();
       return [{
         index,
@@ -650,7 +651,7 @@ async function describeControls(page: Page): Promise<Control[]> {
         href: el.getAttribute("href") ?? "",
         current: el.getAttribute("aria-current") ?? "",
         checked: el.getAttribute("aria-checked") ?? el.getAttribute("aria-pressed") ?? "",
-        type: input.type ?? "",
+        type,
         tag: el.tagName.toLowerCase(),
       }];
     });

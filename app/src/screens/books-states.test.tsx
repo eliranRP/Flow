@@ -944,7 +944,9 @@ describe("rejected writes", () => {
     rerender(queue(rows.slice(1)));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
-    rerender(queue([rows[2]!]));
+    const third = rows[2];
+    if (third == null) throw new Error("review row missing");
+    rerender(queue([third]));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "3");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
     rerender(queue(rows));

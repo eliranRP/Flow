@@ -417,7 +417,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         const previous = surface.style.transition;
         surface.style.transition = "none";
         placeToast(layer);
-        void surface.offsetHeight;
+        const _reflow = surface.offsetHeight;
         pinSheetScroll(surface);
         surface.style.transition = previous;
         return;
@@ -539,15 +539,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       if (surface) surface.style.transition = reduce ? "none" : "";
       placeToast(layer);
       if (surface) {
-        void surface.offsetHeight;
+        const _reflow = surface.offsetHeight;
         pinSheetScroll(surface);
         if (reduce) surface.style.transition = "";
       }
       rememberSheet();
       watchSheet();
       const target = surface ? Number.parseFloat(surface.dataset.toastPad ?? "") || 0 : 0;
-      const moved = !reduce && surface != null && Math.abs(target - before) > 1;
-      if (moved && surface) {
+      if (!reduce && surface != null && Math.abs(target - before) > 1) {
         waiting = true;
         setPhase("pad");
         const onEnd = (event: Event) => {

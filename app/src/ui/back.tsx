@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
-import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { useLocation, useNavigate, useNavigationType, NavigationType } from "react-router-dom";
 import { IconButton } from "./icon-button";
 import { BackIcon } from "./icons";
 
@@ -41,7 +41,7 @@ export function useGoBack(): (fallback: string) => void {
     }
     // MemoryRouter (unit tests) keeps its own stack and does not stamp idx.
     // A push still has a previous screen. A fresh entry falls back.
-    if (action === "PUSH") void navigate(-1);
+    if (action === NavigationType.Push) void navigate(-1);
     else void navigate(fallback, { replace: true });
   }, [navigate, action]);
 }
