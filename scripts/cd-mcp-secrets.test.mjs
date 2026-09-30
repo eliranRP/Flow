@@ -31,6 +31,9 @@ test("the pepper must be JSON with a kid and a secret of at least 32 bytes", () 
 test("the access token must be a scoped personal access token", () => {
   assert.equal(accessTokenProblem(""), "is empty");
   assert.match(accessTokenProblem("sbp_classicexampletokenvalue") ?? "", /classic/);
+  assert.match(accessTokenProblem(`sbp_${"ab".repeat(20)}`) ?? "", /40 hex/);
+  assert.match(accessTokenProblem(`sbp_${"fc".repeat(20)}`) ?? "", /40 hex/);
   assert.equal(accessTokenProblem("sbp_fc"), null);
+  assert.equal(accessTokenProblem(`sbp_fc5${"b".repeat(20)}`), null);
   assert.equal(accessTokenProblem(`sbp_fc_${"b".repeat(20)}`), null);
 });

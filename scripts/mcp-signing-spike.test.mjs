@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { criterion1, criterion4 } from "./mcp-signing-spike.mjs";
+import { criterion1, criterion3, criterion4 } from "./mcp-signing-spike.mjs";
 
 test("criterion 4 fails when cf-connecting-ip did not reach the function", () => {
   assert.equal(criterion4(null).ok, false);
@@ -10,16 +10,53 @@ test("criterion 4 fails when cf-connecting-ip did not reach the function", () =>
   assert.equal(criterion4("present").ok, true);
 });
 
-test("the spike stops when the only JWKS key would be Auth's in-use key", () => {
-  const stopped = criterion1(["985184ff-0c58-4ffd-a4a5-d7322027aee6"], undefined);
+test("criterion 1 checks standby status, not a JWKS key count", () => {
+  const stopped = criterion1([{ status: "in_use", kid: "auth-kid" }], undefined);
   assert.equal(stopped.ok, false);
   assert.equal(stopped.stop, true);
   assert.match(stopped.message, /Do not set FLOW_JWT_LEGACY/);
+  assert.match(stopped.message, /JWKS key count is not/);
 
-  const only = criterion1(["auth-kid"], "auth-kid");
-  assert.equal(only.ok, false);
-  assert.match(only.message, /only one key/);
+  const same = criterion1([
+    { status: "in_use", kid: "auth-kid" },
+    { status: "standby", kid: "auth-kid" },
+  ], "auth-kid");
+  assert.equal(same.ok, false);
+  assert.match(same.message, /in-use key/);
 
-  const extra = criterion1(["auth-kid", "mcp-kid"], "mcp-kid");
-  assert.equal(extra.ok, true);
+  const waiting = criterion1([
+    { status: "in_use", kid: "auth-kid" },
+    { status: "standby", kid: "standby-kid" },
+  ], undefined);
+  assert.equal(waiting.ok, false);
+  assert.equal(waiting.needsKey, true);
+  assert.equal(waiting.stop, false);
+
+  const ready = criterion1([
+    { status: "in_use", kid: "auth-kid" },
+    { status: "standby", kid: "standby-kid" },
+  ], "standby-kid");
+  assert.equal(ready.ok, true);
+  assert.match(ready.message, /not Auth's in-use key/);
+});
+
+test("criterion 3 fails when PostgREST rejects the standby key or leaks the company", () => {
+  assert.equal(criterion3({
+    ownerStatus: 401,
+    ownerCompany: null,
+    otherCompany: null,
+    expectedCompany: "company-a",
+  }).ok, false);
+  assert.equal(criterion3({
+    ownerStatus: 200,
+    ownerCompany: "company-a",
+    otherCompany: "company-a",
+    expectedCompany: "company-a",
+  }).ok, false);
+  assert.equal(criterion3({
+    ownerStatus: 200,
+    ownerCompany: "company-a",
+    otherCompany: null,
+    expectedCompany: "company-a",
+  }).ok, true);
 });

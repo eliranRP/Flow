@@ -2,6 +2,8 @@
 
 ## 2026-09-30
 
+MCP cycle 2. Settings has an עוזר row: a scope `RadioRow`, יצירת קוד, and ניתוק. `tools/list` returns the six read tools. The signed pass takes its user, company, and scope from that user's token row. The signing key is shared and has no user identity. The owner chose standby. Criterion 3 is not run until the standby key exists. Decision [0080](decisions/0080-mcp-connector.md).
+
 MCP cycle 1 review, second pass. A missing, invalid, or expired access token fails the deploy before migrations and Pages. `supabase secrets list` is that probe. There is no skip path. The token expires in 30 days, and the date is kept in the CI runbook. A `bump_mcp_rate` error returns `unavailable`. Decision [0080](decisions/0080-mcp-connector.md).
 
 MCP cycle 1 review. The signing spike of 2026-09-30 stopped on criterion 1, so this cycle does not set a signing key. The deploy checks the scoped access token and the pepper before migrations and Pages, writes `FLOW_MCP_PEPPER` from an env file, then deploys `flow-mcp`. Each hash stores its pepper kid. A `bump_mcp_rate` error fails closed. GitHub does not store a `service_role` JWT. The access token can read injected function secrets, and `SUPABASE_DB_URL` is in the same environment. Decision [0080](decisions/0080-mcp-connector.md).

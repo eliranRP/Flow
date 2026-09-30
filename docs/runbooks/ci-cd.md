@@ -19,16 +19,16 @@ The jobs are `lint`, `check`, and `e2e`. The main Playwright command does not ru
 
 Deploy is the `deploy` job in the same workflow. It runs only on a push to `main`, and only after `lint`, `check`, and `e2e` have succeeded on that commit. It uses the GitHub environment `production`.
 
-If a required secret is missing, or the pepper has the wrong shape, the job fails before the build. That shape check does not prove the access token works. Before migrations and Pages, `supabase secrets list --project-ref sxqpnetmtufkzowutduq` does. A missing, invalid, or expired token fails that probe, and the job stops. There is no skip path. Nothing is migrated and Pages is not published. It does not record a successful production deployment. Add the secret on the `production` environment and push to `main` again.
+If a required secret is missing, or the pepper has the wrong shape, the job fails before the build. That shape check does not prove the access token works. Before migrations and Pages, `supabase functions list --project-ref sxqpnetmtufkzowutduq` does. A missing, invalid, or expired token fails that probe, and the job stops. There is no skip path. Nothing is migrated and Pages is not published. It does not record a successful production deployment. Add the secret on the `production` environment and push to `main` again. If the function step fails after migrations and Pages, push to `main` again. The probe runs again. `db push` applies only migrations that are still pending. The pepper file is created only in the function step.
 
 When the secrets are present, in this order:
 
 1. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`. A failed build or a failed check stops the job. The database is unchanged and the previous app stays live.
-2. The job writes `FLOW_MCP_PEPPER` and `FLOW_MCP_APP_ORIGINS` into a file from `mktemp "$RUNNER_TEMP/..."`, with a trap on EXIT, INT, and TERM, and an `if: always()` step that deletes the file. It then runs `supabase secrets list --project-ref sxqpnetmtufkzowutduq`. That probe is read-only. If it fails, migrations and Pages do not run.
+2. The job runs `supabase functions list --project-ref sxqpnetmtufkzowutduq`. That probe is read-only. It does not write the pepper file. If it fails, migrations and Pages do not run.
 3. A read-only preflight opens the session pooler. It refuses the session unless the last line of the read-only check is `on`. It reads versions `20260929240000`, `20260929250000`, and `20260929260000`. When all three are recorded, it skips `scripts/preflight-r23.sql`. When any is missing, it runs that query and continues only when `rule_transactions_at_risk` and `rule_undo_rows_at_risk` are both 0. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --output-format json` and classifies the output with `--target remote`. CLI 2.118.0 prints a JSON object when `--output-format json` is set, and also when a coding-agent variable is set (`CURSOR_AGENT`, `CURSOR_TRACE_ID`, and the others in `@vercel/detect-agent`). `CI=true` does not select JSON, and a non-TTY stdout does not either, so the GitHub Actions e2e job printed plain text until this flag was passed. The deploy job passes the flag, so it emits the JSON object. The classifier requires that object and the DRY RUN line. Up to date means `upToDate` is true and `migrations`, `seeds`, and `roles` are empty. Production also requires `message` to start with `Remote`. A non-empty `migrations` array is pending. A pending text list next to an up-to-date result fails, and pending JSON next to an up-to-date text line fails. When both lists are present, the names must be equal. A log with no JSON result fails. Nothing is pushed.
 4. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code.
 5. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile. Success is the command's exit code.
-6. `supabase secrets set --env-file` reads the file from step 2. The origin list is `https://flow-app-dx5.pages.dev` only. The job then runs `supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq`. `verify_jwt` stays false, from `supabase/config.toml`. The job does not set `FLOW_MCP_SIGNING_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_SECRET_KEY`. Hosted functions receive `SUPABASE_SECRET_KEYS` from Supabase. The deploy token can read those injected secrets. `SUPABASE_DB_URL` is in the same GitHub environment.
+6. The job writes `FLOW_MCP_PEPPER` and `FLOW_MCP_APP_ORIGINS` into a file from `mktemp "$RUNNER_TEMP/..."`, with a trap on EXIT, INT, and TERM, and an `if: always()` step that deletes the file. This is the only step that writes that file. `supabase secrets set --env-file` reads it. The origin list is `https://flow-app-dx5.pages.dev` only. The job then runs `supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq`. `verify_jwt` stays false, from `supabase/config.toml`. The job does not set `FLOW_MCP_SIGNING_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_SECRET_KEY`. Hosted functions receive `SUPABASE_SECRET_KEYS` from Supabase. The deploy token can read those injected secrets. `SUPABASE_DB_URL` is in the same GitHub environment.
 7. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag. That check is the Pages hostname. A production smoke of `flow-mcp` is backlog N8. It is not this step.
 
 To run only the read-only preflight against production, set `SUPABASE_DB_URL` to the session pooler URL and run `bash scripts/cd-preflight.sh`. That script does not apply migrations. Its commands are:
@@ -65,7 +65,7 @@ Required approving reviews on `main` stay at 0. `.github/CODEOWNERS` notifies `@
 | `SUPABASE_DB_URL` | Session pooler URL for project `sxqpnetmtufkzowutduq`. Shape: `postgresql://postgres.sxqpnetmtufkzowutduq:<password>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require`. Percent-encode the password. Port 5432 is the session pooler. |
 | `CLOUDFLARE_API_TOKEN` | API token with Pages Edit on Cloudflare Pages project `flow-app`. |
 | `CLOUDFLARE_ACCOUNT_ID` | The Cloudflare account that owns `flow-app`. |
-| `SUPABASE_ACCESS_TOKEN` | A scoped personal access token for project `sxqpnetmtufkzowutduq` only. Permissions: Edge Functions Read-write, and Edge Function Secrets Read-write. Expiry: 30 days. It starts with `sbp_fc`. A classic token is rejected. The expiry date is recorded under [Access token expiry](#access-token-expiry). Renew about 5 days before that date: create another token with the same project and the same two permissions, replace this secret, revoke the old token, and write the new date in that section. |
+| `SUPABASE_ACCESS_TOKEN` | A scoped personal access token for project `sxqpnetmtufkzowutduq` only. Permissions: Edge Functions Read-write, and Edge Function Secrets Read-write. Expiry: 30 days. It starts with `sbp_fc`. The token created on 2026-09-30 starts with `sbp_fc5`. A classic token, including the 40-hex shape `sbp_` plus 40 hex characters, is rejected. The expiry date is recorded under [Access token expiry](#access-token-expiry). Renew about 5 days before that date: create another token with the same project and the same two permissions, replace this secret, revoke the old token, and write the new date in that section. |
 | `FLOW_MCP_PEPPER` | HMAC pepper for the MCP secret. JSON object with `kid` and `secret`. Both use only `A-Za-z0-9_-`. `secret` is at least 32 bytes. Optional `previous` is an array of the same objects. When the pepper changes, move the old object into `previous` so existing tokens keep working. |
 
 Generate the pepper on your machine and paste the JSON into the GitHub secret. Do not commit it and do not print it into a pull request:
@@ -81,15 +81,27 @@ Create the access token at <https://supabase.com/dashboard/account/tokens>:
 3. Limit the resource to the selected project `sxqpnetmtufkzowutduq`. Do not select every organization or any other project.
 4. Grant only Edge Functions with Read-write, and Edge Function Secrets with Read-write.
 5. Copy the value, which starts with `sbp_fc`, into the GitHub environment `production` as `SUPABASE_ACCESS_TOKEN`.
-6. Write the expiry date in [Access token expiry](#access-token-expiry). A renewal reminder fires about 5 days before that date.
+6. Write the expiry date in [Access token expiry](#access-token-expiry). A renewal reminder is scheduled by the owner's assistant about 5 days before that date.
 
 ## Access token expiry
 
-The scoped token lasts 30 days. This runbook is where the date is kept. When you create or renew the token, fill in the row. Renew about 5 days before the expiry date.
+The scoped token lasts 30 days. This runbook is where the date is kept. When you create or renew the token, fill in the row. A renewal reminder is scheduled by the owner's assistant about 5 days before the expiry date.
 
 | Created | Expires | Renew by |
 | --- | --- | --- |
-| Not created yet | | about 5 days before Expires |
+| 2026-09-30 | 2026-10-30 | 2026-10-26 |
+
+The current token was created at 16:44 IDT on 2026-09-30. The reminder for 2026-10-26 is already scheduled by the owner's assistant.
+
+## Signing key
+
+Cycle 2 uses a standby asymmetric key. Do not click "Rotate keys". Rotating the standby key makes it Auth's session key.
+
+1. Open the project's JWT signing keys in the Supabase dashboard.
+2. Create one ES256 key and leave it in standby. Do not rotate it.
+3. Put the private key in the Edge Function secret `FLOW_MCP_SIGNING_KEY`. Do not put it in GitHub.
+4. On your machine, with the access token and that private key only in the environment, run `node scripts/mcp-signing-spike.mjs`. Also set `FLOW_MCP_SPIKE_USER`, `FLOW_MCP_SPIKE_OTHER`, `FLOW_MCP_SPIKE_COMPANY`, and `FLOW_SPIKE_PUBLISHABLE_KEY`. The script prints no key material.
+5. If it reports that PostgREST rejected the standby key, set the function secret `FLOW_JWT_LEGACY` in the dashboard instead, and retire it before the end of 2026. Do not put that name in GitHub.
 
 The public anon key is already in `app/.env.production`. Do not add a `service_role` JWT, an `sb_secret_` key, `FLOW_SECRET_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_MCP_SIGNING_KEY`. The access token is still powerful: Edge Function Secrets Read-write can read the keys Supabase injects into the function, and `SUPABASE_DB_URL` in this same environment is the database connection string.
 

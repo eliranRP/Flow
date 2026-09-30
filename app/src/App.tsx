@@ -464,6 +464,7 @@ function DevSettings() {
   const [params] = useSearchParams();
   const mode = params.get("connected");
   const connected = mode === "1" || mode === "auth";
+  const assistant = params.get("assistant");
   return (
     <SettingsScreen
       sample={{
@@ -476,6 +477,17 @@ function DevSettings() {
         projectCount: 2,
         expenseCategories: 1,
         incomeCategories: 1,
+        assistant: assistant === "connected"
+          ? { state: "connected", scope: "read_write", lastUsedAt: "2026-09-30T11:05:00.000Z", id: "mcp-1" }
+          : assistant === "expired"
+            ? { state: "expired", scope: "read", id: "mcp-1" }
+            : assistant === "loading"
+              ? { state: "loading" }
+              : assistant === "error"
+                ? { state: "empty", error: true }
+                : assistant === "nocompany"
+                  ? { state: "no-company" }
+                  : { state: "empty" },
       }}
     />
   );

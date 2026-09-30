@@ -4,6 +4,7 @@
 import { pathToFileURL } from "node:url";
 
 const SCOPED_TOKEN = /^sbp_fc/;
+const CLASSIC_TOKEN = /^sbp_[0-9a-fA-F]{40}$/;
 const PEPPER_TOKEN = /^[A-Za-z0-9_-]+$/;
 
 /**
@@ -57,7 +58,11 @@ export function pepperProblem(raw) {
  */
 export function accessTokenProblem(token) {
   if (token == null || token.trim() === "") return "is empty";
-  if (!SCOPED_TOKEN.test(token)) {
+  const value = token.trim();
+  if (CLASSIC_TOKEN.test(value)) {
+    return "is a classic token (40 hex characters). A classic token is not accepted";
+  }
+  if (!SCOPED_TOKEN.test(value)) {
     return "must be a scoped personal access token for this project. A classic token is not accepted";
   }
   return null;
