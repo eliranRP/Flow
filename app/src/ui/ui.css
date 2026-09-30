@@ -431,8 +431,10 @@ a.ui-row,
   flex-direction: column;
   overflow: hidden;
   padding: var(--space-2) 0 var(--space-4);
+  padding-top: calc(var(--space-2) + var(--toast-pad, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
+  transition: padding-top var(--dur-base) var(--ease-standard);
 }
 
 .ui-sheet-body {
@@ -2856,10 +2858,6 @@ div.ui-check-row {
 .ui-split-summary {
   margin: 0;
   text-align: center;
-}
-
-.ui-split-summary-idle {
-  color: var(--color-text-muted);
 }
 
 .ui-split-cta {

@@ -109,6 +109,7 @@ function renderAt(path: string) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   rpc.handlers.length = 0;
   rpc.impl = () => Promise.resolve({ data: null, error: { message: "db down" } });
 });
@@ -507,6 +508,7 @@ describe("rejected writes", () => {
     };
     renderAt("/review/change?item=r1");
     expect(await screen.findByRole("button", { name: /פרויקט: מפוצל · 6 פרויקטים/ })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "לזכור לספק הזה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
     await waitFor(() => {
@@ -630,7 +632,20 @@ describe("rejected writes", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("שינוע")).toBeInTheDocument();
+    expect(screen.getByText("הצעה")).toBeInTheDocument();
     expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    rerender(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ReviewQueue rows={[{ ...row("שינוע"), category_suggested: false }]} search="" sample />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText("שינוע")).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
   });
 
   it("says a project expense is missing a category", async () => {
@@ -776,6 +791,135 @@ describe("rejected writes", () => {
     rerender(queue(rows));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
+  });
+});
+
+describe("an unchanged complete review", () => {
+  function completeReview(): string[] {
+    const calls: string[] = [];
+    rpc.impl = (name) => {
+      calls.push(name);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: "suggested",
+            pnl_role: "project",
+            share_count: 0,
+            project_id: "p1",
+            category_id: "c1",
+            project_name: "הרצל",
+            category_name: "חומרים",
+            supplier_name: "מחסן",
+            category_suggested: true,
+          }],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            ...emptyDashboard,
+            projects: [
+              { id: "p1", name: "הרצל", status: "active", income_agorot: 0, direct_agorot: 0, shared_agorot: 0, profit_before_shared_agorot: 0, profit_agorot: 0 },
+            ],
+          },
+          error: null,
+        });
+      }
+      if (name === "list_categories") {
+        return Promise.resolve({
+          data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true }],
+          error: null,
+        });
+      }
+      if (name === "resolve_review" || name === "reassign_transaction") {
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    return calls;
+  }
+
+  async function openComplete(): Promise<string[]> {
+    const calls = completeReview();
+    renderAt("/review/change?item=r1");
+    expect(await screen.findByRole("button", { name: "פרויקט: הרצל, שינוי" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, שינוי" })).toBeInTheDocument();
+    return calls;
+  }
+
+  function writes(calls: string[]): string[] {
+    return calls.filter((name) => name === "resolve_review" || name === "reassign_transaction");
+  }
+
+  it("does not write when ✕ closes an unchanged sheet", async () => {
+    const calls = await openComplete();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    });
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it("does not write when the scrim closes an unchanged sheet", async () => {
+    const calls = await openComplete();
+    const scrim = document.querySelector("[data-vaul-overlay]");
+    if (!(scrim instanceof HTMLElement)) throw new Error("scrim missing");
+    fireEvent.pointerDown(scrim, { button: 0, pointerId: 1, pointerType: "mouse" });
+    fireEvent.click(scrim);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    });
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it("does not write when back is pressed on an unchanged sheet", async () => {
+    const calls = await openComplete();
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(writes(calls)).toEqual([]);
+    expect(screen.getByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
+  });
+
+  it("does not write when a swipe closes an unchanged sheet", async () => {
+    const calls = await openComplete();
+    await act(async () => {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 550);
+      });
+    });
+    const drawer = document.querySelector("[data-vaul-drawer]");
+    if (!(drawer instanceof HTMLElement)) throw new Error("drawer missing");
+    HTMLElement.prototype.setPointerCapture = () => undefined;
+    fireEvent.pointerDown(drawer, { pointerId: 1, pageX: 20, pageY: 40, clientX: 20, clientY: 40, pointerType: "mouse" });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    drawer.style.transform = "matrix(1, 0, 0, 1, 0, 400)";
+    fireEvent.pointerUp(drawer, { pointerId: 1, pageX: 20, pageY: 420, clientX: 20, clientY: 420, pointerType: "mouse" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    });
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it("commits a remember change when ✕ closes", async () => {
+    const calls = await openComplete();
+    fireEvent.click(screen.getByRole("switch", { name: "לזכור לספק הזה" }));
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(calls).toContain("resolve_review");
+    });
+    expect(calls).not.toContain("reassign_transaction");
   });
 });
 

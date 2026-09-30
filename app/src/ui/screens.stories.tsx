@@ -373,6 +373,7 @@ export const ReviewSplitCategorySaved: Story = {
           ...splitReviewRow,
           category_id: "c-haul",
           category_name: "שינוע",
+          category_suggested: false,
         }]}
         search=""
         sample

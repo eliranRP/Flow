@@ -5,6 +5,8 @@ export type ReviewSuggestion = {
   project?: string;
   category?: string;
   confidence?: number;
+  /** The owner chose this category. It is not labelled הצעה. */
+  categoryOwned?: boolean;
 };
 
 type ReviewCardProps = {
@@ -51,7 +53,7 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
       <p className="t-hint">{vatLine}</p>
       {lines.length > 0 ? (
         <div className="ui-review-ai">
-          <p className="t-hint">הצעה</p>
+          {suggestion?.categoryOwned ? null : <p className="t-hint">הצעה</p>}
           {lines.map((line) => (
             <p className="ui-review-line" key={line.label}>
               <span className="t-label">{line.label}</span>

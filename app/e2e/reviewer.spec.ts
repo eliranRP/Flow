@@ -403,6 +403,26 @@ test("a split returns to one project and the project totals follow", async ({ pa
   await expect(page.getByText("כולל חלק מהוצאות משותפות")).toHaveCount(6);
 });
 
+test("a saved split category is not a suggestion and אישור is enabled", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/reviewer/project");
+  await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
+  await page.getByRole("link", { name: "שינוי" }).click();
+  await expect(page).toHaveURL(/item=q-bolts/);
+  await expect(page.getByRole("switch", { name: "לזכור לספק הזה" })).toHaveCount(0);
+  await pickCategory(page, "שינוע");
+  await toast(page, "השיוך נשמר");
+  await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toBeVisible();
+  await expect(page.getByText("הצעה")).toHaveCount(0);
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page).toHaveURL(/\/reviewer\/project/);
+  await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+  await expect(page.getByText("שינוע")).toBeVisible();
+  await expect(page.getByText("הצעה")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "אישור" })).toBeEnabled();
+});
+
 test("a review split keeps the sheet open and shows the category on the card", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/reviewer/review");

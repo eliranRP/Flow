@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { isTransientWriteError, type WriteFailure } from "../use-write";
 import { Button } from "./button";
+import { HoldLine } from "./hold-line";
 import { IconButton } from "./icon-button";
 import { BackIcon, PlusIcon, SplitIcon } from "./icons";
 import { ListRow } from "./list-row";
@@ -70,10 +71,17 @@ type Shared = {
    * Omitted in a story, which only updates the local choice.
    */
   onCommitPick?: (kind: "project" | "category", id: string) => Promise<void | "left">;
+  /**
+   * Runs on every close. Rejects with "incomplete" or "remember" to stay open.
+   * It must not write. A write belongs in onCommitPending, and only when pending.
+   */
+  onCloseCheck?: () => Promise<void>;
   /** A pending edit that is not a pick, such as the remember switch. Rejects to stay open. */
   onCommitPending?: () => Promise<void>;
-  /** True when leaving should write onCommitPending. */
+  /** True when leaving should write onCommitPending. An unchanged sheet is not pending. */
   pending?: boolean;
+  /** False once the owner has chosen the category. A suggestion still shows הצעה. */
+  categorySuggested?: boolean;
   /** An incomplete edit. Leaving stays open and this sentence shows on the summary. */
   hold?: string;
   /** The history pop of an overlay sheet. The same check as the backdrop and the X. */
@@ -151,6 +159,7 @@ export function ChangeAssignment(props: Props) {
   const [nameError, setNameError] = useState("");
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [ownedCategory, setOwnedCategory] = useState(props.categorySuggested === false);
   const settled = useRef(false);
   const inflight = useRef<Promise<boolean> | null>(null);
   const warned = useRef(false);
@@ -179,6 +188,10 @@ export function ChangeAssignment(props: Props) {
   useEffect(() => {
     if (!props.hold) warned.current = false;
   }, [props.hold]);
+
+  useEffect(() => {
+    if (props.categorySuggested === false) setOwnedCategory(true);
+  }, [props.categorySuggested]);
 
   useEffect(() => {
     if (sheetOpen) {
@@ -340,6 +353,7 @@ export function ChangeAssignment(props: Props) {
     pendingFocus.current = kind;
     setCreatingNew(false);
     const stay = await commitChoice(kind, id, previous);
+    if (kind === "category" && stay) setOwnedCategory(true);
     if (!stay) return;
     if (props.contained) {
       if (props.start === "project" && props.host === "overlay") {
@@ -391,11 +405,12 @@ export function ChangeAssignment(props: Props) {
   const projectLabel = projectName !== "" ? projectName : (props.projectTitle ?? "לא נבחר");
   const categoryName = props.categories.find((option) => option.id === props.categoryId)?.name ?? "";
   const projectSuggested = props.suggestionProjectId != null && props.suggestionProjectId !== "" && props.projectId === props.suggestionProjectId;
-  const categorySuggested = props.suggestionCategoryId != null && props.suggestionCategoryId !== "" && props.categoryId === props.suggestionCategoryId;
+  const categorySuggestionId = ownedCategory ? "" : (props.suggestionCategoryId ?? "");
+  const categorySuggested = categorySuggestionId !== "" && props.categoryId === categorySuggestionId;
   const pickerKind = view === "category" ? "category" : "project";
   const listed = ordered(
     pickerKind === "project" ? props.projects : props.categories,
-    pickerKind === "project" ? (props.suggestionProjectId ?? "") : (props.suggestionCategoryId ?? ""),
+    pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId,
     pickerKind === "project" ? props.projectId : props.categoryId,
     query,
     pickerKind,
@@ -443,7 +458,16 @@ export function ChangeAssignment(props: Props) {
       }
       return closeSheet(true);
     }
-    if (current.onCommitPending) {
+    if (current.onCloseCheck) {
+      try {
+        await current.onCloseCheck();
+      } catch (error) {
+        const incomplete = error instanceof Error && (error.message === "incomplete" || error.message === "remember");
+        if (incomplete) warned.current = true;
+        return false;
+      }
+    }
+    if (current.pending && current.onCommitPending) {
       try {
         await current.onCommitPending();
       } catch (error) {
@@ -507,12 +531,7 @@ export function ChangeAssignment(props: Props) {
               }}
             />
           </div>
-          {props.hold ? (
-            <p className="t-hint ui-hold-line" role="status">
-              <span>{props.hold}</span>
-              <TextLink tone="quiet" chevron={false} onClick={discardHeld}>ביטול השינוי</TextLink>
-            </p>
-          ) : null}
+          {props.hold ? <HoldLine onDiscard={discardHeld}>{props.hold}</HoldLine> : null}
           {showRemember ? (
             <Toggle
               label="לזכור לספק הזה"
@@ -542,7 +561,7 @@ export function ChangeAssignment(props: Props) {
           loading={props.loading === true}
           listed={listed}
           selectedId={pickerKind === "project" ? props.projectId : props.categoryId}
-          suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : (props.suggestionCategoryId ?? "")}
+          suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId}
           savingId={savingId}
           note={pickerKind === "project" ? props.projectNote : undefined}
           splitLink={pickerKind === "project" && props.hideSplitLink !== true}

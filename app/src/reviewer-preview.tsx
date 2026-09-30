@@ -289,9 +289,9 @@ function ReviewerSave() {
       projectNote={split ? "החלוקה תרד, והסכום כולו יעבור לפרויקט הזה." : undefined}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
-      remember={remember}
-      onRemember={setRemember}
-      pending={remember !== true}
+      {...(split ? {} : { remember, onRemember: setRemember })}
+      categorySuggested={item?.category_suggested !== false}
+      pending={false}
       hold={hold}
       onDiscard={() => {
         setProjectId(baselineProject);
@@ -319,13 +319,13 @@ function ReviewerSave() {
         if (split) return;
         return "left";
       }}
-      onCommitPending={async () => {
+      onCloseCheck={async () => {
         const complete = split ? categoryId !== "" : projectId !== "" && categoryId !== "";
         if (!complete) {
           setHold(split ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           throw new Error("incomplete");
         }
-        if (remember !== true) {
+        if (!split && remember !== true) {
           setHold("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
           throw new Error("remember");
         }

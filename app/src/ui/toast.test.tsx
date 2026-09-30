@@ -369,9 +369,11 @@ describe("placeToast", () => {
     header.getBoundingClientRect = () => box(76, 40);
     toast.getBoundingClientRect = () => box(120, 120);
     placeToast(host);
-    expect(host.style.top).toBe("0px");
+    expect(host.style.top).toBe("8px");
     expect(toast.style.maxHeight).toBe("");
     expect(toast.style.overflow).not.toBe("hidden");
+    expect(surface.dataset.toastPad).toBeUndefined();
+    expect(surface.style.getPropertyValue("--toast-pad")).toBe("");
     sheet.remove();
     host.remove();
   });
@@ -400,27 +402,39 @@ describe("placeToast", () => {
     host.appendChild(toast);
     document.body.append(sheet, host);
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 693 });
-    // Sheet top 56 leaves about 1px once the 47px safe area and the 8px gap are removed.
+    // Sheet top 56. The toast keeps an 8px gap under the 47px safe area, so it sits at 55.
     sheet.getBoundingClientRect = () => box(456, 400);
     header.getBoundingClientRect = () => box(120, 64);
-    close.getBoundingClientRect = () => box(110, 44);
+    const closeTop = 66;
+    close.getBoundingClientRect = () => {
+      const applied = Number.parseFloat(surface.dataset.toastPad ?? "") || 0;
+      const base = box(110, 44);
+      return { ...base, y: base.y + applied, top: base.top + applied, bottom: base.bottom + applied };
+    };
     toast.getBoundingClientRect = () => box(59, 59);
     placeToast(host);
-    expect(host.style.top).toBe("47px");
+    expect(host.style.top).toBe("55px");
     expect(toast.style.maxHeight).toBe("");
     expect(toast.style.overflow).not.toBe("hidden");
-    expect(Number.parseFloat(host.style.top)).toBeGreaterThan(0);
     expect(toast.textContent).toContain("לא נשמר");
     expect(toast.textContent).toContain("ניסיון חוזר");
     const pad = Number.parseFloat(surface.dataset.toastPad ?? "");
     expect(pad).toBeGreaterThan(0);
-    expect(surface.style.paddingTop).toBe(`${String(pad)}px`);
+    expect(surface.style.getPropertyValue("--toast-pad")).toBe(`${String(pad)}px`);
+    expect(closeTop + pad).toBeGreaterThanOrEqual(55 + 59);
+    placeToast(host);
+    expect(surface.dataset.toastPad).toBe(String(pad));
+    expect(host.style.top).toBe("55px");
 
     toast.getBoundingClientRect = () => box(toastMinBlock() + 8, toastMinBlock() + 8);
     placeToast(host);
     expect(toast.style.maxHeight).toBe("");
     expect(toast.style.overflow).not.toBe("hidden");
-    expect(Number.parseFloat(host.style.top)).toBe(47);
+    expect(Number.parseFloat(host.style.top)).toBe(55);
+    const grown = Number.parseFloat(surface.dataset.toastPad ?? "");
+    expect(closeTop + grown).toBeGreaterThanOrEqual(55 + toastMinBlock() + 8);
+    placeToast(host);
+    expect(surface.dataset.toastPad).toBe(String(grown));
     sheet.remove();
     host.remove();
   });

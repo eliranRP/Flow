@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(25);
+select plan(26);
 
 do $users$
 begin
@@ -101,6 +101,10 @@ select is(
   ((public.list_review() -> 0 ->> 'share_count')::int),
   2,
   'list_review reports the share count'
+);
+select ok(
+  (public.list_review() -> 0) ? 'category_suggested',
+  'list_review reports whether the category is a suggestion'
 );
 
 select lives_ok(

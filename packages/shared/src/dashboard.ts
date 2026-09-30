@@ -75,6 +75,8 @@ export const reviewRowSchema = z.object({
   vat_agorot: agorotSchema.optional(),
   project_name: z.string().nullable().optional(),
   category_name: z.string().nullable().optional(),
+  /** False once the owner picked the category. Omitted on older payloads, which stay a suggestion. */
+  category_suggested: z.boolean().optional(),
   /** Present only when a suggestion carries a confidence. AI tagging is off, so live rows omit it. */
   confidence: z.number().int().min(0).max(100).nullable().optional(),
   auto_approved_today: z.number().int().nonnegative().optional(),

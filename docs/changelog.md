@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-30
+
+Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. Closing an unchanged change sheet does not write. A split hides לזכור לספק הזה. A tall toast keeps a gap from the screen edge, may cover the grabber and the empty top of a sheet, and never covers a header control. The sheet pads only when a control would be covered, and that pad moves once. A category the owner picked is not labelled הצעה, and אישור is enabled after a split category is saved. `list_review` returns `category_suggested`.
+
 ## 2026-09-29
 
 Decision [0075](decisions/0075-save-on-tap-and-on-leave.md), amended. A toast that does not fit above a sheet keeps its full height in the safe area and never clips; the sheet content pads down so the toast does not cover a control. ביטול השינוי is the quiet hint link, and the hold sentence is the muted hint on the change sheet and on Split. The other split choices are disabled, not only a cursor. An income review's second pick sends a null project. The reviewer queue carries the split fields, a category tap stays open, and the card shows the category. The radio spinner size is the `--spinner-radio` token.

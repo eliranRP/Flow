@@ -21,13 +21,13 @@ function SheetHarness({
   hold = "בחרו פרויקט וקטגוריה.",
   category = "c1",
   onCommitPick,
-  onCommitPending,
+  onCloseCheck,
   onDiscard,
 }: {
   hold?: string;
   category?: string;
   onCommitPick?: (kind: "project" | "category", id: string) => Promise<void | "left">;
-  onCommitPending?: () => Promise<void>;
+  onCloseCheck?: () => Promise<void>;
   onDiscard?: () => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -60,7 +60,7 @@ function SheetHarness({
             onDiscard?.();
           }}
           onCommitPick={onCommitPick}
-          onCommitPending={onCommitPending ?? (async () => {
+          onCloseCheck={onCloseCheck ?? (async () => {
             if (projectId === "" || categoryId === "") {
               setReason("בחרו פרויקט וקטגוריה.");
               throw new Error("incomplete");
