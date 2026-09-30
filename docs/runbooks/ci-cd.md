@@ -95,13 +95,25 @@ The current token was created at 16:44 IDT on 2026-09-30. The reminder for 2026-
 
 ## Signing key
 
-Cycle 2 uses a standby asymmetric key. Do not click "Rotate keys". Rotating the standby key makes it Auth's session key.
+On 2026-09-30, about 18:10 IDT, the standby path passed. Do not click "Rotate keys". Rotating the standby key makes it Auth's session key. Do not create another key.
+
+| Key | Status |
+| --- | --- |
+| ES256 `46a0230c-733c-401d-a3fb-4a2d9ee7de72` | standby. Imported through the dashboard. This is the function's signer |
+| ES256 `985184ff-0c58-4ffd-a4a5-d7322027aee6` | current. Auth's session key. Unchanged |
+| HS256 `df08281f` | previous |
+
+The standby kid appears in the hosted JWKS. Standby status was confirmed in the dashboard's JWT Keys list. The Management API was not used for that check, because there was no local management token.
+
+`FLOW_MCP_SIGNING_KEY` is set as a Supabase function secret. `FLOW_JWT_LEGACY` is not set, and it is not needed. A 60-second ES256 pass for the owner of Flow Test got `get_dashboard` 200 with that company's id. A pass for the Erie owner got 200 with the Erie company, not Flow Test's. GET `flow-mcp` returns 405, and the response includes `x-flow-cf-connecting-ip`. The local copy of the private key is deleted. The only copy is in Supabase: the standby key and the function secret. After merge, production read tools use this signer.
+
+The procedure that produced this key:
 
 1. Open the project's JWT signing keys in the Supabase dashboard.
 2. Create one ES256 key and leave it in standby. Do not rotate it.
-3. Put the private key in the Edge Function secret `FLOW_MCP_SIGNING_KEY`. Do not put it in GitHub.
+3. Put the private key in the Edge Function secret `FLOW_MCP_SIGNING_KEY`. Do not put it in GitHub. Delete the local copy after the secret is set.
 4. On your machine, with the access token and that private key only in the environment, run `node scripts/mcp-signing-spike.mjs`. Also set `FLOW_MCP_SPIKE_USER`, `FLOW_MCP_SPIKE_OTHER`, `FLOW_MCP_SPIKE_COMPANY`, and `FLOW_SPIKE_PUBLISHABLE_KEY`. The script prints no key material.
-5. If it reports that PostgREST rejected the standby key, set the function secret `FLOW_JWT_LEGACY` in the dashboard instead, and retire it before the end of 2026. Do not put that name in GitHub.
+5. If it reports that PostgREST rejected the standby key, set the function secret `FLOW_JWT_LEGACY` in the dashboard instead, and retire it before the end of 2026. Do not put that name in GitHub. This run did not take that path.
 
 The public anon key is already in `app/.env.production`. Do not add a `service_role` JWT, an `sb_secret_` key, `FLOW_SECRET_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_MCP_SIGNING_KEY`. The access token is still powerful: Edge Function Secrets Read-write can read the keys Supabase injects into the function, and `SUPABASE_DB_URL` in this same environment is the database connection string.
 
