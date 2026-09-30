@@ -138,7 +138,7 @@ jobs:
           db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
           log="$(mktemp)"
           FLOW_CD_PREFLIGHT_LOCAL=1 SUPABASE_DB_URL="$db_url" bash scripts/cd-preflight.sh | tee "$log"
-          grep -F "Preflight passed. Remote database is up to date." "$log"
+          grep -F "Preflight passed. Local database is up to date." "$log"
           rm -f "$log"
           FLOW_CD_PREFLIGHT_LOCAL=1 SUPABASE_DB_URL="$db_url" bash scripts/cd-dry-run-pending.sh
       - name: Main Playwright suite against local Supabase

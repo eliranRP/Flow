@@ -66,27 +66,33 @@ export function preflightCounts(stdout) {
   return { ok: true, counts };
 }
 
-/** Exact lines from Supabase CLI 2.118.0 `db push --db-url --dry-run` (output.raw, uncoloured). */
+/** Exact lines from Supabase CLI 2.118.0 `db push --dry-run` (output.raw, uncoloured). */
 export const dryRunHeadsUp = "DRY RUN: migrations will *not* be pushed to the database.";
 export const remoteUpToDate = "Remote database is up to date.";
+export const localUpToDate = "Local database is up to date.";
 export const wouldPushMigrations = "Would push these migrations:";
 
 /**
- * Up to date: the DRY RUN line, then stdout `Remote database is up to date.`
+ * Up to date: the DRY RUN line, then `Remote database is up to date.` or `Local database is up to date.`
+ * CLI 2.118.0 says local when `--db-url` points at the local stack host and db port. The hosted pooler says remote.
  * Pending: the DRY RUN line and `Would push these migrations:`.
- * `--db-url` says "remote" even when the host is loopback.
  * @param {string} text
- * @returns {{ ok: true, kind: "up-to-date" | "pending" } | { ok: false, reason: string }}
+ * @returns {{ ok: true, kind: "up-to-date", target: "remote" | "local" } | { ok: true, kind: "pending" } | { ok: false, reason: string }}
  */
 export function classifyDryRun(text) {
   const clean = stripAnsi(text);
   const headsUp = clean.includes(dryRunHeadsUp);
-  const upToDate = clean.includes(remoteUpToDate);
+  const remote = clean.includes(remoteUpToDate);
+  const local = clean.includes(localUpToDate);
   const pending = clean.includes(wouldPushMigrations);
-  if (upToDate && pending) {
+  if ((remote || local) && pending) {
     return { ok: false, reason: "dry-run reported both up to date and pending migrations" };
   }
-  if (headsUp && upToDate) return { ok: true, kind: "up-to-date" };
+  if (remote && local) {
+    return { ok: false, reason: "dry-run reported both a local and a remote database" };
+  }
+  if (headsUp && remote) return { ok: true, kind: "up-to-date", target: "remote" };
+  if (headsUp && local) return { ok: true, kind: "up-to-date", target: "local" };
   if (headsUp && pending) return { ok: true, kind: "pending" };
   return { ok: false, reason: "dry-run output did not match Supabase CLI 2.118.0" };
 }
@@ -116,7 +122,7 @@ if (isMain) {
       console.error(result.reason);
       process.exit(1);
     }
-    console.log(result.kind);
+    console.log(result.kind === "up-to-date" ? `up-to-date ${result.target}` : result.kind);
   } else if (mode === "equals") {
     const expected = process.argv[3] ?? "";
     if (lastNonEmptyLine(text) !== expected) {
