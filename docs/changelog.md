@@ -2,7 +2,7 @@
 
 ## 2026-09-30
 
-Decision [0080](decisions/0080-mcp-connector.md), Accepted for a first release of about 22 hours. The assistant reads and searches, assigns one expense, and connects from הגדרות. An assignment on an open review item is the owner's אישור and leaves the queue. `remember` defaults to false. Bulk, the marker, the poll, and project or split writes are deferred. Tool names are in [MCP tools](mcp/TOOLS.md). No application code ships with the record. [0006](decisions/0006-confirm-not-type.md), [0011](decisions/0011-auto-approve-high-confidence.md), and [0069](decisions/0069-back-and-one-tap-review.md) are unchanged.
+Decision [0080](decisions/0080-mcp-connector.md), Accepted for a first release of 18 hours in three cycles. Flow accepts an assistant write with no confirmation of its own. Undo of a closed review calls `reopen_review`. The עוזר row is cycle 2. The app's אישור check, the visit counter, and שויכו היום are cycle 3, with the writes. [0006](decisions/0006-confirm-not-type.md), [0011](decisions/0011-auto-approve-high-confidence.md), and [0069](decisions/0069-back-and-one-tap-review.md) only point at this record.
 
 Deploys stay automatic. After both reviewer bots approve and CI is green, a push to `main` deploys without a person. The `production` environment has no required reviewer, and required pull request approvals stay at 0. `.github/CODEOWNERS` is ownership and notification only. It does not enforce review. Eliran accepts that owner risk. Decision [0079](decisions/0079-automatic-deploy-owner-risk.md).
 

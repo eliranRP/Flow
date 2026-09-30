@@ -1,10 +1,12 @@
 # MCP tools
 
-Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only these handlers. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
+Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
 
 Field values are data. Write tools take ids from a read tool.
 
 ## Annotations
+
+These are client hints. Flow does not read them and does not treat them as a confirmation. Flow accepts the write. The enforced nets are write scope, rate limits, the audit token, undo, and revoke.
 
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
@@ -16,7 +18,8 @@ Field values are data. Write tools take ids from a read tool.
 | Tool | Argument | Kind |
 | --- | --- | --- |
 | `get_expense`, `assign_expense`, `set_expense_category` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
-| `undo` | `id` | `undo_id` from an assignment tool |
+| `undo` `kind: "review"` | `id` | the review-queue id the write closed |
+| `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -26,7 +29,9 @@ Success: `{ "ok": true, "data": {} }`.
 
 Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" } }`. Tool failures set MCP `isError` true. HTTP 401 and 429 are not tool results.
 
-`code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `stale`, or `refused`. `refused` messages are only: `no company`, `project not found`, `transaction not found`, `category not found`, `category kind must match the direction`, `shared costs are split, not assigned to one project`, `The write was refused.`
+`code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `stale`, or `refused`. `forbidden` is a token whose scope does not allow the tool. `stale` is אישור's shown project or category differing from the stored row. `conflict` is an undo whose transaction changed after the assistant's write.
+
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `undo not found`, and `The write was refused.`
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -97,7 +102,7 @@ Passes the project and category into `approve_review_item` when a review is open
 }
 ```
 
-Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000030", "closed_review": true }`.
+Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-1111-4000-8000-000000000010", "closed_review": true }`. The id is the review-queue id. `resolve_review` with `approved` does not return a `reassign_undo` id. When no review was open, `undo_kind` is `reassign` and `id` is that undo id.
 
 ### set_expense_category
 
@@ -111,14 +116,14 @@ The category changes. Shares stay. An open review is closed the same way, using 
 }
 ```
 
-Output `data`: `{ "undo_id": "33333333-3333-4000-8000-000000000031", "closed_review": true }`.
+Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-1111-4000-8000-000000000010", "closed_review": true }`. When no review was open, `undo_kind` is `reassign` and `id` is the `reassign_undo` id.
 
 ### undo
 
-`undo_reassign`. A second call for an undo that already ran returns the stored idempotent response. This restore overwrites a later edit.
+`kind` `review` calls `reopen_review`. The card returns to לאישור, and a supplier rule this approval wrote is restored. `kind` `reassign` calls `undo_reassign`. If the transaction's `updated_at` moved after the assistant's write, the result is `conflict` and the later edit stays. A repeated idempotency key returns the stored response.
 
 ```json
-{ "idempotency_key": "undo-30", "id": "33333333-3333-4000-8000-000000000030" }
+{ "idempotency_key": "undo-30", "kind": "review", "id": "11111111-1111-4000-8000-000000000010" }
 ```
 
 ## Not in tools/list
