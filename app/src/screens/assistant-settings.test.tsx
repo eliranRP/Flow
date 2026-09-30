@@ -50,7 +50,7 @@ describe("assistant settings", () => {
   it("disables the scope rows while minting, and a failure says to try again", async () => {
     let fail = false;
     edge.invoke = (name) => {
-      if (String(name).includes("mint")) {
+      if (name.includes("mint")) {
         return new Promise((resolve) => {
           setTimeout(() => {
             resolve(fail
@@ -76,8 +76,8 @@ describe("assistant settings", () => {
     const calls: string[] = [];
     let finish: (value: { data: unknown; error: unknown }) => void = () => undefined;
     edge.invoke = (name) => {
-      calls.push(String(name));
-      if (String(name).includes("mint")) {
+      calls.push(name);
+      if (name.includes("mint")) {
         return new Promise((resolve) => {
           finish = resolve;
         });
@@ -99,7 +99,7 @@ describe("assistant settings", () => {
 
   it("copies the code once, and a refused clipboard asks for a manual copy", async () => {
     edge.invoke = (name) => {
-      if (String(name).includes("mint")) {
+      if (name.includes("mint")) {
         return Promise.resolve({
           data: { id: "11111111-1111-4000-8000-000000000001", secret: "flow_mcp_once", scope: ["read"] },
           error: null,
@@ -123,7 +123,7 @@ describe("assistant settings", () => {
   it("confirms disconnect, and an expired row opens the connect sheet", async () => {
     const calls: string[] = [];
     edge.invoke = (name) => {
-      calls.push(String(name));
+      calls.push(name);
       return Promise.resolve({ data: { ok: true }, error: null });
     };
     const { rerender } = renderAssistant(
