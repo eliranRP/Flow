@@ -9,11 +9,12 @@ if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 
 origin="https://flow-app-dx5.pages.dev"
+root="$(cd "$(dirname "$0")/.." && pwd)"
 matched=0
 for attempt in $(seq 1 18); do
   body="$(curl -fsS --proto '=https' --max-time 20 "${origin}/build.txt?n=${attempt}" || true)"
-  body="$(printf '%s' "$body" | tr -d '[:space:]')"
-  if [[ "$body" == "$sha" ]]; then
+  # Last line only. A tag on an earlier line must not be glued onto the hash.
+  if printf '%s' "$body" | node "$root/scripts/cd-output.mjs" equals "$sha" 2>/dev/null; then
     matched=1
     break
   fi

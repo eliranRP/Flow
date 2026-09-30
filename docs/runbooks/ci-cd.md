@@ -24,16 +24,39 @@ If any secret below is missing, the job fails before the build and before any mi
 When the secrets are present, in this order:
 
 1. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`. A failed build or a failed check stops the job. The database is unchanged and the previous app stays live.
-2. A read-only preflight opens the session pooler, refuses the session unless it is read-only, and runs `scripts/preflight-r23.sql`. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run`. If that check cannot be read, the job fails and nothing is pushed.
-3. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset.
-4. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile.
-5. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that `build.txt` and the homepage both serve that commit SHA.
+2. A read-only preflight opens the session pooler. It refuses the session unless the last line of the read-only check is `on`. It reads versions `20260929240000`, `20260929250000`, and `20260929260000`. When all three are recorded, it skips `scripts/preflight-r23.sql`. When any is missing, it runs that query and continues only when `rule_transactions_at_risk` and `rule_undo_rows_at_risk` are both 0. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --output-format json` and classifies the output with `--target remote`. CLI 2.118.0 prints a JSON object when `--output-format json` is set, and also when a coding-agent variable is set (`CURSOR_AGENT`, `CURSOR_TRACE_ID`, and the others in `@vercel/detect-agent`). `CI=true` does not select JSON, and a non-TTY stdout does not either, so the GitHub Actions e2e job printed plain text until this flag was passed. The deploy job passes the flag, so it emits the JSON object. The classifier requires that object and the DRY RUN line. Up to date means `upToDate` is true and `migrations`, `seeds`, and `roles` are empty. Production also requires `message` to start with `Remote`. A non-empty `migrations` array is pending. A pending text list next to an up-to-date result fails, and pending JSON next to an up-to-date text line fails. When both lists are present, the names must be equal. A log with no JSON result fails. Nothing is pushed.
+3. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code.
+4. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile. Success is the command's exit code.
+5. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag.
+
+To run only the read-only preflight against production, set `SUPABASE_DB_URL` to the session pooler URL and run `bash scripts/cd-preflight.sh`. That script does not apply migrations. Its commands are:
+
+```bash
+node scripts/cd-db-url.mjs
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
+  -c "SET TRANSACTION READ ONLY" \
+  -c "SELECT current_setting('transaction_read_only');"
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
+  -c "SET TRANSACTION READ ONLY" \
+  -c "SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ('20260929240000', '20260929250000', '20260929260000') ORDER BY version;"
+# When any of those three versions is missing:
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -X -q -At -F '|' --single-transaction \
+  -c "SET TRANSACTION READ ONLY" \
+  -f scripts/preflight-r23.sql
+supabase --yes db push --db-url "$SUPABASE_DB_URL" --dry-run --output-format json
+```
+
+The script then classifies that dry-run with `node scripts/cd-output.mjs dry-run --target remote`.
+
+The e2e job runs the same script against local Supabase, including a dry-run that lists one fixture migration and checks it was not applied.
 
 The reviewers-only build is not deployed. The deploy does not run the live SUMIT specs and does not call an API that writes product data.
 
 ## Secrets
 
 These three secrets live only on the GitHub environment `production`. The repository copies are deleted. The environment is restricted to `main` and has no required reviewer. The deploy job selects that environment, which is how it can read them. A job that does not select `production` cannot see them.
+
+Required approving reviews on `main` stay at 0. `.github/CODEOWNERS` notifies `@eliranRP` and does not block. Both reviewer bots are expected to approve the pull request, and CI on that pull request is expected to be green, before merge. GitHub does not require those approvals. The push then deploys on its own after `lint`, `check`, and `e2e`. Decision [0079](../decisions/0079-automatic-deploy-owner-risk.md) records that as an accepted owner risk.
 
 | Name | What it is |
 | --- | --- |

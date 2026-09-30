@@ -6,7 +6,7 @@ Store the Vault rows before `supabase db push` when the migration should schedul
 
 A push to `main` checks the hosted build, then applies pending files through the deploy job after a read-only preflight ([CI and CD](ci-cd.md)). Applying them by hand is the repair path. Apply, in order, on the hosted SQL editor or with `supabase db push`:
 
-1. `supabase/migrations/20260927120000_schema_v1.sql`
+1. `supabase/migrations/20260928080538_schema_v1.sql`
 2. `supabase/migrations/20260928140000_phase1_slice.sql`
 3. `supabase/migrations/20260928180000_reopen_review.sql`
 4. `supabase/migrations/20260928190000_review_card.sql`
@@ -22,7 +22,7 @@ A push to `main` checks the hosted build, then applies pending files through the
 14. `supabase/migrations/20260929170000_review_0068_column.sql`
 15. `supabase/migrations/20260929180000_reassign_undo_rls.sql`
 
-Migrations are append-only from `20260929150000` on. Hosted Supabase had only the Phase 0 migration when `20260929120000` was edited in place, so that one edit stays. Do not edit a migration after it has been applied. Add a new file.
+Migrations are append-only. `supabase/migrations.lock` stores each filename and the sha256 of that file. CI rejects a rename, a removal, a content change, or a version inserted ahead of the last locked file. Hosted history records `schema_v1` as version `20260928080538`. That rename is a one-time exception ([0078](../decisions/0078-schema-v1-rename.md)). Do not repair that history. Hosted Supabase had only the Phase 0 migration when `20260929120000` was edited in place, so that one edit stays. Do not edit a migration after it has been applied. Add a new file.
 
 `pg_cron` and `pg_net` are created by the round 5 migration when the image allows them. If either is missing, the migration still finishes and the drain job is skipped. The job runs every five minutes (`*/5 * * * *`), not once a day. It is scheduled only when Vault `cron_secret` is a non-empty secret. Store `flow_sync_url` as well; without that URL the job uses `http://kong:8000/functions/v1/sumit-sync`. Create the secret once, store it in both places, then migrate — or migrate first and call `select private.schedule_drain();` after the Vault rows exist. An empty `x-flow-cron` header is rejected everywhere, including the local stack. An empty SUMIT payload sets `last_error` to `sync_sweep_empty`. A payload that would remove more than half of the live SUMIT rows sets `sync_sweep_suspicious` and leaves those rows in place. A successful stamp keeps an error that starts with `sync_sweep`. A billing or limit rejection sets `sumit_rejected` and waits 5 minutes, then 15 minutes, 1 hour, 6 hours, and at most 24 hours. A bad key or company id sets `sumit_auth` and stops until the owner reconnects. Manual refresh respects the same wait.
 
