@@ -1077,6 +1077,12 @@ describe("an unchanged complete review", () => {
       expect(screen.queryByRole("dialog", { name: "שינוי שיוך" })).not.toBeInTheDocument();
     });
     expect(writes(calls)).toEqual([]);
+    // Vaul clears its drag flag 200ms after the swipe. Let that run before the file ends.
+    await act(async () => {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 250);
+      });
+    });
   });
 
   it("commits a remember change when ✕ closes", async () => {
