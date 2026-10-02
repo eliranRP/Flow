@@ -10,7 +10,16 @@ export const READ_TOOL_NAMES = [
   "get_totals",
 ] as const;
 
-const IDENTITY = new Set(["user_id", "p_user", "company_id", "sub", "scope", "mcp_tid"]);
+const IDENTITY = new Set(["user_id", "p_user", "company_id", "sub", "mcp_tid"]);
+const READ_REFUSED = "The read was refused.";
+const ALLOWED: Record<string, Set<string>> = {
+  list_projects: new Set(["from", "to", "basis"]),
+  list_categories: new Set(),
+  list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
+  get_expense: new Set(["transaction_id"]),
+  search_expenses: new Set(["scope", "query", "limit", "offset"]),
+  get_totals: new Set(["from", "to", "basis"]),
+};
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -29,12 +38,12 @@ function ok(data: unknown): ToolResult {
   return { isError: false, structuredContent: { ok: true, data } };
 }
 
-function argsOf(input: unknown): Record<string, unknown> | ToolResult {
+function argsOf(input: unknown, allowed: Set<string>): Record<string, unknown> | ToolResult {
   if (input == null) return {};
   if (typeof input !== "object" || Array.isArray(input)) return fail("validation", "validation");
   const record = input as Record<string, unknown>;
   for (const key of Object.keys(record)) {
-    if (IDENTITY.has(key)) return fail("validation", "validation");
+    if (IDENTITY.has(key) || !allowed.has(key)) return fail("validation", "validation");
   }
   return record;
 }
@@ -135,7 +144,7 @@ function totalsOf(body: Review) {
 async function dashboard(rpc: ToolRpc, from: string | null, to: string | null, basis: string): Promise<ToolResult | Review> {
   const result = await rpc("get_dashboard", { p_from: from, p_to: to, p_basis: basis });
   if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
-    return fail("refused", "The write was refused.");
+    return fail("refused", READ_REFUSED);
   }
   return result.json as Review;
 }
@@ -188,7 +197,7 @@ export function toolsFor(scope: string[]) {
 export async function callTool(name: string, input: unknown, scope: string[], rpc: ToolRpc): Promise<ToolResult> {
   if (!READ_TOOL_NAMES.includes(name as typeof READ_TOOL_NAMES[number])) return fail("validation", "validation");
   if (!scope.includes("read")) return fail("forbidden", "forbidden");
-  const args = argsOf(input);
+  const args = argsOf(input, ALLOWED[name] ?? new Set());
   if (isFail(args)) return args;
 
   if (name === "list_projects" || name === "get_totals") {
@@ -207,7 +216,7 @@ export async function callTool(name: string, input: unknown, scope: string[], rp
 
   if (name === "list_categories") {
     const result = await rpc("list_categories", {});
-    if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", "The write was refused.");
+    if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", "The read was refused.");
     return ok({ categories: result.json });
   }
 
@@ -223,7 +232,7 @@ export async function callTool(name: string, input: unknown, scope: string[], rp
       if (typeof query !== "string" && query != null) return query;
       if (scopeName === "pending") {
         const listed = await rpc("list_review", {});
-        if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The write was refused.");
+        if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The read was refused.");
         const page = filterReviews(listed.json as Review[], {
           direction: null,
           reason: null,
@@ -246,7 +255,7 @@ export async function callTool(name: string, input: unknown, scope: string[], rp
         p_offset: offset,
       });
       if (found.status >= 400 || found.json == null || typeof found.json !== "object") {
-        return fail("refused", "The write was refused.");
+        return fail("refused", READ_REFUSED);
       }
       return ok(found.json);
     }
@@ -264,7 +273,7 @@ export async function callTool(name: string, input: unknown, scope: string[], rp
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
     const listed = await rpc("list_review", {});
-    if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The write was refused.");
+    if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The read was refused.");
     return ok(filterReviews(listed.json as Review[], {
       direction,
       reason,
@@ -280,7 +289,7 @@ export async function callTool(name: string, input: unknown, scope: string[], rp
   const transactionId = args.transaction_id;
   if (typeof transactionId !== "string" || !UUID.test(transactionId)) return fail("validation", "validation");
   const result = await rpc("get_transaction", { p_id: transactionId });
-  if (result.status >= 400) return fail("refused", "The write was refused.");
+  if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
   return ok(result.json);
 }

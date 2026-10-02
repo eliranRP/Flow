@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
 import { AssistantSettings, formatAssistantUse } from "./assistant-settings";
 
@@ -28,6 +28,22 @@ function renderAssistant(ui: ReactNode) {
 }
 
 describe("assistant settings", () => {
+  function resetEdge() {
+    edge.invoke = () => Promise.resolve({ data: null, error: null });
+  }
+  beforeEach(resetEdge);
+  afterEach(resetEdge);
+
+  it("ties the row hint to the control", () => {
+    renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
+    const row = screen.getByRole("button", { name: "חיבור עוזר" });
+    const hintId = row.getAttribute("aria-describedby");
+    expect(hintId).toBeTruthy();
+    const hint = document.getElementById(hintId ?? "");
+    expect(hint).toHaveClass("t-hint");
+    expect(hint).toHaveTextContent("לא מחובר");
+  });
+
   it("formats the last use in Asia/Jerusalem", () => {
     expect(formatAssistantUse("2026-09-30T11:05:00.000Z")).toBe("30/09/2026, 14:05");
   });
@@ -68,7 +84,9 @@ describe("assistant settings", () => {
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
     expect(screen.getByRole("radio", { name: "קריאה וכתיבה" })).toBeDisabled();
-    expect(screen.getAllByText("יוצרים קוד. אי אפשר לשנות עכשיו.")).toHaveLength(2);
+    expect(screen.getAllByText("יוצרים קוד. אי אפשר לשנות עכשיו.")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "יצירת קוד" })).toHaveAttribute("aria-describedby", "assistant-mint-reason");
+    expect(document.getElementById("assistant-mint-reason")).toHaveClass("t-hint");
     expect(await screen.findByText("לא הצלחנו להתחבר. נסו שוב.")).toBeInTheDocument();
   });
 
@@ -112,7 +130,7 @@ describe("assistant settings", () => {
     renderAssistant(<AssistantSettings />);
     fireEvent.click(await screen.findByRole("button", { name: /חיבור עוזר/ }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
-    expect(await screen.findByLabelText("קוד החיבור")).toHaveValue("flow_mcp_once");
+    expect(await screen.findByLabelText("קוד החיבור")).toHaveTextContent("flow_mcp_once");
     fireEvent.click(screen.getByRole("button", { name: "העתקה" }));
     await waitFor(() => expect(screen.getByText("הועתק")).toBeInTheDocument());
     writeText.mockRejectedValueOnce(new Error("denied"));
@@ -147,9 +165,49 @@ describe("assistant settings", () => {
     expect(screen.getByRole("dialog", { name: "חיבור עוזר" })).toBeInTheDocument();
   });
 
+  it("mints the scope that was selected", async () => {
+    const bodies: unknown[] = [];
+    edge.invoke = (name, options) => {
+      bodies.push(options);
+      if (name.includes("mint")) {
+        return Promise.resolve({
+          data: { id: "11111111-1111-4000-8000-000000000001", secret: "flow_mcp_once", scope: ["read"] },
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: { state: "empty" }, error: null });
+    };
+    renderAssistant(<AssistantSettings />);
+    fireEvent.click(await screen.findByRole("button", { name: /חיבור עוזר/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "קריאה בלבד" }));
+    fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
+    expect(await screen.findByText("היקף הגישה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "סיום" })).toBeInTheDocument();
+    expect(bodies).toContainEqual({ body: { scope: "read" } });
+  });
+
+  it("a failed first load offers a retry and does not mint", async () => {
+    edge.invoke = () => Promise.resolve({ data: null, error: { message: "status" } });
+    renderAssistant(<AssistantSettings />);
+    expect(await screen.findByText("לא הצלחנו לטעון את החיבור.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /חיבור עוזר/ })).not.toBeInTheDocument();
+  });
+
+  it("preview disconnect closes the confirm", () => {
+    renderAssistant(
+      <AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} blocked={() => true} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    const confirm = screen.getByRole("dialog", { name: "לנתק את העוזר?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
+    expect(screen.queryByRole("dialog", { name: "לנתק את העוזר?" })).not.toBeInTheDocument();
+  });
+
   it("shows a load error and a disabled row when there is no company", () => {
-    const { rerender } = renderAssistant(<AssistantSettings sample={{ state: "empty", error: true }} />);
+    const { rerender } = renderAssistant(<AssistantSettings sample={{ state: "error" }} />);
     expect(screen.getByText("לא הצלחנו לטעון את החיבור.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -157,6 +215,8 @@ describe("assistant settings", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("button", { name: /אין עסק עדיין/ })).toBeDisabled();
+    const row = screen.getByRole("button", { name: "עוזר" });
+    expect(row).toBeDisabled();
+    expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
   });
 });

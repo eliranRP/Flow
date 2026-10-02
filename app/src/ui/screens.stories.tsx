@@ -2,6 +2,7 @@ import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Route, Routes } from "react-router-dom";
+import { AssistantSettings } from "../screens/assistant-settings";
 import { HelpScreen } from "../screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "../screens/HomeScreen";
 import {
@@ -587,6 +588,117 @@ export const SettingsEmpty: Story = {
     <StoryRoute entry="/settings?preview=empty" tabs>
       <ExampleBar />
       <SettingsScreen />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantConnected: Story = {
+  name: "Assistant connected",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          name: "א.ב. בנייה ושיפוצים בע״מ",
+          vatRegistered: true,
+          connected: true,
+          companyId: 1001,
+          lastError: null,
+          email: "ops@nromomentum.com",
+          assistant: {
+            state: "connected",
+            scope: "read_write",
+            lastUsedAt: "2026-09-30T11:05:00.000Z",
+            id: "mcp-1",
+          },
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+const assistantBusiness = {
+  name: "א.ב. בנייה ושיפוצים בע״מ",
+  vatRegistered: true,
+  connected: true,
+  companyId: 1001,
+  lastError: null as string | null,
+  email: "ops@nromomentum.com",
+};
+
+export const SettingsAssistantEmpty: Story = {
+  name: "Assistant empty",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...assistantBusiness, connected: false, companyId: null, assistant: { state: "empty" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantLoading: Story = {
+  name: "Assistant loading",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...assistantBusiness, assistant: { state: "loading" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantError: Story = {
+  name: "Assistant error",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...assistantBusiness, lastError: "sumit_auth", assistant: { state: "error" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantExpired: Story = {
+  name: "Assistant expired",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...assistantBusiness, assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantNoCompany: Story = {
+  name: "Assistant no company",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...assistantBusiness, name: null, connected: false, companyId: null, assistant: { state: "no-company" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantScope: Story = {
+  name: "Assistant scope",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings sample={{ state: "empty" }} initialOpen />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantSecret: Story = {
+  name: "Assistant secret",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        initialSecret={{
+          id: "mcp-1",
+          secret: "flow_mcp_abcdefghijklmnopqrstuvwxyz0123456789ABC",
+          scope: ["read"],
+        }}
+      />
     </StoryRoute>
   ),
 };

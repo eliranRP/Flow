@@ -3074,16 +3074,16 @@ export function SettingsScreen({
         ) : null}
       </List>
       {lastError && !emptyAccount ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
-      <AssistantSettings
-        sample={sample ? (sample.assistant ?? { state: "empty" }) : undefined}
-        noCompany={emptyAccount}
-        blocked={blocked}
-      />
       {rawError === "sumit_auth" && !emptyAccount ? (
         <div className="ui-page-pad">
           <Button variant="secondary" onClick={() => { setConnectSheet(true); }}>חיבור מחדש</Button>
         </div>
       ) : null}
+      <AssistantSettings
+        sample={sample ? (sample.assistant ?? { state: "empty" }) : undefined}
+        noCompany={emptyAccount}
+        blocked={blocked}
+      />
       <Sheet open={connectOpen} onOpenChange={setConnectSheet} title="חיבור SUMIT">
         <form
           className="ui-stack"

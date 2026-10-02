@@ -484,7 +484,7 @@ function DevSettings() {
             : assistant === "loading"
               ? { state: "loading" }
               : assistant === "error"
-                ? { state: "empty", error: true }
+                ? { state: "error" }
                 : assistant === "nocompany"
                   ? { state: "no-company" }
                   : { state: "empty" },

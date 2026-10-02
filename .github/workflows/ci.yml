@@ -82,7 +82,9 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm --filter @flow/app exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm --filter @flow/app exec playwright install --with-deps chromium
       - run: pnpm test:storybook
       - run: pnpm build-storybook
       - run: pnpm test:storybook:smoke
@@ -133,7 +135,9 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm --filter @flow/app exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm --filter @flow/app exec playwright install --with-deps chromium
       - name: pgTAP
         run: supabase test db supabase/tests/database
       - run: bash scripts/check-db-types.sh
