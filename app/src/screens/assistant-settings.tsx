@@ -94,12 +94,15 @@ export function AssistantSettings({
   blocked,
   initialSecret,
   initialOpen = false,
+  showHeading = true,
 }: {
   sample?: AssistantSample;
   noCompany?: boolean;
   blocked?: () => boolean;
   initialSecret?: Minted;
   initialOpen?: boolean;
+  /** Settings puts this block under חיבורים, so the עוזר heading would repeat. */
+  showHeading?: boolean;
 }) {
   const toast = useToast();
   const client = useQueryClient();
@@ -223,7 +226,7 @@ export function AssistantSettings({
 
   return (
     <>
-      <SectionHead title="עוזר" />
+      {showHeading ? <SectionHead title="עוזר" /> : null}
       <List>
         {row}
         {showDisconnect && view.id ? (

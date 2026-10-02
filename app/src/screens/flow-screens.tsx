@@ -3007,7 +3007,6 @@ export function SettingsScreen({
   const emptyAccount = phase.kind === "empty";
   const connected = emptyAccount ? false : sample ? sample.connected : status.data?.connected === true;
   const businessName = sample ? sample.name : dashboard.data?.name;
-  const vatRegistered = sample ? sample.vatRegistered : dashboard.data?.vat_registered !== false;
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
   const lastError = hebrewSumitError(rawError);
@@ -3022,25 +3021,32 @@ export function SettingsScreen({
   );
   const refreshHint = authReconnect ? "המזהה או המפתח לא התקבלו" : retryHint;
   const email = sample ? sample.email : session?.user.email;
-  const projectCount = sample?.projectCount ?? dashboard.data?.projects.length;
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
   const incomeCount = sample?.incomeCategories ?? categories.data?.filter((category) => category.kind === "income" && !category.hidden).length;
   const categoryHint = expenseCount == null || incomeCount == null
     ? undefined
     : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
+  const accountHint = !emptyAccount && email ? <bdi dir="ltr">{email}</bdi> : undefined;
+  const showInstall = !isStandalone();
+  const showSignOut = emptyAccount || preview === "off";
   return (
     <div>
       <ScreenHeader title="הגדרות" />
-      <SectionHead title="החברה" />
       <List>
         {emptyAccount ? (
-          <ListRow variant="static" title="חשבון Google" hint={email ? <bdi dir="ltr">{email}</bdi> : "החשבון"} icon={<GoogleIcon />} />
+          <ListRow variant="button" title="אין עסק עדיין" icon={<GoogleIcon />} disabled onClick={() => undefined} />
         ) : (
-          <ListRow variant="static" title={businessName ?? "עדיין בלי עסק"} hint={vatRegistered ? "עוסק מורשה" : "עוסק פטור"} icon={<ProjectsIcon />} />
+          <ListRow
+            variant="static"
+            title={businessName ?? "עדיין בלי עסק"}
+            hint={accountHint}
+            icon={<GoogleIcon />}
+            describeHint={accountHint != null}
+            wrapHint
+          />
         )}
-        {!emptyAccount && email ? <ListRow variant="static" title="חשבון Google" hint={<bdi dir="ltr">{email}</bdi>} icon={<GoogleIcon />} /> : null}
       </List>
-      <SectionHead title="חיבור SUMIT" />
+      <SectionHead title="חיבורים" />
       <List>
         {connected ? (
           <ListRow
@@ -3083,6 +3089,7 @@ export function SettingsScreen({
         sample={sample ? (sample.assistant ?? { state: "empty" }) : undefined}
         noCompany={emptyAccount}
         blocked={blocked}
+        showHeading={false}
       />
       <Sheet open={connectOpen} onOpenChange={setConnectSheet} title="חיבור SUMIT">
         <form
@@ -3111,74 +3118,55 @@ export function SettingsScreen({
           disconnect.mutate();
         }}
       />
-      {emptyAccount ? (
-        <List>
-          <ListRow
-            variant="danger"
-            title="התנתקות"
-            icon={<LogoutIcon />}
-            busy={signOut.isPending}
-            onClick={() => {
-              if (blocked()) return;
-              signOut.mutate();
-            }}
-          />
-        </List>
-      ) : (
-      <>
-      <SectionHead title="סיווג" />
-      <List>
-        <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
-        <ListRow variant="item" href={`/projects${search}`} title="פרויקטים" hint={projectCount == null ? undefined : `${String(projectCount)} פעילים`} icon={<ProjectsIcon />} chevron />
-      </List>
-      <SectionHead title="התראות" />
-      <div className="ui-page-pad">
-        <Toggle label="סיכום שבועי" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
-        <Toggle label="תזכורת לפריטים ממתינים" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
-      </div>
-      <SectionHead title="אישור ותצוגה" />
-      <div className="ui-page-pad">
-        <Toggle label="אישור אוטומטי בביטחון גבוה" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
-        <Toggle
-          label="רווח אחרי חלק בכלליות"
-          hint={overheadHint(overheadOn, { available: true, scope: "company" })}
-          checked={overheadOn}
-          onChange={(checked) => {
-            if (sample) {
-              setOverheadOn(checked);
-              return;
-            }
-            if (blocked()) return;
-            const previous = overheadOn;
-            setOverheadOn(checked);
-            wantedOverhead.current = checked;
-            saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
-          }}
-        />
-      </div>
-      <SectionHead title="נתונים" />
-      <List>
-        {preview === "off" ? (
-          <ListRow
-            variant="danger"
-            title="התנתקות"
-            icon={<LogoutIcon />}
-            busy={signOut.isPending}
-            onClick={() => { signOut.mutate(); }}
-          />
-        ) : null}
-      </List>
-      </>
-      )}
-      {isStandalone() ? null : (
+      {emptyAccount ? null : (
         <>
-          <SectionHead title="אפליקציה" />
+          <SectionHead title="תצוגה" />
           <List>
-            <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+            <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
           </List>
+          <div className="ui-page-pad">
+            <Toggle
+              label="רווח אחרי חלק בכלליות"
+              hint={overheadHint(overheadOn, { available: true, scope: "company" })}
+              checked={overheadOn}
+              onChange={(checked) => {
+                if (sample) {
+                  setOverheadOn(checked);
+                  return;
+                }
+                if (blocked()) return;
+                const previous = overheadOn;
+                setOverheadOn(checked);
+                wantedOverhead.current = checked;
+                saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
+              }}
+            />
+          </div>
         </>
       )}
-      <p className="ui-poc t-hint"><bdi dir="ltr">Flow · POC 0.1</bdi></p>
+      {showInstall || showSignOut ? (
+        <>
+          <SectionHead title="עוד" />
+          <List>
+            {showInstall ? (
+              <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+            ) : null}
+            {showSignOut ? (
+              <ListRow
+                variant="danger"
+                title="התנתקות"
+                icon={<LogoutIcon />}
+                busy={signOut.isPending}
+                onClick={() => {
+                  if (emptyAccount && blocked()) return;
+                  signOut.mutate();
+                }}
+              />
+            ) : null}
+          </List>
+        </>
+      ) : null}
+      <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 # Flow — Settings (Draft)
 
+The visible screen follows [0082](../decisions/0082-settings-redesign.md). This page is the old wireframe and is not the build.
+
 **Status: Draft.** The wireframe is [14-settings](screens.md#14-settings), pending owner approval. This screen is not approved. It does not override decisions 0001–0022. [Settings contents](../open-questions.md) stay open until the wireframe is accepted or replaced. The after-overhead default below is decided.
 
 Every name, account, date, and the version string on the wireframe are example data.

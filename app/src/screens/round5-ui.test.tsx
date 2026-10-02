@@ -383,8 +383,8 @@ describe("split monthly rule", () => {
   });
 });
 
-describe("notification switches", () => {
-  it("stays off and says they are inactive", () => {
+describe("settings account", () => {
+  it("shows the business and the Google email on one row", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -397,6 +397,7 @@ describe("notification switches", () => {
                 connected: false,
                 companyId: null,
                 lastError: null,
+                email: "owner@example.com",
               }}
             />
           </MemoryRouter>
@@ -404,14 +405,47 @@ describe("notification switches", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
+    const account = screen.getByRole("group", { name: "אלפא" });
+    expect(account.querySelector("path[fill='#4285F4']")).not.toBeNull();
+    const hint = document.getElementById(account.getAttribute("aria-describedby") ?? "");
+    expect(hint).toHaveClass("t-hint");
+    expect(hint).toHaveTextContent("owner@example.com");
+    expect(screen.queryByText("עוסק מורשה")).not.toBeInTheDocument();
+    expect(screen.queryByText("עוסק פטור")).not.toBeInTheDocument();
+    expect(screen.queryByText("חשבון Google")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "פרויקטים" })).not.toBeInTheDocument();
     for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
-      const toggle = screen.getByRole("switch", { name });
-      expect(toggle).toBeDisabled();
-      expect(toggle).not.toBeChecked();
+      expect(screen.queryByRole("switch", { name })).not.toBeInTheDocument();
     }
-    expect(screen.getAllByText("לא פעיל").length).toBeGreaterThanOrEqual(3);
-    expect(screen.getByText("אפליקציה")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "עוד" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "עוזר" })).not.toBeInTheDocument();
+    expect(screen.getByText("Flow 0.1")).toBeInTheDocument();
+    expect(screen.queryByText("Flow · POC 0.1")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "רווח אחרי חלק בכלליות" })).toBeInTheDocument();
+  });
+
+  it("disables the account row when there is no company", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+          <MemoryRouter initialEntries={["/settings?preview=empty"]}>
+            <SettingsScreen />
+          </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const account = screen.getByRole("button", { name: "אין עסק עדיין" });
+    expect(account).toBeDisabled();
+    expect(account.querySelector("path[fill='#4285F4']")).not.toBeNull();
+    expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "התנתקות" })).toBeInTheDocument();
   });
 
   it("asks to check the id and the key when connect rejects the key", async () => {
@@ -512,7 +546,7 @@ describe("notification switches", () => {
     expect(hint.closest("button")).toBe(heldButton);
     expect(hint.querySelector("bdi")).toHaveAttribute("dir", "ltr");
     expect(getComputedStyle(hint).opacity).toBe("1");
-    expect(getComputedStyle(hint).color).toBe(getComputedStyle(screen.getByText("עוסק מורשה")).color);
+    expect(getComputedStyle(hint).color).toBe(getComputedStyle(screen.getByText(/מספר חברה/)).color);
     unmount();
 
     vi.useFakeTimers();

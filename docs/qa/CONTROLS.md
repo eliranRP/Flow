@@ -111,6 +111,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Split | a percent field | Edits that share. A tap on the left edge, the centre, or the right edge focuses it, and 100 stays fully visible. The row focuses it too. | while saving | no | the remainder line updates | a field over 100% shows "עד 100%" | pass |
 | Split | חזרה לאפשרויות | Restores the previous choice. | while saving | no | the four choices return | none | pass |
 | Split | summary | No שמירה button. ✕ is the save. An invalid choice shows ביטול השינוי next to the reason. | n/a | n/a | the footer is the summary sentence | n/a | pass |
+| Settings | account row | Shows the business name and the Google email on one row. With no company the row is disabled and says "אין עסק עדיין". | no company | no | the row | none | unit |
 | Settings | חיבור עוזר | Opens the connect sheet. Shown when the assistant is not connected. | no company. The hint says why. | no | sheet title חיבור עוזר | none | pass |
 | Settings | קריאה וכתיבה / קריאה בלבד | Selects the scope. It does not mint. | while יצירת קוד is minting. The reason says why. | no | the row is selected | none | pass |
 | Settings | יצירת קוד | Mints one code for this user. | never | the button is busy | step 2 shows the code once | "לא הצלחנו להתחבר. נסו שוב." The button retries | pass |
@@ -125,10 +126,10 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Settings | confirm ניתוק | Calls `disconnect_sumit`. | never | the confirm button | toast "החיבור נותק. הספרים נשארו." | toast "לא הצלחנו לנתק." | pass |
 | Settings | חיבור מחדש | Opens the connect sheet after a rejected key. | never | no | the connect sheet | none | pass |
 | Settings | קטגוריות | Opens categories. | never | no | route `/settings/categories` | none | pass |
-| Settings | פרויקטים | Opens the project list. | never | no | route `/projects` | none | pass |
-| Settings | סיכום שבועי | Does not run. Notifications are not sent. | always. Hint "לא פעיל". | no | none | none | pass |
-| Settings | תזכורת לפריטים ממתינים | Does not run. Notifications are not sent. | always. Hint "לא פעיל". | no | none | none | pass |
-| Settings | אישור אוטומטי בביטחון גבוה | Does not run. There is no confidence score. | always. Hint "לא פעיל". | no | none | none | pass |
+| Settings | פרויקטים | Not on Settings. Projects stay at `/projects`. | n/a | n/a | the row is absent | n/a | pass |
+| Settings | סיכום שבועי | Not on Settings. Notifications stay off. | n/a | n/a | the switch is absent | n/a | pass |
+| Settings | תזכורת לפריטים ממתינים | Not on Settings. Notifications stay off. | n/a | n/a | the switch is absent | n/a | pass |
+| Settings | אישור אוטומטי בביטחון גבוה | Not on Settings. There is no confidence score, and the switch is not shown. | n/a | n/a | the switch is absent | n/a | pass |
 | Settings | רווח אחרי חלק בכלליות | Calls `set_after_overhead` for the company. | never | the switch waits for the write | the switch stays | toast "לא הצלחנו לשמור את התצוגה.", switch returns | pass |
 | Settings | התנתקות | Signs out. | hidden in preview, because preview has no session | the row is busy | route `/sign-in` | toast "לא הצלחנו לצאת." | pass |
 | Settings | התקנה למסך הבית | Opens the install screen. Hidden when the app is already installed. | never | no | route `/install` | none | pass |
