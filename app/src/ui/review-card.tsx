@@ -105,7 +105,7 @@ export function ReviewCard({
             variant="button"
             eyebrow={line.label}
             title={line.value}
-            label={`${line.label}: ${line.value}`}
+            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : ""}`}
             tag={line.suggested ? <SuggestTag /> : undefined}
             chevron
             onClick={line.onOpen}

@@ -1,6 +1,6 @@
 import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { overheadHint, shownProfit } from "../overhead";
@@ -794,6 +794,102 @@ export function FiledTodayScreen({
   );
 }
 
+const EMPTY_REVIEW: ReviewRow[] = [];
+
+/** The row opened from the list. A later URL replace must not move this. */
+let reviewReturnId: string | null = null;
+
+export function resetReviewListFocus(): void {
+  reviewReturnId = null;
+}
+
+let e2eOpen: ReviewRow[] | null = null;
+let e2eGone: ReviewRow[] = [];
+const e2eListeners = new Set<() => void>();
+
+function e2eNotify(): void {
+  for (const listener of e2eListeners) listener();
+}
+
+function seedE2eReview(): ReviewRow[] {
+  const names = [
+    ["r1", "מחסן הנמל"],
+    ["r2", "עגורני החוף"],
+    ["r3", "ברזל הדרום"],
+    ["r4", "צבע הדרום"],
+    ["r5", "חשמל הצפון"],
+  ] as const;
+  return names.map(([id, supplier]) => ({
+    id,
+    transaction_id: `t-${id}`,
+    description: supplier,
+    doc_date: "2026-09-29",
+    amount_net: -10_000n,
+    direction: "expense" as const,
+    reason: null,
+    project_id: "p1",
+    category_id: "c1",
+    project_name: "הרצל",
+    category_name: "חומרים",
+    project_suggested: false,
+    category_suggested: false,
+    supplier_name: supplier,
+    doc_kind: "invoice",
+    auto_approved_today: 0,
+  }));
+}
+
+function e2eEnsure(): ReviewRow[] {
+  if (e2eOpen == null) e2eOpen = seedE2eReview();
+  return e2eOpen;
+}
+
+function dismissE2eReview(id: string): void {
+  const open = e2eEnsure();
+  const row = open.find((item) => item.id === id);
+  if (!row) return;
+  e2eGone = [row, ...e2eGone];
+  e2eOpen = open.filter((item) => item.id !== id);
+  e2eNotify();
+}
+
+function restoreE2eReview(id: string): void {
+  const row = e2eGone.find((item) => item.id === id);
+  if (!row) return;
+  e2eGone = e2eGone.filter((item) => item.id !== id);
+  const ids = new Set(e2eEnsure().map((item) => item.id));
+  ids.add(row.id);
+  e2eOpen = seedE2eReview().filter((item) => ids.has(item.id));
+  e2eNotify();
+}
+
+function useE2eReviewRows(active: boolean): ReviewRow[] {
+  const [, bump] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const listener = () => { bump((n) => n + 1); };
+    e2eListeners.add(listener);
+    return () => { e2eListeners.delete(listener); };
+  }, [active]);
+  return active ? e2eEnsure() : EMPTY_REVIEW;
+}
+
+const e2eChangeSample: ChangeSample = {
+  supplier: "מחסן הנמל",
+  amount: "₪100",
+  projectId: "p1",
+  categoryId: "c1",
+  suggestionId: "p1",
+  suggestionCategoryId: "c1",
+  project_suggested: false,
+  categorySuggested: false,
+  projects: [{ id: "p1", name: "הרצל", status: "active" }],
+  categories: [
+    { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
+    { id: "c2", name: "הובלה", hidden: false, kind: "expense" },
+  ],
+};
+
 export function reviewListPath(search: string): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   params.delete("item");
@@ -854,35 +950,56 @@ export function ReviewScreen() {
   const preview = useHomePreview();
   const search = useFlowSearch();
   const location = useLocation();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
   const review = useReviewQuery();
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
-  const advancedTo = useRef<string | null>(null);
-  const phase = screenPhase(preview, review);
+  const e2eList = params.get("preview") != null && params.get("e2e") === "list";
+  const e2eRows = useE2eReviewRows(e2eList);
+  const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
+  const source = e2eList ? e2eRows : (review.data ?? EMPTY_REVIEW);
+  const activeRows = useMemo(() => {
+    if (projectFilter == null || preview !== "off") return source;
+    const held = waiting.data;
+    if (held == null || held.length === 0 || !held.every((row) => row.review_id != null)) return source;
+    const ids = new Set(held.map((row) => row.review_id));
+    return source.filter((row) => ids.has(row.id));
+  }, [projectFilter, preview, source, waiting.data]);
+  useEffect(() => {
+    if (listing) {
+      focusedOrder.current = null;
+      return;
+    }
+    const urlId = params.get("from") === "all" ? params.get("item") : null;
+    if (urlId == null) {
+      focusedOrder.current = null;
+      return;
+    }
+    if (reviewReturnId == null) reviewReturnId = urlId;
+    if (phase.kind !== "ready") return;
+    if (activeRows.length === 0) {
+      if (projectFilter == null) void navigate(`/review${search}`, { replace: true });
+      return;
+    }
+    if (activeRows.some((row) => row.id === urlId)) {
+      focusedOrder.current = rotateReview(activeRows, urlId);
+      return;
+    }
+    const head = queueAfterFocus(activeRows, urlId, focusedOrder.current).rows[0]?.id;
+    if (head != null && head !== urlId) void navigate(reviewFocusPath(search, head), { replace: true });
+  }, [listing, params, activeRows, phase.kind, search, navigate, projectFilter]);
   function rowsForFocus(rows: ReviewRow[]): ReviewRow[] {
     const urlId = params.get("from") === "all" ? params.get("item") : null;
-    if (listing || urlId == null) {
-      focusedOrder.current = null;
-      advancedTo.current = null;
-      return rows;
-    }
-    const carried = advancedTo.current;
-    const focusId = rows.some((row) => row.id === urlId) ? urlId : carried;
-    if (focusId != null && rows.some((row) => row.id === focusId)) {
-      const order = rotateReview(rows, focusId);
-      focusedOrder.current = order;
-      advancedTo.current = focusId === urlId ? null : focusId;
-      return order;
-    }
-    const placed = queueAfterFocus(rows, urlId, focusedOrder.current);
-    focusedOrder.current = placed.order;
-    const shown = placed.rows[0]?.id;
-    advancedTo.current = shown != null && shown !== urlId ? shown : null;
-    return placed.rows;
+    if (listing || urlId == null) return rows;
+    if (rows.some((row) => row.id === urlId)) return rotateReview(rows, urlId);
+    return queueAfterFocus(rows, urlId, focusedOrder.current).rows;
   }
+  const e2eWrite: ReviewPreviewWrite | undefined = e2eList
+    ? { run: () => Promise.resolve(), onDone: dismissE2eReview, onUndo: restoreE2eReview }
+    : undefined;
   if (projectFilter != null && preview === "off") {
     const back = `/projects/${projectFilter}`;
     const waitingPhase = screenPhase(preview, waiting);
@@ -896,14 +1013,16 @@ export function ReviewScreen() {
         return <ScreenState title="לאישור" backTo={back} phase={phase} onRetry={() => { void review.refetch(); }} />;
       }
       const ids = new Set(held.map((row) => row.review_id));
-      const rows = (review.data ?? []).filter((row) => ids.has(row.id));
+      const rows = source.filter((row) => ids.has(row.id));
       if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
       if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
       const fromList = params.get("from") === "all" && params.get("item") != null;
+      const ordered = rowsForFocus(rows);
       return (
         <ReviewQueue
-          rows={rowsForFocus(rows)}
+          rows={ordered}
           search={search}
+          listPlace={listPlace(rows, ordered, fromList)}
           backTo={fromList ? reviewListPath(search) : back}
           homeTo={back}
           homeLabel="חזרה לפרויקט"
@@ -912,22 +1031,34 @@ export function ReviewScreen() {
     }
     return <ProjectWaitingList rows={held} search={search} backTo={back} />;
   }
-  const rows = review.data ?? [];
+  const rows = source;
+  const fromList = params.get("from") === "all" && params.get("item") != null;
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    return <ReviewEmpty search={search} backTo={listing ? `/review${search}` : undefined} />;
+    return <ReviewEmpty search={search} backTo={listing || fromList ? `/review${search}` : undefined} />;
   }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
   }
   if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
-  const fromList = params.get("from") === "all" && params.get("item") != null;
+  const ordered = rowsForFocus(rows);
   return (
     <ReviewQueue
-      rows={rowsForFocus(rows)}
+      rows={ordered}
       search={search}
+      previewWrite={e2eWrite}
+      listPlace={listPlace(rows, ordered, fromList)}
       backTo={fromList ? reviewListPath(search) : undefined}
     />
   );
+}
+
+function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boolean): { index: number; total: number } | undefined {
+  if (!fromList) return undefined;
+  const head = ordered[0];
+  if (!head) return undefined;
+  const index = rows.findIndex((row) => row.id === head.id);
+  if (index < 0) return undefined;
+  return { index: index + 1, total: rows.length };
 }
 
 export function ReviewAllList({
@@ -939,6 +1070,17 @@ export function ReviewAllList({
   search: string;
   backTo: string;
 }) {
+  useEffect(() => {
+    const id = reviewReturnId;
+    if (id == null) return;
+    const href = reviewFocusPath(search, id);
+    const link = [...document.querySelectorAll("a[href]")].find((node) => node.getAttribute("href") === href);
+    if (link instanceof HTMLElement) link.focus();
+    const timer = window.setTimeout(() => {
+      if (reviewReturnId === id) reviewReturnId = null;
+    }, 0);
+    return () => { window.clearTimeout(timer); };
+  }, [search, rows]);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
@@ -948,7 +1090,7 @@ export function ReviewAllList({
             key={row.id}
             variant="transaction"
             title={row.supplier_name ?? row.description}
-            hint={formatDayMonth(row.doc_date)}
+            hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
             agorot={row.amount_net}
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
@@ -1013,6 +1155,7 @@ export function ReviewQueue({
   homeTo,
   homeLabel,
   onShared,
+  listPlace,
 }: {
   rows: ReviewRow[];
   search: string;
@@ -1024,6 +1167,8 @@ export function ReviewQueue({
   /** Preview sends צפייה to its own filed list. */
   filedTo?: string;
   backTo?: string;
+  /** A card opened from the list. Position in the remaining queue, not visit progress. */
+  listPlace?: { index: number; total: number };
   /** Preview returns an empty queue to its index. */
   homeTo?: string;
   /** Label for that return. The product queue says לדף הבית. */
@@ -1172,8 +1317,8 @@ export function ReviewQueue({
   }
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
-  const total = Math.max(visit.current.total, 1);
-  const index = row ? total - rows.length + 1 : total;
+  const total = listPlace?.total ?? Math.max(visit.current.total, 1);
+  const index = listPlace?.index ?? (row ? total - rows.length + 1 : total);
   const splitCard = reviewIsSplit(row);
   const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
     || (splitCard
@@ -1182,26 +1327,24 @@ export function ReviewQueue({
         ? row.category_id != null
         : row.project_id != null && row.category_id != null));
   return (
-    <div>
+    <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       <div className="ui-review-meter">
-        <ProgressBar
-          variant="thin"
-          label="התקדמות התור"
-          value={index}
-          max={total}
-          caption={
-            <span className="t-hint">
-              <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
-            </span>
-          }
-        />
+        {listPlace == null ? (
+          <ProgressBar
+            variant="thin"
+            label="התקדמות התור"
+            value={index}
+            max={total}
+          />
+        ) : null}
+        <span className="t-hint">
+          <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
+        </span>
+        {changeTo == null ? (
+          <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+        ) : null}
       </div>
-      {changeTo == null ? (
-        <div className="ui-review-show-all">
-          <TextLink to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
-        </div>
-      ) : null}
       {auto > 0 && !hideAuto ? (
         <Banner
           icon={<ReviewIcon />}
@@ -1485,7 +1628,9 @@ export function reviewSplitTitle(row: { project_name?: string | null; share_coun
   return "עלות משותפת · טרם פוצלה";
 }
 
-export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
+export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
+  const [params] = useSearchParams();
+  const sample = given ?? (params.get("e2e") === "list" ? e2eChangeSample : undefined);
   const search = useFlowSearch();
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -1495,7 +1640,6 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const review = useReviewQuery(sample == null);
-  const [params] = useSearchParams();
   const item = params.get("item") ?? "";
   const live = (review.data ?? []).find((entry) => entry.id === item);
   const [kept, setKept] = useState<ReviewRow | null>(null);
@@ -1734,7 +1878,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
         const complete = income ? nextCategory !== "" : nextProject !== "" && nextCategory !== "";
         if (!complete) {
           setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-          return undefined;
+          return "hold";
         }
         setHold("");
         if (closedReview.current) {

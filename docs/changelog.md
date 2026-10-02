@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Review queue, round 1. אישור from a list card keeps the following item in the address, so the third step does not jump back to the oldest. A picker opened from a card line returns to that card. הצג הכול sits at the end of the "N מתוך M" row, and the project and category lines are one row tall. A list card shows its place, not the progress bar. After the last item, Back goes to `/review`. Decision [0081](decisions/0081-review-queue-list.md).
+
 The review queue lists every pending item. הצג הכול sits under the progress bar and opens `/review/all`. A row opens that item's card, and אישור then continues with the item that followed it. The project and category lines open the picker, and the notes say הקישו לבחירה. The split title stays "מפוצל · N פרויקטים". Decision [0081](decisions/0081-review-queue-list.md).
 
 Clip-check measures each text node on the nearest ancestor that is not `display: inline` or `display: contents`, once per container. A `<bdi>` in a hint, mixed text, and `<p><bdi class="ui-num">` are that container's clip. Only the `clip-no-text` tag skips a story. A pass names the skipped stories. One view says "1 story view". A setup failure deletes a stale crash report. `ui-pick-label` on `screens-routes--change-project-picker` stays in UI polish. Unpaid-list clips only at 320, as two hints that should use `wrapHint`. An inline box is as wide as its text and never clips, so the check measures the block around it. [PITFALLS.md](review/PITFALLS.md).

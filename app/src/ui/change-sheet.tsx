@@ -71,7 +71,7 @@ type Shared = {
    * "left" means the screen already navigated, so the picker must not pop history.
    * Omitted in a story, which only updates the local choice.
    */
-  onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left">;
+  onCommitPick?: (kind: "project" | "category", id: string) => Promise<undefined | "left" | "hold">;
   /**
    * Runs on every close. Rejects with "incomplete" or "remember" to stay open.
    * It must not write. A write belongs in onCommitPending, and only when pending.
@@ -279,6 +279,14 @@ export function ChangeAssignment(props: Props) {
     go(searchOf(nextParams), true);
   }
 
+  /** A picker opened from a card line. Depth 0 means the owner never saw the summary. */
+  function landedOnPicker(): boolean {
+    if (props.host !== "route" || props.contained) return false;
+    if (depth.current > 0) return false;
+    const pick = new URLSearchParams(locationRef.current.search).get("pick");
+    return pick === "project" || pick === "category";
+  }
+
   function back() {
     if (creatingNew) {
       setCreatingNew(false);
@@ -292,6 +300,10 @@ export function ChangeAssignment(props: Props) {
       }
       pendingFocus.current = containedView === "category" ? "category" : "project";
       setContainedView("summary");
+      return;
+    }
+    if (landedOnPicker()) {
+      requestClose.current?.();
       return;
     }
     pendingFocus.current = view === "category" ? "category" : "project";
@@ -319,27 +331,51 @@ export function ChangeAssignment(props: Props) {
     void navigate(-1);
   }
 
-  async function commitChoice(kind: "project" | "category", id: string, previous: string): Promise<boolean> {
-    if (!props.onCommitPick) return true;
+  async function commitChoice(kind: "project" | "category", id: string, previous: string): Promise<"stay" | "left" | "hold"> {
+    if (!props.onCommitPick) return "stay";
     setSavingId(id);
-    const work = (async () => {
+    const work = (async (): Promise<"stay" | "left" | "hold"> => {
       try {
         const outcome = await props.onCommitPick?.(kind, id);
         setSavingId(null);
-        return outcome !== "left";
+        if (outcome === "left" || outcome === "hold") return outcome;
+        return "stay";
       } catch {
         setSavingId(null);
         if (kind === "project") props.onProjectId(previous);
         else props.onCategoryId(previous);
-        return false;
+        return "left";
       }
     })();
-    inflight.current = work;
+    const gate = work.then((outcome) => outcome !== "left");
+    inflight.current = gate;
     try {
       return await work;
     } finally {
-      if (inflight.current === work) inflight.current = null;
+      if (inflight.current === gate) inflight.current = null;
     }
+  }
+
+  function finishPick(outcome: "stay" | "left" | "hold") {
+    if (outcome === "left") return;
+    if (outcome === "hold") {
+      if (props.contained) setContainedView("summary");
+      else closePickLevel();
+      return;
+    }
+    if (props.contained) {
+      if (props.start === "project" && props.host === "overlay") {
+        props.onOpenChange(false);
+        return;
+      }
+      setContainedView("summary");
+      return;
+    }
+    if (landedOnPicker()) {
+      requestClose.current?.();
+      return;
+    }
+    closePickLevel();
   }
 
   async function choose(kind: "project" | "category", id: string) {
@@ -349,18 +385,9 @@ export function ChangeAssignment(props: Props) {
     opener.current = kind;
     pendingFocus.current = kind;
     setCreatingNew(false);
-    const stay = await commitChoice(kind, id, previous);
-    if (kind === "category" && stay) setOwnedCategory(true);
-    if (!stay) return;
-    if (props.contained) {
-      if (props.start === "project" && props.host === "overlay") {
-        props.onOpenChange(false);
-        return;
-      }
-      setContainedView("summary");
-      return;
-    }
-    closePickLevel();
+    const outcome = await commitChoice(kind, id, previous);
+    if (kind === "category" && outcome !== "left") setOwnedCategory(true);
+    finishPick(outcome);
   }
 
   async function submitNew(event: SubmitEvent) {
@@ -379,18 +406,9 @@ export function ChangeAssignment(props: Props) {
       opener.current = "project";
       pendingFocus.current = "project";
       setCreatingNew(false);
-      const stay = await commitChoice("project", created.id, previous);
+      const outcome = await commitChoice("project", created.id, previous);
       setCreating(false);
-      if (!stay) return;
-      if (props.contained) {
-        if (props.start === "project" && props.host === "overlay") {
-          props.onOpenChange(false);
-          return;
-        }
-        setContainedView("summary");
-        return;
-      }
-      closePickLevel();
+      finishPick(outcome);
     } catch {
       setCreating(false);
       return;
@@ -445,8 +463,10 @@ export function ChangeAssignment(props: Props) {
       } catch {
         // The write already toasted. The dismiss still closes.
       }
+      if (landedOnPicker()) return closeSheet(true);
       return closeSheet(false);
     }
+    if (landedOnPicker()) return closeSheet(true);
     const current = propsRef.current;
     if (current.hold) {
       if (!warned.current) {
