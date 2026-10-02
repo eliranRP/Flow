@@ -111,6 +111,13 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Split | a percent field | Edits that share. A tap on the left edge, the centre, or the right edge focuses it, and 100 stays fully visible. The row focuses it too. | while saving | no | the remainder line updates | a field over 100% shows "עד 100%" | pass |
 | Split | חזרה לאפשרויות | Restores the previous choice. | while saving | no | the four choices return | none | pass |
 | Split | summary | No שמירה button. ✕ is the save. An invalid choice shows ביטול השינוי next to the reason. | n/a | n/a | the footer is the summary sentence | n/a | pass |
+| Settings | חיבור עוזר | Opens the connect sheet. Shown when the assistant is not connected. | no company. The hint says why. | no | sheet title חיבור עוזר | none | pass |
+| Settings | קריאה וכתיבה / קריאה בלבד | Selects the scope. It does not mint. | while יצירת קוד is minting. The reason says why. | no | the row is selected | none | pass |
+| Settings | יצירת קוד | Mints one code for this user. | never | the button is busy | step 2 shows the code once | "לא הצלחנו להתחבר. נסו שוב." The button retries | pass |
+| Settings | העתקה | Copies the code. | never | no | info toast "הועתק" | the field selects and "העתיקו ידנית" shows. No success toast | pass |
+| Settings | ניתוק on עוזר | Opens the confirm sheet when connected or expired. | never | no | title "לנתק את העוזר?" | none | pass |
+| Settings | confirm ניתוק on עוזר | Revokes this user's token. | never | the confirm button | info toast "העוזר נותק." | toast "לא הצלחנו לנתק. נסו שוב." | pass |
+| Settings | חיבור מחדש | Opens the connect sheet after the code expires. | never | no | the connect sheet | none | pass |
 | Settings | חיבור SUMIT | Opens the connect sheet. Shown when SUMIT is not connected. | never | no | sheet title חיבור SUMIT | none | pass |
 | Settings | חיבור | Calls the `sumit-connect` edge function. | never | the button is busy | toast "SUMIT מחובר. המפתח נשאר בשרת.", sheet closes | toast "החיבור נכשל. בדקו את המזהה ואת המפתח." or "לא הצלחנו להתחבר. נסו שוב." | pass |
 | Settings | רענון עכשיו | Calls `sumit-sync`. | a bad key, or before `next_attempt_at`. The hint says why. Cursor not-allowed. | the row is busy | toast "הרענון הסתיים." | the Hebrew SUMIT error, or "הרענון נכשל." | pass |

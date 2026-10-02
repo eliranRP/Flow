@@ -71,6 +71,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   if (response.error) throw new Error(await edgeErrorCode(response.error));
   return response.data;
 }
+import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -2897,6 +2898,7 @@ type SettingsSample = {
   projectCount?: number;
   expenseCategories?: number;
   incomeCategories?: number;
+  assistant?: AssistantSample;
 };
 
 export function SettingsScreen({
@@ -3077,6 +3079,11 @@ export function SettingsScreen({
           <Button variant="secondary" onClick={() => { setConnectSheet(true); }}>חיבור מחדש</Button>
         </div>
       ) : null}
+      <AssistantSettings
+        sample={sample ? (sample.assistant ?? { state: "empty" }) : undefined}
+        noCompany={emptyAccount}
+        blocked={blocked}
+      />
       <Sheet open={connectOpen} onOpenChange={setConnectSheet} title="חיבור SUMIT">
         <form
           className="ui-stack"
