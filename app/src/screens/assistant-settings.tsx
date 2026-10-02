@@ -240,7 +240,7 @@ export function AssistantSettings({
           <div className="ui-stack ui-assistant-step">
             <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>
             <p className="ui-field-label" id="assistant-secret-label">קוד החיבור</p>
-            <bdi ref={secretRef} className="ui-secret-value" dir="ltr" aria-labelledby="assistant-secret-label">{secret.secret}</bdi>
+            <bdi ref={secretRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="" aria-labelledby="assistant-secret-label">{secret.secret}</bdi>
             <p className="ui-field-label" id="assistant-scope-label">היקף הגישה</p>
             <p aria-labelledby="assistant-scope-label">{scopeLabel(scopeChoice(secret.scope))}</p>
             {manualCopy ? <p className="t-hint" id="assistant-manual-copy" role="status">העתיקו ידנית</p> : null}

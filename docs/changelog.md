@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+MCP cycle 2 design review, round 2. A mouse can select the shown-once secret, and a drag on it does not dismiss the sheet. Decision [0080](decisions/0080-mcp-connector.md) records the error row, "סיום", the step-2 labels, and the wrapped secret. The other design nits stay in the backlog.
+
 MCP cycle 2 review, round 1. `search_expenses` can search filed and all rows. A missing signing key hides the tools and returns a tool error. A token without `read` is refused. Token shape is a warning, not a deploy failure. The עוזר section follows SUMIT, the connected hint wraps, and a failed status load does not offer mint. Row hints use `t-hint` and `aria-describedby`. Decision [0080](decisions/0080-mcp-connector.md).
 
 ## 2026-09-30
