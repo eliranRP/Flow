@@ -2,7 +2,7 @@
 
 ## 2026-10-02
 
-Clip-check review. The script waits for the story, for `document.fonts.ready`, and for sheet panels. It fails when Storybook shows an error or when nothing was measured. One function decides a clip. Ellipsis is exempt only on `.ui-row-title` and `[data-clip-ok]`; a single-line hint is measured. A crash exits 3. The server picks an ephemeral port. Q-1: the signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`, not `SUPABASE_ACCESS_TOKEN`. Q-2: an unknown `?assistant=` preview value shows the error state. Both are tracked tasks and are not applied in this pull request.
+Clip-check review. The script waits for the story, for `document.fonts.ready`, and for sheet panels. It fails when Storybook shows an error or when nothing was measured. One function decides a clip. Ellipsis is exempt only on `.ui-row-title` and `[data-clip-ok]`; a single-line hint is measured. A crash exits 3. The server picks an ephemeral port. The browser cases run in the Storybook smoke, after Playwright is installed. `pnpm test` does not launch a browser. Q-1: the signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`, not `SUPABASE_ACCESS_TOKEN`. Q-2: an unknown `?assistant=` preview value shows the error state. Both are tracked tasks and are not applied in this pull request.
 
 Design findings. Inline text inside a vaul sheet inherits `user-select: none`, so selection is probed on a desktop fine pointer. A fast drag can dismiss shown-once content. A clip-check pass does not cover copy, select, or gesture. A `min-block-size` fix is re-sampled at 320. Button labels use the `ErrorState` action name. A state-table gap is spec drift. [PITFALLS.md](review/PITFALLS.md).
 
