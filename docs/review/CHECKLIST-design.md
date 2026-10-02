@@ -13,3 +13,9 @@ Use this with [PITFALLS.md](PITFALLS.md) before changing a screen, and again bef
 - [ ] `aria-label` and `aria-labelledby` name a control. They do not name a generic element.
 - [ ] A prop that only a story passes is not on a production component.
 - [ ] Stories contain no real personal data, including the owner's email.
+- [ ] Inline text that replaced an input inside a vaul sheet is selectable on a desktop fine pointer. `getSelection()` returns the text. Touch is not the only probe.
+- [ ] A quick diagonal mouse drag over selectable or shown-once content does not dismiss the sheet.
+- [ ] A clip-check pass is not treated as evidence for copy, select, or gesture. Those have their own probe.
+- [ ] A `min-block-size` step-jump fix was re-sampled at 320, where the content wraps.
+- [ ] Button labels use the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
+- [ ] An owner call that shipped in code is also a row in that decision's state table.

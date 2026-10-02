@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Design findings. Inline text inside a vaul sheet inherits `user-select: none`, so selection is probed on a desktop fine pointer. A fast drag can dismiss shown-once content. A clip-check pass does not cover copy, select, or gesture. A `min-block-size` fix is re-sampled at 320. Button labels use the `ErrorState` action name. A state-table gap is spec drift. [PITFALLS.md](review/PITFALLS.md).
+
 Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day. The checklists also catch isolation tests with no positive control, fixtures that skip nullable fields, a reused secret name, a crash exit that collides with a criterion, ARIA names on generic elements, story-only props, real personal data, date-dependent tests, a live check with no person or method, and a self-check line that is a justification. Q-1 and Q-2 are recorded and not applied here.
 
 ## 2026-09-30

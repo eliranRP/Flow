@@ -58,6 +58,12 @@ Catch these before handoff. The matching lines are in the two checklists.
 8. A test does not depend on today's date. It does not require a day after today, and it does not freeze a calendar day that will fail next month.
 9. A live verification records who ran it and how. A conclusion with no person and no method is not a record.
 10. A self-check line is evidence: the command, the exit code, or the artifact. A justification is not a line. A cited run has an artifact.
+11. Replacing an `<input>` with inline text inside a vaul sheet inherits `user-select: none`. Probe `getSelection()` on a desktop fine pointer, not only on touch.
+12. A drag-to-dismiss sheet can read a fast selection drag as a dismiss. Probe a quick diagonal mouse drag over selectable or shown-once content.
+13. The clip test is horizontal only. Zero overflow is not evidence for a copy, select, or gesture flow.
+14. A `min-block-size` step-jump fix is re-sampled at 320, where the content wraps.
+15. A button label uses the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
+16. An owner call that is in the code and missing from the decision's state table is spec drift.
 
 ## Decided, and not yet applied
 
