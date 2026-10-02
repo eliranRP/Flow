@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { dayLabel, formatDisplay, israelToday } from "./date-math";
+import { dayLabel, formatDisplay, inclusiveDays, israelToday, rangeLengthLabel } from "./date-math";
 import { PeriodPicker, RangeSheet } from "./period-picker";
 import { expectRtl, expectTarget } from "./test-support";
 
@@ -36,8 +36,8 @@ describe("RangeSheet", () => {
     const today = israelToday();
     const [year, month] = today.split("-");
     const from = `${year ?? ""}-${month ?? ""}-01`;
-    const to = `${year ?? ""}-${month ?? ""}-03`;
-    expect(to <= today).toBe(true);
+    const to = today;
+    expect(to >= from).toBe(true);
     let applied: [string, string] | null = null;
     render(
       <MemoryRouter>
@@ -54,7 +54,7 @@ describe("RangeSheet", () => {
     fireEvent.click(screen.getByRole("button", { name: dayLabel(to) }));
     expect(screen.getByText(formatDisplay(from))).toBeInTheDocument();
     expect(screen.getByText(formatDisplay(to))).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "הצגת 3 ימים" }));
+    fireEvent.click(screen.getByRole("button", { name: rangeLengthLabel(inclusiveDays(from, to)) }));
     expect(applied).toEqual([from, to]);
   });
 });

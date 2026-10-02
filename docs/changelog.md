@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-02
+
+Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day.
+
 ## 2026-09-30
 
 MCP cycle 1 review, second pass. A missing, invalid, or expired access token fails the deploy before migrations and Pages. `supabase secrets list` is that probe. There is no skip path. The token expires in 30 days, and the date is kept in the CI runbook. A `bump_mcp_rate` error returns `unavailable`. Decision [0080](decisions/0080-mcp-connector.md).
