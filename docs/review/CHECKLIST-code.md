@@ -14,7 +14,7 @@ Use this with [PITFALLS.md](PITFALLS.md) at the start of a cycle, and again befo
 - [ ] Handoff waited for green CI on the pushed head.
 - [ ] Ambiguities are listed as "Decisions needed".
 - [ ] An isolation test has a positive control. The owner still receives their own row.
-- [ ] Fixtures include nullable schema fields. A skipped null is not treated as absent.
+- [ ] A fixture includes every nullable column the schema returns, including when the value is null. Omitting the column hides a null that production sends.
 - [ ] Each script names the secret it reads and that secret's scope. A secret name is not reused for a different scope.
 - [ ] A crash exit code is not a criterion exit code.
 - [ ] Fixtures contain no real personal data, including the owner's email.

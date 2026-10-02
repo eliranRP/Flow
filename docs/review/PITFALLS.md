@@ -2,12 +2,12 @@
 
 Read this file at the start of every cycle, then the [code checklist](CHECKLIST-code.md) and the [design checklist](CHECKLIST-design.md).
 
-`/workspace/flow-tech/velocity-plan.md` is not in this repository. These notes are the section 7 rules that were used for the PR #6 review: the 12-point self-check, and the security and CI norms named with it.
+These notes are the section 7 rules used for the PR #6 review: the 12-point self-check, and the security and CI norms named with it.
 
 ## Self-check
 
 1. Open the design sources for every screen you touch. Hints use `t-hint` and are tied with `aria-describedby`. Rows use the same `ListRow` icon pattern as the neighbouring rows.
-2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. A single-line ellipsis is the designed truncation for a title. A hint that wraps is still measured. The tint that sticks out of a row is not text.
+2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture.
 3. Walk a changed row together with the states it sits beside. Never show a state you do not know. A failed load is an error with a retry, not an empty or disconnected row with an active action.
 4. Run the repo gate before handoff: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `deno test --allow-env supabase/functions/flow-mcp`, `node --test scripts/*.test.mjs`, the database tests, and `pnpm db:types:check`. Hand off only when CI is green on the pushed head.
 5. A script that reports several outcomes has one exit code per outcome, plus one code for incomplete. Run it once per code against the real response shape. Paste the codes.
@@ -35,7 +35,9 @@ Open these before editing the screen:
 - [docs/design/DESIGN-RULES.md](../design/DESIGN-RULES.md).
 - [docs/qa/CONTROLS.md](../qa/CONTROLS.md). A new control gets a row. The row is marked pass only after the test that exercises it.
 
-## Traps already paid for
+## PR #6 lessons, pending merge
+
+These are lessons from PR #6. They apply once that pull request merges.
 
 - An argument such as `scope` on `search_expenses` is not identity. Identity is `user_id`, `p_user`, `company_id`, `sub`, and `mcp_tid`.
 - Reads need the signing key. Without it, `tools/list` is empty and `tools/call` is a tool error. Do not advertise the tools.
@@ -65,9 +67,9 @@ Catch these before handoff. The matching lines are in the two checklists.
 15. A button label uses the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
 16. An owner call that is in the code and missing from the decision's state table is spec drift.
 
-## Decided, and not yet applied
+## Tasks
 
-The next pull request that touches the file applies these. They are not part of PR #6.
+Decided, and not applied in this pull request. The pull request that touches the file does the task. Not part of PR #6.
 
-- Q-1. The signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`. They do not use `SUPABASE_ACCESS_TOKEN` for that read.
-- Q-2. An unknown `?assistant=` preview value shows the error state.
+- [ ] Q-1. The signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`. They do not use `SUPABASE_ACCESS_TOKEN` for that read.
+- [ ] Q-2. An unknown `?assistant=` preview value shows the error state.
