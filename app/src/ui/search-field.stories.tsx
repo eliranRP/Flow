@@ -18,14 +18,17 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = {
+  tags: ["clip-no-text"],
   args: { label: "חיפוש פרויקט", value: "", onChange: () => undefined },
   render: () => <Demo value="" />,
 };
 export const Filled: Story = {
+  tags: ["clip-no-text"],
   args: { label: "חיפוש פרויקט", value: "הרצל", onChange: () => undefined },
   render: () => <Demo value="הרצל" />,
 };
 export const Focus: Story = {
+  tags: ["clip-no-text"],
   args: { label: "חיפוש פרויקט", value: "", onChange: () => undefined },
   render: () => <Demo value="" autoFocus />,
 };

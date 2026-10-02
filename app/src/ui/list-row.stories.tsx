@@ -37,6 +37,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Skeleton: Story = {
+  tags: ["clip-no-text"],
   args: { variant: "item", title: "טוען" },
   render: () => (
     <List>
