@@ -31,7 +31,9 @@ When the filtered set is empty but the company queue is not, show the filter's e
 | Invoice candidates | Ticking invoices is part of the card when candidates exist. |
 | Back / nav | Leaves the queue. Skipped rows stay suggested. |
 
-`אישור` is enabled when the card shows a complete suggestion, and disabled when it says `אין הצעה, בחרו בשינוי`. A deposit still needs a category. Overhead and an unsplit shared cost open Split instead of assigning one project.
+`אישור` is enabled when the card shows a complete suggestion, and disabled when it says `אין הצעה, הקישו לבחירה`. A deposit still needs a category. Overhead and an unsplit shared cost open Split instead of assigning one project.
+
+`הצג הכול` sits under the progress bar and opens `/review/all`, one list of every open item: supplier, date, and amount. A row opens that card. Back returns to the list, including after a refresh. Tapping פרויקט or קטגוריה opens that picker. The save stays the change sheet's save ([0081](../../decisions/0081-review-queue-list.md)). A split's project row opens the split. The split title stays `מפוצל · N פרויקטים`.
 
 ## Elements and fields
 

@@ -794,14 +794,95 @@ export function FiledTodayScreen({
   );
 }
 
+export function reviewListPath(search: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.delete("item");
+  params.delete("from");
+  params.delete("pick");
+  const text = params.toString();
+  return text === "" ? "/review/all" : `/review/all?${text}`;
+}
+
+export function reviewFocusPath(search: string, id: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.delete("pick");
+  params.set("item", id);
+  params.set("from", "all");
+  return `/review?${params.toString()}`;
+}
+
+export function rotateReview<T extends { id: string }>(rows: T[], id: string): T[] {
+  const index = rows.findIndex((row) => row.id === id);
+  if (index <= 0) return rows;
+  return [...rows.slice(index), ...rows.slice(0, index)];
+}
+
+/** Keeps a card opened from the list, then the item that followed it once that card leaves. */
+export function queueAfterFocus<T extends { id: string }>(
+  rows: T[],
+  focusId: string,
+  prior: readonly T[] | null,
+): { rows: T[]; order: T[] } {
+  if (rows.some((row) => row.id === focusId)) {
+    const order = rotateReview(rows, focusId);
+    return { rows: order, order };
+  }
+  const index = prior?.findIndex((row) => row.id === focusId) ?? -1;
+  const rest = prior == null || index < 0 ? [] : [...prior.slice(index + 1), ...prior.slice(0, index)];
+  const nextId = rest.find((row) => rows.some((item) => item.id === row.id))?.id;
+  const order = nextId ? rotateReview(rows, nextId) : rows;
+  return { rows: order, order };
+}
+
+function assignmentPath(
+  changeTo: string | undefined,
+  search: string,
+  id: string,
+  pick?: "project" | "category",
+  fromList = false,
+): string {
+  const base = changeTo ?? `/review/change${search}`;
+  const [path, query = ""] = base.split("?");
+  const params = new URLSearchParams(query);
+  params.set("item", id);
+  if (pick) params.set("pick", pick);
+  if (fromList) params.set("from", "all");
+  return `${String(path)}?${params.toString()}`;
+}
+
 export function ReviewScreen() {
   const preview = useHomePreview();
   const search = useFlowSearch();
+  const location = useLocation();
   const [params] = useSearchParams();
+  const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
   const review = useReviewQuery();
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
+  const focusedOrder = useRef<ReviewRow[] | null>(null);
+  const advancedTo = useRef<string | null>(null);
   const phase = screenPhase(preview, review);
+  function rowsForFocus(rows: ReviewRow[]): ReviewRow[] {
+    const urlId = params.get("from") === "all" ? params.get("item") : null;
+    if (listing || urlId == null) {
+      focusedOrder.current = null;
+      advancedTo.current = null;
+      return rows;
+    }
+    const carried = advancedTo.current;
+    const focusId = rows.some((row) => row.id === urlId) ? urlId : carried;
+    if (focusId != null && rows.some((row) => row.id === focusId)) {
+      const order = rotateReview(rows, focusId);
+      focusedOrder.current = order;
+      advancedTo.current = focusId === urlId ? null : focusId;
+      return order;
+    }
+    const placed = queueAfterFocus(rows, urlId, focusedOrder.current);
+    focusedOrder.current = placed.order;
+    const shown = placed.rows[0]?.id;
+    advancedTo.current = shown != null && shown !== urlId ? shown : null;
+    return placed.rows;
+  }
   if (projectFilter != null && preview === "off") {
     const back = `/projects/${projectFilter}`;
     const waitingPhase = screenPhase(preview, waiting);
@@ -817,11 +898,13 @@ export function ReviewScreen() {
       const ids = new Set(held.map((row) => row.review_id));
       const rows = (review.data ?? []).filter((row) => ids.has(row.id));
       if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
+      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+      const fromList = params.get("from") === "all" && params.get("item") != null;
       return (
         <ReviewQueue
-          rows={rows}
+          rows={rowsForFocus(rows)}
           search={search}
-          backTo={back}
+          backTo={fromList ? reviewListPath(search) : back}
           homeTo={back}
           homeLabel="חזרה לפרויקט"
         />
@@ -831,12 +914,50 @@ export function ReviewScreen() {
   }
   const rows = review.data ?? [];
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    return <ReviewEmpty search={search} />;
+    return <ReviewEmpty search={search} backTo={listing ? `/review${search}` : undefined} />;
   }
   if (phase.kind !== "ready") {
-    return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} />;
+    return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
   }
-  return <ReviewQueue rows={rows} search={search} />;
+  if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+  const fromList = params.get("from") === "all" && params.get("item") != null;
+  return (
+    <ReviewQueue
+      rows={rowsForFocus(rows)}
+      search={search}
+      backTo={fromList ? reviewListPath(search) : undefined}
+    />
+  );
+}
+
+export function ReviewAllList({
+  rows,
+  search,
+  backTo,
+}: {
+  rows: ReviewRow[];
+  search: string;
+  backTo: string;
+}) {
+  return (
+    <div>
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+      <List>
+        {rows.map((row) => (
+          <ListRow
+            key={row.id}
+            variant="transaction"
+            title={row.supplier_name ?? row.description}
+            hint={formatDayMonth(row.doc_date)}
+            agorot={row.amount_net}
+            sign={row.direction === "income" ? "in" : "out"}
+            source="invoice"
+            href={reviewFocusPath(search, row.id)}
+          />
+        ))}
+      </List>
+    </div>
+  );
 }
 
 export function ProjectWaitingList({
@@ -912,6 +1033,8 @@ export function ReviewQueue({
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
+  const [queueParams] = useSearchParams();
+  const fromList = queueParams.get("from") === "all";
   const toast = useToast();
   const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
@@ -1030,7 +1153,23 @@ export function ReviewQueue({
   });
   const card = shown;
   if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
-  const change = changeTo ? withItem(changeTo, card.id) : `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
+  const current = card;
+  const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
+  function openProject() {
+    if (reviewIsSplit(current)) {
+      if (!current.transaction_id) return;
+      if (onShared) {
+        onShared(current.transaction_id);
+        return;
+      }
+      void navigate(`/transactions/${current.transaction_id}/split${search}`);
+      return;
+    }
+    void navigate(assignmentPath(changeTo, search, current.id, "project", fromList));
+  }
+  function openCategory() {
+    void navigate(assignmentPath(changeTo, search, current.id, "category", fromList));
+  }
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
   const total = Math.max(visit.current.total, 1);
@@ -1058,6 +1197,11 @@ export function ReviewQueue({
           }
         />
       </div>
+      {changeTo == null ? (
+        <div className="ui-review-show-all">
+          <TextLink to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+        </div>
+      ) : null}
       {auto > 0 && !hideAuto ? (
         <Banner
           icon={<ReviewIcon />}
@@ -1084,6 +1228,9 @@ export function ReviewQueue({
           vatLine={reviewVatLine(card.vat_agorot)}
           suggestion={suggestion}
           reason={card.reason}
+          direction={card.direction}
+          onProject={card.direction === "income" ? undefined : openProject}
+          onCategory={openCategory}
         />
       </div>
       <div className="ui-review-actions">
@@ -1127,13 +1274,6 @@ export function ReviewQueue({
       </div>
     </div>
   );
-}
-
-function withItem(to: string, id: string): string {
-  const [path, query = ""] = to.split("?");
-  const params = new URLSearchParams(query);
-  params.set("item", id);
-  return `${String(path)}?${params.toString()}`;
 }
 
 function invoiceDate(iso: string): string {
@@ -1534,9 +1674,11 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
     }, invalidate);
   }
 
+  const fromList = params.get("from") === "all" && item !== "";
+  const closeTo = fromList ? reviewFocusPath(search, item) : `/review${search}`;
   if (formPhase.kind !== "ready") {
     return (
-      <RouteSheet title="שינוי שיוך" closeTo={`/review${search}`}>
+      <RouteSheet title="שינוי שיוך" closeTo={closeTo}>
         <ScreenState title="שינוי שיוך" phase={formPhase} onRetry={() => { void dashboard.refetch(); void categories.refetch(); void review.refetch(); }} />
       </RouteSheet>
     );
@@ -1545,7 +1687,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   return (
     <ChangeAssignment
       host="route"
-      closeTo={`/review${search}`}
+      closeTo={closeTo}
       supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
       amount={sample?.amount ?? (row ? formatIls(absAgorot(row.amount_net)) : "")}
       direction={income ? "income" : "expense"}

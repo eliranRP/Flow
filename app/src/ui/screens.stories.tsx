@@ -14,6 +14,7 @@ import {
   ProjectCategoryScreen,
   ProjectDetailScreen,
   ProjectsScreen,
+  ReviewAllList,
   ReviewEmpty as ReviewEmptyState,
   ReviewQueue,
   ReviewScreen,
@@ -267,6 +268,32 @@ export const ReviewCardQueue: Story = {
     <StoryRoute entry="/review" tabs reviewCount={1}>
       <ExampleBar />
       <ReviewQueue rows={[sampleReview]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewAll: Story = {
+  render: () => (
+    <StoryRoute entry="/review/all" tabs reviewCount={2}>
+      <ExampleBar />
+      <ReviewAllList
+        backTo="/review"
+        search=""
+        rows={[
+          sampleReview,
+          {
+            ...sampleReview,
+            id: "r2",
+            transaction_id: "t2",
+            description: "מנוף ליום",
+            doc_date: "2026-09-29",
+            amount_net: -100_000n,
+            supplier_name: "עגורני החוף בע״מ",
+            project_name: null,
+            category_name: "שינוע",
+          },
+        ]}
+      />
     </StoryRoute>
   ),
 };

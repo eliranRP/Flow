@@ -2,7 +2,7 @@
 
 ## 2026-10-02
 
-The review queue gets a list of every pending item. הצג הכול sits under the progress bar and opens `/review/all`. A row opens that item's card. The project and category lines open the picker, and the notes say הקישו לבחירה. The split title stays "מפוצל · N פרויקטים". Decision [0081](decisions/0081-review-queue-list.md).
+The review queue lists every pending item. הצג הכול sits under the progress bar and opens `/review/all`. A row opens that item's card, and אישור then continues with the item that followed it. The project and category lines open the picker, and the notes say הקישו לבחירה. The split title stays "מפוצל · N פרויקטים". Decision [0081](decisions/0081-review-queue-list.md).
 
 MCP cycle 2 design review, round 2. A mouse can select the shown-once secret, and a drag on it does not dismiss the sheet. Decision [0080](decisions/0080-mcp-connector.md) records the error row, "סיום", the step-2 labels, and the wrapped secret. The other design nits stay in the backlog.
 
