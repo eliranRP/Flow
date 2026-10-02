@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSupabase } from "../lib/supabase";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
+import { AlertIcon, InboxIcon, LogoutIcon } from "../ui/icons";
 import { FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
@@ -12,7 +13,7 @@ import { useToast } from "../ui/toast";
 export type AssistantScope = "read" | "read_write";
 
 export type AssistantSample = {
-  state: "empty" | "loading" | "connected" | "expired" | "no-company";
+  state: "empty" | "loading" | "connected" | "expired" | "no-company" | "error";
   scope?: AssistantScope;
   lastUsedAt?: string | null;
   id?: string;
@@ -91,10 +92,14 @@ export function AssistantSettings({
   sample,
   noCompany = false,
   blocked,
+  initialSecret,
+  initialOpen = false,
 }: {
   sample?: AssistantSample;
   noCompany?: boolean;
   blocked?: () => boolean;
+  initialSecret?: Minted;
+  initialOpen?: boolean;
 }) {
   const toast = useToast();
   const client = useQueryClient();
@@ -103,33 +108,32 @@ export function AssistantSettings({
     enabled: sample == null,
     queryFn: readStatus,
   });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialSecret != null || initialOpen);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [choice, setChoice] = useState<AssistantScope>("read_write");
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
-  const [secret, setSecret] = useState<Minted | null>(null);
+  const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
   const [manualCopy, setManualCopy] = useState(false);
   const [revoking, setRevoking] = useState(false);
-  const openRef = useRef(false);
-  const secretRef = useRef<HTMLInputElement>(null);
+  const openRef = useRef(initialSecret != null || initialOpen);
+  const secretRef = useRef<HTMLElement>(null);
 
   const live = status.data;
-  const view: AssistantSample = sample ?? (
-    noCompany
+  const view: AssistantSample = sample
+    ? (sample.state === "error" || sample.error ? { ...sample, state: "error" } : sample)
+    : noCompany
       ? { state: "no-company" }
-      : live
-        ? {
-          state: live.state,
-          scope: scopeChoice(live.scope),
-          lastUsedAt: live.last_used_at,
-          id: live.id,
-          error: status.isError,
-        }
-        : status.isPending
-          ? { state: "loading" }
-          : { state: "empty", error: status.isError }
-  );
+      : status.isError && live == null
+        ? { state: "error" }
+        : live
+          ? {
+            state: live.state,
+            scope: scopeChoice(live.scope),
+            lastUsedAt: live.last_used_at,
+            id: live.id,
+          }
+          : { state: "loading" };
   const scope = view.scope ?? "read_write";
   const showDisconnect = view.state === "connected" || view.state === "expired";
 
@@ -172,14 +176,24 @@ export function AssistantSettings({
       setManualCopy(false);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
-      secretRef.current?.select();
+      const node = secretRef.current;
+      if (node) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
       setManualCopy(true);
     }
   }
 
   async function disconnect() {
     if (!view.id || revoking) return;
-    if (blocked?.()) return;
+    if (blocked?.()) {
+      setDisconnectOpen(false);
+      return;
+    }
     setRevoking(true);
     try {
       await revokeCode(view.id);
@@ -187,22 +201,24 @@ export function AssistantSettings({
       toast.show({ tone: "info", message: "העוזר נותק." });
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
     } catch {
-      toast.show({ tone: "bad", message: "לא הצלחנו לנתק." });
+      toast.show({ tone: "bad", message: "לא הצלחנו לנתק. נסו שוב." });
     } finally {
       setRevoking(false);
     }
   }
 
   const row = view.state === "loading" ? (
-    <ListRow variant="button" title="עוזר" hint="טוען" busy disabled onClick={() => undefined} />
+    <ListRow variant="button" title="עוזר" hint="טוען" icon={<InboxIcon />} wrapHint describeHint busy disabled onClick={() => undefined} />
   ) : view.state === "no-company" ? (
-    <ListRow variant="button" title="עוזר" hint="אין עסק עדיין" disabled onClick={() => undefined} />
+    <ListRow variant="button" title="עוזר" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint disabled onClick={() => undefined} />
+  ) : view.state === "error" ? (
+    <ListRow variant="static" title="עוזר" hint="לא הצלחנו לטעון את החיבור." icon={<AlertIcon />} wrapHint describeHint />
   ) : view.state === "connected" ? (
-    <ListRow variant="static" title="עוזר" hint={connectedHint(scope, view.lastUsedAt)} />
+    <ListRow variant="static" title="עוזר" hint={connectedHint(scope, view.lastUsedAt)} icon={<InboxIcon />} wrapHint describeHint />
   ) : view.state === "expired" ? (
-    <ListRow variant="button" title="חיבור מחדש" hint="התוקף פג" chevron onClick={() => { closeSheet(true); }} />
+    <ListRow variant="button" title="חיבור מחדש" hint="התוקף פג" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { closeSheet(true); }} />
   ) : (
-    <ListRow variant="button" title="חיבור עוזר" hint="לא מחובר" chevron onClick={() => { closeSheet(true); }} />
+    <ListRow variant="button" title="חיבור עוזר" hint="לא מחובר" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { closeSheet(true); }} />
   );
 
   return (
@@ -211,38 +227,34 @@ export function AssistantSettings({
       <List>
         {row}
         {showDisconnect && view.id ? (
-          <ListRow variant="danger" title="ניתוק" onClick={() => { setDisconnectOpen(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} describeHint onClick={() => { setDisconnectOpen(true); }} />
         ) : null}
       </List>
-      {view.error ? <div className="ui-page-pad"><FormError>לא הצלחנו לטעון את החיבור.</FormError></div> : null}
+      {view.state === "error" ? (
+        <div className="ui-page-pad">
+          <Button type="button" variant="secondary" onClick={() => { void status.refetch(); }}>נסו שוב</Button>
+        </div>
+      ) : null}
       <Sheet open={open} onOpenChange={closeSheet} title="חיבור עוזר">
         {secret ? (
-          <div className="ui-stack">
+          <div className="ui-stack ui-assistant-step">
             <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>
-            <label className="ui-field">
-              <span className="ui-field-label">קוד החיבור</span>
-              <input
-                ref={secretRef}
-                className="ui-field-control ui-secret-value"
-                readOnly
-                dir="ltr"
-                value={secret.secret}
-                aria-label="קוד החיבור"
-              />
-            </label>
-            <p>{scopeLabel(scopeChoice(secret.scope))}</p>
-            {manualCopy ? <p>העתיקו ידנית</p> : null}
-            <Button type="button" onClick={() => { void copySecret(); }}>העתקה</Button>
+            <p className="ui-field-label" id="assistant-secret-label">קוד החיבור</p>
+            <bdi ref={secretRef} className="ui-secret-value" dir="ltr" aria-labelledby="assistant-secret-label">{secret.secret}</bdi>
+            <p className="ui-field-label" id="assistant-scope-label">היקף הגישה</p>
+            <p aria-labelledby="assistant-scope-label">{scopeLabel(scopeChoice(secret.scope))}</p>
+            {manualCopy ? <p className="t-hint" id="assistant-manual-copy" role="status">העתיקו ידנית</p> : null}
+            <Button type="button" variant="secondary" aria-describedby={manualCopy ? "assistant-manual-copy" : undefined} onClick={() => { void copySecret(); }}>העתקה</Button>
+            <Button type="button" onClick={() => { closeSheet(false); }}>סיום</Button>
           </div>
         ) : (
-          <div className="ui-stack">
+          <div className="ui-stack ui-assistant-step">
             <div role="radiogroup" aria-label="היקף הגישה">
               <RadioRow
                 marker="start"
                 label="קריאה וכתיבה"
                 selected={choice === "read_write"}
                 disabled={minting}
-                disabledReason={minting ? MINT_REASON : undefined}
                 onSelect={() => { setChoice("read_write"); }}
               />
               <RadioRow
@@ -250,12 +262,12 @@ export function AssistantSettings({
                 label="קריאה בלבד"
                 selected={choice === "read"}
                 disabled={minting}
-                disabledReason={minting ? MINT_REASON : undefined}
                 onSelect={() => { setChoice("read"); }}
               />
             </div>
+            {minting ? <p className="t-hint" id="assistant-mint-reason" role="status">{MINT_REASON}</p> : null}
             {mintError ? <FormError>{MINT_ERROR}</FormError> : null}
-            <Button type="button" busy={minting} onClick={() => { void mint(); }}>יצירת קוד</Button>
+            <Button type="button" busy={minting} aria-describedby={minting ? "assistant-mint-reason" : undefined} onClick={() => { void mint(); }}>יצירת קוד</Button>
           </div>
         )}
       </Sheet>

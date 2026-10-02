@@ -58,12 +58,22 @@ export function pepperProblem(raw) {
  */
 export function accessTokenProblem(token) {
   if (token == null || token.trim() === "") return "is empty";
+  return null;
+}
+
+/**
+ * Shape is a warning. It does not fail the deploy. The functions list probe is the check.
+ * @param {string | undefined} token
+ * @returns {string | null}
+ */
+export function accessTokenShapeWarning(token) {
+  if (token == null || token.trim() === "") return null;
   const value = token.trim();
   if (CLASSIC_TOKEN.test(value)) {
-    return "is a classic token (40 hex characters). A classic token is not accepted";
+    return "looks like a classic token (40 hex characters). Shape is a warning. The functions list probe is the check.";
   }
   if (!SCOPED_TOKEN.test(value)) {
-    return "must be a scoped personal access token for this project. A classic token is not accepted";
+    return "does not start with the scoped prefix. Shape is a warning. The functions list probe is the check.";
   }
   return null;
 }
@@ -88,6 +98,8 @@ function main() {
   }
   const token = accessTokenProblem(process.env.SUPABASE_ACCESS_TOKEN);
   if (token) fail(`Deploy failed. SUPABASE_ACCESS_TOKEN ${token}.`);
+  const shape = accessTokenShapeWarning(process.env.SUPABASE_ACCESS_TOKEN);
+  if (shape) console.error(`Warning. SUPABASE_ACCESS_TOKEN ${shape}`);
   const pepper = pepperProblem(process.env.FLOW_MCP_PEPPER);
   if (pepper) fail(`Deploy failed. FLOW_MCP_PEPPER ${pepper}.`);
 }

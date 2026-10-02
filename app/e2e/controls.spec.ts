@@ -410,7 +410,11 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await expect(page.getByText("30/09/2026, 14:05")).toBeVisible();
   await expect(page.getByText("מחובר")).toBeVisible();
   await page.getByRole("button", { name: "ניתוק" }).click();
-  await expect(page.getByRole("dialog", { name: "לנתק את העוזר?" })).toBeVisible();
+  const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "ניתוק" }).click();
+  await expect(confirm).toBeHidden();
+  await toast(page, previewToast);
   await page.goto("/e2e/settings?preview=1&assistant=loading");
   await expect(page.getByText("טוען")).toBeVisible();
   await expect(page.getByText("מחובר")).toHaveCount(0);

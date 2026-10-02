@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-02
+
+MCP cycle 2 review, round 1. `search_expenses` can search filed and all rows. A missing signing key hides the tools and returns a tool error. A token without `read` is refused. Token shape is a warning, not a deploy failure. The עוזר section follows SUMIT, the connected hint wraps, and a failed status load does not offer mint. Row hints use `t-hint` and `aria-describedby`. Decision [0080](decisions/0080-mcp-connector.md).
+
 ## 2026-09-30
 
 Signing spike, about 18:10 IDT. The standby ES256 key passed. Kid `46a0230c-733c-401d-a3fb-4a2d9ee7de72` is standby. Auth's current key is unchanged. `FLOW_MCP_SIGNING_KEY` is a Supabase function secret. `FLOW_JWT_LEGACY` is not set. PostgREST accepted a 60-second pass for Flow Test and for the Erie owner, each with its own company. GET `flow-mcp` is 405 and carries `x-flow-cf-connecting-ip`. The local private key is deleted. Decision [0080](decisions/0080-mcp-connector.md).

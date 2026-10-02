@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { BigNumber } from "./big-number";
 import { cx } from "./cx";
@@ -10,6 +10,10 @@ type Common = {
   /** Muted line above the title. Project and category rows use it. */
   eyebrow?: string;
   hint?: ReactNode;
+  /** The hint wraps instead of ending in an ellipsis. */
+  wrapHint?: boolean;
+  /** Hint uses t-hint, and the control points at it with aria-describedby. */
+  describeHint?: boolean;
   href?: string;
   state?: unknown;
   action?: ReactNode;
@@ -38,6 +42,7 @@ export type ListRowProps =
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
 export function ListRow(props: ListRowProps) {
+  const hintId = useId();
   if (props.variant === "skeleton") {
     return (
       <div className="ui-row" aria-hidden="true">
@@ -49,6 +54,7 @@ export function ListRow(props: ListRowProps) {
       </div>
     );
   }
+  const described = props.describeHint === true && props.hint != null ? hintId : undefined;
   const rowDisabled = (props.variant === "button" || props.variant === "danger") && props.disabled === true;
   const showChevron = props.chevron === true && props.variant !== "static" && !rowDisabled;
   const icon =
@@ -69,7 +75,9 @@ export function ListRow(props: ListRowProps) {
             {props.tag ? <span className="ui-row-title-text">{props.title}</span> : props.title}
             {props.tag}
           </span>
-          {props.hint ? <span className="ui-row-hint">{props.hint}</span> : null}
+          {props.hint ? (
+            <span id={described} className={cx("ui-row-hint", props.describeHint === true && "t-hint", props.wrapHint && "ui-row-hint-wrap")}>{props.hint}</span>
+          ) : null}
         </span>
       </span>
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
@@ -84,7 +92,11 @@ export function ListRow(props: ListRowProps) {
   );
 
   if (props.variant === "static") {
-    return <div className="ui-row">{body}</div>;
+    return (
+      <div className="ui-row" role={described ? "group" : undefined} aria-label={described ? props.title : undefined} aria-describedby={described}>
+        {body}
+      </div>
+    );
   }
   if (props.variant === "button") {
     return (
@@ -95,7 +107,8 @@ export function ListRow(props: ListRowProps) {
         disabled={props.disabled === true}
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
-        aria-label={props.label}
+        aria-label={described ? (props.label ?? props.title) : props.label}
+        aria-describedby={described}
         onClick={props.onClick}
       >
         {body}
@@ -109,6 +122,8 @@ export function ListRow(props: ListRowProps) {
         className="ui-row ui-hit ui-row-danger"
         disabled={props.disabled === true || props.busy === true}
         aria-busy={props.busy === true}
+        aria-label={described ? props.title : undefined}
+        aria-describedby={described}
         onClick={props.onClick}
       >
         {body}
@@ -125,11 +140,19 @@ export function ListRow(props: ListRowProps) {
 
   const className = props.variant === "project" ? "ui-row ui-row-project ui-hit" : "ui-row ui-hit";
   const row = props.href ? (
-    <Link to={props.href} state={props.state} className={className}>
+    <Link
+      to={props.href}
+      state={props.state}
+      className={className}
+      aria-label={described ? (props.label ?? props.title) : props.label}
+      aria-describedby={described}
+    >
       {body}
     </Link>
   ) : (
-    <div className={className}>{body}</div>
+    <div className={className} role={described ? "group" : undefined} aria-label={described ? props.title : undefined} aria-describedby={described}>
+      {body}
+    </div>
   );
   return withAction(props, row);
 }

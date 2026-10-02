@@ -417,7 +417,8 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   if (method === "ping") return jsonResponse(req, { jsonrpc: "2.0", id, result: {} }, 200);
   const scope = Array.isArray(row.scope) ? row.scope.filter((item): item is string => typeof item === "string") : [];
   if (method === "tools/list") {
-    return jsonResponse(req, { jsonrpc: "2.0", id, result: { tools: toolsFor(scope) } }, 200);
+    const tools = signingKey(deps) ? toolsFor(scope) : [];
+    return jsonResponse(req, { jsonrpc: "2.0", id, result: { tools } }, 200);
   }
   if (method === "tools/call") {
     const params = body.params;
@@ -425,10 +426,24 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
       ? params as Record<string, unknown>
       : null;
     const name = typeof record?.name === "string" ? record.name : "";
+    const toolError = (code: string, message: string) => {
+      const structured = { ok: false, error: { code, message } };
+      return jsonResponse(req, {
+        jsonrpc: "2.0",
+        id,
+        result: {
+          content: [{ type: "text", text: JSON.stringify(structured) }],
+          structuredContent: structured,
+          isError: true,
+        },
+      }, 200);
+    };
+    if (!scope.includes("read")) return toolError("forbidden", "forbidden");
     const key = signingKey(deps);
+    if (!key) return toolError("unavailable", "unavailable");
     const userId = typeof row.user_id === "string" ? row.user_id : "";
     const companyId = typeof row.company_id === "string" ? row.company_id : "";
-    if (!key || !userId || !companyId) return jsonResponse(req, { error: "unavailable" }, 503);
+    if (!userId || !companyId) return jsonResponse(req, { error: "unavailable" }, 503);
     const signed = await signUserJwt(key, {
       issuer: `${deps.env("SUPABASE_URL") ?? ""}/auth/v1`,
       sub: userId,

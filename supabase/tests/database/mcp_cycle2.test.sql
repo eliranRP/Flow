@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(20);
+select plan(25);
 
 do $users$
 begin
@@ -119,6 +119,39 @@ select is(
   true,
   'token A is not company B'
 );
+reset role;
+select isnt(
+  set_config(
+    'mcp2.expense_a',
+    (select id::text from public.transactions where description = 'חשבונית-אלפא'),
+    false
+  ),
+  '',
+  'expense A id is stored for the cross-company read'
+);
+
+select tests.authenticate_as('mcp2_a');
+select is(
+  public.get_transaction(current_setting('mcp2.expense_a')::uuid) ->> 'description',
+  'חשבונית-אלפא',
+  'user A reads their own expense'
+);
+select ok(
+  position('חשבונית-ביתא' in coalesce(public.list_review(), '[]'::jsonb)::text) = 0,
+  'user A review list has no user B expense'
+);
+
+select tests.authenticate_as('mcp2_b');
+select is(
+  public.get_transaction(current_setting('mcp2.expense_a')::uuid),
+  null,
+  'user B cannot read user A expense'
+);
+select ok(
+  position('חשבונית-אלפא' in coalesce(public.list_review(), '[]'::jsonb)::text) = 0,
+  'user B review list has no user A expense'
+);
+
 select ok(
   not has_function_privilege('anon', 'public.search_transactions(text, text, integer, integer)', 'execute')
   and has_function_privilege('authenticated', 'public.search_transactions(text, text, integer, integer)', 'execute'),
