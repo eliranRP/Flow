@@ -55,11 +55,18 @@ function staticSite(html, entries = { a: { type: "story", id: "a", title: "A", n
 
 test("a missing build and an empty index exit 2", async () => {
   const { execute } = await import("./clip-check.mjs");
-  assert.equal(await execute({ staticDir: join(tmpdir(), "clip-check-missing") }), 2);
+  const reportDir = mkdtempSync(join(tmpdir(), "clip-report-"));
   const empty = staticSite("<div id=\"storybook-root\"><p class=\"t-hint\">שלום</p></div>", {});
   try {
-    assert.equal(await execute({ staticDir: empty }), 2);
+    assert.equal(await execute({ staticDir: join(tmpdir(), "clip-check-missing"), reportDir }), 2);
+    const missing = JSON.parse(readFileSync(join(reportDir, "clip-report.json"), "utf8"));
+    assert.match(missing.note, /Build Storybook first/);
+    assert.equal(readFileSync(join(reportDir, "clip-report.txt"), "utf8").includes("exit 2"), true);
+    assert.equal(await execute({ staticDir: empty, reportDir: empty }), 2);
+    const emptyReport = JSON.parse(readFileSync(join(empty, "clip-report.json"), "utf8"));
+    assert.match(emptyReport.note, /no stories/);
   } finally {
+    rmSync(reportDir, { recursive: true, force: true });
     rmSync(empty, { recursive: true, force: true });
   }
 });
@@ -72,11 +79,15 @@ test("a crash exits 3", async () => {
       staticDir: dir,
       widths: [320],
       themes: ["light"],
+      reportDir: dir,
       launch: async () => {
         throw new Error("boom");
       },
     });
     assert.equal(code, 3);
+    const crash = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8"));
+    assert.equal(crash.exit, 3);
+    assert.match(crash.note, /boom/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

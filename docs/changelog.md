@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Clip-check review, second pass. A Storybook error, a story that never renders, and a story that measured nothing exit 2 before a clip, and those lines are printed. Visually hidden text, a box of about 1px, is not measured. Every run writes `clip-report.json` and `clip-report.txt`. Q-3 is a UI polish task: sheet titles and route-sheet titles opt into `data-clip-ok`, and button labels, `.ui-row-hint`, and `.ui-meter-label` wrap instead of truncating. It is not applied in this pull request.
+
 Clip-check review. The script waits for the story, for `document.fonts.ready`, and for sheet panels. It fails when Storybook shows an error or when nothing was measured. One function decides a clip. Ellipsis is exempt only on `.ui-row-title` and `[data-clip-ok]`; a single-line hint is measured. A crash exits 3. The server picks an ephemeral port. The browser cases run in the Storybook smoke, after Playwright is installed. `pnpm test` does not launch a browser. Q-1: the signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`, not `SUPABASE_ACCESS_TOKEN`. Q-2: an unknown `?assistant=` preview value shows the error state. Both are tracked tasks and are not applied in this pull request.
 
 Design findings. Inline text inside a vaul sheet inherits `user-select: none`, so selection is probed on a desktop fine pointer. A fast drag can dismiss shown-once content. A clip-check pass does not cover copy, select, or gesture. A `min-block-size` fix is re-sampled at 320. Button labels use the `ErrorState` action name. A state-table gap is spec drift. [PITFALLS.md](review/PITFALLS.md).

@@ -7,7 +7,7 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 ## Self-check
 
 1. Open the design sources for every screen you touch. Hints use `t-hint` and are tied with `aria-describedby`. Rows use the same `ListRow` icon pattern as the neighbouring rows.
-2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture.
+2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. Visually hidden text, a box of about 1px, is not measured. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture. The full list is `clip-report.json` and `clip-report.txt`. Stdout keeps the first 40 clips.
 3. Walk a changed row together with the states it sits beside. Never show a state you do not know. A failed load is an error with a retry, not an empty or disconnected row with an active action.
 4. Run the repo gate before handoff: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `deno test --allow-env supabase/functions/flow-mcp`, `node --test scripts/*.test.mjs`, the database tests, and `pnpm db:types:check`. Hand off only when CI is green on the pushed head.
 5. A script that reports several outcomes has one exit code per outcome, plus one code for incomplete. Run it once per code against the real response shape. Paste the codes.
@@ -73,3 +73,6 @@ Decided, and not applied in this pull request. The pull request that touches the
 
 - [ ] Q-1. The signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`. They do not use `SUPABASE_ACCESS_TOKEN` for that read.
 - [ ] Q-2. An unknown `?assistant=` preview value shows the error state.
+- [ ] Q-3. UI polish. Sheet titles and route-sheet titles opt into `data-clip-ok`, like a row title. Button labels, `.ui-row-hint`, and `.ui-meter-label` wrap instead of truncating. That fixes the `*--long-hebrew` stories. Not applied in this pull request.
+- [ ] Backlog. The sheet-panel wait can race the panel opening. Not this pull request.
+- [ ] Backlog. The Storybook clip spec repeats the sampler. Not this pull request.

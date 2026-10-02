@@ -16,4 +16,6 @@ test-results
 supabase/.temp
 supabase/.branches
 *.log
+clip-report.json
+clip-report.txt
 .DS_Store
