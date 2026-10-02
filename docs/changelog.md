@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Settings cycle 2. The account row shows the business name and the Google email. With no company it is disabled and says "אין עסק עדיין". The sections are חיבורים, תצוגה, and עוד, and the footer is "Flow 0.1". The פרויקטים row and the three disabled switches are gone. SUMIT and עוזר keep their current actions. Decision [0082](decisions/0082-settings-redesign.md).
+
 Settings becomes one screen: the account row, חיבורים, תצוגה, and עוד. The footer is "Flow 0.1". Three disabled switches and the פרויקטים row leave the screen. SUMIT and עוזר each open one sheet, and a failed status is one "ניסיון חוזר". Decision [0082](decisions/0082-settings-redesign.md) amends the Settings section of [0080](decisions/0080-mcp-connector.md). The screen is unchanged in this record. 0081 stays the review-queue list.
 
 Clip-check measures each text node on the nearest ancestor that is not `display: inline` or `display: contents`, once per container. A `<bdi>` in a hint, mixed text, and `<p><bdi class="ui-num">` are that container's clip. Only the `clip-no-text` tag skips a story. A pass names the skipped stories. One view says "1 story view". A setup failure deletes a stale crash report. `ui-pick-label` on `screens-routes--change-project-picker` stays in UI polish. Unpaid-list clips only at 320, as two hints that should use `wrapHint`.

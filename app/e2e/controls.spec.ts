@@ -430,25 +430,24 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   expect(clipped).toBeLessThanOrEqual(1);
 });
 
-test("settings connect, refresh, categories, and disabled notices", async ({ page }) => {
+test("settings connect, refresh, categories, and the account row", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "חיבור SUMIT" }).click();
   await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
   await page.getByRole("button", { name: "חיבור" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("group", { name: "בדיקה" })).toBeVisible();
+  await expect(page.getByText("owner@example.com")).toBeVisible();
+  await expect(page.getByText("עוסק מורשה")).toHaveCount(0);
+  await expect(page.getByText("Flow 0.1")).toBeVisible();
   await page.getByRole("link", { name: "קטגוריות" }).click();
   await expect(page).toHaveURL(/\/settings\/categories/);
   await page.goto("/e2e/settings?preview=1");
-  await page.getByRole("link", { name: "פרויקטים" }).click();
-  await expect(page).toHaveURL(/\/projects/);
-  await page.goto("/e2e/settings?preview=1");
+  await expect(page.getByRole("link", { name: "פרויקטים" })).toHaveCount(0);
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
-    const toggle = page.getByRole("switch", { name });
-    await expect(toggle).toBeDisabled();
-    expect(await cursorOf(toggle)).toBe("not-allowed");
+    await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
-  await expect(page.getByText("לא פעיל").first()).toBeVisible();
   const overhead = page.getByRole("switch", { name: "רווח אחרי חלק בכלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
