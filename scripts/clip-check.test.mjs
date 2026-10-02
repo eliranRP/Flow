@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { CLIP_OK_SELECTOR, isClipped, reportsClip, THEMES, WIDTHS } from "./clip-check.mjs";
+import { CLIP_OK_SELECTOR, isClipped, passLine, reportsClip, storySkipsText, storyViewPhrase, THEMES, WIDTHS } from "./clip-check.mjs";
 
 test("a text element is clipped only when its text is wider than its box by more than 1px", () => {
   assert.equal(isClipped(100, 100), false);
@@ -40,6 +40,21 @@ test("the clip check covers 320, 360, and 390 in light and dark", () => {
   assert.doesNotMatch(CLIP_OK_SELECTOR, /ui-row-hint/);
 });
 
+test("only the clip-no-text tag skips a story", () => {
+  assert.equal(storySkipsText({ tags: ["clip-no-text"] }), true);
+  assert.equal(storySkipsText({ tags: ["clip-no-text"], parameters: { clipCheck: { noText: true } } }), true);
+  assert.equal(storySkipsText({ parameters: { clipCheck: { noText: true } } }), false);
+  assert.equal(storySkipsText({ tags: [] }), false);
+  assert.equal(storySkipsText({}), false);
+});
+
+test("one view is singular and a pass names skipped stories", () => {
+  assert.equal(storyViewPhrase(1), "1 story view");
+  assert.equal(storyViewPhrase(2), "2 story views");
+  assert.equal(passLine({ stories: 12, skipped: 2, measured: 40, themes: ["light", "dark"], widths: [320, 360, 390] }),
+    "clip-check passed. 12 stories, 2 skipped, 40 elements, light/dark at 320/360/390.");
+});
+
 test("pnpm clip-check runs the script", () => {
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
   assert.match(pkg.scripts["clip-check"], /clip-check\.mjs/);
@@ -68,6 +83,28 @@ test("a missing build and an empty index exit 2", async () => {
   } finally {
     rmSync(reportDir, { recursive: true, force: true });
     rmSync(empty, { recursive: true, force: true });
+  }
+});
+
+test("a setup failure deletes a stale crash report", async () => {
+  const { execute } = await import("./clip-check.mjs");
+  const reportDir = mkdtempSync(join(tmpdir(), "clip-report-"));
+  writeFileSync(join(reportDir, "clip-report.json"), JSON.stringify({
+    exit: 3,
+    note: "old crash",
+    views: [{ storyId: "ghost", status: "measured", elements: [] }],
+  }));
+  writeFileSync(join(reportDir, "clip-report.txt"), "exit 3\n");
+  try {
+    assert.equal(await execute({ staticDir: join(tmpdir(), "clip-check-missing-stale"), reportDir }), 2);
+    const report = JSON.parse(readFileSync(join(reportDir, "clip-report.json"), "utf8"));
+    assert.equal(report.exit, 2);
+    assert.match(report.note, /Build Storybook first/);
+    assert.equal(JSON.stringify(report).includes("ghost"), false);
+    assert.equal(JSON.stringify(report).includes("old crash"), false);
+    assert.equal(readFileSync(join(reportDir, "clip-report.txt"), "utf8").includes("ghost"), false);
+  } finally {
+    rmSync(reportDir, { recursive: true, force: true });
   }
 });
 

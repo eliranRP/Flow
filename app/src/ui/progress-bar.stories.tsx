@@ -13,7 +13,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Thin: Story = {
   tags: ["clip-no-text"],
-  parameters: { clipCheck: { noText: true } },
   args: { value: 1, max: 7, label: "התקדמות התור", variant: "thin" },
   render: (args) => (
     <ProgressBar

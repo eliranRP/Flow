@@ -170,7 +170,7 @@ test("a Storybook error is printed and exits 2 even when another story clips", a
     const log = errors.join("\n");
     expect(log).toContain("err");
     expect(log).toContain("storybook error");
-    expect(log).toMatch(/1 story views/);
+    expect(log).toMatch(/1 story view/);
     const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
       exit: number;
       storyErrors: string[];
@@ -236,7 +236,7 @@ test("a bare span and a tab label are measured, and a no-text story is skipped",
       reportDir: dir,
       error: (line) => { errors.push(line); },
     })).toBe(1);
-    expect(errors.join("\n")).toMatch(/1 story views/);
+    expect(errors.join("\n")).toMatch(/1 story view that clips|1 story view clips/);
     const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
       skipped: string[];
       zeroMeasured: string[];
@@ -247,6 +247,67 @@ test("a bare span and a tab label are measured, and a no-text story is skipped",
     expect(report.skipped).toContain("quiet");
     expect(report.views.find((view) => view.storyId === "quiet")?.status).toBe("skipped");
     expect(report.zeroMeasured).toEqual([]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("an inline bdi is measured on the block that clips", async () => {
+  const dir = staticSite(`<style>
+      .ui-row-hint, .mixed, .t-display { display: block; width: 80px; overflow: hidden; white-space: nowrap; }
+      bdi { display: inline; white-space: nowrap; }
+    </style>
+    <div id="storybook-root"></div>
+    <script>
+      const id = new URLSearchParams(location.search).get("id");
+      const root = document.getElementById("storybook-root");
+      if (id === "email") root.innerHTML = '<p class="ui-row-hint"><bdi dir="ltr">owner@example.com</bdi></p>';
+      if (id === "mixed") root.innerHTML = '<p class="mixed">מספר <bdi dir="ltr">123456789012345</bdi></p>';
+      if (id === "amount") root.innerHTML = '<p class="t-display"><bdi class="ui-num">₪12,345,678.90</bdi></p>';
+    </script>`, {
+    email: { type: "story", id: "email", title: "Email", name: "Email" },
+    mixed: { type: "story", id: "mixed", title: "Mixed", name: "Mixed" },
+    amount: { type: "story", id: "amount", title: "Amount", name: "Amount" },
+  });
+  try {
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(1);
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      failures: string[];
+      views: { storyId: string; elements: { className: string }[] }[];
+    };
+    expect(report.failures.some((line) => line.includes("email"))).toBe(true);
+    expect(report.failures.some((line) => line.includes("mixed"))).toBe(true);
+    expect(report.failures.some((line) => line.includes("amount"))).toBe(true);
+    expect(report.views.find((view) => view.storyId === "email")?.elements.map((element) => element.className)).toEqual(["ui-row-hint"]);
+    expect(report.views.find((view) => view.storyId === "mixed")?.elements.map((element) => element.className)).toEqual(["mixed"]);
+    expect(report.views.find((view) => view.storyId === "amount")?.elements.map((element) => element.className)).toEqual(["t-display"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a passing run mentions skipped stories", async () => {
+  const dir = staticSite(`<div id="storybook-root"><p class="t-hint">שלום</p></div>
+    <script>
+      const id = new URLSearchParams(location.search).get("id");
+      if (id === "quiet") {
+        const root = document.getElementById("storybook-root");
+        if (root) root.innerHTML = "<div class='box'></div>";
+      }
+    </script>`, {
+    fit: { type: "story", id: "fit", title: "Fit", name: "Fit" },
+    quiet: { type: "story", id: "quiet", title: "Quiet", name: "Quiet", tags: ["clip-no-text"] },
+  });
+  const lines: string[] = [];
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      log: (line) => { lines.push(line); },
+    })).toBe(0);
+    expect(lines.join("\n")).toContain("2 stories, 1 skipped,");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
