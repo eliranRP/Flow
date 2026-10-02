@@ -143,6 +143,8 @@ Cycle 3 extends the list. It is still today's auto-assigned SUMIT rows that are 
 
 #### Settings
 
+The visible screen is amended by [0082](0082-settings-redesign.md). The rows below stay the record of what cycle 2 shipped.
+
 Section עוזר, directly under the SUMIT block, uses the same list row and the same destructive `ConfirmSheet` as ניתוק on SUMIT.
 
 The connect sheet has two steps. [0075](0075-save-on-tap-and-on-leave.md) does not apply: this sheet creates a secret, so a tap on a choice does not mint.

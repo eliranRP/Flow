@@ -101,3 +101,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0078](0078-schema-v1-rename.md) | 2026-09-30 | Accepted | Renaming schema_v1 to 20260928080538 is a one-time exception. The lock stores a sha256, and applied SQL stays byte-identical |
 | [0079](0079-automatic-deploy-owner-risk.md) | 2026-09-30 | Accepted | Deploys stay automatic after the reviewer bots and green CI. No required production reviewer, and 0 required PR approvals. CODEOWNERS notifies only |
 | [0080](0080-mcp-connector.md) | 2026-09-30 | Accepted | First MCP release, 18 hours: read, assign one expense, Settings עוזר, typed undo. Bulk, splits, and the marker wait |
+| [0082](0082-settings-redesign.md) | 2026-10-02 | Accepted | Settings is the account row, חיבורים, תצוגה, and עוד. This amends the Settings section of 0080. 0081 is the review-queue list |
