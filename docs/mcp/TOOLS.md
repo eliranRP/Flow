@@ -37,6 +37,8 @@ Writes take `idempotency_key` (1–128 characters). The token id on the audit ro
 
 ## Reads · cycle 2
 
+These reads need the standby signing key. Without it, `tools/list` is empty and `tools/call` is a tool error with `isError`. A token without `read` is `forbidden`.
+
 ### list_projects
 
 `get_dashboard`. Omit both dates for all time. `basis` is `cash` or `invoiced` (default `cash`).

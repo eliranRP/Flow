@@ -397,6 +397,39 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "שינוי שיוך" })).toHaveCount(0);
 });
 
+test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {
+  await page.goto("/e2e/settings?preview=1");
+  await page.getByRole("button", { name: "חיבור עוזר" }).click();
+  const sheet = page.getByRole("dialog", { name: "חיבור עוזר" });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole("radio", { name: "קריאה בלבד" }).click();
+  await expect(sheet.getByRole("radio", { name: "קריאה בלבד" })).toBeChecked();
+  await sheet.getByRole("button", { name: "יצירת קוד" }).click();
+  await toast(page, previewToast);
+  await page.goto("/e2e/settings?preview=1&assistant=connected");
+  await expect(page.getByText("30/09/2026, 14:05")).toBeVisible();
+  await expect(page.getByText("מחובר")).toBeVisible();
+  await page.getByRole("button", { name: "ניתוק" }).click();
+  const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "ניתוק" }).click();
+  await expect(confirm).toBeHidden();
+  await toast(page, previewToast);
+  await page.goto("/e2e/settings?preview=1&assistant=loading");
+  await expect(page.getByText("טוען")).toBeVisible();
+  await expect(page.getByText("מחובר")).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/e2e/settings?preview=1");
+  await page.getByRole("button", { name: "חיבור עוזר" }).click();
+  const narrow = page.getByRole("dialog", { name: "חיבור עוזר" });
+  await expect(narrow).toBeVisible();
+  const clipped = await page.evaluate(() => {
+    const view = document.documentElement;
+    return view.scrollWidth - view.clientWidth;
+  });
+  expect(clipped).toBeLessThanOrEqual(1);
+});
+
 test("settings connect, refresh, categories, and disabled notices", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "חיבור SUMIT" }).click();

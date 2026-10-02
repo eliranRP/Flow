@@ -494,6 +494,9 @@ isOneToOne: true
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
                            },
+"search_transactions":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_query"?: string,"p_scope"?: string }; Returns: Json
+                           },
 "set_after_overhead":
 { Args: { "p_on": boolean,"p_project_id"?: string }; Returns: undefined
                            },

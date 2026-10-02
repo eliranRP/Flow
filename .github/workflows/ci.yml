@@ -82,7 +82,9 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm --filter @flow/app exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm --filter @flow/app exec playwright install --with-deps chromium
       - run: pnpm test:storybook
       - run: pnpm build-storybook
       - run: pnpm test:storybook:smoke
@@ -133,7 +135,9 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - run: pnpm --filter @flow/app exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm --filter @flow/app exec playwright install --with-deps chromium
       - name: pgTAP
         run: supabase test db supabase/tests/database
       - run: bash scripts/check-db-types.sh
@@ -204,20 +208,12 @@ jobs:
           node scripts/stamp-build.mjs "$GITHUB_SHA"
           pnpm check:bundle
 
-      - name: Probe the access token and stage the function secrets
+      - name: Probe the access token
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          FLOW_MCP_PEPPER: ${{ secrets.FLOW_MCP_PEPPER }}
         run: |
           set -euo pipefail
-          umask 077
-          envfile="$(mktemp "$RUNNER_TEMP/flow-mcp-secrets.XXXXXX")"
-          echo "FLOW_MCP_ENV_FILE=$envfile" >> "$GITHUB_ENV"
-          trap 'rm -f "$envfile"' EXIT INT TERM
-          printf 'FLOW_MCP_PEPPER=%s\n' "$FLOW_MCP_PEPPER" > "$envfile"
-          printf 'FLOW_MCP_APP_ORIGINS=%s\n' 'https://flow-app-dx5.pages.dev' >> "$envfile"
-          supabase secrets list --project-ref sxqpnetmtufkzowutduq >/dev/null
-          trap - EXIT INT TERM
+          supabase functions list --project-ref sxqpnetmtufkzowutduq >/dev/null
 
       - name: Read-only preflight and migration push
         env:
@@ -238,11 +234,16 @@ jobs:
       - name: Set flow-mcp secrets, then deploy the function
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FLOW_MCP_PEPPER: ${{ secrets.FLOW_MCP_PEPPER }}
         run: |
           set -euo pipefail
-          test -n "${FLOW_MCP_ENV_FILE:-}"
-          test -f "$FLOW_MCP_ENV_FILE"
-          supabase secrets set --project-ref sxqpnetmtufkzowutduq --env-file "$FLOW_MCP_ENV_FILE"
+          umask 077
+          envfile="$(mktemp "$RUNNER_TEMP/flow-mcp-secrets.XXXXXX")"
+          echo "FLOW_MCP_ENV_FILE=$envfile" >> "$GITHUB_ENV"
+          trap 'rm -f "$envfile"' EXIT INT TERM
+          printf 'FLOW_MCP_PEPPER=%s\n' "$FLOW_MCP_PEPPER" > "$envfile"
+          printf 'FLOW_MCP_APP_ORIGINS=%s\n' 'https://flow-app-dx5.pages.dev' >> "$envfile"
+          supabase secrets set --project-ref sxqpnetmtufkzowutduq --env-file "$envfile"
           supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq
 
       - name: Smoke the production hostname
