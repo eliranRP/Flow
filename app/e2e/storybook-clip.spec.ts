@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -60,7 +60,7 @@ test("a story that renders late and clips exits 1", async () => {
       }, 80);
     </script>`);
   try {
-    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"] })).toBe(1);
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -71,7 +71,7 @@ test("a hidden sheet panel is measured once it is visible", async () => {
     <div class="ui-sheet-panel" style="display:none"><p class="t-hint" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>
     <script>setTimeout(() => { document.querySelector(".ui-sheet-panel").style.display = "block"; }, 80);</script>`);
   try {
-    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"] })).toBe(1);
+    expect(await execute({ staticDir: dir, widths: [320], themes: ["light"], reportDir: dir })).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -82,8 +82,8 @@ test("a Storybook error display and a story with no text exit 2", async () => {
     <script>document.body.classList.add("sb-show-errordisplay");</script>`);
   const emptyDir = staticSite("<div id=\"storybook-root\"><div class=\"box\"></div></div>");
   try {
-    expect(await execute({ staticDir: errorDir, widths: [320], themes: ["light"] })).toBe(2);
-    expect(await execute({ staticDir: emptyDir, widths: [320], themes: ["light"] })).toBe(2);
+    expect(await execute({ staticDir: errorDir, widths: [320], themes: ["light"], reportDir: errorDir })).toBe(2);
+    expect(await execute({ staticDir: emptyDir, widths: [320], themes: ["light"], reportDir: emptyDir })).toBe(2);
   } finally {
     rmSync(errorDir, { recursive: true, force: true });
     rmSync(emptyDir, { recursive: true, force: true });
@@ -103,13 +103,125 @@ test("a fitting story exits 0 and a single-line hint is not exempt", async () =>
       widths: [320],
       themes: ["light"],
       log: (line) => { lines.push(line); },
+      reportDir: fit,
     })).toBe(0);
     expect(lines.join("\n")).toMatch(/1 elements/);
-    expect(await execute({ staticDir: title, widths: [320], themes: ["light"] })).toBe(0);
-    expect(await execute({ staticDir: hint, widths: [320], themes: ["light"] })).toBe(1);
+    expect(await execute({ staticDir: title, widths: [320], themes: ["light"], reportDir: title })).toBe(0);
+    expect(await execute({ staticDir: hint, widths: [320], themes: ["light"], reportDir: hint })).toBe(1);
   } finally {
     rmSync(fit, { recursive: true, force: true });
     rmSync(title, { recursive: true, force: true });
     rmSync(hint, { recursive: true, force: true });
+  }
+});
+
+test("a visually hidden 1px line is not measured, so a fitting story can exit 0", async () => {
+  const dir = staticSite(`<style>
+    .t-hint { display: block; }
+    .sr-only { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; white-space: nowrap; line-height: 1px; }
+  </style>
+  <div id="storybook-root">
+    <p class="t-hint">שלום</p>
+    <p class="sr-only">טוען… מילהארוכהמאודשלאנכנסת</p>
+  </div>`);
+  const lines: string[] = [];
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      log: (line) => { lines.push(line); },
+    })).toBe(0);
+    expect(lines.join("\n")).toMatch(/1 elements/);
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      views: { storyId: string; width: number; theme: string; elements: { className: string; label: string }[] }[];
+    };
+    const elements = report.views.flatMap((view) => view.elements);
+    expect(elements).toHaveLength(1);
+    expect(elements[0]?.className).toBe("t-hint");
+    expect(elements.some((element) => element.className === "sr-only")).toBe(false);
+    expect(report.views[0]?.storyId).toBe("a");
+    expect(report.views[0]?.width).toBe(320);
+    expect(report.views[0]?.theme).toBe("light");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a Storybook error is printed and exits 2 even when another story clips", async () => {
+  const dir = staticSite(`<div id="storybook-root"><p class="t-hint" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</p></div>
+    <script>
+      const id = new URLSearchParams(location.search).get("id");
+      if (id === "err") document.body.classList.add("sb-show-errordisplay");
+    </script>`, {
+    clip: { type: "story", id: "clip", title: "Clip", name: "Clip" },
+    err: { type: "story", id: "err", title: "Err", name: "Err" },
+  });
+  const errors: string[] = [];
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      error: (line) => { errors.push(line); },
+    })).toBe(2);
+    const log = errors.join("\n");
+    expect(log).toContain("err");
+    expect(log).toContain("storybook error");
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      exit: number;
+      storyErrors: string[];
+      failures: string[];
+    };
+    expect(report.exit).toBe(2);
+    expect(report.storyErrors.some((line) => line.includes("err"))).toBe(true);
+    expect(report.failures.some((line) => line.includes("clip"))).toBe(true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("one story that measures nothing exits 2 even when another story fits", async () => {
+  const dir = staticSite(`<div id="storybook-root"><p class="t-hint">שלום</p></div>
+    <script>
+      const id = new URLSearchParams(location.search).get("id");
+      if (id === "empty") {
+        const root = document.getElementById("storybook-root");
+        if (root) root.innerHTML = "<div class='box'></div>";
+      }
+    </script>`, {
+    fit: { type: "story", id: "fit", title: "Fit", name: "Fit" },
+    empty: { type: "story", id: "empty", title: "Empty", name: "Empty" },
+  });
+  const errors: string[] = [];
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      error: (line) => { errors.push(line); },
+    })).toBe(2);
+    expect(errors.join("\n")).toContain("empty");
+    expect(errors.join("\n")).toContain("measured nothing");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a story that never renders exits 2", async () => {
+  const dir = staticSite(`<div id="storybook-root"></div>`);
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      readyTimeout: 400,
+    })).toBe(2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

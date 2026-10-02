@@ -15,6 +15,9 @@ export function execute(options?: {
   staticDir?: string;
   widths?: number[];
   themes?: string[];
+  launch?: () => Promise<{ newPage: () => Promise<unknown>; close: () => Promise<void> }>;
   log?: (line: string) => void;
   error?: (line: string) => void;
+  reportDir?: string;
+  readyTimeout?: number;
 }): Promise<number>;
