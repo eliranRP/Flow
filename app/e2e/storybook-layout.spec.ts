@@ -173,6 +173,56 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
+test("the assistant settings stories stay inside 320, 360, and 390", async ({ page }) => {
+  test.setTimeout(180_000);
+  const stories = [
+    "screens-routes--settings-assistant-empty",
+    "screens-routes--settings-assistant-loading",
+    "screens-routes--settings-assistant-error",
+    "screens-routes--settings-assistant-expired",
+    "screens-routes--settings-assistant-no-company",
+    "screens-routes--settings-assistant-connected",
+    "screens-routes--settings-assistant-scope",
+    "screens-routes--settings-assistant-secret",
+  ];
+  const failures: string[] = [];
+  for (const theme of ["light", "dark"]) {
+    for (const width of [320, 360, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const id of stories) {
+        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
+        await page.locator("#storybook-root").waitFor({ state: "attached" });
+        if (id.endsWith("scope") || id.endsWith("secret")) {
+          await page.locator(".ui-sheet-panel").waitFor({ state: "visible" });
+        }
+        const problems = await page.evaluate(() => {
+          const roots = [document.querySelector("#storybook-root"), document.querySelector(".ui-sheet-panel")].filter((node) => node instanceof HTMLElement);
+          const problems: string[] = [];
+          const seen = new Set<Element>();
+          for (const root of roots) {
+            for (const node of root.querySelectorAll(".ui-row-title, .ui-row-hint, .t-hint, .ui-secret-value, .ui-field-label, .t-title-2, .ui-section-title, .ui-btn-label, p")) {
+              if (!(node instanceof HTMLElement) || seen.has(node)) continue;
+              seen.add(node);
+              const style = getComputedStyle(node);
+              if (style.display === "none" || style.visibility === "hidden") continue;
+              if (node.getClientRects().length === 0) continue;
+              const overflow = node.scrollWidth - node.clientWidth;
+              if (overflow > 1) {
+                const text = node.innerText.trim().replace(/\s+/g, " ").slice(0, 48);
+                problems.push(`${node.className || node.tagName} "${text}" +${String(overflow)}px`);
+              }
+            }
+          }
+          return problems;
+        });
+        if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
+      }
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("sheet titles stay on screen at 320 and 390", async ({ page }) => {
   const cases = [
     ["screens-routes--change-sheet", "שינוי שיוך"],
