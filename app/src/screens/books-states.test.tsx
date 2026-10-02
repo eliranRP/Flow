@@ -304,7 +304,7 @@ describe("rejected writes", () => {
     };
     renderAt("/review");
     expect(await screen.findByText("הוצאה משותפת · אישור יפתח חלוקה")).toBeInTheDocument();
-    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     expect(screen.getByText("חומרים")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeEnabled();
@@ -669,8 +669,8 @@ describe("rejected writes", () => {
     );
     expect(screen.getByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(screen.getByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
-    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -682,7 +682,7 @@ describe("rejected writes", () => {
     );
     expect(screen.getByText("שינוע")).toBeInTheDocument();
     expect(screen.getByText("הצעה")).toBeInTheDocument();
-    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -725,14 +725,12 @@ describe("rejected writes", () => {
       </QueryClientProvider>
     );
     const { rerender } = render(queue(row));
-    const project = screen.getByText("הרצל").closest("p");
-    const category = screen.getByText("חומרים").closest("p");
-    if (!(project instanceof HTMLElement) || !(category instanceof HTMLElement)) throw new Error("line missing");
+    const project = screen.getByRole("button", { name: "פרויקט: הרצל" });
+    const category = screen.getByRole("button", { name: "קטגוריה: חומרים" });
     expect(within(project).getByText("הצעה")).toBeInTheDocument();
     expect(within(category).queryByText("הצעה")).not.toBeInTheDocument();
     rerender(queue({ ...row, project_suggested: false }));
-    const owned = screen.getByText("הרצל").closest("p");
-    if (!(owned instanceof HTMLElement)) throw new Error("line missing");
+    const owned = screen.getByRole("button", { name: "פרויקט: הרצל" });
     expect(within(owned).queryByText("הצעה")).not.toBeInTheDocument();
   });
 
@@ -833,7 +831,7 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
+    expect(await screen.findByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
@@ -863,7 +861,7 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("אין הצעה, בחרו בשינוי")).toBeInTheDocument();
+    expect(await screen.findByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeDisabled();
     expect(getComputedStyle(approve).cursor).toBe("not-allowed");

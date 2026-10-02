@@ -1328,6 +1328,14 @@ a.ui-row,
   margin: var(--space-4) var(--space-side) 0;
 }
 
+.ui-review-show-all {
+  margin: var(--space-3) var(--space-side) 0;
+}
+
+.ui-review-ai .ui-row {
+  border-bottom: 0;
+}
+
 .ui-review-note {
   display: flex;
   align-items: center;

@@ -111,12 +111,12 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.goto("/reviewer/review");
   await page.getByRole("button", { name: "דלג" }).click();
   await toast(page, "דילגנו על הפריט");
-  await expect(page.getByText("חסר קטגוריה, בחרו בשינוי")).toBeVisible();
+  await expect(page.getByText("חסר קטגוריה, הקישו לבחירה")).toBeVisible();
   const held = page.getByRole("button", { name: "אישור" });
   await expect(held).toBeDisabled();
   expect(await held.evaluate((node) => getComputedStyle(node).cursor)).toBe("not-allowed");
   await held.click({ force: true });
-  await expect(page.getByText("חסר קטגוריה, בחרו בשינוי")).toBeVisible();
+  await expect(page.getByText("חסר קטגוריה, הקישו לבחירה")).toBeVisible();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
   await page.goto("/reviewer/review");
