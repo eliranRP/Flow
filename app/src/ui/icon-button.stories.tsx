@@ -13,12 +13,18 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  tags: ["clip-no-text"],
+  parameters: { clipCheck: { noText: true } },
   args: { label: "סגירה", children: <CloseIcon /> },
 };
 export const Disabled: Story = {
+  tags: ["clip-no-text"],
+  parameters: { clipCheck: { noText: true } },
   args: { label: "סגירה", disabled: true, children: <CloseIcon /> },
 };
 export const OnBand: Story = {
+  tags: ["clip-no-text"],
+  parameters: { clipCheck: { noText: true } },
   args: { label: "סגירה", onBand: true, children: <CloseIcon /> },
   decorators: [
     (Story) => (

@@ -11,4 +11,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Bar: Story = { args: { width: "md" } };
+export const Bar: Story = {
+  args: { width: "md" },
+  tags: ["clip-no-text"],
+  parameters: { clipCheck: { noText: true } },
+};

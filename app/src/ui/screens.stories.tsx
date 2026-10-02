@@ -1498,6 +1498,8 @@ export const NotificationsLock: Story = {
 };
 
 export const FabPressed: Story = {
+  tags: ["clip-no-text"],
+  parameters: { clipCheck: { noText: true } },
   render: () => (
     <StoryRoute entry="/">
       <div className="flex min-h-dvh flex-1 flex-col justify-end">

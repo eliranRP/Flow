@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { execute, reportsClip } from "../../scripts/clip-check.mjs";
 
-function staticSite(html: string, entries: Record<string, { type: string; id: string; title: string; name: string }> = { a: { type: "story", id: "a", title: "A", name: "A" } }): string {
+function staticSite(html: string, entries: Record<string, { type: string; id: string; title: string; name: string; tags?: string[] }> = { a: { type: "story", id: "a", title: "A", name: "A" } }): string {
   const dir = mkdtempSync(join(tmpdir(), "clip-check-"));
   writeFileSync(join(dir, "index.json"), JSON.stringify({ entries }));
   writeFileSync(join(dir, "iframe.html"), `<!doctype html><html><body>${html}</body></html>`);
@@ -170,6 +170,7 @@ test("a Storybook error is printed and exits 2 even when another story clips", a
     const log = errors.join("\n");
     expect(log).toContain("err");
     expect(log).toContain("storybook error");
+    expect(log).toMatch(/1 story views/);
     const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
       exit: number;
       storyErrors: string[];
@@ -206,6 +207,46 @@ test("one story that measures nothing exits 2 even when another story fits", asy
     })).toBe(2);
     expect(errors.join("\n")).toContain("empty");
     expect(errors.join("\n")).toContain("measured nothing");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a bare span and a tab label are measured, and a no-text story is skipped", async () => {
+  const dir = staticSite(`<div id="storybook-root">
+      <span style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</span>
+      <span class="ui-tab-label" style="display:block;width:20px;white-space:nowrap">מילהארוכהמאוד</span>
+    </div>
+    <script>
+      const id = new URLSearchParams(location.search).get("id");
+      if (id === "quiet") {
+        const root = document.getElementById("storybook-root");
+        if (root) root.innerHTML = "<div class='box'></div>";
+      }
+    </script>`, {
+    text: { type: "story", id: "text", title: "Text", name: "Text", tags: [] },
+    quiet: { type: "story", id: "quiet", title: "Quiet", name: "Quiet", tags: ["clip-no-text"] },
+  });
+  const errors: string[] = [];
+  try {
+    expect(await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      error: (line) => { errors.push(line); },
+    })).toBe(1);
+    expect(errors.join("\n")).toMatch(/1 story views/);
+    const report = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8")) as {
+      skipped: string[];
+      zeroMeasured: string[];
+      views: { storyId: string; status: string; elements: { className: string }[] }[];
+    };
+    const measured = report.views.find((view) => view.storyId === "text");
+    expect(measured?.elements.map((element) => element.className).sort()).toEqual(["", "ui-tab-label"]);
+    expect(report.skipped).toContain("quiet");
+    expect(report.views.find((view) => view.storyId === "quiet")?.status).toBe("skipped");
+    expect(report.zeroMeasured).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
