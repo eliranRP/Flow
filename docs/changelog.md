@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-02
+
+The review queue gets a list of every pending item. הצג הכול sits under the progress bar and opens `/review/all`. A row opens that item's card. The project and category lines open the picker, and the notes say הקישו לבחירה. The split title stays "מפוצל · N פרויקטים". Decision [0081](decisions/0081-review-queue-list.md).
+
 ## 2026-09-30
 
 MCP cycle 1 review, second pass. A missing, invalid, or expired access token fails the deploy before migrations and Pages. `supabase secrets list` is that probe. There is no skip path. The token expires in 30 days, and the date is kept in the CI runbook. A `bump_mcp_rate` error returns `unavailable`. Decision [0080](decisions/0080-mcp-connector.md).
