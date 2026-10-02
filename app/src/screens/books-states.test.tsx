@@ -725,7 +725,7 @@ describe("rejected writes", () => {
       </QueryClientProvider>
     );
     const { rerender } = render(queue(row));
-    const project = screen.getByRole("button", { name: "פרויקט: הרצל" });
+    const project = screen.getByRole("button", { name: "פרויקט: הרצל, הצעה" });
     const category = screen.getByRole("button", { name: "קטגוריה: חומרים" });
     expect(within(project).getByText("הצעה")).toBeInTheDocument();
     expect(within(category).queryByText("הצעה")).not.toBeInTheDocument();

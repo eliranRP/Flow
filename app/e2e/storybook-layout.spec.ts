@@ -272,6 +272,26 @@ test("the install screen pins the action under the icon", async ({ page }) => {
   expect(lines).toBe(1);
 });
 
+test("אישור stays above the tab bar on a crowded review card", async ({ page }) => {
+  const viewports = [
+    { width: 320, height: 693 },
+    { width: 390, height: 844 },
+  ] as const;
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto("/iframe.html?id=screens-routes--review-missing-project&viewMode=story", { waitUntil: "domcontentloaded" });
+    const approve = page.getByRole("button", { name: "אישור" });
+    await expect(approve).toBeVisible();
+    const approveBox = await approve.boundingBox();
+    const tabBox = await page.locator(".ui-tabbar").boundingBox();
+    expect(approveBox, `אישור box at ${String(viewport.width)}`).not.toBeNull();
+    expect(tabBox, `tab bar at ${String(viewport.width)}`).not.toBeNull();
+    if (!approveBox || !tabBox) return;
+    expect(approveBox.y, `אישור top at ${String(viewport.width)}`).toBeGreaterThanOrEqual(0);
+    expect(approveBox.y + approveBox.height, `אישור bottom at ${String(viewport.width)}×${String(viewport.height)}`).toBeLessThanOrEqual(tabBox.y + 1);
+  }
+});
+
 test("change sheet picks a project and a category without a summary save", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=screens-routes--change-sheet&viewMode=story", { waitUntil: "domcontentloaded" });

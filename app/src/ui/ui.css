@@ -1325,15 +1325,44 @@ a.ui-row,
 
 .ui-review-meter {
   gap: var(--space-3);
-  margin: var(--space-4) var(--space-side) 0;
+  margin: var(--space-3) var(--space-side) 0;
+}
+
+.ui-review-meter .ui-meter-row {
+  flex: 1;
+  min-inline-size: 0;
 }
 
 .ui-review-show-all {
-  margin: var(--space-3) var(--space-side) 0;
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  min-block-size: var(--touch-min);
+}
+
+.ui-review-queue .ui-banner {
+  margin-top: var(--space-3);
+  padding-block: var(--space-2);
 }
 
 .ui-review-ai .ui-row {
   border-bottom: 0;
+  padding-block: 0;
+  min-height: var(--touch-min);
+}
+
+.ui-review-ai .ui-row-text {
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.ui-review-ai .ui-row-hint {
+  flex: none;
+}
+
+.ui-review-ai .ui-row-title {
+  flex: 1 1 auto;
 }
 
 .ui-review-note {
@@ -1350,11 +1379,11 @@ a.ui-row,
 .ui-review {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-1);
   min-inline-size: 0;
   max-inline-size: 100%;
-  margin: var(--space-5) var(--space-card-inset) 0;
-  padding: var(--space-5);
+  margin: var(--space-2) var(--space-card-inset) 0;
+  padding: var(--space-2);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -1434,7 +1463,7 @@ a.ui-row,
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: var(--space-5) var(--space-side) 0;
+  margin: var(--space-2) var(--space-side) 0;
 }
 
 .ui-review-actions-row {

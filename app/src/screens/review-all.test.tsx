@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { ChangeForm, ReviewScreen, SplitScreen, queueAfterFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
+import { ChangeForm, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args?: unknown }>,
@@ -115,6 +115,12 @@ function reviewRow(id: string, supplier: string, projectId: string | null, extra
   };
 }
 
+function showsPlace(text: string) {
+  expect(screen.getByText((_content, element) => {
+    return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === text;
+  })).toBeInTheDocument();
+}
+
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -140,6 +146,7 @@ function renderAt(path: string) {
 afterEach(() => {
   rpc.calls.length = 0;
   rpc.impl = () => Promise.resolve({ data: null, error: null });
+  resetReviewListFocus();
 });
 
 describe("review list paths", () => {
@@ -161,7 +168,7 @@ describe("review list paths", () => {
 });
 
 describe("review queue list", () => {
-  it("puts הצג הכול under the progress bar and above the filed banner", async () => {
+  it("puts הצג הכול on the counter line, after the bar and above the filed banner", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
       return Promise.resolve({ data: null, error: null });
@@ -197,10 +204,15 @@ describe("review queue list", () => {
     fireEvent.click(second);
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "התקדמות התור" })).not.toBeInTheDocument();
+    showsPlace("2 מתוך 2");
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
-    expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /עגורני החוף/ })).toBeInTheDocument();
+    const opened = await screen.findByRole("link", { name: /עגורני החוף/ });
+    expect(screen.getByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(opened).toHaveFocus();
+    });
   });
 
   it("opens the same card when the address is refreshed", async () => {
@@ -278,16 +290,25 @@ describe("review queue list", () => {
     expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
   });
 
-  it("saves a complete category tap the way the change sheet does", async () => {
+  it("saves a complete category tap and returns to the same card", async () => {
+    let savedCategory = false;
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [reviewRow("r1", "מחסן הנמל", "p1", savedCategory ? { category_id: "c2", category_name: "הובלה", category_suggested: false } : {})],
+          error: null,
+        });
+      }
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
-      if (name === "resolve_review") return Promise.resolve({ data: null, error: null });
+      if (name === "resolve_review") {
+        savedCategory = true;
+        return Promise.resolve({ data: null, error: null });
+      }
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים" }));
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
@@ -299,6 +320,31 @@ describe("review queue list", () => {
       p_project_id: "p1",
       p_category_id: "c2",
     });
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: הובלה" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
+  });
+
+  it("closes a card-line picker back to the card", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    expect(screen.getByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "חזרה" }));
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
+    const again = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(within(again).getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
   });
 
   it("opens the split from the project row and keeps the middle dot", async () => {
@@ -383,5 +429,78 @@ describe("review queue list", () => {
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "מחסן הנמל" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the list order across three approvals", async () => {
+    const names = ["מחסן הנמל", "עגורני החוף", "ברזל הדרום", "צבע הדרום", "חשמל הצפון"];
+    const removed = new Set<string>();
+    rpc.impl = (name, args) => {
+      if (name === "list_review") {
+        const rows = names.map((supplier, index) => reviewRow(`r${String(index + 1)}`, supplier, "p1"));
+        return Promise.resolve({ data: rows.filter((row) => !removed.has(row.id)), error: null });
+      }
+      if (name === "resolve_review") {
+        const id = (args as { p_id?: string } | undefined)?.p_id;
+        if (id) removed.add(id);
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
+    fireEvent.click(await screen.findByRole("link", { name: /ברזל הדרום/ }));
+    expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
+    showsPlace("3 מתוך 5");
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(await screen.findByRole("heading", { name: "צבע הדרום" })).toBeInTheDocument();
+    showsPlace("3 מתוך 4");
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(await screen.findByRole("heading", { name: "חשמל הצפון" })).toBeInTheDocument();
+    showsPlace("3 מתוך 3");
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
+    showsPlace("1 מתוך 2");
+  });
+
+  it("leaves the queue at /review after the last list item", async () => {
+    let open = true;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({ data: open ? [reviewRow("r1", "מחסן הנמל", "p1")] : [], error: null });
+      }
+      if (name === "resolve_review") {
+        open = false;
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        { path: "/review", element: <ReviewScreen /> },
+        { path: "/review/all", element: <ReviewScreen /> },
+      ],
+      { initialEntries: ["/review"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
+    fireEvent.click(await screen.findByRole("link", { name: /מחסן הנמל/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/review");
+    });
+    expect(router.state.location.search).not.toContain("from=all");
   });
 });

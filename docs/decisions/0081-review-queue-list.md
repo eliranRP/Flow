@@ -12,9 +12,12 @@
 ## Decision
 
 1. The card notes change because the lines are now the control. "בחרו בשינוי" becomes "הקישו לבחירה". "אין הצעה, בחרו בשינוי" becomes "אין הצעה, הקישו לבחירה".
-2. הצג הכול is a text button directly under the progress bar on the company queue, above the card and above the שויכו היום banner when that banner is showing. It is a route, `/review/all`, so Back and refresh work. The page is one scrollable list of every open review item in that company. Each row shows the supplier, the date, and the amount. Tapping a row opens that item as the queue card. Back from that card returns to `/review/all`. A project-filtered queue does not list another project's items.
+2. הצג הכול is a text button on the company queue, at the end of the "N מתוך M" row, above the card and above the שויכו היום banner when that banner is showing. It is a route, `/review/all`, so Back and refresh work. The page is one scrollable list of every open review item in that company. Each row shows the supplier, the date, and the amount. Tapping a row opens that item as the queue card. Back from that card returns to `/review/all`. A project-filtered queue does not list another project's items.
 3. The split title stays "מפוצל · N פרויקטים", with the middle dot.
-4. Tapping the פרויקט row or the קטגוריה row opens that picker. שינוי stays. The save is the change sheet's save: a complete assignment writes on the tap, a missing project or category holds, a split's project row opens the split, and a split's category row saves the category. The rows use the same `ListRow` chevron as the change sheet. Tapping "מפוצל · N פרויקטים" opens the split.
+4. Tapping the פרויקט row or the קטגוריה row opens that picker. שינוי stays. The save is the change sheet's save: a complete assignment writes on the tap, a missing project or category holds, a split's project row opens the split, and a split's category row saves the category. The rows use the same `ListRow` chevron as the change sheet. Tapping "מפוצל · N פרויקטים" opens the split. A picker opened from a card line returns to that card: ‹ חזרה, ✕, browser back, swipe, and a one-tap pick. The card shows the new value and does not advance.
+5. After the last item, Back goes to `/review`, not the empty list.
+6. A card opened from the list shows its position, such as "14 מתוך 15", not the progress bar.
+7. The list keeps the queue's title, לאישור, and its subtitle, מסמכים שמחכים לשיוך.
 
 ## Alternatives rejected
 
