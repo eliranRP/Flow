@@ -2,9 +2,11 @@
 
 ## 2026-10-02
 
+Clip-check review. The script waits for the story, for `document.fonts.ready`, and for sheet panels. It fails when Storybook shows an error or when nothing was measured. One function decides a clip. Ellipsis is exempt only on `.ui-row-title` and `[data-clip-ok]`; a single-line hint is measured. A crash exits 3. The server picks an ephemeral port. Q-1: the signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`, not `SUPABASE_ACCESS_TOKEN`. Q-2: an unknown `?assistant=` preview value shows the error state. Both are tracked tasks and are not applied in this pull request.
+
 Design findings. Inline text inside a vaul sheet inherits `user-select: none`, so selection is probed on a desktop fine pointer. A fast drag can dismiss shown-once content. A clip-check pass does not cover copy, select, or gesture. A `min-block-size` fix is re-sampled at 320. Button labels use the `ErrorState` action name. A state-table gap is spec drift. [PITFALLS.md](review/PITFALLS.md).
 
-Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day. The checklists also catch isolation tests with no positive control, fixtures that skip nullable fields, a reused secret name, a crash exit that collides with a criterion, ARIA names on generic elements, story-only props, real personal data, date-dependent tests, a live check with no person or method, and a self-check line that is a justification. Q-1 and Q-2 are recorded and not applied here.
+Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day. The checklists also catch isolation tests with no positive control, fixtures that skip nullable fields, a reused secret name, a crash exit that collides with a criterion, ARIA names on generic elements, story-only props, real personal data, date-dependent tests, a live check with no person or method, and a self-check line that is a justification.
 
 ## 2026-09-30
 
