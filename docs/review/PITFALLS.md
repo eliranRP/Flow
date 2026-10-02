@@ -7,7 +7,7 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 ## Self-check
 
 1. Open the design sources for every screen you touch. Hints use `t-hint` and are tied with `aria-describedby`. Rows use the same `ListRow` icon pattern as the neighbouring rows.
-2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. Measure any element that directly holds a non-whitespace text node. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. Visually hidden text, a box of about 1px, is not measured. A story tagged `clip-no-text` is skipped. Any other story that measures nothing exits 2. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture. The full list is `clip-report.json` and `clip-report.txt` at the repo root. Stdout keeps the first 40 clips.
+2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. For each text node, measure the nearest ancestor that is not `display: inline` or `display: contents`, once per container. An inline `<bdi>` is not the box. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. Visually hidden text, a box of about 1px, is not measured. A story tagged `clip-no-text` is skipped. `parameters.clipCheck.noText` is not read. Any other story that measures nothing exits 2. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture. The full list is `clip-report.json` and `clip-report.txt` at the repo root. Stdout keeps the first 40 clips.
 3. Walk a changed row together with the states it sits beside. Never show a state you do not know. A failed load is an error with a retry, not an empty or disconnected row with an active action.
 4. Run the repo gate before handoff: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `deno test --allow-env supabase/functions/flow-mcp`, `node --test scripts/*.test.mjs`, the database tests, and `pnpm db:types:check`. Hand off only when CI is green on the pushed head.
 5. A script that reports several outcomes has one exit code per outcome, plus one code for incomplete. Run it once per code against the real response shape. Paste the codes.
@@ -80,6 +80,10 @@ Decided, and not applied in this pull request. The pull request that touches the
 - [ ] Q-3. UI polish. Sheet titles and route-sheet titles opt into `data-clip-ok`, like a row title. Button labels, `.ui-row-hint`, and `.ui-meter-label` wrap instead of truncating. That fixes the `*--long-hebrew` stories. Not applied in this pull request.
 - [ ] D1. In decision 0080, fold the N13 row into the Error row and the Connect row, mention the retry button, and drop the N13 row.
 - [ ] D2. In decision 0080, the leftovers paragraph calls N9 the step-2 button. N9 is the error row's retry button.
-- [ ] UI polish. At 320, `screens-routes--unpaid-list` hints are +10px and +15px, and `screens-routes--add-sheet` hint is +15px. Those hints use `.ui-row-hint-wrap`. Not this pull request.
+- [ ] UI polish. `screens-routes--unpaid-list` clips only at 320, as two hints. Those hints should use `wrapHint`. `screens-routes--add-sheet` hint is +15px and should use `wrapHint`. Not this pull request.
+- [ ] UI polish. `screens-routes--change-project-picker` clips on `ui-pick-label`, 2 views. Not this pull request.
+- [ ] Backlog. Still measure a `clip-no-text` story, and waive only the zero-measured rule. Not this pull request.
+- [ ] Backlog. Revisit the 1×1 visually hidden skip. Not this pull request.
+- [ ] Backlog. Unpaid-list date drift. Not this pull request.
 - [ ] Backlog. The sheet-panel wait can race the panel opening. Not this pull request.
 - [ ] Backlog. The Storybook clip spec repeats the sampler. Not this pull request.

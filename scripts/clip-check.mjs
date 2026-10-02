@@ -1,12 +1,15 @@
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 /** Designed single-line truncation. A hint is not in this list. */
 export const CLIP_OK_SELECTOR = ".ui-row-title, [data-clip-ok]";
-/** Storybook tag for a story that has no text to measure. */
+/**
+ * Storybook tag for a story that has no text to measure.
+ * The index does not include parameters, so `parameters.clipCheck.noText` is not a skip.
+ */
 export const CLIP_NO_TEXT_TAG = "clip-no-text";
 export const WIDTHS = [320, 360, 390];
 export const THEMES = ["light", "dark"];
@@ -50,12 +53,28 @@ export function clipReportDir() {
 }
 
 /**
- * @param {{ tags?: string[], parameters?: { clipCheck?: { noText?: boolean } } }} entry
+ * @param {{ tags?: string[] }} entry
  */
 export function storySkipsText(entry) {
   const tags = Array.isArray(entry.tags) ? entry.tags : [];
-  if (tags.includes(CLIP_NO_TEXT_TAG)) return true;
-  return entry.parameters?.clipCheck?.noText === true;
+  return tags.includes(CLIP_NO_TEXT_TAG);
+}
+
+/** "1 story view" or "2 story views". */
+export function storyViewPhrase(count) {
+  return `${String(count)} ${count === 1 ? "story view" : "story views"}`;
+}
+
+/**
+ * @param {{ stories: number, skipped: number, measured: number, themes: string[], widths: number[] }} input
+ */
+export function passLine(input) {
+  return `clip-check passed. ${String(input.stories)} stories, ${String(input.skipped)} skipped, ${String(input.measured)} elements, ${input.themes.join("/")} at ${input.widths.join("/")}.`;
+}
+
+async function removeReport(dir) {
+  await rm(join(dir, "clip-report.json"), { force: true });
+  await rm(join(dir, "clip-report.txt"), { force: true });
 }
 
 function isTimeout(error) {
@@ -190,6 +209,7 @@ async function run(options = {}) {
   } catch {
     error("Build Storybook first: pnpm build-storybook");
     report.note = "Build Storybook first: pnpm build-storybook";
+    await removeReport(reportDir);
     return finish(2);
   }
   const stories = Object.values(index.entries ?? {}).filter((entry) => entry && entry.type === "story" && typeof entry.id === "string");
@@ -197,6 +217,7 @@ async function run(options = {}) {
   if (stories.length === 0) {
     error("Storybook index has no stories.");
     report.note = "Storybook index has no stories.";
+    await removeReport(reportDir);
     return finish(2);
   }
   const require = createRequire(new URL("../app/package.json", import.meta.url));
@@ -250,43 +271,53 @@ async function run(options = {}) {
             const roots = [document.querySelector("#storybook-root"), ...document.querySelectorAll(".ui-sheet-panel")];
             const found = [];
             const seen = new Set();
+            function clippingContainer(textNode, root) {
+              let node = textNode.parentElement;
+              while (node instanceof HTMLElement && root.contains(node)) {
+                const display = getComputedStyle(node).display;
+                if (display !== "inline" && display !== "contents") return node;
+                node = node.parentElement;
+              }
+              return null;
+            }
+            function measure(node) {
+              if (!(node instanceof HTMLElement) || seen.has(node)) return;
+              seen.add(node);
+              const style = getComputedStyle(node);
+              if (style.display === "none" || style.visibility === "hidden") return;
+              const box = node.getBoundingClientRect();
+              if (box.width <= 1 && box.height <= 1) return;
+              if (node.getClientRects().length === 0) return;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              let min = Infinity;
+              let max = -Infinity;
+              for (const rect of range.getClientRects()) {
+                min = Math.min(min, rect.left);
+                max = Math.max(max, rect.right);
+              }
+              if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+              found.push({
+                textWidth: max - min,
+                boxWidth: box.width,
+                textOverflow: style.textOverflow,
+                whiteSpace: style.whiteSpace,
+                overflow: style.overflow,
+                clipOk: node.matches(clipOkSelector),
+                className: typeof node.className === "string" ? node.className : node.tagName,
+                label: `${node.className || node.tagName} "${node.innerText.trim().replace(/\s+/g, " ").slice(0, 48)}"`,
+              });
+            }
             for (const root of roots) {
               if (!(root instanceof HTMLElement)) continue;
-              for (const node of root.querySelectorAll("*")) {
-                if (!(node instanceof HTMLElement) || seen.has(node)) continue;
-                let hasText = false;
-                for (const child of node.childNodes) {
-                  if (child.nodeType === Node.TEXT_NODE && (child.textContent ?? "").trim() !== "") hasText = true;
+              const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+              let text = walker.nextNode();
+              while (text) {
+                if ((text.textContent ?? "").trim() !== "") {
+                  const box = clippingContainer(text, root);
+                  if (box) measure(box);
                 }
-                if (!hasText) continue;
-                seen.add(node);
-                const style = getComputedStyle(node);
-                if (style.display === "none" || style.visibility === "hidden") continue;
-                const box = node.getBoundingClientRect();
-                if (box.width <= 1 && box.height <= 1) continue;
-                if (node.getClientRects().length === 0) continue;
-                let min = Infinity;
-                let max = -Infinity;
-                for (const child of node.childNodes) {
-                  if (child.nodeType !== Node.TEXT_NODE || (child.textContent ?? "").trim() === "") continue;
-                  const range = document.createRange();
-                  range.selectNodeContents(child);
-                  for (const rect of range.getClientRects()) {
-                    min = Math.min(min, rect.left);
-                    max = Math.max(max, rect.right);
-                  }
-                }
-                if (!Number.isFinite(min) || !Number.isFinite(max)) continue;
-                found.push({
-                  textWidth: max - min,
-                  boxWidth: box.width,
-                  textOverflow: style.textOverflow,
-                  whiteSpace: style.whiteSpace,
-                  overflow: style.overflow,
-                  clipOk: node.matches(clipOkSelector),
-                  className: typeof node.className === "string" ? node.className : node.tagName,
-                  label: `${node.className || node.tagName} "${node.innerText.trim().replace(/\s+/g, " ").slice(0, 48)}"`,
-                });
+                text = walker.nextNode();
               }
             }
             return found;
@@ -346,16 +377,23 @@ async function run(options = {}) {
       error(report.zeroMeasured.join("\n"));
       error("clip-check measured nothing.");
     }
-    error(`clip-check found ${String(clipViews)} story views that clip.`);
+    error(`clip-check found ${storyViewPhrase(clipViews)} that ${clipViews === 1 ? "clips" : "clip"}.`);
     return finish(2);
   }
   if (report.failures.length > 0) {
     error(report.failures.slice(0, 40).join("\n"));
     if (report.failures.length > 40) error(`stdout shows 40 of ${String(report.failures.length)} clips.`);
-    error(`clip-check failed. ${String(clipViews)} story views clip text.`);
+    error(`clip-check failed. ${storyViewPhrase(clipViews)} ${clipViews === 1 ? "clips" : "clip"} text.`);
     return finish(1);
   }
-  log(`clip-check passed. ${String(stories.length)} stories, ${String(report.measured)} elements, ${themes.join("/")} at ${widths.join("/")}.`);
+  const skipped = new Set(report.views.filter((view) => view.status === "skipped").map((view) => view.storyId)).size;
+  log(passLine({
+    stories: stories.length,
+    skipped,
+    measured: report.measured,
+    themes,
+    widths,
+  }));
   return finish(0);
 }
 
@@ -370,10 +408,11 @@ export async function execute(options) {
     const dir = options?.reportDir ?? clipReportDir();
     try {
       const existing = JSON.parse(await readFile(join(dir, "clip-report.json"), "utf8"));
-      if (existing?.exit === 3) return 3;
+      if (existing?.exit === 3 && existing.note === message) return 3;
     } catch {
-      // The crash happened before a report was written.
+      // This run has not written a report yet.
     }
+    await removeReport(dir);
     try {
       await writeClipReport(dir, {
         exit: 3,

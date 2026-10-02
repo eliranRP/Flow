@@ -38,7 +38,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Skeleton: Story = {
   tags: ["clip-no-text"],
-  parameters: { clipCheck: { noText: true } },
   args: { variant: "item", title: "טוען" },
   render: () => (
     <List>

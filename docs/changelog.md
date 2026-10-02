@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Clip-check measures each text node on the nearest ancestor that is not `display: inline` or `display: contents`, once per container. A `<bdi>` in a hint, mixed text, and `<p><bdi class="ui-num">` are that container's clip. Only the `clip-no-text` tag skips a story. A pass names the skipped stories. One view says "1 story view". A setup failure deletes a stale crash report. `ui-pick-label` on `screens-routes--change-project-picker` stays in UI polish. Unpaid-list clips only at 320, as two hints that should use `wrapHint`.
+
 Clip-check measures every element that holds its own text, and skips a story tagged `clip-no-text`. A crash report keeps the views measured before the crash. The clip count is a count of views. `screens-routes--unpaid-list` and `screens-routes--add-sheet` hints stay for UI polish, where they should wrap with `.ui-row-hint-wrap`.
 
 Clip-check review, second pass. A Storybook error, a story that never renders, and a story that measured nothing exit 2 before a clip, and those lines are printed. Visually hidden text, a box of about 1px, is not measured. Every run writes `clip-report.json` and `clip-report.txt`. Q-3 is a UI polish task: sheet titles and route-sheet titles opt into `data-clip-ok`, and button labels, `.ui-row-hint`, and `.ui-meter-label` wrap instead of truncating. It is not applied in this pull request.
