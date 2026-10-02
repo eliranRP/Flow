@@ -43,3 +43,25 @@ Open these before editing the screen:
 - Token shape is a warning. An empty token still fails the deploy.
 - The signing spike reads the project ref from the environment. It does not embed one.
 - A date test must not require a day after today.
+
+## Findings
+
+Catch these before handoff. The matching lines are in the two checklists.
+
+1. An isolation test has a positive control. Showing that another company gets nothing is not enough. The same test shows that the owner still receives their own row.
+2. A fixture includes the nullable fields the schema returns. Skipping a nullable column hides a null that production sends.
+3. A script writes the secret name and the scope of that secret. A name is not reused for a different scope.
+4. A crash has its own exit code. It does not reuse a criterion's code.
+5. `aria-label` and `aria-labelledby` do not name a generic element. The accessible name belongs to the control.
+6. A prop that only a story passes is not added to a production component.
+7. Fixtures and stories do not contain real personal data. The owner's email is personal data.
+8. A test does not depend on today's date. It does not require a day after today, and it does not freeze a calendar day that will fail next month.
+9. A live verification records who ran it and how. A conclusion with no person and no method is not a record.
+10. A self-check line is evidence: the command, the exit code, or the artifact. A justification is not a line. A cited run has an artifact.
+
+## Decided, and not yet applied
+
+The next pull request that touches the file applies these. They are not part of PR #6.
+
+- Q-1. The signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`. They do not use `SUPABASE_ACCESS_TOKEN` for that read.
+- Q-2. An unknown `?assistant=` preview value shows the error state.

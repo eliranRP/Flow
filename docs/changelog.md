@@ -2,7 +2,7 @@
 
 ## 2026-10-02
 
-Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day.
+Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day. The checklists also catch isolation tests with no positive control, fixtures that skip nullable fields, a reused secret name, a crash exit that collides with a criterion, ARIA names on generic elements, story-only props, real personal data, date-dependent tests, a live check with no person or method, and a self-check line that is a justification. Q-1 and Q-2 are recorded and not applied here.
 
 ## 2026-09-30
 

@@ -13,3 +13,11 @@ Use this with [PITFALLS.md](PITFALLS.md) at the start of a cycle, and again befo
 - [ ] The gate was run on the whole repo: lint, typecheck, unit tests, Deno tests, `node --test scripts/*.test.mjs`, database tests, and the database types check.
 - [ ] Handoff waited for green CI on the pushed head.
 - [ ] Ambiguities are listed as "Decisions needed".
+- [ ] An isolation test has a positive control. The owner still receives their own row.
+- [ ] Fixtures include nullable schema fields. A skipped null is not treated as absent.
+- [ ] Each script names the secret it reads and that secret's scope. A secret name is not reused for a different scope.
+- [ ] A crash exit code is not a criterion exit code.
+- [ ] Fixtures contain no real personal data, including the owner's email.
+- [ ] A test does not depend on today's date and does not require a later day.
+- [ ] A live verification names who ran it and how.
+- [ ] Each self-check line cites a command, an exit code, or an artifact. A justification is not a line. A cited run has an artifact.
