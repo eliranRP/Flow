@@ -39,7 +39,7 @@ If the only key PostgREST will accept is the in-use Auth signing key, the spike 
 
 #### Spike result, 2026-09-30
 
-The spike stopped on criterion 1. The hosted JWKS contained one key, kid `985184ff-0c58-4ffd-a4a5-d7322027aee6`, Auth's in-use key. Standby is unproven, because Supabase's documentation lists only the current key as accepted. Criterion 3 was not run. The project has one standby slot, and the dashboard action "Rotate keys" would turn that slot into Auth's in-use key. That is the S21 trap. Cycle 1 does not create `FLOW_MCP_SIGNING_KEY` and does not create `FLOW_JWT_LEGACY`.
+The cycle 1 spike stopped on criterion 1. The hosted JWKS contained one key, kid `985184ff-0c58-4ffd-a4a5-d7322027aee6`, Auth's in-use key. Standby was unproven then, because Supabase's documentation lists only the current key as accepted. Criterion 3 was not run in that spike. The project has one standby slot, and the dashboard action "Rotate keys" would turn that slot into Auth's in-use key. That is the S21 trap. Cycle 1 does not create `FLOW_MCP_SIGNING_KEY` and does not create `FLOW_JWT_LEGACY`. The cycle 2 run below passed while the new key was still standby.
 
 Before cycle 2 the owner chooses standby with the guards below, or the legacy fallback. The guards for standby are:
 
@@ -48,16 +48,39 @@ Before cycle 2 the owner chooses standby with the guards below, or the legacy fa
 3. Criterion 1 checks that status. A count of keys in the JWKS is not the check.
 4. The runbook warns never to rotate that key into use.
 
+On 2026-09-30 the owner chose standby, with those four guards. Cycle 2 ships the spike that reads standby status from the Management API and can prove criterion 3 while the key is still standby. The path is standby. The result of the owner's run is the next section. `FLOW_JWT_LEGACY` is not set.
+
+#### Spike result, 2026-09-30, about 18:10 IDT
+
+The standby path passed. Production read tools use this signer after merge.
+
+1. An ES256 key, kid `46a0230c-733c-401d-a3fb-4a2d9ee7de72`, was imported through the dashboard. Its status is standby. The current key is still `985184ff-0c58-4ffd-a4a5-d7322027aee6`. The legacy HS256 key `df08281f` is previous. The new kid appears in the hosted JWKS. Standby status was read from the dashboard's JWT Keys list. It was not read through the Management API, because there was no local management token.
+2. The function secret `FLOW_MCP_SIGNING_KEY` is set in Supabase only. `FLOW_JWT_LEGACY` is not set, and it is not needed.
+3. A 60-second ES256 pass signed with the standby key, for the owner of Flow Test, got `get_dashboard` 200 with that company's id. A pass for the Erie owner got 200 with the Erie company, not Flow Test's.
+4. GET `flow-mcp` returns 405, and the response includes `x-flow-cf-connecting-ip`.
+
+The local copy of the private key is deleted. The only copy is in Supabase: the standby key and the function secret. Do not rotate the standby key into use.
+
+Reads need that key. Without it, `tools/list` returns no tools and `tools/call` returns a JSON-RPC tool result with `isError` and code `unavailable`. That is not HTTP 503. A token whose scope does not include `read` is `forbidden` and is not signed. The spike reads standby status from the Management API body `{keys:[...]}`. Exit 0 is a pass. Exit 1 is criterion 1, including a kid that does not match the standby key. Exit 2 is incomplete. Exit 3 is criterion 3. Exit 4 is criterion 4. A parse failure prints none of the key. The project ref comes from `FLOW_SPIKE_PROJECT_REF`.
+
+The scripted re-run on 2026-10-02, with `FLOW_SPIKE_PROJECT_REF` set and no management token in the environment, exited 2. That code is incomplete: criteria 1 and 3 did not run, because `SUPABASE_ACCESS_TOKEN` and the private key are not on this machine. The spike printed no key material and did not rotate the standby key. The 18:10 IDT dashboard pass still stands. The production secret stays where that run put it.
+
+The same script, pointed at a local fixture with the Management API shape `{keys:[...]}` and no network call, exited 0 for a pass, 1 for a kid that is not standby, 2 when the private key is absent, 3 when PostgREST rejects the pass, and 4 when the connecting-ip header is missing. That fixture run did not rotate the standby key.
+
+#### Who the pass belongs to
+
+The connector is multi-user. Nothing is hardcoded to one owner or one company. Each user mints a connection code from their own עוזר row. The function signs the 60-second pass from that user's credential row only: `sub` is `user_id`, the company is `company_id`, and the scope is `scope`. Those three are not read from config, from the environment, or from the request body. The signing key is one server secret, shared by every user, and it carries no user identity. A token minted for one user cannot read another user's company. A test covers two users, two companies, and two tokens.
+
 #### Secrets and deploy
 
-The production deploy job checks the pepper's shape, then, before migrations and Pages, runs `supabase secrets list` for project `sxqpnetmtufkzowutduq`. That probe is what proves the access token. A prefix check does not. There is no skip path: a missing, invalid, or expired token fails the whole deploy before migrations and Pages. The job then sets `FLOW_MCP_PEPPER` from an env file and deploys `flow-mcp`. Cycle 1 does not set a signing key.
+The production deploy job checks the pepper's shape, then, before migrations and Pages, runs `supabase functions list` for project `sxqpnetmtufkzowutduq`. That probe is what proves the access token. A prefix check does not. There is no skip path: a missing, invalid, or expired token fails the whole deploy before migrations and Pages. The pepper file is written only in the function step, after Pages, and that step deletes it. The job then sets `FLOW_MCP_PEPPER` from that file and deploys `flow-mcp`. The signing key is not a GitHub secret.
 
 | GitHub environment `production` | Function secret | First release |
 | --- | --- | --- |
 | `FLOW_MCP_PEPPER` | same, with its `kid` | yes |
 | `FLOW_MCP_CONFIRM_KEY` | same, its own `kid` | no, deferred with bulk |
 
-`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. That is not a claim that the environment is free of equivalent access. `SUPABASE_DB_URL` is in the same environment, and `SUPABASE_ACCESS_TOKEN` can read Edge Function Secrets, including the injected `SUPABASE_SECRET_KEYS`. The token is scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and it expires in 30 days. The expiry date is kept in the [CI and CD](../runbooks/ci-cd.md#access-token-expiry) runbook, and a renewal reminder fires about 5 days before. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
+`FLOW_MCP_SIGNING_KEY` and `FLOW_JWT_LEGACY` are not in that environment and are not in the workflow. GitHub does not store a `service_role` JWT or an `sb_secret_` key. That is not a claim that the environment is free of equivalent access. `SUPABASE_DB_URL` is in the same environment, and `SUPABASE_ACCESS_TOKEN` can read Edge Function Secrets, including the injected `SUPABASE_SECRET_KEYS`. The token is scoped to project `sxqpnetmtufkzowutduq`, to Edge Functions and Edge Function Secrets only, and it expires in 30 days. An empty token fails the deploy. A shape mismatch is a warning and does not fail the deploy. The functions list probe is the check. The expiry date is kept in the [CI and CD](../runbooks/ci-cd.md#access-token-expiry) runbook. A renewal reminder for 2026-10-26 is scheduled by the owner's assistant, about 5 days before the 2026-10-30 expiry. The function uses the injected key only to call the wrappers below, then drops that client. Ledger calls use the publishable key and the 60-second JWT.
 
 #### Credential wrappers
 
@@ -124,7 +147,7 @@ Section עוזר, directly under the SUMIT block, uses the same list row and the
 
 The connect sheet has two steps. [0075](0075-save-on-tap-and-on-leave.md) does not apply: this sheet creates a secret, so a tap on a choice does not mint.
 
-1. A `RadioRow` offers "קריאה וכתיבה" (selected) and "קריאה בלבד". A tap only selects. One primary button, "יצירת קוד", mints. The button is busy while minting and does not mint twice. A failure shows an error line, and the same button retries.
+1. A `RadioRow` offers "קריאה וכתיבה" (selected) and "קריאה בלבד". A tap only selects. One primary button, "יצירת קוד", mints. The button is busy while minting and does not mint twice. While it is minting, both rows are disabled and the reason is "יוצרים קוד. אי אפשר לשנות עכשיו." A failure shows "לא הצלחנו להתחבר. נסו שוב.", and the same button retries. Closing the sheet while minting revokes that code if it lands, so at most one unused token remains.
 2. The secret is shown once, with "העתקה". The chosen scope is a read-only line. The scope is locked once minted. Changing it is ניתוק, then a new connect.
 
 | State | What the owner sees |
@@ -137,6 +160,7 @@ The connect sheet has two steps. [0075](0075-save-on-tap-and-on-leave.md) does n
 | Connected | "מחובר · קריאה וכתיבה · שימוש אחרון " plus `<bdi dir="ltr">30/09/2026, 14:05</bdi>` in Asia/Jerusalem, `dd/mm/yyyy, HH:mm`. No use yet: "מחובר · קריאה וכתיבה · עדיין אין שימוש". A read-only token says "קריאה בלבד" in that place |
 | Expired | Hint "התוקף פג". Action "חיבור מחדש" |
 | ניתוק | A danger row under the status row, shown when connected or expired. It opens the confirm sheet. Title "לנתק את העוזר?" Consequence "הקוד יפסיק לעבוד. הספרים נשארים." Confirm "ניתוק". Then an info toast for 4 seconds: "העוזר נותק." |
+| N13 | The error row hint is "לא הצלחנו לטעון את החיבור." Step 2's primary button is "סיום". Its labels are "קוד החיבור" and "היקף הגישה". The secret wraps |
 
 ניתוק sets `revoked_at` on that user's current token, active or expired. It does not delete ledger rows and it does not sign the owner out. חיבור מחדש revokes that row and mints one new secret. There is one active token.
 
@@ -158,7 +182,9 @@ Those tools add no schema in this record. `private.mcp_writes` is part of the fi
 - The ` · בעוזר` marker, and a 15-second poll while the document is visible. Realtime stays off.
 - `split_expense`, `collapse_expense`, `create_project`, `rename_project`, and `finish_project`.
 
-Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke.
+Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke. The 18:10 IDT spike passed on standby, so `FLOW_JWT_LEGACY` is not set. If a later change sets that function secret, retire it before the HS256 deprecation at the end of 2026.
+
+Design review leftovers, not changed in this record's screen: the error retry says "נסו שוב" and should say "ניסיון חוזר" (N8, a different item from the smoke above); the step-2 button is flush on the divider (N9); a 2–4px gap (N10); the secret's hard-coded monospace stack (N11); a 6px step jump at 320×693 (N12). B4: all sheets block text selection on desktop. The shown-once secret is the exception.
 
 ### Noted for the first release
 

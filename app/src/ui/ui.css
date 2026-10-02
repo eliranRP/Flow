@@ -420,6 +420,13 @@ a.ui-row,
   white-space: nowrap;
 }
 
+.ui-row-hint-wrap {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .ui-row-icon {
   color: var(--color-text-secondary);
 }
@@ -502,6 +509,20 @@ a.ui-row,
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
+}
+
+.ui-secret-value {
+  display: block;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  user-select: text;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+}
+
+.ui-assistant-step {
+  min-block-size: 22rem;
 }
 
 .ui-field-control {

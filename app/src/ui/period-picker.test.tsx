@@ -37,7 +37,7 @@ describe("RangeSheet", () => {
     const [year, month] = today.split("-");
     const from = `${year ?? ""}-${month ?? ""}-01`;
     const to = today;
-    expect(to >= from).toBe(true);
+    expect(from <= to).toBe(true);
     let applied: [string, string] | null = null;
     render(
       <MemoryRouter>
