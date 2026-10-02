@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { isClipped, reportsClip, TEXT_SELECTOR, THEMES, WIDTHS } from "./clip-check.mjs";
+import { CLIP_OK_SELECTOR, isClipped, reportsClip, THEMES, WIDTHS } from "./clip-check.mjs";
 
 test("a text element is clipped only when its text is wider than its box by more than 1px", () => {
   assert.equal(isClipped(100, 100), false);
@@ -35,9 +35,9 @@ test("a row title ellipsis is designed, and a single-line hint is still a clip",
 test("the clip check covers 320, 360, and 390 in light and dark", () => {
   assert.deepEqual(WIDTHS, [320, 360, 390]);
   assert.deepEqual(THEMES, ["light", "dark"]);
-  assert.match(TEXT_SELECTOR, /\.ui-row-hint/);
-  assert.match(TEXT_SELECTOR, /\.ui-row-title/);
-  assert.doesNotMatch(TEXT_SELECTOR, /button/);
+  assert.match(CLIP_OK_SELECTOR, /\.ui-row-title/);
+  assert.match(CLIP_OK_SELECTOR, /data-clip-ok/);
+  assert.doesNotMatch(CLIP_OK_SELECTOR, /ui-row-hint/);
 });
 
 test("pnpm clip-check runs the script", () => {
@@ -110,6 +110,66 @@ test("the preview server binds an ephemeral port", async () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("a crash keeps the views measured before it", async () => {
+  const { execute } = await import("./clip-check.mjs");
+  const dir = staticSite("<div id=\"storybook-root\"><span>שלום</span></div>", {
+    first: { type: "story", id: "first", title: "First", name: "First" },
+    second: { type: "story", id: "second", title: "Second", name: "Second" },
+  });
+  try {
+    const code = await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      launch: async () => ({
+        async newPage() {
+          return {
+            async setViewportSize() {},
+            async goto(url) {
+              const id = new URL(url).searchParams.get("id");
+              if (id === "second") throw new Error("midway");
+            },
+            locator() {
+              return { waitFor: async () => {}, count: async () => 0, nth: () => ({ waitFor: async () => {} }) };
+            },
+            async waitForFunction() {},
+            async evaluate(fn) {
+              const source = Function.prototype.toString.call(fn);
+              if (source.includes("fonts")) return undefined;
+              if (source.includes("classList.contains")) return false;
+              return [{
+                textWidth: 40,
+                boxWidth: 80,
+                textOverflow: "clip",
+                whiteSpace: "normal",
+                overflow: "visible",
+                clipOk: false,
+                className: "span",
+                label: "span \"שלום\"",
+              }];
+            },
+          };
+        },
+        async close() {},
+      }),
+    });
+    assert.equal(code, 3);
+    const crash = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8"));
+    assert.equal(crash.exit, 3);
+    assert.match(crash.note, /midway/);
+    assert.equal(crash.views.length, 1);
+    assert.equal(crash.views[0].storyId, "first");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("the clip report sits at the repo root", async () => {
+  const { clipReportDir } = await import("./clip-check.mjs");
+  assert.equal(clipReportDir(), fileURLToPath(new URL("..", import.meta.url)));
 });
 
 test("the storybook directory is a filesystem path", async () => {
