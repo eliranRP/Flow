@@ -695,7 +695,7 @@ export const SettingsAssistantSecret: Story = {
         sample={{ state: "empty" }}
         initialSecret={{
           id: "mcp-1",
-          secret: "flow_mcp_abcdefghijklmnopqrstuvwxyz0123456789ABC",
+          secret: "flow_mcp_abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrst",
           scope: ["read"],
         }}
       />

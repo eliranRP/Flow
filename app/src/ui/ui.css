@@ -517,6 +517,7 @@ a.ui-row,
   min-inline-size: 0;
   overflow-wrap: anywhere;
   word-break: break-all;
+  user-select: text;
   font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
 }
 

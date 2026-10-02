@@ -160,6 +160,7 @@ The connect sheet has two steps. [0075](0075-save-on-tap-and-on-leave.md) does n
 | Connected | "מחובר · קריאה וכתיבה · שימוש אחרון " plus `<bdi dir="ltr">30/09/2026, 14:05</bdi>` in Asia/Jerusalem, `dd/mm/yyyy, HH:mm`. No use yet: "מחובר · קריאה וכתיבה · עדיין אין שימוש". A read-only token says "קריאה בלבד" in that place |
 | Expired | Hint "התוקף פג". Action "חיבור מחדש" |
 | ניתוק | A danger row under the status row, shown when connected or expired. It opens the confirm sheet. Title "לנתק את העוזר?" Consequence "הקוד יפסיק לעבוד. הספרים נשארים." Confirm "ניתוק". Then an info toast for 4 seconds: "העוזר נותק." |
+| N13 | The error row hint is "לא הצלחנו לטעון את החיבור." Step 2's primary button is "סיום". Its labels are "קוד החיבור" and "היקף הגישה". The secret wraps |
 
 ניתוק sets `revoked_at` on that user's current token, active or expired. It does not delete ledger rows and it does not sign the owner out. חיבור מחדש revokes that row and mints one new secret. There is one active token.
 
@@ -182,6 +183,8 @@ Those tools add no schema in this record. `private.mcp_writes` is part of the fi
 - `split_expense`, `collapse_expense`, `create_project`, `rename_project`, and `finish_project`.
 
 Code nits N19–N28 are backlog, apart from the items this record already states: `stale` (app-only) and `forbidden`, the `resolve_review` refusal list, `cf-connecting-ip` confirmed by the spike, the deprecation wording, the wider SUMIT test, and GoTrue `getUser` for the app JWT (`getClaims` is not that check, and the function does not validate against JWKS itself). N8, a production smoke of `flow-mcp`, stays in the backlog. The Pages hostname check is not that smoke. The 18:10 IDT spike passed on standby, so `FLOW_JWT_LEGACY` is not set. If a later change sets that function secret, retire it before the HS256 deprecation at the end of 2026.
+
+Design review leftovers, not changed in this record's screen: the error retry says "נסו שוב" and should say "ניסיון חוזר" (N8, a different item from the smoke above); the step-2 button is flush on the divider (N9); a 2–4px gap (N10); the secret's hard-coded monospace stack (N11); a 6px step jump at 320×693 (N12). B4: all sheets block text selection on desktop. The shown-once secret is the exception.
 
 ### Noted for the first release
 
