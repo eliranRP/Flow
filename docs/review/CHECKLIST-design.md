@@ -10,3 +10,6 @@ Use this with [PITFALLS.md](PITFALLS.md) before changing a screen, and again bef
 - [ ] No state is shown unless the screen knows that state.
 - [ ] New or changed controls are rows in `docs/qa/CONTROLS.md`, marked pass only after a test.
 - [ ] Copy that fails says what failed and asks for a retry. It does not reuse another action's error sentence.
+- [ ] `aria-label` and `aria-labelledby` name a control. They do not name a generic element.
+- [ ] A prop that only a story passes is not on a production component.
+- [ ] Stories contain no real personal data, including the owner's email.
