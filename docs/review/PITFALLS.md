@@ -35,9 +35,9 @@ Open these before editing the screen:
 - [docs/design/DESIGN-RULES.md](../design/DESIGN-RULES.md).
 - [docs/qa/CONTROLS.md](../qa/CONTROLS.md). A new control gets a row. The row is marked pass only after the test that exercises it.
 
-## PR #6 lessons, pending merge
+## PR #6 lessons
 
-These are lessons from PR #6. They apply once that pull request merges.
+PR #6 is on main. These lessons apply.
 
 - An argument such as `scope` on `search_expenses` is not identity. Identity is `user_id`, `p_user`, `company_id`, `sub`, and `mcp_tid`.
 - Reads need the signing key. Without it, `tools/list` is empty and `tools/call` is a tool error. Do not advertise the tools.
@@ -67,12 +67,18 @@ Catch these before handoff. The matching lines are in the two checklists.
 15. A button label uses the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
 16. An owner call that is in the code and missing from the decision's state table is spec drift.
 
+## Order
+
+A fix delta for a pull request that is under review goes before other queued work.
+
 ## Tasks
 
-Decided, and not applied in this pull request. The pull request that touches the file does the task. Not part of PR #6.
+Decided, and not applied in this pull request. The pull request that touches the file does the task.
 
 - [ ] Q-1. The signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`. They do not use `SUPABASE_ACCESS_TOKEN` for that read.
 - [ ] Q-2. An unknown `?assistant=` preview value shows the error state.
 - [ ] Q-3. UI polish. Sheet titles and route-sheet titles opt into `data-clip-ok`, like a row title. Button labels, `.ui-row-hint`, and `.ui-meter-label` wrap instead of truncating. That fixes the `*--long-hebrew` stories. Not applied in this pull request.
+- [ ] D1. In decision 0080, fold the N13 row into the Error row and the Connect row, mention the retry button, and drop the N13 row.
+- [ ] D2. In decision 0080, the leftovers paragraph calls N9 the step-2 button. N9 is the error row's retry button.
 - [ ] Backlog. The sheet-panel wait can race the panel opening. Not this pull request.
 - [ ] Backlog. The Storybook clip spec repeats the sampler. Not this pull request.

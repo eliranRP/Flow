@@ -10,7 +10,15 @@ Design findings. Inline text inside a vaul sheet inherits `user-select: none`, s
 
 Review checklists. Read [PITFALLS.md](review/PITFALLS.md) at the start of every cycle. [CHECKLIST-code.md](review/CHECKLIST-code.md) and [CHECKLIST-design.md](review/CHECKLIST-design.md) are the handoff lists. `pnpm clip-check` measures text overflow at 320, 360, and 390 in light and dark after `pnpm build-storybook`. The range-sheet test ends on today, so it does not require a later day. The checklists also catch isolation tests with no positive control, fixtures that skip nullable fields, a reused secret name, a crash exit that collides with a criterion, ARIA names on generic elements, story-only props, real personal data, date-dependent tests, a live check with no person or method, and a self-check line that is a justification.
 
+MCP cycle 2 design review, round 2. A mouse can select the shown-once secret, and a drag on it does not dismiss the sheet. Decision [0080](decisions/0080-mcp-connector.md) records the error row, "סיום", the step-2 labels, and the wrapped secret. The other design nits stay in the backlog.
+
+MCP cycle 2 review, round 1. `search_expenses` can search filed and all rows. A missing signing key hides the tools and returns a tool error. A token without `read` is refused. Token shape is a warning, not a deploy failure. The עוזר section follows SUMIT, the connected hint wraps, and a failed status load does not offer mint. Row hints use `t-hint` and `aria-describedby`. Decision [0080](decisions/0080-mcp-connector.md).
+
 ## 2026-09-30
+
+Signing spike, about 18:10 IDT. The standby ES256 key passed. Kid `46a0230c-733c-401d-a3fb-4a2d9ee7de72` is standby. Auth's current key is unchanged. `FLOW_MCP_SIGNING_KEY` is a Supabase function secret. `FLOW_JWT_LEGACY` is not set. PostgREST accepted a 60-second pass for Flow Test and for the Erie owner, each with its own company. GET `flow-mcp` is 405 and carries `x-flow-cf-connecting-ip`. The local private key is deleted. Decision [0080](decisions/0080-mcp-connector.md).
+
+MCP cycle 2. Settings has an עוזר row: a scope `RadioRow`, יצירת קוד, and ניתוק. `tools/list` returns the six read tools. The signed pass takes its user, company, and scope from that user's token row. The signing key is shared and has no user identity. The owner chose standby. Criterion 3 is not run until the standby key exists. Decision [0080](decisions/0080-mcp-connector.md).
 
 MCP cycle 1 review, second pass. A missing, invalid, or expired access token fails the deploy before migrations and Pages. `supabase secrets list` is that probe. There is no skip path. The token expires in 30 days, and the date is kept in the CI runbook. A `bump_mcp_rate` error returns `unavailable`. Decision [0080](decisions/0080-mcp-connector.md).
 
