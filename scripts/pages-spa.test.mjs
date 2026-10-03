@@ -48,7 +48,7 @@ test("a deep link is 200 HTML, and a missing asset stays 404", async () => {
   const port = 8791;
   const child = spawn(
     "pnpm",
-    ["exec", "wrangler", "pages", "dev", dir, "--port", String(port), "--ip", "127.0.0.1"],
+    ["exec", "wrangler", "pages", "dev", dir, "--port", String(port), "--ip", "127.0.0.1", "--persist-to", path.join(dir, "wrangler-state")],
     { cwd: root, detached: true, stdio: ["ignore", "pipe", "pipe"] },
   );
   let log = "";
