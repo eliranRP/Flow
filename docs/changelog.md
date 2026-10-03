@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+UI polish. The code sheet and the expired sheet keep their step until the close animation ends. Step 2 is one muted line, "גישה: קריאה וכתיבה. הקוד מוצג פעם אחת." The connected sheet groups the status with last use, and the change-scope note is muted. The Claude.ai header stays on one line and ends with a period. Decision [0082](decisions/0082-settings-redesign.md).
+
 UI polish. A hero figure still steps down when the document has no font set, and measures again once fonts are ready.
 
 UI polish. The reviewer split button stays in the preview. Unsplit shows the saved toast after the sheet closes. The queue banner counts every filed-today row, including an approved split. The last-sync separator stays on the time, and the time stays on one line. 

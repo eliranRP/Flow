@@ -57,6 +57,13 @@ export function SheetSurface({
   );
 }
 
+function sheetOutMs(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--dur-sheet-out").trim();
+  if (raw.endsWith("ms")) return Number.parseFloat(raw);
+  if (raw.endsWith("s")) return Number.parseFloat(raw) * 1000;
+  return 220;
+}
+
 const openSheetIds: number[] = [];
 let nextSheetId = 1;
 
@@ -120,6 +127,36 @@ export function Sheet({
   const closing = useRef(false);
   const deciding = useRef(false);
   const wasOpen = useRef(false);
+  const opened = useRef(false);
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
+  useEffect(() => {
+    if (open) {
+      opened.current = true;
+      return;
+    }
+    if (!opened.current) return;
+    opened.current = false;
+    let fired = false;
+    const finish = () => {
+      if (fired) return;
+      fired = true;
+      onClosedRef.current?.();
+    };
+    const panel = panelRef.current;
+    const onEnd = (event: AnimationEvent) => {
+      if (event.target !== panel) return;
+      finish();
+    };
+    panel?.addEventListener("animationend", onEnd);
+    const timer = window.setTimeout(finish, sheetOutMs());
+    return () => {
+      panel?.removeEventListener("animationend", onEnd);
+      window.clearTimeout(timer);
+      // Strict mode runs the effect twice. A cancelled close is not finished.
+      if (!fired) opened.current = true;
+    };
+  }, [open]);
   const [depth, setDepth] = useState(0);
   useEffect(() => {
     if (open) closing.current = false;
