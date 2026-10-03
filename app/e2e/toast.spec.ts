@@ -281,7 +281,7 @@ for (const viewport of viewports) {
       }
     });
 
-    test(`tall to short sits --space-2 above the sheet at ${label}`, async ({ page }) => {
+    test(`tall to short keeps the confirmation under the header at ${label}`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/reviewer/save?item=q-bolts");
       await openCategory(page, safe);
@@ -292,7 +292,17 @@ for (const viewport of viewports) {
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
-      assertAboveSheet(settled);
+      const underHeader = await page.evaluate((inset) => {
+        const header = document.querySelector("header.ui-page, header.ui-band");
+        const space = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-4")) || 16;
+        if (header instanceof HTMLElement && header.getBoundingClientRect().height > 0) {
+          const gap = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 8;
+          return header.getBoundingClientRect().bottom + gap;
+        }
+        return inset + space;
+      }, safe);
+      expect(Math.abs(settled.toastTop - underHeader)).toBeLessThanOrEqual(1);
+      expect(settled.toastBottom + GAP).toBeLessThanOrEqual(settled.closeTop + 1);
       expect(settled.sheetTop).toBeGreaterThan(200);
     });
   }
