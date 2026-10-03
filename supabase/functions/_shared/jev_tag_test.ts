@@ -266,6 +266,39 @@ Deno.test("prefill writes the suggestion flags and the allocation, and not the r
   });
 });
 
+Deno.test("a returned model other than the pin is stored on the suggestion", async () => {
+  const store = memoryStore();
+  const report = await tagWork([company({ mode: "shadow" })], store, () => Promise.resolve({
+    model: "jev-1.99.0",
+    answers: answers(),
+    usage: null,
+  }), "jev-test-key");
+  assertEquals(report.tagged, 1);
+  assertEquals(store.suggestions[0].modelVersion, "jev-1.13.0");
+  assertEquals(store.suggestions[0].responseModel, "jev-1.99.0");
+
+  const calls: { url: string; method: string; body: unknown }[] = [];
+  const fetch: typeof globalThis.fetch = (input, init) => {
+    calls.push({
+      url: String(input),
+      method: init?.method ?? "GET",
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+    });
+    return Promise.resolve(new Response(null, { status: 201 }));
+  };
+  const db = createTagStore(fetch, "http://db.test", "service-role-test");
+  await db.saveSuggestion(store.suggestions[0]);
+  assertEquals(calls[0].url, "http://db.test/rest/v1/tag_suggestions");
+  assertEquals(calls[0].body, {
+    company_id: COMPANY,
+    transaction_id: EXPENSE,
+    answers: store.suggestions[0].answers,
+    confidence: store.suggestions[0].confidence,
+    model_version: "jev-1.13.0",
+    response_model: "jev-1.99.0",
+  });
+});
+
 function memoryStore(): TagStore & { suggestions: SuggestionRow[]; writes: PrefillWrite[]; failPrefill: boolean } {
   const suggestions: SuggestionRow[] = [];
   const writes: PrefillWrite[] = [];
@@ -319,6 +352,7 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   assertEquals(shadowReport.prefilled, 0);
   assertEquals(shadow.writes.length, 0);
   assertEquals(shadow.suggestions[0].modelVersion, "jev-1.13.0");
+  assertEquals(shadow.suggestions[0].responseModel, "jev-1.13.0");
   assertEquals(seen[0].state, buildTagState(expense()));
 
   const auto = memoryStore();

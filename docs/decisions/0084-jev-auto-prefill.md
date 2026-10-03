@@ -21,6 +21,8 @@ The user owns a project when `user_assigned` or `project_assigned` is set, and o
 
 The choice keys are the company's active project ids and its visible expense category ids. A key that is not one of those is not written. More than 255 options omits that question. The job does not ask Jev to apply overhead or an anomaly score.
 
+`model_version` is the pin the client sent. `response_model` is the model string in the response, including when it is not the pin.
+
 ## Alternatives rejected
 
 Approving the line when confidence is high. Treating `auto` as [0011](0011-auto-approve-high-confidence.md). Overwriting a project or category the user already set. Gating each field on its own confidence, which would pre-fill one field while the other answer was weak.
@@ -28,6 +30,8 @@ Approving the line when confidence is high. Treating `auto` as [0011](0011-auto-
 ## Consequences
 
 The card can show the pre-fill as הצעה, and אישור sends that project and category. The job is not scheduled. A `pg_cron` row would be a migration, and this change does not add one. The next SUMIT sync can replace a pre-fill the user has not accepted, because `project_assigned` and `category_assigned` stay false. The suggestion row remains.
+
+`mode` `auto` is implemented here and covered by the mock. The connector migration still refuses to store `auto`. Allowing it is a separate migration, and this change does not add that file while the connector pull request is open.
 
 ## Decisions needed
 

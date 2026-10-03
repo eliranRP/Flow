@@ -33,7 +33,7 @@ No network permission and no env permission. `--no-lock` keeps Deno from writing
 
 ## Tagging job
 
-`supabase/functions/jev-tag` labels open לאישור expenses that have no suggestion for `jev-1.13.0`. Decision [0084](../decisions/0084-jev-auto-prefill.md). Tests call the mock. The function does not call TypeSafe in CI.
+`supabase/functions/jev-tag` labels open לאישור expenses that have no suggestion for `jev-1.13.0`. The stored row's `model_version` is that pin. `response_model` is the model string the API returned. Decision [0084](../decisions/0084-jev-auto-prefill.md). Tests call the mock. The function does not call TypeSafe in CI.
 
 The caller sends `x-flow-cron`. That secret is the existing `CRON_SECRET` used by `sumit-sync`. Scope: the internal cron caller. It is not `jev_api_key`. A missing or wrong cron secret does not label anything.
 
