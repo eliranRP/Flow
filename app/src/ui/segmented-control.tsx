@@ -69,7 +69,7 @@ export function SegmentedControl<T extends string>({
               onChange(option.value);
             }}
           >
-            <span className="ui-seg-label">{option.label}</span>
+            <span className="ui-seg-label" data-clip-ok="">{option.label}</span>
           </button>
         );
       })}

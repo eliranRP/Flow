@@ -60,7 +60,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
           setOpen(true);
         }}
       >
-        <span className="ui-period-label">{pill}</span>
+        <span className="ui-period-label" data-clip-ok="">{pill}</span>
         <span className="ui-period-chevron" aria-hidden="true">
           <ChevronDownIcon />
         </span>
