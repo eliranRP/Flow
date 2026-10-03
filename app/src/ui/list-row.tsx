@@ -31,14 +31,21 @@ type Common = {
   label?: string;
   /** An email or other Latin value. The title stays LTR so the start remains visible. */
   ltrTitle?: boolean;
+  className?: string;
+  /** Warning paints the hint and the icon. Muted paints the icon like the hint. */
+  tone?: "warning" | "muted";
+  /** The hint slot holds a skeleton bar, at the real hint line height. */
+  skelHint?: boolean;
+  /** The hint is a polite status, so a failure is announced. */
+  hintStatus?: boolean;
 };
 
 export type ListRowProps =
   | (Common & { variant: "project"; agorot: bigint; loss?: boolean })
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
-  | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
+  | (Common & { variant: "static"; busy?: boolean })
+  | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
@@ -57,8 +64,10 @@ export function ListRow(props: ListRowProps) {
     );
   }
   const described = props.describeHint === true && props.hint != null ? hintId : undefined;
-  const rowDisabled = (props.variant === "button" || props.variant === "danger") && props.disabled === true;
+  const softDisabled = props.variant === "button" && props.ariaDisabled === true;
+  const rowDisabled = ((props.variant === "button" || props.variant === "danger") && props.disabled === true) || softDisabled;
   const showChevron = props.chevron === true && props.variant !== "static" && !rowDisabled;
+  const toneClass = props.tone === "warning" ? "ui-row-tone-warning" : props.tone === "muted" ? "ui-row-tone-muted" : false;
   const icon =
     props.icon ??
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
@@ -80,8 +89,14 @@ export function ListRow(props: ListRowProps) {
             {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
             {props.tag}
           </span>
-          {props.hint ? (
-            <span id={described} className={cx("ui-row-hint", props.describeHint === true && "t-hint", props.wrapHint && "ui-row-hint-wrap")}>{props.hint}</span>
+          {props.hint != null ? (
+            <span
+              id={described}
+              role={props.hintStatus ? "status" : undefined}
+              className={cx("ui-row-hint", props.describeHint === true && "t-hint", props.wrapHint && "ui-row-hint-wrap", props.skelHint && "ui-row-hint-skel")}
+            >
+              {props.hint}
+            </span>
           ) : null}
         </span>
       </span>
@@ -98,7 +113,13 @@ export function ListRow(props: ListRowProps) {
 
   if (props.variant === "static") {
     return (
-      <div className="ui-row" role={described ? "group" : undefined} aria-label={described ? props.title : undefined} aria-describedby={described}>
+      <div
+        className={cx("ui-row", toneClass, props.className)}
+        role={described ? "group" : undefined}
+        aria-label={described ? props.title : undefined}
+        aria-describedby={described}
+        aria-busy={props.busy === true || undefined}
+      >
         {body}
       </div>
     );
@@ -108,13 +129,17 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className={cx("ui-row", "ui-hit", props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
+        className={cx("ui-row", "ui-hit", toneClass, props.clearHint === true && rowDisabled && "ui-row-clear-hint", props.className)}
         disabled={props.disabled === true}
+        aria-disabled={softDisabled || undefined}
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
         aria-label={described ? (props.label ?? props.title) : props.label}
         aria-describedby={described}
-        onClick={props.onClick}
+        onClick={() => {
+          if (props.disabled === true || props.ariaDisabled === true) return;
+          props.onClick?.();
+        }}
       >
         {body}
       </button>

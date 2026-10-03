@@ -859,6 +859,73 @@ export const SettingsAuth: Story = {
   ),
 };
 
+const sumitBusiness = {
+  name: "בית הספר אלון",
+  email: "owner@example.com",
+  companyId: 1001,
+  lastError: null,
+};
+
+export const SettingsSumitConnected: Story = {
+  name: "SUMIT connected",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...sumitBusiness, connected: true }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsSumitDisconnected: Story = {
+  name: "SUMIT disconnected",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...sumitBusiness, connected: false, companyId: null }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsSumitNoCompany: Story = {
+  name: "SUMIT no company",
+  render: () => (
+    <StoryRoute entry="/settings?preview=empty" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...sumitBusiness, name: null, connected: false, companyId: null, noCompany: true }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsSumitReconnect: Story = {
+  name: "SUMIT reconnect",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...sumitBusiness, connected: true, lastError: "sumit_auth" }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsSumitError: Story = {
+  name: "SUMIT error",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "error" }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsSumitLoading: Story = {
+  name: "SUMIT loading",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "loading" }} />
+    </StoryRoute>
+  ),
+};
+
 export const CategoriesList: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories" tabs>

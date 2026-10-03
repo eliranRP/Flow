@@ -17,6 +17,7 @@ export function Skeleton({
 }) {
   return (
     <span
+      aria-hidden="true"
       className={cx(
         "ui-skeleton-bar",
         tone === "band" && "ui-skeleton-bar-band",
