@@ -64,10 +64,12 @@ export function useFocusRowAfterRetry(
     function onBlur(event: FocusEvent) {
       const next = event.relatedTarget;
       if (next instanceof Node && link.contains(next)) return;
-      // Removing the focused link parks focus on the document. A blur while
-      // the link is still mounted is the user leaving, including a blank spot.
-      if (!link.isConnected) return;
-      held.current = false;
+      // Chrome fires this blur while React 19 is removing the focused link,
+      // and the link is still connected. Decide after that removal. A blur
+      // that leaves the link mounted — a blank spot, or Tab — still disarms.
+      queueMicrotask(() => {
+        if (link.isConnected) held.current = false;
+      });
     }
     node.addEventListener("focus", onFocus);
     node.addEventListener("blur", onBlur);
