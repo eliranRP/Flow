@@ -76,6 +76,8 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   return response.data;
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
+import { useJevReview } from "./jev-review-card";
+import { jevCorrectionFor, saveJevCorrection, withJev } from "./jev-review";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -1152,6 +1154,10 @@ export function ReviewQueue({
   const invalidate = useInvalidateBooks();
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
+  const jev = useJevReview(
+    (shown ?? rows[0])?.transaction_id ?? null,
+    !sample && preview === "off" && previewWrite == null,
+  );
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef({ total: rows.length, seen: new Set(rows.map((item) => item.id)) });
   let added = 0;
@@ -1203,19 +1209,34 @@ export function ReviewQueue({
         await previewWrite.run();
         return;
       }
-      if (!row?.category_id) throw new Error("missing");
+      const filled = row ? withJev(row, jev) : null;
+      if (!filled?.category_id) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      if (reviewIsSplit(row) && row.reason !== "unallocated_shared") {
-        assertNoError(await supabase.rpc("approve_split_review", { p_id: row.id }));
+      if (row) {
+        const correction = jevCorrectionFor(row, jev, {
+          projectId: filled.direction === "income" ? null : filled.project_id,
+          categoryId: filled.category_id,
+        });
+        if (correction) await saveJevCorrection(correction);
+      }
+      if (reviewIsSplit(filled) && filled.reason !== "unallocated_shared") {
+        if (row && filled.category_id !== row.category_id && row.transaction_id) {
+          assertNoError(await supabase.rpc("set_transaction_category", {
+            p_id: row.transaction_id,
+            p_category_id: filled.category_id,
+            p_resolve: false,
+          }));
+        }
+        assertNoError(await supabase.rpc("approve_split_review", { p_id: filled.id }));
         return;
       }
-      if (row.direction !== "income" && !row.project_id) throw new Error("missing");
+      if (filled.direction !== "income" && !filled.project_id) throw new Error("missing");
       assertNoError(await supabase.rpc("resolve_review", {
-        p_id: row.id,
+        p_id: filled.id,
         p_action: "approved",
-        ...(row.direction === "income" || row.project_id == null ? {} : { p_project_id: row.project_id }),
-        p_category_id: row.category_id,
+        ...(filled.direction === "income" || filled.project_id == null ? {} : { p_project_id: filled.project_id }),
+        p_category_id: filled.category_id,
         p_remember: false,
       }));
     },
@@ -1283,16 +1304,18 @@ export function ReviewQueue({
     void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
   }
   const auto = card.auto_approved_today ?? 0;
-  const suggestion = reviewSuggestion(card);
+  const view = withJev(card, jev);
+  const head = row ? withJev(row, jev) : view;
+  const suggestion = reviewSuggestion(view);
   const total = listPlace?.total ?? Math.max(visit.current.total, 1);
   const index = listPlace?.index ?? (row ? total - rows.length + 1 : total);
   const splitCard = reviewIsSplit(row);
-  const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
+  const approvable = !leaving && row != null && (head.reason === "unallocated_shared"
     || (splitCard
-      ? row.category_id != null
-      : row.direction === "income"
-        ? row.category_id != null
-        : row.project_id != null && row.category_id != null));
+      ? head.category_id != null
+      : head.direction === "income"
+        ? head.category_id != null
+        : head.project_id != null && head.category_id != null));
   return (
     <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
@@ -1616,6 +1639,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     if (live) setKept(live);
   }, [live]);
   const row = live ?? (kept?.id === item ? kept : null);
+  const jev = useJevReview(
+    sample || preview !== "off" ? null : (row?.transaction_id ?? null),
+    sample == null && preview === "off",
+  );
   const [projectId, setProjectId] = useState(sample?.projectId ?? sample?.suggestionId ?? "");
   const [categoryId, setCategoryId] = useState(sample?.categoryId ?? sample?.suggestionCategoryId ?? "");
   const [remember, setRemember] = useState(true);
@@ -1649,13 +1676,15 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   }, [leaveNote, remember, savedRemember]);
   useEffect(() => {
     if (sample || !row || seeded.current) return;
+    if (jev.loading) return;
     seeded.current = true;
-    const nextProject = row.project_id ?? "";
-    const nextCategory = row.category_id ?? "";
+    const filled = withJev(row, jev);
+    const nextProject = filled.project_id ?? "";
+    const nextCategory = filled.category_id ?? "";
     baseline.current = { projectId: nextProject, categoryId: nextCategory, remember: true };
     setProjectId(nextProject);
     setCategoryId(nextCategory);
-  }, [sample, row]);
+  }, [sample, row, jev]);
   useEffect(() => {
     if (!sample?.saveError || toasted.current) return;
     toasted.current = true;
@@ -1666,10 +1695,11 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       onAction: () => undefined,
     });
   }, [sample?.saveError, toast]);
+  const filledRow = row ? withJev(row, jev) : row;
   const suggestionProjectId = sample
     ? (sample.project_suggested === false ? "" : (sample.suggestionId ?? ""))
-    : (row?.project_suggested === true ? (row.project_id ?? "") : "");
-  const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? row?.category_id ?? "";
+    : (filledRow?.project_suggested === true ? (filledRow.project_id ?? "") : "");
+  const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? filledRow?.category_id ?? "";
   const projectOptions = withChoice(
     [...(sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({
       id: project.id,
@@ -1705,6 +1735,13 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const supabase = getSupabase();
       const next = picked.current;
       if (!supabase || item === "") throw new Error("supabase");
+      if (row) {
+        const correction = jevCorrectionFor(row, jev, {
+          projectId: income ? null : next.projectId,
+          categoryId: next.categoryId,
+        });
+        if (correction) await saveJevCorrection(correction);
+      }
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",
@@ -1730,6 +1767,13 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const transactionId = sharedTx.current;
       const nextCategory = picked.current.categoryId;
       if (!supabase || transactionId == null || nextCategory === "") throw new Error("supabase");
+      if (row) {
+        const correction = jevCorrectionFor(row, jev, {
+          projectId: projectId === "" ? null : projectId,
+          categoryId: nextCategory,
+        });
+        if (correction) await saveJevCorrection(correction);
+      }
       assertNoError(await supabase.rpc("set_transaction_category", {
         p_id: transactionId,
         p_category_id: nextCategory,
@@ -1751,6 +1795,13 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const supabase = getSupabase();
       const next = fieldSave.current;
       if (!supabase || item === "" || next == null) throw new Error("supabase");
+      if (row) {
+        const correction = jevCorrectionFor(row, jev, {
+          projectId: next.kind === "project" ? next.id : (projectId === "" ? null : projectId),
+          categoryId: next.kind === "category" ? next.id : (categoryId === "" ? null : categoryId),
+        });
+        if (correction) await saveJevCorrection(correction);
+      }
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",
@@ -1847,7 +1898,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       {...(income || splitReview ? {} : { remember, onRemember: setRemember })}
-      categorySuggested={sample ? sample.categorySuggested !== false : row?.category_suggested !== false}
+      categorySuggested={sample ? sample.categorySuggested !== false : filledRow?.category_suggested !== false}
       hold={hold || leaveNote}
       pending={!income && !splitReview && remember !== savedRemember && !wroteReview.current && !closedReview.current}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}

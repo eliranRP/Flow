@@ -31,7 +31,7 @@ Approving the line when confidence is high. Treating `auto` as [0011](0011-auto-
 
 ## Consequences
 
-The card can show the pre-fill as הצעה, and אישור sends that project and category. The job is not scheduled. A `pg_cron` row would be a migration, and this change does not add one. The next SUMIT sync can replace a pre-fill the user has not accepted, because `project_assigned` and `category_assigned` stay false. The suggestion row remains.
+The card shows a stored suggestion as הצעה when the connector is on, and אישור sends that project and category. Each confirm or fix is a row in `corrections`, written by `record_jev_correction`. That table is pending and is not applied yet. With the connector off, or with no suggestion, the card is unchanged. The job is not scheduled. A `pg_cron` row would be a migration, and this change does not add one. The next SUMIT sync can replace a pre-fill the user has not accepted, because `project_assigned` and `category_assigned` stay false. The suggestion row remains.
 
 `mode` `auto` is implemented here and covered by the mock. The released connector migration still refuses to store `auto`. The follow-up SQL is `supabase/pending/20261004120000_jev_auto_mode.sql`. It is not in `supabase/migrations.lock` and it is not applied. It waits until the migration slot is free.
 
