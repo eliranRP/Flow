@@ -17,7 +17,7 @@ A Mercury line has no VAT. The VAT amount is 0 and the status is `source`.
 
 A pending line appears in לאישור (the review queue) with the tag ממתין (pending). It is in no P&L and no total until it is posted. A failed, cancelled, reversed, or blocked line leaves the books.
 
-A payment whose counterparty is NEWREZ, Lakeview, or Servease is hinted to the seeded expense `תשלומי הלוואה` (loan payments). That category is excluded from P&L and still shows as cash in לאישור. A transfer to an own account that is not connected is hinted to `העברות` (transfers), with the same exclusion. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). A card refund stays an expense in the original category. The flag and the sums are in the [connector contract](../tech/connector-contract.md).
+A payment whose counterparty is NEWREZ, Lakeview, or Servease is hinted to the seeded expense `תשלומי הלוואה` (loan payments). That category is excluded from P&L and still shows as cash in לאישור. A transfer to an own account that is not connected is hinted to `העברות` (transfers). The expense row and the income row are both seeded and both excluded from P&L, and the hint matches the line's direction. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). A card refund stays an expense in the original category. The flag and the sums are in the [connector contract](../tech/connector-contract.md).
 
 Account numbers, routing numbers, emails, and attachment URLs are not stored. The card account id used for the own-account check comes from `GET /credit` and is kept only as an id in the skip set, not as a stored account number.
 

@@ -169,7 +169,7 @@ A Hashavshevet-compatible format is a later export, not the proof of concept. [0
 - Payroll.
 - Invoicing, and Morning or iCount integration. [0003](../decisions/0003-no-invoicing-in-the-poc.md).
 - Open banking, and any statement file the owner uploads. Bank lines come from the SUMIT sync. Mercury is a pasted read-only token, not a statement file and not open banking. [0086](../decisions/0086-mercury.md).
-- A currency other than ₪ or $. Display is ₪ or $ per company. Typed inputs stay ₪. A stored dollar amount is repriced with today's Bank of Israel rate. [0087](../decisions/0087-multi-currency.md). [0041](../decisions/0041-amounts-before-vat.md) still means amounts are before VAT.
+- A currency other than ₪ or $. Display is ₪ or $ per company. Typed inputs stay ₪. A stored dollar amount stays dollars. A mixed total converts at display time from the Bank of Israel rate. [0087](../decisions/0087-multi-currency.md). [0041](../decisions/0041-amounts-before-vat.md) still means amounts are before VAT.
 - Progress billing and retention.
 - Category sub-groups.
 - Accrual basis.

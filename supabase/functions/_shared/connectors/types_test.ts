@@ -12,6 +12,11 @@ import { SUMIT_CAPABILITIES } from "./sumit/capabilities.ts";
 import {
   CONNECTOR_COPY_KEYS,
   CONNECTOR_ERROR_CLASSES,
+  DEFAULT_FX_POLICY,
+  DISPLAY_CURRENCIES,
+  FX_POLICIES,
+  displayCurrencySchema,
+  fxPolicySchema,
   parseCanonicalLine,
   type CanonicalLine,
 } from "./types.ts";
@@ -26,6 +31,7 @@ function line(overrides: Partial<CanonicalLine> = {}): CanonicalLine {
     pnl_role: "project",
     currency: "USD",
     amount_original: 1250,
+    amount_negated: true,
     doc_date: "2026-10-03",
     cash_date: "2026-10-03",
     source_account_id: "acct_1",
@@ -67,6 +73,38 @@ Deno.test("a SUMIT line keeps gross ILS, a role, and a section hint", () => {
 Deno.test("amount_original rejects floats and negatives", () => {
   assertThrows(() => parseCanonicalLine(line({ amount_original: 1.5 })));
   assertThrows(() => parseCanonicalLine(line({ amount_original: -1 })));
+});
+
+Deno.test("fx policy defaults to original", () => {
+  assertEquals(DEFAULT_FX_POLICY, "original");
+  assertEquals(FX_POLICIES, ["original", "today", "historical"]);
+  assertEquals(DISPLAY_CURRENCIES, ["ILS", "USD"]);
+  assertEquals(fxPolicySchema.parse("original"), "original");
+  assertEquals(displayCurrencySchema.parse("USD"), "USD");
+  assertThrows(() => fxPolicySchema.parse("today-rate"));
+  assertThrows(() => displayCurrencySchema.parse("EUR"));
+});
+
+Deno.test("amount_negated is the stored sign", () => {
+  assertEquals(parseCanonicalLine(line({ amount_negated: false })).amount_negated, false);
+  assertThrows(() => parseCanonicalLine({ ...line(), amount_negated: undefined }));
+});
+
+Deno.test("a missing party name has a null kind", () => {
+  const unnamed = line({ counterparty: { name: null, external_id: null, kind: null } });
+  assertEquals(parseCanonicalLine(unnamed).counterparty.kind, null);
+  assertThrows(() =>
+    parseCanonicalLine({
+      ...line(),
+      counterparty: { name: null, external_id: null, kind: "supplier" },
+    })
+  );
+  assertThrows(() =>
+    parseCanonicalLine({
+      ...line(),
+      counterparty: { name: "Hardware", external_id: null, kind: null },
+    })
+  );
 });
 
 Deno.test("an impossible calendar date is refused", () => {

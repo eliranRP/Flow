@@ -43,6 +43,18 @@ export type PartyKind = (typeof PARTY_KINDS)[number];
 export const VAT_STATUSES = ["source", "derived", "assumed", "unknown"] as const;
 export type VatStatus = (typeof VAT_STATUSES)[number];
 
+/** Company display unit. The ₪/$ toggle. Typed inputs stay ILS. */
+export const DISPLAY_CURRENCIES = ["ILS", "USD"] as const;
+export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
+
+/**
+ * `original` keeps each line in its own currency. Conversion is display-time,
+ * from fx_rates. `today` and `historical` store a rate only after a switch.
+ */
+export const FX_POLICIES = ["original", "today", "historical"] as const;
+export type FxPolicy = (typeof FX_POLICIES)[number];
+export const DEFAULT_FX_POLICY: FxPolicy = "original";
+
 export const TEXT_LIMITS = {
   externalId: 128,
   description: 2000,
@@ -145,19 +157,25 @@ export interface LinkedDocument {
 export interface NormalizeContext {
   /** Ids from the company's connected accounts, including card accounts. */
   ownAccountIds: readonly string[];
+  /**
+   * Owner-set counterparty ids that are the owner's own external accounts.
+   * Not account numbers. A transfer with one of these ids is imported, not skipped.
+   */
+  ownCounterpartyIds: readonly string[];
   /** Company VAT rate in basis points. A bank line ignores it. */
   vatRateBp: number;
-  /** Supplier external ids that are VAT-exempt. */
+  /** Supplier names that are VAT-exempt. This is the match the ledger uses today. */
+  exemptSupplierNames: readonly string[];
+  /** Supplier external ids that are VAT-exempt, when the supplier has one. */
   exemptSupplierIds: readonly string[];
   /** Documents keyed for linked VAT. A bank fetch passes an empty list. */
   linkedDocuments: readonly LinkedDocument[];
 }
 
-export interface Counterparty {
-  name: string | null;
-  external_id: string | null;
-  kind: PartyKind;
-}
+/** A named party has a kind. A missing name has a null kind. */
+export type Counterparty =
+  | { name: string; external_id: string | null; kind: PartyKind }
+  | { name: null; external_id: string | null; kind: null };
 
 export interface Vat {
   /** Minor units. Nonnegative. Direction carries the sign of the line. */
@@ -181,8 +199,9 @@ export interface ProviderMeta {
 
 /**
  * One provider line. amount_original is the gross amount in minor units of
- * `currency` (agorot or cents), nonnegative. The engine writes the signed
- * ILS amount_gross and amount_net.
+ * `currency` (agorot or cents), nonnegative. Import does not convert a USD
+ * line to ILS and does not store a rate. The engine writes signed
+ * amount_gross and amount_net in that same currency.
  */
 export interface CanonicalLine {
   source: string;
@@ -192,8 +211,13 @@ export interface CanonicalLine {
   doc_kind: DocKind;
   pnl_role: PnlRole | null;
   currency: string;
-  /** Gross minor units. Never a net amount. */
+  /** Gross minor units. Never a net amount. Nonnegative. */
   amount_original: number;
+  /**
+   * True when the stored amount_gross is the negation of amount_original.
+   * The engine does not infer this from direction or doc_kind.
+   */
+  amount_negated: boolean;
   doc_date: string;
   cash_date: string | null;
   /** Provider account id. Never an account number or a routing number. */
@@ -208,6 +232,9 @@ export interface CanonicalLine {
 }
 
 const currencyShape = /^[A-Z]{3}$/;
+
+export const displayCurrencySchema = z.enum(DISPLAY_CURRENCIES);
+export const fxPolicySchema = z.enum(FX_POLICIES);
 
 /** Calendar date. Rejects 2026-13-45 and a non-leap 29 February. */
 export function isIsoDate(value: string): boolean {
@@ -229,7 +256,19 @@ export const providerMetaSchema = z.strictObject({
   kind: z.string().max(TEXT_LIMITS.kind).nullable().optional(),
 });
 
-export const canonicalLineSchema: z.ZodType<CanonicalLine> = z.strictObject({
+const namedParty = z.strictObject({
+  name: z.string().min(1).max(TEXT_LIMITS.name),
+  external_id: boundedId.nullable(),
+  kind: z.enum(PARTY_KINDS),
+});
+
+const unnamedParty = z.strictObject({
+  name: z.null(),
+  external_id: boundedId.nullable(),
+  kind: z.null(),
+});
+
+export const canonicalLineSchema = z.strictObject({
   source: z.string().min(1).max(TEXT_LIMITS.provider),
   external_id: boundedId,
   direction: z.enum(DIRECTIONS),
@@ -238,14 +277,11 @@ export const canonicalLineSchema: z.ZodType<CanonicalLine> = z.strictObject({
   pnl_role: z.enum(PNL_ROLES).nullable(),
   currency: z.string().regex(currencyShape),
   amount_original: z.number().int().nonnegative(),
+  amount_negated: z.boolean(),
   doc_date: isoDate,
   cash_date: isoDate.nullable(),
   source_account_id: boundedId.nullable(),
-  counterparty: z.strictObject({
-    name: nullableName,
-    external_id: boundedId.nullable(),
-    kind: z.enum(PARTY_KINDS),
-  }),
+  counterparty: z.union([namedParty, unnamedParty]),
   description: z.string().max(TEXT_LIMITS.description),
   vat: z.strictObject({
     amount: z.number().int().nonnegative(),
@@ -266,7 +302,11 @@ export function parseCanonicalLine(value: unknown): CanonicalLine {
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
 
-/** The strict schema and CanonicalLine name the same value. */
+/**
+ * The strict schema and CanonicalLine name the same value.
+ * canonicalLineSchema is not annotated as ZodType<CanonicalLine>, so this
+ * inference is the object schema. Assigning true fails the build when they differ.
+ */
 export type CanonicalLineSchemaMatches = Equal<z.infer<typeof canonicalLineSchema>, CanonicalLine>;
 const schemaMatchesLine: CanonicalLineSchemaMatches = true;
 void schemaMatchesLine;
