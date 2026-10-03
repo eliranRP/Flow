@@ -1,5 +1,8 @@
-// Cycle 2 read tools. Decision 0080.
+// Cycle 2 reads and cycle 3a single-expense writes. Decision 0080.
 // Identity is not an argument. The handler signs from the credential row.
+// Zod checks write arguments. A failure is the fixed validation message.
+
+import { z } from "https://esm.sh/zod@4.6.5";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -10,8 +13,16 @@ export const READ_TOOL_NAMES = [
   "get_totals",
 ] as const;
 
+export const WRITE_TOOL_NAMES = [
+  "assign_expense",
+  "set_expense_category",
+  "undo",
+] as const;
+
 const IDENTITY = new Set(["user_id", "p_user", "company_id", "sub", "mcp_tid"]);
 const READ_REFUSED = "The read was refused.";
+const WRITE_REFUSED = "The write was refused.";
+const TOOL_CODES = new Set(["forbidden", "validation", "not_found", "conflict", "already_closed", "refused"]);
 const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
   list_categories: new Set(),
@@ -19,9 +30,31 @@ const ALLOWED: Record<string, Set<string>> = {
   get_expense: new Set(["transaction_id"]),
   search_expenses: new Set(["scope", "query", "limit", "offset"]),
   get_totals: new Set(["from", "to", "basis"]),
+  assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
+  set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
+  undo: new Set(["idempotency_key", "kind", "id"]),
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_TEXT = z.string().regex(UUID);
+const IDEMPOTENCY_KEY = z.string().min(1).max(128);
+const assignSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  project_id: UUID_TEXT,
+  category_id: UUID_TEXT,
+  remember: z.boolean().optional(),
+}).strict();
+const categorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  category_id: UUID_TEXT,
+}).strict();
+const undoSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  kind: z.enum(["review", "reassign"]),
+  id: UUID_TEXT,
+}).strict();
 
 export type ToolRpc = (name: string, body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>;
 
@@ -149,17 +182,27 @@ async function dashboard(rpc: ToolRpc, from: string | null, to: string | null, b
   return result.json as Review;
 }
 
-function toolSpec(name: string, description: string, properties: Record<string, unknown>) {
+function toolSpec(
+  name: string,
+  description: string,
+  properties: Record<string, unknown>,
+  write = false,
+) {
   return {
     name,
     description,
     inputSchema: { type: "object", properties, additionalProperties: false },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    annotations: write
+      ? { readOnlyHint: false, destructiveHint: true, idempotentHint: true }
+      : { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   };
 }
 
-export function toolsFor(scope: string[]) {
-  if (!scope.includes("read")) return [];
+export function isWriteTool(name: string): boolean {
+  return (WRITE_TOOL_NAMES as readonly string[]).includes(name);
+}
+
+function readTools() {
   return [
     toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time.", {
       from: { type: "string" },
@@ -194,9 +237,97 @@ export function toolsFor(scope: string[]) {
   ];
 }
 
+function writeTools() {
+  return [
+    toolSpec("assign_expense", "Assign one expense to a project and category. An open review is closed.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      project_id: { type: "string" },
+      category_id: { type: "string" },
+      remember: { type: "boolean" },
+    }, true),
+    toolSpec("set_expense_category", "Set one expense category. Shares stay. An open review is closed.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      category_id: { type: "string" },
+    }, true),
+    toolSpec("undo", "Undo one assistant write recorded for this user.", {
+      idempotency_key: { type: "string" },
+      kind: { type: "string", enum: ["review", "reassign"] },
+      id: { type: "string" },
+    }, true),
+  ];
+}
+
+export function toolsFor(scope: string[]) {
+  return [
+    ...(scope.includes("read") ? readTools() : []),
+    ...(scope.includes("write") ? writeTools() : []),
+  ];
+}
+
+function envelopeOf(json: unknown): ToolResult {
+  if (json == null || typeof json !== "object" || Array.isArray(json)) return fail("refused", WRITE_REFUSED);
+  const body = json as { ok?: unknown; data?: unknown; error?: { code?: unknown; message?: unknown } };
+  if (body.ok === true && body.data != null && typeof body.data === "object") return ok(body.data);
+  const code = body.error?.code;
+  const message = body.error?.message;
+  if (body.ok === false && typeof code === "string" && TOOL_CODES.has(code) && typeof message === "string") {
+    return fail(code, message);
+  }
+  return fail("refused", WRITE_REFUSED);
+}
+
+async function callWrite(
+  name: typeof WRITE_TOOL_NAMES[number],
+  input: unknown,
+  rpc: ToolRpc,
+): Promise<ToolResult> {
+  const args = argsOf(input, ALLOWED[name] ?? new Set());
+  if (isFail(args)) return args;
+  let rpcName = "mcp_undo";
+  let body: Record<string, unknown> = {};
+  if (name === "assign_expense") {
+    const parsed = assignSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_assign_expense";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_project_id: parsed.data.project_id,
+      p_category_id: parsed.data.category_id,
+      p_remember: parsed.data.remember ?? false,
+    };
+  } else if (name === "set_expense_category") {
+    const parsed = categorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_expense_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_category_id: parsed.data.category_id,
+    };
+  } else {
+    const parsed = undoSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_kind: parsed.data.kind,
+      p_id: parsed.data.id,
+    };
+  }
+  const result = await rpc(rpcName, body);
+  if (result.status >= 400) return fail("refused", WRITE_REFUSED);
+  return envelopeOf(result.json);
+}
+
 export async function callTool(name: string, input: unknown, scope: string[], rpc: ToolRpc): Promise<ToolResult> {
-  if (!READ_TOOL_NAMES.includes(name as typeof READ_TOOL_NAMES[number])) return fail("validation", "validation");
-  if (!scope.includes("read")) return fail("forbidden", "forbidden");
+  const write = (WRITE_TOOL_NAMES as readonly string[]).includes(name);
+  const read = (READ_TOOL_NAMES as readonly string[]).includes(name);
+  if (!write && !read) return fail("validation", "validation");
+  if (write && !scope.includes("write")) return fail("forbidden", "forbidden");
+  if (read && !scope.includes("read")) return fail("forbidden", "forbidden");
+  if (write) return callWrite(name as typeof WRITE_TOOL_NAMES[number], input, rpc);
   const args = argsOf(input, ALLOWED[name] ?? new Set());
   if (isFail(args)) return args;
 
