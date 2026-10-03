@@ -41,7 +41,7 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });
   await expect(code).toBeVisible();
-  await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+  await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
   const link = code.getByRole("button", { name: "איך מחברים ב־Claude" });
 
   for (const how of ["close", "escape", "back"] as const) {
@@ -60,7 +60,7 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
     await dismissTop(page, how, help);
     await expect(help).toBeHidden();
     await expect(code).toBeVisible();
-    await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+    await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
     await expect(link).toBeFocused();
   }
 });
@@ -83,7 +83,7 @@ test("Back then Forward still closes the sheet under the restored entry", async 
     await page.goForward();
     await expect(help).toBeHidden();
     await expect(code).toBeVisible();
-    await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+    await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
     if (how === "escape") await page.keyboard.press("Escape");
     else await code.getByRole("button", { name: "סגירה" }).click();
     await expect(code).toBeHidden();
@@ -132,5 +132,35 @@ test("Back then Forward still closes the sheet under the restored entry", async 
     await expect(details).toBeHidden();
     await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
     await expect(details).toBeVisible();
+  }
+});
+
+test("a double tap on סיום pops one history step, and open and close can repeat", async ({ page }) => {
+  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  const row = page.getByRole("button", { name: "עוזר AI", exact: true });
+  const settings = page.url();
+
+  async function openCode() {
+    await row.click();
+    await page.getByRole("button", { name: "יצירת קוד" }).click();
+    await expect(page.getByRole("dialog", { name: "הקוד מוכן" })).toBeVisible();
+  }
+
+  await openCode();
+  await page.getByRole("button", { name: "סיום" }).evaluate((node) => {
+    if (!(node instanceof HTMLButtonElement)) return;
+    node.click();
+    node.click();
+  });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(settings);
+  await expect(row).toBeVisible();
+
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    await openCode();
+    await page.getByRole("button", { name: "סיום" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).toHaveURL(settings);
+    await expect(row).toBeVisible();
   }
 });

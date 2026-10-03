@@ -13,7 +13,7 @@ export function Toggle({ label, hint, checked, disabled = false, onChange }: Tog
   return (
     <label className="ui-switch-row">
       <span className="ui-switch-copy">
-        <span className="ui-switch-label">{label}</span>
+        <span className="ui-switch-label" data-clip-ok="">{label}</span>
         {hint ? <span className="t-hint">{hint}</span> : null}
       </span>
       <input

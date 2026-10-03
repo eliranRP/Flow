@@ -1134,7 +1134,7 @@ export const ProjectSharedCost: Story = {
           shared_agorot: 4_000_000n,
           profit_agorot: 14_000_000n,
           categories: [
-            { id: "c1", name: "חומרים", amount_agorot: 30_000_000n, has_shared_share: false },
+            { id: "c1", name: "חומרים", amount_agorot: 72_000_000n, has_shared_share: false },
             { id: "c2", name: "הובלה", amount_agorot: 4_000_000n, has_shared_share: true },
           ],
           pending_count: 0,

@@ -60,7 +60,7 @@ export function TextLink({
   const body = (
     <>
       {icon}
-      <span className="ui-text-link-label">{children}</span>
+      <span className="ui-text-link-label" data-clip-ok="">{children}</span>
       {trailing != null ? (
         <span className="ui-chevron-turn" data-open={expanded ? "true" : "false"}>
           {trailing}
