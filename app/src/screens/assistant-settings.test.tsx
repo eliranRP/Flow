@@ -1,6 +1,6 @@
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { ToastProvider } from "../ui/toast";
@@ -316,34 +316,100 @@ describe("assistant settings", () => {
   it("does not move focus when the assistant status recovers away from ניסיון חוזר", async () => {
     let hang = false;
     let release: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    const connected = { data: { state: "connected", id: "mcp-1", scope: ["read", "write"] }, error: null };
     edge.invoke = () => hang
       ? new Promise((resolve) => { release = resolve; })
       : Promise.resolve({ data: null, error: { message: "status" } });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <MemoryRouter>
-            <button type="button">אחר</button>
-            <AssistantSettings />
-          </MemoryRouter>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    function SheetSpot() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => { setOpen(true); }}>גיליון</button>
+          {open ? (
+            <div role="dialog" aria-label="גיליון">
+              <button type="button">בגיליון</button>
+            </div>
+          ) : null}
+        </>
+      );
+    }
+    function mount() {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <MemoryRouter>
+              <SheetSpot />
+              <button type="button">אחר</button>
+              <AssistantSettings />
+            </MemoryRouter>
+          </ToastProvider>
+        </QueryClientProvider>,
+      );
+      return { client, ...view };
+    }
+
+    const pressed = mount();
     const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
     retry.focus();
+    hang = true;
+    fireEvent.click(retry);
+    await waitFor(() => {
+      const link = screen.queryByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+      const row = document.querySelector(".ui-project-list .ui-row");
+      expect(link?.getAttribute("aria-busy") === "true" || row?.getAttribute("aria-busy") === "true").toBe(true);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "גיליון" }));
+    const inside = screen.getByRole("button", { name: "בגיליון" });
+    inside.focus();
+    expect(inside).toHaveFocus();
+    release(connected);
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
+    expect(inside).toHaveFocus();
+    pressed.unmount();
+
+    hang = false;
+    const failed = mount();
+    const failedRetry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    failedRetry.focus();
+    hang = true;
+    fireEvent.click(failedRetry);
+    await waitFor(() => { expect(failedRetry).toHaveAttribute("aria-busy", "true"); });
+    release({ data: null, error: { message: "status" } });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "ניסיון חוזר: עוזר AI" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "ניסיון חוזר: עוזר AI" })).not.toHaveAttribute("aria-busy", "true");
+    });
     const elsewhere = screen.getByRole("button", { name: "אחר" });
     elsewhere.focus();
     expect(elsewhere).toHaveFocus();
     hang = true;
-    const done = client.refetchQueries({ queryKey: ["mcp-status"] });
+    const again = failed.client.refetchQueries({ queryKey: ["mcp-status"] });
     await waitFor(() => {
       expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
     });
-    release({ data: { state: "empty" }, error: null });
-    await done;
+    release(connected);
+    await again;
     await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
     expect(elsewhere).toHaveFocus();
+    failed.unmount();
+
+    hang = false;
+    const blank = mount();
+    const blankRetry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    blankRetry.focus();
+    blankRetry.blur();
+    expect(document.activeElement).toBe(document.body);
+    hang = true;
+    const recovered = blank.client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => {
+      expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
+    });
+    release(connected);
+    await recovered;
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
+    expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).not.toHaveFocus();
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("preview disconnect closes the confirm", () => {

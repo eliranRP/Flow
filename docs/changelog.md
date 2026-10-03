@@ -6,6 +6,8 @@ Jev connector, review. The client timeout covers the response body. `tag_suggest
 
 Jev connector plumbing. `company_integrations` and `tag_suggestions` are per company. The connector is off by default, in shadow, with threshold 0.90. Members read suggestions and turn the connector on through `set_company_integration`. The service role writes suggestions. The API key is Vault secret `jev_api_key`, read by `read_jev_api_key` for the service role only. The client pins `jev-1.13.0` and retries 429 and 529. CI does not call TypeSafe. Decision [0083](decisions/0083-jev-connector.md). The bundle scan and its exit codes are in [the Jev runbook](runbooks/jev.md).
 
+Settings cycle 4, review. A recovering status row takes focus only when focus is still parked on the document or inside that row. Moving into a sheet, clicking a blank spot, or a failed retry leaves the hold disarmed. Clickable rows keep span markup. A static heading stays a div.
+
 Settings cycle 4, review. A cold first visit to `?sheet=sumit` replaces that address with `/settings` and pushes the sheet, so Back closes the sheet and stays in the app. Closing it and opening it again pushes too. A visit that already has an earlier entry still reuses that entry. When a status recovers through the loading row, focus returns to the row if it was on ניסיון חוזר, and stays put otherwise. Step 1 is titled חיבור עוזר AI.
 
 Settings cycle 4, review. A return to `?sheet=sumit` reuses that history entry, so closing the sheet and pressing Back leaves Settings. The expired עוזר sheet shows פג תוקף as a status row, and חיבור מחדש moves focus to the step title. A status that recovers while ניסיון חוזר is focused moves focus to the row.

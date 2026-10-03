@@ -3373,7 +3373,7 @@ export function SettingsScreen({
     && sample?.sumit !== "error"
     && !sumitShowsRetry
     && !(sample == null && !sumitNoCompany && status.isLoading && !sumitRetrying);
-  useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef, sumitRowReady);
+  useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef, sumitRowReady, sumitNonce);
 
   useEffect(() => {
     if (!focusSumit) return;

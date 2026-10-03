@@ -251,7 +251,7 @@ export function AssistantSettings({
     return () => { window.clearTimeout(id); };
   }, [hintNonce]);
 
-  useFocusRowAfterRetry(view.state === "error", retryRef, rowRef, view.state !== "error" && view.state !== "loading");
+  useFocusRowAfterRetry(view.state === "error", retryRef, rowRef, view.state !== "error" && view.state !== "loading", hintNonce);
 
   useEffect(() => {
     if (!focusStep.current || intro || !open || secret != null) return;
