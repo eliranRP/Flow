@@ -203,6 +203,12 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
 
   assert.match(push, /cd-preflight.sh/);
   assert.match(push, /db push --db-url/);
+  assert.ok(push.indexOf("db push --db-url") < push.indexOf("bash scripts/check-sumit-cron.sh"));
+  assert.equal(preflight.includes("check-sumit-cron"), false);
+  const e2e = job("e2e");
+  assert.match(e2e, /bash scripts\/check-sumit-cron\.sh/);
+  assert.ok(e2e.indexOf("supabase test db") < e2e.indexOf("check-sumit-cron.sh"));
+  assert.ok(e2e.indexOf("postgresql-client") < e2e.indexOf("check-sumit-cron.sh"));
   assert.equal(push.includes("--include-seed"), false);
   assert.equal(push.includes("db reset"), false);
   assert.match(preflight, /SET TRANSACTION READ ONLY/);
