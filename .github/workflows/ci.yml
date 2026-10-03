@@ -232,6 +232,17 @@ jobs:
           set -euo pipefail
           supabase functions list --project-ref sxqpnetmtufkzowutduq >/dev/null
 
+      - name: Deploy SUMIT functions and reseal before the migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          bash scripts/cd-preflight.sh
+          supabase functions deploy sumit-sync --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy sumit-connect --project-ref sxqpnetmtufkzowutduq
+          bash scripts/cd-sumit-reseal.sh
+
       - name: Read-only preflight and migration push
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
