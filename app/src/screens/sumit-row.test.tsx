@@ -26,6 +26,14 @@ vi.mock("../lib/supabase", () => ({
     },
     rpc: (name: string, args?: unknown) => rpc.impl(name, args),
     functions: { invoke: () => Promise.resolve({ data: null, error: null }) },
+    // Settings also reads the Jev row. A missing table answer is the off switch.
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        }),
+      }),
+    }),
   }),
 }));
 
@@ -409,6 +417,8 @@ describe("SUMIT status row", () => {
     };
     renderSettings();
     expect(await screen.findByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
+    expect(screen.queryByText("שגיאה")).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
   });
@@ -1076,6 +1086,8 @@ describe("SUMIT status row", () => {
         expect(router.state.location.pathname).toBe("/settings");
         expect(router.state.location.search).not.toContain("sheet=");
       });
+      // The company now exists, so the Jev read finishes before Back is used.
+      await screen.findByRole("switch", { name: "תיוג חכם (Jev)", hidden: true });
       return { router, original, unmount: view.unmount };
     }
 
