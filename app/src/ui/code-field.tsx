@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type RefObject, type WheelEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { holdFieldPointer } from "./field-pointer";
 import { CopyIcon } from "./icons";
 import { IconButton } from "./icon-button";
@@ -65,8 +65,9 @@ function onFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
 
 /**
  * touch-action: pan-x does not pan an input by itself, and Chrome drops the
- * moves unless this listener can cancel them. Pointerdown stops at the field,
- * so the sheet does not capture the gesture.
+ * moves unless this listener can cancel them. The wheel listener is not passive,
+ * so one horizontal wheel scrolls once. Pointerdown stops at the field, so the
+ * sheet does not capture the gesture.
  */
 function bindFieldPan(input: HTMLInputElement) {
   let startX = 0;
@@ -95,28 +96,28 @@ function bindFieldPan(input: HTMLInputElement) {
     tracking = false;
     panning = false;
   };
+  const wheel = (event: WheelEvent) => {
+    const across = Math.abs(event.deltaX) >= Math.abs(event.deltaY) ? event.deltaX : 0;
+    if (across === 0) return;
+    const max = scrollMax(input);
+    if (max <= 0) return;
+    const next = Math.min(max, Math.max(0, input.scrollLeft + across));
+    if (next === input.scrollLeft) return;
+    event.preventDefault();
+    input.scrollLeft = next;
+  };
   input.addEventListener("touchstart", start, { passive: true });
   input.addEventListener("touchmove", move, { passive: false });
   input.addEventListener("touchend", end);
   input.addEventListener("touchcancel", end);
+  input.addEventListener("wheel", wheel, { passive: false });
   return () => {
     input.removeEventListener("touchstart", start);
     input.removeEventListener("touchmove", move);
     input.removeEventListener("touchend", end);
     input.removeEventListener("touchcancel", end);
+    input.removeEventListener("wheel", wheel);
   };
-}
-
-function onFieldWheel(event: WheelEvent<HTMLInputElement>) {
-  const across = Math.abs(event.deltaX) >= Math.abs(event.deltaY) ? event.deltaX : 0;
-  if (across === 0) return;
-  const input = event.currentTarget;
-  const max = scrollMax(input);
-  if (max <= 0) return;
-  const next = Math.min(max, Math.max(0, input.scrollLeft + across));
-  if (next === input.scrollLeft) return;
-  input.scrollLeft = next;
-  event.preventDefault();
 }
 
 export function CodeField({
@@ -140,49 +141,57 @@ export function CodeField({
   onCopy: () => void;
 }) {
   const named = label != null && labelId != null;
-  const localRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    const input = localRef.current;
-    if (input == null) return;
-    return bindFieldPan(input);
+  const externalRef = useRef(valueRef);
+  externalRef.current = valueRef;
+  const [inputNode, setInputNode] = useState<HTMLInputElement | null>(null);
+  const setInput = useCallback((node: HTMLInputElement | null) => {
+    setInputNode(node);
+    const external = externalRef.current;
+    if (external) external.current = node;
   }, []);
-  const control = (
-    <>
-      {named ? <p className="ui-field-label" id={labelId}>{label}</p> : null}
-      <div className="ui-code-field-box" data-copy={value === "" ? "off" : "on"}>
-        <input
-          ref={(node) => {
-            localRef.current = node;
-            if (valueRef) valueRef.current = node;
-          }}
-          className="ui-field-control ui-code-field-input"
-          readOnly
-          dir="ltr"
-          value={value}
-          aria-label={named ? undefined : fieldLabel}
-          aria-labelledby={named ? labelId : undefined}
-          autoComplete="off"
-          spellCheck={false}
-          data-vaul-no-drag=""
-          onPointerDown={(event) => {
-            holdFieldPointer(event);
-          }}
-          onKeyDown={onFieldKeyDown}
-          onWheel={onFieldWheel}
-        />
-        {value === "" ? null : (
-          <IconButton label={copyLabel} className="ui-code-field-copy" onClick={onCopy}>
-            <CopyIcon />
-          </IconButton>
-        )}
-      </div>
-      {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
-    </>
+  useEffect(() => {
+    if (inputNode == null) return;
+    return bindFieldPan(inputNode);
+  }, [inputNode]);
+  const field = (
+    <div className="ui-code-field-box" data-copy={value === "" ? "off" : "on"}>
+      <input
+        ref={setInput}
+        className="ui-field-control ui-code-field-input"
+        readOnly
+        dir="ltr"
+        value={value}
+        aria-label={named ? undefined : fieldLabel}
+        aria-labelledby={named ? labelId : undefined}
+        autoComplete="off"
+        spellCheck={false}
+        data-vaul-no-drag=""
+        onPointerDown={(event) => {
+          holdFieldPointer(event);
+        }}
+        onKeyDown={onFieldKeyDown}
+      />
+      {value === "" ? null : (
+        <IconButton label={copyLabel} className="ui-code-field-copy" onClick={onCopy}>
+          <CopyIcon />
+        </IconButton>
+      )}
+    </div>
   );
-  if (!named) return <div className="ui-code-field">{control}</div>;
+  const hint = failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null;
+  if (!named) {
+    return (
+      <div className="ui-code-field">
+        {field}
+        {hint}
+      </div>
+    );
+  }
   return (
     <div className="ui-code-field" role="group" aria-labelledby={labelId}>
-      {control}
+      <p className="ui-field-label" id={labelId}>{label}</p>
+      {field}
+      {hint}
     </div>
   );
 }
