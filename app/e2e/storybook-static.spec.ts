@@ -1,4 +1,4 @@
-import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page, type Request } from "@playwright/test";
 
 type StoryEntry = {
   id: string;
@@ -19,6 +19,15 @@ function isFrameworkNoise(text: string): boolean {
   return /Permissions policy violation: unload is not allowed/i.test(text);
 }
 
+function isProductionSupabase(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === "supabase.co" || host.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+}
+
 function recordProblems(page: Page, problems: string[]) {
   const onPageError = (error: Error) => {
     problems.push(`pageerror: ${error.message}`);
@@ -29,11 +38,17 @@ function recordProblems(page: Page, problems: string[]) {
     if (isFrameworkNoise(text)) return;
     problems.push(`console: ${text}`);
   };
+  const onRequest = (request: Request) => {
+    if (!isProductionSupabase(request.url())) return;
+    problems.push(`request: ${request.url()}`);
+  };
   page.on("pageerror", onPageError);
   page.on("console", onConsole);
+  page.on("request", onRequest);
   return () => {
     page.off("pageerror", onPageError);
     page.off("console", onConsole);
+    page.off("request", onRequest);
   };
 }
 
