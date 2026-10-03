@@ -677,7 +677,7 @@ describe("settings account", () => {
     fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
-    expect(layer).toBeNull();
+    await waitFor(() => { expect(layer).toBeNull(); });
     expect(rpc.calls.some((call) => call.name === "disconnect_sumit")).toBe(true);
   });
 
