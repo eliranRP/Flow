@@ -1,4 +1,5 @@
-import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type ConsoleMessage, type Page } from "@playwright/test";
+import { classifyStorybookRequest, isAllowedStorybookUrl, type StorybookRequestKind } from "./storybook-network";
 
 type StoryEntry = {
   id: string;
@@ -11,12 +12,61 @@ type StoryIndex = {
   entries: Record<string, StoryEntry>;
 };
 
+type StoryLabel = {
+  id: string;
+  title: string;
+  name: string;
+};
+
+type BlockedRequest = StoryLabel & {
+  url: string;
+  kind: Exclude<StorybookRequestKind, "allow"> | "websocket";
+};
+
 /**
  * Storybook's own manager logs this Chrome intervention on every page. It is not a story failure.
  * The BigInt crash is an uncaught TypeError and is never ignored.
  */
 function isFrameworkNoise(text: string): boolean {
   return /Permissions policy violation: unload is not allowed/i.test(text);
+}
+
+function serverPort(baseURL: string | undefined): string {
+  const url = new URL(baseURL ?? "http://127.0.0.1:6193");
+  if (url.port === "") throw new Error("storybook baseURL needs a port");
+  return url.port;
+}
+
+/**
+ * One guard for the whole test. Playwright does not route requests a service worker makes after it
+ * starts, and this project sets serviceWorkers to "block", so a worker cannot skip the allowlist.
+ * A script fetch Playwright still attributes to a worker is classified and aborted here.
+ */
+async function installStorybookGuard(
+  context: BrowserContext,
+  port: string,
+  storyOf: () => StoryLabel,
+  blocked: BlockedRequest[],
+): Promise<void> {
+  const record = (url: string, kind: BlockedRequest["kind"]) => {
+    const story = storyOf();
+    blocked.push({ id: story.id, title: story.title, name: story.name, url, kind });
+  };
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    const fromWorker = request.serviceWorker() != null || request.resourceType() === "serviceworker";
+    const kind = classifyStorybookRequest(request.url(), port, fromWorker);
+    if (kind === "allow") {
+      await route.continue();
+      return;
+    }
+    record(request.url(), kind);
+    await route.abort("blockedbyclient");
+  });
+  await context.routeWebSocket((url) => !isAllowedStorybookUrl(url.href, port), (ws) => {
+    record(ws.url(), "websocket");
+    void ws.close({ code: 1008, reason: "blocked" });
+  });
 }
 
 function recordProblems(page: Page, problems: string[]) {
@@ -37,18 +87,24 @@ function recordProblems(page: Page, problems: string[]) {
   };
 }
 
-test("every static story loads in the manager without console errors", async ({ page }) => {
+test("every static story loads in the manager without console or network errors", async ({ page, context }) => {
   test.setTimeout(600_000);
+  const port = serverPort(test.info().project.use.baseURL);
+  const blocked: BlockedRequest[] = [];
+  let story: StoryLabel = { id: "index", title: "index", name: "index" };
+  await installStorybookGuard(context, port, () => story, blocked);
+
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
   const stories = Object.values(index.entries).filter((entry) => entry.type === "story");
   expect(stories.length).toBeGreaterThan(50);
 
   const failures: string[] = [];
-  for (const story of stories) {
+  for (const entry of stories) {
+    story = { id: entry.id, title: entry.title, name: entry.name };
     const problems: string[] = [];
     const stop = recordProblems(page, problems);
     try {
-      await page.goto(`/?path=/story/${story.id}`, { waitUntil: "domcontentloaded" });
+      await page.goto(`/?path=/story/${entry.id}`, { waitUntil: "domcontentloaded" });
       const root = page.frameLocator("#storybook-preview-iframe").locator("#storybook-root");
       await root.waitFor({ state: "attached", timeout: 20_000 });
       await expect(page.locator("#storybook-explorer-tree, #storybook-preview-iframe").first()).toBeVisible();
@@ -61,8 +117,47 @@ test("every static story loads in the manager without console errors", async ({ 
     } finally {
       stop();
     }
-    if (problems.length > 0) failures.push(`${story.title} / ${story.name}: ${problems.join(" | ")}`);
+    if (problems.length > 0) failures.push(`${entry.title} / ${entry.name}: ${problems.join(" | ")}`);
   }
 
+  for (const hit of blocked) failures.push(`${hit.title} / ${hit.name} [${hit.id}]: ${hit.kind} ${hit.url}`);
   expect(failures, failures.join("\n")).toEqual([]);
+});
+
+test("the network guard aborts a fetch and a websocket outside storybook", async ({ page, context }) => {
+  const port = serverPort(test.info().project.use.baseURL);
+  const blocked: BlockedRequest[] = [];
+  let story: StoryLabel = {
+    id: "screens-routes--settings-empty",
+    title: "Screens/Routes",
+    name: "Settings empty",
+  };
+  await installStorybookGuard(context, port, () => story, blocked);
+  expect(test.info().project.use.serviceWorkers).toBe("block");
+  await page.goto("/");
+
+  const fetchUrl = "https://fake.supabase.co/functions/v1/flow-mcp/status";
+  const socketUrl = "wss://fake.supabase.co/realtime/v1/websocket";
+  const outcome = await page.evaluate(async ({ fetchUrl: nextFetch, socketUrl: nextSocket }) => {
+    const fetchResult = await fetch(nextFetch).then(() => "reached" as const, () => "aborted" as const);
+    const socketResult = await new Promise<"open" | "aborted">((resolve) => {
+      const ws = new WebSocket(nextSocket);
+      ws.addEventListener("open", () => { resolve("open"); });
+      ws.addEventListener("error", () => { resolve("aborted"); });
+      ws.addEventListener("close", () => { resolve("aborted"); });
+    });
+    return { fetchResult, socketResult };
+  }, { fetchUrl, socketUrl });
+
+  story = {
+    id: "screens-routes--assistant-connected",
+    title: "Screens/Routes",
+    name: "Assistant connected",
+  };
+
+  expect(outcome.fetchResult).toBe("aborted");
+  expect(outcome.socketResult).toBe("aborted");
+  expect(blocked.some((hit) => hit.kind === "request" && hit.url === fetchUrl && hit.id === "screens-routes--settings-empty")).toBe(true);
+  expect(blocked.some((hit) => hit.kind === "websocket" && hit.url === socketUrl && hit.id === "screens-routes--settings-empty")).toBe(true);
+  expect(blocked.some((hit) => hit.id === "screens-routes--assistant-connected")).toBe(false);
 });
