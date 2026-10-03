@@ -14,8 +14,12 @@ if [[ -z "${secret}" ]]; then
   exit 1
 fi
 
-curl -fsS -X POST "https://sxqpnetmtufkzowutduq.supabase.co/functions/v1/sumit-reseal" \
-  -H "content-type: application/json" \
-  -H "x-flow-cron: ${secret}" \
-  --data '{}'
+# The runner masks the value. The header is stdin, not a process argument.
+if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+  echo "::add-mask::${secret}"
+fi
+printf 'content-type: application/json\nx-flow-cron: %s\n' "$secret" \
+  | curl -fsS -X POST "https://sxqpnetmtufkzowutduq.supabase.co/functions/v1/sumit-reseal" \
+      -H @- \
+      --data '{}'
 echo

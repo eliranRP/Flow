@@ -178,7 +178,11 @@ begin
     party_name := nullif(btrim(coalesce(line #>> '{counterparty,name}', '')), '');
     party_kind := line #>> '{counterparty,kind}';
     party_external_text := nullif(line #>> '{counterparty,external_id}', '');
-    party_external := party_external_text::bigint;
+    -- Mercury ids are text. Only a SUMIT id is a bigint on the party row.
+    party_external := case
+      when p_provider = 'sumit' then party_external_text::bigint
+      else null
+    end;
     supplier := null;
     customer := null;
     remembered := null;

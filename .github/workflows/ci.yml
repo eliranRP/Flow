@@ -241,6 +241,7 @@ jobs:
           bash scripts/cd-preflight.sh
           supabase functions deploy sumit-sync --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy sumit-connect --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy sumit-reseal --project-ref sxqpnetmtufkzowutduq
           bash scripts/cd-sumit-reseal.sh
 
       - name: Read-only preflight and migration push
