@@ -53,10 +53,40 @@ No network permission and no env permission. `--no-lock` keeps Deno from writing
 
 `enabled` false disables a company. `mode` `off` disables it as well. Either one is enough, and the job does not call Jev for that company.
 
-The caller is either `x-flow-cron` matching `CRON_SECRET`, or `Authorization: Bearer` matching `SUPABASE_SERVICE_ROLE_KEY`. `CRON_SECRET` is the existing secret used by `sumit-sync`. Scope: the internal cron caller. It is not `jev_api_key`. A member JWT, a missing header, and a wrong secret are 401 and do not label anything.
+The caller is either `x-flow-cron` matching `CRON_SECRET`, or `Authorization: Bearer` matching the `default` field of `SUPABASE_SECRET_KEYS`. `CRON_SECRET` is the existing secret used by `sumit-sync`. Scope: the internal cron caller. It is not `jev_api_key`. A member JWT, a missing header, an empty header, and a wrong non-empty header are 401 and do not label anything. The legacy `SUPABASE_SERVICE_ROLE_KEY` variable is not read. A missing, empty, or unparseable `SUPABASE_SECRET_KEYS` value is 500 `missing_key` and does not call Jev.
 
-An accepted call reserves the isolate for 60 seconds. The next call in that window is 429 `rate_limited` and does not call Jev.
+An accepted call reserves the isolate for 60 seconds. The next call in that window is 429 `rate_limited` and does not call Jev. That limit is in memory until a cron exists. A database run lock is backlog with the cron.
 
-The function is not on a schedule. Adding `pg_cron` would be a migration. The deploy workflow deploys `flow-mcp` only, and this change does not edit that workflow.
+One run labels at most 50 expenses. A request may set `limit`; values above 100 are clamped to 100, and a missing or unusable limit stays 50. The candidate query orders by `doc_date` descending and applies that cap in SQL. It does not put every open id in the URL. Each expense is at most 2 attempts of 8 seconds. The run stops at about 120 seconds, leaves the remaining lines for the next run, and reports `budget_skipped`. TypeSafe accepts `{ model, state, questions }` only. It has no max-output field, so the job does not send one. The response and the function log include `input_tokens` and `output_tokens`. Those are counts. The log does not include the expense text or the answers.
+
+Project names and category names are sent to TypeSafe as the choice labels. That is the owner's own data. Amounts may be included in the request state. The job does not write amounts, VAT, or dates.
+
+The function does not read `jev_api_key` when no enabled company has a line to label.
+
+## Hand trigger
+
+The function is not on a schedule. Adding `pg_cron` would be a migration, and this change does not add one. The first shadow run is a manual POST. `verify_jwt` is false in `supabase/config.toml`. The function checks the caller itself.
+
+Secrets that must exist before that call:
+
+| Name | Where |
+| --- | --- |
+| `jev_api_key` | Vault. Already in production. Not an Edge Function env var. |
+| `SUPABASE_URL` | Injected by Supabase. |
+| `SUPABASE_SECRET_KEYS` | Injected by Supabase. The hand trigger's bearer is the `default` field. Do not print it and do not commit it. |
+| `CRON_SECRET` | Only for an `x-flow-cron` caller. The curl below uses the service role and does not send that header. |
+
+`SUPABASE_URL` is the project URL, `https://sxqpnetmtufkzowutduq.supabase.co`. From a shell that already has the service-role key in `SERVICE_ROLE_KEY`:
+
+```bash
+curl -sS -X POST "$SUPABASE_URL/functions/v1/jev-tag" \
+  -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"company_id":"COMPANY_UUID","limit":50}'
+```
+
+`company_id` is optional. Omit it, and send `{}` or no body, to label every enabled company up to the cap. A `company_id` that is not a UUID is 400 and does not call Jev. A wrong bearer is 401 and does not call Jev.
+
+The deploy step ships `jev-tag` with the same `supabase functions deploy` command as `flow-mcp`.
 
 `supabase/pending/20261004120000_jev_auto_mode.sql` allows `mode` `auto`. It is not in `supabase/migrations.lock`. Do not apply it until the migration slot is free.
