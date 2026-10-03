@@ -149,14 +149,16 @@ describe("Jev review one tap", () => {
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
-      expect(db.writes.map((call) => call.name)).toContain("resolve_review");
+      expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
     });
-    expect(db.writes.find((call) => call.name === "resolve_review")?.args).toEqual({
+    expect(db.writes.find((call) => call.name === "approve_review_item")?.args).toEqual({
       p_id: "r1",
-      p_action: "approved",
       p_project_id: "p1",
       p_category_id: "c1",
       p_remember: false,
+      p_check_shown: true,
+      p_shown_project_id: "p1",
+      p_shown_category_id: "c1",
     });
     expect(db.writes.some((call) => call.name === "record_jev_correction")).toBe(false);
     expect(db.seenIds.some((ids) => ids.includes("t1") && ids.includes("t2"))).toBe(true);
@@ -212,9 +214,9 @@ describe("Jev review one tap", () => {
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
-      expect(db.writes.map((call) => call.name)).toContain("resolve_review");
+      expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
     });
-    expect(db.writes.find((call) => call.name === "resolve_review")?.args).toMatchObject({
+    expect(db.writes.find((call) => call.name === "approve_review_item")?.args).toMatchObject({
       p_project_id: "p1",
       p_category_id: "c1",
     });
@@ -285,9 +287,9 @@ describe("Jev review one tap", () => {
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     fireEvent.click(approve);
     await waitFor(() => {
-      expect(db.writes.map((call) => call.name)).toContain("resolve_review");
+      expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
     });
-    expect(db.writes.find((call) => call.name === "resolve_review")?.args).toMatchObject({
+    expect(db.writes.find((call) => call.name === "approve_review_item")?.args).toMatchObject({
       p_project_id: "p-stored",
       p_category_id: "c-stored",
     });
