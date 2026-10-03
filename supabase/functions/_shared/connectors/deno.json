@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window"],
+    "strict": true
+  },
+  "imports": {
+    "zod": "npm:zod@4.6.5"
+  },
+  "lock": {
+    "path": "./deno.lock",
+    "frozen": true
+  }
+}
