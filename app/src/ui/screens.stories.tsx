@@ -318,6 +318,33 @@ export const ReviewBanner: Story = {
   ),
 };
 
+export const ReviewBannerOne: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 1, assistant_filed_today: false }]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewBannerAssistant: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 3, assistant_filed_today: true }]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewBannerAssistantOne: Story = {
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={1}>
+      <ExampleBar />
+      <ReviewQueue rows={[{ ...sampleReview, auto_approved_today: 1, assistant_filed_today: true }]} search="" sample />
+    </StoryRoute>
+  ),
+};
+
 const sampleFiled: FiledTodayRow[] = Array.from({ length: filedTodayCount }, (_, index) => ({
   id: index === 0 ? "t-filed" : `t-filed-${String(index)}`,
   description: index === 0 ? "מלט" : "חשבונית",
