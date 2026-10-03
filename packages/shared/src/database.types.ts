@@ -327,13 +327,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount_gross": number,"amount_net": number,"cash_date": string | null,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"id": string,"idempotency_key": string,"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_id": string | null,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"id": string,"idempotency_key": string,"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Insert: {
-                    "amount_gross": number,"amount_net": number,"cash_date"?: string | null,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"id"?: string,"idempotency_key": string,"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_id"?: string | null,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"id"?: string,"idempotency_key": string,"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Update: {
-                    "amount_gross"?: number,"amount_net"?: number,"cash_date"?: string | null,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"id"?: string,"idempotency_key"?: string,"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_id"?: string | null,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
+                    "amount_gross"?: number,"amount_net"?: number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"id"?: string,"idempotency_key"?: string,"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
                   }
                   Relationships: [
                     {
@@ -486,7 +486,7 @@ isOneToOne: true
 { Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number,"p_validated": boolean }; Returns: undefined
                            },
 "resolve_review":
-{ Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean }; Returns: undefined
+{ Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean,"p_resolve"?: boolean }; Returns: undefined
                            },
 "revoke_mcp_credential":
 { Args: { "p_id": string,"p_user": string }; Returns: Json
@@ -507,7 +507,7 @@ isOneToOne: true
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
                            },
 "set_transaction_category":
-{ Args: { "p_category_id": string,"p_id": string }; Returns: string
+{ Args: { "p_category_id": string,"p_id": string,"p_resolve"?: boolean }; Returns: string
                            },
 "stamp_sumit_sync":
 { Args: { "p_company": string }; Returns: undefined

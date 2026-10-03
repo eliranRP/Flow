@@ -43,6 +43,7 @@ const modulePatterns = [
   /[/\\]testing\.ts$/,
   /[/\\]reviewer-preview\./,
   /[/\\]reviewer-sample\./,
+  /[/\\]review-e2e-fixture\./,
 ];
 
 /**
@@ -90,6 +91,8 @@ export function violations(input) {
     }
     if (file.body.includes("new-")) found.push(`${file.name} contains a story id prefix`);
     if (file.body.includes("draft:")) found.push(`${file.name} contains a story id prefix`);
+    if (file.body.includes("מחסן הנמל")) found.push(`${file.name} contains the review e2e supplier מחסן הנמל`);
+    if (file.body.includes("e2e=list")) found.push(`${file.name} contains e2e=list`);
   }
   return found;
 }
