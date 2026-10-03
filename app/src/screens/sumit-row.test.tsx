@@ -760,7 +760,7 @@ describe("SUMIT status row", () => {
     expect(within(held).queryByText(/נסו שוב/)).not.toBeInTheDocument();
     expect(within(held).queryByText("עודכן")).not.toBeInTheDocument();
     expect(within(held).getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
-    expect(within(held).getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+    expect(within(held).getByText(/אפשר לנסות שוב(?: מחר)? ב-/)).toBeInTheDocument();
   });
 
   it("says the refresh failed when a rate limit has no retry time", async () => {
