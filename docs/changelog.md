@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector engine L1a, upsert. `upsert_connector_lines` writes a canonical line, skips a foreign source, and raises `sync_cursor_conflict` when the cursor moved. `upsert_sumit_documents` maps today's documents onto that engine and still returns the written count. `private.filed_today_rows()` still waits for MCP 3b.
+
 Connector engine L1a, tables. `connector_connections`, refresh requests, skips, and party refs replace the SUMIT tables. The old names stay as security-invoker views with instead-of triggers, and a still-sealed format 1 row stops the migration. Jobs are `flow-connector-daily` and `flow-connector-drain`. `private.filed_today_rows()` still waits for MCP 3b. Decisions [0085](decisions/0085-connector-engine.md) and [0086](decisions/0086-mercury.md).
 
 Connector engine L1a. The deploy job runs the read-only preflight, deploys `sumit-sync` and `sumit-connect`, invokes `sumit-reseal`, then pushes migrations. `envelope.ts` opens and seals format 3 (`company_id|provider`). Filed-today rows and review cards carry `currency`, `amount_original`, and `line_status`, and a pending line stays off שויכו היום. `private.is_connector_source` replaces the three `source = 'sumit'` filters. `excluded_from_pnl` seeds loan payments and transfers, and the same rows insert for existing companies with `on conflict (company_id, kind, name) do nothing`. `private.filed_today_rows()` waits for MCP 3b. Decisions [0085](decisions/0085-connector-engine.md) and [0086](decisions/0086-mercury.md).
