@@ -84,7 +84,7 @@ import { StatusPill } from "../ui/chip";
 import { formatDayMonth, formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { HoldLine } from "../ui/hold-line";
-import { BackButton, popSheetLayers, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
+import { BackButton, historyIndex, popSheetLayers, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
@@ -3367,7 +3367,13 @@ export function SettingsScreen({
     && !sumitNoCompany
     && (sumitRetrying || sumitPaused || (status.isError && status.data == null))
   );
-  useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef);
+  const sumitRowReady = phase.kind !== "loading"
+    && phase.kind !== "error"
+    && sample?.sumit !== "loading"
+    && sample?.sumit !== "error"
+    && !sumitShowsRetry
+    && !(sample == null && !sumitNoCompany && status.isLoading && !sumitRetrying);
+  useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef, sumitRowReady);
 
   useEffect(() => {
     if (!focusSumit) return;
@@ -3385,10 +3391,19 @@ export function SettingsScreen({
       ? sample.noCompany === true
       : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
     if (params.get("sheet") === "sumit") {
-      if (phase.kind === "loading" || phase.kind === "error") return;
-      if (sample == null && !noCo && status.isLoading) return;
+      if (phase.kind === "loading" || phase.kind === "error") {
+        adoptSheet.current = false;
+        return;
+      }
+      if (sample == null && !noCo && status.isLoading) {
+        adoptSheet.current = false;
+        return;
+      }
       const companySettling = sample == null && preview === "off" && dashboard.isFetching && dashboard.data?.company_id == null;
-      if (companySettling) return;
+      if (companySettling) {
+        adoptSheet.current = false;
+        return;
+      }
       wantSheet.current = true;
       const next = new URLSearchParams(params);
       next.delete("sheet");
@@ -3409,7 +3424,10 @@ export function SettingsScreen({
     });
     sheetApplied.current = true;
     wantSheet.current = false;
-    if (opened === "connected" || opened === "reconnect" || opened === "disconnected") adoptSheet.current = true;
+    if (opened === "connected" || opened === "reconnect" || opened === "disconnected") {
+      const earlier = historyIndex();
+      adoptSheet.current = earlier != null && earlier > 0;
+    }
     if (opened === "connected") setStatusOpen(true);
     else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
   }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data]);

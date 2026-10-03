@@ -131,6 +131,9 @@ export function useSheetHistory(
     }
     if (pushed.current || layer === name || pushingLayer) {
       if (layer === name) pushed.current = true;
+      // The closed sibling sheet runs first and must not drop a shared flag.
+      // A push already in flight still needs the flag on its next run.
+      if (!pushingLayer && adopt) adopt.current = false;
       return;
     }
     pushingLayer = true;

@@ -400,7 +400,7 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
 test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "חיבור עוזר" });
+  const sheet = page.getByRole("dialog", { name: "חיבור עוזר AI" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("radio", { name: "קריאה בלבד" }).click();
   await expect(sheet.getByRole("radio", { name: "קריאה בלבד" })).toBeChecked();
@@ -432,7 +432,7 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  const narrow = page.getByRole("dialog", { name: "חיבור עוזר" });
+  const narrow = page.getByRole("dialog", { name: "חיבור עוזר AI" });
   await expect(narrow).toBeVisible();
   const clipped = await page.evaluate(() => {
     const view = document.documentElement;
