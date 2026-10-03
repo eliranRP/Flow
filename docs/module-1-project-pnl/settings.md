@@ -1,6 +1,21 @@
 # Flow — Settings (Draft)
 
-The visible screen follows [0082](../decisions/0082-settings-redesign.md). This page is the old wireframe and is not the build.
+The visible screen follows [0082](../decisions/0082-settings-redesign.md). Cycle 3 is the SUMIT row in חיבורים. This page below that section is the old wireframe and is not the build.
+
+### SUMIT row
+
+The row title is SUMIT, with the document icon. Every settled state is one hint and one sheet, except the load error, which does not open a sheet.
+
+| State | Hint | What opens |
+| --- | --- | --- |
+| Connected | מחובר | The SUMIT sheet: status, רענון עכשיו, ניתוק |
+| Not connected, with a company | לא מחובר | The connect form: מספר חברה, מפתח API, חיבור |
+| Not connected, no company | לא מחובר | "כדי לחבר את SUMIT צריך עסק." and פרטי העסק. No key form |
+| Key rejected (`sumit_auth`) | צריך לחבר מחדש | A sheet titled SUMIT: "המזהה או המפתח לא התקבלו", the key form with primary חיבור מחדש, then ניתוק |
+| Status failed to load | לא הצלחנו לטעון | Nothing. ניסיון חוזר refetches the status only |
+| Loading | a skeleton bar | Nothing. It is not focusable and it does not say מחובר |
+
+A sync failure that is not the key keeps מחובר. While רענון עכשיו is held, the sheet says הרענון נכשל and the retry time, with no "נסו שוב". A last-sync time on the status is "עודכן ב-HH:MM" on the status line; a missing time is omitted. Starting the company from that sheet returns only to `/settings?sheet=sumit`. Any other `return` finishes on Home. Opening from `?sheet=sumit` removes that param.
 
 **Status: Draft.** The wireframe is [14-settings](screens.md#14-settings), pending owner approval. This screen is not approved. It does not override decisions 0001–0022. [Settings contents](../open-questions.md) stay open until the wireframe is accepted or replaced. The after-overhead default below is decided.
 

@@ -21,6 +21,19 @@ export function hebrewSumitError(code: string | null | undefined): string | null
   return SUMIT_ERRORS[code] ?? "החיבור נכשל. נסו שוב.";
 }
 
+/** Israel clock, HH:MM. An unreadable time stays silent. */
+export function israelClock(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return null;
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(at));
+}
+
 /** Israel clock for a future retry. A past or empty time stays silent. The next Israel date says מחר. */
 export function retryClockParts(
   iso: string | null | undefined,
@@ -30,12 +43,8 @@ export function retryClockParts(
   const at = Date.parse(iso);
   if (!Number.isFinite(at) || at <= now) return null;
   const zone = "Asia/Jerusalem";
-  const clock = new Intl.DateTimeFormat("en-GB", {
-    timeZone: zone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(new Date(at));
+  const clock = israelClock(iso);
+  if (clock == null) return null;
   const day = new Intl.DateTimeFormat("en-CA", {
     timeZone: zone,
     year: "numeric",
