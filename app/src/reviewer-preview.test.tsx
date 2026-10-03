@@ -74,7 +74,7 @@ describe("reviewer sample saves", () => {
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeDisabled();
     expect(getComputedStyle(approve).cursor).toBe("not-allowed");
-    expect(screen.getByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
+    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
   });
 
   it("opens the sample split for a shared cost", async () => {

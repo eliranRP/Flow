@@ -1,10 +1,22 @@
 # Changelog
 
+## 2026-10-03
+
+Review queue, round 4. A SUMIT sync keeps a line pick: `category_assigned` owns the category, and a project pick keeps the project, the role, the allocations, and the overhead row. Picking the suggested category clears הצעה. אישור on a shared or split card still calls `approve_split_review`, because `resolve_review` raises. A confirmation toast stays under the header after the sheet closes. Decision [0081](decisions/0081-review-queue-list.md).
+
+Review queue, round 3. A project pick from a card line removes the overhead row and refuses a shared cost, on the same guard as אישור. A field-only save owns only that field: `project_assigned` marks the project, and the other line keeps הצעה. The line-pick toast sits under the header. Focus returns to the line on a list-opened card. ✕ on a picker that is not a card line returns to the summary. Decision [0081](decisions/0081-review-queue-list.md).
+
 ## 2026-10-02
 
 Settings becomes one screen: the account row, חיבורים, תצוגה, and עוד. The footer is "Flow 0.1". Three disabled switches and the פרויקטים row leave the screen. SUMIT and עוזר each open one sheet, and a failed status is one "ניסיון חוזר". Decision [0082](decisions/0082-settings-redesign.md) amends the Settings section of [0080](decisions/0080-mcp-connector.md). The screen is unchanged in this record. 0081 stays the review-queue list.
 
-Clip-check measures each text node on the nearest ancestor that is not `display: inline` or `display: contents`, once per container. A `<bdi>` in a hint, mixed text, and `<p><bdi class="ui-num">` are that container's clip. Only the `clip-no-text` tag skips a story. A pass names the skipped stories. One view says "1 story view". A setup failure deletes a stale crash report. `ui-pick-label` on `screens-routes--change-project-picker` stays in UI polish. Unpaid-list clips only at 320, as two hints that should use `wrapHint`.
+Review queue, round 2. The in-memory review fixture stays on the dev server and is absent from the hosted bundle. A pick from a card line saves only that field (`resolve_review` with `p_resolve` false) and leaves the item open, so the card stays and shows the new value. The queue address advances only on `/review`. A confirmation toast sits under the header, not on the tab bar. Decision [0081](decisions/0081-review-queue-list.md).
+
+Review queue, round 1. אישור from a list card keeps the following item in the address, so the third step does not jump back to the oldest. A picker opened from a card line returns to that card. הצג הכול sits at the end of the "N מתוך M" row, and the project and category lines are one row tall. A list card shows its place, not the progress bar. After the last item, Back goes to `/review`. Decision [0081](decisions/0081-review-queue-list.md).
+
+The review queue lists every pending item. הצג הכול sits under the progress bar and opens `/review/all`. A row opens that item's card, and אישור then continues with the item that followed it. The project and category lines open the picker, and the notes say הקישו לבחירה. The split title stays "מפוצל · N פרויקטים". Decision [0081](decisions/0081-review-queue-list.md).
+
+Clip-check measures each text node on the nearest ancestor that is not `display: inline` or `display: contents`, once per container. A `<bdi>` in a hint, mixed text, and `<p><bdi class="ui-num">` are that container's clip. Only the `clip-no-text` tag skips a story. A pass names the skipped stories. One view says "1 story view". A setup failure deletes a stale crash report. `ui-pick-label` on `screens-routes--change-project-picker` stays in UI polish. Unpaid-list clips only at 320, as two hints that should use `wrapHint`. An inline box is as wide as its text and never clips, so the check measures the block around it. [PITFALLS.md](review/PITFALLS.md).
 
 Clip-check measures every element that holds its own text, and skips a story tagged `clip-no-text`. A crash report keeps the views measured before the crash. The clip count is a count of views. `screens-routes--unpaid-list` and `screens-routes--add-sheet` hints stay for UI polish, where they should wrap with `.ui-row-hint-wrap`.
 
