@@ -16,6 +16,29 @@ function rules(text) {
     .filter((line) => line.length > 0 && !line.startsWith("#"));
 }
 
+/** Production routes from App.tsx. `/` is index.html. Dev and reviewer routes are not shipped. */
+function productionRoutes(source) {
+  const shipped = source.replace(/\{import\.meta\.env\.DEV \? \([\s\S]*?\) : null\}/, "");
+  const paths = new Set();
+  for (const match of shipped.matchAll(/path="([^"]+)"/g)) {
+    const route = match[1].startsWith("/") ? match[1] : `/${match[1]}`;
+    paths.add(route);
+  }
+  return [...paths].sort();
+}
+
+function headerRules(text) {
+  return text
+    .split("\n")
+    .filter((line) => line.startsWith("/"))
+    .map((line) => line.trim());
+}
+
+function headerCovers(route, blocks) {
+  if (blocks.includes(route)) return true;
+  return blocks.some((block) => block.endsWith("/*") && route.startsWith(block.slice(0, -1)));
+}
+
 test("the Pages fallback lists app routes and does not use the rejected splat", () => {
   const vite = readFileSync(path.join(root, "app/vite.config.ts"), "utf8");
   assert.equal(vite.includes("/*  /index.html  200"), false);
@@ -31,6 +54,19 @@ test("the Pages fallback lists app routes and does not use the rejected splat", 
   }
   assert.match(headers, /^\/settings\n {2}Content-Type: text\/html/m);
   assert.equal(headers.includes("\n/*\n"), false);
+});
+
+test("every production route is listed in _redirects and covered by _headers", () => {
+  const routes = productionRoutes(readFileSync(path.join(root, "app/src/App.tsx"), "utf8"));
+  assert.ok(routes.includes("/settings"));
+  assert.equal(routes.includes("/e2e/home"), false);
+  assert.equal(routes.includes("/reviewer/*"), false);
+  const sources = new Set(rules(redirects).map((line) => line.split(/\s+/)[0]));
+  const blocks = headerRules(headers);
+  const missingRedirect = routes.filter((route) => !sources.has(route));
+  const missingHeader = routes.filter((route) => !headerCovers(route, blocks));
+  assert.deepEqual(missingRedirect, []);
+  assert.deepEqual(missingHeader, []);
 });
 
 test("a deep link is 200 HTML, and a missing asset stays 404", async () => {
