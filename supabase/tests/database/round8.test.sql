@@ -162,7 +162,7 @@ select throws_ok(
 );
 
 select function_privs_are(
-  'public', 'set_transaction_category', array['uuid', 'uuid'], 'anon', array[]::text[],
+  'public', 'set_transaction_category', array['uuid', 'uuid', 'boolean'], 'anon', array[]::text[],
   'anon cannot set a category'
 );
 
