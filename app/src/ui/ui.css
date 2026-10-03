@@ -570,6 +570,10 @@ a.ui-row,
   background: var(--color-surface);
 }
 
+.ui-code-field-box[data-copy="off"] .ui-code-field-input {
+  padding-inline-end: var(--field-pad);
+}
+
 .ui-assistant-step {
   min-block-size: 22rem;
 }

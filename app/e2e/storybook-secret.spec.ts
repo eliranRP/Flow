@@ -28,7 +28,7 @@ test("select-all on the shown-once secret yields the code", async ({ page }) => 
       },
     });
   });
-  const copy = page.getByRole("group", { name: "קוד" }).getByRole("button", { name: "העתקה" });
+  const copy = page.getByRole("group", { name: "קוד" }).getByRole("button", { name: "העתקה: קוד" });
   const copyBox = await copy.boundingBox();
   if (copyBox == null) throw new Error("copy has no box");
   expect(copyBox.width).toBeGreaterThanOrEqual(44);

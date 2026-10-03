@@ -62,16 +62,26 @@ export function BigNumber({ agorot, presentation = "summary", size, loss = false
     host.style.visibility = "hidden";
     host.appendChild(probe);
     document.body.appendChild(host);
-    const measure = () => {
-      const style = getComputedStyle(column);
+    const pads = new Map<HTMLElement, number>();
+    const readPad = (el: HTMLElement) => {
+      const style = getComputedStyle(el);
       const pad = (Number.parseFloat(style.paddingInlineStart) || 0) + (Number.parseFloat(style.paddingInlineEnd) || 0);
-      let content = column.clientWidth - pad;
-      let walker: HTMLElement | null = column.parentElement;
-      while (walker && walker !== document.documentElement) {
-        const parentStyle = getComputedStyle(walker);
-        const parentPad = (Number.parseFloat(parentStyle.paddingInlineStart) || 0) + (Number.parseFloat(parentStyle.paddingInlineEnd) || 0);
-        if (walker.clientWidth > 0) content = Math.min(content, walker.clientWidth - parentPad);
-        walker = walker.parentElement;
+      pads.set(el, pad);
+    };
+    const chain: HTMLElement[] = [column];
+    readPad(column);
+    let walker: HTMLElement | null = column.parentElement;
+    while (walker && walker !== document.documentElement) {
+      readPad(walker);
+      chain.push(walker);
+      walker = walker.parentElement;
+    }
+    const measure = () => {
+      let content = column.clientWidth - (pads.get(column) ?? 0);
+      for (const ancestor of chain) {
+        if (ancestor === column) continue;
+        const pad = pads.get(ancestor) ?? 0;
+        if (ancestor.clientWidth > 0) content = Math.min(content, ancestor.clientWidth - pad);
       }
       const widthOf = (typeClass: string) => {
         probe.className = `ui-num ${typeClass}`;
@@ -89,7 +99,7 @@ export function BigNumber({ agorot, presentation = "summary", size, loss = false
     };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(column);
+    for (const ancestor of chain) observer.observe(ancestor);
     let cancelled = false;
     // jsdom has no FontFaceSet. The assertion is the runtime check.
     const fonts = document.fonts as FontFaceSet | undefined;

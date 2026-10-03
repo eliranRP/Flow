@@ -1125,7 +1125,6 @@ export function ReviewQueue({
   homeLabel,
   onShared,
   listPlace,
-  autoCount,
 }: {
   rows: ReviewRow[];
   search: string;
@@ -1145,8 +1144,6 @@ export function ReviewQueue({
   homeLabel?: string;
   /** Preview opens its own split instead of the ledger split. */
   onShared?: (transactionId: string) => void;
-  /** Reviewer preview counts the live filed list, including a split approved on this visit. */
-  autoCount?: number;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -1179,7 +1176,8 @@ export function ReviewQueue({
           || next.category_suggested !== shown.category_suggested
           || next.project_suggested !== shown.project_suggested
           || next.project_name !== shown.project_name
-          || next.share_count !== shown.share_count)
+          || next.share_count !== shown.share_count
+          || next.auto_approved_today !== shown.auto_approved_today)
       ) {
         setShown(next);
       }
@@ -1287,7 +1285,7 @@ export function ReviewQueue({
   function openCategory() {
     void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
   }
-  const auto = autoCount ?? card.auto_approved_today ?? 0;
+  const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
   const total = listPlace?.total ?? Math.max(visit.current.total, 1);
   const index = listPlace?.index ?? (row ? total - rows.length + 1 : total);

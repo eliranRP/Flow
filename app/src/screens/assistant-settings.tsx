@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useRefreshingNow } from "../israel-clock";
@@ -9,11 +9,11 @@ import { popSheetLayers, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { AlertIcon, CopyIcon, LogoutIcon, SparkIcon } from "../ui/icons";
+import { CodeField, type CopyTarget } from "../ui/code-field";
+import { AlertIcon, LogoutIcon, SparkIcon } from "../ui/icons";
 import { FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
-import { IconButton } from "../ui/icon-button";
 import { Sheet } from "../ui/sheet";
 import { Skeleton } from "../ui/skeleton";
 import { TextLink } from "../ui/text-link";
@@ -50,61 +50,11 @@ const HELP_LEAD = "ב־Claude Code הריצו את הפקודה.";
 const CLAUDE_WEB = "ב־Claude.ai צריך כותרת מותאמת";
 const CLAUDE_HEADER = "Authorization: Bearer <הקוד>.";
 
-type CopyField = "url" | "secret" | "command";
-
 function scopeChoice(scope: string[] | undefined): AssistantScope {
   return scope?.includes("write") ? "read_write" : "read";
 }
 
 const COMMAND_FIELD = "פקודת חיבור ל־Claude Code";
-
-function CopyField({
-  label,
-  labelId,
-  fieldLabel,
-  value,
-  valueRef,
-  failed,
-  onCopy,
-}: {
-  label?: string;
-  labelId?: string;
-  fieldLabel?: string;
-  value: string;
-  valueRef?: RefObject<HTMLInputElement | null>;
-  failed: boolean;
-  onCopy: () => void;
-}) {
-  const named = label != null && labelId != null;
-  const control = (
-    <>
-      {named ? <p className="ui-field-label" id={labelId}>{label}</p> : null}
-      <div className="ui-code-field-box">
-        <input
-          ref={valueRef}
-          className="ui-field-control ui-code-field-input"
-          readOnly
-          dir="ltr"
-          value={value}
-          aria-label={named ? undefined : fieldLabel}
-          aria-labelledby={named ? labelId : undefined}
-          spellCheck={false}
-          data-vaul-no-drag=""
-        />
-        <IconButton label="העתקה" className="ui-code-field-copy" onClick={onCopy}>
-          <CopyIcon />
-        </IconButton>
-      </div>
-      {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
-    </>
-  );
-  if (!named) return <div className="ui-code-field">{control}</div>;
-  return (
-    <div className="ui-code-field" role="group" aria-labelledby={labelId}>
-      {control}
-    </div>
-  );
-}
 
 function scopeLabel(scope: AssistantScope): string {
   return scope === "read" ? "קריאה בלבד" : "קריאה וכתיבה";
@@ -185,7 +135,7 @@ export function AssistantSettings({
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
   const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
-  const [manualField, setManualField] = useState<CopyField | null>(null);
+  const [manualField, setManualField] = useState<CopyTarget | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [intro, setIntro] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -240,12 +190,12 @@ export function AssistantSettings({
   closeConnectRef.current = closeSheet;
 
   function finishConnectClose() {
-    if (openRef.current) return;
+    const reopened = openRef.current;
     setMintError(false);
     setManualField(null);
     setSecret(null);
     setChoice("read_write");
-    setIntro(false);
+    if (!reopened) setIntro(false);
   }
 
   async function mint() {
@@ -278,7 +228,7 @@ export function AssistantSettings({
     }
   }
 
-  async function copyValue(field: CopyField, value: string, node: HTMLInputElement | null) {
+  async function copyValue(field: CopyTarget, value: string, node: HTMLInputElement | null) {
     try {
       await navigator.clipboard.writeText(value);
       setManualField(null);
@@ -469,20 +419,22 @@ export function AssistantSettings({
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p className="t-hint">{scopeShownOnce(scopeChoice(secret.scope))}</p>
-            <CopyField
+            <CodeField
               label="כתובת"
               labelId="assistant-url-label"
               value={mcpUrl}
               valueRef={urlRef}
               failed={manualField === "url"}
+              copyLabel="העתקה: כתובת"
               onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
             />
-            <CopyField
+            <CodeField
               label="קוד"
               labelId="assistant-secret-label"
               value={secret.secret}
               valueRef={secretRef}
               failed={manualField === "secret"}
+              copyLabel="העתקה: קוד"
               onCopy={() => { void copyValue("secret", secret.secret, secretRef.current); }}
             />
             {urlReady ? (
@@ -540,16 +492,17 @@ export function AssistantSettings({
         <div className="ui-stack">
           <p>{HELP_LEAD}</p>
           {command !== "" ? (
-            <CopyField
+            <CodeField
               fieldLabel={COMMAND_FIELD}
               value={command}
               valueRef={commandRef}
               failed={manualField === "command"}
+              copyLabel="העתקה: פקודה"
               onCopy={() => { void copyValue("command", command, commandRef.current); }}
             />
           ) : null}
           <p className="t-hint">{INSTALL_HINT}</p>
-          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr" className="ui-nowrap ui-assistant-header" data-vaul-no-drag="">{CLAUDE_HEADER}</bdi></p>
+          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr" tabIndex={-1} className="ui-nowrap ui-assistant-header" data-vaul-no-drag="">{CLAUDE_HEADER}</bdi></p>
         </div>
       </Sheet>
       <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI" returnFocusRef={rowRef}>
