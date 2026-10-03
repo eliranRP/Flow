@@ -209,6 +209,11 @@ export function reviewerFiledView(): FiledTodayRow[] {
   return filedViewCache;
 }
 
+/** Every שויכו היום row, including the seeded split and one approved on this visit. */
+export function reviewerFiledCount(): number {
+  return reviewerFiledView().length;
+}
+
 export function reviewerSharesFor(id: string): readonly ReviewerShare[] | null {
   if (id === reviewerApprovedSplitId) return reviewerApprovedShares;
   return filedShares.get(id) ?? null;
@@ -287,8 +292,8 @@ export function reviewerBooks() {
     profit,
     shared: reviewerSharedAgorot,
     otherIncome: reviewerOtherIncomeAgorot,
-    filedCount: reviewerFiled.length,
-    bannerCount: reviewerQueue[0]?.auto_approved_today ?? 0,
+    filedCount: reviewerFiledCount(),
+    bannerCount: reviewerFiledCount(),
     split,
     splitSum: split.reduce((sum, part) => sum + part.agorot, 0n),
     bpSum: split.reduce((sum, part) => sum + part.bp, 0),
@@ -305,7 +310,7 @@ export function reviewerBooksAddUp(): boolean {
     && books.projectExpenses === books.approved + books.waiting
     && books.profit === books.income - books.projectExpenses
     && books.filedCount === books.bannerCount
-    && books.bannerCount === reviewerFiled.length
+    && books.bannerCount === reviewerFiledCount()
     && books.splitSum === books.shared
     && books.bpSum === 10000
     && books.queueTotal === books.shared + books.waiting
