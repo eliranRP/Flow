@@ -734,33 +734,72 @@ describe("SUMIT status row", () => {
     expect(stamp?.textContent.startsWith(" ·")).toBe(true);
     unmount();
 
-    rpc.impl = (name) => {
-      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
-      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
-      if (name === "sumit_status") {
-        return Promise.resolve({
-          data: sumit({
-            connected: true,
-            sumit_company_id: 1001,
-            last_error: "rate_limited",
-            next_attempt_at: new Date(Date.now() + 60 * 60_000).toISOString(),
-          }),
-          error: null,
-        });
-      }
-      return Promise.resolve({ data: null, error: null });
-    };
-    renderSettings();
-    const row = await screen.findByRole("button", { name: "SUMIT" });
-    expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר");
-    fireEvent.click(row);
-    const held = screen.getByRole("dialog", { name: "SUMIT" });
-    expect(within(held).getByText("הרענון נכשל")).toBeInTheDocument();
-    expect(within(held).queryByText("החיבור נכשל")).not.toBeInTheDocument();
-    expect(within(held).queryByText(/נסו שוב/)).not.toBeInTheDocument();
-    expect(within(held).queryByText("עודכן")).not.toBeInTheDocument();
-    expect(within(held).getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
-    expect(within(held).getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 12:00 in Asia/Jerusalem. An hour later is still today, so the hint has no מחר.
+    vi.setSystemTime(new Date("2026-10-03T09:00:00.000Z"));
+    try {
+      rpc.impl = (name) => {
+        if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+        if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+        if (name === "sumit_status") {
+          return Promise.resolve({
+            data: sumit({
+              connected: true,
+              sumit_company_id: 1001,
+              last_error: "rate_limited",
+              next_attempt_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+            }),
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: null, error: null });
+      };
+      renderSettings();
+      const row = await screen.findByRole("button", { name: "SUMIT" });
+      expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר");
+      fireEvent.click(row);
+      const held = screen.getByRole("dialog", { name: "SUMIT" });
+      expect(within(held).getByText("הרענון נכשל")).toBeInTheDocument();
+      expect(within(held).queryByText("החיבור נכשל")).not.toBeInTheDocument();
+      expect(within(held).queryByText(/נסו שוב/)).not.toBeInTheDocument();
+      expect(within(held).queryByText("עודכן")).not.toBeInTheDocument();
+      expect(within(held).getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
+      expect(within(held).getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+      expect(within(held).queryByText(/מחר/)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("says מחר when a held refresh is at 23:30 Israel time", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 23:30 in Asia/Jerusalem. An hour later is 00:30 the next Israel date.
+    vi.setSystemTime(new Date("2026-10-03T20:30:00.000Z"));
+    try {
+      rpc.impl = (name) => {
+        if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+        if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+        if (name === "sumit_status") {
+          return Promise.resolve({
+            data: sumit({
+              connected: true,
+              sumit_company_id: 1001,
+              last_error: "rate_limited",
+              next_attempt_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+            }),
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: null, error: null });
+      };
+      renderSettings();
+      fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+      const held = screen.getByRole("dialog", { name: "SUMIT" });
+      expect(within(held).getByText(/אפשר לנסות שוב מחר ב-/)).toBeInTheDocument();
+      expect(within(held).getByText("00:30")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("says the refresh failed when a rate limit has no retry time", async () => {
