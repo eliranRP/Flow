@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { israelSyncPhrase } from "../sumit-copy";
+import { israelSyncPhrase, retryClockParts } from "../sumit-copy";
 import { OnboardingScreen, SettingsScreen } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
@@ -734,6 +734,9 @@ describe("SUMIT status row", () => {
     expect(stamp?.textContent.startsWith(" ·")).toBe(true);
     unmount();
 
+    const retryAt = new Date(Date.now() + 60 * 60_000).toISOString();
+    const retry = retryClockParts(retryAt);
+    if (retry == null) throw new Error("missing retry clock");
     rpc.impl = (name) => {
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
@@ -743,7 +746,7 @@ describe("SUMIT status row", () => {
             connected: true,
             sumit_company_id: 1001,
             last_error: "rate_limited",
-            next_attempt_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+            next_attempt_at: retryAt,
           }),
           error: null,
         });
@@ -760,7 +763,8 @@ describe("SUMIT status row", () => {
     expect(within(held).queryByText(/נסו שוב/)).not.toBeInTheDocument();
     expect(within(held).queryByText("עודכן")).not.toBeInTheDocument();
     expect(within(held).getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
-    expect(within(held).getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+    expect(within(held).getByText(retry.tomorrow ? /אפשר לנסות שוב מחר ב-/ : /אפשר לנסות שוב ב-/)).toBeInTheDocument();
+    expect(within(held).getByText(retry.clock)).toBeInTheDocument();
   });
 
   it("says the refresh failed when a rate limit has no retry time", async () => {
