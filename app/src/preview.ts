@@ -42,6 +42,14 @@ export function useFlowSearch(): string {
   return value ? `?${value}` : "";
 }
 
+/** Keeps the current preview on a return path that does not already carry one. */
+export function keepPreview(path: string, previewSearch: string): string {
+  if (previewSearch === "" || path.includes("preview=")) return path;
+  const query = previewSearch.startsWith("?") ? previewSearch.slice(1) : previewSearch;
+  if (query === "") return path;
+  return `${path}${path.includes("?") ? "&" : "?"}${query}`;
+}
+
 /** Keeps the current preview flag on in-app links. Empty when signed in for real. */
 export function usePreviewSearch(): string {
   const [params] = useSearchParams();

@@ -820,6 +820,9 @@ describe("SUMIT status row", () => {
       expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
       expect(within(group).getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
+      act(() => { onlineManager.setOnline(true); });
+      expect(within(group).queryByText("אין חיבור לאינטרנט")).not.toBeInTheDocument();
+      expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
     } finally {
       onlineManager.setOnline(true);
     }
@@ -1066,5 +1069,58 @@ describe("SUMIT status row", () => {
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "חיבור מחדש" })).not.toBeInTheDocument();
     expect(screen.queryByText("פג תוקף")).not.toBeInTheDocument();
+  });
+
+  it("keeps preview when the onboarding header returns to settings", async () => {
+    function Place() {
+      const location = useLocation();
+      return <p>{`${location.pathname}${location.search}`}</p>;
+    }
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/onboarding?preview=1&return=/settings"]}>
+              <Routes>
+                <Route path="/onboarding" element={<OnboardingScreen />} />
+                <Route path="/settings" element={<h1>הגדרות</h1>} />
+                <Route path="/" element={<h1>בית</h1>} />
+              </Routes>
+              <Place />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
+    expect(screen.getByText("/settings?preview=1")).toBeInTheDocument();
+  });
+
+  it("returns focus to the SUMIT row and to ניתוק", async () => {
+    const { unmount } = renderSettings(
+      <SettingsScreen sample={{ name: "אלפא", connected: false, companyId: null, lastError: null }} />,
+    );
+    const row = screen.getByRole("button", { name: "SUMIT" });
+    fireEvent.click(row);
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(row).toHaveFocus(); });
+    unmount();
+
+    renderSettings(
+      <SettingsScreen sample={{ name: "אלפא", connected: true, companyId: 1001, lastError: null, lastSyncAt: "2026-09-30T11:05:00.000Z" }} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+    const sheet = await screen.findByRole("dialog", { name: "SUMIT" });
+    const line = within(sheet).getByText((_, node) => node != null && node.tagName === "P" && node.textContent.includes("מחובר"));
+    expect(line.textContent.trim().endsWith("·")).toBe(false);
+    const chunks = [...line.querySelectorAll(".ui-nowrap")].map((node) => node.textContent);
+    expect(chunks.some((chunk) => chunk.startsWith(" ·"))).toBe(true);
+    const disconnect = within(sheet).getByRole("button", { name: "ניתוק" });
+    fireEvent.click(disconnect);
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לנתק את SUMIT?" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(disconnect).toHaveFocus(); });
   });
 });

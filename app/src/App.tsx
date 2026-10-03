@@ -13,7 +13,7 @@ import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
-import { BackButton, ScrollMemory, useGoBack } from "./ui/back";
+import { BackButton, DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { Button } from "./ui/button";
 import { CheckIcon } from "./ui/icons";
 import { ProgressBar } from "./ui/progress-bar";
@@ -64,6 +64,7 @@ export function App() {
       <BooksProvider>
         <ThemeColor />
         <ScrollMemory />
+        <DropRestoredSheet />
         <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
           <AppRoutes />
         </div>

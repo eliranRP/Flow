@@ -39,21 +39,42 @@ function previousIsraelDay(now: number): string {
   return israelDayKey(probe);
 }
 
-/**
- * Last-sync phrase in Israel time. Today is a clock, yesterday names אתמול,
- * and an older day is D.M. An unreadable time stays silent.
- */
-export function israelSyncPhrase(iso: string | null | undefined, now = Date.now()): string | null {
-  if (!iso) return null;
+/** Today is a clock, yesterday names אתמול, and an older day is D.M. */
+function israelWhen(iso: string, now: number, lead: string): string | null {
   const at = Date.parse(iso);
   if (!Number.isFinite(at)) return null;
   const clock = israelClock(iso);
   const day = israelDayKey(at);
   if (clock == null) return null;
-  if (day === israelDayKey(now)) return `עודכן ב-${clock}`;
-  if (day === previousIsraelDay(now)) return `עודכן אתמול ב-${clock}`;
+  if (day === israelDayKey(now)) return `${lead} ב-${clock}`;
+  if (day === previousIsraelDay(now)) return `${lead} אתמול ב-${clock}`;
   const [, month, date] = day.split("-");
-  return `עודכן ב-${String(Number(date))}.${String(Number(month))}`;
+  return `${lead} ב-${String(Number(date))}.${String(Number(month))}`;
+}
+
+/** Last-sync phrase in Israel time. Today is a clock, yesterday names אתמול, and an older day is D.M. */
+export function israelSyncPhrase(iso: string | null | undefined, now = Date.now()): string | null {
+  if (!iso) return null;
+  return israelWhen(iso, now, "עודכן");
+}
+
+/** Last assistant use, with the same today / yesterday / D.M rules. */
+export function israelUsePhrase(iso: string | null | undefined, now = Date.now()): string | null {
+  if (!iso) return null;
+  return israelWhen(iso, now, "שימוש אחרון");
+}
+
+/** Milliseconds until the Israel calendar day changes. At least one second. */
+export function msUntilNextIsraelDay(now = Date.now()): number {
+  const today = israelDayKey(now);
+  let lo = now;
+  let hi = now + 26 * 60 * 60 * 1000;
+  while (hi - lo > 1000) {
+    const mid = lo + Math.floor((hi - lo) / 2);
+    if (israelDayKey(mid) === today) lo = mid;
+    else hi = mid;
+  }
+  return Math.max(1000, hi - now);
 }
 
 /** Israel clock, HH:MM. An unreadable time stays silent. */

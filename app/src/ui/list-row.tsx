@@ -38,7 +38,7 @@ type Common = {
   skelHint?: boolean;
   /** The hint is a polite status, so a failure is announced. */
   hintStatus?: boolean;
-  /** The title is a heading. The expired assistant sheet uses it. */
+  /** The title is a heading. Only a static row uses it. The expired assistant sheet does. */
   heading?: boolean;
 };
 
@@ -49,7 +49,7 @@ export type ListRowProps =
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
-  | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
+  | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
 export function ListRow(props: ListRowProps) {
@@ -97,8 +97,6 @@ export function ListRow(props: ListRowProps) {
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
           {props.heading && blockCopy ? (
             <h3 className={titleClass} dir={titleDir}>{titleBody}</h3>
-          ) : props.heading ? (
-            <span role="heading" aria-level={3} className={titleClass} dir={titleDir}>{titleBody}</span>
           ) : (
             <span className={titleClass} dir={titleDir}>{titleBody}</span>
           )}
@@ -161,6 +159,7 @@ export function ListRow(props: ListRowProps) {
   if (props.variant === "danger") {
     return (
       <button
+        ref={props.buttonRef}
         type="button"
         className="ui-row ui-hit ui-row-danger"
         disabled={props.disabled === true || props.busy === true}
