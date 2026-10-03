@@ -569,6 +569,13 @@ describe("assistant settings", () => {
     expect(within(sheet).queryByText("בלי כתיבה")).not.toBeInTheDocument();
   });
 
+  it("focuses the code title when the code step replaces the scope step", async () => {
+    renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "יצירת קוד" }));
+    expect(screen.getByRole("heading", { name: "הקוד מוכן" })).toHaveFocus();
+  });
+
   it("returns focus to the row on close and on Escape", async () => {
     renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
     const row = screen.getByRole("button", { name: "עוזר AI" });
