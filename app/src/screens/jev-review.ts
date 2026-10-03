@@ -158,32 +158,101 @@ export function jevQueueQueryKey(transactionIds: readonly string[]) {
   return ["jev-review-queue", jevQueueKey(transactionIds)] as const;
 }
 
-export async function loadJevQueue(transactionIds: readonly string[]): Promise<JevQueueData> {
+/** Separate from the suggestion read, so a company with Jev off never waits on the card. */
+export const jevConnectorQueryKey = ["jev-connector"] as const;
+
+export const JEV_CONNECTOR_STALE_MS = 5 * 60 * 1000;
+
+/** A hung read gives the card back. Longer than this, the card keeps today's values. */
+export const JEV_READ_MS = 1000;
+
+const JEV_OFF_QUEUE: JevQueueData = { connectorOn: false, byId: {} };
+
+function abortError(reason?: unknown): Error {
+  return reason instanceof Error ? reason : new DOMException("The operation was aborted.", "AbortError");
+}
+
+function signalled<T>(query: T, signal?: AbortSignal): T {
+  if (signal == null || query == null || typeof query !== "object") return query;
+  const candidate = query as { abortSignal?: (next: AbortSignal) => T };
+  if (typeof candidate.abortSignal !== "function") return query;
+  return candidate.abortSignal(signal);
+}
+
+/**
+ * One second, no retry. A stall returns `fallback`. The caller's abort still rejects
+ * so React Query can drop the read when the card unmounts.
+ */
+export function withJevDeadline<T>(
+  caller: AbortSignal | undefined,
+  work: (signal: AbortSignal) => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  if (caller?.aborted) return Promise.reject(abortError(caller.reason));
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, JEV_READ_MS);
+  const onCaller = () => {
+    controller.abort(caller?.reason);
+  };
+  caller?.addEventListener("abort", onCaller, { once: true });
+  const attempt = work(controller.signal).then(
+    (value) => {
+      if (caller?.aborted) throw abortError(caller.reason);
+      return value;
+    },
+    (error: unknown) => {
+      if (caller?.aborted) throw abortError(error);
+      if (controller.signal.aborted) return fallback;
+      throw error;
+    },
+  );
+  const deadline = new Promise<T>((resolve, reject) => {
+    const settle = () => {
+      if (caller?.aborted) reject(abortError(caller.reason));
+      else resolve(fallback);
+    };
+    if (controller.signal.aborted) settle();
+    else controller.signal.addEventListener("abort", settle, { once: true });
+  });
+  return Promise.race([attempt, deadline]).finally(() => {
+    clearTimeout(timer);
+    caller?.removeEventListener("abort", onCaller);
+  });
+}
+
+export function jevConnectorOn(stored: { enabled?: boolean | null; mode?: string | null } | null | undefined): boolean {
+  return stored?.enabled === true && (stored.mode === "shadow" || stored.mode === "auto");
+}
+
+export async function loadJevConnector(signal?: AbortSignal): Promise<boolean> {
+  const supabase = getSupabase();
+  if (!supabase || typeof supabase.from !== "function") return false;
+  const integration = await signalled(
+    supabase.from("company_integrations").select("enabled,mode").eq("provider", "jev"),
+    signal,
+  ).maybeSingle();
+  if (integration.error) throw new Error(integration.error.message);
+  return jevConnectorOn(integration.data);
+}
+
+export async function loadJevSuggestions(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
   const supabase = getSupabase();
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
-  if (!supabase || typeof supabase.from !== "function") return { connectorOn: false, byId: {} };
-  const integration = await supabase
-    .from("company_integrations")
-    .select("enabled,mode")
-    .eq("provider", "jev")
-    .maybeSingle();
-  if (integration.error) throw new Error(integration.error.message);
-  const stored = integration.data;
-  const connectorOn = stored?.enabled === true && stored.mode !== "off" && (stored.mode === "shadow" || stored.mode === "auto");
-  if (!connectorOn || ids.length === 0) return { connectorOn, byId: {} };
-  const suggestions = await supabase
-    .from("tag_suggestions")
-    .select("id,transaction_id,answers")
-    .in("transaction_id", ids)
-    .order("created_at", { ascending: false });
+  if (!supabase || typeof supabase.from !== "function" || ids.length === 0) return { connectorOn: true, byId: {} };
+  const suggestions = await signalled(
+    supabase.from("tag_suggestions").select("id,transaction_id,answers").in("transaction_id", ids).order("created_at", { ascending: false }),
+    signal,
+  );
   if (suggestions.error) throw new Error(suggestions.error.message);
   const newest = new Map<string, { id: string; transaction_id: string; answers: unknown }>();
   for (const row of suggestions.data) {
     if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
   }
-  const projects = await supabase.from("projects").select("id,name,status");
+  const projects = await signalled(supabase.from("projects").select("id,name,status"), signal);
   if (projects.error) throw new Error(projects.error.message);
-  const categories = await supabase.from("categories").select("id,name,hidden");
+  const categories = await signalled(supabase.from("categories").select("id,name,hidden"), signal);
   if (categories.error) throw new Error(categories.error.message);
   const projectNames = nameMap(projects.data, "project");
   const categoryNames = nameMap(categories.data, "category");
@@ -197,8 +266,14 @@ export async function loadJevQueue(transactionIds: readonly string[]): Promise<J
   return { connectorOn: true, byId };
 }
 
-export async function loadJevReview(transactionId: string): Promise<JevReviewState> {
-  const queue = await loadJevQueue([transactionId]);
+export async function loadJevQueue(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
+  const connectorOn = await loadJevConnector(signal);
+  if (!connectorOn) return JEV_OFF_QUEUE;
+  return loadJevSuggestions(transactionIds, signal);
+}
+
+export async function loadJevReview(transactionId: string, signal?: AbortSignal): Promise<JevReviewState> {
+  const queue = await loadJevQueue([transactionId], signal);
   return {
     connectorOn: queue.connectorOn,
     prefill: queue.byId[transactionId] ?? null,

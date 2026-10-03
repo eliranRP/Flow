@@ -9,18 +9,31 @@ import { ReviewQueue } from "./flow-screens";
 const db = vi.hoisted(() => ({
   integration: null as { enabled: boolean; mode: string } | null,
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
-  hold: null as Promise<void> | null,
+  holdIntegration: null as Promise<void> | null,
+  holdSuggestions: null as Promise<void> | null,
   failSuggestions: false,
   seenIds: [] as string[][],
+  integrationReads: 0,
   writes: [] as Array<{ name: string; args?: Record<string, unknown> }>,
 }));
 
-function table(data: unknown, options?: { gate?: boolean }) {
+function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
   const result = {
-    data: options?.gate && db.failSuggestions ? null : data,
-    error: options?.gate && db.failSuggestions ? { message: "jev down" } : null,
+    data: options?.fail && db.failSuggestions ? null : data,
+    error: options?.fail && db.failSuggestions ? { message: "jev down" } : null,
   };
-  const ready = () => (options?.gate && db.hold != null ? db.hold.then(() => result) : Promise.resolve(result));
+  const held = options?.hold === "integration"
+    ? db.holdIntegration
+    : options?.hold === "suggestions"
+      ? db.holdSuggestions
+      : null;
+  const ready = () => {
+    const finish = () => {
+      if (options?.hold === "integration") db.integrationReads += 1;
+      return result;
+    };
+    return held != null ? held.then(finish) : Promise.resolve().then(finish);
+  };
   const builder = {
     select: () => builder,
     eq: () => builder,
@@ -42,8 +55,8 @@ function table(data: unknown, options?: { gate?: boolean }) {
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
     from: (name: string) => {
-      if (name === "company_integrations") return table(db.integration);
-      if (name === "tag_suggestions") return table(db.suggestions, { gate: true });
+      if (name === "company_integrations") return table(db.integration, { hold: "integration" });
+      if (name === "tag_suggestions") return table(db.suggestions, { hold: "suggestions", fail: true });
       if (name === "projects") return table([{ id: "p1", name: "וילה רעננה", status: "active" }]);
       return table([{ id: "c1", name: "חומרים", hidden: false }]);
     },
@@ -79,13 +92,21 @@ function fieldBox() {
   };
 }
 
-function renderQueue() {
+const stored: ReviewRow = {
+  ...open,
+  project_id: "p-stored",
+  category_id: "c-stored",
+  project_name: "פרויקט שמור",
+  category_name: "קטגוריה שמורה",
+};
+
+function renderQueue(rows: ReviewRow[] = [open]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MemoryRouter>
-          <ReviewQueue rows={[open]} search="" />
+          <ReviewQueue rows={rows} search="" />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
@@ -96,9 +117,11 @@ describe("Jev review one tap", () => {
   beforeEach(() => {
     db.integration = null;
     db.suggestions = [];
-    db.hold = null;
+    db.holdIntegration = null;
+    db.holdSuggestions = null;
     db.failSuggestions = false;
     db.seenIds = [];
+    db.integrationReads = 0;
     db.writes = [];
   });
 
@@ -158,9 +181,9 @@ describe("Jev review one tap", () => {
     expect(db.writes).toEqual([]);
   });
 
-  it("holds the card height and refuses אישור until a slow Jev read settles", async () => {
+  it("refuses אישור until a slow Jev read settles, and keeps the note while it waits", async () => {
     let release: () => void = () => undefined;
-    db.hold = new Promise<void>((resolve) => {
+    db.holdSuggestions = new Promise<void>((resolve) => {
       release = resolve;
     });
     db.integration = { enabled: true, mode: "shadow" };
@@ -173,21 +196,19 @@ describe("Jev review one tap", () => {
       },
     }];
     renderQueue();
-    const approve = await screen.findByRole("button", { name: "אישור" });
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    });
+    expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
+    const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeDisabled();
-    expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
-    expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
-    const pending = fieldBox();
-    expect(pending.rows).toBe(2);
-    expect(pending.note).toBe("");
+    expect(fieldBox().rows).toBe(2);
     approve.removeAttribute("disabled");
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
     expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
-    const settled = fieldBox();
-    expect(settled).toEqual(pending);
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
@@ -196,6 +217,79 @@ describe("Jev review one tap", () => {
     expect(db.writes.find((call) => call.name === "resolve_review")?.args).toMatchObject({
       p_project_id: "p1",
       p_category_id: "c1",
+    });
+  });
+
+  it("keeps the note row when a slow read settles with no suggestion", async () => {
+    let release: () => void = () => undefined;
+    db.holdSuggestions = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [];
+    renderQueue();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    });
+    expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    const pending = fieldBox();
+    release();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    });
+    expect(fieldBox()).toEqual(pending);
+    expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+  });
+
+  it("shows no pending state while a Jev-off read is still loading", async () => {
+    let release: () => void = () => undefined;
+    db.holdIntegration = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    db.integration = { enabled: true, mode: "off" };
+    renderQueue([stored]);
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(db.seenIds).toEqual([]);
+    release();
+    await waitFor(() => {
+      expect(db.integrationReads).toBeGreaterThan(0);
+    });
+    expect(db.seenIds).toEqual([]);
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    expect(approve).toBeEnabled();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+  });
+
+  it("falls back to today's values within a second when the Jev read stalls", async () => {
+    db.holdSuggestions = new Promise<void>(() => undefined);
+    db.integration = { enabled: true, mode: "shadow" };
+    renderQueue([stored]);
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    });
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    const marked = performance.now();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    }, { timeout: 2500 });
+    expect(performance.now() - marked).toBeLessThan(1500);
+    const approve = screen.getByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(db.writes.map((call) => call.name)).toContain("resolve_review");
+    });
+    expect(db.writes.find((call) => call.name === "resolve_review")?.args).toMatchObject({
+      p_project_id: "p-stored",
+      p_category_id: "c-stored",
     });
   });
 

@@ -161,4 +161,32 @@ describe("ListRow", () => {
     expect(getComputedStyle(text as Element).overflow).toBe("hidden");
     expect(getComputedStyle(title as Element).overflow).toBe("visible");
   });
+
+  it("keeps a long change-sheet name at the start, beside הצעה", () => {
+    const name = "חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי והסביבה הקרובה";
+    render(
+      <MemoryRouter>
+        <div className="ui-change-summary" style={{ inlineSize: "320px" }}>
+          <ListRow
+            variant="button"
+            eyebrow="קטגוריה"
+            title={name}
+            label={`קטגוריה: ${name}, הצעה`}
+            tag={<SuggestTag />}
+            onClick={() => undefined}
+          />
+        </div>
+      </MemoryRouter>,
+    );
+    const text = document.querySelector(".ui-row-title-text");
+    const title = text?.parentElement;
+    expect(text).not.toBeNull();
+    expect(title).toHaveClass("ui-row-title-with-tag");
+    const textStyle = getComputedStyle(text as Element);
+    expect(textStyle.flexGrow).toBe("0");
+    expect(textStyle.whiteSpace).toBe("normal");
+    expect(textStyle.textOverflow).toBe("clip");
+    expect(textStyle.textAlign).toBe("start");
+    expect(getComputedStyle(title as Element).justifyContent).toBe("flex-start");
+  });
 });
