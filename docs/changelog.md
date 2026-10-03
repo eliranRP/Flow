@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Jev tagging. An off company is not sent to Jev. Shadow stores a suggestion and leaves the line in לאישור. Auto, at or above the threshold, pre-fills a project and category the user has not set, marks that fill as a suggestion, and still waits for one tap. It never approves. The job is not scheduled. The stored suggestion includes the model the API returned. Decision [0084](decisions/0084-jev-auto-prefill.md).
+
 Jev connector, review. The client timeout covers the response body. `tag_suggestions.response_model` stores the model the API returned, including when it is not the pin. Until the tagging job, the setting accepts only `off` or `shadow`, and the threshold is 0.50 to 1.00. `read_jev_api_key` checks `auth.jwt()->>'role'` and stays service role only, because that job is an Edge Function. Decision [0083](decisions/0083-jev-connector.md).
 
 Jev connector plumbing. `company_integrations` and `tag_suggestions` are per company. The connector is off by default, in shadow, with threshold 0.90. Members read suggestions and turn the connector on through `set_company_integration`. The service role writes suggestions. The API key is Vault secret `jev_api_key`, read by `read_jev_api_key` for the service role only. The client pins `jev-1.13.0` and retries 429 and 529. CI does not call TypeSafe. Decision [0083](decisions/0083-jev-connector.md). The bundle scan and its exit codes are in [the Jev runbook](runbooks/jev.md).

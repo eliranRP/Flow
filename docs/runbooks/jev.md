@@ -30,3 +30,11 @@ Every run prints `secret jev_api_key scope=typesafe-jev-api-bearer server-only`.
 `deno test --no-prompt --no-lock supabase/functions/_shared`
 
 No network permission and no env permission. `--no-lock` keeps Deno from writing a repo-root `deno.lock` for this folder. `package.json` `test` runs that command, and the check job already runs `pnpm test` after Deno is installed. Do not add `--allow-net`.
+
+## Tagging job
+
+`supabase/functions/jev-tag` labels open לאישור expenses that have no suggestion for `jev-1.13.0`. Decision [0084](../decisions/0084-jev-auto-prefill.md). Tests call the mock. The function does not call TypeSafe in CI.
+
+The caller sends `x-flow-cron`. That secret is the existing `CRON_SECRET` used by `sumit-sync`. Scope: the internal cron caller. It is not `jev_api_key`. A missing or wrong cron secret does not label anything.
+
+The function is not on a schedule. Adding `pg_cron` would be a migration. The deploy workflow deploys `flow-mcp` only, and this change does not edit that workflow.
