@@ -1089,3 +1089,56 @@ Deno.test("a call is not started when fewer than 20 seconds of the budget remain
   assertEquals(stillOpen.budget_skipped, 0);
   assertEquals(stillOpen.tagged, 2);
 });
+
+Deno.test("an overhead or shared line is not asked for a project", async () => {
+  const overhead = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const shared = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const split = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+  const owned = "12121212-1212-4121-8121-121212121212";
+  const seen: JevCall[] = [];
+  const store = memoryStore();
+  await tagWork([company({
+    mode: "shadow",
+    expenses: [
+      expense({ id: overhead, pnlRole: "overhead", description: "overhead" }),
+      expense({ id: shared, pnlRole: "shared", description: "shared-cost" }),
+      expense({ id: split, allocationCount: 2, description: "split" }),
+      expense({ description: "normal" }),
+      expense({ id: owned, projectAssigned: true, projectId: OTHER, description: "owned" }),
+    ],
+  })], store, (_key, input) => {
+    seen.push(input);
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+  }, "jev-test-key", { log: () => {} });
+
+  assertEquals(seen.length, 5);
+  for (const input of seen.slice(0, 3)) {
+    assertEquals("project" in input.questions, false);
+    assertEquals("category" in input.questions, true);
+  }
+  assertEquals("project" in seen[3].questions, true);
+  assertEquals("project" in seen[4].questions, true);
+  for (const row of store.suggestions.slice(0, 3)) {
+    assertEquals("project" in row.answers, false);
+    assert("category" in row.answers);
+  }
+  assert("project" in store.suggestions[3].answers);
+  assert("project" in store.suggestions[4].answers);
+  assertEquals(store.writes.length, 0);
+
+  const auto = memoryStore();
+  const autoSeen: JevCall[] = [];
+  await tagWork([company({
+    expenses: [expense({ id: overhead, pnlRole: "overhead" })],
+  })], auto, (_key, input) => {
+    autoSeen.push(input);
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(0.4, 0.95), usage: null });
+  }, "jev-test-key", { log: () => {} });
+  assertEquals(autoSeen.length, 1);
+  assertEquals("project" in autoSeen[0].questions, false);
+  assertEquals("project" in auto.suggestions[0].answers, false);
+  assertEquals(auto.suggestions[0].confidence, 0.95);
+  assertEquals(auto.writes.length, 1);
+  assertEquals(auto.writes[0].projectId, undefined);
+  assertEquals(auto.writes[0].categoryId, CATEGORY);
+});
