@@ -715,6 +715,14 @@ isOneToOne: false
 "undo_reassign":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"upsert_connector_lines":
+{ Args: { "p_company": string,"p_expected_prev_cursor": string,"p_lines": Json,"p_next_cursor": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Database["public"]['CompositeTypes']["connector_upsert_result"]
+                          SetofOptions: {
+        from: "*"
+        to: "connector_upsert_result"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "upsert_project":
 { Args: { "p_budget_agorot"?: number,"p_id"?: string,"p_name"?: string,"p_status"?: string }; Returns: string
                            },
@@ -726,7 +734,9 @@ isOneToOne: false
             "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
-            [_ in never]: never
+            "connector_upsert_result": {
+                        "inserted": number | null,"updated": number | null,"removed": number | null,"skipped": number | null
+                      }
           }
         }
 }
