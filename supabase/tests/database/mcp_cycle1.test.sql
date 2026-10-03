@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(35);
+select plan(32);
 
 do $users$
 begin
@@ -279,50 +279,11 @@ select ok(
 
 select has_column('private', 'mcp_writes', 'undone_at', 'mcp_writes has undone_at');
 
-insert into private.mcp_writes (token_id, user_id, review_id, kind, project_id, category_id, pnl_role, shares)
-select
-  id,
-  user_id,
-  '11111111-1111-4000-8000-000000000010',
-  'review',
-  null,
-  null,
-  null,
-  '[]'::jsonb
-from private.mcp_credentials
-where token_hash = 'hash-owner-rate-cccc';
-
-select is(
-  private.consume_mcp_undo(
-    (select id from auth.users where email = 'mcp-other@test.flow'),
-    (select id from private.mcp_writes)
-  ),
-  false,
-  'another user cannot consume this undo'
-);
-
-select is(
-  private.consume_mcp_undo(
-    (select id from auth.users where email = 'mcp-owner@test.flow'),
-    (select id from private.mcp_writes)
-  ),
-  true,
-  'the first undo consumes the write'
-);
-
-select is(
-  private.consume_mcp_undo(
-    (select id from auth.users where email = 'mcp-owner@test.flow'),
-    (select id from private.mcp_writes)
-  ),
-  false,
-  'a second undo is single-use'
-);
-
-select isnt(
-  (select undone_at from private.mcp_writes),
-  null,
-  'undone_at is set after the undo'
+select hasnt_function(
+  'private',
+  'consume_mcp_undo',
+  array['uuid', 'uuid'],
+  'the cycle 1 undo consumer is gone'
 );
 
 select * from finish();

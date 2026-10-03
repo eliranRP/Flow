@@ -318,6 +318,20 @@ Deno.test("a database refusal stays a tool error and an HTTP failure is generic"
   }));
   assertEquals(conflict.isError, true);
   if (!conflict.structuredContent.ok) assertEquals(conflict.structuredContent.error.code, "conflict");
+  const retry = await callTool("assign_expense", {
+    idempotency_key: "assign-22",
+    transaction_id: TXN,
+    project_id: PROJECT,
+    category_id: CATEGORY,
+  }, ["write"], () => Promise.resolve({
+    status: 200,
+    json: { ok: false, error: { code: "unavailable", message: "retry" } },
+  }));
+  assertEquals(retry.isError, true);
+  if (!retry.structuredContent.ok) {
+    assertEquals(retry.structuredContent.error.code, "unavailable");
+    assertEquals(retry.structuredContent.error.message, "retry");
+  }
   const http = await callTool("undo", {
     idempotency_key: "undo-31",
     kind: "review",

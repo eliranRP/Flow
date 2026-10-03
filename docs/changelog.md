@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+MCP cycle 3a, review. An assistant approve, an app reopen, and another assistant approve records the latest close and still undoes. Tokens that already existed become read-only; a new connection keeps read and write, and the owner reconnects in Settings for write. A deadlock or serialization failure is `unavailable` / `retry` and is not stored. Decision [0080](decisions/0080-mcp-connector.md). The reconnect note is in [CI and CD](runbooks/ci-cd.md).
+
 Jev tagging, review. A wrong non-empty cron header is 401 and does not call Jev. The service key is the `default` field of `SUPABASE_SECRET_KEYS`; a missing value fails closed. A run labels at most 50 expenses (100 if the request asks for more), two attempts of 8 seconds each, and stops after about 120 seconds with `budget_skipped`. The candidate query orders by date descending and does not list every id. Vault is not read when no line is waiting. The hand trigger is in [the Jev runbook](runbooks/jev.md). Decision [0084](decisions/0084-jev-auto-prefill.md).
 
 Jev tagging. `enabled` false or `mode` off disables the connector; either one is enough. Shadow stores a suggestion and leaves the line in לאישור. Auto, at or above the threshold, pre-fills a project and category the user has not set, marks that fill as a suggestion, and still waits for one tap. It never approves. Only the cron secret or the service-role key may call the job, and a second call inside 60 seconds is refused. The stored suggestion includes the model the API returned. The job is not scheduled. Allowing `auto` in the database is written under `supabase/pending` and is not in the migration lock. Decision [0084](decisions/0084-jev-auto-prefill.md).

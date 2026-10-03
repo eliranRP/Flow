@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(67);
+select plan(92);
 
 do $users$
 begin
@@ -26,7 +26,7 @@ create temp table mcp3_prior (
 );
 grant all on mcp3_prior to authenticated, service_role;
 
-create or replace function pg_temp.as_mcp(p_label text)
+create or replace function pg_temp.as_mcp(p_label text, p_user text default 'mcp3_owner')
 returns void
 language plpgsql
 set search_path = ''
@@ -35,7 +35,7 @@ declare
   uid uuid;
   tid uuid;
 begin
-  uid := tests.get_supabase_uid('mcp3_owner');
+  uid := tests.get_supabase_uid(p_user);
   select id into tid from pg_temp.mcp3 where label = p_label;
   if uid is null or tid is null then
     raise exception 'missing mcp actor %', p_label;
@@ -55,7 +55,7 @@ begin
   );
 end;
 $$;
-grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
+grant execute on function pg_temp.as_mcp(text, text) to authenticated, service_role;
 
 select tests.authenticate_as('mcp3_owner');
 select lives_ok($$select public.create_company('חברה', true)$$, 'owner creates a company');
@@ -289,6 +289,64 @@ from public.review_queue q
 join public.transactions t on t.id = q.transaction_id
 where t.idempotency_key = 'mcp3:app' and q.status = 'open';
 
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description,
+  user_assigned
+)
+select c.id, 'expense', 'expense', 'project',
+  -10000, -10000, 0, 'unknown',
+  '2026-09-12', 'manual', 'mcp3:again', a.id, m.id, 'שוב',
+  false
+from mcp3 c
+join mcp3 a on a.label = 'alpha'
+join mcp3 m on m.label = 'materials'
+where c.label = 'company';
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select t.company_id, t.id, t.project_id, 10000, t.amount_net
+from public.transactions t
+where t.idempotency_key = 'mcp3:again';
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select t.company_id, t.id, 'open', 'missing_project'
+from public.transactions t
+where t.idempotency_key = 'mcp3:again';
+insert into mcp3 (label, id)
+select 'again', id from public.transactions where idempotency_key = 'mcp3:again';
+insert into mcp3 (label, id)
+select 'again_review', q.id
+from public.review_queue q
+join public.transactions t on t.id = q.transaction_id
+where t.idempotency_key = 'mcp3:again' and q.status = 'open';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description,
+  user_assigned
+)
+select c.id, 'expense', 'expense', 'project',
+  -10000, -10000, 0, 'unknown',
+  '2026-09-13', 'manual', key, a.id, m.id, 'שער',
+  false
+from mcp3 c
+join mcp3 a on a.label = 'alpha'
+join mcp3 m on m.label = 'materials'
+cross join (values ('mcp3:gate-a'), ('mcp3:gate-b'), ('mcp3:gate-c'), ('mcp3:dead')) as keys(key)
+where c.label = 'company';
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select t.company_id, t.id, t.project_id, 10000, t.amount_net
+from public.transactions t
+where t.idempotency_key in ('mcp3:gate-a', 'mcp3:gate-b', 'mcp3:gate-c', 'mcp3:dead');
+insert into mcp3 (label, id)
+select 'gate_a', id from public.transactions where idempotency_key = 'mcp3:gate-a';
+insert into mcp3 (label, id)
+select 'gate_b', id from public.transactions where idempotency_key = 'mcp3:gate-b';
+insert into mcp3 (label, id)
+select 'gate_c', id from public.transactions where idempotency_key = 'mcp3:gate-c';
+insert into mcp3 (label, id)
+select 'dead', id from public.transactions where idempotency_key = 'mcp3:dead';
+
 insert into mcp3_prior (label, project_id, category_id, pnl_role, user_assigned, category_suggested, shares)
 select 'plain', t.project_id, t.category_id, t.pnl_role::text, t.user_assigned, t.category_suggested,
   coalesce((
@@ -362,6 +420,38 @@ where token_hash = 'hash-mcp3-write1';
 insert into mcp3 (label, id)
 select 'revoked', id from private.mcp_credentials where token_hash = 'hash-mcp3-revoked';
 
+insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
+select user_id, company_id, 'hash-mcp3-expired', 'pepper-1', array['read','write'], now() - interval '1 day'
+from private.mcp_credentials
+where token_hash = 'hash-mcp3-write1';
+
+insert into mcp3 (label, id)
+select 'expired', id from private.mcp_credentials where token_hash = 'hash-mcp3-expired';
+
+insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
+select
+  (select id from auth.users where email = 'mcp3-other@test.flow'),
+  (select id from mcp3 where label = 'other_company'),
+  'hash-mcp3-otherw',
+  'pepper-1',
+  array['read','write'],
+  now() + interval '90 days';
+
+insert into mcp3 (label, id)
+select 'other_write', id from private.mcp_credentials where token_hash = 'hash-mcp3-otherw';
+
+insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
+select
+  (select id from auth.users where email = 'mcp3-owner@test.flow'),
+  (select id from mcp3 where label = 'other_company'),
+  'hash-mcp3-xcompan',
+  'pepper-1',
+  array['read','write'],
+  now() + interval '90 days';
+
+insert into mcp3 (label, id)
+select 'cross_company', id from private.mcp_credentials where token_hash = 'hash-mcp3-xcompan';
+
 insert into mcp3 (label, id)
 select 'owner_user', id from auth.users where email = 'mcp3-owner@test.flow';
 
@@ -398,6 +488,46 @@ select ok(
   and not has_function_privilege('authenticated', 'private.mcp_require_writer()', 'execute')
   and not has_function_privilege('anon', 'private.mcp_idempotency_store(uuid, text, text, jsonb)', 'execute'),
   'authenticated can call the wrappers and cannot call the private helpers'
+);
+
+select ok(
+  not (
+    select p.prosecdef
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private' and p.proname = 'mcp_error'
+  )
+  and not (
+    select p.prosecdef
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private' and p.proname = 'mcp_refused'
+  )
+  and (
+    select p.prosecdef
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'private' and p.proname = 'mcp_require_writer'
+  ),
+  'json helpers are not security definer and the writer gate is'
+);
+
+select ok(
+  strpos(
+    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)'::regprocedure),
+    'for update'
+  ) < strpos(
+    pg_get_functiondef('public.mcp_assign_expense(text, uuid, uuid, uuid, boolean)'::regprocedure),
+    'from public.review_queue q'
+  )
+  and strpos(
+    pg_get_functiondef('public.mcp_set_expense_category(text, uuid, uuid)'::regprocedure),
+    'for update'
+  ) < strpos(
+    pg_get_functiondef('public.mcp_set_expense_category(text, uuid, uuid)'::regprocedure),
+    'from public.review_queue q'
+  ),
+  'assign and category lock the expense before the review'
 );
 
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
@@ -1166,6 +1296,340 @@ select is(
   (select project_id from public.transactions where idempotency_key = 'mcp3:sync'),
   (select project_id from mcp3_prior where label = 'sync'),
   'undo after sync restores the pre-assign project'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-again',
+      (select id from mcp3 where label = 'again'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'data'->>'closed_review'
+  ),
+  'true',
+  'the assistant closes the review'
+);
+
+select tests.authenticate_as('mcp3_owner');
+select lives_ok(
+  format(
+    $$select public.reopen_review(%L::uuid)$$,
+    (select id from mcp3 where label = 'again_review')
+  ),
+  'the app reopens that review'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-again-2',
+      (select id from mcp3 where label = 'again'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'ok'
+  )::boolean,
+  true,
+  'a second assistant approve after the reopen succeeds'
+);
+
+reset role;
+
+select is(
+  (
+    select count(*)
+    from private.mcp_writes w
+    where w.review_id = (select id from mcp3 where label = 'again_review')
+  ),
+  2::bigint,
+  'both assistant closes are recorded'
+);
+
+select is(
+  (
+    select count(*)
+    from private.mcp_writes w
+    where w.review_id = (select id from mcp3 where label = 'again_review')
+      and w.undone_at is null
+  ),
+  1::bigint,
+  'the earlier open assistant row is superseded'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_undo(
+      'undo-again',
+      'review',
+      (select id from mcp3 where label = 'again_review')
+    )->'ok'
+  )::boolean,
+  true,
+  'undo after the second approve succeeds'
+);
+
+select is(
+  (
+    select q.status
+    from public.review_queue q
+    where q.id = (select id from mcp3 where label = 'again_review')
+  ),
+  'open'::public.review_status,
+  'undo reopens the review'
+);
+
+do $$ begin perform pg_temp.as_mcp('expired'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-expired',
+      (select id from mcp3 where label = 'gate_a'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'error'->>'message'
+  ),
+  'expired',
+  'an expired token that is not revoked is refused'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-gate-a',
+      (select id from mcp3 where label = 'gate_a'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'ok'
+  )::boolean,
+  true,
+  'the live token still assigns after the expired refusal'
+);
+
+do $$ begin perform pg_temp.as_mcp('other_write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-other-token',
+      (select id from mcp3 where label = 'gate_b'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'error'->>'message'
+  ),
+  'The write was refused.',
+  'another user''s token id is refused'
+);
+
+do $$ begin perform pg_temp.as_mcp('cross_company'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-cross-company',
+      (select id from mcp3 where label = 'gate_b'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'error'->>'message'
+  ),
+  'The write was refused.',
+  'a token for another company is refused'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-gate-b',
+      (select id from mcp3 where label = 'gate_b'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'data'->>'undo_kind'
+  ),
+  'reassign',
+  'the owner token still assigns after the foreign token refusals'
+);
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-gate-c',
+      (select id from mcp3 where label = 'gate_c'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'data'->>'id'
+  ) is not null,
+  true,
+  'the owner records an undo id'
+);
+
+insert into mcp3 (label, id)
+select 'gate_c_undo', (
+  public.mcp_assign_expense(
+    'assign-gate-c',
+    (select id from mcp3 where label = 'gate_c'),
+    (select id from mcp3 where label = 'beta'),
+    (select id from mcp3 where label = 'haul'),
+    false
+  )->'data'->>'id'
+)::uuid;
+
+do $$ begin perform pg_temp.as_mcp('other_write', 'mcp3_other'); end $$;
+
+select is(
+  (
+    public.mcp_undo(
+      'undo-other-user',
+      'reassign',
+      (select id from mcp3 where label = 'gate_c_undo')
+    )->'error'->>'code'
+  ),
+  'not_found',
+  'another user cannot undo the owner write'
+);
+
+reset role;
+
+select is(
+  (select project_id from public.transactions where idempotency_key = 'mcp3:gate-c'),
+  (select id from mcp3 where label = 'beta'),
+  'the other user undo changes nothing'
+);
+
+select is(
+  (
+    select w.undone_at is null
+    from private.mcp_writes w
+    where w.transaction_id = (select id from mcp3 where label = 'gate_c')
+  ),
+  true,
+  'the owner undo row stays open'
+);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_undo(
+      'undo-gate-c',
+      'reassign',
+      (select id from mcp3 where label = 'gate_c_undo')
+    )->'ok'
+  )::boolean,
+  true,
+  'the owner can still undo that write'
+);
+
+reset role;
+
+create or replace function pg_temp.mcp3_deadlock()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception using errcode = '40P01', message = 'deadlock detected';
+end;
+$$;
+
+create trigger mcp3_deadlock
+before insert on private.mcp_writes
+for each row execute function pg_temp.mcp3_deadlock();
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-dead',
+      (select id from mcp3 where label = 'dead'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'error'->>'message'
+  ),
+  'retry',
+  'a deadlock is retryable'
+);
+
+reset role;
+
+select is(
+  (
+    select count(*)
+    from private.mcp_idempotency
+    where idempotency_key = 'assign-dead'
+  ),
+  0::bigint,
+  'a deadlock is not stored for the idempotency key'
+);
+
+drop trigger mcp3_deadlock on private.mcp_writes;
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+select is(
+  (
+    public.mcp_assign_expense(
+      'assign-dead',
+      (select id from mcp3 where label = 'dead'),
+      (select id from mcp3 where label = 'beta'),
+      (select id from mcp3 where label = 'haul'),
+      false
+    )->'ok'
+  )::boolean,
+  true,
+  'the same key proceeds after the deadlock'
+);
+
+reset role;
+
+insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
+select
+  (select id from auth.users where email = 'mcp3-owner@test.flow'),
+  (select id from mcp3 where label = 'company'),
+  'hash-mcp3-legacy',
+  'pepper-1',
+  array['read','write'],
+  now() + interval '90 days';
+
+update private.mcp_credentials
+set scope = array['read']::text[];
+
+select is(
+  (select scope from private.mcp_credentials where token_hash = 'hash-mcp3-legacy'),
+  array['read']::text[],
+  'the backfill sets an existing token to read only'
+);
+
+select lives_ok(
+  format(
+    $$select public.store_mcp_credential(%L::uuid, 'hash-mcp3-new001', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
+    (select id from auth.users where email = 'mcp3-owner@test.flow')
+  ),
+  'a new token can still be stored with write'
+);
+
+select is(
+  (select scope from private.mcp_credentials where token_hash = 'hash-mcp3-new001'),
+  array['read','write']::text[],
+  'a new token keeps read and write'
 );
 
 select tests.authenticate_as('mcp3_owner');

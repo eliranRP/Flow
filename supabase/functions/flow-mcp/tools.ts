@@ -2,7 +2,7 @@
 // Identity is not an argument. The handler signs from the credential row.
 // Zod checks write arguments. A failure is the fixed validation message.
 
-import { z } from "https://esm.sh/zod@4.6.5";
+import { z } from "zod";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -22,7 +22,7 @@ export const WRITE_TOOL_NAMES = [
 const IDENTITY = new Set(["user_id", "p_user", "company_id", "sub", "mcp_tid"]);
 const READ_REFUSED = "The read was refused.";
 const WRITE_REFUSED = "The write was refused.";
-const TOOL_CODES = new Set(["forbidden", "validation", "not_found", "conflict", "already_closed", "refused"]);
+const TOOL_CODES = new Set(["forbidden", "validation", "not_found", "conflict", "already_closed", "refused", "unavailable"]);
 const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
   list_categories: new Set(),

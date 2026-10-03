@@ -9,6 +9,11 @@
 -- here. reassign_transaction has no remember argument.
 -- A revoked or expired credential is forbidden. The edge function still returns
 -- HTTP 401 before it calls these wrappers.
+-- Tokens minted before writes existed stay read-only. A new token keeps the
+-- scope store_mcp_credential is given. The owner reconnects in Settings for write.
+
+update private.mcp_credentials
+set scope = array['read']::text[];
 
 alter table private.mcp_writes
   add column reassign_id uuid;
@@ -51,7 +56,6 @@ create or replace function private.mcp_error(p_code text, p_message text)
 returns jsonb
 language sql
 immutable
-security definer
 set search_path = ''
 as $$
   select jsonb_build_object(
@@ -66,7 +70,6 @@ create or replace function private.mcp_refused(p_message text)
 returns jsonb
 language sql
 immutable
-security definer
 set search_path = ''
 as $$
   select private.mcp_error(
@@ -326,6 +329,15 @@ begin
   snap_shares := private.mcp_shares(p_txn);
 
   if p_kind = 'review' then
+    -- An app reopen leaves the earlier assistant row open. Supersede it so
+    -- the next assistant close can insert, and undo targets that latest row.
+    update private.mcp_writes
+    set undone_at = clock_timestamp()
+    where user_id = auth.uid()
+      and kind = 'review'
+      and review_id = p_review
+      and undone_at is null;
+
     insert into private.mcp_writes (
       token_id, user_id, transaction_id, review_id, kind,
       project_id, category_id, pnl_role, shares
@@ -385,6 +397,7 @@ declare
   outcome jsonb;
   undo_id uuid;
   response jsonb;
+  locked boolean;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -414,29 +427,26 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Lock the expense before the review so assign and category share one order.
+    select true into locked
+    from public.transactions t
+    where t.id = p_transaction_id
+      and t.company_id = cid
+      and t.removed_at is null
+    for update;
+    locked := found;
+
     if exists (
       select 1
       from public.review_queue q
       where q.id = p_transaction_id
         and q.company_id = cid
-    ) and not exists (
-      select 1
-      from public.transactions t
-      where t.id = p_transaction_id
-        and t.company_id = cid
-        and t.removed_at is null
-    ) then
+    ) and not locked then
       response := private.mcp_error(
         'validation',
         'id is not a transaction; list_review.id is the review id'
       );
-    elsif not exists (
-      select 1
-      from public.transactions t
-      where t.id = p_transaction_id
-        and t.company_id = cid
-        and t.removed_at is null
-    ) then
+    elsif not locked then
       response := private.mcp_refused('transaction not found');
     else
       select q.id into review
@@ -469,6 +479,8 @@ begin
       end if;
     end if;
   exception
+    when deadlock_detected or serialization_failure then
+      return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.mcp_refused(sqlerrm);
   end;
@@ -503,6 +515,7 @@ declare
   outcome jsonb;
   undo_id uuid;
   response jsonb;
+  locked boolean;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -530,63 +543,60 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Lock the expense before the review so assign and category share one order.
+    select t.project_id into current_project
+    from public.transactions t
+    where t.id = p_transaction_id
+      and t.company_id = cid
+      and t.removed_at is null
+    for update;
+    locked := found;
+
     if exists (
       select 1
       from public.review_queue q
       where q.id = p_transaction_id
         and q.company_id = cid
-    ) and not exists (
-      select 1
-      from public.transactions t
-      where t.id = p_transaction_id
-        and t.company_id = cid
-        and t.removed_at is null
-    ) then
+    ) and not locked then
       response := private.mcp_error(
         'validation',
         'id is not a transaction; list_review.id is the review id'
       );
+    elsif not locked then
+      response := private.mcp_refused('transaction not found');
     else
-      select t.project_id into current_project
-      from public.transactions t
-      where t.id = p_transaction_id
-        and t.company_id = cid
-        and t.removed_at is null
+      select q.id into review
+      from public.review_queue q
+      where q.transaction_id = p_transaction_id
+        and q.company_id = cid
+        and q.status = 'open'
+      order by q.created_at desc
+      limit 1
       for update;
-      if not found then
-        response := private.mcp_refused('transaction not found');
-      else
-        select q.id into review
-        from public.review_queue q
-        where q.transaction_id = p_transaction_id
-          and q.company_id = cid
-          and q.status = 'open'
-        order by q.created_at desc
-        limit 1
-        for update;
 
-        if review is not null then
-          outcome := public.approve_review_item(
-            review,
-            current_project,
-            p_category_id,
-            false,
-            null,
-            null,
-            false
-          );
-          if outcome->>'ok' is distinct from 'true' then
-            response := outcome;
-          else
-            response := private.mcp_record_write(token, p_transaction_id, review, null, 'review');
-          end if;
+      if review is not null then
+        outcome := public.approve_review_item(
+          review,
+          current_project,
+          p_category_id,
+          false,
+          null,
+          null,
+          false
+        );
+        if outcome->>'ok' is distinct from 'true' then
+          response := outcome;
         else
-          undo_id := public.set_transaction_category(p_transaction_id, p_category_id, true);
-          response := private.mcp_record_write(token, p_transaction_id, null, undo_id, 'reassign');
+          response := private.mcp_record_write(token, p_transaction_id, review, null, 'review');
         end if;
+      else
+        undo_id := public.set_transaction_category(p_transaction_id, p_category_id, true);
+        response := private.mcp_record_write(token, p_transaction_id, null, undo_id, 'reassign');
       end if;
     end if;
   exception
+    when deadlock_detected or serialization_failure then
+      return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.mcp_refused(sqlerrm);
   end;
@@ -697,6 +707,8 @@ begin
       end if;
     end if;
   exception
+    when deadlock_detected or serialization_failure then
+      return private.mcp_error('unavailable', 'retry');
     when others then
       response := private.mcp_refused(sqlerrm);
   end;
@@ -709,3 +721,6 @@ $$;
 revoke all on function public.mcp_undo(text, text, uuid) from public, anon, authenticated, service_role;
 
 grant execute on function public.mcp_undo(text, text, uuid) to authenticated;
+
+-- Cycle 1 left a single-use consumer. Undo is public.mcp_undo. This function is unused.
+drop function if exists private.consume_mcp_undo(uuid, uuid);

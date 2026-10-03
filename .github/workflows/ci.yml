@@ -58,7 +58,7 @@ jobs:
         with:
           deno-version: v2.9.7
       - name: Deno tests for flow-mcp
-        run: deno test --allow-env supabase/functions/flow-mcp
+        run: deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
       - run: pnpm typecheck
       # Root bundle tests, then @flow/app and @flow/shared unit tests.
       - run: pnpm test
