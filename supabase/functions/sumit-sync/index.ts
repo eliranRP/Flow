@@ -135,7 +135,7 @@ async function syncCompany(
   const sumitCompanyId = Number(row.sumit_company_id);
   let apiKey = "";
   try {
-    apiKey = await openApiKey(envelope, kek, companyId);
+    apiKey = await openApiKey(envelope, kek, companyId, "sumit");
     const listed = await listDocuments(sumitCompanyId, apiKey);
     const documents = listed.docs;
     await writeLedger(admin, companyId, documents);

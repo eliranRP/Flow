@@ -132,6 +132,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e\n/);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
+  assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
   assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);
   assert.match(job("e2e"), /bash scripts\/cd-dry-run-pending.sh/);
   assert.match(job("e2e"), /FLOW_CD_PREFLIGHT_LOCAL=1/);
@@ -193,10 +194,22 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const fn = deploy.indexOf("functions deploy flow-mcp");
   const jevFn = deploy.indexOf("functions deploy jev-tag");
   const mktemp = deploy.indexOf("mktemp");
+  const preflightStep = deploy.indexOf("bash scripts/cd-preflight.sh");
+  const sumitSync = deploy.indexOf("functions deploy sumit-sync");
+  const sumitConnect = deploy.indexOf("functions deploy sumit-connect");
+  const sumitResealFn = deploy.indexOf("functions deploy sumit-reseal");
+  const reseal = deploy.indexOf("bash scripts/cd-sumit-reseal.sh");
   assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
   assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < jevFn && jevFn < smoke);
+  assert.ok(probe < preflightStep && preflightStep < sumitSync && sumitSync < sumitConnect && sumitConnect < sumitResealFn && sumitResealFn < reseal && reseal < migrate);
+  const resealScript = readFileSync(new URL("./cd-sumit-reseal.sh", import.meta.url), "utf8");
+  assert.match(resealScript, /::add-mask::/);
+  assert.match(resealScript, /-H @-/);
+  assert.equal(resealScript.includes("x-flow-cron: ${secret}"), false);
   assert.equal(deploy.slice(probe, migrate).includes("mktemp"), false);
   assert.equal(deploy.slice(probe, migrate).includes("FLOW_MCP_PEPPER"), false);
+  assert.equal(deploy.slice(probe, migrate).includes("functions deploy flow-mcp"), false);
+  assert.equal(deploy.slice(probe, migrate).includes("functions deploy jev-tag"), false);
   assert.match(deploy, /mktemp "\$RUNNER_TEMP\/flow-mcp-secrets\.XXXXXX"/);
   assert.match(deploy, /trap 'rm -f "\$envfile"' EXIT INT TERM/);
   assert.match(deploy, /if: always\(\)/);
@@ -231,6 +244,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(owners, /^supabase\/migrations\.lock @eliranRP$/m);
   assert.match(owners, /^scripts\/cd-\* @eliranRP$/m);
   assert.match(owners, /^scripts\/check-migration-order\.mjs @eliranRP$/m);
+  assert.match(owners, /^scripts\/check-migration-transaction\.mjs @eliranRP$/m);
   assert.match(owners, /^scripts\/preflight-r23\.sql @eliranRP$/m);
   assert.match(owners, /^\.github\/workflows\/ @eliranRP$/m);
   assert.match(owners, /^\.github\/CODEOWNERS @eliranRP$/m);
