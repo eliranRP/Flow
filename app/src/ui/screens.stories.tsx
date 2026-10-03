@@ -659,6 +659,26 @@ export const SettingsEmpty: Story = {
   ),
 };
 
+export const SettingsLongEmail: Story = {
+  name: "Long email",
+  render: () => (
+    <StoryRoute entry="/settings?preview=empty" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          name: null,
+          vatRegistered: false,
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner.with.a.very.long.mailbox.name@example.com",
+          noCompany: true,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const SettingsAssistantConnected: Story = {
   name: "Assistant connected",
   render: () => (
@@ -1053,9 +1073,9 @@ export const ProjectDetailError: Story = {
 
 export const CategoriesEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/settings/categories?preview=empty" tabs>
+    <StoryRoute entry="/settings/categories" tabs>
       <ExampleBar />
-      <CategoriesScreen />
+      <CategoriesScreen sample={[]} />
     </StoryRoute>
   ),
 };

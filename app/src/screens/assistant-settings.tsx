@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
+import { popSheetLayers, useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { AlertIcon, InboxIcon, LogoutIcon } from "../ui/icons";
@@ -60,7 +62,7 @@ function connectedHint(scope: AssistantScope, lastUsedAt: string | null | undefi
   return (
     <>
       {`מחובר · ${label} · שימוש אחרון `}
-      <bdi dir="ltr">{formatAssistantUse(lastUsedAt)}</bdi>
+      <bdi className="ui-nowrap" dir="ltr">{formatAssistantUse(lastUsedAt)}</bdi>
     </>
   );
 }
@@ -105,6 +107,7 @@ export function AssistantSettings({
   showHeading?: boolean;
 }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const client = useQueryClient();
   const status = useQuery({
     queryKey: ["mcp-status"],
@@ -122,6 +125,12 @@ export function AssistantSettings({
   const [revoking, setRevoking] = useState(false);
   const openRef = useRef(initialSecret != null || initialOpen);
   const secretRef = useRef<HTMLElement>(null);
+  const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
+  const setDetailsSheet = useSheetHistory("assistant-details", detailsOpen, setDetailsOpen);
+  const setDisconnectSheet = useSheetHistory("assistant-disconnect", disconnectOpen, setDisconnectOpen);
+  const setConnectSheet = useSheetHistory("assistant-connect", open, (next) => {
+    closeConnectRef.current(next);
+  });
 
   const live = status.data;
   const view: AssistantSample = sample
@@ -151,6 +160,7 @@ export function AssistantSettings({
       setChoice("read_write");
     }
   }
+  closeConnectRef.current = closeSheet;
 
   async function mint() {
     if (minting) return;
@@ -195,13 +205,16 @@ export function AssistantSettings({
   async function disconnect() {
     if (!view.id || revoking) return;
     if (blocked?.()) {
-      setDisconnectOpen(false);
+      setDisconnectSheet(false);
       return;
     }
     setRevoking(true);
     try {
       await revokeCode(view.id);
       setDisconnectOpen(false);
+      if (view.state === "connected") setDetailsOpen(false);
+      else closeSheet(false);
+      popSheetLayers(navigate, 2);
       toast.show({ tone: "info", message: "העוזר נותק." });
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
     } catch {
@@ -212,22 +225,22 @@ export function AssistantSettings({
   }
 
   const row = view.state === "loading" ? (
-    <ListRow variant="button" title="עוזר" hint="טוען" icon={<InboxIcon />} wrapHint describeHint busy disabled onClick={() => undefined} />
+    <ListRow variant="button" title="עוזר AI" hint="טוען" icon={<InboxIcon />} wrapHint describeHint busy disabled onClick={() => undefined} />
   ) : view.state === "no-company" ? (
     <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint disabled onClick={() => undefined} />
   ) : view.state === "error" ? (
-    <ListRow variant="static" title="עוזר" hint="לא הצלחנו לטעון את החיבור." icon={<AlertIcon />} wrapHint describeHint />
+    <ListRow variant="static" title="עוזר AI" hint="לא הצלחנו לטעון את החיבור." icon={<AlertIcon />} wrapHint describeHint />
   ) : view.state === "connected" ? (
-    <ListRow variant="button" title="עוזר" hint={connectedHint(scope, view.lastUsedAt)} icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setDetailsOpen(true); }} />
+    <ListRow variant="button" title="עוזר AI" hint={connectedHint(scope, view.lastUsedAt)} icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setDetailsSheet(true); }} />
   ) : view.state === "expired" ? (
-    <ListRow variant="button" title="חיבור מחדש" hint="התוקף פג" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { closeSheet(true); }} />
+    <ListRow variant="button" title="עוזר AI" hint="התוקף פג" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setConnectSheet(true); }} />
   ) : (
-    <ListRow variant="button" title="חיבור עוזר" hint="לא מחובר" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { closeSheet(true); }} />
+    <ListRow variant="button" title="עוזר AI" hint="לא מחובר" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setConnectSheet(true); }} />
   );
 
   return (
     <>
-      {showHeading ? <SectionHead title="עוזר" /> : null}
+      {showHeading ? <SectionHead title="עוזר AI" /> : null}
       <List>
         {row}
       </List>
@@ -236,7 +249,7 @@ export function AssistantSettings({
           <Button type="button" variant="secondary" onClick={() => { void status.refetch(); }}>נסו שוב</Button>
         </div>
       ) : null}
-      <Sheet open={open} onOpenChange={closeSheet} title="חיבור עוזר">
+      <Sheet open={open} onOpenChange={setConnectSheet} title="חיבור עוזר">
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>
@@ -246,7 +259,7 @@ export function AssistantSettings({
             <p aria-labelledby="assistant-scope-label">{scopeLabel(scopeChoice(secret.scope))}</p>
             {manualCopy ? <p className="t-hint" id="assistant-manual-copy" role="status">העתיקו ידנית</p> : null}
             <Button type="button" variant="secondary" aria-describedby={manualCopy ? "assistant-manual-copy" : undefined} onClick={() => { void copySecret(); }}>העתקה</Button>
-            <Button type="button" onClick={() => { closeSheet(false); }}>סיום</Button>
+            <Button type="button" onClick={() => { setConnectSheet(false); }}>סיום</Button>
           </div>
         ) : (
           <div className="ui-stack ui-assistant-step">
@@ -273,18 +286,18 @@ export function AssistantSettings({
         )}
         {showDisconnect && view.id && view.state === "expired" ? (
           <List>
-            <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectOpen(true); }} />
+            <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
           </List>
         ) : null}
       </Sheet>
-      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen} title="עוזר">
+      <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI">
         <List>
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectOpen(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
         </List>
       </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
-        onOpenChange={setDisconnectOpen}
+        onOpenChange={setDisconnectSheet}
         title="לנתק את העוזר?"
         consequence="הקוד יפסיק לעבוד. הספרים נשארים."
         confirmLabel="ניתוק"

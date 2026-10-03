@@ -467,7 +467,12 @@ function DevSettings() {
   const connected = mode === "1" || mode === "auth";
   const assistant = params.get("assistant");
   const noCompany = params.get("nocompany") === "1";
-  const email = params.get("email") === "none" ? "" : "owner@example.com";
+  const emailParam = params.get("email");
+  const email = emailParam === "none"
+    ? ""
+    : emailParam === "long"
+      ? "owner.with.a.very.long.mailbox.name@example.com"
+      : "owner@example.com";
   return (
     <SettingsScreen
       sample={{

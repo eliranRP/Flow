@@ -1,12 +1,12 @@
 import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
+import { CategoriesScreen, SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -487,6 +487,19 @@ describe("settings account", () => {
     fireEvent.click(assistant);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(email.closest(".ui-row")?.querySelector("path[fill='#4285F4']")).not.toBeNull();
+    const calls: string[] = [];
+    edge.invoke = (name) => {
+      calls.push(name);
+      return Promise.resolve({ data: null, error: null });
+    };
+    fireEvent.click(sumit);
+    const sumitSheet = screen.getByRole("dialog", { name: "חיבור SUMIT" });
+    expect(within(sumitSheet).queryByLabelText("מספר חברה")).not.toBeInTheDocument();
+    expect(within(sumitSheet).queryByLabelText("מפתח API")).not.toBeInTheDocument();
+    expect(within(sumitSheet).queryByRole("button", { name: "חיבור" })).not.toBeInTheDocument();
+    expect(sumitSheet).toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
+    expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding");
+    expect(calls.some((name) => name.includes("sumit-connect"))).toBe(false);
     unmount();
 
     render(
@@ -618,6 +631,207 @@ describe("settings account", () => {
     const sumit = screen.getByRole("dialog", { name: "SUMIT" });
     fireEvent.click(within(sumit).getByRole("button", { name: "ניתוק" }));
     expect(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).toBeInTheDocument();
+  });
+
+  it("closes the SUMIT sheet when ניתוק succeeds", async () => {
+    rpc.calls.length = 0;
+    rpc.impl = () => Promise.resolve({ data: null, error: null });
+    let layer: string | null = "unset";
+    function Layer() {
+      const location = useLocation();
+      const state: unknown = location.state;
+      if (typeof state !== "object" || state === null || !("flowLayer" in state)) {
+        layer = null;
+        return null;
+      }
+      layer = typeof state.flowLayer === "string" ? state.flowLayer : null;
+      return null;
+    }
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <Layer />
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: true,
+                  companyId: 1001,
+                  lastError: null,
+                  email: "owner@example.com",
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "SUMIT מחובר" }));
+    await waitFor(() => { expect(layer).toBe("sumit-status"); });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "SUMIT" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => { expect(layer).toBe("sumit-disconnect"); });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    expect(layer).toBeNull();
+    expect(rpc.calls.some((call) => call.name === "disconnect_sumit")).toBe(true);
+  });
+
+  it("keeps other previews on their sample and hides sign-out", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/settings?preview=1"]}>
+              <SettingsScreen />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: /חיבור SUMIT/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "התנתקות" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "SUMIT", exact: true })).not.toBeInTheDocument();
+  });
+
+  function cssPx(value: string): number {
+    const root = getComputedStyle(document.documentElement);
+    const named = /^var\((--[^),\s]+)\)$/.exec(value.trim());
+    const resolved = named ? root.getPropertyValue(named[1]).trim() : value.trim();
+    if (resolved.endsWith("rem")) return Number.parseFloat(resolved) * 16;
+    if (resolved.endsWith("px")) return Number.parseFloat(resolved);
+    return Number.parseFloat(resolved);
+  }
+
+  function declared(selector: string, property: string): string {
+    for (const sheet of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of rules) {
+        if (!(rule instanceof CSSStyleRule)) continue;
+        const matches = rule.selectorText.split(",").some((part) => part.trim() === selector);
+        if (!matches) continue;
+        const value = rule.style.getPropertyValue(property);
+        if (value) return value;
+      }
+    }
+    throw new Error(`missing ${selector} ${property}`);
+  }
+
+  function lineBox(selector: string): number {
+    const size = cssPx(declared(selector, "font-size"));
+    const line = declared(selector, "line-height");
+    const raw = line.trim().endsWith("px") ? cssPx(line) : cssPx(line) * size;
+    return Math.round(raw);
+  }
+
+  /** jsdom leaves custom properties unresolved, so the height comes from the rules. */
+  function rowHeight(hasHint: boolean): number {
+    const pad = cssPx(declared(".ui-row", "padding-block"));
+    const border = Number.parseFloat(declared(".ui-row", "border-bottom"));
+    const min = cssPx(declared(".ui-row", "min-height"));
+    const content = lineBox(".ui-row-title") + (hasHint ? lineBox(".ui-row-hint") : 0) + pad * 2 + border;
+    return declared(".ui-row", "box-sizing") === "border-box" ? Math.max(content, min) : content;
+  }
+
+  it("uses the single-line height for the no-company account row and 72px for a two-line row", () => {
+    document.documentElement.style.setProperty("--row-pad", "14px");
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: null,
+                  vatRegistered: false,
+                  connected: false,
+                  companyId: null,
+                  lastError: null,
+                  email: "owner@example.com",
+                  noCompany: true,
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const single = screen.getByText("owner@example.com").closest(".ui-row");
+    expect(single).not.toBeNull();
+    expect(single?.querySelector(".ui-row-hint")).toBeNull();
+    expect(getComputedStyle(single as Element).boxSizing).toBe("border-box");
+    expect(rowHeight(false)).toBe(53);
+    unmount();
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: false,
+                  companyId: null,
+                  lastError: null,
+                  email: "owner@example.com",
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const paired = screen.getByRole("group", { name: "אלפא" });
+    expect(paired.querySelector(".ui-row-hint")).not.toBeNull();
+    expect(rowHeight(true)).toBe(72);
+    document.documentElement.style.removeProperty("--row-pad");
+  });
+
+  it("sends categories with no company back to settings", () => {
+    const { unmount } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/settings/categories?preview=empty"]}>
+              <Routes>
+                <Route path="/settings/categories" element={<CategoriesScreen />} />
+                <Route path="/settings" element={<h1>הגדרות</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "קטגוריות" })).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/settings/categories?preview=1"]}>
+              <Routes>
+                <Route path="/settings/categories" element={<CategoriesScreen />} />
+                <Route path="/settings" element={<h1>הגדרות</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "קטגוריות" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "הגדרות" })).not.toBeInTheDocument();
   });
 
   it("asks to check the id and the key when connect rejects the key", async () => {
