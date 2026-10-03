@@ -3183,6 +3183,8 @@ type SettingsSample = {
   lastError: string | null;
   nextAttemptAt?: string | null;
   email?: string | null;
+  /** Live `company_id` is null. Preview passes this because a sample skips the dashboard. */
+  noCompany?: boolean;
   projectCount?: number;
   expenseCategories?: number;
   incomeCategories?: number;
@@ -3204,8 +3206,10 @@ export function SettingsScreen({
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen);
+  const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen);
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -3292,8 +3296,10 @@ export function SettingsScreen({
     );
   }
 
-  const emptyAccount = phase.kind === "empty";
-  const connected = emptyAccount ? false : sample ? sample.connected : status.data?.connected === true;
+  const noCompany = sample
+    ? sample.noCompany === true
+    : phase.kind === "empty" || dashboard.data?.company_id == null;
+  const connected = noCompany ? false : sample ? sample.connected : status.data?.connected === true;
   const businessName = sample ? sample.name : dashboard.data?.name;
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
@@ -3308,47 +3314,51 @@ export function SettingsScreen({
     </>
   );
   const refreshHint = authReconnect ? "המזהה או המפתח לא התקבלו" : retryHint;
-  const email = sample ? sample.email : session?.user.email;
+  const email = (sample ? sample.email : session?.user.email)?.trim() ?? "";
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
   const incomeCount = sample?.incomeCategories ?? categories.data?.filter((category) => category.kind === "income" && !category.hidden).length;
   const categoryHint = expenseCount == null || incomeCount == null
     ? undefined
     : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
-  const accountHint = !emptyAccount && email ? <bdi dir="ltr">{email}</bdi> : undefined;
+  const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
   const showInstall = !isStandalone();
-  const showSignOut = emptyAccount || preview === "off";
+  const showSignOut = noCompany || preview === "off";
   return (
     <div>
       <ScreenHeader title="הגדרות" />
-      <List>
-        {emptyAccount ? (
-          <ListRow
-            variant="button"
-            title={email ?? "עדיין בלי עסק"}
-            icon={<GoogleIcon />}
-            disabled
-            onClick={() => undefined}
-          />
-        ) : (
+      {noCompany ? (
+        email !== "" ? (
+          <List>
+            <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} />
+          </List>
+        ) : null
+      ) : (
+        <List>
           <ListRow
             variant="static"
-            title={businessName ?? "עדיין בלי עסק"}
+            title={businessName ?? ""}
             hint={accountHint}
             icon={<GoogleIcon />}
             describeHint={accountHint != null}
             wrapHint
           />
-        )}
-      </List>
+        </List>
+      )}
       <SectionHead title="חיבורים" />
       <List>
         {connected ? (
           <ListRow
-            variant="static"
+            variant="button"
             title="SUMIT מחובר"
             hint={<>מספר חברה <bdi dir="ltr">{String(sumitId ?? "")}</bdi></>}
             icon={<RefreshIcon />}
+            chevron
+            describeHint
+            wrapHint
+            onClick={() => { setStatusSheet(true); }}
           />
+        ) : noCompany ? (
+          <ListRow variant="button" title="SUMIT" hint="לא מחובר" icon={<RefreshIcon />} chevron describeHint wrapHint onClick={() => { setConnectSheet(true); }} />
         ) : (
           <ListRow variant="button" title="חיבור SUMIT" hint="מספר חברה ומפתח API" icon={<RefreshIcon />} chevron onClick={() => { setConnectSheet(true); }} />
         )}
@@ -3369,19 +3379,22 @@ export function SettingsScreen({
             }}
           />
         ) : null}
-        {connected ? (
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
-        ) : null}
       </List>
-      {lastError && !emptyAccount ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
-      {rawError === "sumit_auth" && !emptyAccount ? (
+      {lastError && !noCompany ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
+      {rawError === "sumit_auth" && !noCompany ? (
         <div className="ui-page-pad">
           <Button variant="secondary" onClick={() => { setConnectSheet(true); }}>חיבור מחדש</Button>
         </div>
       ) : null}
       <AssistantSettings
-        sample={sample ? (sample.assistant ?? { state: "empty" }) : undefined}
-        noCompany={emptyAccount}
+        sample={
+          noCompany
+            ? { state: "no-company" }
+            : sample
+              ? (sample.assistant ?? { state: "empty" })
+              : undefined
+        }
+        noCompany={noCompany}
         blocked={blocked}
         showHeading={false}
       />
@@ -3399,6 +3412,11 @@ export function SettingsScreen({
           <Button type="submit" busy={connect.isPending}>חיבור</Button>
         </form>
       </Sheet>
+      <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT">
+        <List>
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
+        </List>
+      </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
         onOpenChange={setDisconnectSheet}
@@ -3412,7 +3430,7 @@ export function SettingsScreen({
           disconnect.mutate();
         }}
       />
-      {emptyAccount ? null : (
+      {noCompany ? null : (
         <>
           <SectionHead title="תצוגה" />
           <List>
@@ -3420,8 +3438,8 @@ export function SettingsScreen({
           </List>
           <div className="ui-page-pad">
             <Toggle
-              label="רווח אחרי חלק בכלליות"
-              hint={overheadHint(overheadOn, { available: true, scope: "company" })}
+              label="רווח אחרי כלליות"
+              hint="חלק מהכלליות נכנס לכל פרויקט"
               checked={overheadOn}
               onChange={(checked) => {
                 if (sample) {
@@ -3452,7 +3470,6 @@ export function SettingsScreen({
                 icon={<LogoutIcon />}
                 busy={signOut.isPending}
                 onClick={() => {
-                  if (emptyAccount && blocked()) return;
                   signOut.mutate();
                 }}
               />

@@ -1,8 +1,9 @@
-import { FunctionsHttpError } from "@supabase/supabase-js";
+import { FunctionsHttpError, type Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
@@ -18,8 +19,23 @@ const edge = vi.hoisted(() => ({
     Promise.resolve({ data: null, error: null }),
 }));
 
+const auth = vi.hoisted(() => ({
+  handlers: [] as Array<(event: string, session: Session | null) => void>,
+  signOuts: 0,
+}));
+
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
+    auth: {
+      onAuthStateChange: (callback: (event: string, session: Session | null) => void) => {
+        auth.handlers.push(callback);
+        return { data: { subscription: { unsubscribe: () => undefined } } };
+      },
+      signOut: () => {
+        auth.signOuts += 1;
+        return Promise.resolve({ error: null });
+      },
+    },
     rpc: (name: string, args?: unknown) => {
       rpc.calls.push({ name, args });
       return rpc.impl(name, args);
@@ -425,30 +441,183 @@ describe("settings account", () => {
     expect(screen.queryByText("Flow · POC 0.1")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "רווח אחרי חלק בכלליות" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeInTheDocument();
+    expect(screen.getByText("חלק מהכלליות נכנס לכל פרויקט")).toBeInTheDocument();
   });
 
-  it("disables the account row when there is no company", () => {
-    render(
+  it("shows a static email row when there is no company", async () => {
+    auth.signOuts = 0;
+    const { unmount } = render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
           <BooksProvider>
-          <MemoryRouter initialEntries={["/settings?preview=empty"]}>
-            <SettingsScreen />
+          <MemoryRouter>
+            <SettingsScreen
+              sample={{
+                name: null,
+                vatRegistered: false,
+                connected: false,
+                companyId: null,
+                lastError: null,
+                email: "owner@example.com",
+                noCompany: true,
+              }}
+            />
           </MemoryRouter>
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const account = screen.getByRole("button", { name: "עדיין בלי עסק" });
-    expect(account).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "אין עסק עדיין" })).not.toBeInTheDocument();
-    const assistant = screen.getByRole("button", { name: "עוזר" });
-    expect(document.getElementById(assistant.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
-    expect(account.querySelector("path[fill='#4285F4']")).not.toBeNull();
+    const email = screen.getByText("owner@example.com");
+    expect(email.tagName).toBe("BDI");
+    expect(email).toHaveAttribute("dir", "ltr");
+    expect(email.closest(".ui-row-title")).toHaveAttribute("dir", "ltr");
+    expect(email.closest(".ui-row")?.tagName).toBe("DIV");
+    expect(email.closest("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: "owner@example.com" })).not.toBeInTheDocument();
+    expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "התנתקות" })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeInTheDocument();
+    const sumit = screen.getByRole("button", { name: "SUMIT" });
+    expect(sumit).toBeEnabled();
+    expect(document.getElementById(sumit.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
+    const assistant = screen.getByRole("button", { name: "עוזר AI" });
+    expect(assistant).toBeDisabled();
+    expect(document.getElementById(assistant.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
+    fireEvent.click(assistant);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(email.closest(".ui-row")?.querySelector("path[fill='#4285F4']")).not.toBeNull();
+    unmount();
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+          <MemoryRouter initialEntries={["/settings?preview=empty"]}>
+            <SettingsScreen
+              sample={{
+                name: null,
+                vatRegistered: false,
+                connected: false,
+                companyId: null,
+                lastError: null,
+                email: "   ",
+                noCompany: true,
+              }}
+            />
+          </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "התנתקות" }));
+    await waitFor(() => { expect(auth.signOuts).toBe(1); });
+    expect(screen.queryByText("במצב תצוגה זה לא נשמר.")).not.toBeInTheDocument();
+  });
+
+  it("treats a live dashboard with a null company id as no company", async () => {
+    auth.handlers.length = 0;
+    rpc.calls.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: null,
+            name: null,
+            vat_registered: false,
+            basis: "invoiced",
+            from: null,
+            to: null,
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 0,
+            review_count: 0,
+            projects: [],
+          },
+          error: null,
+        });
+      }
+      if (name === "sumit_status") {
+        return Promise.resolve({
+          data: { connected: false, sumit_company_id: null, last_sync_at: null, last_error: null },
+          error: null,
+        });
+      }
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/settings"]}>
+              <AuthProvider>
+                <SettingsScreen />
+              </AuthProvider>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    act(() => {
+      for (const handler of auth.handlers) {
+        handler("INITIAL_SESSION", { user: { email: "owner@example.com" } } as Session);
+      }
+    });
+    const email = await screen.findByText("owner@example.com");
+    expect(email.closest("button")).toBeNull();
+    expect(email.closest(".ui-row")?.tagName).toBe("DIV");
+    expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "רווח אחרי כלליות" })).not.toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "set_after_overhead")).toBe(false);
+    const sumit = screen.getByRole("button", { name: "SUMIT" });
+    expect(sumit).toBeEnabled();
+    expect(sumit).toHaveTextContent("לא מחובר");
+    const assistant = screen.getByRole("button", { name: "עוזר AI" });
+    expect(assistant).toBeDisabled();
+    expect(assistant).toHaveTextContent("אין עסק עדיין");
+    fireEvent.click(assistant);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("keeps ניתוק inside the SUMIT sheet", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter>
+              <SettingsScreen
+                sample={{
+                  name: "אלפא",
+                  vatRegistered: true,
+                  connected: true,
+                  companyId: 1001,
+                  lastError: null,
+                  email: "owner@example.com",
+                  assistant: { state: "connected", scope: "read", id: "mcp-1" },
+                }}
+              />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "SUMIT מחובר" }));
+    const sumit = screen.getByRole("dialog", { name: "SUMIT" });
+    fireEvent.click(within(sumit).getByRole("button", { name: "ניתוק" }));
+    expect(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).toBeInTheDocument();
   });
 
   it("asks to check the id and the key when connect rejects the key", async () => {

@@ -409,7 +409,8 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await page.goto("/e2e/settings?preview=1&assistant=connected");
   await expect(page.getByText("30/09/2026, 14:05")).toBeVisible();
   await expect(page.getByText("מחובר")).toBeVisible();
-  await page.getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("button", { name: "עוזר" }).click();
+  await page.getByRole("dialog", { name: "עוזר" }).getByRole("button", { name: "ניתוק" }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "ניתוק" }).click();
@@ -448,7 +449,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
     await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
-  const overhead = page.getByRole("switch", { name: "רווח אחרי חלק בכלליות" });
+  const overhead = page.getByRole("switch", { name: "רווח אחרי כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   await expect(page.getByRole("button", { name: "התנתקות" })).toHaveCount(0);
@@ -458,9 +459,24 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.goto("/e2e/settings?preview=1&connected=1");
   await page.getByRole("button", { name: "רענון עכשיו" }).click();
   await toast(page, previewToast);
-  await page.getByRole("button", { name: "ניתוק" }).click();
-  await page.getByRole("button", { name: "ניתוק" }).last().click();
+  await page.getByRole("button", { name: "SUMIT מחובר" }).click();
+  await page.getByRole("dialog", { name: "SUMIT" }).getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("dialog", { name: "לנתק את SUMIT?" }).getByRole("button", { name: "ניתוק" }).click();
   await toast(page, previewToast);
+
+  await page.goto("/e2e/settings?preview=1&nocompany=1");
+  await expect(page.getByText("owner@example.com")).toBeVisible();
+  await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "רווח אחרי כלליות" })).toHaveCount(0);
+  const sumit = page.getByRole("button", { name: "SUMIT" });
+  await expect(sumit).toBeEnabled();
+  await expect(sumit).toContainText("לא מחובר");
+  await expect(page.getByRole("button", { name: "עוזר AI" })).toBeDisabled();
+  await page.goto("/e2e/settings?preview=1&nocompany=1&email=none");
+  await expect(page.getByText("owner@example.com")).toHaveCount(0);
+  await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
 
   await page.goto("/e2e/settings?preview=1&connected=auth");
   const held = page.getByRole("button", { name: /רענון עכשיו/ });

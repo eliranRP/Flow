@@ -60,7 +60,9 @@ describe("assistant settings", () => {
     );
     expect(screen.getByText(/קריאה בלבד/)).toBeInTheDocument();
     expect(screen.getByText("30/09/2026, 14:05")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "עוזר" }));
+    expect(within(screen.getByRole("dialog", { name: "עוזר" })).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
   });
 
   it("disables the scope rows while minting, and a failure says to try again", async () => {
@@ -144,25 +146,22 @@ describe("assistant settings", () => {
       calls.push(name);
       return Promise.resolve({ data: { ok: true }, error: null });
     };
-    const { rerender } = renderAssistant(
+    const connected = renderAssistant(
       <AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(screen.getByRole("button", { name: "עוזר" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "עוזר" })).getByRole("button", { name: "ניתוק" }));
     const confirm = screen.getByRole("dialog", { name: "לנתק את העוזר?" });
     expect(confirm).toHaveTextContent("הקוד יפסיק לעבוד. הספרים נשארים.");
     fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
     await waitFor(() => expect(screen.getByText("העוזר נותק.")).toBeInTheDocument());
     expect(calls.some((name) => name.includes("revoke"))).toBe(true);
+    connected.unmount();
 
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <AssistantSettings sample={{ state: "expired", scope: "read", id: "mcp-1" }} />
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+    renderAssistant(<AssistantSettings sample={{ state: "expired", scope: "read", id: "mcp-1" }} />);
     fireEvent.click(screen.getByRole("button", { name: /חיבור מחדש/ }));
-    expect(screen.getByRole("dialog", { name: "חיבור עוזר" })).toBeInTheDocument();
+    const reconnect = screen.getByRole("dialog", { name: "חיבור עוזר" });
+    expect(within(reconnect).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
   });
 
   it("mints the scope that was selected", async () => {
@@ -198,7 +197,8 @@ describe("assistant settings", () => {
     renderAssistant(
       <AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} blocked={() => true} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(screen.getByRole("button", { name: "עוזר" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "עוזר" })).getByRole("button", { name: "ניתוק" }));
     const confirm = screen.getByRole("dialog", { name: "לנתק את העוזר?" });
     fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
     expect(screen.queryByRole("dialog", { name: "לנתק את העוזר?" })).not.toBeInTheDocument();
@@ -215,7 +215,7 @@ describe("assistant settings", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const row = screen.getByRole("button", { name: "עוזר" });
+    const row = screen.getByRole("button", { name: "עוזר AI" });
     expect(row).toBeDisabled();
     expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
   });

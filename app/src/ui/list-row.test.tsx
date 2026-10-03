@@ -41,6 +41,19 @@ describe("ListRow", () => {
     expect(screen.getByRole("button", { name: "וילה" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("keeps an ltr title from the start", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="static" title="owner@example.com" ltrTitle />
+      </MemoryRouter>,
+    );
+    const email = screen.getByText("owner@example.com");
+    expect(email.tagName).toBe("BDI");
+    expect(email).toHaveAttribute("dir", "ltr");
+    expect(email.closest(".ui-row-title")).toHaveAttribute("dir", "ltr");
+    expect(email.closest(".ui-row")?.tagName).toBe("DIV");
+  });
+
   it("drops the chevron on a static row and exposes aria-expanded on a disclosure", () => {
     const { container } = render(
       <MemoryRouter>
