@@ -30,11 +30,11 @@ export function SheetSurface({
   footClassName?: string;
 }) {
   const heading = drawer ? (
-    <Drawer.Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2">
+    <Drawer.Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2" data-clip-ok="">
       {title}
     </Drawer.Title>
   ) : (
-    <h2 className="t-title-2">
+    <h2 className="t-title-2" data-clip-ok="">
       {title}
     </h2>
   );
@@ -57,15 +57,25 @@ export function SheetSurface({
   );
 }
 
+function sheetOutMs(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--dur-sheet-out").trim();
+  if (raw.endsWith("ms")) return Number.parseFloat(raw);
+  if (raw.endsWith("s")) return Number.parseFloat(raw) * 1000;
+  return 220;
+}
+
 const openSheetIds: number[] = [];
 let nextSheetId = 1;
+const closingPanels = new Set<HTMLElement>();
 
 function syncSheetInert(): void {
-  const drawers = [...document.querySelectorAll<HTMLElement>("[data-vaul-drawer][data-state=\"open\"]")];
-  drawers.forEach((node, index) => {
-    if (index < drawers.length - 1) node.setAttribute("inert", "");
-    else node.removeAttribute("inert");
-  });
+  const drawers = [...document.querySelectorAll<HTMLElement>("[data-vaul-drawer]")];
+  const interactive = drawers.filter((node) => node.getAttribute("data-state") === "open" && !closingPanels.has(node));
+  const top = interactive.length > 0 ? interactive[interactive.length - 1] : undefined;
+  for (const node of drawers) {
+    if (node === top) node.removeAttribute("inert");
+    else if (closingPanels.has(node) || node.getAttribute("data-state") === "open") node.setAttribute("inert", "");
+  }
 }
 
 export function Sheet({
@@ -120,14 +130,63 @@ export function Sheet({
   const closing = useRef(false);
   const deciding = useRef(false);
   const wasOpen = useRef(false);
+  const opened = useRef(false);
+  const closeNotified = useRef(true);
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
+  const notifyClosed = () => {
+    if (closeNotified.current) return;
+    closeNotified.current = true;
+    onClosedRef.current?.();
+  };
+  const notifyRef = useRef(notifyClosed);
+  notifyRef.current = notifyClosed;
+  useEffect(() => {
+    if (open) {
+      // A close that reopens before the timer fires still owes its reset.
+      if (!closeNotified.current) notifyRef.current();
+      opened.current = true;
+      return;
+    }
+    if (!opened.current) return;
+    opened.current = false;
+    closeNotified.current = false;
+    const panel = panelRef.current;
+    const onEnd = (event: AnimationEvent) => {
+      if (event.target !== panel) return;
+      notifyRef.current();
+    };
+    panel?.addEventListener("animationend", onEnd);
+    const timer = window.setTimeout(() => {
+      notifyRef.current();
+    }, sheetOutMs());
+    return () => {
+      panel?.removeEventListener("animationend", onEnd);
+      window.clearTimeout(timer);
+      // Strict mode runs the effect twice. A cancelled close is not finished.
+      if (!closeNotified.current) opened.current = true;
+    };
+  }, [open]);
   const [depth, setDepth] = useState(0);
   useEffect(() => {
     if (open) closing.current = false;
   }, [open]);
   useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (panel) {
+      if (open) closingPanels.delete(panel);
+      else {
+        closingPanels.add(panel);
+        panel.setAttribute("inert", "");
+      }
+    }
     if (!open) {
       setDepth(0);
-      return;
+      syncSheetInert();
+      return () => {
+        if (panel) closingPanels.delete(panel);
+        queueMicrotask(syncSheetInert);
+      };
     }
     const id = nextSheetId;
     nextSheetId += 1;
@@ -142,6 +201,7 @@ export function Sheet({
     const frame = window.requestAnimationFrame(syncSheetInert);
     return () => {
       window.cancelAnimationFrame(frame);
+      if (panel) closingPanels.delete(panel);
       const index = openSheetIds.indexOf(id);
       if (index >= 0) openSheetIds.splice(index, 1);
       queueMicrotask(syncSheetInert);
@@ -227,7 +287,7 @@ export function Sheet({
         else onOpenChange(true);
       }}
       onAnimationEnd={(stillOpen) => {
-        if (!stillOpen) onClosed?.();
+        if (!stillOpen) notifyRef.current();
       }}
     >
       <Drawer.Portal>

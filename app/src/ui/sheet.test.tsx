@@ -1,9 +1,14 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Sheet, SheetSurface } from "./sheet";
 import { expectRtl, expectTarget } from "./test-support";
 
 describe("Sheet", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("opens a dialog with a 44px close control", () => {
     expectRtl();
     render(
@@ -34,6 +39,31 @@ describe("Sheet", () => {
     expect(getComputedStyle(panel).outlineStyle).toBe("none");
     expect(sheetFocusRule()).toBe("none");
     expect(screen.getByRole("button", { name: "בפנים" })).toBeInTheDocument();
+  });
+
+  it("notifies a close once, and the panel is inert while it closes", async () => {
+    vi.useFakeTimers();
+    let closed = 0;
+    function Harness() {
+      const [open, setOpen] = useState(true);
+      return (
+        <Sheet open={open} onOpenChange={setOpen} onClosed={() => { closed += 1; }} title="תקופה">
+          <p>תוכן</p>
+        </Sheet>
+      );
+    }
+    render(<Harness />);
+    const panel = screen.getByRole("dialog", { name: "תקופה" });
+    expect(panel).not.toHaveAttribute("inert");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const sliding = screen.queryByRole("dialog", { name: "תקופה" });
+    if (sliding) expect(sliding).toHaveAttribute("inert");
+    expect(closed).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(220); });
+    expect(closed).toBe(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(closed).toBe(1);
   });
 });
 
