@@ -3198,6 +3198,7 @@ export function SettingsScreen({
 } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
+  const navigate = useNavigate();
   const { session } = useAuth();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
@@ -3278,6 +3279,7 @@ export function SettingsScreen({
   const signOut = useWrite({
     failure: "לא הצלחנו לצאת.",
     keys: [],
+    onSuccess: () => { void navigate("/sign-in"); },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
