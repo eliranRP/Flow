@@ -399,18 +399,24 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
 
 test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
-  await page.getByRole("button", { name: "חיבור עוזר" }).click();
+  await page.getByRole("button", { name: "עוזר AI" }).click();
   const sheet = page.getByRole("dialog", { name: "חיבור עוזר" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("radio", { name: "קריאה בלבד" }).click();
   await expect(sheet.getByRole("radio", { name: "קריאה בלבד" })).toBeChecked();
   await sheet.getByRole("button", { name: "יצירת קוד" }).click();
   await toast(page, previewToast);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/e2e/settings?preview=1&assistant=connected");
   await expect(page.getByText("30/09/2026, 14:05")).toBeVisible();
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  const stampLines = await page.locator("bdi", { hasText: "30/09/2026, 14:05" }).evaluate((node) => node.getClientRects().length);
+  expect(stampLines).toBe(1);
   await expect(page.getByText("מחובר")).toBeVisible();
-  await page.getByRole("button", { name: "עוזר" }).click();
-  await page.getByRole("dialog", { name: "עוזר" }).getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("button", { name: "עוזר AI" }).click();
+  await page.getByRole("dialog", { name: "עוזר AI" }).getByRole("button", { name: "ניתוק" }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "ניתוק" }).click();
@@ -421,7 +427,7 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await expect(page.getByText("מחובר")).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/settings?preview=1");
-  await page.getByRole("button", { name: "חיבור עוזר" }).click();
+  await page.getByRole("button", { name: "עוזר AI" }).click();
   const narrow = page.getByRole("dialog", { name: "חיבור עוזר" });
   await expect(narrow).toBeVisible();
   const clipped = await page.evaluate(() => {
@@ -477,6 +483,25 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.goto("/e2e/settings?preview=1&nocompany=1&email=none");
   await expect(page.getByText("owner@example.com")).toHaveCount(0);
   await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/e2e/settings?preview=1&nocompany=1&email=long");
+  const longEmail = "owner.with.a.very.long.mailbox.name@example.com";
+  const emailStart = await page.locator(".ui-row-title", { hasText: longEmail }).evaluate((node, email) => {
+    const text = node.querySelector("bdi")?.firstChild;
+    if (!text || text.textContent !== email) return false;
+    const box = node.getBoundingClientRect();
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 1);
+    const start = range.getBoundingClientRect();
+    range.setStart(text, email.length - 1);
+    range.setEnd(text, email.length);
+    const end = range.getBoundingClientRect();
+    const startInside = start.width > 0 && start.left >= box.left - 1 && start.right <= box.right + 1;
+    const endClipped = end.right > box.right + 1 || node.scrollWidth > node.clientWidth + 1;
+    return startInside && endClipped;
+  }, longEmail);
+  expect(emailStart).toBe(true);
 
   await page.goto("/e2e/settings?preview=1&connected=auth");
   const held = page.getByRole("button", { name: /רענון עכשיו/ });
