@@ -409,6 +409,10 @@ a.ui-row,
   line-height: var(--type-title-3-line);
 }
 
+.t-hint {
+  text-wrap: pretty;
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -575,6 +579,11 @@ a.ui-row,
   inset-block-start: 50%;
   transform: translateY(-50%);
   background: var(--color-surface);
+}
+
+/* The shared icon ring is offset 2px, which runs past this field's end border. */
+.ui-code-field-copy.ui-icon-btn:focus-visible {
+  outline-offset: -2px;
 }
 
 .ui-assistant-step {
@@ -1952,6 +1961,11 @@ button.ui-tab-slot {
   z-index: 30;
   border: 0;
   background: var(--color-scrim);
+}
+
+/* A fading scrim stays painted for the close animation. It must not take the next tap. */
+[data-vaul-overlay][data-state="closed"] {
+  pointer-events: none;
 }
 
 .ui-sheet-panel {

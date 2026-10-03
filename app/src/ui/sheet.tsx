@@ -180,6 +180,11 @@ export function Sheet({
         panel.setAttribute("inert", "");
       }
     }
+    const scrim = scrimRef.current;
+    if (scrim) {
+      if (open) scrim.style.removeProperty("pointer-events");
+      else scrim.style.pointerEvents = "none";
+    }
     if (!open) {
       setDepth(0);
       syncSheetInert();

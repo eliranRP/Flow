@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Sheet backdrop. A tap on the code sheet while the help backdrop is still fading no longer closes it, so the shown-once code stays. The copy button's focus ring stays inside the field. A horizontal wheel on the code field scrolls once, and the pan listener returns if the field remounts. `t-hint` uses `text-wrap: pretty`. Decision [0082](decisions/0082-settings-redesign.md).
+
 UI polish, design review. A sideways swipe pans the code field, and Home, End, and the arrows move along the value. The copy button sits inside the field border, and the end of the value stays clear of it. Hints wrap with `text-wrap: pretty`.
 
 UI polish, review. The code field lives in `app/src/ui/code-field.tsx`. An empty value hides העתקה. The accessible names are "העתקה: כתובת", "העתקה: קוד", and "העתקה: פקודה". Reopening a sheet before the close animation finishes still resets it, and Escape notifies the close once. The panel is inert while it closes. The Claude.ai header is not a tab stop. The reviewer leasing split opens ליסינג הדרך. The queue banner count stays on the preview rows.

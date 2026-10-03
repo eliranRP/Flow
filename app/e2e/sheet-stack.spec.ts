@@ -65,6 +65,58 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
   }
 });
 
+test("a tap on step 2 while help is fading keeps the code sheet open", async ({ page }) => {
+  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
+  await page.getByRole("button", { name: "יצירת קוד" }).click();
+  const code = page.getByRole("dialog", { name: "הקוד מוכן" });
+  await expect(code).toBeVisible();
+  await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
+  const copy = code.getByRole("button", { name: "העתקה: קוד" });
+  await copy.evaluate((node: HTMLElement) => {
+    node.focus({ focusVisible: true } as FocusOptions);
+  });
+  await expect.poll(() => copy.evaluate((node) => getComputedStyle(node).outlineOffset)).toBe("-2px");
+  await code.getByRole("button", { name: "איך מחברים ב־Claude" }).click();
+  const help = page.getByRole("dialog", { name: "איך מחברים ב־Claude" });
+  await expect(help).toBeVisible();
+  await help.getByRole("button", { name: "סגירה" }).click();
+  await page.waitForTimeout(100);
+  const closing = await page.evaluate(() => {
+    const overlays = [...document.querySelectorAll("[data-vaul-overlay]")].filter((node) => node.getAttribute("data-state") === "closed");
+    return overlays.map((node) => getComputedStyle(node).pointerEvents);
+  });
+  expect(closing.length).toBeGreaterThan(0);
+  expect(closing.every((value) => value === "none")).toBe(true);
+  const spot = await page.evaluate(() => {
+    const drawers = [...document.querySelectorAll<HTMLElement>("[data-vaul-drawer]")];
+    const codePanel = drawers.find((node) => node.getAttribute("data-state") === "open");
+    const helpPanel = drawers.find((node) => node.getAttribute("data-state") === "closed");
+    const field = codePanel?.querySelector("input");
+    if (codePanel == null || field == null) return null;
+    const codeBox = codePanel.getBoundingClientRect();
+    const fieldBox = field.getBoundingClientRect();
+    const helpBox = helpPanel?.getBoundingClientRect();
+    let x = fieldBox.x + Math.min(48, fieldBox.width / 2);
+    let y = fieldBox.y + fieldBox.height / 2;
+    if (helpBox != null && y >= helpBox.y && y <= helpBox.y + helpBox.height) {
+      const above = helpBox.y - 12;
+      if (above > codeBox.y + 12) {
+        y = above;
+        x = codeBox.x + codeBox.width / 2;
+      }
+    }
+    y = Math.min(Math.max(y, codeBox.y + 12), codeBox.y + codeBox.height - 12);
+    return { x, y };
+  });
+  if (spot == null) throw new Error("code sheet has no box");
+  await page.mouse.click(spot.x, spot.y);
+  await expect(code).toBeVisible();
+  await expect(help).toBeHidden();
+  await expect(code).toBeVisible();
+  await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
+});
+
 test("Back then Forward still closes the sheet under the restored entry", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1&e2e=stack");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
