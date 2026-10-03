@@ -595,12 +595,13 @@ select is(
   'a suspicious payload records last_error'
 );
 
--- The job exists only when Vault holds cron_secret. An empty header is not a schedule.
+-- The job exists only when Vault holds cron_secret and flow_sync_url.
 reset role;
 select lives_ok(
   $$do $chk$
     declare
       secret text;
+      sync_url text;
     begin
       if to_regclass('cron.job') is null then
         if exists (select 1 from pg_extension where extname = 'pg_cron')
@@ -614,9 +615,13 @@ select lives_ok(
       from vault.decrypted_secrets s
       where s.name = 'cron_secret'
       limit 1;
-      if coalesce(secret, '') = '' then
+      select s.decrypted_secret into sync_url
+      from vault.decrypted_secrets s
+      where s.name = 'flow_sync_url'
+      limit 1;
+      if coalesce(secret, '') = '' or coalesce(sync_url, '') = '' then
         if exists (select 1 from cron.job where jobname = 'flow-sumit-drain') then
-          raise exception 'drain is scheduled without a secret';
+          raise exception 'drain is scheduled without cron_secret and flow_sync_url';
         end if;
         return;
       end if;
@@ -625,7 +630,7 @@ select lives_ok(
       end if;
     end
     $chk$;$$,
-  'the drain is scheduled only when the cron secret is set'
+  'the drain is scheduled only when cron_secret and flow_sync_url are set'
 );
 
 select * from finish();

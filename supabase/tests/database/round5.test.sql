@@ -400,6 +400,7 @@ as $$
 declare
   scheduled boolean := false;
   has_secret boolean := false;
+  has_url boolean := false;
 begin
   if to_regclass('cron.job') is null
      or not exists (select 1 from pg_extension where extname = 'pg_net') then
@@ -413,17 +414,23 @@ begin
         where name = 'cron_secret' and btrim(decrypted_secret) <> ''
       )
     $sql$ into has_secret;
+    execute $sql$
+      select exists (
+        select 1 from vault.decrypted_secrets
+        where name = 'flow_sync_url' and btrim(decrypted_secret) <> ''
+      )
+    $sql$ into has_url;
   end if;
-  if has_secret and not scheduled then
+  if has_secret and has_url and not scheduled then
     raise exception 'drain job missing';
   end if;
-  if not has_secret and scheduled then
-    raise exception 'drain job scheduled without a secret';
+  if scheduled and not (has_secret and has_url) then
+    raise exception 'drain job scheduled without cron_secret and flow_sync_url';
   end if;
 end;
 $$;
 
-select lives_ok($$select pg_temp.check_drain()$$, 'the drain job matches the extensions and the secret');
+select lives_ok($$select pg_temp.check_drain()$$, 'the drain job matches the extensions, cron_secret, and flow_sync_url');
 
 select * from finish();
 rollback;

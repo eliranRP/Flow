@@ -33,3 +33,5 @@ Showing "שלב 1 מתוך 4" on a one-screen onboarding. Leaving the bank row d
 **Amended by [0067](0067-review-round8.md).** Point 1: Split's title is its own `t-title-1` under a compact bar. Point 3: a shared row changes category through `set_transaction_category` and does not discard the choice. Point 4: a bad key is `sumit_auth` and does not back off. Point 11: chips, ghost buttons, text links, and banners also use `--surface-hover` on hover. Point 12: a title focused for a screen reader never draws a ring.
 
 **Amended by [0068](0068-review-round9.md).** Point 1: Split's title row is `ScreenHeader` `layout="stacked"`. Point 8: a toast scrolls the remember row into view, and does not jump a long picker to the bottom. Point 12: Install's close uses `location.key`, not the history index.
+
+**Later.** Point 2 no longer falls back to Kong. `flow-sumit-drain` is scheduled only when Vault `flow_sync_url` is non-empty, and the command reads that URL. The `x-flow-cron` header stays a Vault `cron_secret` lookup. The check's exit codes are in [CI and CD](../runbooks/ci-cd.md).
