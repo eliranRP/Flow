@@ -7,6 +7,8 @@ type TextLinkProps = {
   children: ReactNode;
   className?: string;
   to?: string;
+  /** Replaces the current history entry. Settings uses it so onboarding does not sit on a sheet entry. */
+  replace?: boolean;
   href?: string;
   onClick?: () => void;
   tone?: "accent" | "quiet";
@@ -32,6 +34,7 @@ export function TextLink({
   children,
   className,
   to,
+  replace = false,
   href,
   onClick,
   tone = "accent",
@@ -69,7 +72,7 @@ export function TextLink({
   );
   if (to) {
     return (
-      <Link to={to} className={classes} aria-label={label} aria-busy={busy || undefined}>
+      <Link to={to} replace={replace} className={classes} aria-label={label} aria-busy={busy || undefined}>
         {body}
       </Link>
     );

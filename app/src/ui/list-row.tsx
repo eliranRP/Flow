@@ -38,6 +38,8 @@ type Common = {
   skelHint?: boolean;
   /** The hint is a polite status, so a failure is announced. */
   hintStatus?: boolean;
+  /** The title is a heading. The expired assistant sheet uses it. */
+  heading?: boolean;
 };
 
 export type ListRowProps =
@@ -71,6 +73,17 @@ export function ListRow(props: ListRowProps) {
   const icon =
     props.icon ??
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
+  const blockCopy = props.variant === "static";
+  const CopyMain = blockCopy ? "div" : "span";
+  const CopyText = blockCopy ? "div" : "span";
+  const titleClass = cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false);
+  const titleDir = props.ltrTitle ? "ltr" : undefined;
+  const titleBody = (
+    <>
+      {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
+      {props.tag}
+    </>
+  );
   const body = (
     <>
       {props.grip ? (
@@ -78,17 +91,17 @@ export function ListRow(props: ListRowProps) {
           <GripIcon />
         </span>
       ) : null}
-      <span className="ui-row-main">
+      <CopyMain className="ui-row-main">
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
-        <span className="ui-row-text">
+        <CopyText className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
-          <span
-            className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}
-            dir={props.ltrTitle ? "ltr" : undefined}
-          >
-            {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
-            {props.tag}
-          </span>
+          {props.heading && blockCopy ? (
+            <h3 className={titleClass} dir={titleDir}>{titleBody}</h3>
+          ) : props.heading ? (
+            <span role="heading" aria-level={3} className={titleClass} dir={titleDir}>{titleBody}</span>
+          ) : (
+            <span className={titleClass} dir={titleDir}>{titleBody}</span>
+          )}
           {props.hint != null ? (
             <span
               id={described}
@@ -98,8 +111,8 @@ export function ListRow(props: ListRowProps) {
               {props.hint}
             </span>
           ) : null}
-        </span>
-      </span>
+        </CopyText>
+      </CopyMain>
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
       {props.actionBelow ? null : props.action}

@@ -2,6 +2,20 @@
 
 ## 2026-10-03
 
+Jev connector, review. The client timeout covers the response body. `tag_suggestions.response_model` stores the model the API returned, including when it is not the pin. Until the tagging job, the setting accepts only `off` or `shadow`, and the threshold is 0.50 to 1.00. `read_jev_api_key` checks `auth.jwt()->>'role'` and stays service role only, because that job is an Edge Function. Decision [0083](decisions/0083-jev-connector.md).
+
+Jev connector plumbing. `company_integrations` and `tag_suggestions` are per company. The connector is off by default, in shadow, with threshold 0.90. Members read suggestions and turn the connector on through `set_company_integration`. The service role writes suggestions. The API key is Vault secret `jev_api_key`, read by `read_jev_api_key` for the service role only. The client pins `jev-1.13.0` and retries 429 and 529. CI does not call TypeSafe. Decision [0083](decisions/0083-jev-connector.md). The bundle scan and its exit codes are in [the Jev runbook](runbooks/jev.md).
+
+Settings cycle 4, review. Going offline and back with focus on ניסיון חוזר returns focus to the SUMIT or עוזר AI row. Chrome blurs the link while React is still removing it, so the hold waits until after that removal. A blank spot, a Tab, or a move during loading still leaves focus where the user put it.
+
+Settings cycle 4, review. A recovering status row takes focus only when focus is still parked on the document or inside that row. Moving into a sheet, clicking a blank spot, or a failed retry leaves the hold disarmed. Clickable rows keep span markup. A static heading stays a div.
+
+Settings cycle 4, review. A cold first visit to `?sheet=sumit` replaces that address with `/settings` and pushes the sheet, so Back closes the sheet and stays in the app. Closing it and opening it again pushes too. A visit that already has an earlier entry still reuses that entry. When a status recovers through the loading row, focus returns to the row if it was on ניסיון חוזר, and stays put otherwise. Step 1 is titled חיבור עוזר AI.
+
+Settings cycle 4, review. A return to `?sheet=sumit` reuses that history entry, so closing the sheet and pressing Back leaves Settings. The expired עוזר sheet shows פג תוקף as a status row, and חיבור מחדש moves focus to the step title. A status that recovers while ניסיון חוזר is focused moves focus to the row.
+
+Settings cycle 4. The עוזר AI row uses the spark icon and one status word: מחובר with the scope, לא מחובר, or צריך לחבר מחדש in the warning colour when the code expired. A failed status load is only that row, with ניסיון חוזר. Loading is a skeleton in the hint slot. The expired sheet says the code stopped after 90 days, and חיבור מחדש opens the scope step. A SUMIT last-sync is עודכן ב-HH:MM today, עודכן אתמול ב-HH:MM yesterday, and עודכן ב-D.M after that, on one line. A rate limit with no retry time says הרענון נכשל. נסו שוב. ניתוק returns focus to its row. Onboarding replaces the sheet entry, returns with replace, and its back control goes to the allowlisted return or Home. Decision [0082](decisions/0082-settings-redesign.md).
+
 Settings cycle 3, review. Onboarding accepts only `/settings` and `/settings?sheet=sumit` as `return`. A paused SUMIT status is the row error, not לא מחובר. A rejected key opens a sheet titled SUMIT: the reason, the key form, חיבור מחדש, then ניתוק. A held refresh says הרענון נכשל, and `?sheet=sumit` is removed after the sheet opens.
 
 Settings cycle 3. The SUMIT row is titled SUMIT and shows one status word: מחובר, לא מחובר, or צריך לחבר מחדש in the warning colour when the key was rejected. A sync failure that is not the key stays מחובר, and the detail sits in the sheet next to רענון עכשיו. A failed status load is only that row, with ניסיון חוזר, and a dashboard failure is still a screen error. Loading is a skeleton in the hint slot. With no company the sheet still points at onboarding, and creating the company from that link returns to Settings with the SUMIT sheet open. The no-company עוזר AI row stays focusable with `aria-disabled`. Decision [0082](decisions/0082-settings-redesign.md).

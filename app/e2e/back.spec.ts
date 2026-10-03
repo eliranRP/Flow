@@ -50,7 +50,7 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
     ["קטגוריות לדוגמה", "חזרה", "/settings/categories?preview=1", /\/settings\?preview=1$/],
     ["התראות לדוגמה", "חזרה", "/notifications?preview=1", /\/settings\?preview=1$/],
     ["חשבוניות לדוגמה", "חזרה", "/unpaid?preview=1", /\/\?preview=1$/],
-    ["הצטרפות לדוגמה", "חזרה", "/onboarding?preview=1", /\/sign-in\?preview=1$/],
+    ["הצטרפות לדוגמה", "חזרה", "/onboarding?preview=1", /\/\?preview=1$/],
     ["התקנה לדוגמה", "סגירה", "/install?preview=1", /\/settings\?preview=1$/],
     ["שינוי לדוגמה", "סגירה", "/review/change?preview=1", /\/review\?preview=1$/],
   ];
@@ -98,14 +98,14 @@ test("the connect sheet closes on browser back and on its own close", async ({ p
 
 test("the assistant sheet closes on browser back and on its own close", async ({ page }) => {
   await page.goto("/settings?preview=1");
-  await page.getByRole("button", { name: "עוזר AI" }).click();
-  await expect(page.getByRole("dialog", { name: "חיבור עוזר" })).toBeVisible();
+  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "חיבור עוזר AI" })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
   await page.goto("/e2e/project");
   await page.goto("/settings?preview=1");
-  await page.getByRole("button", { name: "עוזר AI" }).click();
+  await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.goBack();
