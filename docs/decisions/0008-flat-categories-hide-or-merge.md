@@ -38,3 +38,5 @@ Category sub-groups in the proof of concept, and allowing delete of a category t
 ## Consequences
 
 The change sheet and the project "by category" breakdown use this flat list. Order in Settings is the order suggestions prefer. Merge reassigns existing transactions to the surviving category so reports stay tagged. Hide does not remove historical totals. The income and expense lists are separate tabs because a row is one direction.
+
+[0086](0086-mercury.md) adds seeded `תשלומי הלוואה` (loan payments, expense) and `העברות` (transfers, one expense and one income). All three are excluded from P&L. The seven expenses above are unchanged. There is no balance-sheet model. The category flag is the exclusion.
