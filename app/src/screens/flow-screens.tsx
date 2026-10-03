@@ -81,6 +81,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   return response.data;
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
+import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -3252,6 +3253,7 @@ type SettingsSample = {
   /** Story fixture. Live status comes from the query. */
   sumit?: "loading" | "error";
   assistant?: AssistantSample;
+  jev?: JevCardState;
 };
 
 type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
@@ -3643,6 +3645,19 @@ export function SettingsScreen({
         blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
         sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
         showHeading={false}
+      />
+      <JevSettings
+        noCompany={noCompany}
+        blocked={blocked}
+        sample={
+          noCompany
+            ? undefined
+            : sample
+              ? (sample.jev ?? JEV_DEFAULT)
+              : preview !== "off"
+                ? JEV_DEFAULT
+                : undefined
+        }
       />
       <Sheet open={connectOpen} onOpenChange={setConnectSheet} title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"} returnFocusRef={sumitRowRef}>
         {noCompany ? (
