@@ -69,6 +69,28 @@ describe("useWrite", () => {
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
   });
 
+  it("dismisses the retry toast when a new save starts", async () => {
+    let release: () => void = () => undefined;
+    let calls = 0;
+    renderSave(() => {
+      calls += 1;
+      if (calls === 1) return Promise.reject(new Error("Failed to fetch"));
+      return new Promise((resolve) => { release = resolve; });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    });
+    fireEvent.click(retry);
+    expect(calls).toBe(2);
+    release();
+    await waitFor(() => {
+      expect(calls).toBe(2);
+    });
+  });
+
   it("does not offer a retry for another deterministic refusal", async () => {
     renderSave(() => Promise.reject(new Error("category kind must match the direction")));
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));

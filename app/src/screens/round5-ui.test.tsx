@@ -440,7 +440,8 @@ describe("settings account", () => {
     expect(screen.queryByText("Flow · POC 0.1")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /התקנה למסך הבית/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeInTheDocument();
+    const overhead = screen.getByRole("switch", { name: "רווח אחרי כלליות" });
+    expect(document.getElementById(overhead.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חלק מהכלליות נכנס לכל פרויקט");
     expect(screen.getByText("חלק מהכלליות נכנס לכל פרויקט")).toBeInTheDocument();
   });
 
