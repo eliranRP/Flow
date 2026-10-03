@@ -13,7 +13,7 @@ type HoldState = {
 };
 
 let state: HoldState = { press: false, focus: false, sheet: false, scrolling: false };
-let pointers = 0;
+const pointerIds = new Set<number>();
 let mouseDown = false;
 let scrollTimer = 0;
 const listeners = new Set<() => void>();
@@ -42,17 +42,17 @@ function inSurface(target: EventTarget | null): boolean {
 }
 
 function syncPress(): void {
-  setState({ ...state, press: pointers > 0 || mouseDown });
+  setState({ ...state, press: pointerIds.size > 0 || mouseDown });
 }
 
 function onPointerDown(event: PointerEvent): void {
   if (!inSurface(event.target)) return;
-  pointers += 1;
+  pointerIds.add(event.pointerId);
   syncPress();
 }
 
-function onPointerUp(): void {
-  pointers = Math.max(0, pointers - 1);
+function onPointerUp(event: PointerEvent): void {
+  if (!pointerIds.delete(event.pointerId)) return;
   syncPress();
 }
 
@@ -68,8 +68,28 @@ function onMouseUp(): void {
   syncPress();
 }
 
+function isEditable(element: Element): boolean {
+  return element instanceof HTMLInputElement
+    || element instanceof HTMLTextAreaElement
+    || element instanceof HTMLSelectElement
+    || (element instanceof HTMLElement && element.isContentEditable);
+}
+
+/** Keyboard focus holds. A programmatic focus(), such as Back restoring a row, does not. */
+function keyboardFocus(element: Element): boolean {
+  try {
+    if (element.matches(":focus-visible")) return true;
+  } catch {
+    // jsdom can reject :focus-visible. Tests mark that case on the element.
+    if (element instanceof HTMLElement && element.dataset.focusVisible === "true") return true;
+  }
+  return false;
+}
+
 function syncFocus(): void {
-  setState({ ...state, focus: inSurface(document.activeElement) });
+  const element = document.activeElement;
+  const holds = element instanceof Element && inSurface(element) && (isEditable(element) || keyboardFocus(element));
+  setState({ ...state, focus: holds });
 }
 
 function sheetOpen(): boolean {
@@ -94,7 +114,7 @@ export function holdActive(): boolean {
 
 export function resetListHold(): void {
   window.clearTimeout(scrollTimer);
-  pointers = 0;
+  pointerIds.clear();
   mouseDown = false;
   scrollTimer = 0;
   state = { press: false, focus: false, sheet: false, scrolling: false };
@@ -112,8 +132,10 @@ export function installListHold(): () => void {
   document.addEventListener("focusin", syncFocus);
   document.addEventListener("focusout", syncFocus);
   document.addEventListener("scroll", onScroll, true);
-  const observer = new MutationObserver(syncSheet);
-  observer.observe(document.body, { attributes: true, childList: true, subtree: true, attributeFilter: ["data-state"] });
+  const portals = new MutationObserver(syncSheet);
+  const sheets = new MutationObserver(syncSheet);
+  portals.observe(document.body, { childList: true });
+  sheets.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["data-state"] });
   syncSheet();
   syncFocus();
   return () => {
@@ -125,7 +147,8 @@ export function installListHold(): () => void {
     document.removeEventListener("focusin", syncFocus);
     document.removeEventListener("focusout", syncFocus);
     document.removeEventListener("scroll", onScroll, true);
-    observer.disconnect();
+    portals.disconnect();
+    sheets.disconnect();
     resetListHold();
   };
 }

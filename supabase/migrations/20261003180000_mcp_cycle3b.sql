@@ -1,27 +1,10 @@
 -- MCP cycle 3b. Decision 0080.
--- approve_review_item locks the transaction, then the review, matching the
--- MCP wrappers. A deadlock or serialization failure inside resolve_review is
+-- approve_review_item, approve_split_review, and reopen_review read the review
+-- without a lock, lock the transaction, then lock the review and re-check its
+-- status. A deadlock or serialization failure inside resolve_review is
 -- re-raised so the caller can retry instead of storing a refused result.
--- שויכו היום is today's SUMIT filings plus this user's assistant approvals.
-
-create or replace function private.note_lock_step(p_step text)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  log text;
-begin
-  log := current_setting('flow.test_lock_log', true);
-  if log is null or (log <> 'on' and left(log, 3) is distinct from 'on>') then
-    return;
-  end if;
-  perform set_config('flow.test_lock_log', log || '>' || p_step, true);
-end;
-$$;
-
-revoke all on function private.note_lock_step(text) from public, anon, authenticated;
+-- שויכו היום is today's SUMIT filings plus this user's assistant approvals
+-- that are still approved.
 
 -- One row per transaction on שויכו היום. assistant is true when this user's
 -- assistant approved it today and the approval is not undone.
@@ -127,7 +110,6 @@ begin
   end if;
 
   -- The expense, then the review. The MCP wrappers and the sync use this order.
-  perform private.note_lock_step('transactions');
   select t.project_id, t.category_id
   into cur_project, cur_category
   from public.transactions t
@@ -135,7 +117,6 @@ begin
     and t.company_id = cid
   for update;
 
-  perform private.note_lock_step('review_queue');
   select q.company_id, q.status
   into item_company, item_status
   from public.review_queue q
@@ -198,7 +179,7 @@ as $$
     'supplier_name', s.name,
     'project_name', p.name,
     'category_name', c.name
-  ) order by filed.created_at desc), '[]'::jsonb)
+  ) order by filed.created_at desc, filed.id), '[]'::jsonb)
   from public.transactions filed
   join private.filed_today_rows() ids on ids.id = filed.id
   left join public.suppliers s on s.id = filed.supplier_id
@@ -273,3 +254,238 @@ $$;
 
 revoke all on function public.list_review() from public, anon;
 grant execute on function public.list_review() to authenticated, service_role;
+
+-- Read the review, lock the expense, then lock the review again and re-check it.
+create or replace function public.approve_split_review(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  txn uuid;
+  reason text;
+  item_status public.review_status;
+  direction public.txn_direction;
+  kind public.doc_kind;
+  role public.pnl_role;
+  category uuid;
+  project uuid;
+  assigned boolean;
+  suggested boolean;
+  supplier uuid;
+  net bigint;
+  gross bigint;
+  doc_date date;
+  description text;
+  external_id text;
+  shares jsonb;
+  share_count integer;
+  prior_remembered uuid;
+  cat_kind text;
+begin
+  cid := private.current_company_id();
+  if cid is null then
+    raise exception 'no company';
+  end if;
+
+  select q.transaction_id
+  into txn
+  from public.review_queue q
+  where q.id = p_id and q.company_id = cid;
+  if txn is null then
+    raise exception 'review item not found';
+  end if;
+
+  select t.direction, t.doc_kind, t.pnl_role, t.category_id, t.project_id, t.user_assigned,
+         t.category_suggested, t.supplier_id, t.amount_net, t.amount_gross, t.doc_date,
+         t.description, t.external_id
+  into direction, kind, role, category, project, assigned, suggested, supplier, net, gross,
+       doc_date, description, external_id
+  from public.transactions t
+  where t.id = txn and t.company_id = cid and t.removed_at is null
+  for update;
+  if direction is null then
+    raise exception 'review item not found';
+  end if;
+
+  select q.reason, q.status
+  into reason, item_status
+  from public.review_queue q
+  where q.id = p_id and q.company_id = cid
+  for update;
+  if item_status is distinct from 'open' then
+    raise exception 'review item not found';
+  end if;
+  if direction = 'income' then
+    raise exception 'income is not split';
+  end if;
+  if reason = 'unallocated_shared' then
+    raise exception 'shared costs are split, not assigned to one project';
+  end if;
+
+  select count(*)::integer into share_count
+  from public.allocations a
+  where a.transaction_id = txn;
+  if role is distinct from 'shared' and share_count <= 1 then
+    raise exception 'transaction is not split';
+  end if;
+  if category is null then
+    raise exception 'category is required';
+  end if;
+  select c.kind::text into cat_kind
+  from public.categories c
+  where c.id = category and c.company_id = cid;
+  if cat_kind is null or cat_kind is distinct from direction::text then
+    raise exception 'category kind must match the direction';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'project_id', a.project_id,
+    'share_bp', a.share_bp,
+    'amount_net', a.amount_net
+  ) order by a.project_id), '[]'::jsonb)
+  into shares
+  from public.allocations a
+  where a.transaction_id = txn;
+
+  prior_remembered := null;
+  if supplier is not null then
+    select s.remembered_category_id into prior_remembered
+    from public.suppliers s
+    where s.id = supplier and s.company_id = cid;
+  end if;
+
+  update public.review_queue q
+  set status = 'approved',
+      resolved_at = now(),
+      prior_project_id = project,
+      prior_category_id = category,
+      prior_pnl_role = role,
+      prior_user_assigned = assigned,
+      prior_category_suggested = suggested,
+      prior_allocations = shares,
+      prior_remembered_category_id = prior_remembered,
+      written_remembered_category_id = null,
+      doc_fingerprint = private.doc_fingerprint(direction::text, kind::text, gross, doc_date, description, external_id)
+  where q.id = p_id
+    and q.company_id = cid
+    and q.status = 'open'
+    and exists (
+      select 1
+      from public.transactions t
+      where t.id = q.transaction_id
+        and t.company_id = q.company_id
+        and t.removed_at is null
+    );
+  if not found then
+    raise exception 'review item not found';
+  end if;
+end;
+$$;
+
+create or replace function public.reopen_review(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  txn uuid;
+  item_status public.review_status;
+  prior_project uuid;
+  prior_category uuid;
+  prior_role public.pnl_role;
+  prior_assigned boolean;
+  prior_suggested boolean;
+  prior_shares jsonb;
+  prior_remembered uuid;
+  written uuid;
+  supplier uuid;
+  item jsonb;
+  updated int;
+begin
+  cid := private.current_company_id();
+  if cid is null then
+    raise exception 'no company';
+  end if;
+
+  select q.transaction_id
+  into txn
+  from public.review_queue q
+  where q.id = p_id
+    and q.company_id = cid;
+  if txn is null then
+    raise exception 'review item not found';
+  end if;
+
+  select t.supplier_id
+  into supplier
+  from public.transactions t
+  where t.id = txn and t.company_id = cid
+  for update;
+  if not found then
+    raise exception 'review item not found';
+  end if;
+
+  select q.prior_project_id, q.prior_category_id, q.prior_pnl_role,
+         q.prior_user_assigned, q.prior_category_suggested, q.prior_allocations,
+         q.prior_remembered_category_id, q.written_remembered_category_id, q.status
+  into prior_project, prior_category, prior_role, prior_assigned, prior_suggested, prior_shares,
+       prior_remembered, written, item_status
+  from public.review_queue q
+  where q.id = p_id
+    and q.company_id = cid
+  for update;
+  if item_status is null or item_status not in ('approved', 'skipped', 'changed') then
+    raise exception 'review item not found';
+  end if;
+
+  update public.transactions
+  set project_id = prior_project,
+      category_id = prior_category,
+      pnl_role = prior_role,
+      user_assigned = coalesce(prior_assigned, false),
+      category_suggested = coalesce(prior_suggested, false)
+  where id = txn and company_id = cid;
+  get diagnostics updated = row_count;
+  if updated = 0 then
+    raise exception 'review item not found';
+  end if;
+
+  delete from public.allocations where transaction_id = txn and company_id = cid;
+  if prior_shares is not null and jsonb_typeof(prior_shares) = 'array' then
+    for item in select value from jsonb_array_elements(prior_shares)
+    loop
+      insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+      values (
+        cid,
+        txn,
+        (item->>'project_id')::uuid,
+        (item->>'share_bp')::integer,
+        (item->>'amount_net')::bigint
+      );
+    end loop;
+  end if;
+
+  delete from public.overhead where transaction_id = txn and company_id = cid;
+  if prior_role = 'overhead' then
+    insert into public.overhead (company_id, transaction_id) values (cid, txn);
+  end if;
+
+  if supplier is not null and written is not null then
+    update public.suppliers
+    set remembered_category_id = prior_remembered
+    where id = supplier
+      and company_id = cid
+      and remembered_category_id is not distinct from written;
+  end if;
+
+  update public.review_queue
+  set status = 'open',
+      resolved_at = null
+  where id = p_id and company_id = cid;
+end;
+$$;

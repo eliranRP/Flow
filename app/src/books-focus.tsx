@@ -23,15 +23,27 @@ export function refreshLedger(client: { invalidateQueries: (filters: { queryKey:
 export function LedgerFocusRefresh() {
   const client = useQueryClient();
   useEffect(() => {
+    let pending = false;
+    let alive = true;
+    function schedule() {
+      if (pending || !alive) return;
+      pending = true;
+      queueMicrotask(() => {
+        pending = false;
+        if (!alive) return;
+        refreshLedger(client);
+      });
+    }
     function onFocus() {
-      refreshLedger(client);
+      schedule();
     }
     function onVisibility() {
-      if (document.visibilityState === "visible") refreshLedger(client);
+      if (document.visibilityState === "visible") schedule();
     }
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      alive = false;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };

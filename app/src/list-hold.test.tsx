@@ -17,6 +17,26 @@ function names(): string[] {
   return screen.getAllByRole("listitem").map((item) => item.textContent);
 }
 
+function withFocusVisible(visible: (element: HTMLElement) => boolean, run: () => void): void {
+  const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "matches");
+  const value: unknown = descriptor?.value;
+  if (descriptor == null || typeof value !== "function") throw new Error("matches");
+  const original = value as (this: HTMLElement, selector: string) => boolean;
+  Object.defineProperty(Element.prototype, "matches", {
+    configurable: true,
+    writable: true,
+    value(this: HTMLElement, selector: string) {
+      if (selector === ":focus-visible") return visible(this);
+      return original.call(this, selector);
+    },
+  });
+  try {
+    run();
+  } finally {
+    Object.defineProperty(Element.prototype, "matches", descriptor);
+  }
+}
+
 describe("held list order", () => {
   let stop = (): void => undefined;
   afterEach(() => {
@@ -110,5 +130,53 @@ describe("held list order", () => {
     expect(names()).toEqual(["ביתא", "אלפא"]);
     drawer.remove();
     outside.remove();
+  });
+
+  it("does not hold when focus returns to a row", () => {
+    stop = installListHold();
+    withFocusVisible(() => false, () => {
+      render(
+        <ol>
+          <li className="ui-row"><button type="button">אלפא</button></li>
+        </ol>,
+      );
+      act(() => {
+        screen.getByRole("button", { name: "אלפא" }).focus();
+      });
+      expect(holdActive()).toBe(false);
+    });
+  });
+
+  it("holds keyboard focus on a row", () => {
+    stop = installListHold();
+    withFocusVisible((element) => element.dataset.focusVisible === "true", () => {
+      render(
+        <ol>
+          <li className="ui-row"><button type="button" data-focus-visible="true">אלפא</button></li>
+        </ol>,
+      );
+      act(() => {
+        screen.getByRole("button", { name: "אלפא" }).focus();
+      });
+      expect(holdActive()).toBe(true);
+    });
+  });
+
+  it("counts each pointer once", () => {
+    stop = installListHold();
+    render(
+      <ol>
+        <li className="ui-row">אלפא</li>
+      </ol>,
+    );
+    const row = screen.getByText("אלפא");
+    fireEvent.pointerDown(row, { pointerId: 1 });
+    fireEvent.pointerDown(row, { pointerId: 2 });
+    fireEvent.pointerUp(row, { pointerId: 7 });
+    expect(holdActive()).toBe(true);
+    fireEvent.pointerUp(row, { pointerId: 1 });
+    expect(holdActive()).toBe(true);
+    fireEvent.pointerUp(row, { pointerId: 2 });
+    expect(holdActive()).toBe(false);
   });
 });
