@@ -5,6 +5,7 @@ const SUMIT_ERRORS: Record<string, string> = {
   "could not store the connection": "לא הצלחנו לשמור את החיבור.",
   "SUMIT is not connected": "SUMIT לא מחובר.",
   sync_failed: "הרענון נכשל. נסו שוב.",
+  rate_limited: "הרענון נכשל. נסו שוב.",
   sumit_rejected: "SUMIT לא זמין כרגע.",
   sumit_auth: "החיבור ל־SUMIT נכשל.",
   sync_page_cap: "יש יותר מדי מסמכים לרענון אחד. פנו לתמיכה.",
@@ -19,6 +20,40 @@ const SUMIT_ERRORS: Record<string, string> = {
 export function hebrewSumitError(code: string | null | undefined): string | null {
   if (!code) return null;
   return SUMIT_ERRORS[code] ?? "החיבור נכשל. נסו שוב.";
+}
+
+function israelDayKey(at: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(at));
+}
+
+/** The previous Israel calendar day. A 24-hour step that lands on today steps again. */
+function previousIsraelDay(now: number): string {
+  const today = israelDayKey(now);
+  let probe = now - 24 * 60 * 60 * 1000;
+  if (israelDayKey(probe) === today) probe -= 24 * 60 * 60 * 1000;
+  return israelDayKey(probe);
+}
+
+/**
+ * Last-sync phrase in Israel time. Today is a clock, yesterday names אתמול,
+ * and an older day is D.M. An unreadable time stays silent.
+ */
+export function israelSyncPhrase(iso: string | null | undefined, now = Date.now()): string | null {
+  if (!iso) return null;
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return null;
+  const clock = israelClock(iso);
+  const day = israelDayKey(at);
+  if (clock == null) return null;
+  if (day === israelDayKey(now)) return `עודכן ב-${clock}`;
+  if (day === previousIsraelDay(now)) return `עודכן אתמול ב-${clock}`;
+  const [, month, date] = day.split("-");
+  return `עודכן ב-${String(Number(date))}.${String(Number(month))}`;
 }
 
 /** Israel clock, HH:MM. An unreadable time stays silent. */

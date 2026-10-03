@@ -67,6 +67,7 @@ Catch these before handoff. The matching lines are in the two checklists.
 15. A button label uses the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
 16. An owner call that is in the code and missing from the decision's state table is spec drift.
 17. An inline element's box is as wide as its text and never clips. Measure the nearest block ancestor, the one whose `display` is not `inline` or `contents`, once per container. A `<bdi>` inside a hint, mixed text, or a display amount is not the clipping box.
+18. Focus and blur hooks need a browser-mode test, because jsdom doesn't fire blur on removal.
 
 ## Order
 

@@ -1,6 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { ToastProvider } from "../ui/toast";
@@ -77,13 +77,16 @@ describe("assistant settings", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(screen.getByText(/קריאה בלבד/)).toBeInTheDocument();
-    const stamp = screen.getByText("30/09/2026, 14:05");
+    const row = screen.getByRole("button", { name: "עוזר AI" });
+    expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר · קריאה בלבד");
+    expect(screen.queryByText("30/09/2026, 14:05")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    fireEvent.click(row);
+    const sheet = screen.getByRole("dialog", { name: "עוזר AI" });
+    const stamp = within(sheet).getByText("30/09/2026, 14:05");
     expect(stamp).toHaveClass("ui-nowrap");
     expect(getComputedStyle(stamp).whiteSpace).toBe("nowrap");
-    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
-    expect(within(screen.getByRole("dialog", { name: "עוזר AI" })).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
   });
 
   it("disables the scope rows while minting, and a failure says to try again", async () => {
@@ -181,14 +184,29 @@ describe("assistant settings", () => {
     await waitFor(() => expect(screen.getByText("העוזר נותק.")).toBeInTheDocument());
     expect(calls.some((name) => name.includes("revoke"))).toBe(true);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "עוזר AI" })).toHaveFocus();
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
     connected.unmount();
 
     renderAssistant(<AssistantSettings sample={{ state: "expired", scope: "read", id: "mcp-1" }} />);
-    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
-    const reconnect = screen.getByRole("dialog", { name: "חיבור עוזר" });
+    const expiredRow = screen.getByRole("button", { name: "עוזר AI" });
+    expect(expiredRow).toHaveClass("ui-row-tone-warning");
+    expect(document.getElementById(expiredRow.getAttribute("aria-describedby") ?? "")).toHaveTextContent("צריך לחבר מחדש");
+    expect(screen.queryByText("פג תוקף")).not.toBeInTheDocument();
+    fireEvent.click(expiredRow);
+    const reconnect = screen.getByRole("dialog", { name: "עוזר AI" });
+    const expiredHeading = within(reconnect).getByRole("heading", { name: "פג תוקף" });
+    expect(expiredHeading.tagName).toBe("H3");
+    expect(expiredHeading.closest("span")).toBeNull();
+    expect(reconnect).toHaveTextContent("הקוד הפסיק לעבוד אחרי 90 יום.");
+    expect(within(reconnect).getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
     expect(within(reconnect).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
-    fireEvent.click(within(reconnect).getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(within(reconnect).getByRole("button", { name: "חיבור מחדש" }));
+    const step = screen.getByRole("dialog", { name: "חיבור עוזר AI" });
+    expect(step).toBeInTheDocument();
+    expect(within(step).getByRole("heading", { name: "חיבור עוזר AI" })).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "קריאה וכתיבה" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור עוזר AI" })).getByRole("button", { name: "ניתוק" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את העוזר?" })).getByRole("button", { name: "ניתוק" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
@@ -207,7 +225,7 @@ describe("assistant settings", () => {
     await waitFor(() => { expect(layer).toBe("assistant-disconnect"); });
     fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את העוזר?" })).getByRole("button", { name: "ניתוק" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(layer).toBeNull();
+    await waitFor(() => { expect(layer).toBeNull(); });
   });
 
   it("mints the scope that was selected", async () => {
@@ -235,9 +253,163 @@ describe("assistant settings", () => {
   it("a failed first load offers a retry and does not mint", async () => {
     edge.invoke = () => Promise.resolve({ data: null, error: { message: "status" } });
     renderAssistant(<AssistantSettings />);
-    expect(await screen.findByText("לא הצלחנו לטעון את החיבור.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /חיבור עוזר/ })).not.toBeInTheDocument();
+    const group = await screen.findByRole("group", { name: "עוזר AI" });
+    expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר: עוזר AI" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עוזר AI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("היקף הגישה")).not.toBeInTheDocument();
+  });
+
+  it("moves focus to the row when the status recovers while ניסיון חוזר is focused", async () => {
+    let fail = true;
+    edge.invoke = () => fail
+      ? Promise.resolve({ data: null, error: { message: "status" } })
+      : Promise.resolve({ data: { state: "connected", id: "mcp-1", scope: ["read", "write"] }, error: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <AssistantSettings />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    retry.focus();
+    expect(retry).toHaveFocus();
+    fail = false;
+    await client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toHaveFocus(); });
+  });
+
+  it("returns focus to the assistant row when a reconnect passes through loading", async () => {
+    let hang = false;
+    let release: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    edge.invoke = () => hang
+      ? new Promise((resolve) => { release = resolve; })
+      : Promise.resolve({ data: null, error: { message: "status" } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <AssistantSettings />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    retry.focus();
+    hang = true;
+    const done = client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => {
+      expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
+    });
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר: עוזר AI" })).not.toBeInTheDocument();
+    release({ data: { state: "connected", id: "mcp-1", scope: ["read", "write"] }, error: null });
+    await done;
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toHaveFocus(); });
+  });
+
+  it("does not move focus when the assistant status recovers away from ניסיון חוזר", async () => {
+    let hang = false;
+    let release: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    const connected = { data: { state: "connected", id: "mcp-1", scope: ["read", "write"] }, error: null };
+    edge.invoke = () => hang
+      ? new Promise((resolve) => { release = resolve; })
+      : Promise.resolve({ data: null, error: { message: "status" } });
+    function SheetSpot() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => { setOpen(true); }}>גיליון</button>
+          {open ? (
+            <div role="dialog" aria-label="גיליון">
+              <button type="button">בגיליון</button>
+            </div>
+          ) : null}
+        </>
+      );
+    }
+    function mount() {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <MemoryRouter>
+              <SheetSpot />
+              <button type="button">אחר</button>
+              <AssistantSettings />
+            </MemoryRouter>
+          </ToastProvider>
+        </QueryClientProvider>,
+      );
+      return { client, ...view };
+    }
+
+    const pressed = mount();
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    retry.focus();
+    hang = true;
+    fireEvent.click(retry);
+    await waitFor(() => {
+      const link = screen.queryByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+      const row = document.querySelector(".ui-project-list .ui-row");
+      expect(link?.getAttribute("aria-busy") === "true" || row?.getAttribute("aria-busy") === "true").toBe(true);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "גיליון" }));
+    const inside = screen.getByRole("button", { name: "בגיליון" });
+    inside.focus();
+    expect(inside).toHaveFocus();
+    release(connected);
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
+    expect(inside).toHaveFocus();
+    pressed.unmount();
+
+    hang = false;
+    const failed = mount();
+    const failedRetry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    failedRetry.focus();
+    hang = true;
+    fireEvent.click(failedRetry);
+    await waitFor(() => { expect(failedRetry).toHaveAttribute("aria-busy", "true"); });
+    release({ data: null, error: { message: "status" } });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "ניסיון חוזר: עוזר AI" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "ניסיון חוזר: עוזר AI" })).not.toHaveAttribute("aria-busy", "true");
+    });
+    const elsewhere = screen.getByRole("button", { name: "אחר" });
+    elsewhere.focus();
+    expect(elsewhere).toHaveFocus();
+    hang = true;
+    const again = failed.client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => {
+      expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
+    });
+    release(connected);
+    await again;
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
+    expect(elsewhere).toHaveFocus();
+    failed.unmount();
+
+    hang = false;
+    const blank = mount();
+    const blankRetry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    blankRetry.focus();
+    blankRetry.blur();
+    expect(document.activeElement).toBe(document.body);
+    hang = true;
+    const recovered = blank.client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => {
+      expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
+    });
+    release(connected);
+    await recovered;
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
+    expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).not.toHaveFocus();
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("preview disconnect closes the confirm", () => {
@@ -253,8 +425,8 @@ describe("assistant settings", () => {
 
   it("shows a load error and a disabled row when there is no company", () => {
     const { rerender } = renderAssistant(<AssistantSettings sample={{ state: "error" }} />);
-    expect(screen.getByText("לא הצלחנו לטעון את החיבור.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "נסו שוב" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "עוזר AI" })).toHaveTextContent("לא הצלחנו לטעון");
+    expect(screen.getByRole("button", { name: "ניסיון חוזר: עוזר AI" })).toBeInTheDocument();
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -273,5 +445,77 @@ describe("assistant settings", () => {
     fireEvent.click(row);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
+  });
+
+  it("reads a live status, and a failed refetch keeps the last state", async () => {
+    let calls = 0;
+    edge.invoke = (name) => {
+      if (!name.includes("status")) return Promise.resolve({ data: null, error: null });
+      calls += 1;
+      if (calls === 1) {
+        return Promise.resolve({
+          data: { state: "connected", id: "mcp-1", scope: ["read", "write"], last_used_at: null },
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: { message: "down" } });
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <AssistantSettings />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const row = await screen.findByRole("button", { name: "עוזר AI" });
+    expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר · קריאה וכתיבה");
+    await client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => { expect(calls).toBeGreaterThan(1); });
+    expect(document.getElementById(screen.getByRole("button", { name: "עוזר AI" }).getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר · קריאה וכתיבה");
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר: עוזר AI" })).not.toBeInTheDocument();
+  });
+
+  it("moves focus to the row only when it is still on the retry", async () => {
+    let fail = true;
+    edge.invoke = () => {
+      if (fail) return Promise.resolve({ data: null, error: { message: "down" } });
+      return Promise.resolve({ data: { state: "empty" }, error: null });
+    };
+    renderAssistant(<AssistantSettings />);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    fail = false;
+    retry.focus();
+    fireEvent.click(retry);
+    await waitFor(() => { expect(screen.getByRole("button", { name: "עוזר AI" })).toHaveFocus(); });
+    expect(document.getElementById(screen.getByRole("button", { name: "עוזר AI" }).getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
+  });
+
+  it("announces that the retry is offline and leaves the hint", async () => {
+    edge.invoke = () => Promise.resolve({ data: null, error: { message: "down" } });
+    onlineManager.setOnline(false);
+    try {
+      renderAssistant(<AssistantSettings />);
+      const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+      fireEvent.click(retry);
+      const group = screen.getByRole("group", { name: "עוזר AI" });
+      expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
+      expect(within(group).getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "עוזר AI" })).not.toBeInTheDocument();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it("shows a skeleton while the status is loading", () => {
+    renderAssistant(<AssistantSettings sample={{ state: "loading" }} showHeading={false} />);
+    const title = screen.getByText("עוזר AI");
+    expect(title.closest(".ui-row")).toHaveAttribute("aria-busy", "true");
+    expect(title.closest("button")).toBeNull();
+    expect(screen.getByText("טוען…")).toHaveAttribute("role", "status");
+    expect(title.closest(".ui-row")?.querySelector(".ui-skeleton-bar")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
   });
 });

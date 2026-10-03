@@ -734,7 +734,23 @@ export const SettingsAssistantError: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, lastError: "sumit_auth", assistant: { state: "error" } }} />
+      <SettingsScreen sample={{ ...assistantBusiness, assistant: { state: "error" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantMixed: Story = {
+  name: "Assistant mixed",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          ...assistantBusiness,
+          lastError: "sumit_auth",
+          assistant: { state: "expired", scope: "read", id: "mcp-1" },
+        }}
+      />
     </StoryRoute>
   ),
 };
