@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Jev tagging follow-up. The per-run cap is split across enabled companies in company-id order, so one backlog cannot take the whole run. An approved review line is not sent. An overhead line, a shared cost, or a split with more than one allocation is asked for a category only, and the stored suggestion has no project. A new Jev call is not started when fewer than 20 seconds of the 120 second budget remain. The hand trigger exports `SUPABASE_URL` and reads the service-role key with `read -rs`. Decision [0084](decisions/0084-jev-auto-prefill.md).
+
 MCP cycle 3a, review. An assistant approve, an app reopen, and another assistant approve records the latest close and still undoes. Tokens that already existed become read-only; a new connection keeps read and write, and the owner reconnects in Settings for write. A deadlock or serialization failure is `unavailable` / `retry` and is not stored. Decision [0080](decisions/0080-mcp-connector.md). The reconnect note is in [CI and CD](runbooks/ci-cd.md).
 
 Jev tagging, review. A wrong non-empty cron header is 401 and does not call Jev. The service key is the `default` field of `SUPABASE_SECRET_KEYS`; a missing value fails closed. A run labels at most 50 expenses (100 if the request asks for more), two attempts of 8 seconds each, and stops after about 120 seconds with `budget_skipped`. The candidate query orders by date descending and does not list every id. Vault is not read when no line is waiting. The hand trigger is in [the Jev runbook](runbooks/jev.md). Decision [0084](decisions/0084-jev-auto-prefill.md).

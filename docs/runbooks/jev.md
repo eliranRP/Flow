@@ -53,11 +53,11 @@ No network permission and no env permission. `--no-lock` keeps Deno from writing
 
 `enabled` false disables a company. `mode` `off` disables it as well. Either one is enough, and the job does not call Jev for that company.
 
-The caller is either `x-flow-cron` matching `CRON_SECRET`, or `Authorization: Bearer` matching the `default` field of `SUPABASE_SECRET_KEYS`. `CRON_SECRET` is the existing secret used by `sumit-sync`. Scope: the internal cron caller. It is not `jev_api_key`. A member JWT, a missing header, an empty header, and a wrong non-empty header are 401 and do not label anything. The legacy `SUPABASE_SERVICE_ROLE_KEY` variable is not read. A missing, empty, or unparseable `SUPABASE_SECRET_KEYS` value is 500 `missing_key` and does not call Jev.
+The caller is either `x-flow-cron` matching `CRON_SECRET`, or `Authorization: Bearer` matching the `default` field of `SUPABASE_SECRET_KEYS`. `CRON_SECRET` is the existing secret used by `sumit-sync`. Scope: the internal cron caller. It is not `jev_api_key`. A member JWT, a missing header, an empty header, a wrong non-empty header, and a bearer that does not match the service key are 401 and do not label anything. The legacy `SUPABASE_SERVICE_ROLE_KEY` variable is not read. A bearer call when `SUPABASE_SECRET_KEYS` is missing is 401, because there is no key to match. The 500 `missing_key` for that missing value applies only to a cron caller: the cron header already matched, and the function still cannot read the database without the service key. It does not call Jev. A missing `SUPABASE_URL` is 500 `missing_key` for any accepted caller.
 
 An accepted call reserves the isolate for 60 seconds. The next call in that window is 429 `rate_limited` and does not call Jev. That limit is in memory until a cron exists. A database run lock is backlog with the cron.
 
-One run labels at most 50 expenses. A request may set `limit`; values above 100 are clamped to 100, and a missing or unusable limit stays 50. The candidate query orders by `doc_date` descending and applies that cap in SQL. It does not put every open id in the URL. Each expense is at most 2 attempts of 8 seconds. The run stops at about 120 seconds, leaves the remaining lines for the next run, and reports `budget_skipped`. TypeSafe accepts `{ model, state, questions }` only. It has no max-output field, so the job does not send one. The response and the function log include `input_tokens` and `output_tokens`. Those are counts. The log does not include the expense text or the answers.
+One run labels at most 50 expenses. A request may set `limit`; values above 100 are clamped to 100, and a missing or unusable limit stays 50. That cap is split across the enabled companies in company-id order. The first companies get one extra line when the cap does not divide evenly. A company with a long backlog cannot take another company's share. The candidate query orders by `doc_date` descending and applies that company's share in SQL. It does not put every open id in the URL. An approved review line is not sent. An overhead line, a shared cost, or a split with more than one allocation is not asked for a project. That call sends the category question only, and the stored suggestion has no project. Each expense is at most 2 attempts of 8 seconds. The run budget is 120 seconds. A new call is not started when fewer than 20 seconds of that budget remain, so the last call still finishes under the 150 second Edge limit. Lines that were not started are `budget_skipped`. TypeSafe accepts `{ model, state, questions }` only. It has no max-output field, so the job does not send one. The response and the function log include `input_tokens` and `output_tokens`. Those are counts. The log does not include the expense text or the answers.
 
 Project names and category names are sent to TypeSafe as the choice labels. That is the owner's own data. Amounts may be included in the request state. The job does not write amounts, VAT, or dates.
 
@@ -76,13 +76,17 @@ Secrets that must exist before that call:
 | `SUPABASE_SECRET_KEYS` | Injected by Supabase. The hand trigger's bearer is the `default` field. Do not print it and do not commit it. |
 | `CRON_SECRET` | Only for an `x-flow-cron` caller. The curl below uses the service role and does not send that header. |
 
-`SUPABASE_URL` is the project URL, `https://sxqpnetmtufkzowutduq.supabase.co`. From a shell that already has the service-role key in `SERVICE_ROLE_KEY`:
+`SUPABASE_URL` is the project URL. Export it in the shell. Read the service-role key with `read -rs` so it is not echoed and not written to shell history. While `curl` is running, that key is in the process arguments, so `ps` can show it. Unset it when the request returns.
 
 ```bash
+export SUPABASE_URL="https://sxqpnetmtufkzowutduq.supabase.co"
+read -rs SERVICE_ROLE_KEY
+echo
 curl -sS -X POST "$SUPABASE_URL/functions/v1/jev-tag" \
   -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
   -d '{"company_id":"COMPANY_UUID","limit":50}'
+unset SERVICE_ROLE_KEY
 ```
 
 `company_id` is optional. Omit it, and send `{}` or no body, to label every enabled company up to the cap. A `company_id` that is not a UUID is 400 and does not call Jev. A wrong bearer is 401 and does not call Jev.

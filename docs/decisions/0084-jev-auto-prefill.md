@@ -17,7 +17,7 @@ The tagging job calls Jev only for an open לאישור expense that has no `tag
 
 A suggestion never approves a line. The job does not call `resolve_review` and does not set the review row to approved.
 
-The user owns a project when `user_assigned` or `project_assigned` is set, and owns a category when `user_assigned` or `category_assigned` is set. Those fields are left as they are. A shared cost, an overhead line, or a split with more than one allocation does not receive a single project. A pre-filled category sets `category_suggested`. A pre-filled project leaves `project_assigned` and `user_assigned` false, so `list_review` still reports `project_suggested`. Amounts, VAT, and dates are not written. The model may see them in the request state.
+The user owns a project when `user_assigned` or `project_assigned` is set, and owns a category when `user_assigned` or `category_assigned` is set. Those fields are left as they are. A shared cost, an overhead line, or a split with more than one allocation does not receive a single project. The job does not ask Jev for a project on those lines and does not store a project suggestion. A pre-filled category sets `category_suggested`. A pre-filled project leaves `project_assigned` and `user_assigned` false, so `list_review` still reports `project_suggested`. Amounts, VAT, and dates are not written. The model may see them in the request state.
 
 The choice keys are the company's active project ids and its visible expense category ids. A key that is not one of those is not written. More than 255 options omits that question. The job does not ask Jev to apply overhead or an anomaly score.
 
