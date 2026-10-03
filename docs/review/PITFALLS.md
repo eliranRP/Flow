@@ -79,8 +79,8 @@ Decided, and not applied in this pull request. The pull request that touches the
 - [ ] Q-1. The signing spike and the CI runbook read Auth config with `SUPABASE_AUTH_READ_TOKEN`. They do not use `SUPABASE_ACCESS_TOKEN` for that read.
 - [ ] Q-2. An unknown `?assistant=` preview value shows the error state.
 - [ ] Q-3. UI polish. Sheet titles and route-sheet titles opt into `data-clip-ok`, like a row title. Button labels, `.ui-row-hint`, and `.ui-meter-label` wrap instead of truncating. That fixes the `*--long-hebrew` stories. Not applied in this pull request.
-- [ ] D1. In decision 0080, fold the N13 row into the Error row and the Connect row, mention the retry button, and drop the N13 row.
-- [ ] D2. In decision 0080, the leftovers paragraph calls N9 the step-2 button. N9 is the error row's retry button.
+- [x] D1. In decision 0080, fold the N13 row into the Error row and the Connect row, mention the retry button, and drop the N13 row. Done by [0082](../decisions/0082-settings-redesign.md): that record replaces the visible Settings copy, so this is not a separate edit.
+- [x] D2. In decision 0080, the leftovers paragraph calls N9 the step-2 button. N9 is the error row's retry button. Done by [0082](../decisions/0082-settings-redesign.md), same as D1.
 - [ ] UI polish. `screens-routes--unpaid-list` clips only at 320, as two hints. Those hints should use `wrapHint`. `screens-routes--add-sheet` hint is +15px and should use `wrapHint`. Not this pull request.
 - [ ] UI polish. `screens-routes--change-project-picker` clips on `ui-pick-label`, 2 views. Not this pull request.
 - [ ] Backlog. Still measure a `clip-no-text` story, and waive only the zero-measured rule. Not this pull request.
