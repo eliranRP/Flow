@@ -15,7 +15,7 @@ test("the migration lock matches the directory, the file bytes, and the producti
   assert.deepEqual(migrationOrderProblems(files, lock, null, hashes), []);
   assert.equal(files[0], "20260928080538_schema_v1.sql");
   assert.equal(files.includes("20260927120000_schema_v1.sql"), false);
-  assert.equal(files.length, 32);
+  assert.equal(files.length, 33);
   assert.match(lock[0], /^20260928080538_schema_v1\.sql [0-9a-f]{64}$/);
 });
 
@@ -34,7 +34,7 @@ test("a rename, a removal, a content change, or an inserted version fails, and a
   inserted.splice(2, 0, `20260928090000_middle.sql ${"b".repeat(64)}`);
   assert.ok(migrationOrderProblems(names(inserted), inserted, lock).some((line) => line.includes("renamed, removed, or reordered")));
 
-  const appended = [...lock, `20261002130000_next.sql ${"c".repeat(64)}`];
+  const appended = [...lock, `20261004120000_next.sql ${"c".repeat(64)}`];
   assert.deepEqual(migrationOrderProblems(names(appended), appended, lock), []);
 
   const early = [...lock, `20260928080537_too_early.sql ${"d".repeat(64)}`];

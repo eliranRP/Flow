@@ -87,6 +87,25 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"company_integrations": {
+                  Row: {
+                    "company_id": string,"created_at": string,"enabled": boolean,"mode": string,"provider": string,"threshold": number,"updated_at": string
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"enabled"?: boolean,"mode"?: string,"provider": string,"threshold"?: number,"updated_at"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"enabled"?: boolean,"mode"?: string,"provider"?: string,"threshold"?: number,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_integrations_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"customers": {
                   Row: {
                     "company_id": string,"company_number": string | null,"created_at": string,"id": string,"name": string,"sumit_external_id": number | null,"updated_at": string
@@ -325,6 +344,31 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"tag_suggestions": {
+                  Row: {
+                    "answers": NonNullable<Json>,"company_id": string,"confidence": number,"created_at": string,"id": string,"model_version": string,"transaction_id": string
+                  }
+                  Insert: {
+                    "answers": NonNullable<Json>,"company_id": string,"confidence": number,"created_at"?: string,"id"?: string,"model_version": string,"transaction_id": string
+                  }
+                  Update: {
+                    "answers"?: NonNullable<Json>,"company_id"?: string,"confidence"?: number,"created_at"?: string,"id"?: string,"model_version"?: string,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tag_suggestions_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tag_suggestions_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"transactions": {
                   Row: {
                     "amount_gross": number,"amount_net": number,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"id": string,"idempotency_key": string,"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
@@ -476,6 +520,9 @@ isOneToOne: true
 "project_waiting":
 { Args: { "p_project": string }; Returns: Json
                            },
+"read_jev_api_key":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
                            },
@@ -502,6 +549,9 @@ isOneToOne: true
                            },
 "set_category_hidden":
 { Args: { "p_hidden": boolean,"p_id": string }; Returns: undefined
+                           },
+"set_company_integration":
+{ Args: { "p_enabled": boolean,"p_mode"?: string,"p_provider"?: string,"p_threshold"?: number }; Returns: Json
                            },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
