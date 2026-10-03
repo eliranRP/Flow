@@ -1452,8 +1452,22 @@ a.ui-row,
 }
 
 .ui-review-queue .ui-banner {
-  margin-top: var(--space-3);
-  padding-block: var(--space-2);
+  margin-top: var(--space-1);
+  padding-block: var(--space-1);
+}
+
+.ui-review-queue .ui-review {
+  margin-top: 0;
+}
+
+.ui-review-queue .ui-banner .ui-row-title {
+  -webkit-line-clamp: 3;
+}
+
+.ui-review-count {
+  display: inline-block;
+  min-inline-size: 2ch;
+  text-align: center;
 }
 
 .ui-review-ai .ui-row {
@@ -1578,6 +1592,10 @@ a.ui-row,
   flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-2) var(--space-side) 0;
+}
+
+.ui-review-approve {
+  display: contents;
 }
 
 .ui-review-actions-row {

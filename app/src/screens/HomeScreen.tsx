@@ -1,6 +1,7 @@
 import { formatIls, roundedProfitAgorot, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { useHeldOrder } from "../list-hold";
 import { useNavigate } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useAuth } from "../auth";
@@ -163,7 +164,8 @@ export function HomeBooks({
 }) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
-  const leading = [...data.projects].sort((a, b) => (a.profit_agorot < b.profit_agorot ? 1 : a.profit_agorot > b.profit_agorot ? -1 : 0)).slice(0, 3);
+  const ranked = [...data.projects].sort((a, b) => (a.profit_agorot < b.profit_agorot ? 1 : a.profit_agorot > b.profit_agorot ? -1 : 0)).slice(0, 3);
+  const leading = useHeldOrder(ranked, (project) => project.id);
   const hero = roundedProfitAgorot(data.income_agorot, data.expense_agorot);
   const previous =
     data.prev_income_agorot != null && data.prev_expense_agorot != null
