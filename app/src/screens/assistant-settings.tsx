@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useRefreshingNow } from "../israel-clock";
@@ -171,6 +171,7 @@ export function AssistantSettings({
   const urlRef = useRef<HTMLElement>(null);
   const commandRef = useRef<HTMLElement>(null);
   const focusStep = useRef(false);
+  const hadSecret = useRef(initialSecret != null);
   const openRef = useRef(initialSecret != null || initialOpen);
   const secretRef = useRef<HTMLElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
@@ -308,6 +309,13 @@ export function AssistantSettings({
     focusStep.current = false;
     connectTitleRef.current?.focus();
   }, [intro, open, secret]);
+
+  useLayoutEffect(() => {
+    const arrived = secret != null && !hadSecret.current;
+    hadSecret.current = secret != null;
+    if (!arrived || !open) return;
+    connectTitleRef.current?.focus();
+  }, [open, secret]);
 
   useEffect(() => {
     if (!focusRow) return;
