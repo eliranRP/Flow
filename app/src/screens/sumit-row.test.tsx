@@ -3,7 +3,7 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
@@ -82,6 +82,10 @@ function hintOf(row: HTMLElement): string {
 }
 
 describe("SUMIT status row", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "");
+  });
+
   it("shows a load error on the row and moves focus when retry succeeds", async () => {
     let fail = true;
     rpc.impl = (name) => {
@@ -507,16 +511,22 @@ describe("SUMIT status row", () => {
       });
       const openKey = router.state.location.key;
       window.history.replaceState({ idx: 1 }, "");
-      fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
-      await waitFor(() => { expect(router.state.location.key).not.toBe(openKey); });
+      await act(async () => {
+        fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
+        await Promise.resolve();
+      });
+      await waitFor(() => { expect(router.state.location.key).not.toBe(openKey); }, { timeout: 5_000 });
       act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
       await waitFor(() => { expect(router.state.location.pathname).toBe("/settings"); });
       const closedKey = router.state.location.key;
 
-      fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+        await Promise.resolve();
+      });
       await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-      await waitFor(() => { expect(router.state.location.key).not.toBe(closedKey); });
+      await waitFor(() => { expect(router.state.location.key).not.toBe(closedKey); }, { timeout: 5_000 });
       const again = router.state.location.key;
       await act(async () => { await router.navigate(-1); });
       await waitFor(() => {
@@ -1050,6 +1060,9 @@ describe("SUMIT status row", () => {
       );
       const original = router.state.location.key;
       fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+      await waitFor(() => {
+        expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
+      });
       fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
       fireEvent.change(await screen.findByLabelText("שם העסק"), { target: { value: "אלפא" } });
       window.history.replaceState({ idx: 1 }, "");
@@ -1079,7 +1092,10 @@ describe("SUMIT status row", () => {
 
     const closed = await openReturnedSheet();
     window.history.replaceState({ idx: 2 }, "");
-    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
+      await Promise.resolve();
+    });
     await waitFor(() => { expect(closed.router.state.location.key).toBe(closed.original); });
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });

@@ -475,7 +475,7 @@ describe("review queue list", () => {
         ];
         return Promise.resolve({ data: open ? rows : rows.filter((row) => row.id !== "r2"), error: null });
       }
-      if (name === "resolve_review") {
+      if (name === "approve_review_item") {
         open = false;
         return Promise.resolve({ data: null, error: null });
       }
@@ -498,7 +498,7 @@ describe("review queue list", () => {
         const rows = names.map((supplier, index) => reviewRow(`r${String(index + 1)}`, supplier, "p1"));
         return Promise.resolve({ data: rows.filter((row) => !removed.has(row.id)), error: null });
       }
-      if (name === "resolve_review") {
+      if (name === "approve_review_item") {
         const id = (args as { p_id?: string } | undefined)?.p_id;
         if (id) removed.add(id);
         return Promise.resolve({ data: null, error: null });
@@ -528,7 +528,7 @@ describe("review queue list", () => {
       if (name === "list_review") {
         return Promise.resolve({ data: open ? [reviewRow("r1", "מחסן הנמל", "p1")] : [], error: null });
       }
-      if (name === "resolve_review") {
+      if (name === "approve_review_item") {
         open = false;
         return Promise.resolve({ data: null, error: null });
       }
