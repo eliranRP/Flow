@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { SAMPLE_ASSISTANT_SECRET } from "../src/screens/assistant-settings";
+import { SAMPLE_ASSISTANT_SECRET } from "../src/assistant-sample";
 
 const STORY = "/iframe.html?id=screens-routes--settings-assistant-secret&viewMode=story";
 

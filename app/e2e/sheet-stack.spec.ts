@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { SAMPLE_ASSISTANT_SECRET } from "../src/screens/assistant-settings";
+import { SAMPLE_ASSISTANT_SECRET } from "../src/assistant-sample";
 
 async function dismissTop(page: Page, how: "escape" | "close" | "back", top: Locator) {
   if (how === "escape") await page.keyboard.press("Escape");
@@ -47,9 +47,10 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
   for (const how of ["close", "escape", "back"] as const) {
     await link.click();
     const help = page.getByRole("dialog", { name: "איך מחברים ב־Claude" });
+    const coveredCode = page.getByRole("dialog", { name: "הקוד מוכן", includeHidden: true });
     await expect(help).toBeVisible();
-    await expect(code).toHaveAttribute("inert", "");
-    const lowerClose = code.getByRole("button", { name: "סגירה" });
+    await expect(coveredCode).toHaveAttribute("inert", "");
+    const lowerClose = coveredCode.getByRole("button", { name: "סגירה", includeHidden: true });
     const covered = await lowerClose.evaluate((node) => {
       const box = node.getBoundingClientRect();
       const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
@@ -57,9 +58,8 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
     });
     expect(covered).toBe(true);
     await lowerClose.dispatchEvent("click");
-    await expect(code).toBeVisible();
     await expect(help).toBeVisible();
-    await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+    await expect(coveredCode).toContainText(SAMPLE_ASSISTANT_SECRET);
     await dismissTop(page, how, help);
     await expect(help).toBeHidden();
     await expect(code).toBeVisible();
