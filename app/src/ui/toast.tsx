@@ -41,6 +41,33 @@ function cssPx(name: string): number {
   return Number.isFinite(value) ? value : 0;
 }
 
+function lengthPx(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "" || trimmed.includes("env(")) return null;
+  if (trimmed.endsWith("rem")) {
+    const root = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const parsed = Number.parseFloat(trimmed);
+    return Number.isFinite(parsed) ? parsed * root : null;
+  }
+  const value = Number.parseFloat(trimmed);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** The top safe area in pixels. `env()` stays unresolved on the custom property, so a probe reads the used length. */
+export function safeTopPx(): number {
+  const declared = lengthPx(getComputedStyle(document.documentElement).getPropertyValue("--safe-top"));
+  if (declared != null) return declared;
+  const probe = document.createElement("div");
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.pointerEvents = "none";
+  probe.style.blockSize = "var(--safe-top)";
+  document.body.appendChild(probe);
+  const height = probe.getBoundingClientRect().height;
+  probe.remove();
+  return Number.isFinite(height) ? height : 0;
+}
+
 function tokenPx(name: string, fallback: number): number {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   if (raw.endsWith("rem")) {
@@ -232,7 +259,7 @@ export function placeToast(layer: HTMLElement): void {
   }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
   const { sheet, anchor, gap, inset } = toastAnchor(layer);
-  const safe = cssPx("--safe-top");
+  const safe = safeTopPx();
   const ignoreDrawers = layer.dataset.place === "page";
   const measured = anchor instanceof HTMLElement
     ? anchor.getBoundingClientRect().bottom + gap

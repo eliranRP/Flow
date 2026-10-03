@@ -595,7 +595,7 @@ On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice
 
 ### Display conversion
 
-A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and under `fx_policy` `original` and `today` its `fx_rate` and `fx_rate_date` stay null. No aggregate adds that integer to an ILS `amount_net`.
+A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and import leaves the pair null under `original` and `today`. No aggregate adds that integer to an ILS `amount_net`.
 
 Every total calls one helper:
 
