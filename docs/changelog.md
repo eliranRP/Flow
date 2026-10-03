@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Smoke user. A viewer row is read-only on one demo company. `private.current_company_id()` stays the owner, so write policies and write RPCs do not follow the viewer. Home, projects, review, and settings read through `private.readable_company_id()`. The deploy job runs that Playwright check after Pages and skips it when `SMOKE_EMAIL` or `SMOKE_PASSWORD` is unset. The password is not in the repo. Provisioning is in [the smoke-user runbook](runbooks/smoke-user.md).
+
 Connector engine L1a, filed today. `private.filed_today_rows()`, `list_auto_assigned_today`, and `list_review` are the MCP 3b versions. An assistant approval that is still approved is on שויכו היום, the banner carries `assistant_filed_today`, and a tied `created_at` orders by id. Connector rows stay `is_connector_source` and `line_status = 'posted'`, and the cards still carry `currency`, `amount_original`, and `line_status`. The whole-file `begin` and `commit` stay.
 
 Connector engine L1a, one transaction. CLI 2.118.0 runs each statement on its own, so the currency migration, the SUMIT copy, and the review migration open with `begin` and close with `commit`. A commit after the drop would remove the SUMIT tables, skip the views, and leave the migration unrecorded. `lock_timeout` and the access-exclusive lock stay inside that transaction. The cash-basis fixture includes a pending receipt. `private.filed_today_rows()` still waits for MCP 3b.
