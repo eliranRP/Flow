@@ -729,9 +729,9 @@ describe("SUMIT status row", () => {
     fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
     const sheet = screen.getByRole("dialog", { name: "SUMIT" });
     const phrase = israelSyncPhrase(synced);
-    expect(phrase).toBeTruthy();
-    const stamp = [...sheet.querySelectorAll(".ui-nowrap")].find((node) => node.textContent?.includes(phrase ?? ""));
-    expect(stamp?.textContent?.startsWith(" ·")).toBe(true);
+    if (phrase == null) throw new Error("missing sync phrase");
+    const stamp = [...sheet.querySelectorAll(".ui-nowrap")].find((node) => node.textContent.includes(phrase));
+    expect(stamp?.textContent.startsWith(" ·")).toBe(true);
     unmount();
 
     rpc.impl = (name) => {

@@ -56,6 +56,20 @@ function layerState(state: unknown, name: string): Record<string, unknown> {
   return { ...base, flowLayer: name, flowLayers: next };
 }
 
+/** Location state after the top sheet has closed without a browser pop. */
+function droppedStackState(state: unknown, layers: string[]): Record<string, unknown> | null {
+  const record = historyRecord(state) ?? {};
+  const base = { ...record };
+  delete base.idx;
+  delete base.key;
+  delete base.usr;
+  delete base.flowLayer;
+  delete base.flowLayers;
+  const top = layers[layers.length - 1];
+  const next = top == null ? base : { ...base, flowLayer: top, flowLayers: layers };
+  return Object.keys(next).length === 0 ? null : next;
+}
+
 /**
  * Pop the screen that opened this one. A deep link has no app history, so it
  * replaces itself with the logical parent. Browser back uses the same entry.
@@ -221,6 +235,14 @@ export function useSheetHistory(
     // The sheet underneath stays. Only the top layer handles ✕, Escape, and Back.
     if (stack.includes(name) && !top) return;
     onOpenChange(false);
+    // MemoryRouter has no browser index, so closing cannot pop. Drop the layer
+    // in place, or the sheet under this one stays stuck below a dead entry.
+    if (!top) return;
+    const current = locationRef.current;
+    void navigate(`${current.pathname}${current.search}${current.hash}`, {
+      replace: true,
+      state: droppedStackState(current.state, stack.slice(0, -1)),
+    });
   }, [name, navigate, onOpenChange]);
 }
 
