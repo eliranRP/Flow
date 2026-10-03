@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(69);
+select plan(78);
 
 do $users$
 begin
@@ -164,20 +164,43 @@ select throws_ok(
 select throws_ok(
   $$insert into public.company_integrations (company_id, provider, mode)
     select id, 'jev', 'live' from jev_ref where label = 'company_b'$$,
-  '23514', null, 'mode is shadow or auto'
+  '23514', null, 'mode is off or shadow'
 );
+select throws_ok(
+  $$insert into public.company_integrations (company_id, provider, mode)
+    select id, 'jev', 'auto' from jev_ref where label = 'company_b'$$,
+  '23514', null, 'auto is refused until the tagging job'
+);
+select lives_ok(
+  $$update public.company_integrations set mode = 'off'$$,
+  'mode can be off'
+);
+select is(
+  (select mode from public.company_integrations),
+  'off',
+  'off was stored'
+);
+update public.company_integrations set mode = 'shadow';
 select throws_ok(
   $$update public.company_integrations set threshold = 1.5$$,
   '23514', null, 'threshold cannot exceed 1'
 );
-select lives_ok(
+select throws_ok(
   $$update public.company_integrations set threshold = 0$$,
-  'threshold can be 0'
+  '23514', null, 'threshold cannot be 0'
+);
+select throws_ok(
+  $$update public.company_integrations set threshold = 0.49$$,
+  '23514', null, 'threshold cannot be below 0.50'
+);
+select lives_ok(
+  $$update public.company_integrations set threshold = 0.50$$,
+  'threshold can be 0.50'
 );
 select is(
-  (select threshold = 0 from public.company_integrations),
+  (select threshold = 0.50 from public.company_integrations),
   true,
-  'threshold 0 was stored'
+  'threshold 0.50 was stored'
 );
 select lives_ok(
   $$update public.company_integrations set threshold = 1$$,
@@ -198,8 +221,8 @@ select throws_ok(
 
 select throws_ok(
   format(
-    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
-      values (%L::uuid, %L::uuid, '{"project":{"probabilities":null}}'::jsonb, 1.1, 'jev-1.13.0')$$,
+    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+      values (%L::uuid, %L::uuid, '{"project":{"probabilities":null}}'::jsonb, 1.1, 'jev-1.13.0', 'jev-1.13.0')$$,
     (select id from jev_ref where label = 'company_a'),
     (select id from jev_ref where label = 'txn_a')
   ),
@@ -207,8 +230,8 @@ select throws_ok(
 );
 select throws_ok(
   format(
-    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
-      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, ' ')$$,
+    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, ' ', 'jev-1.13.0')$$,
     (select id from jev_ref where label = 'company_a'),
     (select id from jev_ref where label = 'txn_a')
   ),
@@ -216,8 +239,17 @@ select throws_ok(
 );
 select throws_ok(
   format(
-    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
-      values (%L::uuid, %L::uuid, '[]'::jsonb, 0.5, 'jev-1.13.0')$$,
+    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, 'jev-1.13.0', ' ')$$,
+    (select id from jev_ref where label = 'company_a'),
+    (select id from jev_ref where label = 'txn_a')
+  ),
+  '23514', null, 'response_model cannot be blank'
+);
+select throws_ok(
+  format(
+    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+      values (%L::uuid, %L::uuid, '[]'::jsonb, 0.5, 'jev-1.13.0', 'jev-1.13.0')$$,
     (select id from jev_ref where label = 'company_a'),
     (select id from jev_ref where label = 'txn_a')
   ),
@@ -225,8 +257,8 @@ select throws_ok(
 );
 select throws_ok(
   format(
-    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
-      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, 'jev-1.13.0')$$,
+    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, 'jev-1.13.0', 'jev-1.13.0')$$,
     (select id from jev_ref where label = 'company_b'),
     (select id from jev_ref where label = 'txn_a')
   ),
@@ -266,19 +298,21 @@ select is(
 );
 
 set role service_role;
-insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
+insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
 select
   (select id from jev_ref where label = 'company_a'),
   (select id from jev_ref where label = 'txn_a'),
   '{"project":{"type":"choice","choice":"site","probabilities":{"site":0.91,"other":0.09},"confidence":0.82},"overhead":{"type":"noul","noul":0.04,"probabilities":null}}'::jsonb,
   0.82,
-  'jev-1.13.0';
-insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
+  'jev-1.13.0',
+  'jev-1.14.0';
+insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
 select
   (select id from jev_ref where label = 'company_b'),
   (select id from jev_ref where label = 'txn_b'),
   '{"project":{"type":"choice","choice":"yard","probabilities":{"yard":0.4},"confidence":0.2}}'::jsonb,
   0.20,
+  'jev-1.13.0',
   'jev-1.13.0';
 reset role;
 
@@ -290,8 +324,8 @@ select is(
 
 select throws_ok(
   format(
-    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
-      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, 'jev-1.13.0')$$,
+    $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+      values (%L::uuid, %L::uuid, '{}'::jsonb, 0.5, 'jev-1.13.0', 'jev-1.13.0')$$,
     (select id from jev_ref where label = 'company_a'),
     (select id from jev_ref where label = 'txn_a')
   ),
@@ -299,12 +333,13 @@ select throws_ok(
 );
 
 set role service_role;
-insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
+insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
 select
   (select id from jev_ref where label = 'company_a'),
   (select id from jev_ref where label = 'txn_a'),
   '{}'::jsonb,
   0.10,
+  'jev-other',
   'jev-other';
 reset role;
 
@@ -348,15 +383,20 @@ select is(
   'owner reads answers, including a null probabilities field'
 );
 select is(
-  (select company_id = (select id from jev_ref where label = 'company_a') and transaction_id = (select id from jev_ref where label = 'txn_a') and created_at is not null and id is not null
+  (select response_model from public.tag_suggestions where model_version = 'jev-1.13.0'),
+  'jev-1.14.0',
+  'owner reads the model the API returned'
+);
+select is(
+  (select company_id = (select id from jev_ref where label = 'company_a') and transaction_id = (select id from jev_ref where label = 'txn_a') and created_at is not null and id is not null and response_model = 'jev-1.14.0'
     from public.tag_suggestions where model_version = 'jev-1.13.0'),
   true,
   'owner reads every remaining suggestion column'
 );
 
 select throws_ok(
-  $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version)
-    select company_id, id, '{}'::jsonb, 0.5, 'jev-client' from public.transactions limit 1$$,
+  $$insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
+    select company_id, id, '{}'::jsonb, 0.5, 'jev-client', 'jev-1.13.0' from public.transactions limit 1$$,
   '42501', null, 'a member cannot insert a suggestion'
 );
 select throws_ok(
@@ -401,23 +441,32 @@ select is(
   'omitted threshold stays 0.90'
 );
 select is(
-  (public.set_company_integration(true, 'auto', 0.95) ->> 'mode'),
-  'auto',
-  'the owner can store auto mode'
+  (public.set_company_integration(true, 'off', 0.95) ->> 'mode'),
+  'off',
+  'the owner can store off'
 );
 select is(
-  ((public.set_company_integration(true, 'auto', 0.95) ->> 'threshold')::numeric = 0.95),
+  ((public.set_company_integration(true, 'off', 0.95) ->> 'threshold')::numeric = 0.95),
   true,
   'the owner can store a threshold'
 );
 select throws_ok(
-  $$select public.set_company_integration(true, 'live', null)$$,
-  'P0001', 'validation', 'an unknown mode is refused'
+  $$select public.set_company_integration(true, 'auto', null)$$,
+  'P0001', 'validation', 'auto is refused by the RPC'
+);
+select throws_ok(
+  $$select public.set_company_integration(true, 'shadow', 0.49)$$,
+  'P0001', 'validation', 'a threshold below 0.50 is refused by the RPC'
 );
 select is(
   (select mode from public.company_integrations),
-  'auto',
+  'off',
   'a refused mode leaves the stored mode in place'
+);
+select is(
+  (select threshold = 0.95 from public.company_integrations),
+  true,
+  'a refused threshold leaves the stored threshold in place'
 );
 
 select tests.authenticate_as('jev_other');

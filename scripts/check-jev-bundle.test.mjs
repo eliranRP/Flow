@@ -43,6 +43,18 @@ test("the script exit codes are 0, 1, 2, and 3", () => {
   assert.match(missing.stderr, /incomplete/);
   assert.match(missing.stdout, new RegExp(SECRET_LINE));
 
+  const empty = mkdtempSync(path.join(tmpdir(), "jev-empty-"));
+  const emptyRun = run([empty]);
+  assert.equal(emptyRun.status, 2);
+  assert.match(emptyRun.stderr, /empty/);
+  assert.doesNotMatch(emptyRun.stdout, /clean /);
+
+  const host = mkdtempSync(path.join(tmpdir(), "jev-host-"));
+  writeFileSync(path.join(host, "index.js"), "https://api.typesafe.ai/v1/systemone");
+  const hostRun = run([host]);
+  assert.equal(hostRun.status, 1);
+  assert.match(hostRun.stderr, /api\.typesafe\.ai/);
+
   const crash = run(["--crash"]);
   assert.equal(crash.status, 3);
   assert.match(crash.stderr, /crash probe/);

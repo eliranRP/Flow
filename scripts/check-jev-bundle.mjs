@@ -8,7 +8,7 @@
  * Exit codes:
  * 0 clean
  * 1 a scanned file contains a needle
- * 2 incomplete: no directory to scan, or a path is missing
+ * 2 incomplete: a path is missing, is not a directory, or has no files
  * 3 crash
  *
  * `--crash` is the crash probe. It is not a scan result.
@@ -24,9 +24,27 @@ export const jevBundleNeedles = [
   "JEV_API_KEY",
   "vault.decrypted_secrets",
   "read_jev_api_key",
+  "api.typesafe.ai",
 ];
 
 export const SECRET_LINE = "secret jev_api_key scope=typesafe-jev-api-bearer server-only";
+
+/**
+ * @param {string} dir
+ * @returns {number}
+ */
+function jevBundleFileCount(dir) {
+  let count = 0;
+  const walk = (current) => {
+    for (const name of readdirSync(current)) {
+      const full = path.join(current, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else count += 1;
+    }
+  };
+  walk(dir);
+  return count;
+}
 
 /**
  * @param {string} dir
@@ -64,7 +82,6 @@ export function runJevBundleCheck(argv) {
   }
   const dirs = argv.filter((arg) => arg !== "--crash");
   const targets = dirs.length > 0 ? dirs : ["app/dist"];
-  if (targets.length === 0) return 2;
   /** @type {string[]} */
   const problems = [];
   for (const dir of targets) {
@@ -77,6 +94,10 @@ export function runJevBundleCheck(argv) {
     }
     if (!info.isDirectory()) {
       console.error(`incomplete: ${dir} is not a directory`);
+      return 2;
+    }
+    if (jevBundleFileCount(dir) === 0) {
+      console.error(`incomplete: ${dir} is empty`);
       return 2;
     }
     problems.push(...jevBundleViolations(dir));

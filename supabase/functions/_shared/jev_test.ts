@@ -208,6 +208,86 @@ Deno.test("a timeout is not retried", async () => {
   assertEquals(sleeps, [], "no backoff");
 });
 
+Deno.test("a stalled body times out at the limit and is not retried", async () => {
+  let calls = 0;
+  const started = Date.now();
+  const error = await assertRejects(() => callJev("test-key", sample, {
+    timeoutMs: 50,
+    timer: {
+      sleep() {
+        return Promise.resolve();
+      },
+      arm(ms, fire) {
+        const id = setTimeout(fire, ms);
+        return { cancel() { clearTimeout(id); } };
+      },
+    },
+    fetch: (_input, init) => {
+      calls += 1;
+      let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
+      const stream = new ReadableStream({
+        start(controller) {
+          streamController = controller;
+        },
+      });
+      init?.signal?.addEventListener("abort", () => {
+        try {
+          streamController?.error(new DOMException("timed out", "TimeoutError"));
+        } catch {
+          // The body may already be closed.
+        }
+      });
+      return Promise.resolve(new Response(stream, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    },
+  }), "timeout");
+  const elapsed = Date.now() - started;
+  assertEquals(error.status, null, "no status");
+  assertEquals(calls, 1, "one attempt");
+  assert(elapsed >= 40, "waited for the limit");
+  assert(elapsed < 1000, "did not hang past the limit");
+});
+
+Deno.test("a returned model other than the pin is kept", async () => {
+  const result = await callJev("test-key", sample, {
+    timer: quietTimer([]),
+    fetch: () => Promise.resolve(jsonResponse(200, { ...answer, model: "jev-1.99.0" })),
+  });
+  assertEquals(result.model, "jev-1.99.0", "returned model");
+});
+
+Deno.test("a non-OK body is cancelled before the retry", async () => {
+  const events: string[] = [];
+  let calls = 0;
+  await callJev("test-key", sample, {
+    timer: {
+      sleep() {
+        events.push("sleep");
+        return Promise.resolve();
+      },
+      arm() {
+        return { cancel() {} };
+      },
+    },
+    fetch: () => {
+      calls += 1;
+      if (calls === 1) {
+        const stream = new ReadableStream({
+          cancel() {
+            events.push("cancel");
+          },
+        });
+        return Promise.resolve(new Response(stream, { status: 529, headers: { "retry-after": "1" } }));
+      }
+      events.push("second");
+      return Promise.resolve(jsonResponse(200, answer));
+    },
+  });
+  assertEquals(events, ["cancel", "sleep", "second"], "cancel before backoff");
+});
+
 Deno.test("a network failure is unavailable and is not retried", async () => {
   const sleeps: number[] = [];
   let calls = 0;

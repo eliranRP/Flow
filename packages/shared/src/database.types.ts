@@ -346,13 +346,13 @@ isOneToOne: false
                   ]
                 },"tag_suggestions": {
                   Row: {
-                    "answers": NonNullable<Json>,"company_id": string,"confidence": number,"created_at": string,"id": string,"model_version": string,"transaction_id": string
+                    "answers": NonNullable<Json>,"company_id": string,"confidence": number,"created_at": string,"id": string,"model_version": string,"response_model": string,"transaction_id": string
                   }
                   Insert: {
-                    "answers": NonNullable<Json>,"company_id": string,"confidence": number,"created_at"?: string,"id"?: string,"model_version": string,"transaction_id": string
+                    "answers": NonNullable<Json>,"company_id": string,"confidence": number,"created_at"?: string,"id"?: string,"model_version": string,"response_model": string,"transaction_id": string
                   }
                   Update: {
-                    "answers"?: NonNullable<Json>,"company_id"?: string,"confidence"?: number,"created_at"?: string,"id"?: string,"model_version"?: string,"transaction_id"?: string
+                    "answers"?: NonNullable<Json>,"company_id"?: string,"confidence"?: number,"created_at"?: string,"id"?: string,"model_version"?: string,"response_model"?: string,"transaction_id"?: string
                   }
                   Relationships: [
                     {

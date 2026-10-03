@@ -186,11 +186,18 @@ function isTimeout(error: unknown, timedOut: boolean): boolean {
   return name === "TimeoutError";
 }
 
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error ? String(error.name) : "";
+  return name === "AbortError" || name === "TimeoutError";
+}
+
 async function parseResult(response: Response): Promise<JevResult> {
   let body: unknown;
   try {
     body = await response.json();
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     throw new JevError("unavailable", response.status);
   }
   if (!isObject(body) || typeof body.model !== "string" || body.model.trim() === "" || !isObject(body.answers)) {
@@ -223,7 +230,7 @@ export async function callJev(apiKey: string, input: JevCall, deps: JevDeps): Pr
       timedOut = true;
       controller.abort();
     });
-    let response: Response;
+    let response: Response | null = null;
     try {
       response = await deps.fetch(JEV_URL, {
         method: "POST",
@@ -235,21 +242,21 @@ export async function callJev(apiKey: string, input: JevCall, deps: JevDeps): Pr
         body,
         signal: controller.signal,
       });
+      if (response.ok) return await parseResult(response);
+      await response.body?.cancel();
     } catch (error) {
-      if (isTimeout(error, timedOut)) throw new JevError("timeout");
+      if (error instanceof JevError) throw error;
+      if (isTimeout(error, timedOut) || isAbortError(error)) throw new JevError("timeout");
       throw new JevError("unavailable");
     } finally {
       armed.cancel();
     }
 
-    if (response.ok) return await parseResult(response);
-    if ((response.status === 429 || response.status === 529) && attempt < JEV_MAX_ATTEMPTS - 1) {
-      await response.body?.cancel();
+    if (response && (response.status === 429 || response.status === 529) && attempt < JEV_MAX_ATTEMPTS - 1) {
       await timer.sleep(backoffMs(attempt, response));
       continue;
     }
-    await response.body?.cancel();
-    throw statusError(response.status);
+    throw statusError(response?.status ?? 0);
   }
   throw new JevError("unavailable");
 }
