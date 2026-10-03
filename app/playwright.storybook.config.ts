@@ -11,8 +11,8 @@ export default defineConfig({
     serviceWorkers: "block",
   },
   webServer: {
-    command: "python3 -m http.server 6193 --bind 127.0.0.1",
-    cwd: "./storybook-static",
+    command: "python3 e2e/storybook-static-server.py",
+    cwd: ".",
     url: "http://127.0.0.1:6193/index.json",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

@@ -315,6 +315,7 @@ a.ui-row,
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  box-sizing: border-box;
   inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
@@ -425,6 +426,10 @@ a.ui-row,
   overflow-wrap: anywhere;
   text-overflow: clip;
   white-space: normal;
+}
+
+.ui-nowrap {
+  white-space: nowrap;
 }
 
 .ui-row-icon {
