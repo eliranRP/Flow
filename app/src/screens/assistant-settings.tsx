@@ -201,6 +201,7 @@ export function AssistantSettings({
   const openRef = useRef(initialSecret != null || initialOpen);
   const secretRef = useRef<HTMLInputElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
+  const connectCloseRef = useRef<(() => void) | null>(null);
   const setDetailsSheet = useSheetHistory("assistant-details", detailsOpen, setDetailsOpen);
   const setHelpSheet = useSheetHistory("assistant-help", helpOpen, setHelpOpen);
   const setDisconnectSheet = useSheetHistory("assistant-disconnect", disconnectOpen, setDisconnectOpen);
@@ -458,7 +459,7 @@ export function AssistantSettings({
       <List>
         {row}
       </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
+      <Sheet open={open} onOpenChange={setConnectSheet} onRequestClose={connectCloseRef} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p>{SHOWN_ONCE}</p>
@@ -485,7 +486,7 @@ export function AssistantSettings({
             {urlReady ? (
               <TextLink chevron={false} buttonRef={helpLinkRef} onClick={() => { setHelpSheet(true); }}>{HELP_TITLE}</TextLink>
             ) : null}
-            <Button type="button" onClick={() => { setConnectSheet(false); }}>סיום</Button>
+            <Button type="button" onClick={() => { connectCloseRef.current?.(); }}>סיום</Button>
           </div>
         ) : intro ? (
           <div className="ui-stack">

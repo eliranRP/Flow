@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+UI polish. A double tap on סיום closes the code sheet once. The button uses the sheet's own close, so a second tap does not pop another history step. Decision [0082](decisions/0082-settings-redesign.md).
+
 UI polish. The Claude command, the address, and the code are each one read-only field on the input surface. The text is monospace and LTR, on one line that scrolls horizontally. The command is named "פקודת חיבור ל־Claude Code" and has no separate label. The copy control is an icon button inside the field, named "העתקה". Decision [0082](decisions/0082-settings-redesign.md). The owner decision is in [PLAN.md](PLAN.md).
 
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
