@@ -1,10 +1,10 @@
 -- L1a. Today's connector filings carry currency and amount_original.
--- A pending line is not filed. An assistant approval is filed, and a tied
--- created_at keeps the id order.
+-- A pending line is not filed. An assistant approval is filed, a pending
+-- assistant approval is not, and a tied created_at keeps the smaller id first.
 
 begin;
 
-select plan(19);
+select plan(20);
 
 do $users$
 begin
@@ -139,11 +139,36 @@ where t.idempotency_key = 'l1a:assistant';
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
-  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+  doc_date, source, line_status, idempotency_key, project_id, category_id, description, created_at
 )
 select c.id, 'expense', 'expense', 'project',
-  -21000, -21000, 0, 'unknown',
-  current_date, 'sumit', 'l1a:tie-a', a.id, m.id, 'קודם',
+  -31000, -31000, 0, 'unknown',
+  current_date - 2, 'manual', 'pending', 'l1a:assistant-pending', a.id, m.id, 'טיוטה', now() - interval '2 days'
+from l1a c
+join l1a a on a.label = 'alpha'
+join l1a m on m.label = 'materials'
+where c.label = 'company';
+
+insert into private.mcp_writes (token_id, user_id, transaction_id, review_id, kind, created_at)
+select
+  (select id from private.mcp_credentials where token_hash = 'hash-l1a-write01'),
+  (select id from auth.users where email = 'l1a-owner@test.flow'),
+  t.id,
+  gen_random_uuid(),
+  'review',
+  now()
+from public.transactions t
+where t.idempotency_key = 'l1a:assistant-pending';
+
+-- The larger id is inserted first, so a table scan meets אחר before קודם.
+insert into public.transactions (
+  id, company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select 'ffffffff-ffff-4fff-8fff-ffffffffffff', c.id, 'expense', 'expense', 'project',
+  -22000, -22000, 0, 'unknown',
+  current_date, 'sumit', 'l1a:tie-b', a.id, m.id, 'אחר',
   (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') + interval '2 hours'
 from l1a c
 join l1a a on a.label = 'alpha'
@@ -151,13 +176,13 @@ join l1a m on m.label = 'materials'
 where c.label = 'company';
 
 insert into public.transactions (
-  company_id, direction, doc_kind, pnl_role,
+  id, company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
   doc_date, source, idempotency_key, project_id, category_id, description, created_at
 )
-select c.id, 'expense', 'expense', 'project',
-  -22000, -22000, 0, 'unknown',
-  current_date, 'sumit', 'l1a:tie-b', a.id, m.id, 'אחר',
+select '11111111-1111-4111-8111-111111111111', c.id, 'expense', 'expense', 'project',
+  -21000, -21000, 0, 'unknown',
+  current_date, 'sumit', 'l1a:tie-a', a.id, m.id, 'קודם',
   (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') + interval '2 hours'
 from l1a c
 join l1a a on a.label = 'alpha'
@@ -229,10 +254,26 @@ select is(
 );
 
 select is(
+  (
+    select count(*)
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'description' = 'טיוטה'
+  ),
+  0::bigint,
+  'a pending assistant approval stays off filed today'
+);
+
+select is(
   (select jsonb_array_length(public.list_auto_assigned_today())),
   4,
   'the owner count is the posted connector filings plus the assistant row'
 );
+
+-- The id-sorted function output hides a missing tiebreak, because a stable
+-- sort keeps that order. A nested loop over the table scan follows insertion
+-- order, and the larger id was inserted first.
+set local enable_hashjoin = off;
+set local enable_mergejoin = off;
 
 select is(
   (
@@ -240,12 +281,8 @@ select is(
     from jsonb_array_elements(public.list_auto_assigned_today()) with ordinality as filed(elem, ord)
     where filed.elem->>'description' in ('קודם', 'אחר')
   ),
-  (
-    select string_agg(t.description, '>' order by t.created_at desc, t.id)
-    from public.transactions t
-    where t.idempotency_key in ('l1a:tie-a', 'l1a:tie-b')
-  ),
-  'equal created_at keeps the id order'
+  'קודם>אחר',
+  'equal created_at keeps the smaller id first'
 );
 
 select is(
