@@ -8,7 +8,7 @@ Decision [0083](../decisions/0083-jev-connector.md). J-1 stores the setting and 
 | --- | --- |
 | `jev_api_key` | TypeSafe Jev API bearer key. One project-wide server secret in Vault. Not a per-company key. Not the SUMIT key. Not an Edge Function env var. |
 
-`public.read_jev_api_key()` is the only read. Execute is `service_role` only.
+`public.read_jev_api_key()` is the only read. Execute is `service_role` only, because the tagging job runs as an Edge Function. The function also requires `auth.jwt()->>'role'` to be `service_role`.
 
 ## Bundle scan
 
@@ -19,8 +19,8 @@ The check job should run it on the hosted dist and on the reviewers-only dist, a
 | Exit | Meaning |
 | --- | --- |
 | 0 | Clean. The directory has none of the needles. |
-| 1 | A file contains `jev_api_key`, `JEV_API_KEY`, `vault.decrypted_secrets`, or `read_jev_api_key`. |
-| 2 | Incomplete. A path is missing or is not a directory. |
+| 1 | A file contains `jev_api_key`, `JEV_API_KEY`, `vault.decrypted_secrets`, `read_jev_api_key`, or `api.typesafe.ai`. |
+| 2 | Incomplete. A path is missing, is not a directory, or has no files. |
 | 3 | Crash. `--crash` is the probe for this code. It is not a scan result. |
 
 Every run prints `secret jev_api_key scope=typesafe-jev-api-bearer server-only`. A hit prints the file and the needle. It does not print the file's contents.

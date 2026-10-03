@@ -13,8 +13,8 @@ create table public.company_integrations (
   updated_at timestamptz not null default now(),
   primary key (company_id, provider),
   constraint company_integrations_provider_chk check (provider = 'jev'),
-  constraint company_integrations_mode_chk check (mode in ('shadow', 'auto')),
-  constraint company_integrations_threshold_chk check (threshold >= 0 and threshold <= 1)
+  constraint company_integrations_mode_chk check (mode in ('off', 'shadow')),
+  constraint company_integrations_threshold_chk check (threshold >= 0.50 and threshold <= 1)
 );
 
 comment on table public.company_integrations is
@@ -24,10 +24,10 @@ comment on column public.company_integrations.provider is
   'jev is the only provider in this migration.';
 
 comment on column public.company_integrations.mode is
-  'shadow keeps the line in the review queue. auto is stored for the tagging job and is not applied here.';
+  'off or shadow until the tagging job ships. auto is refused. Decision 0083.';
 
 comment on column public.company_integrations.threshold is
-  'Confidence from 0 to 1. Default 0.90. The tagging job reads it. This migration does not apply it.';
+  'Confidence from 0.50 to 1. Default 0.90. The tagging job reads it. This migration does not apply it.';
 
 create trigger company_integrations_touch
   before update on public.company_integrations
@@ -40,11 +40,13 @@ create table public.tag_suggestions (
   answers jsonb not null,
   confidence numeric not null,
   model_version text not null,
+  response_model text not null,
   created_at timestamptz not null default now(),
   unique (transaction_id, model_version),
   constraint tag_suggestions_answers_object_chk check (jsonb_typeof(answers) = 'object'),
   constraint tag_suggestions_confidence_chk check (confidence >= 0 and confidence <= 1),
   constraint tag_suggestions_model_version_chk check (char_length(btrim(model_version)) between 1 and 64),
+  constraint tag_suggestions_response_model_chk check (char_length(btrim(response_model)) between 1 and 64),
   foreign key (company_id, transaction_id)
     references public.transactions (company_id, id)
     on delete cascade
@@ -57,7 +59,10 @@ comment on column public.tag_suggestions.answers is
   'Per-question answer and probabilities. A JSON object. Null probabilities stay inside the object.';
 
 comment on column public.tag_suggestions.model_version is
-  'The model that produced the row, pinned by the client to jev-1.13.0 until a later decision moves it.';
+  'The pinned model the client sent. Idempotency is one row per transaction and this pin.';
+
+comment on column public.tag_suggestions.response_model is
+  'The model string the API returned. It may differ from model_version. The client does not refuse that drift.';
 
 create index tag_suggestions_company_idx on public.tag_suggestions (company_id);
 
@@ -102,10 +107,10 @@ begin
   if p_enabled is null or p_provider is distinct from 'jev' then
     raise exception 'validation';
   end if;
-  if p_mode is not null and p_mode not in ('shadow', 'auto') then
+  if p_mode is not null and p_mode not in ('off', 'shadow') then
     raise exception 'validation';
   end if;
-  if p_threshold is not null and (p_threshold < 0 or p_threshold > 1) then
+  if p_threshold is not null and (p_threshold < 0.50 or p_threshold > 1) then
     raise exception 'validation';
   end if;
 
@@ -147,6 +152,7 @@ comment on function public.set_company_integration(boolean, text, numeric, text)
 
 -- Vault secret name jev_api_key. Scope: the TypeSafe API bearer key, one project-wide secret.
 -- Not a per-company key, not the SUMIT key, and not an Edge Function env var.
+-- Execute stays service_role only: the tagging job runs as an Edge Function.
 create or replace function public.read_jev_api_key()
 returns text
 language plpgsql
@@ -156,7 +162,7 @@ as $$
 declare
   secret text;
 begin
-  if coalesce(auth.role(), '') is distinct from 'service_role' then
+  if coalesce(auth.jwt() ->> 'role', '') is distinct from 'service_role' then
     raise exception 'forbidden' using errcode = '42501';
   end if;
   if to_regclass('vault.decrypted_secrets') is null then
@@ -177,7 +183,7 @@ revoke all on function public.read_jev_api_key() from public, anon, authenticate
 grant execute on function public.read_jev_api_key() to service_role;
 
 comment on function public.read_jev_api_key() is
-  'Service-role read of Vault secret jev_api_key. A missing secret fails closed. Decision 0083.';
+  'Service-role read of Vault secret jev_api_key. The tagging job is an Edge Function, so only service_role may execute this. A missing secret fails closed. Decision 0083.';
 
 do $vault_revoke$
 begin

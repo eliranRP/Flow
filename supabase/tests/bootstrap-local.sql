@@ -79,9 +79,23 @@ as $$
   end
 $$;
 
+-- The hosted image provides auth.jwt(). This stand-in matches it so
+-- read_jev_api_key can require auth.jwt()->>'role' on a local cluster.
+create or replace function auth.jwt()
+returns jsonb
+language sql
+stable
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')
+  )::jsonb
+$$;
+
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to public, anon, authenticated, service_role;
 grant execute on function auth.role() to public, anon, authenticated, service_role;
+grant execute on function auth.jwt() to public, anon, authenticated, service_role;
 
 grant usage on schema extensions to public, anon, authenticated, service_role;
 
