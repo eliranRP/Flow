@@ -2,6 +2,8 @@
 
 ## 2026-10-02
 
+Review queue, round 2. The in-memory review fixture stays on the dev server and is absent from the hosted bundle. A pick from a card line saves only that field (`resolve_review` with `p_resolve` false) and leaves the item open, so the card stays and shows the new value. The queue address advances only on `/review`. A confirmation toast sits under the header, not on the tab bar. Decision [0081](decisions/0081-review-queue-list.md).
+
 Review queue, round 1. אישור from a list card keeps the following item in the address, so the third step does not jump back to the oldest. A picker opened from a card line returns to that card. הצג הכול sits at the end of the "N מתוך M" row, and the project and category lines are one row tall. A list card shows its place, not the progress bar. After the last item, Back goes to `/review`. Decision [0081](decisions/0081-review-queue-list.md).
 
 The review queue lists every pending item. הצג הכול sits under the progress bar and opens `/review/all`. A row opens that item's card, and אישור then continues with the item that followed it. The project and category lines open the picker, and the notes say הקישו לבחירה. The split title stays "מפוצל · N פרויקטים". Decision [0081](decisions/0081-review-queue-list.md).

@@ -82,6 +82,15 @@ function toastControls(layer: HTMLElement, sheet: Element | null): ToastBox[] {
   return boxes;
 }
 
+/** The tab bar chrome is not a button, so a toast can sit on it without hitting a control. */
+function tabBarObstacle(): ToastBox | null {
+  const bar = document.querySelector(".ui-tabbar");
+  if (!(bar instanceof HTMLElement)) return null;
+  const rect = bar.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return null;
+  return { top: rect.top, bottom: rect.bottom };
+}
+
 function toastHits(top: number, height: number, boxes: ToastBox[]): boolean {
   const bottom = top + height;
   return boxes.some((box) => box.top < bottom && box.bottom > top);
@@ -247,6 +256,28 @@ export function placeToast(layer: HTMLElement): void {
     const top = minTop;
     layer.style.top = `${String(top)}px`;
     padSheetUnderToast(sheet, top, height, gap);
+    return;
+  }
+  const bar = tabBarObstacle();
+  if (bar && height > 0) {
+    const limit = bar.top;
+    let top = measured;
+    for (let step = 0; step < boxes.length + 1; step += 1) {
+      if (top < safe) top = safe;
+      if (top + height > limit) {
+        top = Math.max(safe, measured);
+        break;
+      }
+      const hit = boxes.find((box) => box.top < top + height && box.bottom > top);
+      if (!hit) break;
+      const next = hit.bottom + gap;
+      if (next + height > limit) {
+        top = Math.max(safe, measured);
+        break;
+      }
+      top = next;
+    }
+    layer.style.top = `${String(top)}px`;
     return;
   }
   const candidates = [measured];

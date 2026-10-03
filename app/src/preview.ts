@@ -26,16 +26,18 @@ export function previewHidesBand(preview: HomePreview): boolean {
   return preview === "error" || preview === "error-server";
 }
 
-/** Keeps preview, a project filter, and the review e2e fixture on the review path. */
+/** Keeps preview and a project filter. The dev review fixture also keeps its query flag. */
 export function useFlowSearch(): string {
   const [params] = useSearchParams();
   const next = new URLSearchParams();
   const preview = params.get("preview");
   const project = params.get("project");
-  const e2e = params.get("e2e");
   if (preview) next.set("preview", preview);
   if (project) next.set("project", project);
-  if (e2e) next.set("e2e", e2e);
+  if (import.meta.env.DEV) {
+    const e2e = params.get("e2e");
+    if (e2e) next.set("e2e", e2e);
+  }
   const value = next.toString();
   return value ? `?${value}` : "";
 }

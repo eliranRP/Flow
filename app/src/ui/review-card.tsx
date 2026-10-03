@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { formatAmount } from "./big-number";
 import { DocumentIcon } from "./icons";
 import { ListRow } from "./list-row";
@@ -25,8 +26,10 @@ type ReviewCardProps = {
   direction?: "income" | "expense";
   /** Opens the project picker, or the split when this line is a split. */
   onProject?: () => void;
-  /** Opens the category picker. The save is the change sheet's save. */
+  /** Opens the category picker. A line pick saves that field and does not resolve. */
   onCategory?: () => void;
+  projectButtonRef?: Ref<HTMLButtonElement>;
+  categoryButtonRef?: Ref<HTMLButtonElement>;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -40,6 +43,8 @@ export function ReviewCard({
   direction = "expense",
   onProject,
   onCategory,
+  projectButtonRef,
+  categoryButtonRef,
 }: ReviewCardProps) {
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
   const shared = reason === "unallocated_shared";
@@ -108,6 +113,7 @@ export function ReviewCard({
             label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : ""}`}
             tag={line.suggested ? <SuggestTag /> : undefined}
             chevron
+            buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
             onClick={line.onOpen}
           />
         ) : (

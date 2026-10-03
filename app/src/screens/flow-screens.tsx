@@ -3,6 +3,7 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
+import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
 import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
@@ -799,102 +800,42 @@ const EMPTY_REVIEW: ReviewRow[] = [];
 /** The row opened from the list. A later URL replace must not move this. */
 let reviewReturnId: string | null = null;
 
+/** The card line that opened the picker. The sheet focuses it after close. */
+export const reviewLineFocus: {
+  project: { current: HTMLButtonElement | null };
+  category: { current: HTMLButtonElement | null };
+} = {
+  project: { current: null },
+  category: { current: null },
+};
+
 export function resetReviewListFocus(): void {
   reviewReturnId = null;
+  reviewLineFocus.project.current = null;
+  reviewLineFocus.category.current = null;
 }
 
-let e2eOpen: ReviewRow[] | null = null;
-let e2eGone: ReviewRow[] = [];
-const e2eListeners = new Set<() => void>();
-
-function e2eNotify(): void {
-  for (const listener of e2eListeners) listener();
-}
-
-function seedE2eReview(): ReviewRow[] {
-  const names = [
-    ["r1", "מחסן הנמל"],
-    ["r2", "עגורני החוף"],
-    ["r3", "ברזל הדרום"],
-    ["r4", "צבע הדרום"],
-    ["r5", "חשמל הצפון"],
-  ] as const;
-  return names.map(([id, supplier]) => ({
-    id,
-    transaction_id: `t-${id}`,
-    description: supplier,
-    doc_date: "2026-09-29",
-    amount_net: -10_000n,
-    direction: "expense" as const,
-    reason: null,
-    project_id: "p1",
-    category_id: "c1",
-    project_name: "הרצל",
-    category_name: "חומרים",
-    project_suggested: false,
-    category_suggested: false,
-    supplier_name: supplier,
-    doc_kind: "invoice",
-    auto_approved_today: 0,
-  }));
-}
-
-function e2eEnsure(): ReviewRow[] {
-  if (e2eOpen == null) e2eOpen = seedE2eReview();
-  return e2eOpen;
-}
-
-function dismissE2eReview(id: string): void {
-  const open = e2eEnsure();
-  const row = open.find((item) => item.id === id);
-  if (!row) return;
-  e2eGone = [row, ...e2eGone];
-  e2eOpen = open.filter((item) => item.id !== id);
-  e2eNotify();
-}
-
-function restoreE2eReview(id: string): void {
-  const row = e2eGone.find((item) => item.id === id);
-  if (!row) return;
-  e2eGone = e2eGone.filter((item) => item.id !== id);
-  const ids = new Set(e2eEnsure().map((item) => item.id));
-  ids.add(row.id);
-  e2eOpen = seedE2eReview().filter((item) => ids.has(item.id));
-  e2eNotify();
-}
+/** Dev-only fixture. A production build folds this to null and drops the module. */
+const reviewE2e = import.meta.env.DEV ? reviewE2eFixture : null;
 
 function useE2eReviewRows(active: boolean): ReviewRow[] {
   const [, bump] = useState(0);
   useEffect(() => {
-    if (!active) return;
-    const listener = () => { bump((n) => n + 1); };
-    e2eListeners.add(listener);
-    return () => { e2eListeners.delete(listener); };
+    if (!import.meta.env.DEV || !active || reviewE2e == null) return;
+    return reviewE2e.subscribe(() => {
+      bump((n) => n + 1);
+    });
   }, [active]);
-  return active ? e2eEnsure() : EMPTY_REVIEW;
+  if (!import.meta.env.DEV || !active || reviewE2e == null) return EMPTY_REVIEW;
+  return reviewE2e.currentRows();
 }
-
-const e2eChangeSample: ChangeSample = {
-  supplier: "מחסן הנמל",
-  amount: "₪100",
-  projectId: "p1",
-  categoryId: "c1",
-  suggestionId: "p1",
-  suggestionCategoryId: "c1",
-  project_suggested: false,
-  categorySuggested: false,
-  projects: [{ id: "p1", name: "הרצל", status: "active" }],
-  categories: [
-    { id: "c1", name: "חומרים", hidden: false, kind: "expense" },
-    { id: "c2", name: "הובלה", hidden: false, kind: "expense" },
-  ],
-};
 
 export function reviewListPath(search: string): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   params.delete("item");
   params.delete("from");
   params.delete("pick");
+  params.delete("list");
   const text = params.toString();
   return text === "" ? "/review/all" : `/review/all?${text}`;
 }
@@ -902,6 +843,7 @@ export function reviewListPath(search: string): string {
 export function reviewFocusPath(search: string, id: string): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   params.delete("pick");
+  params.delete("list");
   params.set("item", id);
   params.set("from", "all");
   return `/review?${params.toString()}`;
@@ -936,13 +878,22 @@ function assignmentPath(
   id: string,
   pick?: "project" | "category",
   fromList = false,
+  fromLine = false,
 ): string {
   const base = changeTo ?? `/review/change${search}`;
   const [path, query = ""] = base.split("?");
   const params = new URLSearchParams(query);
   params.set("item", id);
   if (pick) params.set("pick", pick);
-  if (fromList) params.set("from", "all");
+  else params.delete("pick");
+  if (fromLine) {
+    params.set("from", "line");
+    if (fromList) params.set("list", "all");
+    else params.delete("list");
+  } else if (fromList) {
+    params.set("from", "all");
+    params.delete("list");
+  }
   return `${String(path)}?${params.toString()}`;
 }
 
@@ -957,7 +908,7 @@ export function ReviewScreen() {
   const review = useReviewQuery();
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
   const focusedOrder = useRef<ReviewRow[] | null>(null);
-  const e2eList = params.get("preview") != null && params.get("e2e") === "list";
+  const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
   const e2eRows = useE2eReviewRows(e2eList);
   const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
   const source = e2eList ? e2eRows : (review.data ?? EMPTY_REVIEW);
@@ -969,8 +920,8 @@ export function ReviewScreen() {
     return source.filter((row) => ids.has(row.id));
   }, [projectFilter, preview, source, waiting.data]);
   useEffect(() => {
-    if (listing) {
-      focusedOrder.current = null;
+    if (location.pathname !== "/review") {
+      if (listing) focusedOrder.current = null;
       return;
     }
     const urlId = params.get("from") === "all" ? params.get("item") : null;
@@ -990,15 +941,15 @@ export function ReviewScreen() {
     }
     const head = queueAfterFocus(activeRows, urlId, focusedOrder.current).rows[0]?.id;
     if (head != null && head !== urlId) void navigate(reviewFocusPath(search, head), { replace: true });
-  }, [listing, params, activeRows, phase.kind, search, navigate, projectFilter]);
+  }, [location.pathname, listing, params, activeRows, phase.kind, search, navigate, projectFilter]);
   function rowsForFocus(rows: ReviewRow[]): ReviewRow[] {
     const urlId = params.get("from") === "all" ? params.get("item") : null;
     if (listing || urlId == null) return rows;
     if (rows.some((row) => row.id === urlId)) return rotateReview(rows, urlId);
     return queueAfterFocus(rows, urlId, focusedOrder.current).rows;
   }
-  const e2eWrite: ReviewPreviewWrite | undefined = e2eList
-    ? { run: () => Promise.resolve(), onDone: dismissE2eReview, onUndo: restoreE2eReview }
+  const e2eWrite: ReviewPreviewWrite | undefined = reviewE2e != null && e2eList
+    ? reviewE2e.e2ePreviewWrite()
     : undefined;
   if (projectFilter != null && preview === "off") {
     const back = `/projects/${projectFilter}`;
@@ -1310,10 +1261,10 @@ export function ReviewQueue({
       void navigate(`/transactions/${current.transaction_id}/split${search}`);
       return;
     }
-    void navigate(assignmentPath(changeTo, search, current.id, "project", fromList));
+    void navigate(assignmentPath(changeTo, search, current.id, "project", fromList, true));
   }
   function openCategory() {
-    void navigate(assignmentPath(changeTo, search, current.id, "category", fromList));
+    void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
   }
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
@@ -1372,6 +1323,8 @@ export function ReviewQueue({
           suggestion={suggestion}
           reason={card.reason}
           direction={card.direction}
+          projectButtonRef={reviewLineFocus.project}
+          categoryButtonRef={reviewLineFocus.category}
           onProject={card.direction === "income" ? undefined : openProject}
           onCategory={openCategory}
         />
@@ -1630,7 +1583,7 @@ export function reviewSplitTitle(row: { project_name?: string | null; share_coun
 
 export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const [params] = useSearchParams();
-  const sample = given ?? (params.get("e2e") === "list" ? e2eChangeSample : undefined);
+  const sample: ChangeSample | undefined = given ?? (reviewE2e != null && params.get("e2e") === "list" ? reviewE2e.e2eChangeSample : undefined);
   const search = useFlowSearch();
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -1745,6 +1698,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       }));
     },
   });
+  const lineField = useRef(false);
   const setSharedCategory = useWrite({
     failure: changeSaveFailure,
     success: "השיוך נשמר",
@@ -1760,6 +1714,30 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       assertNoError(await supabase.rpc("set_transaction_category", {
         p_id: transactionId,
         p_category_id: nextCategory,
+        ...(lineField.current ? { p_resolve: false } : {}),
+      }));
+    },
+  });
+  const fieldSave = useRef<{ kind: "project" | "category"; id: string } | null>(null);
+  const saveField = useWrite({
+    failure: changeSaveFailure,
+    success: "השיוך נשמר",
+    keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    onSuccess: () => {
+      const pickedField = fieldSave.current;
+      if (!pickedField) return;
+      if (pickedField.kind === "project") setProjectId(pickedField.id);
+      else setCategoryId(pickedField.id);
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      const next = fieldSave.current;
+      if (!supabase || item === "" || next == null) throw new Error("supabase");
+      assertNoError(await supabase.rpc("resolve_review", {
+        p_id: item,
+        p_action: "changed",
+        p_resolve: false,
+        ...(next.kind === "project" ? { p_project_id: next.id } : { p_category_id: next.id }),
       }));
     },
   });
@@ -1818,11 +1796,17 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     }, invalidate);
   }
 
-  const fromList = params.get("from") === "all" && item !== "";
+  const fromList = (params.get("from") === "all" || params.get("list") === "all") && item !== "";
   const closeTo = fromList ? reviewFocusPath(search, item) : `/review${search}`;
+  const linePick = params.get("from") === "line" ? params.get("pick") : null;
+  const returnFocusRef = linePick === "project"
+    ? reviewLineFocus.project
+    : linePick === "category"
+      ? reviewLineFocus.category
+      : undefined;
   if (formPhase.kind !== "ready") {
     return (
-      <RouteSheet title="שינוי שיוך" closeTo={closeTo}>
+      <RouteSheet title="שינוי שיוך" closeTo={closeTo} returnFocusRef={returnFocusRef}>
         <ScreenState title="שינוי שיוך" phase={formPhase} onRetry={() => { void dashboard.refetch(); void categories.refetch(); void review.refetch(); }} />
       </RouteSheet>
     );
@@ -1832,6 +1816,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     <ChangeAssignment
       host="route"
       closeTo={closeTo}
+      returnFocusRef={returnFocusRef}
       supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
       amount={sample?.amount ?? (row ? formatIls(absAgorot(row.amount_net)) : "")}
       direction={income ? "income" : "expense"}
@@ -1865,6 +1850,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
         picked.current = { projectId: nextProject, categoryId: nextCategory, remember };
+        const fromLine = params.get("from") === "line";
         if (splitReview) {
           if (kind === "project") {
             if (!row?.transaction_id || id === "") throw new Error("supabase");
@@ -1872,7 +1858,13 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
             return undefined;
           }
           if (!row?.transaction_id) throw new Error("supabase");
+          lineField.current = fromLine;
           await setSharedCategory.mutateAsync();
+          return undefined;
+        }
+        if (fromLine) {
+          fieldSave.current = { kind, id };
+          await saveField.mutateAsync();
           return undefined;
         }
         const complete = income ? nextCategory !== "" : nextProject !== "" && nextCategory !== "";
