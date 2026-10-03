@@ -3,7 +3,7 @@ import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
@@ -82,6 +82,10 @@ function hintOf(row: HTMLElement): string {
 }
 
 describe("SUMIT status row", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "");
+  });
+
   it("shows a load error on the row and moves focus when retry succeeds", async () => {
     let fail = true;
     rpc.impl = (name) => {
