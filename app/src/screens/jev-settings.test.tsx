@@ -17,6 +17,7 @@ const db = vi.hoisted(() => {
     readError: { message: string } | null;
     writeError: { message: string } | null;
     hold: Promise<void> | null;
+    readHold: Promise<void> | null;
     failRefresh: boolean;
     writes: Array<Record<string, unknown>>;
   } = {
@@ -24,6 +25,7 @@ const db = vi.hoisted(() => {
     readError: null,
     writeError: null,
     hold: null,
+    readHold: null,
     failRefresh: false,
     writes: [],
   };
@@ -35,7 +37,11 @@ vi.mock("../lib/supabase", () => ({
     from: () => ({
       select: () => ({
         eq: () => ({
-          maybeSingle: () => Promise.resolve({ data: db.row, error: db.readError }),
+          maybeSingle: () => {
+            const finish = () => ({ data: db.row, error: db.readError });
+            if (db.readHold) return db.readHold.then(finish);
+            return Promise.resolve(finish());
+          },
         }),
       }),
     }),
@@ -80,6 +86,7 @@ describe("Jev settings card", () => {
     db.readError = null;
     db.writeError = null;
     db.hold = null;
+    db.readHold = null;
     db.failRefresh = false;
     db.writes = [];
   });
@@ -147,11 +154,13 @@ describe("Jev settings card", () => {
   });
 
   it("gives the loading row the hint height and marks it busy", () => {
-    const { container } = render(<JevSettings sample={{ ...JEV_DEFAULT, status: "loading" }} />);
+    const { container } = render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true, status: "loading" }} />);
     const row = container.querySelector(".ui-row");
     expect(row).toHaveAttribute("aria-busy", "true");
     expect(row?.querySelector(".ui-row-hint-skel")).not.toBeNull();
+    expect(container.querySelector(".ui-jev-options-reserve")).not.toBeNull();
     expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
   });
 
   it("is absent when there is no company", () => {
@@ -257,6 +266,64 @@ describe("Jev settings card", () => {
     expect(await screen.findByText("לא הצלחנו לשמור.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     await waitFor(() => expect(toggle).toBeChecked());
+  });
+
+  it("keeps the error row while a retry runs, then focuses the switch", async () => {
+    let release: () => void = () => undefined;
+    db.readError = { message: "down" };
+    renderLive(<JevSettings />);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: תיוג חכם" });
+    retry.focus();
+    db.readHold = new Promise((resolve) => { release = resolve; });
+    db.readError = null;
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    fireEvent.click(retry);
+    await waitFor(() => expect(retry).toHaveAttribute("aria-busy", "true"));
+    expect(screen.getByText("שגיאה")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
+    expect(document.querySelector(".ui-row-hint-skel")).toBeNull();
+    expect(retry).toHaveFocus();
+    release();
+    await waitFor(() => expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toHaveFocus());
+    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).not.toBeInTheDocument();
+  });
+
+  it("leaves focus on the retry when the load fails again", async () => {
+    let release: () => void = () => undefined;
+    db.readError = { message: "down" };
+    renderLive(<JevSettings />);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: תיוג חכם" });
+    retry.focus();
+    db.readHold = new Promise((resolve) => { release = resolve; });
+    fireEvent.click(retry);
+    await waitFor(() => expect(retry).toHaveAttribute("aria-busy", "true"));
+    expect(screen.getByText("שגיאה")).toBeInTheDocument();
+    expect(retry).toHaveFocus();
+    release();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).not.toHaveAttribute("aria-busy");
+    });
+    expect(screen.getByText("שגיאה")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
+  });
+
+  it("reserves אפשרויות while a slow load resolves to on", async () => {
+    let release: () => void = () => undefined;
+    db.readHold = new Promise((resolve) => { release = resolve; });
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    const { container } = renderLive(<JevSettings />);
+    await waitFor(() => {
+      expect(container.querySelector(".ui-jev-options-reserve")).not.toBeNull();
+    });
+    expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
+    release();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "אפשרויות" })).toBeInTheDocument();
+    });
+    expect(container.querySelector(".ui-jev-options-reserve")).toBeNull();
+    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
   });
 
   it("shows שגיאה when the row fails to load, not an on state", async () => {

@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-Jev settings, retry. A new save clears the previous ניסיון חוזר toast. The switch follows that save, so a retry tapped while it is still running leaves the switch usable. No migration. Decision [0083](decisions/0083-jev-connector.md).
+Jev settings, retry. A new save clears the previous ניסיון חוזר toast. The switch follows that save, so a retry tapped while it is still running leaves the switch usable. A failed read keeps שגיאה and the retry on screen while that retry runs: success moves focus to the switch, and a failure leaves focus on the link. A slow first load reserves the אפשרויות row. No migration. Decision [0083](decisions/0083-jev-connector.md).
 
 Jev settings, design. The switch is a חיבורים row: כבוי, פעיל · מצב צל, or שגיאה. A save keeps focus and stays `aria-busy`. The error row matches SUMIT, with ניסיון חוזר on the row. A dashboard failure does not render the card. אפשרויות is the shadow hint and a chevron. The percent field stays hidden until auto mode. A retry resends the save that failed. A failed refresh after a good save keeps that save. No migration. Decision [0083](decisions/0083-jev-connector.md).
 

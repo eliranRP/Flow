@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { getSupabase } from "../lib/supabase";
+import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { AlertIcon, ChevronDownIcon, TagIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Skeleton } from "../ui/skeleton";
@@ -107,6 +108,9 @@ export function JevSettingsCard({
   busy = false,
   optionsOpen = false,
   showThreshold = false,
+  retryBusy = false,
+  retryRef,
+  switchRef,
   onToggle,
   onThreshold,
   onRetry,
@@ -116,6 +120,9 @@ export function JevSettingsCard({
   optionsOpen?: boolean;
   /** The percent field stays hidden until auto mode. Tests still exercise the save. */
   showThreshold?: boolean;
+  retryBusy?: boolean;
+  retryRef?: Ref<HTMLButtonElement>;
+  switchRef?: Ref<HTMLInputElement>;
   onToggle?: (enabled: boolean) => void;
   onThreshold?: (value: number) => void;
   onRetry?: () => void;
@@ -146,7 +153,14 @@ export function JevSettingsCard({
       hintStatus
       hint="שגיאה"
       action={onRetry ? (
-        <TextLink size="label" chevron={false} label="ניסיון חוזר: תיוג חכם" onClick={onRetry}>
+        <TextLink
+          size="label"
+          chevron={false}
+          label="ניסיון חוזר: תיוג חכם"
+          busy={retryBusy}
+          buttonRef={retryRef}
+          onClick={onRetry}
+        >
           ניסיון חוזר
         </TextLink>
       ) : undefined}
@@ -158,6 +172,7 @@ export function JevSettingsCard({
       icon={<TagIcon size={24} />}
       checked={shownOn}
       busy={busy}
+      inputRef={switchRef}
       onChange={(checked) => {
         if (busy) return;
         onToggle?.(checked);
@@ -168,7 +183,11 @@ export function JevSettingsCard({
   return (
     <div>
       <List>{row}</List>
-      {showOptions ? (
+      {state.status === "loading" ? (
+        <div className="ui-jev-options" aria-hidden="true">
+          <span className="ui-jev-options-reserve" />
+        </div>
+      ) : showOptions ? (
         <div className="ui-jev-options">
           <TextLink
             chevron={false}
@@ -268,13 +287,45 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
       client.setQueryData(["jev-integration"], next);
     },
   });
+  const retryRef = useRef<HTMLButtonElement>(null);
+  const switchRef = useRef<HTMLInputElement>(null);
+  const retrying = useRef(false);
+  const [retryingView, setRetryingView] = useState(false);
+  const [failureNonce, setFailureNonce] = useState(0);
   const stored: StoredJev | null = query.data ?? null;
   const current = (save.isPending ? save.variables : undefined) ?? stored;
-  const view: JevCardState = current != null
+  const reading = current == null;
+  const fetchingError = reading && (retrying.current || retryingView);
+  const view: JevCardState = !reading
     ? { ...current, status: "ready" }
-    : query.isPending
-      ? { enabled: false, mode: "shadow", threshold: 0.9, status: "loading" }
-      : { enabled: false, mode: "shadow", threshold: 0.9, status: "error" };
+    : fetchingError || !query.isPending
+      ? { enabled: false, mode: "shadow", threshold: 0.9, status: "error" }
+      : { enabled: false, mode: "shadow", threshold: 0.9, status: "loading" };
+
+  useFocusRowAfterRetry(view.status === "error", retryRef, switchRef, view.status === "ready", failureNonce);
+
+  useEffect(() => {
+    if (failureNonce === 0) return;
+    const id = window.setTimeout(() => {
+      const retry = retryRef.current;
+      const active = document.activeElement;
+      if (retry == null || active === retry) return;
+      if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) return;
+      retry.focus();
+    }, 30);
+    return () => { window.clearTimeout(id); };
+  }, [failureNonce]);
+
+  function retryRead() {
+    if (retrying.current) return;
+    retrying.current = true;
+    setRetryingView(true);
+    void query.refetch().then((result) => {
+      retrying.current = false;
+      setRetryingView(false);
+      if (result.isError || result.data == null) setFailureNonce((nonce) => nonce + 1);
+    });
+  }
 
   function commit(next: StoredJev) {
     if (blocked?.()) return;
@@ -287,6 +338,9 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
       state={view}
       busy={save.isPending}
       showThreshold={showThreshold}
+      retryBusy={retryingView}
+      retryRef={retryRef}
+      switchRef={switchRef}
       onToggle={(enabled) => {
         if (!stored || save.isPending) return;
         commit(turnedOn(stored, enabled));
@@ -295,7 +349,7 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
         if (!stored || save.isPending) return;
         commit({ ...stored, threshold: roundJevThreshold(threshold) });
       }}
-      onRetry={() => { void query.refetch(); }}
+      onRetry={retryRead}
     />
   );
 }
