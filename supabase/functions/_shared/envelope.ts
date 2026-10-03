@@ -77,7 +77,7 @@ export interface Envelope {
   dekNonce: string;
   /** KEK rotation id. Not the envelope format. */
   kekVersion: string;
-  /** AES-GCM format. "2" binds companyId. Omitted seals treat kekVersion "2" as format 2. */
+  /** AES-GCM format. "2" binds companyId. "3" binds companyId|provider. Omitted seals treat kekVersion "2" as format 2. */
   envelopeVersion?: string;
 }
 
@@ -86,10 +86,25 @@ function envelopeFormat(kekVersion: string, envelopeVersion?: string): string {
   return kekVersion === "2" ? "2" : "1";
 }
 
+/** Format 1 has no additional data. Format 2 binds the company. Format 3 binds company|provider. */
+function additionalData(format: string, companyId?: string, provider?: string): Uint8Array | undefined {
+  if (format === "1") return undefined;
+  if (format === "2") {
+    if (!companyId) throw new Error("version 2 seals bind a company");
+    return te.encode(companyId);
+  }
+  if (format === "3") {
+    if (!companyId || !provider) throw new Error("version 3 seals bind a company and a provider");
+    return te.encode(`${companyId}|${provider}`);
+  }
+  throw new Error("unknown envelope format");
+}
+
 /**
  * Encrypt an API key under a fresh DEK, and the DEK under the KEK.
  * Format "1" has no additional data. Format "2" binds companyId so the
- * ciphertext cannot be moved to another tenant. Decision 0063 and 0064.
+ * ciphertext cannot be moved to another tenant. Format "3" binds
+ * companyId|provider. Decision 0063, 0064, and 0085.
  * The 4-argument form still treats kekVersion "2" as format 2.
  */
 export async function sealApiKey(
@@ -98,10 +113,10 @@ export async function sealApiKey(
   kekVersion: string,
   companyId?: string,
   envelopeVersion?: string,
+  provider?: string,
 ): Promise<Envelope> {
   const format = envelopeFormat(kekVersion, envelopeVersion);
-  const aad = format === "2" ? te.encode(companyId ?? "") : undefined;
-  if (format === "2" && !companyId) throw new Error("version 2 seals bind a company");
+  const aad = additionalData(format, companyId, provider);
   const dek = crypto.getRandomValues(new Uint8Array(32));
   const sealedKey = await aesGcmEncrypt(dek, te.encode(apiKey), aad);
   const sealedDek = await aesGcmEncrypt(kek, dek, aad);
@@ -115,9 +130,14 @@ export async function sealApiKey(
   };
 }
 
-export async function openApiKey(envelope: Envelope, kek: Uint8Array, companyId?: string): Promise<string> {
+export async function openApiKey(
+  envelope: Envelope,
+  kek: Uint8Array,
+  companyId?: string,
+  provider?: string,
+): Promise<string> {
   const format = envelopeFormat(envelope.kekVersion, envelope.envelopeVersion);
-  const aad = format === "2" ? te.encode(companyId ?? "") : undefined;
+  const aad = additionalData(format, companyId, provider);
   const dek = await aesGcmDecrypt(kek, hexToBytes(envelope.dekCiphertext), hexToBytes(envelope.dekNonce), aad);
   const plain = await aesGcmDecrypt(dek, hexToBytes(envelope.keyCiphertext), hexToBytes(envelope.keyNonce), aad);
   return td.decode(plain);

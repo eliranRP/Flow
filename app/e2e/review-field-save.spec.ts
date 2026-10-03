@@ -98,6 +98,7 @@ test("a card-line category pick stays on the card and shows the new value", asyn
       pnl_role: "project",
       amount_gross: -10000,
       amount_net: -10000,
+      amount_original: 10000,
       vat_amount: 0,
       vat_status: "unknown",
       doc_date: docDate,
