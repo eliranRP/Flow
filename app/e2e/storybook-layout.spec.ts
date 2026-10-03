@@ -725,7 +725,8 @@ test("a title focused on open draws no ring", async ({ page }) => {
     });
     if (problem) failures.push(`${story.id}: ${problem}`);
     const sheetProblem = await page.evaluate(() => {
-      const panel = document.querySelector<HTMLElement>(".ui-sheet-panel");
+      const panels = document.querySelectorAll<HTMLElement>(".ui-sheet-panel");
+      const panel = panels[panels.length - 1];
       if (!panel) return "";
       panel.focus();
       const style = getComputedStyle(panel);
