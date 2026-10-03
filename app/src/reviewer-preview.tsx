@@ -144,13 +144,15 @@ function reviewerBannerRows(rows: ReviewRow[], banner: string | null): ReviewRow
 
 function ReviewerQueue() {
   const [params] = useSearchParams();
+  const banner = params.get("banner");
   const stored = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
-  const rows = reviewerBannerRows(stored, params.get("banner"));
+  const rows = reviewerBannerRows(stored, banner);
   const mode = sampleSaveMode(params.get("save"));
   const search = `?save=${mode}`;
   return (
     <SampleQueue
       rows={rows}
+      keepBanner={banner === "assistant" || banner === "one" || banner === "one-assistant"}
       mode={mode}
       search={search}
       changeTo={`/reviewer/save?save=${mode}`}
@@ -592,6 +594,7 @@ function sampleRun(mode: SampleSave): Promise<void> {
 
 function SampleQueue({
   rows: initial,
+  keepBanner = false,
   mode,
   search,
   changeTo,
@@ -601,6 +604,8 @@ function SampleQueue({
   homeLabel,
 }: {
   rows: ReviewRow[];
+  /** A `?banner=` story owns the title. The default queue still follows the filed rows. */
+  keepBanner?: boolean;
   mode: SampleSave;
   search: string;
   changeTo: string;
@@ -616,7 +621,7 @@ function SampleQueue({
     <ReviewQueue
       search={search}
       sample
-      rows={rows.map((row) => ({ ...row, auto_approved_today: filedCount }))}
+      rows={keepBanner ? rows : rows.map((row) => ({ ...row, auto_approved_today: filedCount }))}
       previewWrite={{
         run: () => sampleRun(mode),
         onDone: (id) => {
