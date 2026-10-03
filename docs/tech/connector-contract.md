@@ -77,7 +77,7 @@ Mercury currency is USD only. SUMIT currency is ILS only. The row check is `sour
 | `linked_external_id` | Text or null |
 | `provider_meta` | `{ kind? }`. See redaction |
 
-The engine writes signed `amount_gross` and `amount_net` in the line's own currency. A SUMIT line is ILS agorot. A Mercury line is USD cents. Import does not convert that line to shekels and does not write `fx_rate` or `fx_rate_date`. The adapter does not either. The sign is `amount_negated`, not a rebuild from `direction` and `doc_kind`. A positive-valued expense document and a negative receipt both occur on SUMIT. Aggregates do not add that signed `amount_net` across currencies. Each total sums `private.to_display_minor`, specified under Display conversion.
+The engine writes signed `amount_gross` and `amount_net` in the line's own currency. A SUMIT line is ILS agorot. A Mercury line is USD cents. Import does not convert that line to shekels. The adapter does not either. Import writes `fx_rate` and `fx_rate_date` only when `fx_policy` is `historical` and the line is USD, from the newest `fx_rates` row on or before `doc_date`, as specified under FX and reprice. Under `original` and `today` those columns stay null. An ILS row is never stamped. The sign is `amount_negated`, not a rebuild from `direction` and `doc_kind`. A positive-valued expense document and a negative receipt both occur on SUMIT. Aggregates do not add that signed `amount_net` across currencies. Each total sums `private.to_display_minor`, specified under Display conversion.
 
 ```text
 amount_gross = amount_negated ? -amount_original : amount_original
@@ -565,7 +565,7 @@ Replace the literal `source = 'sumit'` with `private.is_connector_source(t.sourc
 
 Sweep and company-id retirement are not these three. They run inside `upsert_connector_lines` and the SUMIT wrapper, scoped by `p_provider`.
 
-`list_review` items gain `line_status`, `currency`, and `amount_original`. The function signature stays `() returns jsonb`. `get_transaction` gains `currency` and `amount_original` on the line it already returns. `search_transactions` adds those two fields on each expense object beside `line_status`. `list_auto_assigned_today` adds them on each filed row. The MCP tools `list_review`, `get_transaction`, and `search_expenses` return that JSON, so a USD line carries `currency` and `amount_original` and is not shown as shekels. Signatures and grants stay.
+`list_review` items gain `line_status`, `currency`, and `amount_original`. The function signature stays `() returns jsonb`. `get_transaction` gains `currency` and `amount_original` on the line it already returns. `search_transactions` adds those two fields on each expense object beside `line_status`. `list_auto_assigned_today` adds them on each filed row. The MCP tools `list_review`, `get_transaction`, and `search_expenses` return that JSON, so a USD line carries `currency` and `amount_original` and is not shown as shekels. Signatures and grants stay. The line lists inside totals payloads carry the same two fields, specified under Display conversion.
 
 ### Pending is excluded from totals
 
@@ -591,7 +591,7 @@ On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice
 
 `search_transactions(p_query text, p_scope text, p_limit integer, p_offset integer)` adds `line_status`, `currency`, and `amount_original` on each expense object. The `filed` scope also requires `line_status = 'posted'`. The `all` scope may include pending and still returns those fields. `search_expenses` returns that JSON. Signature and grants stay.
 
-`project_waiting` is a list, not a profit figure. It is not one of these sums.
+`project_waiting` is a list, not a profit figure. It is not one of these posted sums. Each item carries `currency` and `amount_original`. `get_project`'s `pending_agorot` converts those lines, under Display conversion.
 
 ### Display conversion
 
@@ -613,15 +613,18 @@ stable
 set search_path = '';
 ```
 
-`revoke all` from `public` and `anon`. `grant execute` to `authenticated` and `service_role`. The function returns minor units of the company's `display_currency`. The default is `ILS`, so the number is agorot and every `*_agorot` field stays shekels. When `display_currency` is `USD`, those same keys hold US cents. The key names stay.
+`revoke all` from `public` and `anon`. `grant execute` to `authenticated` and `service_role`. The function returns minor units of the company's `display_currency`. The default is `ILS`, so the number is agorot and the converted `*_agorot` fields stay shekels. When `display_currency` is `USD`, those same keys hold US cents. The key names stay. `budget_agorot` is the exception, stated with `get_project`.
 
 `p_line_date` is the line's Jerusalem date. It is not the rate date.
 
 The rate, and this is the only rule:
 
-- `p_currency` equal to `display_currency`: return `p_amount_minor`. No rate is read. `p_fx_rate` is ignored.
+- `p_currency` equal to `display_currency`: return `p_amount_minor`. No rate is read. `p_fx_rate` is ignored. An ILS line shown in shekels is this case, including under `historical`.
 - `fx_policy` `original` or `today`: the newest `fx_rates` row whose `rate_date` is on or before today in `Asia/Jerusalem`. The line's stored pair is not read. `p_line_date` is not that date.
-- `fx_policy` `historical`: the stored pair. `p_fx_rate` and `p_fx_rate_date` must both be set. `p_line_date` is not a second lookup.
+- `fx_policy` `historical`, `p_currency` `ILS`, and `display_currency` `USD`: the newest `fx_rates` row whose `rate_date` is on or before `p_line_date`. An ILS row has no stored pair. `p_fx_rate` is not read.
+- `fx_policy` `historical`, `p_currency` `USD`, and `display_currency` `ILS`: the stored pair. `p_fx_rate` and `p_fx_rate_date` must both be set. `p_line_date` is not a second lookup.
+
+Under `historical`, import stamps that stored pair on each USD row, as specified under FX and reprice. An ILS row is never stamped.
 
 `display_currency` `ILS` and `p_currency` `USD`: the sign of `p_amount_minor` times `private.round_half_even(abs(p_amount_minor) * ils_per_unit)`, in agorot. One dollar is 100 cents and one shekel is 100 agorot, so the factors cancel.
 
@@ -637,12 +640,20 @@ These functions sum `private.to_display_minor` for each posted line that already
 | --- | --- |
 | `public.company_pnl(uuid, date, date, text)` | Every P&L total. `get_dashboard` returns this payload |
 | `public.get_home()` | `net_profit_agorot` |
-| `public.get_project(uuid)` | `income_agorot`, `direct_agorot`, `shared_agorot`, and the category sums |
+| `public.get_project(uuid)` | `income_agorot`, `direct_agorot`, `shared_agorot`, the category sums, and `pending_agorot` |
 | `public.list_project_category(uuid, uuid, integer, integer)` | `total_agorot`, through `private.project_category_entries` |
 | `private.overhead_share(uuid)` | The overhead it shares |
 | allocation amounts on those reads | `allocations.amount_net`, in the line's currency, through the same helper |
 
-Each payload includes `fx_missing_count`, the number of posted lines in that total for which the helper returned null. When the count is above zero the payload also includes `sync_fx_missing`. That status is display-time only. Import does not write it on `last_error`, does not fail the batch, and does not zero the stored line.
+`get_project`'s `pending_agorot` is the negation of the sum of `private.to_display_minor` over the waiting lines from `project_waiting`. Each call uses that line's currency, `doc_date`, and stored pair. It does not sum raw `amount_net`. A null is left out of the sum and still counts in `fx_missing_count`. Those lines may be pending. This figure is not a posted P&L total. The sign matches today's `-sum(amount_net)`, in display minor units.
+
+`budget_agorot` stays the stored project budget in ILS agorot. It is not a line. It has no `doc_date` and no stored pair, so `private.to_display_minor` is not applied and a `$` display does not turn the number into cents. `get_project` returns `budget_currency` with the value `ILS` beside `budget_agorot`.
+
+`get_project`'s `transactions` items, `list_project_category`'s `rows`, and `project_waiting` items each include `currency` and `amount_original`. `amount_net` on those items stays in the line's currency. The converted amounts stay on the totals.
+
+Each of these payloads includes `display_currency` and `fx_missing_count`. `fx_missing_count` is the number of lines in that total for which the helper returned null, including a waiting line omitted from `pending_agorot`. When the count is above zero the payload also includes `sync_fx_missing`. That status is display-time only. Import does not write it on `last_error`, does not fail the batch, and does not zero the stored line.
+
+MCP `get_totals` and `list_projects` read `get_dashboard`. `totalsOf` and `projectRow` in `supabase/functions/flow-mcp/tools.ts` pass `fx_missing_count` and `display_currency` through from that payload. They do not drop those keys. `list_projects` copies the company `display_currency` and `fx_missing_count` onto each project row, because `projectRow` returns only the fields it copies. `fx_missing_count` is 0 when the payload omits it.
 
 pgTAP in this same layer: one company, one posted ILS line and one posted USD line, read through `company_pnl`, `get_dashboard`, `get_home`, `get_project`, `list_project_category`, and `private.overhead_share`. One case with no `fx_rates` row: `fx_missing_count` is 1, the ILS amount is unchanged, and the USD cents are absent from the sum. One allocation stored in USD cents reads back in the display minor unit.
 
@@ -737,15 +748,15 @@ set search_path = '';
 
 `fx_rates` is insert-only. `authenticated` can select and cannot insert, update, or delete. `service_role` can select and insert and cannot update or delete. A rate for a date is written once. A later fetch does not overwrite it.
 
-`ils_per_unit` is shekels per one US dollar. `private.round_half_even` sends an exact `.5` to the even integer and sends every other value to the nearest integer. Postgres `round` is not used. Mercury VAT is 0, so `amount_net = amount_gross` in cents while the row stays in dollars. Display conversion of a total is only `private.to_display_minor`, under Display conversion. That helper is the rate rule: `original` and `today` use the newest `fx_rates` row on or before today, and `historical` uses the line's stored pair. [0087](../decisions/0087-multi-currency.md).
+`ils_per_unit` is shekels per one US dollar. `private.round_half_even` sends an exact `.5` to the even integer and sends every other value to the nearest integer. Postgres `round` is not used. Mercury VAT is 0, so `amount_net = amount_gross` in cents while the row stays in dollars. Display conversion of a total is only `private.to_display_minor`, under Display conversion. That helper is the rate rule. `original` and `today` use the newest `fx_rates` row on or before today. `historical` shows an ILS line in shekels unchanged, converts an ILS line into dollars at the newest `fx_rates` row on or before the line date, and converts a USD line into shekels with the pair import stored on that row. [0087](../decisions/0087-multi-currency.md).
 
 The Bank of Israel does not publish a rate on a weekend or a holiday. The rate for a date is the newest `fx_rates` row on or before that date. It is not copied onto the transaction by default.
 
-The default `fx_policy` is `original`. A Mercury row keeps `currency = 'USD'` and `amount_original` in cents. `amount_gross` and `amount_net` are the signed cents from `amount_negated`. `fx_rate` and `fx_rate_date` stay null. The pair check still requires both null, or `fx_rate > 0` together with `fx_rate_date`. Import does not call `reprice_usd_lines` and does not raise `sync_fx_missing`. A missing Bank of Israel rate does not block the upsert and does not zero a line. A later read leaves that row out of the converted total and counts it in `fx_missing_count`.
+The default `fx_policy` is `original`. A Mercury row keeps `currency = 'USD'` and `amount_original` in cents. `amount_gross` and `amount_net` are the signed cents from `amount_negated`. Under `original` and `today`, `fx_rate` and `fx_rate_date` stay null. Under `historical`, import writes both on each USD row from the newest `fx_rates` row on or before that line's `doc_date`. An ILS row is not stamped. If that rate row does not exist, the pair stays null. The pair check still requires both null, or `fx_rate > 0` together with `fx_rate_date`. Import does not call `reprice_usd_lines` and does not raise `sync_fx_missing`. A missing Bank of Israel rate does not block the upsert and does not zero a line. A later read leaves that row out of the converted total and counts it in `fx_missing_count`.
 
 A line is shown in its own currency. A Mercury line is dollars, amount and currency as stored. The ₪/$ toggle (`display_currency`) does not update the row. Totals convert at read through `private.to_display_minor`.
 
-`reprice_usd_lines` runs only when `fx_policy` is switched off `original`. Under `original` it changes nothing. Under `today` it writes `fx_rate` and `fx_rate_date` from the stored rate for `p_rate_date` (the newest row on or before that date) onto every USD row of the company. Under `historical` it writes that pair only on USD rows whose `fx_rate_date` is null. It does not change `currency`, `amount_original`, `amount_gross`, or `amount_net`. Locking the rate to each line's own date is not accepted. Switching back to `original` leaves any stored pair in place. Display ignores that pair and reads the newest `fx_rates` row on or before today.
+`reprice_usd_lines` runs only when `fx_policy` is switched off `original`. Under `original` it changes nothing. Under `today` it writes `fx_rate` and `fx_rate_date` from the stored rate for `p_rate_date` (the newest row on or before that date) onto every USD row of the company. Under `historical`, import has already stamped each USD row from the newest rate on or before that line's own `doc_date`. `reprice_usd_lines` writes the `p_rate_date` pair only onto USD rows whose `fx_rate_date` is still null. It does not change `currency`, `amount_original`, `amount_gross`, or `amount_net`, and it does not replace a pair import already wrote. Switching back to `original` leaves any stored pair in place. Display under `original` and `today` ignores that pair and reads the newest `fx_rates` row on or before today.
 
 `reprice_usd_lines` takes no free-rate argument. It reads `fx_rates`. It is service role. `private.audit_row` skips a write when `auth.uid()` is null. Reprice sets `flow.system_actor` to `reprice` for the transaction. `audit_log.actor_id` becomes nullable. `audit_log.system_actor` is null or `reprice`. The check, added `not valid` then validated, requires exactly one of `actor_id` and `system_actor`. When the setting is `reprice`, the trigger writes `system_actor` and a null `actor_id`. When both the user and the setting are absent, it still skips, as it does today.
 
@@ -799,10 +810,12 @@ Not in this stack:
 | --- | --- |
 | L0 | This contract, decisions 0085–0087, types, Mercury GET types, the credit type, the GET guard, redact |
 | L1a | `connector_connections` and the other tables, SUMIT copy, compatibility views, upsert, three filters, jobs and the cron check in the same migration, drop of the `sumit_*` tables behind those views, `line_status = 'posted'` on totals, `categories.excluded_from_pnl` with `on conflict (company_id, kind, name) do nothing`, FX columns, `ci.yml` deploy of `sumit-sync` and `sumit-connect` then `sumit-reseal` then `db push` (`scripts/ci-cd.test.mjs` asserts it; today the workflow deploys only `flow-mcp` and `jev-tag`) |
-| L1b | `fx_rates` (insert-only), `display_currency`, `fx_policy`, `set_display_currency`, `reprice_usd_lines`, `private.to_display_minor`, the aggregate rewrite and `fx_missing_count`, `currency` and `amount_original` on review, transaction, search, and the MCP line tools, the mixed-currency pgTAP. This lands before L2b imports a Mercury row. The system actor |
+| L1b | `fx_rates` (insert-only), `display_currency`, `fx_policy`, `set_display_currency`, `reprice_usd_lines`, `private.to_display_minor`, the aggregate rewrite, `pending_agorot` through that helper, `budget_currency` on `get_project`, `fx_missing_count` and `display_currency` passed through MCP `get_totals` and `list_projects`, `currency` and `amount_original` on review, transaction, search, the MCP line tools, `get_project` transactions, `list_project_category` rows, and `project_waiting` items, and the mixed-currency pgTAP. This lands before L2b imports a Mercury row. The system actor |
 | L2a | Registry `open`, engine, `connector-sync` / `connector-connect`, `fx.ts`, aliases, `sumit-sync` moved off the views, `sumit-connect` seals format 3 and the connection RPCs require `'3'` |
 | L2b | Mercury adapter and SUMIT `normalize` over the current mapper. Verifies pending and posted share an id |
 | L3a | ₪/$ toggle |
 | L3b | Connection card, range, ממתין |
+
+L1b backlog, named here and not specified in this contract: pgTAP expected values for a negative amount, an exact `.5`, a USD display, and `historical`; whether `today` stays the same rule as `original`; the allocation rounding rule; the overhead rounding rule; the duplicate unique index; `sumit-reseal` rejecting a caller that is not `service_role`; the unpaid-list currency note.
 
 The SUMIT pgTAP suites (`owner_ledger`, `round4`, `round5`, `review_field_save`, `mcp_cycle3a`, `sumit_*`) stay on the compatibility views, except `sumit_daily_schedule.test.sql`, which is ported 1:1 onto the pinned job text in L1a. `ledger-parity.test.ts` and the demo-data to expected-pnl golden stay green or move one for one. Each new id-taking RPC gets a cross-tenant negative.
