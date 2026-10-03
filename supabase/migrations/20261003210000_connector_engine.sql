@@ -182,9 +182,21 @@ select
   s.updated_at
 from public.sumit_connections s;
 
+-- One open row per company. A second open row would miss connector_refresh_open_uidx.
 insert into public.connector_refresh_requests (company_id, provider, requested_at, claimed_at, forced)
 select r.company_id, 'sumit'::public.connector_provider, r.requested_at, r.claimed_at, false
-from public.sumit_refresh_requests r;
+from (
+  select distinct on (company_id)
+    company_id, requested_at, claimed_at
+  from public.sumit_refresh_requests
+  where claimed_at is null
+  order by company_id, requested_at desc, id desc
+) r;
+
+insert into public.connector_refresh_requests (company_id, provider, requested_at, claimed_at, forced)
+select r.company_id, 'sumit'::public.connector_provider, r.requested_at, r.claimed_at, false
+from public.sumit_refresh_requests r
+where r.claimed_at is not null;
 
 insert into public.party_external_refs (company_id, provider, kind, external_id, supplier_id)
 select s.company_id, 'sumit'::public.connector_provider, 'supplier', s.sumit_external_id::text, s.id

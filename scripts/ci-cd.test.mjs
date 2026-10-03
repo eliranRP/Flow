@@ -196,10 +196,15 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const preflightStep = deploy.indexOf("bash scripts/cd-preflight.sh");
   const sumitSync = deploy.indexOf("functions deploy sumit-sync");
   const sumitConnect = deploy.indexOf("functions deploy sumit-connect");
+  const sumitResealFn = deploy.indexOf("functions deploy sumit-reseal");
   const reseal = deploy.indexOf("bash scripts/cd-sumit-reseal.sh");
   assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
   assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < jevFn && jevFn < smoke);
-  assert.ok(probe < preflightStep && preflightStep < sumitSync && sumitSync < sumitConnect && sumitConnect < reseal && reseal < migrate);
+  assert.ok(probe < preflightStep && preflightStep < sumitSync && sumitSync < sumitConnect && sumitConnect < sumitResealFn && sumitResealFn < reseal && reseal < migrate);
+  const resealScript = readFileSync(new URL("./cd-sumit-reseal.sh", import.meta.url), "utf8");
+  assert.match(resealScript, /::add-mask::/);
+  assert.match(resealScript, /-H @-/);
+  assert.equal(resealScript.includes("x-flow-cron: ${secret}"), false);
   assert.equal(deploy.slice(probe, migrate).includes("mktemp"), false);
   assert.equal(deploy.slice(probe, migrate).includes("FLOW_MCP_PEPPER"), false);
   assert.equal(deploy.slice(probe, migrate).includes("functions deploy flow-mcp"), false);

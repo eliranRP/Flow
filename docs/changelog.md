@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector engine L1a, review. The deploy job deploys `sumit-reseal` after `sumit-connect` and before the invoke, so the first production call is not a 404. The refresh copy keeps the newest open row per company. `sumit_status()` is security definer and reads the caller's company on `connector_connections`. `fill_amount_original` also follows an update of `amount_gross`. The sweep matches `external_id`: a legacy row whose id is null cannot be swept, and a document with no id raises. A party id is cast to bigint only for SUMIT. P&L exclusion of `excluded_from_pnl` stays in L1b, before L2b. `private.filed_today_rows()` still waits for MCP 3b.
+
 Connector engine L1a, posted totals. `company_pnl`, `get_home`, `get_project`, `overhead_share`, and `project_category_entries` sum `line_status = 'posted'` only. A pending line stays on the project list and out of the figure. `private.filed_today_rows()` still waits for MCP 3b.
 
 Connector engine L1a, upsert. `upsert_connector_lines` writes a canonical line, skips a foreign source, and raises `sync_cursor_conflict` when the cursor moved. `upsert_sumit_documents` maps today's documents onto that engine and still returns the written count. `private.filed_today_rows()` still waits for MCP 3b.
