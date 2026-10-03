@@ -525,23 +525,30 @@ function ReviewerSplitExpense() {
       }}
       sampleProjects={projects}
       sampleCategories={reviewerCategories}
-      onOpenSplit={() => { void navigate("/reviewer/split"); }}
+      onOpenSplit={() => { void navigate("/reviewer/split", { state: { sample: "leasing" } }); }}
     />
   );
 }
 
+function leasingSplit(state: unknown): boolean {
+  if (typeof state !== "object" || state === null || !("sample" in state)) return false;
+  return state.sample === "leasing";
+}
+
 function ReviewerSplit() {
   const [params] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const leasing = leasingSplit(location.state);
   const mode = sampleSaveMode(params.get("save"));
   const write = useSampleWrite(mode, "החלוקה נשמרה", () => {
     void navigate(`/reviewer/review?save=${mode}`);
   });
   return (
     <SplitScreen
-      sampleAmount={reviewerSharedAgorot}
-      sampleProjects={reviewerSplitProjects}
-      sampleMeta="עגורני החוף בע״מ · 29/09/2026"
+      sampleAmount={leasing ? unsplitNet : reviewerSharedAgorot}
+      sampleProjects={leasing ? unsplitProjects.map((project) => ({ id: project.id, name: project.name })) : reviewerSplitProjects}
+      sampleMeta={leasing ? "ליסינג הדרך בע״מ · 01/07/2026" : "עגורני החוף בע״מ · 29/09/2026"}
       backTo={`/reviewer/review?save=${mode}`}
       onSave={async () => {
         try {
@@ -598,10 +605,9 @@ function SampleQueue({
   const [rows, setRows] = useState(initial);
   return (
     <ReviewQueue
-      rows={rows}
       search={search}
       sample
-      autoCount={filedCount}
+      rows={rows.map((row) => ({ ...row, auto_approved_today: filedCount }))}
       previewWrite={{
         run: () => sampleRun(mode),
         onDone: (id) => {
