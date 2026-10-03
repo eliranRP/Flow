@@ -38,6 +38,8 @@ type Common = {
   skelHint?: boolean;
   /** The hint is a polite status, so a failure is announced. */
   hintStatus?: boolean;
+  /** The title is a heading. The expired assistant sheet uses it. */
+  heading?: boolean;
 };
 
 export type ListRowProps =
@@ -82,13 +84,23 @@ export function ListRow(props: ListRowProps) {
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
         <span className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
-          <span
-            className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}
-            dir={props.ltrTitle ? "ltr" : undefined}
-          >
-            {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
-            {props.tag}
-          </span>
+          {props.heading ? (
+            <h3
+              className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}
+              dir={props.ltrTitle ? "ltr" : undefined}
+            >
+              {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
+              {props.tag}
+            </h3>
+          ) : (
+            <span
+              className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}
+              dir={props.ltrTitle ? "ltr" : undefined}
+            >
+              {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
+              {props.tag}
+            </span>
+          )}
           {props.hint != null ? (
             <span
               id={described}

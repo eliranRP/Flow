@@ -108,9 +108,13 @@ export function useSheetHistory(
   open: boolean,
   onOpenChange: (open: boolean) => void,
   allowClose?: () => boolean | Promise<boolean>,
+  /** When set, the next open replaces the current entry instead of pushing one. */
+  adopt?: { current: boolean },
 ): (next: boolean) => void {
   const navigate = useNavigate();
   const location = useLocation();
+  const locationRef = useRef(location);
+  locationRef.current = location;
   const openRef = useRef(open);
   const onOpenChangeRef = useRef(onOpenChange);
   openRef.current = open;
@@ -131,14 +135,20 @@ export function useSheetHistory(
     }
     pushingLayer = true;
     pushed.current = true;
+    let replaceEntry = false;
+    if (adopt?.current === true) {
+      replaceEntry = true;
+      adopt.current = false;
+    }
     const prev = isRecord(location.state) ? location.state : {};
     void navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: replaceEntry,
       state: { ...prev, flowLayer: name },
     });
     queueMicrotask(() => {
       pushingLayer = false;
     });
-  }, [open, name, layer, navigate, location.pathname, location.search, location.hash, location.state]);
+  }, [open, name, layer, navigate, location.pathname, location.search, location.hash, location.state, adopt]);
 
   useEffect(() => {
     function onPop() {
@@ -168,12 +178,13 @@ export function useSheetHistory(
       onOpenChange(true);
       return;
     }
-    if (layerName(location.state) === name && canGoBack()) {
+    const current = locationRef.current;
+    if (layerName(current.state) === name && canGoBack()) {
       void navigate(-1);
       return;
     }
     onOpenChange(false);
-  }, [location.state, name, navigate, onOpenChange]);
+  }, [name, navigate, onOpenChange]);
 }
 
 /** Drop open sheet entries in one step. A second close must not push another entry. */
