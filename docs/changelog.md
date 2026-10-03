@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector contract, review round 2. The port takes a per-company session and a normalize context. Canonical lines carry `doc_kind`, `pnl_role`, a section hint, and a gross `amount_original`. The idempotency key is `source || ':' || external_id`. `connector_connections` replaces the name `connections`. SUMIT tables become compatibility views so `sumit-sync` and the current pgTAP suites keep running. The cron check moves in the same layer as the new jobs. FX columns land before any Mercury row. Zod is 4.6.5 with a frozen lock. Decision [0085](decisions/0085-connector-engine.md). The names are in [the connector contract](tech/connector-contract.md).
+
 Connector contract, interim rules. A loan payment hinted to `תשלומי הלוואה` (loan payments) stays in לאישור and out of the P&L sums. `categories.excluded_from_pnl` is the flag. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). Loans and amortization are named as a future decision and are not built. Decision [0086](decisions/0086-mercury.md). The sums are in [the connector contract](tech/connector-contract.md).
 
 Connector contract. Decisions [0085](decisions/0085-connector-engine.md), [0086](decisions/0086-mercury.md), and [0087](decisions/0087-multi-currency.md). One engine will serve SUMIT and Mercury. The port, the SQL signatures, and the Hebrew card copy are in [the connector contract](tech/connector-contract.md) and [the UI states](tech/connector-ui-states.md). This change does not migrate. [0087](decisions/0087-multi-currency.md) supersedes the README and spec lines that listed multi-currency as out of scope.
