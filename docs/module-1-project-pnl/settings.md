@@ -15,7 +15,21 @@ The row title is SUMIT, with the document icon. Every settled state is one hint 
 | Status failed to load | לא הצלחנו לטעון | Nothing. ניסיון חוזר refetches the status only |
 | Loading | a skeleton bar | Nothing. It is not focusable and it does not say מחובר |
 
-A sync failure that is not the key keeps מחובר. While רענון עכשיו is held, the sheet says הרענון נכשל and the retry time, with no "נסו שוב". A last-sync time on the status is "עודכן ב-HH:MM" on the status line; a missing time is omitted. Starting the company from that sheet returns only to `/settings?sheet=sumit`. Any other `return` finishes on Home. Opening from `?sheet=sumit` removes that param.
+A sync failure that is not the key keeps מחובר. While רענון עכשיו is held, the sheet says הרענון נכשל and the retry time, with no "נסו שוב". A rate limit with no retry time says "הרענון נכשל. נסו שוב." A last-sync time is one line: "עודכן ב-HH:MM" today, "עודכן אתמול ב-HH:MM" yesterday, and "עודכן ב-D.M" after that. A missing time is omitted. Starting the company from that sheet returns only to `/settings?sheet=sumit`, after the company query has settled, and that visit replaces the sheet entry. Any other `return` finishes on Home. Opening from `?sheet=sumit` removes that param and keeps `?preview`. When that visit already has an earlier in-app entry, the sheet reuses it, so one Back after the sheet closes leaves Settings. A first entry in the tab pushes the sheet instead, so Back closes the sheet and stays on Settings.
+
+### עוזר AI row
+
+The row title is עוזר AI, with the spark icon. The no-company row stays `aria-disabled` and says "אין עסק עדיין".
+
+| State | Hint | What opens |
+| --- | --- | --- |
+| Connected | מחובר · קריאה וכתיבה, or מחובר · קריאה בלבד | The עוזר AI sheet: last use, ניתוק |
+| Not connected | לא מחובר | Step 1, titled חיבור עוזר AI: the scope, then יצירת קוד |
+| Expired | צריך לחבר מחדש | A status row: alert icon, heading "פג תוקף", muted "הקוד הפסיק לעבוד אחרי 90 יום.", then חיבור מחדש, which reveals step 1, titled חיבור עוזר AI, and focuses its title. ניתוק stays in that sheet |
+| Status failed to load | לא הצלחנו לטעון | Nothing. ניסיון חוזר refetches the assistant status only |
+| Loading | a skeleton bar | Nothing. It is not focusable and it does not say מחובר |
+
+The root shows one status word on each row. ניתוק and חיבור מחדש stay inside the sheets, including when SUMIT needs a key and the assistant has expired.
 
 **Status: Draft.** The wireframe is [14-settings](screens.md#14-settings), pending owner approval. This screen is not approved. It does not override decisions 0001–0022. [Settings contents](../open-questions.md) stay open until the wireframe is accepted or replaced. The after-overhead default below is decided.
 

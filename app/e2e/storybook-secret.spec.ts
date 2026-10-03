@@ -4,7 +4,7 @@ const STORY = "/iframe.html?id=screens-routes--settings-assistant-secret&viewMod
 
 async function openSecret(page: Page): Promise<{ secret: Locator; dialog: Locator; text: string }> {
   await page.goto(STORY, { waitUntil: "domcontentloaded" });
-  const dialog = page.getByRole("dialog", { name: "חיבור עוזר" });
+  const dialog = page.getByRole("dialog", { name: "חיבור עוזר AI" });
   const secret = page.locator(".ui-secret-value");
   await expect(dialog).toBeVisible();
   await expect(secret).toBeVisible();

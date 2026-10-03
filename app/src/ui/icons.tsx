@@ -186,6 +186,15 @@ export function ChevronUpIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+/** Four-point spark from the design grid. The עוזר AI row uses it. */
+export function SparkIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+    </Svg>
+  );
+}
+
 export function InboxIcon(props: IconProps) {
   return (
     <Svg size={22} {...props}>
