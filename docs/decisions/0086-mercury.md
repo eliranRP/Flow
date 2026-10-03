@@ -17,6 +17,8 @@ A Mercury line has no VAT. The VAT amount is 0 and the status is `source`.
 
 A pending line appears in לאישור (the review queue) with the tag ממתין (pending). It is in no P&L and no total until it is posted. A failed, cancelled, reversed, or blocked line leaves the books.
 
+A payment whose counterparty is NEWREZ, Lakeview, or Servease is hinted to the seeded expense `תשלומי הלוואה` (loan payments). That category is excluded from P&L and still shows as cash in לאישור. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). The flag and the sums are in the [connector contract](../tech/connector-contract.md).
+
 Account numbers, routing numbers, emails, and attachment URLs are not stored. The card account id used for the own-account check comes from `GET /credit` and is kept only as an id in the skip set, not as a stored account number.
 
 The field rules, status map, and allowlist are in [the connector contract](../tech/connector-contract.md).
@@ -28,3 +30,5 @@ A read-write token. Skipping income. Deduping against SUMIT. Treating a Mercury 
 ## Consequences
 
 Card spend is one expense line. The autopay that moves money from checking onto the card is skipped, so it is not a second expense. A window of lines is not a full listing, so a missing page does not delete history.
+
+Loans and amortization are a future decision record, not accepted here. The paragraph is in the connector contract.

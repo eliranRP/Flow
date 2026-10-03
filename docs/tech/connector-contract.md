@@ -331,6 +331,40 @@ These keep their signatures and gain `line_status <> 'pending'` on every sum. Ex
 
 `list_review` shows pending. `get_transaction(p_id uuid) returns jsonb` still returns a line opened from review, including pending. `list_unpaid() returns jsonb` stays document-based and does not gain Mercury cash lines.
 
+### Off-P&L loan payments
+
+L1a adds the column. This layer does not migrate.
+
+```sql
+alter table public.categories
+  add column excluded_from_pnl boolean not null default false;
+```
+
+`private.seed_default_categories` also inserts an expense, `תשלומי הלוואה` (loan payments), `is_default` true, `excluded_from_pnl` true, `sort_order` 8. The same migration inserts that row for companies that already exist.
+
+A line in that category stays in the books. It is a cash movement, so לאישור (`list_review`) and `get_transaction` still show it. There is no separate cash-flow total. The P&L sums skip it, including while the review row is still open. The upsert may set the category from `category_hint` and must leave `category_assigned` false, so the owner can change it. Changing it to a normal category puts the line back into P&L.
+
+The Mercury adapter sets `category_hint` to `תשלומי הלוואה` when the counterparty name is NEWREZ, Lakeview, or Servease, compared case-insensitively. Those three are the interim list. The core does not match lender names.
+
+These sums gain `not exists (select 1 from public.categories c where c.id = t.category_id and c.excluded_from_pnl)`:
+
+| Function | What it sums |
+| --- | --- |
+| `public.company_pnl(uuid, date, date, text)` | Every P&L total. `get_dashboard` returns this payload |
+| `public.get_home()` | `net_profit_agorot` |
+| `public.get_project(uuid)` | `income_agorot`, `direct_agorot`, `shared_agorot`, and the category sums |
+| `public.list_project_category(uuid, uuid, integer, integer)` | `total_agorot`, through `private.project_category_entries` |
+
+`project_waiting` is a list, not a profit figure. It is not one of these sums.
+
+### Mercury cashback
+
+A Mercury credit whose description is `IO Cashback` gets `category_hint` `הכנסה אחרת` (other income). That category is already seeded and is not excluded from P&L. VAT stays 0. The adapter sets the hint. L2b.
+
+## Future decision record (not numbered, not accepted)
+
+**Loans and amortization.** This is the feature after the connector stack. It is not part of L0–L3. A loan is set up once: lender match, balance, rate, start, term, and escrow, through a form or MCP. Flow builds the schedule and splits each matched payment into interest (P&L expense `ריבית משכנתא`), escrow (taxes and insurance), and principal (off-P&L, and the principal reduces the balance), with a correction each month. Until that exists, the whole payment sits in `תשלומי הלוואה`. The canonical line stays one bank line with one `external_id` and one `amount_original`. A later three-way split attaches three category amounts to that same line. It does not create three provider lines, and it does not change the allocations' project shares. This stack does not build the schedule, the form, or the split.
+
 ## FX and reprice
 
 L1b. Not this layer.
@@ -415,7 +449,7 @@ Logs call `redact` before printing a provider payload. A log line does not conta
 | Layer | What lands |
 | --- | --- |
 | L0 | This contract, decisions 0085–0087, types, Mercury GET types |
-| L1a | Tables, SUMIT move, upsert, three filters, jobs, drop `sumit_*`, pending excluded from totals |
+| L1a | Tables, SUMIT move, upsert, three filters, jobs, drop `sumit_*`, pending excluded from totals, `categories.excluded_from_pnl` |
 | L1b | `fx_rates`, `display_currency`, `set_display_currency`, `reprice_usd_lines` |
 | L2a | Registry, engine, `connector-sync` / `connector-connect`, `fx.ts`, aliases |
 | L2b | Mercury adapter and SUMIT `normalize` over the current mapper |

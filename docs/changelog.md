@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector contract, interim rules. A loan payment hinted to `תשלומי הלוואה` (loan payments) stays in לאישור and out of the P&L sums. `categories.excluded_from_pnl` is the flag. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). Loans and amortization are named as a future decision and are not built. Decision [0086](decisions/0086-mercury.md). The sums are in [the connector contract](tech/connector-contract.md).
+
 Connector contract. Decisions [0085](decisions/0085-connector-engine.md), [0086](decisions/0086-mercury.md), and [0087](decisions/0087-multi-currency.md). One engine will serve SUMIT and Mercury. The port, the SQL signatures, and the Hebrew card copy are in [the connector contract](tech/connector-contract.md) and [the UI states](tech/connector-ui-states.md). This change does not migrate. [0087](decisions/0087-multi-currency.md) supersedes the README and spec lines that listed multi-currency as out of scope.
 
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
