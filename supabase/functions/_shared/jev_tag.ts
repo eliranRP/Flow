@@ -22,6 +22,8 @@ export const JEV_TAG_DEFAULT_LIMIT = 50;
 export const JEV_TAG_MAX_LIMIT = 100;
 export const JEV_TAG_ATTEMPTS = 2;
 export const JEV_TAG_BUDGET_MS = 120_000;
+/** Do not start another Jev call when less than this much of the budget is left. */
+export const JEV_TAG_RESERVE_MS = 20_000;
 export const JEV_TAG_INTERVAL_MS = 60_000;
 const CHOICE_CAP = 255;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -121,6 +123,7 @@ export type TagReport = {
 export type TagRunOptions = {
   now?: () => number;
   budgetMs?: number;
+  reserveMs?: number;
   log?: (line: string) => void;
 };
 
@@ -243,6 +246,20 @@ export function clampTagLimit(value: unknown): number {
   return Math.min(JEV_TAG_MAX_LIMIT, whole);
 }
 
+/**
+ * Equal shares of the cap, in the order of `companyIds`.
+ * The first `cap % n` companies get one extra. The shares sum to the clamped cap.
+ * The caller passes company ids in ascending order.
+ */
+export function companyQuotas(companyIds: readonly string[], cap: number): number[] {
+  const limit = clampTagLimit(cap);
+  const count = companyIds.length;
+  if (count === 0) return [];
+  const base = Math.floor(limit / count);
+  const extra = limit % count;
+  return companyIds.map((_, index) => base + (index < extra ? 1 : 0));
+}
+
 /** Newest doc_date, then id, then the clamped cap. The SQL query uses the same order and limit. */
 export function capNewest(expenses: readonly TagExpense[], limit: number): TagExpense[] {
   const cap = clampTagLimit(limit);
@@ -278,9 +295,11 @@ export function logTagRun(report: TagReport, log?: (line: string) => void): void
   (log ?? ((message: string) => console.info(message)))(line);
 }
 
-function budgetSpent(started: number, budgetMs: number, now: number): boolean {
-  if (!Number.isFinite(now) || !Number.isFinite(started) || !Number.isFinite(budgetMs)) return true;
-  return now - started >= budgetMs;
+function budgetSpent(started: number, budgetMs: number, now: number, reserveMs: number): boolean {
+  if (!Number.isFinite(now) || !Number.isFinite(started) || !Number.isFinite(budgetMs) || !Number.isFinite(reserveMs)) {
+    return true;
+  }
+  return budgetMs - (now - started) < reserveMs;
 }
 
 export async function tagWork(
@@ -293,6 +312,7 @@ export async function tagWork(
   const report = emptyReport(work.length);
   const now = options.now ?? Date.now;
   const budgetMs = options.budgetMs ?? JEV_TAG_BUDGET_MS;
+  const reserveMs = options.reserveMs ?? JEV_TAG_RESERVE_MS;
   const started = now();
   let stop = false;
   for (const company of work) {
@@ -307,7 +327,7 @@ export async function tagWork(
       continue;
     }
     for (const expense of company.expenses) {
-      if (budgetSpent(started, budgetMs, now())) {
+      if (budgetSpent(started, budgetMs, now(), reserveMs)) {
         report.skipped += 1;
         report.budget_skipped += 1;
         stop = true;
@@ -519,6 +539,27 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
   }];
 }
 
+type EnabledCompany = { companyId: string; mode: TagMode; threshold: number };
+
+function enabledCompanies(integrations: readonly RestRow[], onlyCompanyId?: string | null): EnabledCompany[] {
+  const seen = new Set<string>();
+  const enabled: EnabledCompany[] = [];
+  for (const integration of integrations) {
+    const companyId = asString(integration.company_id);
+    const mode = integration.mode === "auto" || integration.mode === "shadow" ? integration.mode : null;
+    const threshold = asNumber(integration.threshold);
+    if (!companyId || !isUuid(companyId) || connectorDisabled(integration.enabled, integration.mode) || !mode || !Number.isFinite(threshold)) {
+      continue;
+    }
+    if (onlyCompanyId && companyId !== onlyCompanyId) continue;
+    if (seen.has(companyId)) continue;
+    seen.add(companyId);
+    enabled.push({ companyId, mode, threshold });
+  }
+  enabled.sort((left, right) => left.companyId.localeCompare(right.companyId));
+  return enabled;
+}
+
 export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey: string): TagStore {
   const base = supabaseUrl.replace(/\/+$/, "");
   const get = (path: string) => rest(fetch, `${base}${path}`, serviceKey, { method: "GET" });
@@ -526,38 +567,32 @@ export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey
   return {
     async listWork(limit: number, onlyCompanyId?: string | null): Promise<TagCompanyWork[]> {
       const integrations = rows(await get(integrationsPath(onlyCompanyId)));
+      const enabled = enabledCompanies(integrations, onlyCompanyId);
+      const quotas = companyQuotas(enabled.map((company) => company.companyId), limit);
       const work: TagCompanyWork[] = [];
-      let remaining = clampTagLimit(limit);
-      for (const integration of integrations) {
-        if (remaining < 1) break;
-        const companyId = asString(integration.company_id);
-        const mode = integration.mode === "auto" || integration.mode === "shadow" ? integration.mode : null;
-        const threshold = asNumber(integration.threshold);
-        if (!companyId || !isUuid(companyId) || connectorDisabled(integration.enabled, integration.mode) || !mode || !Number.isFinite(threshold)) {
-          continue;
-        }
-        if (onlyCompanyId && companyId !== onlyCompanyId) continue;
-        const projects = rows(await get(projectsPath(companyId))).flatMap((row) => {
+      for (let index = 0; index < enabled.length; index += 1) {
+        const quota = quotas[index] ?? 0;
+        if (quota < 1) continue;
+        const company = enabled[index];
+        const projects = rows(await get(projectsPath(company.companyId))).flatMap((row) => {
           const id = asString(row.id);
           const name = asString(row.name);
           return id && name ? [{ id, name }] : [];
         });
-        const categories = rows(await get(categoriesPath(companyId))).flatMap((row) => {
+        const categories = rows(await get(categoriesPath(company.companyId))).flatMap((row) => {
           const id = asString(row.id);
           const name = asString(row.name);
           return id && name ? [{ id, name }] : [];
         });
-        const transactions = rows(await get(transactionsPath(companyId, remaining)));
-        const loaded = transactions.flatMap((row) => expenseFromRow(row, companyId));
-        const expenses = capNewest(loaded, remaining);
-        remaining -= expenses.length;
+        const transactions = rows(await get(transactionsPath(company.companyId, quota)));
+        const loaded = transactions.flatMap((row) => expenseFromRow(row, company.companyId));
         work.push({
-          companyId,
-          mode,
-          threshold,
+          companyId: company.companyId,
+          mode: company.mode,
+          threshold: company.threshold,
           projects,
           categories,
-          expenses,
+          expenses: capNewest(loaded, quota),
         });
       }
       return work;
