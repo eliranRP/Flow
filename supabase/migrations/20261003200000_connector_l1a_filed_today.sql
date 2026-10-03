@@ -3,6 +3,9 @@
 -- categories already has unique (company_id, kind, name). A second unique index
 -- would make ON CONFLICT (company_id, kind, name) ambiguous. That duplicate
 -- index stays the L1b backlog item.
+-- CLI 2.118.0 runs each statement on its own. This file is one transaction:
+-- begin is first, commit is last. A commit in the middle would keep the
+-- column changes and leave the migration unrecorded.
 
 begin;
 
@@ -41,8 +44,6 @@ alter table public.transactions
     (source::text <> 'mercury' or currency = 'USD')
     and (source::text <> 'sumit' or currency = 'ILS')
   );
-
-commit;
 
 -- Existing writers omit amount_original. Fill it from the stored gross so the
 -- not-null column does not reject those inserts.
@@ -323,3 +324,5 @@ cross join (
     ('העברות', 'income'::public.category_kind, 3)
 ) as v(name, kind, sort_order)
 on conflict (company_id, kind, name) do nothing;
+
+commit;

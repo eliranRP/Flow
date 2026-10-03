@@ -2,6 +2,13 @@
 -- A SUMIT row that still resolves to format 1 stops this migration.
 -- private.filed_today_rows() stays out until MCP 3b merges.
 -- suppliers.sumit_external_id and customers.sumit_external_id stay. The upsert still writes them.
+-- CLI 2.118.0 runs each statement on its own. This file is one transaction:
+-- begin is first, commit is last. A commit after the drop would remove the
+-- SUMIT tables, skip the views, and leave the migration unrecorded.
+
+begin;
+
+set local lock_timeout = '5s';
 
 create type public.connector_provider as enum ('sumit', 'mercury');
 
@@ -133,12 +140,8 @@ from public.connector_connections;
 revoke all on public.connector_connection_status from public, anon;
 grant select on public.connector_connection_status to authenticated, service_role;
 
--- Hold writers out until the copy and the drop commit. A concurrent update
--- otherwise lands on the table this migration then drops.
-begin;
-
-set local lock_timeout = '5s';
-
+-- Hold writers out until this file commits. A concurrent update otherwise
+-- lands on the table this migration then drops.
 lock table public.sumit_connections, public.sumit_refresh_requests in access exclusive mode;
 
 -- Format 1 is resealed before this migration. Copy only 2 and 3.
@@ -270,8 +273,6 @@ $copycount$;
 drop view public.sumit_connection_status;
 drop table public.sumit_connections;
 drop table public.sumit_refresh_requests;
-
-commit;
 
 -- security_invoker checks every column the view body reads. Authenticated is not
 -- granted ciphertext or settings, so the view reads through this definer function.
@@ -1157,11 +1158,12 @@ $$;
 revoke all on function private.schedule_connector_jobs() from public, anon, authenticated;
 grant execute on function private.schedule_connector_jobs() to service_role;
 
--- The copy above commits, so a local setting on its own statement is gone
--- before this call. One block keeps the role for the schedule.
+-- The role has to be visible to the schedule call in this same transaction.
 do $schedule$
 begin
   perform set_config('request.jwt.claim.role', 'service_role', true);
   perform private.schedule_connector_jobs();
 end
 $schedule$;
+
+commit;

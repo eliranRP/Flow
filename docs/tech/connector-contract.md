@@ -188,7 +188,7 @@ Client: `ConnectorClientDescriptor` with `provider`, `nameHe`, `icon`, and `copy
 
 L1a applies this. Grants are explicit. New definer functions set `search_path = ''` and start with `if coalesce(auth.role(), '') is distinct from '<role>' then raise exception 'forbidden'; end if`. `private.current_company_id()` is the company predicate. Adding `mercury` to `txn_source` must not use the new value in that same transaction. Checks compare `source::text`.
 
-`amount_original` is backfilled with `abs(amount_gross)` because expenses are stored negative. That update runs with `transactions_touch` disabled, so it does not stamp `updated_at`. The adds, the backfill, `set not null`, and the four checks share one transaction with `lock_timeout` of five seconds. The checks are ordinary, not `not valid`: a validate in that same transaction would not release the lock any sooner.
+`amount_original` is backfilled with `abs(amount_gross)` because expenses are stored negative. That update runs with `transactions_touch` disabled, so it does not stamp `updated_at`. CLI 2.118.0 runs each statement on its own, so the migration's first statement is `begin` and its last is `commit`. `lock_timeout` is five seconds inside that transaction. The file does not commit in the middle. The checks are ordinary, not `not valid`: a validate in that same transaction would not release the lock any sooner.
 
 ```sql
 create type public.connector_provider as enum ('sumit', 'mercury');
@@ -226,7 +226,6 @@ alter table public.transactions
     (source::text <> 'mercury' or currency = 'USD')
     and (source::text <> 'sumit' or currency = 'ILS')
   );
-commit;
 
 create table public.connector_connections (
   id uuid not null default gen_random_uuid() unique,

@@ -95,6 +95,16 @@ insert into public.transactions (
   amount_gross, amount_net, vat_amount, vat_status,
   doc_date, source, idempotency_key, project_id, description
 )
+select id, 'income', 'receipt', 'pending',
+  60000, 60000, 0, 'unknown',
+  current_date, 'manual', 'pending:receipt', (select id from posted_ref where label = 'project'), 'קבלה ממתינה'
+from posted_ref where label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, description
+)
 select id, 'income', 'invoice', 'pending',
   90000, 90000, 0, 'unknown',
   current_date, 'manual', 'pending:invoice', (select id from posted_ref where label = 'project'), 'חשבונית ממתינה'
