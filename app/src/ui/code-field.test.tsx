@@ -80,4 +80,30 @@ describe("CodeField", () => {
     fireEvent.keyDown(input, { key: "ArrowRight" });
     expect(input).toHaveProperty("selectionStart", 1);
   });
+
+  it("binds a non-passive wheel listener again when the field remounts", () => {
+    const spy = vi.spyOn(HTMLInputElement.prototype, "addEventListener");
+    const props = {
+      label: "קוד",
+      labelId: "code-wheel",
+      value: "abcdef",
+      failed: false,
+      copyLabel: "העתקה: קוד",
+      onCopy: () => undefined,
+    } as const;
+    const wheels = () => spy.mock.calls.filter((call) => call[0] === "wheel");
+    const passive = (call: (typeof spy.mock.calls)[number]) => {
+      const options = call[2];
+      return options != null && typeof options === "object" && "passive" in options && options.passive === false;
+    };
+    const { rerender, unmount } = render(<CodeField key="a" {...props} />);
+    expect(wheels().length).toBeGreaterThan(0);
+    expect(wheels().every(passive)).toBe(true);
+    const before = wheels().length;
+    rerender(<CodeField key="b" {...props} />);
+    expect(wheels().length).toBeGreaterThan(before);
+    expect(wheels().every(passive)).toBe(true);
+    unmount();
+    spy.mockRestore();
+  });
 });
