@@ -3388,6 +3388,7 @@ export function SettingsScreen({
       ) : null}
       <AssistantSettings
         sample={
+          // A missing company, including preview, must not call flow-mcp/status.
           noCompany
             ? { state: "no-company" }
             : sample
