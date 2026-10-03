@@ -730,7 +730,8 @@ describe("SUMIT status row", () => {
     const sheet = screen.getByRole("dialog", { name: "SUMIT" });
     const phrase = israelSyncPhrase(synced);
     expect(phrase).toBeTruthy();
-    expect(within(sheet).getByText(phrase ?? "")).toHaveClass("ui-nowrap");
+    const stamp = [...sheet.querySelectorAll(".ui-nowrap")].find((node) => node.textContent?.includes(phrase ?? ""));
+    expect(stamp?.textContent?.startsWith(" ·")).toBe(true);
     unmount();
 
     rpc.impl = (name) => {

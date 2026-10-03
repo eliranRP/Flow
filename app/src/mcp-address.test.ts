@@ -11,7 +11,7 @@ describe("flow MCP address", () => {
   it("builds one user-scoped Claude Code command", () => {
     const command = claudeCodeCommand("https://mcp.example", "secret-once");
     expect(command).toContain("--scope user");
-    expect(command).toContain("https://mcp.example");
+    expect(command).toContain('flow "https://mcp.example"');
     expect(command).toContain("Authorization: Bearer secret-once");
     expect(command.startsWith("claude mcp add ")).toBe(true);
   });

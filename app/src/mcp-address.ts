@@ -12,5 +12,5 @@ export function flowMcpUrl(env: { mcp?: string; supabase?: string } = {
 
 /** One Claude Code command. The secret is the bearer, not a second code. */
 export function claudeCodeCommand(url: string, secret: string): string {
-  return `claude mcp add --scope user --transport http flow ${url} --header "Authorization: Bearer ${secret}"`;
+  return `claude mcp add --scope user --transport http flow "${url}" --header "Authorization: Bearer ${secret}"`;
 }
