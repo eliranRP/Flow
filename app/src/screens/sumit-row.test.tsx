@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
+import { israelSyncPhrase } from "../sumit-copy";
 import { OnboardingScreen, SettingsScreen } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
@@ -100,6 +101,7 @@ describe("SUMIT status row", () => {
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("מספר חברה")).not.toBeInTheDocument();
     fail = false;
+    retry.focus();
     fireEvent.click(retry);
     await waitFor(() => { expect(screen.getByRole("button", { name: "SUMIT" })).toHaveFocus(); });
     expect(hintOf(screen.getByRole("button", { name: "SUMIT" }))).toBe("מחובר");
@@ -178,9 +180,10 @@ describe("SUMIT status row", () => {
     expect(hintOf(row)).toBe("מחובר");
     await client.refetchQueries({ queryKey: ["sumit"] });
     await waitFor(() => { expect(calls).toBeGreaterThan(1); });
-    expect(hintOf(screen.getByRole("button", { name: "SUMIT" }))).toBe("מחובר");
+    const kept = screen.getByRole("button", { name: "SUMIT" });
+    expect(hintOf(kept)).toBe("מחובר");
     expect(screen.queryByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toBeInTheDocument();
-    expect(screen.queryByText("לא הצלחנו לטעון")).not.toBeInTheDocument();
+    expect(within(kept).queryByText("לא הצלחנו לטעון")).not.toBeInTheDocument();
   });
 
   it("uses the warning tone for a rejected key and keeps a sync failure connected", async () => {
@@ -425,12 +428,6 @@ describe("SUMIT status row", () => {
 
   it("shows a last-sync clock when the status has one, and a short failure while refresh is held", async () => {
     const synced = "2026-10-03T09:05:00.000Z";
-    const clock = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Jerusalem",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).format(new Date(synced));
     rpc.impl = (name) => {
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
@@ -445,7 +442,9 @@ describe("SUMIT status row", () => {
     const { unmount } = renderSettings();
     fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
     const sheet = screen.getByRole("dialog", { name: "SUMIT" });
-    expect(sheet).toHaveTextContent(`עודכן ב-${clock}`);
+    const phrase = israelSyncPhrase(synced);
+    expect(phrase).toBeTruthy();
+    expect(within(sheet).getByText(phrase ?? "")).toHaveClass("ui-nowrap");
     unmount();
 
     rpc.impl = (name) => {
@@ -475,5 +474,227 @@ describe("SUMIT status row", () => {
     expect(within(held).queryByText("עודכן")).not.toBeInTheDocument();
     expect(within(held).getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
     expect(within(held).getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
+  });
+
+  it("says the refresh failed when a rate limit has no retry time", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") {
+        return Promise.resolve({
+          data: sumit({ connected: true, sumit_company_id: 1001, last_error: "rate_limited" }),
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    const sheet = screen.getByRole("dialog", { name: "SUMIT" });
+    expect(within(sheet).getByText("הרענון נכשל. נסו שוב.")).toBeInTheDocument();
+    expect(within(sheet).queryByText(/החיבור נכשל/)).not.toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "רענון עכשיו" })).toBeEnabled();
+  });
+
+  it("does not steal focus when a successful retry finds it elsewhere", async () => {
+    const failed = Promise.resolve({ data: null, error: { message: "down" } });
+    let attempt: Promise<{ data: unknown; error: { message: string } | null }> = failed;
+    let release: (value: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return attempt;
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: SUMIT" });
+    attempt = new Promise((resolve) => { release = resolve; });
+    fireEvent.click(retry);
+    const elsewhere = screen.getByRole("button", { name: "התנתקות" });
+    elsewhere.focus();
+    release({ data: sumit({ connected: true, sumit_company_id: 1001 }), error: null });
+    const row = await screen.findByRole("button", { name: "SUMIT" });
+    expect(hintOf(row)).toBe("מחובר");
+    expect(elsewhere).toHaveFocus();
+  });
+
+  it("announces an offline retry without leaving the error row", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return Promise.resolve({ data: null, error: { message: "down" } });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: SUMIT" });
+    onlineManager.setOnline(false);
+    try {
+      fireEvent.click(retry);
+      const group = screen.getByRole("group", { name: "SUMIT" });
+      expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
+      expect(within(group).getByText("אין חיבור לאינטרנט")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it("returns focus to the SUMIT row after ניתוק from either sheet", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return Promise.resolve({ data: sumit({ connected: true, sumit_company_id: 1001 }), error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const connected = renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "SUMIT" })).getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "SUMIT" })).toHaveFocus(); });
+    connected.unmount();
+
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") {
+        return Promise.resolve({ data: sumit({ connected: true, sumit_company_id: 1001, last_error: "sumit_auth" }), error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "SUMIT" })).getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "SUMIT" })).toHaveFocus(); });
+  });
+
+  it("keeps preview when the sheet param is stripped, and encoded returns finish on Home", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return Promise.resolve({ data: sumit({}), error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [{ path: "/settings", element: <SettingsScreen /> }],
+      { initialEntries: ["/settings?preview=1&sheet=sumit"] },
+    );
+    const preview = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <RouterProvider router={router} />
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    await waitFor(() => { expect(router.state.location.search).toBe("?preview=1"); });
+    preview.unmount();
+
+    for (const value of ["/%2e%2e//evil.com", "/%252e%252e//evil.com", "/\\evil", "//evil.com", "https://evil.example/settings"]) {
+      const { unmount } = render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <ToastProvider>
+            <BooksProvider>
+              <MemoryRouter initialEntries={[`/onboarding?return=${encodeURIComponent(value)}`]}>
+                <Routes>
+                  <Route path="/onboarding" element={<OnboardingScreen />} />
+                  <Route path="/" element={<h1>בית</h1>} />
+                  <Route path="/settings" element={<h1>הגדרות</h1>} />
+                </Routes>
+              </MemoryRouter>
+            </BooksProvider>
+          </ToastProvider>
+        </QueryClientProvider>,
+      );
+      fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
+      fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+      expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("replaces the sheet entry on the way to onboarding and returns with replace", async () => {
+    let created = false;
+    rpc.impl = (name) => {
+      if (name === "create_company") {
+        created = true;
+        return Promise.resolve({ data: "company-1", error: null });
+      }
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: { ...dashboard, company_id: created ? "company-1" : null, name: created ? "אלפא" : "" },
+          error: null,
+        });
+      }
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return Promise.resolve({ data: sumit({}), error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        { path: "/settings", element: <SettingsScreen /> },
+        { path: "/onboarding", element: <OnboardingScreen /> },
+        { path: "/", element: <h1>בית</h1> },
+        { path: "/sign-in", element: <h1>התחברות</h1> },
+      ],
+      { initialEntries: ["/settings"] },
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <RouterProvider router={router} />
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
+    expect(await screen.findByRole("heading", { name: "פרטי העסק" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/onboarding");
+    await act(async () => { await router.navigate(-1); });
+    expect(router.state.location.pathname).toBe("/settings");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "התחברות" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
+    fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    expect(within(sheet).getByLabelText("מספר חברה")).toBeInTheDocument();
+    expect(sheet).not.toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
+    const returned = router.state.location.key;
+    await act(async () => { await router.navigate(-1); });
+    expect(router.state.location.pathname).not.toBe("/onboarding");
+    expect(router.state.location.key).not.toBe(returned);
+  });
+
+  it("shows only the two status words when SUMIT needs a key and the assistant expired", () => {
+    renderSettings(
+      <SettingsScreen
+        sample={{
+          name: "אלפא",
+          connected: true,
+          companyId: 1001,
+          lastError: "sumit_auth",
+          email: "owner@example.com",
+          assistant: { state: "expired", scope: "read", id: "mcp-1" },
+        }}
+      />,
+    );
+    expect(screen.getAllByText("צריך לחבר מחדש")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "SUMIT" })).toHaveClass("ui-row-tone-warning");
+    expect(screen.getByRole("button", { name: "עוזר AI" })).toHaveClass("ui-row-tone-warning");
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "חיבור מחדש" })).not.toBeInTheDocument();
+    expect(screen.queryByText("פג תוקף")).not.toBeInTheDocument();
   });
 });

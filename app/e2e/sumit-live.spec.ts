@@ -387,7 +387,7 @@ async function expectProbeAbsent(page: Page, token: string, probe: string): Prom
 
 async function sync(page: Page) {
   const pending = page.waitForResponse((response) => response.url().includes("/functions/v1/sumit-sync"));
-  const dialog = page.getByRole("dialog", { name: "SUMIT" });
+  const dialog = page.getByRole("dialog", { name: "SUMIT", exact: true });
   if (await dialog.count() === 0) await page.getByRole("button", { name: "SUMIT" }).click();
   await dialog.getByRole("button", { name: "רענון עכשיו" }).click();
   const response = await pending;
