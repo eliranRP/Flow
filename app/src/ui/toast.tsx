@@ -13,7 +13,9 @@ type ToastInput = {
 type ToastItem = ToastInput & { id: number };
 
 type ToastContextValue = {
-  show: (input: ToastInput) => void;
+  show: (input: ToastInput) => number;
+  /** Clears the toast. An id clears that toast only, and leaves a newer one on screen. */
+  dismiss: (id?: number) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -335,6 +337,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const remaining = useRef(OK_MS);
   const started = useRef(0);
   const acting = useRef(false);
+  const toastRef = useRef<ToastItem | null>(null);
+  toastRef.current = toast;
 
   const clearTimer = () => {
     if (timer.current != null) window.clearTimeout(timer.current);
@@ -370,12 +374,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         if (next.place === "page") host.current.dataset.place = "page";
         else delete host.current.dataset.place;
       }
-      setToast({ ...next, id: seq.current });
+      const id = seq.current;
+      setToast({ ...next, id });
+      return id;
     },
     [],
   );
 
-  const dismiss = useCallback(() => {
+  const dismiss = useCallback((id?: number) => {
+    if (id != null && toastRef.current?.id !== id) return;
     acting.current = false;
     clearTimer();
     setPhase("off");
@@ -404,8 +411,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }
 
   const visible = phase === "fade" || phase === "in";
-  const toastRef = useRef(toast);
-  toastRef.current = toast;
   const padToken = useRef(0);
   useEffect(() => {
     if (!toast || !visible) {
@@ -742,7 +747,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   return (
-    <ToastContext.Provider value={{ show }}>
+    <ToastContext.Provider value={{ show, dismiss }}>
       {children}
       <div
         className="ui-toast-host"

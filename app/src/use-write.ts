@@ -42,8 +42,15 @@ export function useWrite<T = void>(options: {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
   const retry = useRef<(payload: T) => void>(() => undefined);
+  const retryToast = useRef<number | null>(null);
   const mutation = useMutation({
     mutationFn: (payload: T) => options.run(payload),
+    onMutate: () => {
+      const id = retryToast.current;
+      if (id == null) return;
+      retryToast.current = null;
+      toast.dismiss(id);
+    },
     onSuccess: async () => {
       await invalidate(options.keys);
       if (options.success) toast.show({ message: options.success });
@@ -55,7 +62,7 @@ export function useWrite<T = void>(options: {
       const retryable = failureRetries(reported, failure);
       const tone = typeof reported === "string" ? "bad" : (reported.tone ?? "bad");
       const split = typeof reported !== "string" && reported.action != null && options.onSplit != null;
-      toast.show({
+      const id = toast.show({
         tone,
         message: failureMessage(reported),
         ...(split
@@ -64,9 +71,11 @@ export function useWrite<T = void>(options: {
             ? { action: "ניסיון חוזר", onAction: () => { retry.current(payload); } }
             : {}),
       });
+      if (retryable && !split) retryToast.current = id;
     },
   });
   retry.current = (payload) => {
+    if (mutation.isPending) return;
     mutation.mutate(payload);
   };
   return mutation;

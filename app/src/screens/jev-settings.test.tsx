@@ -208,13 +208,11 @@ describe("Jev settings card", () => {
     expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.queryByText("צל")).not.toBeInTheDocument();
     release();
-    await waitFor(() => {
-      expect(db.writes).toEqual([
-        { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
-      ]);
-    });
+    await waitFor(() => expect(screen.getByLabelText("סף")).toBeEnabled());
+    expect(db.writes).toEqual([
+      { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
+    ]);
     expect(screen.getByLabelText("סף")).toHaveValue("0.95");
-    expect(screen.getByLabelText("סף")).toBeEnabled();
     expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
   });
 
@@ -291,30 +289,48 @@ describe("Jev settings card", () => {
     expect(toggle).toBeChecked();
   });
 
-  it("retries the failed turn-off, not a later threshold save", async () => {
+  it("retries the failed turn-off", async () => {
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
     db.writeError = { message: "Failed to fetch" };
-    renderLive(<JevSettings showThreshold />);
+    renderLive(<JevSettings />);
     const toggle = await readySwitch();
     fireEvent.click(toggle);
     const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
     db.writeError = null;
-    fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
-    const field = screen.getByLabelText("סף");
-    fireEvent.change(field, { target: { value: "0.95" } });
-    fireEvent.blur(field);
-    await waitFor(() => {
-      expect(db.writes.at(-1)).toEqual({
-        p_enabled: true,
-        p_mode: "shadow",
-        p_threshold: 0.95,
-        p_provider: "jev",
-      });
-    });
     fireEvent.click(retry);
     await waitFor(() => {
       expect(db.writes.at(-1)).toEqual({
         p_enabled: false,
+        p_mode: "shadow",
+        p_threshold: 0.9,
+        p_provider: "jev",
+      });
+    });
+  });
+
+  it("stays writable when retry is tapped during a newer save", async () => {
+    let release: () => void = () => undefined;
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    db.writeError = { message: "Failed to fetch" };
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    await waitFor(() => expect(toggle).toBeChecked());
+    db.writeError = null;
+    db.hold = new Promise((resolve) => { release = resolve; });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-busy", "true"));
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(db.writes).toHaveLength(2);
+    release();
+    await waitFor(() => expect(toggle).not.toHaveAttribute("aria-busy"));
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    await waitFor(() => {
+      expect(db.writes.at(-1)).toEqual({
+        p_enabled: true,
         p_mode: "shadow",
         p_threshold: 0.9,
         p_provider: "jev",
