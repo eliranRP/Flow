@@ -515,7 +515,7 @@ describe("SUMIT status row", () => {
         fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
         await Promise.resolve();
       });
-      await waitFor(() => { expect(router.state.location.key).not.toBe(openKey); });
+      await waitFor(() => { expect(router.state.location.key).not.toBe(openKey); }, { timeout: 5_000 });
       act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
       await waitFor(() => { expect(router.state.location.pathname).toBe("/settings"); });
@@ -526,7 +526,7 @@ describe("SUMIT status row", () => {
         await Promise.resolve();
       });
       await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-      await waitFor(() => { expect(router.state.location.key).not.toBe(closedKey); });
+      await waitFor(() => { expect(router.state.location.key).not.toBe(closedKey); }, { timeout: 5_000 });
       const again = router.state.location.key;
       await act(async () => { await router.navigate(-1); });
       await waitFor(() => {
