@@ -92,4 +92,26 @@ describe("SUMIT envelope", () => {
     const { envelopeVersion: _dropped, ...withoutFormat } = oldFormat;
     await expect(openApiKey(withoutFormat, kek, company)).resolves.toBe(secret);
   });
+
+  it("binds version 3 to the company and the provider", async () => {
+    const kek = decodeKek(Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64"));
+    const secret = "unit-test-key-not-a-real-sumit-secret";
+    const company = "11111111-1111-1111-1111-111111111111";
+    const other = "22222222-2222-2222-2222-222222222222";
+    const sealed = await sealApiKey(secret, kek, "1", company, "3", "sumit");
+    expect(sealed.kekVersion).toBe("1");
+    expect(sealed.envelopeVersion).toBe("3");
+    expect(sealed.keyCiphertext.includes(secret)).toBe(false);
+    await expect(openApiKey(sealed, kek, company, "sumit")).resolves.toBe(secret);
+    await expect(openApiKey(sealed, kek, other, "sumit")).rejects.toThrow();
+    await expect(openApiKey(sealed, kek, company, "mercury")).rejects.toThrow();
+    await expect(openApiKey(sealed, kek, company)).rejects.toThrow();
+    await expect(openApiKey(sealed, kek)).rejects.toThrow();
+    await expect(sealApiKey(secret, kek, "1", company, "3")).rejects.toThrow();
+    await expect(sealApiKey(secret, kek, "1", undefined, "4", "sumit")).rejects.toThrow();
+    const format2 = await sealApiKey(secret, kek, "2", company);
+    await expect(openApiKey(format2, kek, company, "sumit")).resolves.toBe(secret);
+    const format1 = await sealApiKey(secret, kek, "1");
+    await expect(openApiKey(format1, kek)).resolves.toBe(secret);
+  });
 });
