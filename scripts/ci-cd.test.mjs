@@ -48,11 +48,11 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /environment: production/);
   assert.match(deploy, /group: cd-production/);
   assert.match(deploy, /cancel-in-progress: false/);
-  assert.match(deploy, /actions\/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4\.4\.0/);
+  assert.match(deploy, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/);
   assert.match(deploy, /persist-credentials: false/);
-  assert.match(deploy, /pnpm\/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4\.4\.0/);
-  assert.match(deploy, /actions\/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4\.4\.0/);
-  assert.match(deploy, /supabase\/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1\.7\.3/);
+  assert.match(deploy, /pnpm\/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0/);
+  assert.match(deploy, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
+  assert.match(deploy, /supabase\/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3\.0\.1/);
   assert.match(deploy, /SUPABASE_DB_URL/);
   assert.match(deploy, /CLOUDFLARE_API_TOKEN/);
   assert.match(deploy, /CLOUDFLARE_ACCOUNT_ID/);
@@ -107,6 +107,8 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(preflight, /cd-output.mjs read-only/);
   assert.match(preflight, /cd-output.mjs counts/);
   assert.match(preflight, /cd-output.mjs dry-run --target remote/);
+  assert.match(preflight, /cd-output.mjs preflight-kind --target local/);
+  assert.match(preflight, /cd-output.mjs preflight-kind --target remote/);
   assert.match(preflight, /db push --db-url "\$SUPABASE_DB_URL" --dry-run --output-format json/);
   assert.match(readFileSync(new URL("./cd-dry-run-pending.sh", import.meta.url), "utf8"), /--output-format json/);
   assert.match(preflight, /--dry-run/);
@@ -127,4 +129,42 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(owners, /^pnpm-lock\.yaml @eliranRP$/m);
   assert.match(owners, /^supabase\/config\.toml @eliranRP$/m);
   assert.match(readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8"), /cd-output\.mjs" equals/);
+});
+
+test("CI bounds every job, cancels only pull requests, and installs Playwright browsers once", () => {
+  assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
+  assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
+  assert.match(job("deploy"), /cancel-in-progress: false/);
+  for (const name of ["lint", "check", "e2e", "deploy"]) {
+    assert.match(job(name), /timeout-minutes: 20\n/, name);
+  }
+  assert.equal(ci.includes("timeout-minutes: 45"), false);
+  assert.equal(ci.includes("timeout-minutes: 40"), false);
+  assert.equal(ci.includes("timeout-minutes: 10"), false);
+  assert.equal(ci.includes("--with-deps"), false);
+  assert.match(ci, /if: steps\.playwright-cache\.outputs\.cache-hit != 'true'/);
+  assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install-deps chromium/);
+  assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
+  assert.match(ci, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/);
+  assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
+  assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
+  assert.match(ci, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/);
+  assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
+  assert.equal(ci.includes("uses: actions/checkout@v"), false);
+  assert.equal(ci.includes("uses: pnpm/action-setup@v"), false);
+  assert.equal(ci.includes("uses: supabase/setup-cli@v"), false);
+  assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
+});
+
+test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {
+  const env = JSON.parse(readFileSync(new URL("../.cursor/environment.json", import.meta.url), "utf8"));
+  assert.equal(env.install, "bash scripts/cloud-agent-install.sh");
+  const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
+  assert.match(install, /pnpm@10\.33\.3/);
+  assert.match(install, /playwright install --with-deps chromium/);
+  assert.match(install, /supabase_\$\{supabase_version\}_linux_/);
+  assert.match(install, /deno \$\{deno_version\}/);
+  assert.match(install, /\/usr\/local\/bin\/deno/);
+  assert.match(install, /\/usr\/local\/bin\/supabase/);
+  assert.equal(install.includes("SUPABASE_ACCESS_TOKEN"), false);
 });
