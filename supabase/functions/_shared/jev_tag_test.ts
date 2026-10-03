@@ -5,6 +5,7 @@ import {
   JEV_TAG_BUDGET_MS,
   JEV_TAG_DEFAULT_LIMIT,
   JEV_TAG_MAX_LIMIT,
+  JEV_TAG_RESERVE_MS,
   StoreConflict,
   TagStop,
   allowTagRun,
@@ -13,6 +14,7 @@ import {
   capNewest,
   categoriesPath,
   clampTagLimit,
+  companyQuotas,
   connectorDisabled,
   createTagStore,
   handleJevTag,
@@ -924,4 +926,219 @@ Deno.test("each expense gets at most two attempts and the body has no max-output
     },
   }), JevError, "rate_limited");
   assertEquals(uncapped, 4);
+});
+
+Deno.test("the cap is split across companies in id order", () => {
+  assertEquals(companyQuotas(["a", "b", "c"], 50), [17, 17, 16]);
+  assertEquals(companyQuotas(["a"], 50), [50]);
+  assertEquals(companyQuotas(["a", "b"], 1), [1, 0]);
+  assertEquals(companyQuotas([], 50), []);
+  assertEquals(JEV_TAG_RESERVE_MS, 20_000);
+});
+
+const COMPANY_A = "11111111-1111-4111-8111-111111111112";
+const COMPANY_B = "22222222-2222-4222-8222-222222222223";
+
+function lineId(n: number): string {
+  return `44444444-4444-4444-8444-${n.toString(16).padStart(12, "0")}`;
+}
+
+Deno.test("a 450-line backlog does not starve the other company", async () => {
+  const descriptions: string[] = [];
+  const transactionUrls: string[] = [];
+  const backlogA = Array.from({ length: 450 }, (_, index) => txnRow({
+    id: lineId(index + 1),
+    company_id: COMPANY_A,
+    description: "backlog-a",
+  }));
+  assertEquals(backlogA.length, 450);
+  const response = await handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test" },
+  }), {
+    fetch: (input, init) => {
+      const url = String(input);
+      if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([
+          { company_id: COMPANY_A, enabled: true, mode: "shadow", threshold: 0.9 },
+          { company_id: COMPANY_B, enabled: true, mode: "shadow", threshold: 0.9 },
+        ]));
+      }
+      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+      if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+      if (url.includes("/transactions")) {
+        transactionUrls.push(url);
+        const limit = Number(/limit=(\d+)$/.exec(url)?.[1] ?? "0");
+        if (url.includes(`company_id=eq.${COMPANY_A}`)) {
+          return Promise.resolve(Response.json(backlogA.slice(0, limit)));
+        }
+        return Promise.resolve(Response.json(Array.from({ length: 3 }, (_, index) => txnRow({
+          id: lineId(500 + index),
+          company_id: COMPANY_B,
+          description: "backlog-b",
+        }))));
+      }
+      return Promise.resolve(Response.json([]));
+    },
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+    log: () => {},
+    readKey: () => Promise.resolve("jev-test-key"),
+    call: (_key, input) => {
+      const state = input.state;
+      descriptions.push(typeof state === "object" && state !== null && !Array.isArray(state) && typeof state.description === "string" ? state.description : "");
+      return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+    },
+  });
+  assertEquals(response.status, 200);
+  const companyA = transactionUrls.find((url) => url.includes(`company_id=eq.${COMPANY_A}`));
+  const companyB = transactionUrls.find((url) => url.includes(`company_id=eq.${COMPANY_B}`));
+  assert(companyA);
+  assert(companyB);
+  assert(companyA.endsWith("limit=25"));
+  assert(companyB.endsWith("limit=25"));
+  assertEquals(descriptions.filter((item) => item === "backlog-a").length, 25);
+  assertEquals(descriptions.filter((item) => item === "backlog-b").length, 3);
+  assertEquals(descriptions.length, 28);
+});
+
+Deno.test("an approved line is not sent to TypeSafe", async () => {
+  const descriptions: string[] = [];
+  const urls: string[] = [];
+  const response = await handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test" },
+  }), {
+    fetch: (input, init) => {
+      const url = String(input);
+      urls.push(url);
+      if (init?.method && init.method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([
+          { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
+        ]));
+      }
+      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+      if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+      if (url.includes("/transactions")) {
+        return Promise.resolve(Response.json([
+          txnRow({ id: EXPENSE, description: "open-line", review_queue: [{ status: "open" }] }),
+          txnRow({
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            description: "approved-line",
+            review_queue: [{ status: "approved" }],
+          }),
+        ]));
+      }
+      return Promise.resolve(Response.json([]));
+    },
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+    log: () => {},
+    readKey: () => Promise.resolve("jev-test-key"),
+    call: (_key, input) => {
+      const state = input.state;
+      descriptions.push(typeof state === "object" && state !== null && !Array.isArray(state) && typeof state.description === "string" ? state.description : "");
+      return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+    },
+  });
+  assertEquals(response.status, 200);
+  assertEquals(descriptions, ["open-line"]);
+  const transactions = urls.find((url) => url.includes("/transactions"));
+  assert(transactions);
+  assert(transactions.includes("review_queue.status=eq.open"));
+  assert(transactions.includes("review_queue!inner(status)"));
+});
+
+Deno.test("a call is not started when fewer than 20 seconds of the budget remain", async () => {
+  const second = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  let clock = 0;
+  let calls = 0;
+  const stopped = await tagWork([company({
+    mode: "shadow",
+    expenses: [expense(), expense({ id: second, description: "later" })],
+  })], memoryStore(), () => {
+    calls += 1;
+    clock = JEV_TAG_BUDGET_MS - JEV_TAG_RESERVE_MS + 1;
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+  }, "jev-test-key", {
+    now: () => clock,
+    budgetMs: JEV_TAG_BUDGET_MS,
+    log: () => {},
+  });
+  assertEquals(calls, 1);
+  assertEquals(stopped.budget_skipped, 1);
+  assertEquals(stopped.tagged, 1);
+
+  let exact = 0;
+  clock = 0;
+  const stillOpen = await tagWork([company({
+    mode: "shadow",
+    expenses: [expense(), expense({ id: second })],
+  })], memoryStore(), () => {
+    exact += 1;
+    if (exact === 1) clock = JEV_TAG_BUDGET_MS - JEV_TAG_RESERVE_MS;
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+  }, "jev-test-key", {
+    now: () => clock,
+    budgetMs: JEV_TAG_BUDGET_MS,
+    log: () => {},
+  });
+  assertEquals(exact, 2);
+  assertEquals(stillOpen.budget_skipped, 0);
+  assertEquals(stillOpen.tagged, 2);
+});
+
+Deno.test("an overhead or shared line is not asked for a project", async () => {
+  const overhead = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const shared = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const split = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+  const owned = "12121212-1212-4121-8121-121212121212";
+  const seen: JevCall[] = [];
+  const store = memoryStore();
+  await tagWork([company({
+    mode: "shadow",
+    expenses: [
+      expense({ id: overhead, pnlRole: "overhead", description: "overhead" }),
+      expense({ id: shared, pnlRole: "shared", description: "shared-cost" }),
+      expense({ id: split, allocationCount: 2, description: "split" }),
+      expense({ description: "normal" }),
+      expense({ id: owned, projectAssigned: true, projectId: OTHER, description: "owned" }),
+    ],
+  })], store, (_key, input) => {
+    seen.push(input);
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+  }, "jev-test-key", { log: () => {} });
+
+  assertEquals(seen.length, 5);
+  for (const input of seen.slice(0, 3)) {
+    assertEquals("project" in input.questions, false);
+    assertEquals("category" in input.questions, true);
+  }
+  assertEquals("project" in seen[3].questions, true);
+  assertEquals("project" in seen[4].questions, true);
+  for (const row of store.suggestions.slice(0, 3)) {
+    assertEquals("project" in row.answers, false);
+    assert("category" in row.answers);
+  }
+  assert("project" in store.suggestions[3].answers);
+  assert("project" in store.suggestions[4].answers);
+  assertEquals(store.writes.length, 0);
+
+  const auto = memoryStore();
+  const autoSeen: JevCall[] = [];
+  await tagWork([company({
+    expenses: [expense({ id: overhead, pnlRole: "overhead" })],
+  })], auto, (_key, input) => {
+    autoSeen.push(input);
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(0.4, 0.95), usage: null });
+  }, "jev-test-key", { log: () => {} });
+  assertEquals(autoSeen.length, 1);
+  assertEquals("project" in autoSeen[0].questions, false);
+  assertEquals("project" in auto.suggestions[0].answers, false);
+  assertEquals(auto.suggestions[0].confidence, 0.95);
+  assertEquals(auto.writes.length, 1);
+  assertEquals(auto.writes[0].projectId, undefined);
+  assertEquals(auto.writes[0].categoryId, CATEGORY);
 });
