@@ -21,7 +21,7 @@ export const Off: Story = { args: { label: "אחרי חלק בהוצאות כל�
 export const On: Story = { args: { label: "לזכור לספק הזה", hint: "השרון ← בניין מגורים חולון · חומרים", checked: true } };
 export const Disabled: Story = { args: { label: "סיכום שבועי", hint: "ההודעות לא נשלחות", disabled: true } };
 export const Focus: Story = {
-  args: { label: "רווח אחרי חלק בכלליות", hint: "ברירת מחדל בבית ובפרויקט", checked: true },
+  args: { label: "רווח אחרי כלליות", hint: "חלק מהכלליות נכנס לכל פרויקט", checked: true },
   play: ({ canvasElement }) => {
     canvasElement.querySelector("input")?.focus();
   },

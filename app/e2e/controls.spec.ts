@@ -399,17 +399,24 @@ test("the transaction change sheet opens split in place", async ({ page }) => {
 
 test("the assistant row selects a scope and does not mint in preview", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
-  await page.getByRole("button", { name: "חיבור עוזר" }).click();
+  await page.getByRole("button", { name: "עוזר AI" }).click();
   const sheet = page.getByRole("dialog", { name: "חיבור עוזר" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("radio", { name: "קריאה בלבד" }).click();
   await expect(sheet.getByRole("radio", { name: "קריאה בלבד" })).toBeChecked();
   await sheet.getByRole("button", { name: "יצירת קוד" }).click();
   await toast(page, previewToast);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/e2e/settings?preview=1&assistant=connected");
   await expect(page.getByText("30/09/2026, 14:05")).toBeVisible();
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  const stampLines = await page.locator("bdi", { hasText: "30/09/2026, 14:05" }).evaluate((node) => node.getClientRects().length);
+  expect(stampLines).toBe(1);
   await expect(page.getByText("מחובר")).toBeVisible();
-  await page.getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("button", { name: "עוזר AI" }).click();
+  await page.getByRole("dialog", { name: "עוזר AI" }).getByRole("button", { name: "ניתוק" }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "ניתוק" }).click();
@@ -420,7 +427,7 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await expect(page.getByText("מחובר")).toHaveCount(0);
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/settings?preview=1");
-  await page.getByRole("button", { name: "חיבור עוזר" }).click();
+  await page.getByRole("button", { name: "עוזר AI" }).click();
   const narrow = page.getByRole("dialog", { name: "חיבור עוזר" });
   await expect(narrow).toBeVisible();
   const clipped = await page.evaluate(() => {
@@ -430,26 +437,25 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   expect(clipped).toBeLessThanOrEqual(1);
 });
 
-test("settings connect, refresh, categories, and disabled notices", async ({ page }) => {
+test("settings connect, refresh, categories, and the account row", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "חיבור SUMIT" }).click();
   await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
   await page.getByRole("button", { name: "חיבור" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("group", { name: "בדיקה" })).toBeVisible();
+  await expect(page.getByText("owner@example.com")).toBeVisible();
+  await expect(page.getByText("עוסק מורשה")).toHaveCount(0);
+  await expect(page.getByText("Flow 0.1")).toBeVisible();
   await page.getByRole("link", { name: "קטגוריות" }).click();
   await expect(page).toHaveURL(/\/settings\/categories/);
   await page.goto("/e2e/settings?preview=1");
-  await page.getByRole("link", { name: "פרויקטים" }).click();
-  await expect(page).toHaveURL(/\/projects/);
-  await page.goto("/e2e/settings?preview=1");
+  await expect(page.getByRole("link", { name: "פרויקטים" })).toHaveCount(0);
   for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
-    const toggle = page.getByRole("switch", { name });
-    await expect(toggle).toBeDisabled();
-    expect(await cursorOf(toggle)).toBe("not-allowed");
+    await expect(page.getByRole("switch", { name })).toHaveCount(0);
   }
-  await expect(page.getByText("לא פעיל").first()).toBeVisible();
-  const overhead = page.getByRole("switch", { name: "רווח אחרי חלק בכלליות" });
+  const overhead = page.getByRole("switch", { name: "רווח אחרי כלליות" });
   await overhead.click();
   await expect(overhead).toBeChecked();
   await expect(page.getByRole("button", { name: "התנתקות" })).toHaveCount(0);
@@ -459,9 +465,43 @@ test("settings connect, refresh, categories, and disabled notices", async ({ pag
   await page.goto("/e2e/settings?preview=1&connected=1");
   await page.getByRole("button", { name: "רענון עכשיו" }).click();
   await toast(page, previewToast);
-  await page.getByRole("button", { name: "ניתוק" }).click();
-  await page.getByRole("button", { name: "ניתוק" }).last().click();
+  await page.getByRole("button", { name: "SUMIT מחובר" }).click();
+  await page.getByRole("dialog", { name: "SUMIT" }).getByRole("button", { name: "ניתוק" }).click();
+  await page.getByRole("dialog", { name: "לנתק את SUMIT?" }).getByRole("button", { name: "ניתוק" }).click();
   await toast(page, previewToast);
+
+  await page.goto("/e2e/settings?preview=1&nocompany=1");
+  await expect(page.getByText("owner@example.com")).toBeVisible();
+  await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "owner@example.com" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "תצוגה" })).toHaveCount(0);
+  await expect(page.getByRole("switch", { name: "רווח אחרי כלליות" })).toHaveCount(0);
+  const sumit = page.getByRole("button", { name: "SUMIT" });
+  await expect(sumit).toBeEnabled();
+  await expect(sumit).toContainText("לא מחובר");
+  await expect(page.getByRole("button", { name: "עוזר AI" })).toBeDisabled();
+  await page.goto("/e2e/settings?preview=1&nocompany=1&email=none");
+  await expect(page.getByText("owner@example.com")).toHaveCount(0);
+  await expect(page.getByText("עדיין בלי עסק")).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/e2e/settings?preview=1&nocompany=1&email=long");
+  const longEmail = "owner.with.a.very.long.mailbox.name@example.com";
+  const emailStart = await page.locator(".ui-row-title", { hasText: longEmail }).evaluate((node, email) => {
+    const text = node.querySelector("bdi")?.firstChild;
+    if (!text || text.textContent !== email) return false;
+    const box = node.getBoundingClientRect();
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 1);
+    const start = range.getBoundingClientRect();
+    range.setStart(text, email.length - 1);
+    range.setEnd(text, email.length);
+    const end = range.getBoundingClientRect();
+    const startInside = start.width > 0 && start.left >= box.left - 1 && start.right <= box.right + 1;
+    const endClipped = end.right > box.right + 1 || node.scrollWidth > node.clientWidth + 1;
+    return startInside && endClipped;
+  }, longEmail);
+  expect(emailStart).toBe(true);
 
   await page.goto("/e2e/settings?preview=1&connected=auth");
   const held = page.getByRole("button", { name: /רענון עכשיו/ });

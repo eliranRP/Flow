@@ -96,6 +96,22 @@ test("the connect sheet closes on browser back and on its own close", async ({ p
   await expect(page).toHaveURL(/\/e2e\/project$/);
 });
 
+test("the assistant sheet closes on browser back and on its own close", async ({ page }) => {
+  await page.goto("/settings?preview=1");
+  await page.getByRole("button", { name: "עוזר AI" }).click();
+  await expect(page.getByRole("dialog", { name: "חיבור עוזר" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/settings\?preview=1$/);
+  await page.goto("/e2e/project");
+  await page.goto("/settings?preview=1");
+  await page.getByRole("button", { name: "עוזר AI" }).click();
+  await page.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/e2e\/project$/);
+});
+
 test("the add sheet closes back to the screen that opened it", async ({ page }) => {
   await page.goto("/?preview=1");
   await page.getByRole("link", { name: "הוספה" }).click();

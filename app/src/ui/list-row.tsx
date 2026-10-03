@@ -29,6 +29,8 @@ type Common = {
   tag?: ReactNode;
   /** Replaces the accessible name. Summary rows say "פרויקט: X, שינוי". */
   label?: string;
+  /** An email or other Latin value. The title stays LTR so the start remains visible. */
+  ltrTitle?: boolean;
 };
 
 export type ListRowProps =
@@ -36,7 +38,7 @@ export type ListRowProps =
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
   | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
+  | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
@@ -71,8 +73,11 @@ export function ListRow(props: ListRowProps) {
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
         <span className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
-          <span className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}>
-            {props.tag ? <span className="ui-row-title-text">{props.title}</span> : props.title}
+          <span
+            className={cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false)}
+            dir={props.ltrTitle ? "ltr" : undefined}
+          >
+            {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
             {props.tag}
           </span>
           {props.hint ? (
@@ -155,6 +160,11 @@ export function ListRow(props: ListRowProps) {
     </div>
   );
   return withAction(props, row);
+}
+
+function titleText(props: Common): ReactNode {
+  if (!props.ltrTitle) return props.title;
+  return <bdi dir="ltr">{props.title}</bdi>;
 }
 
 function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {

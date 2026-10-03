@@ -644,7 +644,35 @@ export const SettingsEmpty: Story = {
   render: () => (
     <StoryRoute entry="/settings?preview=empty" tabs>
       <ExampleBar />
-      <SettingsScreen />
+      <SettingsScreen
+        sample={{
+          name: null,
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner@example.com",
+          noCompany: true,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsLongEmail: Story = {
+  name: "Long email",
+  render: () => (
+    <StoryRoute entry="/settings?preview=empty" tabs>
+      <ExampleBar />
+      <SettingsScreen
+        sample={{
+          name: null,
+          connected: false,
+          companyId: null,
+          lastError: null,
+          email: "owner.with.a.very.long.mailbox.name@example.com",
+          noCompany: true,
+        }}
+      />
     </StoryRoute>
   ),
 };
@@ -656,12 +684,11 @@ export const SettingsAssistantConnected: Story = {
       <ExampleBar />
       <SettingsScreen
         sample={{
-          name: "א.ב. בנייה ושיפוצים בע״מ",
-          vatRegistered: true,
+          name: "בית הספר אלון",
           connected: true,
           companyId: 1001,
           lastError: null,
-          email: "ops@nromomentum.com",
+          email: "owner@example.com",
           assistant: {
             state: "connected",
             scope: "read_write",
@@ -675,12 +702,11 @@ export const SettingsAssistantConnected: Story = {
 };
 
 const assistantBusiness = {
-  name: "א.ב. בנייה ושיפוצים בע״מ",
-  vatRegistered: true,
+  name: "בית הספר אלון",
   connected: true,
   companyId: 1001,
   lastError: null as string | null,
-  email: "ops@nromomentum.com",
+  email: "owner@example.com",
 };
 
 export const SettingsAssistantEmpty: Story = {
@@ -728,7 +754,7 @@ export const SettingsAssistantNoCompany: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, name: null, connected: false, companyId: null, assistant: { state: "no-company" } }} />
+      <SettingsScreen sample={{ ...assistantBusiness, name: null, connected: false, companyId: null, noCompany: true, assistant: { state: "no-company" } }} />
     </StoryRoute>
   ),
 };
@@ -766,13 +792,11 @@ export const SettingsConnected: Story = {
       <ExampleBar />
       <SettingsScreen
         sample={{
-          name: "א.ב. בנייה ושיפוצים בע״מ",
-          vatRegistered: true,
+          name: "בית הספר אלון",
           connected: true,
           companyId: 1001,
           lastError: null,
-          email: "ops@nromomentum.com",
-          projectCount: 17,
+          email: "owner@example.com",
           expenseCategories: 7,
           incomeCategories: 2,
         }}
@@ -787,12 +811,11 @@ export const SettingsError: Story = {
       <ExampleBar />
       <SettingsScreen
         sample={{
-          name: "א.ב. בנייה ושיפוצים בע״מ",
-          vatRegistered: true,
+          name: "בית הספר אלון",
           connected: true,
           companyId: 1001,
           lastError: "sync_failed",
-          email: "ops@nromomentum.com",
+          email: "owner@example.com",
         }}
       />
     </StoryRoute>
@@ -806,13 +829,12 @@ export const SettingsBackoff: Story = {
       <ExampleBar />
       <SettingsScreen
         sample={{
-          name: "א.ב. בנייה ושיפוצים בע״מ",
-          vatRegistered: true,
+          name: "בית הספר אלון",
           connected: true,
           companyId: 1001,
           lastError: "sumit_rejected",
           nextAttemptAt: "2099-01-01T10:00:00.000Z",
-          email: "ops@nromomentum.com",
+          email: "owner@example.com",
         }}
       />
     </StoryRoute>
@@ -826,12 +848,11 @@ export const SettingsAuth: Story = {
       <ExampleBar />
       <SettingsScreen
         sample={{
-          name: "א.ב. בנייה ושיפוצים בע״מ",
-          vatRegistered: true,
+          name: "בית הספר אלון",
           connected: true,
           companyId: 1001,
           lastError: "sumit_auth",
-          email: "ops@nromomentum.com",
+          email: "owner@example.com",
         }}
       />
     </StoryRoute>
@@ -1043,9 +1064,9 @@ export const ProjectDetailError: Story = {
 
 export const CategoriesEmpty: Story = {
   render: () => (
-    <StoryRoute entry="/settings/categories?preview=empty" tabs>
+    <StoryRoute entry="/settings/categories" tabs>
       <ExampleBar />
-      <CategoriesScreen />
+      <CategoriesScreen sample={[]} />
     </StoryRoute>
   ),
 };

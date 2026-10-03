@@ -1,7 +1,7 @@
 import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
@@ -82,7 +82,7 @@ import { StatusPill } from "../ui/chip";
 import { formatDayMonth, formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { HoldLine } from "../ui/hold-line";
-import { BackButton, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
+import { BackButton, popSheetLayers, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
 import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, FormError, SectionHead, SharedCostNote } from "../ui/layout";
@@ -1940,7 +1940,6 @@ export function AddForm() {
           title="צילום חשבונית"
           hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
           icon={<CameraIcon size={26} />}
-          onClick={() => undefined}
         />
         <ListRow
           variant="button"
@@ -1948,7 +1947,6 @@ export function AddForm() {
           title="הזנה ידנית"
           hint="סכום, פרויקט וקטגוריה – רק במקרה הצורך"
           icon={<PencilIcon size={26} />}
-          onClick={() => undefined}
         />
       </div>
       <Button variant="ghost" full onClick={() => { goBack(`/${search}`); }}>ביטול</Button>
@@ -3175,15 +3173,19 @@ export function SplitScreen({
   );
 }
 
+/** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
+const previewAccountName = "בית הספר אלון";
+const previewAccountEmail = "owner@example.com";
+
 type SettingsSample = {
   name: string | null;
-  vatRegistered: boolean;
   connected: boolean;
   companyId: number | null;
   lastError: string | null;
   nextAttemptAt?: string | null;
   email?: string | null;
-  projectCount?: number;
+  /** Live `company_id` is null. Preview passes this because a sample skips the dashboard. */
+  noCompany?: boolean;
   expenseCategories?: number;
   incomeCategories?: number;
   assistant?: AssistantSample;
@@ -3195,7 +3197,10 @@ export function SettingsScreen({
   sample?: SettingsSample;
 } = {}) {
   const preview = useHomePreview();
+  const [params] = useSearchParams();
+  const previewValue = params.get("preview");
   const search = usePreviewSearch();
+  const navigate = useNavigate();
   const { session } = useAuth();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
@@ -3204,8 +3209,10 @@ export function SettingsScreen({
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen);
+  const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen);
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -3264,7 +3271,11 @@ export function SettingsScreen({
     failure: "לא הצלחנו לנתק.",
     success: "החיבור נותק. הספרים נשארו.",
     keys: ["sumit"],
-    onSuccess: () => { setDisconnectSheet(false); },
+    onSuccess: () => {
+      setDisconnectOpen(false);
+      setStatusOpen(false);
+      popSheetLayers(navigate, 2);
+    },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -3274,6 +3285,7 @@ export function SettingsScreen({
   const signOut = useWrite({
     failure: "לא הצלחנו לצאת.",
     keys: [],
+    onSuccess: () => { void navigate("/sign-in"); },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -3292,10 +3304,12 @@ export function SettingsScreen({
     );
   }
 
-  const emptyAccount = phase.kind === "empty";
-  const connected = emptyAccount ? false : sample ? sample.connected : status.data?.connected === true;
-  const businessName = sample ? sample.name : dashboard.data?.name;
-  const vatRegistered = sample ? sample.vatRegistered : dashboard.data?.vat_registered !== false;
+  const noCompany = sample
+    ? sample.noCompany === true
+    : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
+  const previewSample = sample == null && preview !== "off" && previewValue !== "empty";
+  const connected = noCompany ? false : sample ? sample.connected : status.data?.connected === true;
+  const businessName = sample ? sample.name : previewSample ? previewAccountName : dashboard.data?.name;
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
   const lastError = hebrewSumitError(rawError);
@@ -3309,40 +3323,52 @@ export function SettingsScreen({
     </>
   );
   const refreshHint = authReconnect ? "המזהה או המפתח לא התקבלו" : retryHint;
-  const email = sample ? sample.email : session?.user.email;
-  const projectCount = sample?.projectCount ?? dashboard.data?.projects.length;
+  const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
   const incomeCount = sample?.incomeCategories ?? categories.data?.filter((category) => category.kind === "income" && !category.hidden).length;
   const categoryHint = expenseCount == null || incomeCount == null
     ? undefined
     : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
-  // Runs whenever ?preview= is set, including the hosted app. Leaving this undefined fetches flow-mcp/status.
-  const assistantSample: AssistantSample | undefined = sample
-    ? (sample.assistant ?? { state: "empty" })
-    : preview === "off"
-      ? undefined
-      : { state: "no-company" };
+  const namedBusiness = (businessName ?? "").trim();
+  const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
+  const showInstall = !isStandalone();
+  const showSignOut = preview === "off" || previewValue === "empty";
   return (
     <div>
       <ScreenHeader title="הגדרות" />
-      <SectionHead title="החברה" />
-      <List>
-        {emptyAccount ? (
-          <ListRow variant="static" title="חשבון Google" hint={email ? <bdi dir="ltr">{email}</bdi> : "החשבון"} icon={<GoogleIcon />} />
-        ) : (
-          <ListRow variant="static" title={businessName ?? "עדיין בלי עסק"} hint={vatRegistered ? "עוסק מורשה" : "עוסק פטור"} icon={<ProjectsIcon />} />
-        )}
-        {!emptyAccount && email ? <ListRow variant="static" title="חשבון Google" hint={<bdi dir="ltr">{email}</bdi>} icon={<GoogleIcon />} /> : null}
-      </List>
-      <SectionHead title="חיבור SUMIT" />
+      {noCompany ? (
+        email !== "" ? (
+          <List>
+            <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} />
+          </List>
+        ) : null
+      ) : namedBusiness !== "" ? (
+        <List>
+          <ListRow
+            variant="static"
+            title={namedBusiness}
+            hint={accountHint}
+            icon={<GoogleIcon />}
+            describeHint={accountHint != null}
+            wrapHint
+          />
+        </List>
+      ) : null}
+      <SectionHead title="חיבורים" />
       <List>
         {connected ? (
           <ListRow
-            variant="static"
+            variant="button"
             title="SUMIT מחובר"
             hint={<>מספר חברה <bdi dir="ltr">{String(sumitId ?? "")}</bdi></>}
             icon={<RefreshIcon />}
+            chevron
+            describeHint
+            wrapHint
+            onClick={() => { setStatusSheet(true); }}
           />
+        ) : noCompany ? (
+          <ListRow variant="button" title="SUMIT" hint="לא מחובר" icon={<RefreshIcon />} chevron describeHint wrapHint onClick={() => { setConnectSheet(true); }} />
         ) : (
           <ListRow variant="button" title="חיבור SUMIT" hint="מספר חברה ומפתח API" icon={<RefreshIcon />} chevron onClick={() => { setConnectSheet(true); }} />
         )}
@@ -3363,34 +3389,53 @@ export function SettingsScreen({
             }}
           />
         ) : null}
-        {connected ? (
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
-        ) : null}
       </List>
-      {lastError && !emptyAccount ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
-      {rawError === "sumit_auth" && !emptyAccount ? (
+      {lastError && !noCompany ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
+      {rawError === "sumit_auth" && !noCompany ? (
         <div className="ui-page-pad">
           <Button variant="secondary" onClick={() => { setConnectSheet(true); }}>חיבור מחדש</Button>
         </div>
       ) : null}
       <AssistantSettings
-        sample={assistantSample}
-        noCompany={emptyAccount}
+        sample={
+          // A missing company, and any preview, must not call flow-mcp/status.
+          sample
+            ? (noCompany ? { state: "no-company" } : (sample.assistant ?? { state: "empty" }))
+            : noCompany
+              ? { state: "no-company" }
+              : preview !== "off"
+                ? { state: "empty" }
+                : undefined
+        }
+        noCompany={noCompany}
         blocked={blocked}
+        showHeading={false}
       />
       <Sheet open={connectOpen} onOpenChange={setConnectSheet} title="חיבור SUMIT">
-        <form
-          className="ui-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (blocked()) return;
-            connect.mutate();
-          }}
-        >
-          <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
-          <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
-          <Button type="submit" busy={connect.isPending}>חיבור</Button>
-        </form>
+        {noCompany ? (
+          <div className="ui-stack">
+            <p>כדי לחבר את SUMIT צריך עסק.</p>
+            <TextLink to={`/onboarding${search}`}>פרטי העסק</TextLink>
+          </div>
+        ) : (
+          <form
+            className="ui-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (blocked()) return;
+              connect.mutate();
+            }}
+          >
+            <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
+            <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
+            <Button type="submit" busy={connect.isPending}>חיבור</Button>
+          </form>
+        )}
+      </Sheet>
+      <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT">
+        <List>
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
+        </List>
       </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
@@ -3405,74 +3450,54 @@ export function SettingsScreen({
           disconnect.mutate();
         }}
       />
-      {emptyAccount ? (
-        <List>
-          <ListRow
-            variant="danger"
-            title="התנתקות"
-            icon={<LogoutIcon />}
-            busy={signOut.isPending}
-            onClick={() => {
-              if (blocked()) return;
-              signOut.mutate();
-            }}
-          />
-        </List>
-      ) : (
-      <>
-      <SectionHead title="סיווג" />
-      <List>
-        <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
-        <ListRow variant="item" href={`/projects${search}`} title="פרויקטים" hint={projectCount == null ? undefined : `${String(projectCount)} פעילים`} icon={<ProjectsIcon />} chevron />
-      </List>
-      <SectionHead title="התראות" />
-      <div className="ui-page-pad">
-        <Toggle label="סיכום שבועי" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
-        <Toggle label="תזכורת לפריטים ממתינים" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
-      </div>
-      <SectionHead title="אישור ותצוגה" />
-      <div className="ui-page-pad">
-        <Toggle label="אישור אוטומטי בביטחון גבוה" hint="לא פעיל" checked={false} disabled onChange={() => undefined} />
-        <Toggle
-          label="רווח אחרי חלק בכלליות"
-          hint={overheadHint(overheadOn, { available: true, scope: "company" })}
-          checked={overheadOn}
-          onChange={(checked) => {
-            if (sample) {
-              setOverheadOn(checked);
-              return;
-            }
-            if (blocked()) return;
-            const previous = overheadOn;
-            setOverheadOn(checked);
-            wantedOverhead.current = checked;
-            saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
-          }}
-        />
-      </div>
-      <SectionHead title="נתונים" />
-      <List>
-        {preview === "off" ? (
-          <ListRow
-            variant="danger"
-            title="התנתקות"
-            icon={<LogoutIcon />}
-            busy={signOut.isPending}
-            onClick={() => { signOut.mutate(); }}
-          />
-        ) : null}
-      </List>
-      </>
-      )}
-      {isStandalone() ? null : (
+      {noCompany ? null : (
         <>
-          <SectionHead title="אפליקציה" />
+          <SectionHead title="תצוגה" />
           <List>
-            <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+            <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
           </List>
+          <div className="ui-page-pad">
+            <Toggle
+              label="רווח אחרי כלליות"
+              hint="חלק מהכלליות נכנס לכל פרויקט"
+              checked={overheadOn}
+              onChange={(checked) => {
+                if (sample) {
+                  setOverheadOn(checked);
+                  return;
+                }
+                if (blocked()) return;
+                const previous = overheadOn;
+                setOverheadOn(checked);
+                wantedOverhead.current = checked;
+                saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
+              }}
+            />
+          </div>
         </>
       )}
-      <p className="ui-poc t-hint"><bdi dir="ltr">Flow · POC 0.1</bdi></p>
+      {showInstall || showSignOut ? (
+        <>
+          <SectionHead title="עוד" />
+          <List>
+            {showInstall ? (
+              <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
+            ) : null}
+            {showSignOut ? (
+              <ListRow
+                variant="danger"
+                title="התנתקות"
+                icon={<LogoutIcon />}
+                busy={signOut.isPending}
+                onClick={() => {
+                  signOut.mutate();
+                }}
+              />
+            ) : null}
+          </List>
+        </>
+      ) : null}
+      <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
   );
 }
@@ -3514,8 +3539,10 @@ export function CategoriesScreen({
 } = {}) {
   const search = usePreviewSearch();
   const preview = useHomePreview();
+  const [params] = useSearchParams();
   const blocked = useBlockedPreview();
   const categories = useCategoriesQuery(sample == null);
+  const dashboard = useDashboardQuery(sample == null && preview === "off");
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
   const rows: Array<CategoryRow & { count?: number }> = sample ?? categories.data ?? [];
   const [kind, setKind] = useState<"expense" | "income">("expense");
@@ -3570,6 +3597,11 @@ export function CategoriesScreen({
   const hiddenRows = rows.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
   const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
+  const previewNoCompany = sample == null && params.get("preview") === "empty";
+  const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
+  if (previewNoCompany || liveNoCompany) {
+    return <Navigate to={`/settings${search}`} replace />;
+  }
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
       <ScreenState

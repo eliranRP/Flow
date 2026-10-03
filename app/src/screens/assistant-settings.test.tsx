@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { ToastProvider } from "../ui/toast";
 import { AssistantSettings, formatAssistantUse } from "./assistant-settings";
 
@@ -18,11 +19,27 @@ vi.mock("../lib/supabase", () => ({
   }),
 }));
 
-function renderAssistant(ui: ReactNode) {
+function sheetLayer(state: unknown): string | null {
+  if (typeof state !== "object" || state === null || !("flowLayer" in state)) return null;
+  const layer = state.flowLayer;
+  return typeof layer === "string" ? layer : null;
+}
+
+function renderAssistant(ui: ReactNode, onLayer?: (layer: string | null) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  function Layer() {
+    const location = useLocation();
+    onLayer?.(sheetLayer(location.state));
+    return null;
+  }
   return render(
     <QueryClientProvider client={client}>
-      <ToastProvider>{ui}</ToastProvider>
+      <ToastProvider>
+        <MemoryRouter>
+          <Layer />
+          {ui}
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -36,7 +53,7 @@ describe("assistant settings", () => {
 
   it("ties the row hint to the control", () => {
     renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
-    const row = screen.getByRole("button", { name: "חיבור עוזר" });
+    const row = screen.getByRole("button", { name: "עוזר AI" });
     const hintId = row.getAttribute("aria-describedby");
     expect(hintId).toBeTruthy();
     const hint = document.getElementById(hintId ?? "");
@@ -50,17 +67,23 @@ describe("assistant settings", () => {
 
   it("shows an empty row, and a connected row names the scope and the last use", () => {
     const { rerender } = renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
-    expect(screen.getByRole("button", { name: /חיבור עוזר/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "עוזר AI" })).toBeInTheDocument();
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
-          <AssistantSettings sample={{ state: "connected", scope: "read", lastUsedAt: "2026-09-30T11:05:00.000Z", id: "mcp-1" }} />
+          <MemoryRouter>
+            <AssistantSettings sample={{ state: "connected", scope: "read", lastUsedAt: "2026-09-30T11:05:00.000Z", id: "mcp-1" }} />
+          </MemoryRouter>
         </ToastProvider>
       </QueryClientProvider>,
     );
     expect(screen.getByText(/קריאה בלבד/)).toBeInTheDocument();
-    expect(screen.getByText("30/09/2026, 14:05")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    const stamp = screen.getByText("30/09/2026, 14:05");
+    expect(stamp).toHaveClass("ui-nowrap");
+    expect(getComputedStyle(stamp).whiteSpace).toBe("nowrap");
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    expect(within(screen.getByRole("dialog", { name: "עוזר AI" })).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
   });
 
   it("disables the scope rows while minting, and a failure says to try again", async () => {
@@ -78,7 +101,8 @@ describe("assistant settings", () => {
       return Promise.resolve({ data: { state: "empty" }, error: null });
     };
     renderAssistant(<AssistantSettings />);
-    fireEvent.click(await screen.findByRole("button", { name: /חיבור עוזר/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "עוזר AI" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(screen.getByRole("radio", { name: "קריאה בלבד" }));
     expect(screen.getByRole("radio", { name: "קריאה בלבד" })).toBeChecked();
     fail = true;
@@ -103,7 +127,8 @@ describe("assistant settings", () => {
       return Promise.resolve({ data: { ok: true }, error: null });
     };
     renderAssistant(<AssistantSettings />);
-    fireEvent.click(await screen.findByRole("button", { name: /חיבור עוזר/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "עוזר AI" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     finish({
@@ -128,7 +153,8 @@ describe("assistant settings", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     renderAssistant(<AssistantSettings />);
-    fireEvent.click(await screen.findByRole("button", { name: /חיבור עוזר/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "עוזר AI" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
     expect(await screen.findByLabelText("קוד החיבור")).toHaveTextContent("flow_mcp_once");
     fireEvent.click(screen.getByRole("button", { name: "העתקה" }));
@@ -144,25 +170,44 @@ describe("assistant settings", () => {
       calls.push(name);
       return Promise.resolve({ data: { ok: true }, error: null });
     };
-    const { rerender } = renderAssistant(
+    const connected = renderAssistant(
       <AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "עוזר AI" })).getByRole("button", { name: "ניתוק" }));
     const confirm = screen.getByRole("dialog", { name: "לנתק את העוזר?" });
     expect(confirm).toHaveTextContent("הקוד יפסיק לעבוד. הספרים נשארים.");
     fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
     await waitFor(() => expect(screen.getByText("העוזר נותק.")).toBeInTheDocument());
     expect(calls.some((name) => name.includes("revoke"))).toBe(true);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+    connected.unmount();
 
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <ToastProvider>
-          <AssistantSettings sample={{ state: "expired", scope: "read", id: "mcp-1" }} />
-        </ToastProvider>
-      </QueryClientProvider>,
+    renderAssistant(<AssistantSettings sample={{ state: "expired", scope: "read", id: "mcp-1" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    const reconnect = screen.getByRole("dialog", { name: "חיבור עוזר" });
+    expect(within(reconnect).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    fireEvent.click(within(reconnect).getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את העוזר?" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
+  });
+
+  it("drops both assistant history entries when ניתוק succeeds", async () => {
+    let layer: string | null = "unset";
+    edge.invoke = () => Promise.resolve({ data: { ok: true }, error: null });
+    renderAssistant(
+      <AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} />,
+      (next) => { layer = next; },
     );
-    fireEvent.click(screen.getByRole("button", { name: /חיבור מחדש/ }));
-    expect(screen.getByRole("dialog", { name: "חיבור עוזר" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    await waitFor(() => { expect(layer).toBe("assistant-details"); });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "עוזר AI" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => { expect(layer).toBe("assistant-disconnect"); });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את העוזר?" })).getByRole("button", { name: "ניתוק" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(layer).toBeNull();
   });
 
   it("mints the scope that was selected", async () => {
@@ -178,7 +223,8 @@ describe("assistant settings", () => {
       return Promise.resolve({ data: { state: "empty" }, error: null });
     };
     renderAssistant(<AssistantSettings />);
-    fireEvent.click(await screen.findByRole("button", { name: /חיבור עוזר/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "עוזר AI" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(screen.getByRole("radio", { name: "קריאה בלבד" }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
     expect(await screen.findByText("היקף הגישה")).toBeInTheDocument();
@@ -198,7 +244,8 @@ describe("assistant settings", () => {
     renderAssistant(
       <AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} blocked={() => true} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "עוזר AI" })).getByRole("button", { name: "ניתוק" }));
     const confirm = screen.getByRole("dialog", { name: "לנתק את העוזר?" });
     fireEvent.click(within(confirm).getByRole("button", { name: "ניתוק" }));
     expect(screen.queryByRole("dialog", { name: "לנתק את העוזר?" })).not.toBeInTheDocument();
@@ -211,11 +258,13 @@ describe("assistant settings", () => {
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
-          <AssistantSettings noCompany />
+          <MemoryRouter>
+            <AssistantSettings noCompany />
+          </MemoryRouter>
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const row = screen.getByRole("button", { name: "עוזר" });
+    const row = screen.getByRole("button", { name: "עוזר AI" });
     expect(row).toBeDisabled();
     expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
   });

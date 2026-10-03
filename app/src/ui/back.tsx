@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
-import { useLocation, useNavigate, useNavigationType, NavigationType } from "react-router-dom";
+import { useLocation, useNavigate, useNavigationType, NavigationType, type NavigateFunction } from "react-router-dom";
 import { IconButton } from "./icon-button";
 import { BackIcon } from "./icons";
 
@@ -174,4 +174,12 @@ export function useSheetHistory(
     }
     onOpenChange(false);
   }, [location.state, name, navigate, onOpenChange]);
+}
+
+/** Drop open sheet entries in one step. A second close must not push another entry. */
+export function popSheetLayers(navigate: NavigateFunction, count: number): void {
+  if (count <= 0) return;
+  const idx = historyIndex();
+  const steps = idx == null ? count : Math.min(count, idx);
+  if (steps > 0) void navigate(-steps);
 }

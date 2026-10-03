@@ -466,19 +466,27 @@ function DevSettings() {
   const mode = params.get("connected");
   const connected = mode === "1" || mode === "auth";
   const assistant = params.get("assistant");
+  const noCompany = params.get("nocompany") === "1";
+  const emailParam = params.get("email");
+  const email = emailParam === "none"
+    ? ""
+    : emailParam === "long"
+      ? "owner.with.a.very.long.mailbox.name@example.com"
+      : "owner@example.com";
   return (
     <SettingsScreen
       sample={{
-        name: "בדיקה",
-        vatRegistered: true,
-        connected,
+        name: noCompany ? null : "בדיקה",
+        connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
         lastError: mode === "auth" ? "sumit_auth" : null,
-        email: "owner@example.com",
-        projectCount: 2,
+        email,
+        noCompany,
         expenseCategories: 1,
         incomeCategories: 1,
-        assistant: assistant === "connected"
+        assistant: noCompany
+          ? { state: "no-company" }
+          : assistant === "connected"
           ? { state: "connected", scope: "read_write", lastUsedAt: "2026-09-30T11:05:00.000Z", id: "mcp-1" }
           : assistant === "expired"
             ? { state: "expired", scope: "read", id: "mcp-1" }
