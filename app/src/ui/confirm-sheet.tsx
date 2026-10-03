@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { Button } from "./button";
 import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
@@ -12,6 +13,7 @@ type ConfirmSheetProps = {
   destructive?: boolean;
   busy?: boolean;
   onConfirm: () => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
 export function ConfirmSheet({
@@ -24,9 +26,10 @@ export function ConfirmSheet({
   destructive = false,
   busy = false,
   onConfirm,
+  returnFocusRef,
 }: ConfirmSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={title}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={title} returnFocusRef={returnFocusRef}>
       {item ? <p className="t-label text-text-secondary">{item}</p> : null}
       <p className="t-hint text-text-secondary">{consequence}</p>
       <Button

@@ -190,6 +190,52 @@ export function useSheetHistory(
   }, [name, navigate, onOpenChange]);
 }
 
+let dropDone = false;
+let dropActedKey = "";
+
+/** Tests start from a fresh reload. */
+export function resetDropRestoredSheet(): void {
+  dropDone = false;
+  dropActedKey = "";
+}
+
+/**
+ * A reload restores a sheet history entry while the sheet starts closed.
+ * Pop that entry so the first Back is not a dead step. A `?sheet=` visit
+ * stays, because the screen opens the sheet from the query.
+ */
+export function DropRestoredSheet() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (dropDone) return;
+    const layer = layerName(location.state);
+    if (layer == null) {
+      dropDone = true;
+      return;
+    }
+    if (new URLSearchParams(location.search).has("sheet")) {
+      dropDone = true;
+      return;
+    }
+    if (dropActedKey === location.key) return;
+    dropActedKey = location.key;
+    const idx = historyIndex();
+    if (idx != null && idx > 0) {
+      void navigate(-1);
+      return;
+    }
+    dropDone = true;
+    const prev = isRecord(location.state) ? { ...location.state } : {};
+    delete prev.flowLayer;
+    void navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: Object.keys(prev).length === 0 ? null : prev,
+    });
+  }, [location, navigate]);
+  return null;
+}
+
 /** Drop open sheet entries in one step. A second close must not push another entry. */
 export function popSheetLayers(navigate: NavigateFunction, count: number): void {
   if (count <= 0) return;

@@ -15,7 +15,7 @@ The row title is SUMIT, with the document icon. Every settled state is one hint 
 | Status failed to load | לא הצלחנו לטעון | Nothing. ניסיון חוזר refetches the status only |
 | Loading | a skeleton bar | Nothing. It is not focusable and it does not say מחובר |
 
-A sync failure that is not the key keeps מחובר. While רענון עכשיו is held, the sheet says הרענון נכשל and the retry time, with no "נסו שוב". A rate limit with no retry time says "הרענון נכשל. נסו שוב." A last-sync time is one line: "עודכן ב-HH:MM" today, "עודכן אתמול ב-HH:MM" yesterday, and "עודכן ב-D.M" after that. A missing time is omitted. Starting the company from that sheet returns only to `/settings?sheet=sumit`, after the company query has settled, and that visit replaces the sheet entry. Any other `return` finishes on Home. Opening from `?sheet=sumit` removes that param and keeps `?preview`. When that visit already has an earlier in-app entry, the sheet reuses it, so one Back after the sheet closes leaves Settings. A first entry in the tab pushes the sheet instead, so Back closes the sheet and stays on Settings.
+A sync failure that is not the key keeps מחובר. While רענון עכשיו is held, the sheet says הרענון נכשל and the retry time, with no "נסו שוב". A rate limit with no retry time says "הרענון נכשל. נסו שוב." A last-sync time is one line: "עודכן ב-HH:MM" today, "עודכן אתמול ב-HH:MM" yesterday, and "עודכן ב-D.M" after that. It refreshes at the next Israel midnight. A missing time is omitted. The · before מספר חברה and before the time stays with those words. Starting the company from that sheet returns only to `/settings?sheet=sumit`, after the company query has settled, and that visit replaces the sheet entry. Any other `return` finishes on Home. Opening from `?sheet=sumit` removes that param and keeps `?preview`. When that visit already has an earlier in-app entry, the sheet reuses it, so one Back after the sheet closes leaves Settings. A first entry in the tab pushes the sheet instead, so Back closes the sheet and stays on Settings. Reloading while a sheet is open drops that restored entry, so the first Back is not a dead step. A `?sheet=` address still opens the sheet.
 
 ### עוזר AI row
 
@@ -23,9 +23,11 @@ The row title is עוזר AI, with the spark icon. The no-company row stays `ari
 
 | State | Hint | What opens |
 | --- | --- | --- |
-| Connected | מחובר · קריאה וכתיבה, or מחובר · קריאה בלבד | The עוזר AI sheet: last use, ניתוק |
-| Not connected | לא מחובר | Step 1, titled חיבור עוזר AI: the scope, then יצירת קוד |
+| Connected | מחובר · קריאה וכתיבה, or מחובר · קריאה בלבד | The עוזר AI sheet: last use, ניתוק. Last use is "שימוש אחרון ב-HH:MM" today, "שימוש אחרון אתמול ב-HH:MM" yesterday, and "שימוש אחרון ב-D.M" after that. No use yet is "עדיין אין שימוש" |
+| Not connected | לא מחובר | Step 1, titled חיבור עוזר AI: קריאה וכתיבה ("גם כתיבה", selected) and קריאה בלבד ("בלי כתיבה"), then יצירת קוד. A tap on a scope does not mint |
 | Expired | צריך לחבר מחדש | A status row: alert icon, heading "פג תוקף", muted "הקוד הפסיק לעבוד אחרי 90 יום.", then חיבור מחדש, which reveals step 1, titled חיבור עוזר AI, and focuses its title. ניתוק stays in that sheet |
+
+Step 2 is titled הקוד מוכן. It has a כתובת row with העתקה, a קוד row with העתקה, the scope line, the link איך מחברים ב־Claude, and סיום. The code is the secret only, shown once. The address is `VITE_FLOW_MCP_URL` when that is set, otherwise the flow-mcp URL derived from the Supabase URL. The help sheet is titled חיבור ב־Claude. Claude Code is one copyable command, `claude mcp add --scope user` with the address and an Authorization bearer. The hint "אם Claude Code לא מותקן, התקינו אותו קודם." follows. Then "ב־Claude.ai הדביקו את הכתובת ואת הקוד." The command is built in the app. It is not a second secret. ✕ and Escape on every Settings sheet return focus to the control that opened it. A hint separator stays on the same line as the words after it.
 | Status failed to load | לא הצלחנו לטעון | Nothing. ניסיון חוזר refetches the assistant status only |
 | Loading | a skeleton bar | Nothing. It is not focusable and it does not say מחובר |
 

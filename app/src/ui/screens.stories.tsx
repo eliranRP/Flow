@@ -785,6 +785,13 @@ export const SettingsAssistantScope: Story = {
   ),
 };
 
+const assistantAddress = "https://example.com/functions/v1/flow-mcp";
+const assistantSecret = {
+  id: "mcp-1",
+  secret: "shown-once-example",
+  scope: ["read", "write"],
+};
+
 export const SettingsAssistantSecret: Story = {
   name: "Assistant secret",
   render: () => (
@@ -792,11 +799,49 @@ export const SettingsAssistantSecret: Story = {
       <ExampleBar />
       <AssistantSettings
         sample={{ state: "empty" }}
-        initialSecret={{
-          id: "mcp-1",
-          secret: "flow_mcp_abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrst",
-          scope: ["read"],
-        }}
+        address={assistantAddress}
+        initialSecret={{ ...assistantSecret, scope: ["read"] }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantHelp: Story = {
+  name: "Assistant help",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        address={assistantAddress}
+        initialSecret={assistantSecret}
+        initialHelp
+      />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantUsed: Story = {
+  name: "Assistant used",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings
+        sample={{ state: "connected", scope: "read_write", id: "mcp-1", lastUsedAt: "2026-09-30T11:05:00.000Z" }}
+        initialDetails
+      />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsAssistantUnused: Story = {
+  name: "Assistant unused",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings
+        sample={{ state: "connected", scope: "read", id: "mcp-1", lastUsedAt: null }}
+        initialDetails
       />
     </StoryRoute>
   ),

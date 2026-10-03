@@ -25,19 +25,32 @@ function PhaseButton(props: { label: string; phase: Phase }) {
   );
 }
 
+let bumpHoldFailure: () => void = () => undefined;
+
 function RetryHold() {
   const retryRef = useRef<HTMLButtonElement>(null);
   const rowRef = useRef<HTMLButtonElement>(null);
   const [phase, setPhase] = useState<Phase>("error");
+  const [nonce, setNonce] = useState(0);
   // Play can run before effects. The render assigns the setter the test calls.
   setHoldPhase = setPhase;
-  useFocusRowAfterRetry(phase === "error", retryRef, rowRef, phase === "ready", 0);
+  bumpHoldFailure = () => { setNonce((value) => value + 1); };
+  useFocusRowAfterRetry(phase === "error", retryRef, rowRef, phase === "ready", nonce);
 
   return (
     <div>
       <PhaseButton label="לטעינה" phase="loading" />
       <PhaseButton label="למוכן" phase="ready" />
       <PhaseButton label="לשגיאה" phase="error" />
+      <button
+        type="button"
+        onMouseDown={(event) => {
+          event.preventDefault();
+          bumpHoldFailure();
+        }}
+      >
+        כישלון
+      </button>
       <button type="button">אחר</button>
       {phase === "loading" ? <p role="status">טוען</p> : null}
       {phase === "error" ? <button type="button" ref={retryRef}>ניסיון חוזר</button> : null}
@@ -90,5 +103,19 @@ export const HoldThroughRemoval: Story = {
     show("ready");
     await expect(elsewhere).toHaveFocus();
     await expect(canvas.getByRole("button", { name: "השורה" })).not.toHaveFocus();
+  },
+};
+
+/** A failed retry leaves the link focused, so the next recovery still moves focus. */
+export const RearmAfterFailure: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const retry = canvas.getByRole("button", { name: "ניסיון חוזר" });
+    retry.focus();
+    await expect(retry).toHaveFocus();
+    flushSync(() => { bumpHoldFailure(); });
+    await expect(retry).toHaveFocus();
+    show("ready");
+    await expect(canvas.getByRole("button", { name: "השורה" })).toHaveFocus();
   },
 };

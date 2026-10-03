@@ -73,6 +73,7 @@ export function Sheet({
   onEscape,
   onBeforeClose,
   onRequestClose,
+  returnFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -97,15 +98,46 @@ export function Sheet({
   onBeforeClose?: () => undefined | boolean | Promise<undefined | boolean>;
   /** The sheet's own close. Callers use this instead of the first dialog's ✕. */
   onRequestClose?: RefObject<(() => void) | null>;
+  /** ✕ and Escape put focus back on the control that opened the sheet. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const localTitle = useRef<HTMLHeadingElement>(null);
   const titleRef = titleRefProp ?? localTitle;
   const closing = useRef(false);
   const deciding = useRef(false);
+  const wasOpen = useRef(false);
   useEffect(() => {
     if (open) closing.current = false;
   }, [open]);
+  useEffect(() => {
+    if (!returnFocusRef) return;
+    if (open) {
+      wasOpen.current = true;
+      return;
+    }
+    if (!wasOpen.current) return;
+    const ref = returnFocusRef;
+    const started = performance.now();
+    let frame = 0;
+    const tryFocus = () => {
+      const el = ref.current;
+      const dialogs = [...document.querySelectorAll("[role=\"dialog\"]")];
+      const blocked = dialogs.some((dialog) => el == null || !dialog.contains(el));
+      // Vaul removes the dialog on a 500ms timer, after the close animation.
+      if (blocked && performance.now() - started < 800) {
+        frame = window.requestAnimationFrame(tryFocus);
+        return;
+      }
+      wasOpen.current = false;
+      if (!blocked && el?.isConnected) el.focus();
+    };
+    const timer = window.setTimeout(tryFocus, 0);
+    return () => {
+      window.clearTimeout(timer);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
+  }, [open, returnFocusRef]);
   async function requestClose() {
     if (closing.current || deciding.current) return;
     deciding.current = true;
