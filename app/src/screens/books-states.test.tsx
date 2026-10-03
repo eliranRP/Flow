@@ -23,7 +23,7 @@ import { HomeScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
   handlers: [] as Array<(event: string, session: Session | null) => void>,
-  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string } | null }> =>
+  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string; code?: string } | null }> =>
     Promise.resolve({ data: null, error: { message: "db down" } }),
 }));
 
@@ -259,20 +259,243 @@ describe("rejected writes", () => {
     expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
-      expect(calls).toContain("resolve_review");
+      expect(calls).toContain("approve_review_item");
     });
-    expect(args.find((entry) => isRecord(entry) && entry.p_action === "approved")).toMatchObject({
-      p_action: "approved",
-      p_remember: false,
+    expect(args.find((entry) => isRecord(entry) && entry.p_check_shown === true)).toMatchObject({
+      p_id: "r1",
       p_project_id: "p1",
       p_category_id: "c1",
+      p_remember: false,
+      p_shown_project_id: "p1",
+      p_shown_category_id: "c1",
+      p_check_shown: true,
     });
     fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
     await waitFor(() => {
       expect(calls).toContain("reopen_review");
     });
     expect(await screen.findByText("הפריט חזר לתור, והשיוך הקודם שוחזר.")).toBeInTheDocument();
-    expect(calls).toContain("resolve_review");
+    expect(calls).not.toContain("resolve_review");
+  });
+
+  it("shows an info toast when the shown assignment is stale", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p2",
+            category_id: "c1",
+            project_name: "ביתא",
+            category_name: "חומרים",
+            supplier_name: "מחסן",
+          }],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        return Promise.resolve({ data: { ok: false, error: { code: "stale" } }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("השיוך עודכן. בדקו את הכרטיס.")).toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(screen.getByText("ביתא")).toBeInTheDocument();
+  });
+
+  it("shows an info toast when the item is already closed", async () => {
+    let open = true;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: open ? [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }] : [],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        open = false;
+        return Promise.resolve({ data: { ok: false, error: { code: "already_closed" } }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("הפריט כבר טופל.")).toBeInTheDocument();
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+  });
+
+  it("offers a retry when approve hits a deadlock", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        return Promise.resolve({
+          data: null,
+          error: { message: "could not serialize access due to concurrent update", code: "40001" },
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+  });
+
+  it("focuses אישור before retrying a serialization failure", async () => {
+    let attempts = 0;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        attempts += 1;
+        if (attempts === 1) {
+          return Promise.resolve({
+            data: null,
+            error: { message: "could not serialize access due to concurrent update", code: "40001" },
+          });
+        }
+        return new Promise(() => undefined);
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    expect(screen.getByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    retry.focus();
+    fireEvent.click(retry);
+    const approve = screen.getByRole("button", { name: "אישור" });
+    await waitFor(() => {
+      expect(approve).toHaveFocus();
+    });
+    expect(approve).toHaveAttribute("aria-busy", "true");
+    expect(document.body).not.toHaveFocus();
+  });
+
+  it("refreshes the queue when the item is gone", async () => {
+    let open = true;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: open ? [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }] : [],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        open = false;
+        return Promise.resolve({ data: { ok: false, error: { code: "not_found" } }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+  });
+
+  it("does not treat a malformed approve body as success", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") return Promise.resolve({ data: { surprise: true }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
   });
 
   it("opens split for an unallocated shared cost", async () => {
@@ -912,7 +1135,7 @@ describe("rejected writes", () => {
     expect(screen.queryByText(/אי אפשר לאשר/)).not.toBeInTheDocument();
   });
 
-  it("advances the visit meter without shrinking the queue", async () => {
+  it("advances the visit meter on a local skip and keeps it when the card leaves", async () => {
     const row = (id: string, supplier: string): ReviewRow => ({
       id,
       transaction_id: id,
@@ -927,30 +1150,41 @@ describe("rejected writes", () => {
       project_name: "שיפוץ הרצל 12",
       category_name: "חומרים",
     });
+    const first = row("a", "חומרי בניין השרון");
+    const second = row("b", "הובלות הגליל");
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    function queue(rows: ReviewRow[]) {
+    function queue(rows: ReviewRow[], onDone: (id: string) => void) {
       return (
         <QueryClientProvider client={client}>
           <ToastProvider>
             <MemoryRouter>
-              <ReviewQueue rows={rows} search="" sample />
+              <ReviewQueue
+                rows={rows}
+                search=""
+                sample
+                previewWrite={{ run: () => Promise.resolve(), onDone, onUndo: () => undefined }}
+              />
             </MemoryRouter>
           </ToastProvider>
         </QueryClientProvider>
       );
     }
-    const { rerender } = render(queue([row("a", "חומרי בניין השרון"), row("b", "הובלות הגליל")]));
+    const { rerender } = render(queue([first, second], () => undefined));
     const meter = screen.getByRole("meter", { name: "התקדמות התור" });
     expect(meter).toHaveAttribute("aria-valuenow", "1");
     expect(meter).toHaveAttribute("aria-valuemax", "2");
-    rerender(queue([row("b", "הובלות הגליל")]));
-    const next = screen.getByRole("meter", { name: "התקדמות התור" });
-    expect(next).toHaveAttribute("aria-valuenow", "2");
-    expect(next).toHaveAttribute("aria-valuemax", "2");
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    await waitFor(() => {
+      expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
+    });
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
+    rerender(queue([second], () => undefined));
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
     expect(await screen.findByRole("heading", { name: "הובלות הגליל" })).toBeInTheDocument();
   });
 
-  it("restores the visit meter when an approved card comes back", () => {
+  it("grows the visit total by one when an approved card comes back", async () => {
     const row = (id: string, supplier: string): ReviewRow => ({
       id,
       transaction_id: id,
@@ -965,8 +1199,71 @@ describe("rejected writes", () => {
       project_name: "אלפא",
       category_name: "מלט",
     });
+    const rows = [row("a", "ספק א"), row("b", "ספק ב")];
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let listed = rows;
+    function draw() {
+      return (
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <MemoryRouter>
+              <ReviewQueue
+                rows={listed}
+                search=""
+                sample
+                previewWrite={{
+                  run: () => Promise.resolve(),
+                  onDone: (id) => {
+                    listed = listed.filter((item) => item.id !== id);
+                    rerender(draw());
+                  },
+                  onUndo: (id) => {
+                    const original = rows.find((item) => item.id === id);
+                    if (original == null || listed.some((item) => item.id === id)) return;
+                    listed = [original, ...listed];
+                    rerender(draw());
+                  },
+                }}
+              />
+            </MemoryRouter>
+          </ToastProvider>
+        </QueryClientProvider>
+      );
+    }
+    const { rerender } = render(draw());
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "ספק ב" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "ספק א" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
+  });
+
+  it("keeps the visit index when a card closes remotely or a new card arrives", () => {
+    const row = (id: string, supplier: string): ReviewRow => ({
+      id,
+      transaction_id: id,
+      description: supplier,
+      doc_date: "2026-06-20",
+      amount_net: -1_000n,
+      direction: "expense",
+      reason: null,
+      project_id: "p",
+      category_id: "c",
+      supplier_name: supplier,
+      project_name: "אלפא",
+      category_name: "מלט",
+    });
     const rows = [row("a", "ספק א"), row("b", "ספק ב"), row("c", "ספק ג")];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     function queue(listed: ReviewRow[]) {
       return (
         <QueryClientProvider client={client}>
@@ -979,17 +1276,11 @@ describe("rejected writes", () => {
       );
     }
     const { rerender } = render(queue(rows));
-    const meter = screen.getByRole("meter", { name: "התקדמות התור" });
-    expect(meter).toHaveAttribute("aria-valuenow", "1");
-    expect(meter).toHaveAttribute("aria-valuemax", "3");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
     rerender(queue(rows.slice(1)));
-    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "2");
-    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
-    const third = rows[2];
-    if (third == null) throw new Error("review row missing");
-    rerender(queue([third]));
-    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "3");
-    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "2");
     rerender(queue(rows));
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.getByRole("meter", { name: "התקדמות התור" })).toHaveAttribute("aria-valuemax", "3");
