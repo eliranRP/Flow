@@ -244,16 +244,9 @@ export function useSheetHistory(
       return true;
     }
     // A restored Forward entry can still list a sheet that already closed.
-    // Close this sheet and every layer above it, instead of ignoring the request.
+    // Pop this sheet and every layer above it. The popstate handler closes them.
+    // Closing first, before the pop, leaves the reopened sheet on the same entry.
     const closing = stack.slice(index);
-    let closed = false;
-    for (const layer of closing) {
-      const close = sheetClosers.get(layer);
-      if (close == null) continue;
-      close(false);
-      closed = true;
-    }
-    if (!closed) return false;
     const steps = closing.length;
     const idx = historyIndex();
     if (idx != null && idx >= steps) {
@@ -262,6 +255,14 @@ export function useSheetHistory(
     }
     // MemoryRouter has no browser index, so closing cannot pop. Drop the layers
     // in place, or a sheet stays stuck below a dead entry.
+    let closed = false;
+    for (const layer of closing) {
+      const close = sheetClosers.get(layer);
+      if (close == null) continue;
+      close(false);
+      closed = true;
+    }
+    if (!closed) return false;
     void navigate(`${current.pathname}${current.search}${current.hash}`, {
       replace: true,
       state: droppedStackState(current.state, stack.slice(0, index)),
