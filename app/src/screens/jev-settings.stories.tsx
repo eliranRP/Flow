@@ -1,9 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { JEV_DEFAULT, JevSettingsCard, type JevCardState } from "./jev-settings";
 
-const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "connected" };
-const on: JevCardState = { ...JEV_DEFAULT, enabled: true, status: "connected" };
-const missing: JevCardState = { ...JEV_DEFAULT, status: "missing-key" };
+const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "ready" };
+const on: JevCardState = { ...JEV_DEFAULT, enabled: true, status: "ready" };
 const failed: JevCardState = { ...JEV_DEFAULT, status: "error" };
 
 const meta = {
@@ -29,11 +28,6 @@ export const On: Story = { args: { state: on, optionsOpen: true }, ...light390 }
 export const OnDark: Story = { args: { state: on, optionsOpen: true }, ...dark390 };
 export const On320: Story = { args: { state: on, optionsOpen: true }, ...light320 };
 export const OnDark320: Story = { args: { state: on, optionsOpen: true }, ...dark320 };
-
-export const MissingKey: Story = { args: { state: missing }, ...light390 };
-export const MissingKeyDark: Story = { args: { state: missing }, ...dark390 };
-export const MissingKey320: Story = { args: { state: missing }, ...light320 };
-export const MissingKeyDark320: Story = { args: { state: missing }, ...dark320 };
 
 export const Error: Story = { args: { state: failed }, ...light390 };
 export const ErrorDark: Story = { args: { state: failed }, ...dark390 };
