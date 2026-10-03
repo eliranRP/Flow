@@ -7,6 +7,7 @@ import { signUserJwt, type SigningKey } from "./sign.ts";
 
 const PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
 const PROTOCOL = "2025-06-18";
+const MAX_BODY_BYTES = 65_536;
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -281,8 +282,45 @@ function scopeList(choice: unknown): string[] | null {
   return null;
 }
 
-async function readBody(req: Request): Promise<Record<string, unknown> | null> {
-  const text = await req.text();
+function declaredLength(req: Request): number | null {
+  const raw = req.headers.get("content-length");
+  if (raw == null || !/^\d+$/.test(raw.trim())) return null;
+  const size = Number(raw);
+  return Number.isSafeInteger(size) ? size : null;
+}
+
+/** Read at most MAX_BODY_BYTES. A larger body is refused and the rest is not kept. */
+async function cappedText(req: Request): Promise<string | "too_large"> {
+  const declared = declaredLength(req);
+  if (declared != null && declared > MAX_BODY_BYTES) return "too_large";
+  if (req.body == null) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const next = await reader.read();
+    if (next.done) break;
+    const value = next.value;
+    if (value == null || value.byteLength === 0) continue;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return "too_large";
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+async function readBody(req: Request): Promise<Record<string, unknown> | null | "too_large"> {
+  const text = await cappedText(req);
+  if (text === "too_large") return "too_large";
   if (!text) return {};
   try {
     const parsed = JSON.parse(text) as unknown;
@@ -295,7 +333,7 @@ async function readBody(req: Request): Promise<Record<string, unknown> | null> {
 
 async function handleMint(req: Request, deps: Deps, userId: string): Promise<Response> {
   const body = await readBody(req);
-  if (body == null) return jsonResponse(req, { error: "validation" }, 400);
+  if (body === "too_large" || body == null) return jsonResponse(req, { error: "validation" }, 400);
   const scope = scopeList(body.scope);
   if (!scope) return jsonResponse(req, { error: "validation" }, 400);
   const peppers = peppersOf(deps.env("FLOW_MCP_PEPPER"));
@@ -321,6 +359,7 @@ async function handleMint(req: Request, deps: Deps, userId: string): Promise<Res
 
 async function handleRevoke(req: Request, deps: Deps, userId: string): Promise<Response> {
   const body = await readBody(req);
+  if (body === "too_large") return jsonResponse(req, { error: "validation" }, 400);
   const id = body && typeof body.id === "string" ? body.id : "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return jsonResponse(req, { error: "validation" }, 400);
   const result = await rpc(deps, "revoke_mcp_credential", { p_user: userId, p_id: id });
@@ -377,7 +416,26 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   if (row?.found !== true || row.revoked_at != null || expired || typeof row.id !== "string") {
     return unauthorized(req, await noteFailure(deps, req));
   }
-  const body = await readBody(req);
+  // The size cap is the header and the capped read. An over-cap request is
+  // refused before the rate limit. The tool name is in the body, so the
+  // bucket is chosen from that capped text, and the limit runs before the
+  // call is signed or handled.
+  const declared = declaredLength(req);
+  if (declared != null && declared > MAX_BODY_BYTES) {
+    return jsonResponse(req, { error: "validation" }, 400);
+  }
+  const text = await cappedText(req);
+  if (text === "too_large") return jsonResponse(req, { error: "validation" }, 400);
+  let body: Record<string, unknown> | null = {};
+  if (text) {
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (Array.isArray(parsed) || parsed == null || typeof parsed !== "object") body = null;
+      else body = parsed as Record<string, unknown>;
+    } catch {
+      body = null;
+    }
+  }
   const method = body && typeof body.method === "string" ? body.method : "";
   const params = body?.params;
   const record = params != null && typeof params === "object" && !Array.isArray(params)

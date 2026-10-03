@@ -824,6 +824,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   assertEquals(deniedBody.result.isError, true, "isError");
   assertEquals(deniedBody.result.structuredContent.error.code, "forbidden", "read token cannot write");
   assertEquals(ledger.includes("mcp_assign_expense"), false, "the wrapper was not called");
+  assertEquals(kinds, ["write"], "a read-only write attempt still uses the write bucket");
 
   scope = ["write"];
   const writeList = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
@@ -843,4 +844,30 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
   assertEquals(readNames.length, 6, "six reads");
+});
+
+Deno.test("an over-cap body is refused before the rate limit", async () => {
+  const calls: Call[] = [];
+  const token = `flow_mcp_${"e".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: "x".repeat(65_537),
+  }), deps(calls, {
+    lookup_mcp_credential: {
+      found: true,
+      id: "55555555-5555-4000-8000-000000000005",
+      user_id: "user-1",
+      company_id: "company-1",
+      scope: ["read", "write"],
+      expires_at: "2099-01-01T00:00:00.000Z",
+      revoked_at: null,
+    },
+  }));
+  assertEquals(response.status, 400, "over cap");
+  const payload = await response.json();
+  assertEquals(payload.error, "validation", "validation");
+  assertEquals(calls.some((call) => call.url.endsWith("bump_mcp_rate")), false, "rate limit not called");
+  assertEquals(calls.some((call) => call.url.endsWith("lookup_mcp_credential") && call.body?.p_token_hash === hash), true, "the token was still checked");
 });

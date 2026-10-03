@@ -109,6 +109,8 @@ The standby kid appears in the hosted JWKS. Standby status was confirmed in the 
 
 Reads need this key. Without it, `tools/list` is empty and `tools/call` returns a tool error with `isError`, not HTTP 503. Prove the key with the spike before the production secret is set.
 
+Write tools shipped after the first connections. The migration sets every existing MCP token to `read` only. Those connections do not gain write. The owner opens Settings, disconnects עוזר, and connects again. A new token still defaults to read and write. A deadlock or a serialization failure on a write returns the tool error `unavailable` with message `retry`. That response is not stored, so the same idempotency key can be sent again.
+
 The procedure, in this order:
 
 1. Open the project's JWT signing keys in the Supabase dashboard. Create one ES256 key and leave it in standby. Do not rotate it.
