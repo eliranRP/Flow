@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Jev settings, retry. A new save clears the previous ניסיון חוזר toast. The switch follows that save, so a retry tapped while it is still running leaves the switch usable. No migration. Decision [0083](decisions/0083-jev-connector.md).
+
 Jev settings, design. The switch is a חיבורים row: כבוי, פעיל · מצב צל, or שגיאה. A save keeps focus and stays `aria-busy`. The error row matches SUMIT, with ניסיון חוזר on the row. A dashboard failure does not render the card. אפשרויות is the shadow hint and a chevron. The percent field stays hidden until auto mode. A retry resends the save that failed. A failed refresh after a good save keeps that save. No migration. Decision [0083](decisions/0083-jev-connector.md).
 
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).

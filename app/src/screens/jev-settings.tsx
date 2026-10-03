@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { getSupabase } from "../lib/supabase";
 import { AlertIcon, ChevronDownIcon, TagIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
@@ -260,8 +260,6 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
     retry: false,
     queryFn: readJevIntegration,
   });
-  const [pending, setPending] = useState<StoredJev | null>(null);
-  const saving = useRef(false);
   const save = useWrite<StoredJev>({
     failure: "לא הצלחנו לשמור.",
     keys: ["jev-integration"],
@@ -271,7 +269,7 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
     },
   });
   const stored: StoredJev | null = query.data ?? null;
-  const current = pending ?? stored;
+  const current = (save.isPending ? save.variables : undefined) ?? stored;
   const view: JevCardState = current != null
     ? { ...current, status: "ready" }
     : query.isPending
@@ -280,15 +278,8 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
 
   function commit(next: StoredJev) {
     if (blocked?.()) return;
-    if (saving.current || save.isPending) return;
-    saving.current = true;
-    setPending(next);
-    save.mutate(next, {
-      onSettled: () => {
-        saving.current = false;
-        setPending(null);
-      },
-    });
+    if (save.isPending) return;
+    save.mutate(next);
   }
 
   return (
@@ -297,15 +288,12 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
       busy={save.isPending}
       showThreshold={showThreshold}
       onToggle={(enabled) => {
-        if (!stored && !pending) return;
-        const base = pending ?? stored;
-        if (!base) return;
-        commit(turnedOn(base, enabled));
+        if (!stored || save.isPending) return;
+        commit(turnedOn(stored, enabled));
       }}
       onThreshold={(threshold) => {
-        const base = pending ?? stored;
-        if (!base) return;
-        commit({ ...base, threshold: roundJevThreshold(threshold) });
+        if (!stored || save.isPending) return;
+        commit({ ...stored, threshold: roundJevThreshold(threshold) });
       }}
       onRetry={() => { void query.refetch(); }}
     />
