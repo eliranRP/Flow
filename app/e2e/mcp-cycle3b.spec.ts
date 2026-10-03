@@ -33,7 +33,7 @@ async function expectNoOverflow(page: Page) {
   expect(await horizontalOverflow(page)).toEqual([]);
 }
 
-/** Line-clamp keeps the text in the DOM, so a text query cannot see the cut. */
+/** Line-clamp keeps the text in the DOM, so a text query cannot see a vertical cut. */
 async function bannerTitleClipped(page: Page): Promise<boolean> {
   return page.locator(".ui-banner .ui-row-title").evaluate((node) => {
     if (!(node instanceof HTMLElement) || node.parentElement == null) return true;
