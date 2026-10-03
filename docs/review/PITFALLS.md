@@ -25,6 +25,8 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 - CI before deploy. The deploy job needs `lint`, `check`, and `e2e` on that commit, and it does not migrate before the hosted bundle check. Those three job names stay stable.
 - The deploy job pins its actions to a full commit SHA. Checkout does not persist credentials. A missing production secret exits 1 before the build.
 - A read or write that takes an id has a cross-tenant test: another company gets nothing, and the call is refused.
+- No provider-name literal outside `supabase/functions/_shared/connectors/<provider>/`, the registry module, and migrations. The core calls the registry. It does not branch on the provider name.
+- Logs and errors never print a secret, a token, ciphertext, a nonce, an account number, or a routing number. `redact()` runs before any log of a provider payload.
 
 ## Design files for a screen
 
