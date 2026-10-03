@@ -9,10 +9,11 @@ import { popSheetLayers, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { AlertIcon, LogoutIcon, SparkIcon } from "../ui/icons";
+import { AlertIcon, CopyIcon, LogoutIcon, SparkIcon } from "../ui/icons";
 import { FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
+import { IconButton } from "../ui/icon-button";
 import { Sheet } from "../ui/sheet";
 import { Skeleton } from "../ui/skeleton";
 import { TextLink } from "../ui/text-link";
@@ -55,29 +56,52 @@ function scopeChoice(scope: string[] | undefined): AssistantScope {
   return scope?.includes("write") ? "read_write" : "read";
 }
 
-function CopyRow({
+const COMMAND_FIELD = "פקודת חיבור ל־Claude Code";
+
+function CopyField({
   label,
   labelId,
+  fieldLabel,
   value,
   valueRef,
   failed,
   onCopy,
 }: {
-  label: string;
-  labelId: string;
+  label?: string;
+  labelId?: string;
+  fieldLabel?: string;
   value: string;
-  valueRef?: RefObject<HTMLElement | null>;
+  valueRef?: RefObject<HTMLInputElement | null>;
   failed: boolean;
   onCopy: () => void;
 }) {
-  return (
-    <div className="ui-copy-row" role="group" aria-labelledby={labelId}>
-      <div className="ui-copy-main">
-        <p className="ui-field-label" id={labelId}>{label}</p>
-        <bdi ref={valueRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="">{value}</bdi>
-        {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
+  const named = label != null && labelId != null;
+  const control = (
+    <>
+      {named ? <p className="ui-field-label" id={labelId}>{label}</p> : null}
+      <div className="ui-code-field-box">
+        <input
+          ref={valueRef}
+          className="ui-field-control ui-code-field-input"
+          readOnly
+          dir="ltr"
+          value={value}
+          aria-label={named ? undefined : fieldLabel}
+          aria-labelledby={named ? labelId : undefined}
+          spellCheck={false}
+          data-vaul-no-drag=""
+        />
+        <IconButton label="העתקה" className="ui-code-field-copy" onClick={onCopy}>
+          <CopyIcon />
+        </IconButton>
       </div>
-      <TextLink chevron={false} label={`העתקה: ${label}`} onClick={onCopy}>העתקה</TextLink>
+      {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
+    </>
+  );
+  if (!named) return <div className="ui-code-field">{control}</div>;
+  return (
+    <div className="ui-code-field" role="group" aria-labelledby={labelId}>
+      {control}
     </div>
   );
 }
@@ -170,12 +194,12 @@ export function AssistantSettings({
   const disconnectRef = useRef<HTMLButtonElement>(null);
   const helpLinkRef = useRef<HTMLButtonElement>(null);
   const connectTitleRef = useRef<HTMLHeadingElement>(null);
-  const urlRef = useRef<HTMLElement>(null);
-  const commandRef = useRef<HTMLElement>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
+  const commandRef = useRef<HTMLInputElement>(null);
   const focusStep = useRef(false);
   const hadSecret = useRef(initialSecret != null);
   const openRef = useRef(initialSecret != null || initialOpen);
-  const secretRef = useRef<HTMLElement>(null);
+  const secretRef = useRef<HTMLInputElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
   const setDetailsSheet = useSheetHistory("assistant-details", detailsOpen, setDetailsOpen);
   const setHelpSheet = useSheetHistory("assistant-help", helpOpen, setHelpOpen);
@@ -247,18 +271,15 @@ export function AssistantSettings({
     }
   }
 
-  async function copyValue(field: CopyField, value: string, node: HTMLElement | null) {
+  async function copyValue(field: CopyField, value: string, node: HTMLInputElement | null) {
     try {
       await navigator.clipboard.writeText(value);
       setManualField(null);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
       if (node) {
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        const selection = window.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
+        node.focus();
+        node.select();
       }
       setManualField(field);
     }
@@ -445,7 +466,7 @@ export function AssistantSettings({
               <p className="ui-field-label" id="assistant-scope-label">{SCOPE_FIELD}</p>
               <p>{scopeLabel(scopeChoice(secret.scope))}</p>
             </div>
-            <CopyRow
+            <CopyField
               label="כתובת"
               labelId="assistant-url-label"
               value={mcpUrl}
@@ -453,7 +474,7 @@ export function AssistantSettings({
               failed={manualField === "url"}
               onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
             />
-            <CopyRow
+            <CopyField
               label="קוד"
               labelId="assistant-secret-label"
               value={secret.secret}
@@ -516,9 +537,8 @@ export function AssistantSettings({
         <div className="ui-stack">
           <p>{HELP_LEAD}</p>
           {command !== "" ? (
-            <CopyRow
-              label="Claude Code"
-              labelId="assistant-command-label"
+            <CopyField
+              fieldLabel={COMMAND_FIELD}
               value={command}
               valueRef={commandRef}
               failed={manualField === "command"}
