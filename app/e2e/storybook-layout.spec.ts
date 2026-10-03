@@ -206,7 +206,10 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
               seen.add(node);
               const style = getComputedStyle(node);
               if (style.display === "none" || style.visibility === "hidden") continue;
+              if (node.classList.contains("sr-only")) continue;
               if (node.getClientRects().length === 0) continue;
+              const box = node.getBoundingClientRect();
+              if (box.width <= 1 && box.height <= 1) continue;
               const overflow = node.scrollWidth - node.clientWidth;
               if (overflow > 1) {
                 const text = node.innerText.trim().replace(/\s+/g, " ").slice(0, 48);

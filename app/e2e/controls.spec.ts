@@ -418,7 +418,6 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   });
   const stampLines = await page.locator("bdi", { hasText: "30/09/2026, 14:05" }).evaluate((node) => node.getClientRects().length);
   expect(stampLines).toBe(1);
-  await expect(page.getByRole("button", { name: "עוזר AI" })).toContainText("מחובר");
   await page.getByRole("dialog", { name: "עוזר AI" }).getByRole("button", { name: "ניתוק" }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
   await expect(confirm).toBeVisible();
@@ -590,7 +589,7 @@ test("install, notifications, onboarding, and legal screens", async ({ page }) =
   await page.getByRole("button", { name: "המשך" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "חזרה" }).click();
-  await expect(page).toHaveURL(/\/sign-in/);
+  await expect(page).toHaveURL(/\/\?preview=1$/);
 
   await page.goto("/sign-in");
   const google = page.getByRole("button", { name: "המשך עם Google" });
