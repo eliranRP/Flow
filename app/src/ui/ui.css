@@ -1486,8 +1486,10 @@ a.ui-row,
   flex: 1;
 }
 
-.ui-review-supplier {
+.ui-review-supplier,
+.ui-party {
   min-inline-size: 0;
+  overflow-wrap: anywhere;
   white-space: normal;
 }
 
@@ -2441,6 +2443,9 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-remember-supplier {
   flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ui-remember-dest {

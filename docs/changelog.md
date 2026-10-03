@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+UI polish. A supplier name wraps, including a 30-letter name on the review card, the remember line, and the transaction heading. Decision [0074](decisions/0074-toast-and-remembered-supplier.md).
+
 UI polish. Sheet and route-sheet titles keep a single-line ellipsis (`data-clip-ok`). Button labels, row hints, meter labels, and project-picker labels wrap. Chip, pill, period, segment, text-link, and switch labels stay one line and use `data-clip-ok`. The add-sheet hint and the unpaid-list hints wrap.
 
 UI polish. A double tap on סיום closes the code sheet once. The button uses the sheet's own close, so a second tap does not pop another history step. Decision [0082](decisions/0082-settings-redesign.md).

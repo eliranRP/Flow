@@ -2350,7 +2350,7 @@ export function TransactionScreen({
         trailing={<IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
-        <p className="t-title-3">{party}</p>
+        <p className="t-title-3 ui-party">{party}</p>
         <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" /></p>
         <p className="t-hint">לפני מע״מ · <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi></p>
         {reviewLabel || paymentLabel ? (

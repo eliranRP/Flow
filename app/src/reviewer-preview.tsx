@@ -248,7 +248,7 @@ function ReviewerTransaction({ path }: { path: string }) {
   const shares = reviewerSharesFor(row.id);
   return (
     <>
-      <ScreenHeader title="הוצאה" subtitle={row.supplier_name ?? row.description} backTo="/reviewer/filed" />
+      <ScreenHeader title="הוצאה" subtitle={row.supplier_name ?? row.description} subtitleClassName="ui-party" backTo="/reviewer/filed" />
       <p className="ui-page-pad t-display">
         <bdi className="ui-num" dir="ltr">{money(-row.amount_net)}</bdi>
       </p>
