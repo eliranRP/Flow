@@ -49,6 +49,8 @@ When the secrets are present, in this order:
 | 3 | `flow-sumit-drain` is missing when Vault `cron_secret` and `pg_net` are present, present when they are not, or its schedule is wrong |
 | 4 | `cron.job` is missing. `pg_cron` is not installed |
 
+If exit 3 is because `flow-sumit-drain` is missing while Vault `cron_secret` is non-empty and `pg_net` is installed, run `select private.schedule_drain();` after those Vault rows exist. The check does not schedule the job.
+
 To run only the read-only preflight against production, set `SUPABASE_DB_URL` to the session pooler URL and run `bash scripts/cd-preflight.sh`. That script does not apply migrations. Its commands are:
 
 ```bash
