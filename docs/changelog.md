@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-SUMIT daily sync. `flow-sumit-daily` is scheduled again at 03:00 UTC. The phase 1 migration ran before `pg_cron` existed, so the job was never stored. The new migration unschedules that job when it is already there, then schedules the same refresh insert. A missing `pg_cron` fails the migration. After `db push`, `scripts/check-sumit-cron.sh` reads the jobs. Decision [0049](decisions/0049-sumit-refresh.md). The check's exit codes are in [CI and CD](runbooks/ci-cd.md).
+SUMIT daily sync. `flow-sumit-daily` is scheduled again at 03:00 UTC. The phase 1 migration ran before `pg_cron` existed, so the job was never stored. The new migration unschedules that job when it is already there, then schedules the same refresh insert. A missing `pg_cron` fails the migration. After `db push`, `scripts/check-sumit-cron.sh` reads the jobs. Decision [0049](decisions/0049-sumit-refresh.md). The check's exit codes are in [CI and CD](runbooks/ci-cd.md). If that check exits 3 because the drain is missing, run `select private.schedule_drain();`.
 
 Pages deep links. `/settings` and the other app routes are served with status 200. `/* /index.html 200` is rejected by Cloudflare Pages as a loop, and `404.html` was answering those routes with 404. Each route in `app/public/_redirects` serves the built shell, and a missing file, including under `/assets/`, stays 404. The production smoke checks `/settings?preview=1`.
 

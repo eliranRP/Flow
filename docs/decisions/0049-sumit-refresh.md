@@ -11,7 +11,7 @@ The Free plan should stay at $0. A network call from Postgres to the Edge Functi
 
 The owner taps רענון עכשיו. That calls `sumit-sync` with the user JWT and `force: true`. A forced sync is refused if the previous one was under 60 seconds ago. A non-forced sync is refused inside 6 hours.
 
-If `pg_cron` is installed, the migration schedules `flow-sumit-daily` at 03:00 UTC. The job only inserts a row in `sumit_refresh_requests`. It does not call the network. Draining those rows is a POST to `sumit-sync` with header `x-flow-cron` equal to the secret `CRON_SECRET`. If `pg_cron` is missing, the migration still applies.
+If `pg_cron` is installed, the migration schedules `flow-sumit-daily` at 03:00 UTC. The job only inserts a row in `sumit_refresh_requests`. It does not call the network. Draining those rows is a POST to `sumit-sync` with header `x-flow-cron` equal to the secret `CRON_SECRET`. `20261003140000_sumit_daily_schedule.sql` fails if `pg_cron` is missing. The phase 1 migration is unchanged and still skips that schedule.
 
 The allowlist is two read paths: `crm/data/listfolders` and `crm/data/listentities`. Anything else throws before the request. Nothing in this slice creates or edits a SUMIT document.
 
