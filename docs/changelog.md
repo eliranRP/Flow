@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-Sheet backdrop. A tap on the code sheet while the help backdrop is still fading no longer closes it, so the shown-once code stays. The copy button's focus ring stays inside the field. A horizontal wheel on the code field scrolls once, and the pan listener returns if the field remounts. `t-hint` uses `text-wrap: pretty`. Decision [0082](decisions/0082-settings-redesign.md).
+Sheet backdrop. A sheet backdrop fades opacity only, so its stacking drops at once. A tap on the code sheet while help is still fading does not close it, and a tap during the fade of the only open sheet does not reach the page. While the one-time code is on screen, a backdrop tap does not close that sheet: ✕ and סיום do, and Escape still does. The copy button's focus ring stays inside the field. A horizontal wheel on the code field scrolls once, and the pan listener returns if the field remounts. `t-hint` uses `text-wrap: pretty`. Decision [0082](decisions/0082-settings-redesign.md).
 
 UI polish, design review. A sideways swipe pans the code field, and Home, End, and the arrows move along the value. The copy button sits inside the field border, and the end of the value stays clear of it. Hints wrap with `text-wrap: pretty`.
 
