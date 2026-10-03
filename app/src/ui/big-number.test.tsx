@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BigNumber, formatAmount, heroTypeClass } from "./big-number";
 import { expectRtl } from "./test-support";
@@ -44,6 +44,47 @@ describe("BigNumber", () => {
       Object.defineProperty(Element.prototype, "getBoundingClientRect", rect);
       if (client) Object.defineProperty(Element.prototype, "clientWidth", client);
       else Reflect.deleteProperty(Element.prototype, "clientWidth");
+    }
+  });
+
+  it("caches ancestor padding and does not read it again on resize", async () => {
+    let calls = 0;
+    const style = Object.getOwnPropertyDescriptor(window, "getComputedStyle");
+    const original = window.getComputedStyle.bind(window);
+    window.getComputedStyle = (element: Element, pseudo?: string | null) => {
+      calls += 1;
+      return original(element, pseudo);
+    };
+    let notify: ResizeObserverCallback = () => undefined;
+    let observed = 0;
+    const Observer = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) {
+        notify = callback;
+      }
+      observe() {
+        observed += 1;
+      }
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      render(
+        <div>
+          <div className="ui-band-hero">
+            <BigNumber agorot={1_234_567_800n} size="hero" />
+          </div>
+        </div>,
+      );
+      await act(async () => { await Promise.resolve(); });
+      const afterMeasure = calls;
+      expect(observed).toBeGreaterThan(1);
+      notify([], {} as ResizeObserver);
+      expect(calls).toBe(afterMeasure);
+    } finally {
+      if (style) Object.defineProperty(window, "getComputedStyle", style);
+      else window.getComputedStyle = original;
+      globalThis.ResizeObserver = Observer;
     }
   });
 });

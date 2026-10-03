@@ -1,8 +1,8 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useLayoutEffect } from "react";
-import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
-import { DropRestoredSheet, resetDropRestoredSheet } from "./back";
+import { createMemoryRouter, MemoryRouter, RouterProvider, useLocation, useNavigate } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DropRestoredSheet, resetDropRestoredSheet, resetScrollToWarning, ScrollMemory } from "./back";
 
 function layerOf(state: unknown): string {
   if (typeof state !== "object" || state == null) return "";
@@ -116,5 +116,38 @@ describe("restored sheet history", () => {
     );
     render(<RouterProvider router={router} />);
     expect(await screen.findByText("/settings?sheet=sumit sumit-connect")).toBeInTheDocument();
+  });
+});
+
+function ScrollJump() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <ScrollMemory />
+      <button type="button" onClick={() => { void navigate("/next"); }}>הבא</button>
+      <button type="button" onClick={() => { void navigate(-1); }}>חזרה</button>
+    </>
+  );
+}
+
+describe("scroll restore", () => {
+  afterEach(() => {
+    resetScrollToWarning();
+    vi.restoreAllMocks();
+  });
+
+  it("calls scrollTo once under jsdom", () => {
+    resetScrollToWarning();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    render(
+      <MemoryRouter>
+        <ScrollJump />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הבא" }));
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    fireEvent.click(screen.getByRole("button", { name: "הבא" }));
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 });
