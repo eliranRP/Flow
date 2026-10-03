@@ -15,6 +15,7 @@ const db = vi.hoisted(() => ({
   seenIds: [] as string[][],
   integrationReads: 0,
   writes: [] as Array<{ name: string; args?: Record<string, unknown> }>,
+  rows: [] as ReviewRow[],
 }));
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
@@ -62,6 +63,16 @@ vi.mock("../lib/supabase", () => ({
     },
     rpc: (name: string, args?: Record<string, unknown>) => {
       db.writes.push({ name, args });
+      if (name === "approve_review_item" && args?.p_check_shown === true) {
+        const row = db.rows.find((item) => item.id === args.p_id);
+        const shownProject = args.p_shown_project_id ?? null;
+        const shownCategory = args.p_shown_category_id ?? null;
+        const storedProject = row?.project_id ?? null;
+        const storedCategory = row?.category_id ?? null;
+        if (storedProject !== shownProject || storedCategory !== shownCategory) {
+          return Promise.resolve({ data: { ok: false, error: { code: "stale" } }, error: null });
+        }
+      }
       return Promise.resolve({ data: null, error: null });
     },
   }),
@@ -101,6 +112,7 @@ const stored: ReviewRow = {
 };
 
 function renderQueue(rows: ReviewRow[] = [open]) {
+  db.rows = rows;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -123,6 +135,7 @@ describe("Jev review one tap", () => {
     db.seenIds = [];
     db.integrationReads = 0;
     db.writes = [];
+    db.rows = [];
   });
 
   it("approves the prefilled project and category in one tap", async () => {
@@ -135,6 +148,7 @@ describe("Jev review one tap", () => {
         category: { choice: "c1", confidence: 0.88 },
       },
     }];
+    db.rows = [open, { ...open, id: "r2", transaction_id: "t2" }];
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
@@ -157,11 +171,39 @@ describe("Jev review one tap", () => {
       p_category_id: "c1",
       p_remember: false,
       p_check_shown: true,
-      p_shown_project_id: "p1",
-      p_shown_category_id: "c1",
     });
     expect(db.writes.some((call) => call.name === "record_jev_correction")).toBe(false);
     expect(db.seenIds.some((ids) => ids.includes("t1") && ids.includes("t2"))).toBe(true);
+  });
+
+  it("approves a Jev-filled category with the stored shown ids", async () => {
+    const row: ReviewRow = {
+      ...stored,
+      category_id: null,
+      category_name: null,
+    };
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{
+      id: "s1",
+      transaction_id: "t1",
+      answers: {
+        category: { choice: "c1", confidence: 0.88 },
+      },
+    }];
+    renderQueue([row]);
+    expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    expect(screen.queryByText("השיוך עודכן. בדקו את הכרטיס.")).not.toBeInTheDocument();
+    expect(db.writes.find((call) => call.name === "approve_review_item")?.args).toEqual({
+      p_id: "r1",
+      p_project_id: "p-stored",
+      p_category_id: "c1",
+      p_remember: false,
+      p_check_shown: true,
+      p_shown_project_id: "p-stored",
+    });
   });
 
   it("does not prefill when the connector is off", async () => {

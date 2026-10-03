@@ -1266,8 +1266,8 @@ export function ReviewQueue({
         p_category_id: filled.category_id,
         p_remember: false,
         p_check_shown: true,
-        ...(filled.project_id == null ? {} : { p_shown_project_id: filled.project_id }),
-        p_shown_category_id: filled.category_id,
+        ...(target.project_id == null ? {} : { p_shown_project_id: target.project_id }),
+        ...(target.category_id == null ? {} : { p_shown_category_id: target.category_id }),
       });
       assertNoError(result);
       const outcome = readApproveOutcome(result.data);
