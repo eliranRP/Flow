@@ -33,4 +33,12 @@ if [[ "$html" != *"name=\"flow-build\" content=\"${sha}\""* ]]; then
   exit 1
 fi
 
+settings_headers="$(mktemp)"
+trap 'rm -f "$settings_headers"' EXIT
+settings_code="$(curl -sS -D "$settings_headers" -o /dev/null -w '%{http_code}' --proto '=https' --max-time 20 "${origin}/settings?preview=1")"
+if [[ "$settings_code" != "200" ]] || ! grep -Eiq '^content-type:[[:space:]]*text/html' "$settings_headers"; then
+  echo "Smoke failed. /settings returned ${settings_code}, not 200 HTML."
+  exit 2
+fi
+
 echo "Smoke passed. ${origin} is serving ${sha}."

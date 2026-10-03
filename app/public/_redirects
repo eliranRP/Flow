@@ -1,0 +1,26 @@
+# Pages rejects `/* /index.html 200`: /index.html strips back to `/` and matches the splat, so the rule is ignored.
+# 404.html stays, so a missing file, including /assets/*, is 404.
+# These routes serve the built shell with status 200 and keep the URL.
+# Static rules stay above placeholders.
+/sign-in /app-shell 200
+/auth/callback /app-shell 200
+/preview /app-shell 200
+/terms /app-shell 200
+/privacy /app-shell 200
+/help /app-shell 200
+/onboarding /app-shell 200
+/install /app-shell 200
+/add /app-shell 200
+/projects /app-shell 200
+/review /app-shell 200
+/review/all /app-shell 200
+/review/change /app-shell 200
+/review/filed /app-shell 200
+/unpaid /app-shell 200
+/notifications /app-shell 200
+/settings /app-shell 200
+/settings/categories /app-shell 200
+/projects/:projectId /app-shell 200
+/projects/:projectId/categories/:categoryId /app-shell 200
+/transactions/:transactionId /app-shell 200
+/transactions/:transactionId/split /app-shell 200

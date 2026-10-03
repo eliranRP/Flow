@@ -21,7 +21,7 @@ export function stampBuild(dist, sha) {
   }
   writeFileSync(path.join(dist, "build.txt"), `${sha}\n`);
   const meta = `<meta name="flow-build" content="${sha}" />`;
-  for (const name of ["index.html", "404.html"]) {
+  for (const name of ["index.html", "404.html", "app-shell"]) {
     const file = path.join(dist, name);
     if (!existsSync(file)) continue;
     const html = readFileSync(file, "utf8");

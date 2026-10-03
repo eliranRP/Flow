@@ -7,7 +7,6 @@ import { VitePWA } from "vite-plugin-pwa";
 import { checkReviewerBundle } from "../scripts/check-prod-bundle.mjs";
 import { rejectEmptyHostedSupabase } from "../scripts/hosted-env.mjs";
 
-/** Static hosts that only serve files: deep links fall back to index.html. */
 /** Module ids of the production build. Written beside dist so the host never serves it. */
 function bundleGraph(): Plugin {
   return {
@@ -47,8 +46,11 @@ function spaFallback(): Plugin {
     apply: "build",
     closeBundle() {
       const dist = path.resolve(__dirname, "dist");
-      copyFileSync(path.join(dist, "index.html"), path.join(dist, "404.html"));
-      writeFileSync(path.join(dist, "_redirects"), "/*  /index.html  200\n");
+      const index = path.join(dist, "index.html");
+      // 404.html keeps a missing file at 404. Deep links are listed in app/public/_redirects
+      // and serve this shell. A splat to /index.html is rejected by Pages as a loop.
+      copyFileSync(index, path.join(dist, "404.html"));
+      copyFileSync(index, path.join(dist, "app-shell"));
     },
   };
 }
