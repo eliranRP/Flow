@@ -35,6 +35,9 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("אלפא").closest(".ui-row")?.tagName).toBe("DIV");
+    expect(screen.getByText("אלפא").closest(".ui-row-main")?.tagName).toBe("DIV");
+    expect(screen.getByRole("button", { name: "חיבור SUMIT" }).querySelector(".ui-row-main")?.tagName).toBe("SPAN");
+    expect(screen.getByRole("button", { name: "התנתקות" }).querySelector(".ui-row-text")?.tagName).toBe("SPAN");
     expect(screen.getByText("אלפא").closest(".ui-row")).not.toHaveClass("ui-hit");
     expect(screen.getByRole("button", { name: "חיבור SUMIT" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "התנתקות" })).toHaveAttribute("aria-busy", "true");
