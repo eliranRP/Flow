@@ -34,7 +34,7 @@ export function Toggle({ label, hint, checked, disabled = false, busy = false, i
         </span>
       ) : (
         <span className="ui-switch-copy">
-          <span className="ui-switch-label">{label}</span>
+          <span className="ui-switch-label" data-clip-ok="">{label}</span>
           {hint != null ? <span id={hintId} className="t-hint">{hint}</span> : null}
         </span>
       )}

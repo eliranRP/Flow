@@ -90,7 +90,7 @@ import { BackButton, historyIndex, popSheetLayers, transactionParent, useGoBack,
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, SectionHead, SharedCostNote } from "../ui/layout";
+import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
@@ -461,13 +461,11 @@ function ProjectCategories({
 }) {
   const pending = project.pending_count ?? 0;
   const waiting = pending > 0;
-  const shared = project.categories.some((category) => category.has_shared_share === true);
   if (project.categories.length === 0 && !waiting) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
   return (
     <>
-      {shared ? <SharedCostNote /> : null}
       <List>
       {project.categories.map((category) => (
         <ListRow
@@ -478,6 +476,10 @@ function ProjectCategories({
           loss={false}
           chevron={category.id != null}
           href={category.id == null ? undefined : (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`)}
+          wrapHint={category.has_shared_share === true}
+          hint={category.has_shared_share === true ? (
+            <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
+          ) : undefined}
         />
       ))}
       {waiting ? (
@@ -1175,7 +1177,8 @@ export function ReviewQueue({
           || next.category_suggested !== shown.category_suggested
           || next.project_suggested !== shown.project_suggested
           || next.project_name !== shown.project_name
-          || next.share_count !== shown.share_count)
+          || next.share_count !== shown.share_count
+          || next.auto_approved_today !== shown.auto_approved_today)
       ) {
         setShown(next);
       }
@@ -1948,6 +1951,7 @@ export function AddForm() {
           disabled
           title="צילום חשבונית"
           hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
+          wrapHint
           icon={<CameraIcon size={26} />}
         />
         <ListRow
@@ -2007,6 +2011,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
             variant="project"
             title={row.customer_name ?? row.description}
             hint={unpaidHintLine(row)}
+            wrapHint
             agorot={absAgorot(row.open_gross_agorot)}
             loss={false}
             actionBelow
@@ -2349,7 +2354,7 @@ export function TransactionScreen({
         trailing={<IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
-        <p className="t-title-3">{party}</p>
+        <p className="t-title-3 ui-party">{party}</p>
         <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" /></p>
         <p className="t-hint">לפני מע״מ · <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi></p>
         {reviewLabel || paymentLabel ? (

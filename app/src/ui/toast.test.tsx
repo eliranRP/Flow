@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { placeToast, toastMinBlock, ToastProvider, useToast } from "./toast";
+import { placeToast, safeTopPx, toastMinBlock, ToastProvider, useToast } from "./toast";
 
 function Probe({ tone, message = "הפריט אושר" }: { tone?: "ok" | "bad" | "info"; message?: string }) {
   const toast = useToast();
@@ -512,6 +512,73 @@ describe("placeToast", () => {
     expect(surface.style.getPropertyValue("--toast-pad")).toBe("");
     sheet.remove();
     host.remove();
+  });
+
+  it("reads a safe area that is still an env() token", () => {
+    document.documentElement.style.setProperty("--safe-top", "env(safe-area-inset-top, 0px)");
+    const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
+    if (!rect?.value) throw new Error("getBoundingClientRect is missing");
+    const original = rect.value as (this: Element) => DOMRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (this instanceof HTMLElement && this.style.blockSize.includes("--safe-top")) {
+        return DOMRect.fromRect({ width: 0, height: 47 });
+      }
+      return original.call(this);
+    };
+    try {
+      expect(safeTopPx()).toBe(47);
+    } finally {
+      Object.defineProperty(Element.prototype, "getBoundingClientRect", rect);
+    }
+  });
+
+  it("pads a 320 two-line refusal by the safe area", () => {
+    const height = 69;
+    const closeTop = 85;
+    for (const safe of [20, 47]) {
+      document.documentElement.style.setProperty("--safe-top", `${String(safe)}px`);
+      const sheet = document.createElement("div");
+      sheet.setAttribute("data-vaul-drawer", "");
+      sheet.setAttribute("data-state", "open");
+      sheet.className = "ui-sheet-tall";
+      const surface = document.createElement("div");
+      surface.className = "ui-sheet-surface";
+      const close = document.createElement("button");
+      close.setAttribute("aria-label", "סגירה");
+      surface.appendChild(close);
+      sheet.appendChild(surface);
+      const host = document.createElement("div");
+      const toast = document.createElement("div");
+      toast.className = "ui-toast";
+      toast.textContent = "לא נשמר. בדקו את הפרטים ונסו שוב.";
+      host.appendChild(toast);
+      document.body.append(sheet, host);
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: 700 });
+      sheet.getBoundingClientRect = () => box(456, 400);
+      close.getBoundingClientRect = () => {
+        const applied = Number.parseFloat(surface.dataset.toastPad ?? "") || 0;
+        const base = box(closeTop + 44, 44);
+        return {
+          x: base.x,
+          y: base.y + applied,
+          width: base.width,
+          height: base.height,
+          top: base.top + applied,
+          right: base.right,
+          bottom: base.bottom + applied,
+          left: base.left,
+          toJSON: () => ({}),
+        };
+      };
+      toast.getBoundingClientRect = () => box(height, height);
+      placeToast(host);
+      expect(host.style.top).toBe(`${String(safe + 8)}px`);
+      expect(toast.style.maxHeight).toBe("");
+      expect(toast.style.overflow).not.toBe("hidden");
+      expect(surface.dataset.toastPad).toBe(String(safe));
+      sheet.remove();
+      host.remove();
+    }
   });
 
   it("keeps a 59px refusal and a two-line toast intact under a 47px safe area", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useRefreshingNow } from "../israel-clock";
@@ -9,6 +9,7 @@ import { popSheetLayers, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
+import { CodeField, type CopyTarget } from "../ui/code-field";
 import { AlertIcon, LogoutIcon, SparkIcon } from "../ui/icons";
 import { FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
@@ -41,49 +42,26 @@ const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
 const MINT_REASON = "יוצרים קוד. אי אפשר לשנות עכשיו.";
 const INSTALL_HINT = "אם Claude Code לא מותקן, התקינו אותו קודם.";
 const SCOPE_INTRO = "בחרו מה העוזר יכול לעשות.";
-const SHOWN_ONCE = "הקוד מוצג פעם אחת";
+const SHOWN_ONCE = "הקוד מוצג פעם אחת.";
 const SCOPE_FIELD = "היקף הגישה";
 const CHANGE_SCOPE = "כדי לשנות את הגישה מנתקים ומחברים שוב.";
 const HELP_TITLE = "איך מחברים ב־Claude";
 const HELP_LEAD = "ב־Claude Code הריצו את הפקודה.";
 const CLAUDE_WEB = "ב־Claude.ai צריך כותרת מותאמת";
-const CLAUDE_HEADER = "Authorization: Bearer <הקוד>";
-
-type CopyField = "url" | "secret" | "command";
+const CLAUDE_HEADER = "Authorization: Bearer <הקוד>.";
 
 function scopeChoice(scope: string[] | undefined): AssistantScope {
   return scope?.includes("write") ? "read_write" : "read";
 }
 
-function CopyRow({
-  label,
-  labelId,
-  value,
-  valueRef,
-  failed,
-  onCopy,
-}: {
-  label: string;
-  labelId: string;
-  value: string;
-  valueRef?: RefObject<HTMLElement | null>;
-  failed: boolean;
-  onCopy: () => void;
-}) {
-  return (
-    <div className="ui-copy-row" role="group" aria-labelledby={labelId}>
-      <div className="ui-copy-main">
-        <p className="ui-field-label" id={labelId}>{label}</p>
-        <bdi ref={valueRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="">{value}</bdi>
-        {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
-      </div>
-      <TextLink chevron={false} label={`העתקה: ${label}`} onClick={onCopy}>העתקה</TextLink>
-    </div>
-  );
-}
+const COMMAND_FIELD = "פקודת חיבור ל־Claude Code";
 
 function scopeLabel(scope: AssistantScope): string {
   return scope === "read" ? "קריאה בלבד" : "קריאה וכתיבה";
+}
+
+function scopeShownOnce(scope: AssistantScope): string {
+  return `גישה: ${scopeLabel(scope)}. ${SHOWN_ONCE}`;
 }
 
 function connectedHint(scope: AssistantScope): ReactNode {
@@ -157,7 +135,7 @@ export function AssistantSettings({
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
   const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
-  const [manualField, setManualField] = useState<CopyField | null>(null);
+  const [manualField, setManualField] = useState<CopyTarget | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [intro, setIntro] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -170,13 +148,14 @@ export function AssistantSettings({
   const disconnectRef = useRef<HTMLButtonElement>(null);
   const helpLinkRef = useRef<HTMLButtonElement>(null);
   const connectTitleRef = useRef<HTMLHeadingElement>(null);
-  const urlRef = useRef<HTMLElement>(null);
-  const commandRef = useRef<HTMLElement>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
+  const commandRef = useRef<HTMLInputElement>(null);
   const focusStep = useRef(false);
   const hadSecret = useRef(initialSecret != null);
   const openRef = useRef(initialSecret != null || initialOpen);
-  const secretRef = useRef<HTMLElement>(null);
+  const secretRef = useRef<HTMLInputElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
+  const connectCloseRef = useRef<(() => void) | null>(null);
   const setDetailsSheet = useSheetHistory("assistant-details", detailsOpen, setDetailsOpen);
   const setHelpSheet = useSheetHistory("assistant-help", helpOpen, setHelpOpen);
   const setDisconnectSheet = useSheetHistory("assistant-disconnect", disconnectOpen, setDisconnectOpen);
@@ -207,15 +186,17 @@ export function AssistantSettings({
   function closeSheet(next: boolean) {
     openRef.current = next;
     setOpen(next);
-    if (!next) {
-      setMintError(false);
-      setManualField(null);
-      setSecret(null);
-      setChoice("read_write");
-      setIntro(false);
-    }
   }
   closeConnectRef.current = closeSheet;
+
+  function finishConnectClose() {
+    const reopened = openRef.current;
+    setMintError(false);
+    setManualField(null);
+    setSecret(null);
+    setChoice("read_write");
+    if (!reopened) setIntro(false);
+  }
 
   async function mint() {
     if (minting) return;
@@ -247,18 +228,15 @@ export function AssistantSettings({
     }
   }
 
-  async function copyValue(field: CopyField, value: string, node: HTMLElement | null) {
+  async function copyValue(field: CopyTarget, value: string, node: HTMLInputElement | null) {
     try {
       await navigator.clipboard.writeText(value);
       setManualField(null);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
       if (node) {
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        const selection = window.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
+        node.focus();
+        node.select();
       }
       setManualField(field);
     }
@@ -437,34 +415,32 @@ export function AssistantSettings({
       <List>
         {row}
       </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
+      <Sheet open={open} onOpenChange={setConnectSheet} onClosed={finishConnectClose} onRequestClose={connectCloseRef} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
-            <p>{SHOWN_ONCE}</p>
-            <div role="group" aria-labelledby="assistant-scope-label">
-              <p className="ui-field-label" id="assistant-scope-label">{SCOPE_FIELD}</p>
-              <p>{scopeLabel(scopeChoice(secret.scope))}</p>
-            </div>
-            <CopyRow
+            <p className="t-hint">{scopeShownOnce(scopeChoice(secret.scope))}</p>
+            <CodeField
               label="כתובת"
               labelId="assistant-url-label"
               value={mcpUrl}
               valueRef={urlRef}
               failed={manualField === "url"}
+              copyLabel="העתקה: כתובת"
               onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
             />
-            <CopyRow
+            <CodeField
               label="קוד"
               labelId="assistant-secret-label"
               value={secret.secret}
               valueRef={secretRef}
               failed={manualField === "secret"}
+              copyLabel="העתקה: קוד"
               onCopy={() => { void copyValue("secret", secret.secret, secretRef.current); }}
             />
             {urlReady ? (
               <TextLink chevron={false} buttonRef={helpLinkRef} onClick={() => { setHelpSheet(true); }}>{HELP_TITLE}</TextLink>
             ) : null}
-            <Button type="button" onClick={() => { setConnectSheet(false); }}>סיום</Button>
+            <Button type="button" onClick={() => { connectCloseRef.current?.(); }}>סיום</Button>
           </div>
         ) : intro ? (
           <div className="ui-stack">
@@ -516,24 +492,26 @@ export function AssistantSettings({
         <div className="ui-stack">
           <p>{HELP_LEAD}</p>
           {command !== "" ? (
-            <CopyRow
-              label="Claude Code"
-              labelId="assistant-command-label"
+            <CodeField
+              fieldLabel={COMMAND_FIELD}
               value={command}
               valueRef={commandRef}
               failed={manualField === "command"}
+              copyLabel="העתקה: פקודה"
               onCopy={() => { void copyValue("command", command, commandRef.current); }}
             />
           ) : null}
           <p className="t-hint">{INSTALL_HINT}</p>
-          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr">{CLAUDE_HEADER}</bdi></p>
+          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr" tabIndex={-1} className="ui-nowrap ui-assistant-header" data-vaul-no-drag="">{CLAUDE_HEADER}</bdi></p>
         </div>
       </Sheet>
       <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI" returnFocusRef={rowRef}>
         <div className="ui-stack">
-          <p>{connectedHint(scope)}</p>
-          <p>{CHANGE_SCOPE}</p>
-          <p className={useLine != null ? "ui-nowrap" : undefined}>{useLine ?? "עדיין אין שימוש"}</p>
+          <div className="ui-assistant-status">
+            <p>{connectedHint(scope)}</p>
+            <p className={useLine != null ? "ui-nowrap" : undefined}>{useLine ?? "עדיין אין שימוש"}</p>
+          </div>
+          <p className="t-hint">{CHANGE_SCOPE}</p>
         </div>
         <List>
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={disconnectRef} onClick={() => { setDisconnectSheet(true); }} />
