@@ -29,7 +29,15 @@ When the secrets are present, in this order:
 4. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code.
 5. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile. Success is the command's exit code.
 6. The job writes `FLOW_MCP_PEPPER` and `FLOW_MCP_APP_ORIGINS` into a file from `mktemp "$RUNNER_TEMP/..."`, with a trap on EXIT, INT, and TERM, and an `if: always()` step that deletes the file. This is the only step that writes that file. `supabase secrets set --env-file` reads it. The origin list is `https://flow-app-dx5.pages.dev` only. The job then runs `supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq` and `supabase functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq`. `verify_jwt` stays false, from `supabase/config.toml`. The job does not set `FLOW_MCP_SIGNING_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_SECRET_KEY`. Hosted functions receive `SUPABASE_SECRET_KEYS` from Supabase. The deploy token can read those injected secrets. `SUPABASE_DB_URL` is in the same GitHub environment.
-7. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag. That check is the Pages hostname. A production smoke of `flow-mcp` is backlog N8. It is not this step.
+7. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag. It also requests `/settings?preview=1` and requires status 200 with `Content-Type: text/html`. That check is the Pages hostname. A production smoke of `flow-mcp` is backlog N8. It is not this step.
+
+`scripts/cd-smoke.sh` uses these exits:
+
+| Exit | Outcome |
+| --- | --- |
+| 0 | `build.txt`, the homepage, and `/settings` match this commit |
+| 1 | The SHA was missing, `build.txt` did not match, or the homepage did not include the build tag |
+| 2 | `/settings?preview=1` was not 200 HTML |
 
 To run only the read-only preflight against production, set `SUPABASE_DB_URL` to the session pooler URL and run `bash scripts/cd-preflight.sh`. That script does not apply migrations. Its commands are:
 

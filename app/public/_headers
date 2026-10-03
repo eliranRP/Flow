@@ -1,0 +1,38 @@
+# app-shell has no extension, so Pages would send application/octet-stream.
+# nosniff would then refuse to render the document. These rules type the route, not /assets.
+/sign-in
+  Content-Type: text/html; charset=utf-8
+/auth/*
+  Content-Type: text/html; charset=utf-8
+/preview
+  Content-Type: text/html; charset=utf-8
+/terms
+  Content-Type: text/html; charset=utf-8
+/privacy
+  Content-Type: text/html; charset=utf-8
+/help
+  Content-Type: text/html; charset=utf-8
+/onboarding
+  Content-Type: text/html; charset=utf-8
+/install
+  Content-Type: text/html; charset=utf-8
+/add
+  Content-Type: text/html; charset=utf-8
+/projects
+  Content-Type: text/html; charset=utf-8
+/projects/*
+  Content-Type: text/html; charset=utf-8
+/review
+  Content-Type: text/html; charset=utf-8
+/review/*
+  Content-Type: text/html; charset=utf-8
+/unpaid
+  Content-Type: text/html; charset=utf-8
+/notifications
+  Content-Type: text/html; charset=utf-8
+/settings
+  Content-Type: text/html; charset=utf-8
+/settings/*
+  Content-Type: text/html; charset=utf-8
+/transactions/*
+  Content-Type: text/html; charset=utf-8
