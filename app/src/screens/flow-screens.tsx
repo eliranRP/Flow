@@ -1940,7 +1940,6 @@ export function AddForm() {
           title="צילום חשבונית"
           hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
           icon={<CameraIcon size={26} />}
-          onClick={() => undefined}
         />
         <ListRow
           variant="button"
@@ -1948,7 +1947,6 @@ export function AddForm() {
           title="הזנה ידנית"
           hint="סכום, פרויקט וקטגוריה – רק במקרה הצורך"
           icon={<PencilIcon size={26} />}
-          onClick={() => undefined}
         />
       </div>
       <Button variant="ghost" full onClick={() => { goBack(`/${search}`); }}>ביטול</Button>
@@ -3175,9 +3173,12 @@ export function SplitScreen({
   );
 }
 
+/** Shown on `/settings?preview=` when the value is not `empty` and no sample is passed. */
+const previewAccountName = "בית הספר אלון";
+const previewAccountEmail = "owner@example.com";
+
 type SettingsSample = {
   name: string | null;
-  vatRegistered: boolean;
   connected: boolean;
   companyId: number | null;
   lastError: string | null;
@@ -3185,7 +3186,6 @@ type SettingsSample = {
   email?: string | null;
   /** Live `company_id` is null. Preview passes this because a sample skips the dashboard. */
   noCompany?: boolean;
-  projectCount?: number;
   expenseCategories?: number;
   incomeCategories?: number;
   assistant?: AssistantSample;
@@ -3307,8 +3307,9 @@ export function SettingsScreen({
   const noCompany = sample
     ? sample.noCompany === true
     : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
+  const previewSample = sample == null && preview !== "off" && previewValue !== "empty";
   const connected = noCompany ? false : sample ? sample.connected : status.data?.connected === true;
-  const businessName = sample ? sample.name : dashboard.data?.name;
+  const businessName = sample ? sample.name : previewSample ? previewAccountName : dashboard.data?.name;
   const sumitId = sample ? sample.companyId : status.data?.sumit_company_id;
   const rawError = sample ? sample.lastError : status.data?.last_error;
   const lastError = hebrewSumitError(rawError);
@@ -3322,12 +3323,13 @@ export function SettingsScreen({
     </>
   );
   const refreshHint = authReconnect ? "המזהה או המפתח לא התקבלו" : retryHint;
-  const email = (sample ? sample.email : session?.user.email)?.trim() ?? "";
+  const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
   const incomeCount = sample?.incomeCategories ?? categories.data?.filter((category) => category.kind === "income" && !category.hidden).length;
   const categoryHint = expenseCount == null || incomeCount == null
     ? undefined
     : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
+  const namedBusiness = (businessName ?? "").trim();
   const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
   const showInstall = !isStandalone();
   const showSignOut = preview === "off" || previewValue === "empty";
@@ -3340,18 +3342,18 @@ export function SettingsScreen({
             <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} />
           </List>
         ) : null
-      ) : (
+      ) : namedBusiness !== "" ? (
         <List>
           <ListRow
             variant="static"
-            title={businessName ?? ""}
+            title={namedBusiness}
             hint={accountHint}
             icon={<GoogleIcon />}
             describeHint={accountHint != null}
             wrapHint
           />
         </List>
-      )}
+      ) : null}
       <SectionHead title="חיבורים" />
       <List>
         {connected ? (

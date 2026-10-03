@@ -477,13 +477,11 @@ function DevSettings() {
     <SettingsScreen
       sample={{
         name: noCompany ? null : "בדיקה",
-        vatRegistered: true,
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
         lastError: mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
-        projectCount: 2,
         expenseCategories: 1,
         incomeCategories: 1,
         assistant: noCompany

@@ -38,7 +38,7 @@ export type ListRowProps =
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank" })
   | (Common & { variant: "item" })
   | (Common & { variant: "static" })
-  | (Common & { variant: "button"; onClick: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
+  | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });

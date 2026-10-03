@@ -409,7 +409,6 @@ describe("settings account", () => {
             <SettingsScreen
               sample={{
                 name: "אלפא",
-                vatRegistered: true,
                 connected: false,
                 companyId: null,
                 lastError: null,
@@ -455,7 +454,6 @@ describe("settings account", () => {
             <SettingsScreen
               sample={{
                 name: null,
-                vatRegistered: false,
                 connected: false,
                 companyId: null,
                 lastError: null,
@@ -510,7 +508,6 @@ describe("settings account", () => {
             <SettingsScreen
               sample={{
                 name: null,
-                vatRegistered: false,
                 connected: false,
                 companyId: null,
                 lastError: null,
@@ -613,7 +610,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: true,
                   companyId: 1001,
                   lastError: null,
@@ -656,7 +652,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: true,
                   companyId: 1001,
                   lastError: null,
@@ -680,21 +675,97 @@ describe("settings account", () => {
   });
 
   it("keeps other previews on their sample and hides sign-out", () => {
+    auth.handlers.length = 0;
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings?preview=1"]}>
-              <SettingsScreen />
+              <AuthProvider>
+                <SettingsScreen />
+              </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
+    act(() => {
+      for (const handler of auth.handlers) {
+        handler("INITIAL_SESSION", { user: { email: "real-owner@example.com" } } as Session);
+      }
+    });
+    const account = screen.getByRole("group", { name: "בית הספר אלון" });
+    expect(account).toHaveTextContent("owner@example.com");
+    expect(account.closest("button")).toBeNull();
+    expect(screen.queryByText("real-owner@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: (name) => name.trim() === "" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /חיבור SUMIT/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "התנתקות" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: (name) => name === "SUMIT" })).not.toBeInTheDocument();
+  });
+
+  it("omits the account row when the live business name is empty", async () => {
+    auth.handlers.length = 0;
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            company_id: "company-1",
+            name: null,
+            vat_registered: false,
+            basis: "invoiced",
+            from: null,
+            to: null,
+            income_agorot: 0,
+            direct_agorot: 0,
+            shared_agorot: 0,
+            overhead_agorot: 0,
+            expense_agorot: 0,
+            net_profit_agorot: 0,
+            prev_income_agorot: null,
+            prev_expense_agorot: null,
+            prev_net_agorot: null,
+            active_projects: 0,
+            review_count: 0,
+            projects: [],
+          },
+          error: null,
+        });
+      }
+      if (name === "sumit_status") {
+        return Promise.resolve({
+          data: { connected: false, sumit_company_id: null, last_sync_at: null, last_error: null },
+          error: null,
+        });
+      }
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/settings"]}>
+              <AuthProvider>
+                <SettingsScreen />
+              </AuthProvider>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    act(() => {
+      for (const handler of auth.handlers) {
+        handler("INITIAL_SESSION", { user: { email: "owner@example.com" } } as Session);
+      }
+    });
+    expect(await screen.findByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /חיבור SUMIT/ })).toBeInTheDocument();
+    expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("בית הספר אלון")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: (name) => name.trim() === "" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group")).not.toBeInTheDocument();
   });
 
   function cssPx(value: string): number {
@@ -752,7 +823,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: null,
-                  vatRegistered: false,
                   connected: false,
                   companyId: null,
                   lastError: null,
@@ -780,7 +850,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: false,
                   companyId: null,
                   lastError: null,
@@ -848,7 +917,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: false,
                   companyId: null,
                   lastError: null,
@@ -879,7 +947,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: false,
                   companyId: null,
                   lastError: null,
@@ -908,7 +975,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: true,
                   companyId: 1001,
                   lastError: "sumit_rejected",
@@ -947,7 +1013,6 @@ describe("settings account", () => {
                 <SettingsScreen
                   sample={{
                     name: "אלפא",
-                    vatRegistered: true,
                     connected: true,
                     companyId: 1001,
                     lastError: "sumit_rejected",
@@ -977,7 +1042,6 @@ describe("settings account", () => {
               <SettingsScreen
                 sample={{
                   name: "אלפא",
-                  vatRegistered: true,
                   connected: true,
                   companyId: 1001,
                   lastError: "sumit_auth",

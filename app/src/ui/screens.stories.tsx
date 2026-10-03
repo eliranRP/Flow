@@ -647,7 +647,6 @@ export const SettingsEmpty: Story = {
       <SettingsScreen
         sample={{
           name: null,
-          vatRegistered: false,
           connected: false,
           companyId: null,
           lastError: null,
@@ -667,7 +666,6 @@ export const SettingsLongEmail: Story = {
       <SettingsScreen
         sample={{
           name: null,
-          vatRegistered: false,
           connected: false,
           companyId: null,
           lastError: null,
@@ -687,7 +685,6 @@ export const SettingsAssistantConnected: Story = {
       <SettingsScreen
         sample={{
           name: "בית הספר אלון",
-          vatRegistered: true,
           connected: true,
           companyId: 1001,
           lastError: null,
@@ -706,7 +703,6 @@ export const SettingsAssistantConnected: Story = {
 
 const assistantBusiness = {
   name: "בית הספר אלון",
-  vatRegistered: true,
   connected: true,
   companyId: 1001,
   lastError: null as string | null,
@@ -797,12 +793,10 @@ export const SettingsConnected: Story = {
       <SettingsScreen
         sample={{
           name: "בית הספר אלון",
-          vatRegistered: true,
           connected: true,
           companyId: 1001,
           lastError: null,
           email: "owner@example.com",
-          projectCount: 17,
           expenseCategories: 7,
           incomeCategories: 2,
         }}
@@ -818,7 +812,6 @@ export const SettingsError: Story = {
       <SettingsScreen
         sample={{
           name: "בית הספר אלון",
-          vatRegistered: true,
           connected: true,
           companyId: 1001,
           lastError: "sync_failed",
@@ -837,7 +830,6 @@ export const SettingsBackoff: Story = {
       <SettingsScreen
         sample={{
           name: "בית הספר אלון",
-          vatRegistered: true,
           connected: true,
           companyId: 1001,
           lastError: "sumit_rejected",
@@ -857,7 +849,6 @@ export const SettingsAuth: Story = {
       <SettingsScreen
         sample={{
           name: "בית הספר אלון",
-          vatRegistered: true,
           connected: true,
           companyId: 1001,
           lastError: "sumit_auth",
