@@ -872,6 +872,14 @@ export function queueAfterFocus<T extends { id: string }>(
   return { rows: order, order };
 }
 
+/** The list card under a line picker. from=all opens it; list=all keeps it while the picker is open. */
+function listFocusId(params: URLSearchParams): string | null {
+  const item = params.get("item");
+  if (item == null || item === "") return null;
+  if (params.get("from") === "all" || params.get("list") === "all") return item;
+  return null;
+}
+
 function assignmentPath(
   changeTo: string | undefined,
   search: string,
@@ -924,7 +932,7 @@ export function ReviewScreen() {
       if (listing) focusedOrder.current = null;
       return;
     }
-    const urlId = params.get("from") === "all" ? params.get("item") : null;
+    const urlId = listFocusId(params);
     if (urlId == null) {
       focusedOrder.current = null;
       return;
@@ -943,7 +951,7 @@ export function ReviewScreen() {
     if (head != null && head !== urlId) void navigate(reviewFocusPath(search, head), { replace: true });
   }, [location.pathname, listing, params, activeRows, phase.kind, search, navigate, projectFilter]);
   function rowsForFocus(rows: ReviewRow[]): ReviewRow[] {
-    const urlId = params.get("from") === "all" ? params.get("item") : null;
+    const urlId = listFocusId(params);
     if (listing || urlId == null) return rows;
     if (rows.some((row) => row.id === urlId)) return rotateReview(rows, urlId);
     return queueAfterFocus(rows, urlId, focusedOrder.current).rows;
@@ -967,7 +975,7 @@ export function ReviewScreen() {
       const rows = source.filter((row) => ids.has(row.id));
       if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
       if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
-      const fromList = params.get("from") === "all" && params.get("item") != null;
+      const fromList = listFocusId(params) != null;
       const ordered = rowsForFocus(rows);
       return (
         <ReviewQueue
@@ -983,7 +991,7 @@ export function ReviewScreen() {
     return <ProjectWaitingList rows={held} search={search} backTo={back} />;
   }
   const rows = source;
-  const fromList = params.get("from") === "all" && params.get("item") != null;
+  const fromList = listFocusId(params) != null;
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
     return <ReviewEmpty search={search} backTo={listing || fromList ? `/review${search}` : undefined} />;
   }
@@ -1130,7 +1138,7 @@ export function ReviewQueue({
   const preview = useHomePreview();
   const navigate = useNavigate();
   const [queueParams] = useSearchParams();
-  const fromList = queueParams.get("from") === "all";
+  const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
   const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
@@ -1701,10 +1709,13 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const lineField = useRef(false);
   const setSharedCategory = useWrite({
     failure: changeSaveFailure,
-    success: "השיוך נשמר",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
     onSuccess: () => {
       setCategoryId(picked.current.categoryId);
+      toast.show({
+        message: "השיוך נשמר",
+        ...(lineField.current ? { place: "page" as const } : {}),
+      });
     },
     run: async () => {
       const supabase = getSupabase();
@@ -1721,13 +1732,12 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const fieldSave = useRef<{ kind: "project" | "category"; id: string } | null>(null);
   const saveField = useWrite({
     failure: changeSaveFailure,
-    success: "השיוך נשמר",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
     onSuccess: () => {
       const pickedField = fieldSave.current;
-      if (!pickedField) return;
-      if (pickedField.kind === "project") setProjectId(pickedField.id);
-      else setCategoryId(pickedField.id);
+      if (pickedField?.kind === "project") setProjectId(pickedField.id);
+      else if (pickedField) setCategoryId(pickedField.id);
+      toast.show({ message: "השיוך נשמר", place: "page" });
     },
     run: async () => {
       const supabase = getSupabase();

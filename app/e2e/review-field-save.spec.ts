@@ -135,6 +135,7 @@ test("a card-line category pick stays on the card and shows the new value", asyn
   await page.getByRole("radio", { name: "הובלה" }).click();
   await expect(page.getByRole("heading", { name: supplier })).toBeVisible();
   await expect(page.getByRole("button", { name: "קטגוריה: הובלה" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "פרויקט: הרצל, הצעה" })).toBeVisible();
   await expect(page.getByRole("heading", { name: other })).toHaveCount(0);
   const toast = page.locator(".ui-toast");
   await expect(toast).toContainText("השיוך נשמר");

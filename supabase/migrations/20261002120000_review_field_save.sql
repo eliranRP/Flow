@@ -1,6 +1,42 @@
 -- A card-line pick writes one field and leaves the review open.
 -- p_resolve defaults to true, so אישור, דלג, and a complete שינוי still close the item.
--- Decision 0081, round 2.
+-- A field-only save owns only that field. project_assigned marks the project
+-- without setting user_assigned, so the category guess stays. Decision 0081.
+
+alter table public.transactions
+  add column project_assigned boolean not null default false;
+
+comment on column public.transactions.project_assigned is
+  'True when the owner picked the project and the category guess may still stand. Decision 0081.';
+
+-- The project write and the resolving write share one guard: the same raises,
+-- then the overhead row is removed. A split is not collapsed into one project.
+create or replace function private.guard_review_assignment(
+  p_company uuid,
+  p_txn uuid,
+  p_reason text,
+  p_role public.pnl_role,
+  p_share_count integer,
+  p_assign_project boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_reason = 'unallocated_shared' then
+    raise exception 'shared costs are split, not assigned to one project';
+  end if;
+  if p_assign_project and (p_role = 'shared' or coalesce(p_share_count, 0) > 1) then
+    raise exception 'shared costs are split, not assigned to one project';
+  end if;
+  delete from public.overhead
+  where transaction_id = p_txn and company_id = p_company;
+end;
+$$;
+
+revoke all on function private.guard_review_assignment(uuid, uuid, text, public.pnl_role, integer, boolean) from public, anon, authenticated;
 
 drop function if exists public.resolve_review(uuid, text, uuid, uuid, boolean);
 
@@ -64,6 +100,10 @@ begin
   where t.id = txn and t.company_id = cid
   for update;
 
+  select count(*)::integer into share_count
+  from public.allocations a
+  where a.transaction_id = txn;
+
   if not p_resolve then
     if p_action is distinct from 'changed' then
       raise exception 'unknown review action';
@@ -73,6 +113,17 @@ begin
     end if;
     if p_category_id is null and (direction = 'income' or p_project_id is null) then
       raise exception 'project or category is required';
+    end if;
+    if reason = 'unallocated_shared'
+      or (direction is distinct from 'income' and p_project_id is not null) then
+      perform private.guard_review_assignment(
+        cid,
+        txn,
+        reason,
+        prior_role,
+        share_count,
+        direction is distinct from 'income' and p_project_id is not null
+      );
     end if;
     if p_category_id is not null then
       select c.kind::text into cat_kind
@@ -84,9 +135,9 @@ begin
       if cat_kind is distinct from direction::text then
         raise exception 'category kind must match the direction';
       end if;
+      -- The category is the owner's. user_assigned stays, so a project guess remains.
       update public.transactions
-      set category_id = p_category_id,
-          user_assigned = true
+      set category_id = p_category_id
       where id = txn and company_id = cid;
     end if;
     if direction is distinct from 'income' and p_project_id is not null then
@@ -97,19 +148,12 @@ begin
       end if;
       update public.transactions
       set project_id = p_project_id,
-          user_assigned = true
+          project_assigned = true,
+          pnl_role = 'project'
       where id = txn and company_id = cid;
-      select count(*)::integer into share_count
-      from public.allocations a
-      where a.transaction_id = txn;
-      if coalesce(prior_role, 'project') is distinct from 'shared' and coalesce(share_count, 0) <= 1 then
-        delete from public.allocations where transaction_id = txn and company_id = cid;
-        insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
-        values (cid, txn, p_project_id, 10000, net);
-        update public.transactions
-        set pnl_role = 'project'
-        where id = txn and company_id = cid;
-      end if;
+      delete from public.allocations where transaction_id = txn and company_id = cid;
+      insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+      values (cid, txn, p_project_id, 10000, net);
     end if;
     return;
   end if;
@@ -130,8 +174,15 @@ begin
     where s.id = supplier and s.company_id = cid;
   end if;
 
-  if reason = 'unallocated_shared' and next_status <> 'skipped' then
-    raise exception 'shared costs are split, not assigned to one project';
+  if next_status <> 'skipped' then
+    perform private.guard_review_assignment(
+      cid,
+      txn,
+      reason,
+      prior_role,
+      share_count,
+      direction is distinct from 'income'
+    );
   end if;
 
   written := null;
@@ -150,7 +201,6 @@ begin
     end if;
 
     delete from public.allocations where transaction_id = txn and company_id = cid;
-    delete from public.overhead where transaction_id = txn and company_id = cid;
 
     if direction = 'income' then
       update public.transactions
@@ -274,7 +324,7 @@ begin
 
   update public.transactions
   set category_id = p_category_id,
-      user_assigned = true
+      user_assigned = case when p_resolve then true else user_assigned end
   where id = p_id and company_id = cid;
 
   if prior_review is not null then
@@ -311,3 +361,88 @@ $$;
 
 revoke all on function public.set_transaction_category(uuid, uuid, boolean) from public, anon;
 grant execute on function public.set_transaction_category(uuid, uuid, boolean) to authenticated, service_role;
+
+-- project_suggested stays a computed flag. A project the owner picked is not a guess,
+-- even while user_assigned is still false and the category guess remains.
+create or replace function public.list_review()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', q.id,
+    'transaction_id', t.id,
+    'description', t.description,
+    'doc_date', t.doc_date,
+    'doc_kind', t.doc_kind,
+    'amount_net', t.amount_net,
+    'vat_agorot', t.vat_amount,
+    'direction', t.direction,
+    'reason', q.reason,
+    'pnl_role', t.pnl_role,
+    'share_count', (
+      select count(*)::int
+      from public.allocations a
+      where a.transaction_id = t.id
+    ),
+    'project_id', t.project_id,
+    'category_id', t.category_id,
+    'project_name', p.name,
+    'category_name', c.name,
+    'category_suggested', t.category_suggested,
+    'project_suggested', (
+      t.project_id is not null
+      and not t.user_assigned
+      and not t.project_assigned
+      and coalesce(t.pnl_role, 'project') is distinct from 'shared'
+      and (
+        select count(*)
+        from public.allocations a
+        where a.transaction_id = t.id
+          and a.company_id = t.company_id
+      ) <= 1
+      and not exists (
+        select 1
+        from public.suppliers sp
+        where sp.id = t.supplier_id
+          and sp.company_id = t.company_id
+          and sp.remembered_project_id = t.project_id
+      )
+    ),
+    'confidence', null,
+    'supplier_name', s.name,
+    'auto_approved_today', (
+      select count(*)::int
+      from public.transactions filed
+      where filed.company_id = q.company_id
+        and filed.source = 'sumit'
+        and filed.removed_at is null
+        and filed.created_at >= (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem')
+        and filed.category_id is not null
+        and (
+          coalesce(filed.pnl_role, 'project') <> 'project'
+          or filed.project_id is not null
+          or filed.direction <> 'expense'
+        )
+        and not exists (
+          select 1
+          from public.review_queue open_row
+          where open_row.transaction_id = filed.id
+            and open_row.status = 'open'
+        )
+    )
+  ) order by t.doc_date, q.created_at), '[]'::jsonb)
+  from public.review_queue q
+  join public.transactions t on t.id = q.transaction_id
+  left join public.suppliers s on s.id = t.supplier_id
+  left join public.projects p on p.id = t.project_id
+  left join public.categories c on c.id = t.category_id
+  where q.company_id = (select private.current_company_id())
+    and q.status = 'open'
+    and t.removed_at is null;
+$$;
+
+revoke all on function public.list_review() from public, anon;
+grant execute on function public.list_review() to authenticated, service_role;

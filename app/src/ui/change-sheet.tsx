@@ -288,10 +288,9 @@ export function ChangeAssignment(props: Props) {
     return search.get("from") === "line" && (pick === "project" || pick === "category");
   }
 
-  /** A refreshed שינוי picker. ✕ returns to the summary instead of the card. */
+  /** A picker that was not opened from a card line. ✕ returns to the summary. */
   function summaryUnderPicker(): boolean {
     if (props.host !== "route" || props.contained) return false;
-    if (depth.current > 0) return false;
     const search = new URLSearchParams(locationRef.current.search);
     const pick = search.get("pick");
     if (pick !== "project" && pick !== "category") return false;
@@ -478,7 +477,19 @@ export function ChangeAssignment(props: Props) {
       return closeSheet(false);
     }
     if (landedOnPicker()) return closeSheet(true);
-    if (summaryUnderPicker()) closePickLevel();
+    if (summaryUnderPicker()) {
+      closePickLevel();
+      const current = propsRef.current;
+      if (current.onCloseCheck) {
+        try {
+          await current.onCloseCheck();
+        } catch (error) {
+          const incomplete = error instanceof Error && (error.message === "incomplete" || error.message === "remember");
+          if (incomplete) warned.current = true;
+        }
+      }
+      return false;
+    }
     const current = propsRef.current;
     if (current.hold) {
       if (!warned.current) {

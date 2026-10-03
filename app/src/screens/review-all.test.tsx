@@ -701,4 +701,130 @@ describe("review queue list", () => {
       expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toHaveFocus();
     });
   });
+
+  it("returns focus to the line on a list-opened card", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [reviewRow("r2", "עגורני החוף", "p2"), reviewRow("r1", "מחסן הנמל", "p1")],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        {
+          element: <><ReviewScreen /><Outlet /></>,
+          children: [
+            { path: "/review", element: null },
+            { path: "/review/change", element: <ChangeForm /> },
+          ],
+        },
+      ],
+      { initialEntries: ["/review?item=r1&from=all"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    const line = screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" });
+    fireEvent.click(line);
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    expect(screen.getByRole("heading", { name: "מחסן הנמל", hidden: true })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toHaveFocus();
+    });
+    expect(screen.getByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+  });
+
+  it("returns focus to the line after back on a list-opened card", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [reviewRow("r2", "עגורני החוף", "p2"), reviewRow("r1", "מחסן הנמל", "p1")],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        {
+          element: <><ReviewScreen /><Outlet /></>,
+          children: [
+            { path: "/review", element: null },
+            { path: "/review/change", element: <ChangeForm /> },
+          ],
+        },
+      ],
+      { initialEntries: ["/review?item=r1&from=all"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חזרה" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toHaveFocus();
+    });
+  });
+
+  it("returns a complete picker to the summary, and the next step brings it back", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [{ path: "/review/change", element: <ChangeForm /> }],
+      { initialEntries: ["/review/change?item=r1"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
+    await router.navigate(1);
+    expect(await screen.findByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
+    await router.navigate(-1);
+    expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
+  });
 });

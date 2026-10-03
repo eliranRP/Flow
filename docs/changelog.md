@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-03
+
+Review queue, round 3. A project pick from a card line removes the overhead row and refuses a shared cost, on the same guard as אישור. A field-only save owns only that field: `project_assigned` marks the project, and the other line keeps הצעה. The line-pick toast sits under the header. Focus returns to the line on a list-opened card. ✕ on a picker that is not a card line returns to the summary. Decision [0081](decisions/0081-review-queue-list.md).
+
 ## 2026-10-02
 
 Review queue, round 2. The in-memory review fixture stays on the dev server and is absent from the hosted bundle. A pick from a card line saves only that field (`resolve_review` with `p_resolve` false) and leaves the item open, so the card stays and shows the new value. The queue address advances only on `/review`. A confirmation toast sits under the header, not on the tab bar. Decision [0081](decisions/0081-review-queue-list.md).
