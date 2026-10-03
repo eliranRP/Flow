@@ -26,6 +26,7 @@ import {
   type SplitProject,
 } from "../split-math";
 import { withSheetBackground } from "../sheet-background";
+import { safeAppPath } from "../safe-return";
 import { hebrewSumitError, retryClockParts } from "../sumit-copy";
 import { isStandalone } from "../ui/install-prompt";
 import {
@@ -84,8 +85,8 @@ import { EmptyState } from "../ui/empty-state";
 import { HoldLine } from "../ui/hold-line";
 import { BackButton, popSheetLayers, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
-import { CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, FormError, SectionHead, SharedCostNote } from "../ui/layout";
+import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { BandFigures, BandHero, SectionHead, SharedCostNote } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
@@ -157,6 +158,7 @@ async function saveNewProject(
 
 export function OnboardingScreen() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const search = usePreviewSearch();
   const blocked = useBlockedPreview();
   const [name, setName] = useState("");
@@ -165,7 +167,7 @@ export function OnboardingScreen() {
     failure: "לא הצלחנו לשמור.",
     keys: ["home", "dashboard"],
     onSuccess: () => {
-      void navigate("/", { replace: true });
+      void navigate(safeAppPath(params.get("return")) ?? "/", { replace: true });
     },
     run: async () => {
       const supabase = getSupabase();
@@ -3186,10 +3188,40 @@ type SettingsSample = {
   email?: string | null;
   /** Live `company_id` is null. Preview passes this because a sample skips the dashboard. */
   noCompany?: boolean;
+  /** Story fixture. Live status comes from the query. */
+  sumit?: "loading" | "error";
   expenseCategories?: number;
   incomeCategories?: number;
   assistant?: AssistantSample;
 };
+
+type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
+
+function sumitKind(input: {
+  forced: "loading" | "error" | null;
+  noCompany: boolean;
+  statusLoading: boolean;
+  statusFailed: boolean;
+  authReconnect: boolean;
+  connected: boolean;
+}): SumitKind {
+  if (input.forced === "loading") return "loading";
+  if (input.forced === "error") return "error";
+  if (input.noCompany) return "disconnected";
+  if (input.statusLoading) return "loading";
+  if (input.statusFailed) return "error";
+  if (input.authReconnect) return "reconnect";
+  if (input.connected) return "connected";
+  return "disconnected";
+}
+
+/** Settings → onboarding, then back to Settings with the SUMIT sheet open. */
+function onboardingFromSettings(search: string): string {
+  const settings = search === "" ? "/settings?sheet=sumit" : `/settings${search}&sheet=sumit`;
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : "");
+  params.set("return", settings);
+  return `/onboarding?${params.toString()}`;
+}
 
 export function SettingsScreen({
   sample,
@@ -3216,7 +3248,14 @@ export function SettingsScreen({
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
+  const [focusSumit, setFocusSumit] = useState(false);
+  const [sumitRetrying, setSumitRetrying] = useState(false);
+  const [sumitHint, setSumitHint] = useState("לא הצלחנו לטעון");
+  const [sumitNonce, setSumitNonce] = useState(0);
   const wantedOverhead = useRef(false);
+  const sumitRowRef = useRef<HTMLButtonElement>(null);
+  const sumitRetryRef = useRef<HTMLButtonElement>(null);
+  const sheetApplied = useRef(false);
   const retrySource = sample ? sample.nextAttemptAt : status.data?.next_attempt_at;
   useEffect(() => {
     if (!retrySource) return;
@@ -3230,7 +3269,7 @@ export function SettingsScreen({
     if (sample) return;
     if (dashboard.data) setOverheadOn(dashboard.data.after_overhead === true);
   }, [sample, dashboard.data]);
-  const phase = sample ? ({ kind: "ready" } as const) : combinePhase(screenPhase(preview, dashboard), screenPhase(preview, status));
+  const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
   const saveOverhead = useWrite({
     failure: "לא הצלחנו לשמור את התצוגה.",
     keys: ["dashboard", "project"],
@@ -3294,12 +3333,53 @@ export function SettingsScreen({
     },
   });
 
+  useEffect(() => {
+    if (sumitNonce === 0) return;
+    setSumitHint("");
+    const id = window.setTimeout(() => {
+      setSumitHint("לא הצלחנו לטעון");
+      sumitRetryRef.current?.focus();
+    }, 30);
+    return () => { window.clearTimeout(id); };
+  }, [sumitNonce]);
+
+  useEffect(() => {
+    if (!focusSumit) return;
+    const node = sumitRowRef.current;
+    if (node == null) return;
+    node.focus();
+    setFocusSumit(false);
+  }, [focusSumit, status.data, status.isError, status.isLoading]);
+
+  useEffect(() => {
+    if (sheetApplied.current) return;
+    if (params.get("sheet") !== "sumit") return;
+    if (phase.kind === "loading" || phase.kind === "error") return;
+    const noCo = sample
+      ? sample.noCompany === true
+      : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
+    if (sample == null && !noCo && status.isLoading) return;
+    const auth = (sample ? sample.lastError : status.data?.last_error) === "sumit_auth";
+    const isConnected = noCo ? false : sample ? sample.connected : status.data?.connected === true;
+    const opened = sumitKind({
+      forced: sample?.sumit ?? null,
+      noCompany: noCo,
+      statusLoading: false,
+      statusFailed: sample == null && status.isError && status.data == null,
+      authReconnect: auth,
+      connected: isConnected,
+    });
+    sheetApplied.current = true;
+    if (opened === "connected") setStatusOpen(true);
+    else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
+  }, [params, phase.kind, sample, preview, previewValue, dashboard.data, status.isLoading, status.isError, status.data]);
+
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
       <ScreenState
         title="הגדרות"
         phase={phase}
-        onRetry={() => { void dashboard.refetch(); void status.refetch(); }}
+        onRetry={() => { void dashboard.refetch(); }}
       />
     );
   }
@@ -3315,14 +3395,22 @@ export function SettingsScreen({
   const lastError = hebrewSumitError(rawError);
   const authReconnect = rawError === "sumit_auth";
   const retry = authReconnect ? null : retryClockParts(retrySource, clockNow);
-  const refreshHeld = authReconnect || retry != null;
+  const refreshHeld = retry != null;
+  const kind = sumitKind({
+    forced: sample?.sumit ?? null,
+    noCompany,
+    statusLoading: sample == null && !noCompany && status.isLoading && !sumitRetrying,
+    statusFailed: sample == null && (sumitRetrying || (status.isError && status.data == null)),
+    authReconnect,
+    connected,
+  });
   const retryHint = retry == null ? undefined : (
     <>
       {retry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
       <bdi className="ui-num" dir="ltr">{retry.clock}</bdi>
     </>
   );
-  const refreshHint = authReconnect ? "המזהה או המפתח לא התקבלו" : retryHint;
+  const refreshHint = retryHint;
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
   const incomeCount = sample?.incomeCategories ?? categories.data?.filter((category) => category.kind === "income" && !category.hidden).length;
@@ -3355,47 +3443,62 @@ export function SettingsScreen({
         </List>
       ) : null}
       <SectionHead title="חיבורים" />
+      {kind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}
       <List>
-        {connected ? (
+        {kind === "loading" ? (
+          <ListRow variant="static" title="SUMIT" icon={<DocumentIcon size={24} />} hint={<Skeleton width="sm" />} skelHint busy />
+        ) : kind === "error" ? (
+          <ListRow
+            variant="static"
+            title="SUMIT"
+            icon={<AlertIcon size={24} />}
+            tone="muted"
+            describeHint
+            hintStatus
+            hint={sumitHint}
+            action={(
+              <TextLink
+                size="label"
+                chevron={false}
+                label="ניסיון חוזר: SUMIT"
+                busy={sumitRetrying}
+                buttonRef={sumitRetryRef}
+                onClick={() => {
+                  if (sample != null || sumitRetrying) return;
+                  setSumitRetrying(true);
+                  void status.refetch().then((result) => {
+                    setSumitRetrying(false);
+                    if (result.isError || result.data == null) {
+                      setSumitNonce((nonce) => nonce + 1);
+                      return;
+                    }
+                    setFocusSumit(true);
+                  });
+                }}
+              >
+                ניסיון חוזר
+              </TextLink>
+            )}
+          />
+        ) : (
           <ListRow
             variant="button"
-            title="SUMIT מחובר"
-            hint={<>מספר חברה <bdi dir="ltr">{String(sumitId ?? "")}</bdi></>}
-            icon={<RefreshIcon />}
+            title="SUMIT"
+            hint={kind === "reconnect" ? "צריך לחבר מחדש" : kind === "connected" ? "מחובר" : "לא מחובר"}
+            icon={kind === "reconnect" ? <AlertIcon size={24} /> : <DocumentIcon size={24} />}
+            tone={kind === "reconnect" ? "warning" : undefined}
             chevron
             describeHint
             wrapHint
-            onClick={() => { setStatusSheet(true); }}
-          />
-        ) : noCompany ? (
-          <ListRow variant="button" title="SUMIT" hint="לא מחובר" icon={<RefreshIcon />} chevron describeHint wrapHint onClick={() => { setConnectSheet(true); }} />
-        ) : (
-          <ListRow variant="button" title="חיבור SUMIT" hint="מספר חברה ומפתח API" icon={<RefreshIcon />} chevron onClick={() => { setConnectSheet(true); }} />
-        )}
-        {connected ? (
-          <ListRow
-            variant="button"
-            title="רענון עכשיו"
-            hint={refreshHint}
-            icon={<RefreshIcon />}
-            chevron
-            clearHint={authReconnect || retry != null}
-            busy={refresh.isPending}
-            disabled={refreshHeld}
+            className="ui-row-ring"
+            buttonRef={sumitRowRef}
             onClick={() => {
-              if (refreshHeld) return;
-              if (blocked()) return;
-              refresh.mutate();
+              if (kind === "connected") setStatusSheet(true);
+              else setConnectSheet(true);
             }}
           />
-        ) : null}
+        )}
       </List>
-      {lastError && !noCompany ? <div className="ui-page-pad"><FormError>{lastError}</FormError></div> : null}
-      {rawError === "sumit_auth" && !noCompany ? (
-        <div className="ui-page-pad">
-          <Button variant="secondary" onClick={() => { setConnectSheet(true); }}>חיבור מחדש</Button>
-        </div>
-      ) : null}
       <AssistantSettings
         sample={
           // A missing company, and any preview, must not call flow-mcp/status.
@@ -3415,7 +3518,7 @@ export function SettingsScreen({
         {noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
-            <TextLink to={`/onboarding${search}`}>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search)}>פרטי העסק</TextLink>
           </div>
         ) : (
           <form
@@ -3428,12 +3531,36 @@ export function SettingsScreen({
           >
             <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
             <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
-            <Button type="submit" busy={connect.isPending}>חיבור</Button>
+            <Button type="submit" busy={connect.isPending}>{kind === "reconnect" ? "חיבור מחדש" : "חיבור"}</Button>
           </form>
         )}
       </Sheet>
       <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT">
+        <div className="ui-stack">
+          <p>
+            מחובר
+            {sumitId != null ? <> · מספר חברה <bdi dir="ltr">{String(sumitId)}</bdi></> : null}
+          </p>
+          {rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}
+        </div>
         <List>
+          <ListRow
+            variant="button"
+            title="רענון עכשיו"
+            hint={refreshHint}
+            icon={<RefreshIcon />}
+            chevron
+            clearHint={retry != null}
+            describeHint={refreshHint != null}
+            wrapHint
+            busy={refresh.isPending}
+            disabled={refreshHeld}
+            onClick={() => {
+              if (refreshHeld) return;
+              if (blocked()) return;
+              refresh.mutate();
+            }}
+          />
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
         </List>
       </Sheet>

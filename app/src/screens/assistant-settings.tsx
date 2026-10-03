@@ -227,7 +227,7 @@ export function AssistantSettings({
   const row = view.state === "loading" ? (
     <ListRow variant="button" title="עוזר AI" hint="טוען" icon={<InboxIcon />} wrapHint describeHint busy disabled />
   ) : view.state === "no-company" ? (
-    <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint disabled />
+    <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint clearHint ariaDisabled className="ui-row-ring" />
   ) : view.state === "error" ? (
     <ListRow variant="static" title="עוזר AI" hint="לא הצלחנו לטעון את החיבור." icon={<AlertIcon />} wrapHint describeHint />
   ) : view.state === "connected" ? (

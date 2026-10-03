@@ -428,6 +428,24 @@ a.ui-row,
   white-space: normal;
 }
 
+.ui-row-hint-skel {
+  display: flex;
+  align-items: center;
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
+.ui-row-hint[role="status"] {
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
+.ui-row-tone-warning :is(.ui-row-hint, .ui-row-icon) {
+  color: var(--color-warning);
+}
+
+.ui-row-tone-muted .ui-row-icon {
+  color: var(--color-text-muted);
+}
+
 .ui-nowrap {
   white-space: nowrap;
 }
@@ -1099,6 +1117,22 @@ a.ui-row,
   text-underline-offset: 2px;
 }
 
+.ui-text-link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-row > .ui-text-link {
+  flex: none;
+  max-width: none;
+  margin-block: -2px;
+}
+
+.ui-row > .ui-text-link .ui-text-link-label {
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .ui-change {
   display: inline-flex;
   align-items: center;
@@ -1523,17 +1557,22 @@ a.ui-row,
   background: var(--surface-hover);
 }
 
-.ui-row:disabled {
+.ui-row:is(:disabled, [aria-disabled="true"]) {
   opacity: 0.45;
 }
 
-/* The retry time is information, so it stays at the hint colour. Only the control fades. */
-.ui-row.ui-row-clear-hint:disabled {
+/* The reason stays at the hint colour. Only the control fades. */
+.ui-row.ui-row-clear-hint:is(:disabled, [aria-disabled="true"]) {
   opacity: 1;
 }
 
-.ui-row.ui-row-clear-hint:disabled :is(.ui-row-title, .ui-row-icon, .ui-row-chevron) {
+.ui-row.ui-row-clear-hint:is(:disabled, [aria-disabled="true"]) :is(.ui-row-title, .ui-row-icon, .ui-row-chevron) {
   opacity: 0.45;
+}
+
+.ui-row.ui-row-ring:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

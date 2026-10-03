@@ -265,7 +265,13 @@ describe("assistant settings", () => {
       </QueryClientProvider>,
     );
     const row = screen.getByRole("button", { name: "עוזר AI" });
-    expect(row).toBeDisabled();
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    expect(row).not.toHaveAttribute("disabled");
+    row.focus();
+    expect(row).toHaveFocus();
+    expect(row.querySelector(".ui-row-chevron")).toBeNull();
+    fireEvent.click(row);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
   });
 });
