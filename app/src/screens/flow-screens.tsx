@@ -3316,6 +3316,12 @@ export function SettingsScreen({
   const categoryHint = expenseCount == null || incomeCount == null
     ? undefined
     : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
+  // Runs whenever ?preview= is set, including the hosted app. Leaving this undefined fetches flow-mcp/status.
+  const assistantSample: AssistantSample | undefined = sample
+    ? (sample.assistant ?? { state: "empty" })
+    : preview === "off"
+      ? undefined
+      : { state: "no-company" };
   return (
     <div>
       <ScreenHeader title="הגדרות" />
@@ -3368,7 +3374,7 @@ export function SettingsScreen({
         </div>
       ) : null}
       <AssistantSettings
-        sample={sample ? (sample.assistant ?? { state: "empty" }) : undefined}
+        sample={assistantSample}
         noCompany={emptyAccount}
         blocked={blocked}
       />
