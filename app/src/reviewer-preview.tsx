@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { formatIls, type ProjectWaitingRow, type ReviewRow } from "@flow/shared";
 import { FiledTodayScreen, ProjectCategoryScreen, ProjectWaitingList, ReviewEmpty, ReviewQueue, SplitScreen, TransactionScreen, reviewIsSplit, reviewSplitTitle } from "./screens/flow-screens";
@@ -8,6 +8,7 @@ import {
   reviewerBooks,
   reviewerCategories,
   reviewerFiled,
+  reviewerFiledCount,
   reviewerFiledView,
   reviewerOtherProjectName,
   reviewerProjectChoices,
@@ -65,6 +66,7 @@ function money(agorot: bigint): string {
 }
 
 function ReviewerHome() {
+  const filedCount = useSyncExternalStore(subscribeReviewerFiled, reviewerFiledCount, reviewerFiledCount);
   const books = reviewerBooks();
   const lines = [
     { label: "הכנסות", amount: books.income },
@@ -95,7 +97,7 @@ function ReviewerHome() {
         <p className="t-hint">
           אושרו הם מלט ועוד שינוע. הוצאות הפרויקט הן אושרו ועוד ממתינות לאישור. הרווח הוא ההכנסות פחות הוצאות הפרויקט.
           {" "}
-          <bdi className="ui-num" dir="ltr">{String(books.filedCount)}</bdi>
+          <bdi className="ui-num" dir="ltr">{String(filedCount)}</bdi>
           {" תנועות שויכו היום, וזה מספר השורות ברשימה."}
         </p>
         <p className="t-hint">
@@ -384,6 +386,16 @@ function ReviewerUnsplit() {
   const toast = useToast();
   const [collapsed, setCollapsed] = useState<string | null>(null);
   const [showSplit, setShowSplit] = useState(true);
+  const pendingSave = useRef(false);
+  useEffect(() => {
+    if (!pendingSave.current || showSplit) return;
+    pendingSave.current = false;
+    toast.show({
+      message: "השיוך נשמר",
+      action: "ביטול",
+      onAction: () => { setCollapsed(null); },
+    });
+  }, [showSplit, collapsed, toast]);
   const projects = unsplitProjects.map((project) => ({ id: project.id, name: project.name }));
   const spent = (id: string, bp: number) => collapsed == null
     ? unsplitShare(bp)
@@ -421,13 +433,9 @@ function ReviewerUnsplit() {
           sampleMeta="ליסינג הדרך בע״מ · 01/07/2026"
           backTo="/reviewer"
           onOneProject={(id) => {
+            pendingSave.current = true;
             setCollapsed(id);
             setShowSplit(false);
-            toast.show({
-              message: "השיוך נשמר",
-              action: "ביטול",
-              onAction: () => { setCollapsed(null); },
-            });
             return Promise.resolve("left" as const);
           }}
         />
@@ -477,6 +485,7 @@ function ReviewerUnsplit() {
 }
 
 function ReviewerSplitExpense() {
+  const navigate = useNavigate();
   const projects = [
     { id: "p-alon", name: reviewerProjectName },
     { id: "p-raanana", name: reviewerOtherProjectName },
@@ -516,6 +525,7 @@ function ReviewerSplitExpense() {
       }}
       sampleProjects={projects}
       sampleCategories={reviewerCategories}
+      onOpenSplit={() => { void navigate("/reviewer/split"); }}
     />
   );
 }
@@ -584,12 +594,14 @@ function SampleQueue({
   homeLabel: string;
 }) {
   const navigate = useNavigate();
+  const filedCount = useSyncExternalStore(subscribeReviewerFiled, reviewerFiledCount, reviewerFiledCount);
   const [rows, setRows] = useState(initial);
   return (
     <ReviewQueue
       rows={rows}
       search={search}
       sample
+      autoCount={filedCount}
       previewWrite={{
         run: () => sampleRun(mode),
         onDone: (id) => {

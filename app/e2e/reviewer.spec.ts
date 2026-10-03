@@ -372,6 +372,9 @@ test("a split expense saves the category on the tap and keeps it after close", a
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /שינוע/ })).toBeVisible();
   await expect(page.getByText("מפוצל · 6 פרויקטים")).toBeVisible();
+  await page.getByRole("button", { name: "פיצול בין פרויקטים" }).click();
+  await expect(page).toHaveURL(/\/reviewer\/split$/);
+  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
 });
 
 test("a split returns to one project and the project totals follow", async ({ page }) => {
@@ -423,6 +426,7 @@ test("approving ברגי העמק adds the split to שויכו היום, and ב�
   await expect(page.getByRole("button", { name: "אישור" })).toBeEnabled();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
+  await expect(page.locator(".ui-banner")).toContainText("5");
   const undo = toastAction(page, "ביטול");
   await expect(undo).toBeVisible();
   // Hover pauses the 5s timer. Later moves use dispatch so the pointer stays put.
