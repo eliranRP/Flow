@@ -64,7 +64,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (!separated) problems.push("period pill overlaps the wordmark");
     }
 
-    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-btn-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
+    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
     for (const node of singleLine) {
       if (!(node instanceof HTMLElement)) continue;
       const style = getComputedStyle(node);
@@ -204,7 +204,7 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
           const problems: string[] = [];
           const seen = new Set<Element>();
           for (const root of roots) {
-            for (const node of root.querySelectorAll(".ui-row-title, .ui-row-hint, .t-hint, .ui-secret-value, .ui-field-label, .t-title-2, .ui-section-title, .ui-btn-label, p")) {
+            for (const node of root.querySelectorAll(".ui-row-title, .ui-row-hint, .t-hint, .ui-field-label, .t-title-2, .ui-section-title, .ui-btn-label, p")) {
               if (!(node instanceof HTMLElement) || seen.has(node)) continue;
               seen.add(node);
               const style = getComputedStyle(node);

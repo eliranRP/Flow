@@ -4,6 +4,44 @@
 
 Jev review prefill. לאישור shows a Jev project and category, with הצעה, when the connector is on and a suggestion is stored. אישור sends those ids in one tap. Off, or no suggestion, the card is unchanged. Corrections are not written yet. `supabase/pending/20261005120000_jev_corrections.sql` stays pending and is not applied. Decision [0084](decisions/0084-jev-auto-prefill.md).
 
+Jev review prefill, design review. An empty category is filled. `list_review` returns `category_suggested` false for that line, and ownership is `user_assigned` or `category_assigned`. The queue reads every suggestion with the review list. אישור stays disabled until that read settles, and the suggestion rows keep their height. A long name truncates in the text, so הצעה stays in the row. Corrections stay pending. Decision [0084](decisions/0084-jev-auto-prefill.md).
+
+Connector contract, review. `get_project`'s `pending_agorot` sums `private.to_display_minor`. `budget_agorot` stays shekels, and the payload adds `budget_currency` `ILS`. MCP `get_totals` and `list_projects` pass `fx_missing_count` and `display_currency`. Under `historical`, an ILS line is unchanged in shekels and uses the line date's rate in dollars, and under `historical` import stamps `fx_rate` and `fx_rate_date` on each USD row. `get_project` transactions, `list_project_category` rows, and `project_waiting` items carry `currency` and `amount_original`. Decision [0087](decisions/0087-multi-currency.md).
+
+Connector contract, display conversion. Aggregates sum `private.to_display_minor` into the company's display currency. `original` and `today` use the newest `fx_rates` row on or before today. `historical` uses the stored pair. A missing rate omits the row and sets `fx_missing_count`. Review, transaction, search, and the MCP line tools carry `currency` and `amount_original`. `sync_fx_missing` is display-time only. Decision [0087](decisions/0087-multi-currency.md).
+
+Connector contract, original currency. A Mercury line stays USD. Import does not convert it to shekels and does not store a rate. `fx_policy` defaults to `original`. The ₪/$ toggle and a mixed total convert at display time from `fx_rates`. Reprice runs only if that policy is switched. Decision [0087](decisions/0087-multi-currency.md).
+
+Connector contract, review round 2 delta. Format 3 is readable before any reseal: `envelope.ts` opens formats 1, 2, and 3, the format-3-aware SUMIT functions deploy before `sumit-reseal`, and the reseal updates only format-1 rows, one row at a time. Connection replace accepts format 2 or 3 until `sumit-connect` seals 3. A canonical line carries `amount_negated` so the stored sign is not rebuilt. A SUMIT id that is both a supplier and a customer is two party refs. Mercury inflows are receipts and count as income on the invoiced basis, with no invoice match. `העברות` is seeded for income and expense. VAT exemption matches supplier names. Decision [0085](decisions/0085-connector-engine.md). The order is in [the connector contract](tech/connector-contract.md).
+
+Connector contract, review round 2. The port takes a per-company session and a normalize context. Canonical lines carry `doc_kind`, `pnl_role`, a section hint, and a gross `amount_original`. The idempotency key is `source || ':' || external_id`. `connector_connections` replaces the name `connections`. SUMIT tables become compatibility views so `sumit-sync` and the current pgTAP suites keep running. The cron check moves in the same layer as the new jobs. FX columns land before any Mercury row. Zod is 4.6.5 with a frozen lock. Decision [0085](decisions/0085-connector-engine.md). The names are in [the connector contract](tech/connector-contract.md).
+
+Connector contract, interim rules. A loan payment hinted to `תשלומי הלוואה` (loan payments) stays in לאישור and out of the P&L sums. `categories.excluded_from_pnl` is the flag. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). Loans and amortization are named as a future decision and are not built. Decision [0086](decisions/0086-mercury.md). The sums are in [the connector contract](tech/connector-contract.md).
+
+Connector contract. Decisions [0085](decisions/0085-connector-engine.md), [0086](decisions/0086-mercury.md), and [0087](decisions/0087-multi-currency.md). One engine will serve SUMIT and Mercury. The port, the SQL signatures, and the Hebrew card copy are in [the connector contract](tech/connector-contract.md) and [the UI states](tech/connector-ui-states.md). This change does not migrate. [0087](decisions/0087-multi-currency.md) supersedes the README and spec lines that listed multi-currency as out of scope.
+
+UI polish, design review. A sideways swipe pans the code field, and Home, End, and the arrows move along the value. The copy button sits inside the field border, and the end of the value stays clear of it. Hints wrap with `text-wrap: pretty`.
+
+UI polish, review. The code field lives in `app/src/ui/code-field.tsx`. An empty value hides העתקה. The accessible names are "העתקה: כתובת", "העתקה: קוד", and "העתקה: פקודה". Reopening a sheet before the close animation finishes still resets it, and Escape notifies the close once. The panel is inert while it closes. The Claude.ai header is not a tab stop. The reviewer leasing split opens ליסינג הדרך. The queue banner count stays on the preview rows.
+
+UI polish. The code sheet and the expired sheet keep their step until the close animation ends. Step 2 is one muted line, "גישה: קריאה וכתיבה. הקוד מוצג פעם אחת." The connected sheet groups the status with last use, and the change-scope note is muted. The Claude.ai header stays on one line and ends with a period. Decision [0082](decisions/0082-settings-redesign.md).
+
+UI polish. A hero figure still steps down when the document has no font set, and measures again once fonts are ready.
+
+UI polish. The reviewer split button stays in the preview. Unsplit shows the saved toast after the sheet closes. The queue banner counts every filed-today row, including an approved split. The last-sync separator stays on the time, and the time stays on one line. 
+
+UI polish. The shared-cost note sits on the category line that includes a share. The project story's lines add up: חומרים 72 and הובלה 4. Decision [0071](decisions/0071-shared-cost-copy.md).
+
+UI polish. A tall-sheet toast stays at its full height `--space-2` below the safe area. A 320 two-line refusal pads the sheet by 20 at safe area 20 and by 47 at safe area 47. Decision [0075](decisions/0075-save-on-tap-and-on-leave.md).
+
+UI polish. A supplier name wraps, including a 30-letter name on the review card, the remember line, and the transaction heading. Decision [0074](decisions/0074-toast-and-remembered-supplier.md).
+
+UI polish. Sheet and route-sheet titles keep a single-line ellipsis (`data-clip-ok`). Button labels, row hints, meter labels, and project-picker labels wrap. Chip, pill, period, segment, text-link, and switch labels stay one line and use `data-clip-ok`. The add-sheet hint and the unpaid-list hints wrap.
+
+UI polish. A double tap on סיום closes the code sheet once. The button uses the sheet's own close, so a second tap does not pop another history step. Decision [0082](decisions/0082-settings-redesign.md).
+
+UI polish. The Claude command, the address, and the code are each one read-only field on the input surface. The text is monospace and LTR, on one line that scrolls horizontally. The command is named "פקודת חיבור ל־Claude Code" and has no separate label. The copy control is an icon button inside the field, named "העתקה". Decision [0082](decisions/0082-settings-redesign.md). The owner decision is in [PLAN.md](PLAN.md).
+
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
 
 Settings cycle 5, review. A sheet keeps its own history layer. Closing the Claude help sheet or a ניתוק confirm pops only that layer, so הקוד מוכן and the details sheet stay open and focus returns to the control that opened the top sheet. The top sheet draws its own scrim over the one underneath. Step 1 leads with "בחרו מה העוזר יכול לעשות." Step 2 says the code is shown once, labels the scope, and copies the address and the code with a text link. The help sheet is titled "איך מחברים ב־Claude" and says Claude.ai needs an Authorization bearer header. A failed copy is announced in the sheet that owns the button. The קטגוריות row has no counts. Decision [0082](decisions/0082-settings-redesign.md).

@@ -25,11 +25,11 @@ const sizeClass = {
   list: "t-title-3",
 } as const;
 
+const heroSteps = ["t-hero", "t-display", "t-title-1", "t-title-2", "t-title-3"] as const;
+
 export function heroStepClass(size: "hero" | "display" | "list" | undefined, step: number): string {
   if (size !== "hero") return size ? sizeClass[size] : "";
-  if (step >= 2) return "t-title-1";
-  if (step === 1) return "t-display";
-  return "t-hero";
+  return heroSteps[Math.min(Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
 }
 
 export function heroTypeClass(size: "hero" | "display" | "list" | undefined, stepDown: boolean): string {
@@ -62,22 +62,54 @@ export function BigNumber({ agorot, presentation = "summary", size, loss = false
     host.style.visibility = "hidden";
     host.appendChild(probe);
     document.body.appendChild(host);
-    const measure = () => {
-      const style = getComputedStyle(column);
+    const pads = new Map<HTMLElement, number>();
+    const readPad = (el: HTMLElement) => {
+      const style = getComputedStyle(el);
       const pad = (Number.parseFloat(style.paddingInlineStart) || 0) + (Number.parseFloat(style.paddingInlineEnd) || 0);
-      const content = column.clientWidth - pad;
+      pads.set(el, pad);
+    };
+    const chain: HTMLElement[] = [column];
+    readPad(column);
+    let walker: HTMLElement | null = column.parentElement;
+    while (walker && walker !== document.documentElement) {
+      readPad(walker);
+      chain.push(walker);
+      walker = walker.parentElement;
+    }
+    const measure = () => {
+      let content = column.clientWidth - (pads.get(column) ?? 0);
+      for (const ancestor of chain) {
+        if (ancestor === column) continue;
+        const pad = pads.get(ancestor) ?? 0;
+        if (ancestor.clientWidth > 0) content = Math.min(content, ancestor.clientWidth - pad);
+      }
       const widthOf = (typeClass: string) => {
         probe.className = `ui-num ${typeClass}`;
         return probe.getBoundingClientRect().width;
       };
-      if (widthOf("t-hero") <= content) setStep(0);
-      else if (widthOf("t-display") <= content) setStep(1);
-      else setStep(2);
+      let next = heroSteps.length - 1;
+      for (let index = 0; index < heroSteps.length; index += 1) {
+        const typeClass = heroSteps[index];
+        if (typeClass != null && widthOf(typeClass) <= content) {
+          next = index;
+          break;
+        }
+      }
+      setStep(next);
     };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(column);
+    for (const ancestor of chain) observer.observe(ancestor);
+    let cancelled = false;
+    // jsdom has no FontFaceSet. The assertion is the runtime check.
+    const fonts = document.fonts as FontFaceSet | undefined;
+    if (fonts != null) {
+      void fonts.ready.then(() => {
+        if (!cancelled && host.isConnected) measure();
+      });
+    }
     return () => {
+      cancelled = true;
       observer.disconnect();
       host.remove();
     };

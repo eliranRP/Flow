@@ -65,9 +65,9 @@
 
 .ui-btn-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
 }
 
 .ui-pill-label,
@@ -81,7 +81,6 @@
 }
 
 .ui-btn.ui-btn-primary {
-  height: var(--control-height);
   min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-accent);
@@ -94,7 +93,6 @@
 }
 
 .ui-btn.ui-btn-secondary {
-  height: var(--control-height);
   min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-tint);
@@ -401,6 +399,22 @@ a.ui-row,
   white-space: nowrap;
 }
 
+.ui-row-title-with-tag {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.ui-row-title-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ui-row-title-muted {
   color: var(--color-text-muted);
 }
@@ -413,13 +427,13 @@ a.ui-row,
 
 .ui-row-hint {
   display: block;
-  overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  text-wrap: pretty;
 }
 
 .ui-row-hint-wrap {
@@ -535,34 +549,65 @@ a.ui-row,
   line-height: var(--type-hint-line);
 }
 
-.ui-secret-value {
-  display: block;
-  max-inline-size: 100%;
-  min-inline-size: 0;
-  overflow-wrap: anywhere;
-  word-break: break-all;
-  user-select: text;
-  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
-}
-
-.ui-copy-row {
+.ui-code-field {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--label-gap);
+  inline-size: 100%;
   min-inline-size: 0;
 }
 
-.ui-copy-main {
-  flex: 1;
+.ui-code-field-box {
+  position: relative;
+  inline-size: 100%;
   min-inline-size: 0;
+  direction: ltr;
 }
 
-.ui-copy-row > .ui-text-link {
-  flex: none;
+.ui-code-field-input {
+  direction: ltr;
+  text-align: start;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  user-select: text;
+  touch-action: pan-x;
+}
+
+/* Vaul sets touch-action: none on the drawer. The field has to win so a sideways swipe pans the value. */
+[data-vaul-drawer] .ui-code-field-input {
+  touch-action: pan-x;
+}
+
+.ui-code-field-copy {
+  position: absolute;
+  z-index: 1;
+  /* Sit inside the field border so the surface does not cover the end edge. */
+  inset-inline-end: 1px;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  background: var(--color-surface);
 }
 
 .ui-assistant-step {
   min-block-size: 22rem;
+}
+
+.ui-assistant-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-assistant-header {
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  vertical-align: bottom;
 }
 
 .ui-field-control {
@@ -579,6 +624,15 @@ a.ui-row,
   box-sizing: border-box;
   font-size: max(16px, var(--type-body-size));
   font-weight: var(--type-body-weight);
+}
+
+/* After .ui-field-control. That rule's padding-inline would otherwise put the value under the copy button. */
+.ui-code-field-box[data-copy="on"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: calc(var(--touch-min) + var(--space-2));
+}
+
+.ui-code-field-box[data-copy="off"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: var(--field-pad);
 }
 
 .ui-money-field.ui-field-control {
@@ -831,9 +885,8 @@ a.ui-row,
 .ui-meter-label {
   display: block;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ui-budget {
@@ -853,7 +906,9 @@ a.ui-row,
 
 .ui-budget-title {
   display: -webkit-box;
+  min-inline-size: 0;
   overflow: hidden;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1419,6 +1474,7 @@ a.ui-row,
 
 .ui-review-ai .ui-row-title {
   flex: 1 1 auto;
+  min-inline-size: 0;
 }
 
 .ui-review-note {
@@ -1476,8 +1532,10 @@ a.ui-row,
   flex: 1;
 }
 
-.ui-review-supplier {
+.ui-review-supplier,
+.ui-party {
   min-inline-size: 0;
+  overflow-wrap: anywhere;
   white-space: normal;
 }
 
@@ -1880,6 +1938,7 @@ button.ui-tab-slot {
   margin: 0;
   display: -webkit-box;
   overflow: hidden;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1893,6 +1952,7 @@ button.ui-tab-slot {
   color: var(--color-text-muted);
   display: -webkit-box;
   overflow: hidden;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
@@ -2429,6 +2489,9 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-remember-supplier {
   flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ui-remember-dest {
@@ -2476,9 +2539,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-banner .ui-row-title,
 .ui-banner .ui-row-hint {
-  white-space: normal;
   display: -webkit-box;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -3114,9 +3178,8 @@ div.ui-check-row {
 
 .ui-pick-label {
   min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ui-pick-row > .ui-pick-date,

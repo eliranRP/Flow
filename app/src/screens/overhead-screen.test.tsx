@@ -1,6 +1,6 @@
 import type { ProjectDetail } from "@flow/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
@@ -95,9 +95,11 @@ describe("project category breakdown", () => {
         { id: "m", name: "חומרים", amount_agorot: 2_000n, has_shared_share: false },
       ],
     });
-    const note = screen.getByText("כולל חלק מהוצאות משותפות");
+    const haul = screen.getByRole("link", { name: /הובלה/ });
+    const note = within(haul).getByText("כולל חלק מהוצאות משותפות");
     expect(note).toHaveClass("ui-shared-note");
     expect(note).toHaveClass("t-hint");
+    expect(within(screen.getByRole("link", { name: /חומרים/ })).queryByText("כולל חלק מהוצאות משותפות")).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>

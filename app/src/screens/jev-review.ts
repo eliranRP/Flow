@@ -28,6 +28,10 @@ type JevRow = {
   category_name?: string | null;
   project_suggested?: boolean;
   category_suggested?: boolean;
+  /** Set when the user owns the row. Absent on today's list_review payload. */
+  user_assigned?: boolean;
+  category_assigned?: boolean;
+  project_assigned?: boolean;
 };
 
 function skipsProject(row: JevRow): boolean {
@@ -38,12 +42,29 @@ function skipsProject(row: JevRow): boolean {
     || row.reason === "unallocated_shared";
 }
 
+function userOwns(userAssigned: boolean | undefined, fieldAssigned: boolean | undefined): boolean {
+  return userAssigned === true || fieldAssigned === true;
+}
+
+/** Both flags are on the row and neither says the user set the field. */
+function flagsSayUnset(userAssigned: boolean | undefined, fieldAssigned: boolean | undefined): boolean {
+  return userAssigned === false && fieldAssigned === false;
+}
+
 function projectOpen(row: JevRow): boolean {
   if (skipsProject(row)) return false;
-  return !(row.project_id != null && row.project_suggested !== true);
+  if (userOwns(row.user_assigned, row.project_assigned)) return false;
+  if (row.project_id == null) return true;
+  if (flagsSayUnset(row.user_assigned, row.project_assigned)) return true;
+  return row.project_suggested === true;
 }
 
 function categoryOpen(row: JevRow): boolean {
+  if (userOwns(row.user_assigned, row.category_assigned)) return false;
+  // An empty category is unset. list_review still returns category_suggested false.
+  if (row.category_id == null) return true;
+  if (flagsSayUnset(row.user_assigned, row.category_assigned)) return true;
+  // No assignment columns: a stored non-suggestion stays. An omitted flag stays open.
   return row.category_suggested !== false;
 }
 
@@ -117,9 +138,30 @@ function nameMap(rows: readonly NameRow[] | null, kind: "project" | "category"):
   return map;
 }
 
-export async function loadJevReview(transactionId: string): Promise<JevReviewState> {
+export type JevQueueData = {
+  connectorOn: boolean;
+  /** Every requested id is present. Null means the connector is on and that line has no usable suggestion. */
+  byId: Record<string, JevPrefill | null>;
+};
+
+export function jevReadable(): boolean {
   const supabase = getSupabase();
-  if (!supabase || typeof supabase.from !== "function") return JEV_REVIEW_OFF;
+  return supabase != null && typeof supabase.from === "function";
+}
+
+/** Stable id list for the queue query, so a card does not start its own read. */
+export function jevQueueKey(transactionIds: readonly string[]): string {
+  return [...new Set(transactionIds.filter((id) => id !== ""))].sort().join("\0");
+}
+
+export function jevQueueQueryKey(transactionIds: readonly string[]) {
+  return ["jev-review-queue", jevQueueKey(transactionIds)] as const;
+}
+
+export async function loadJevQueue(transactionIds: readonly string[]): Promise<JevQueueData> {
+  const supabase = getSupabase();
+  const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
+  if (!supabase || typeof supabase.from !== "function") return { connectorOn: false, byId: {} };
   const integration = await supabase
     .from("company_integrations")
     .select("enabled,mode")
@@ -128,29 +170,37 @@ export async function loadJevReview(transactionId: string): Promise<JevReviewSta
   if (integration.error) throw new Error(integration.error.message);
   const stored = integration.data;
   const connectorOn = stored?.enabled === true && stored.mode !== "off" && (stored.mode === "shadow" || stored.mode === "auto");
-  if (!connectorOn) return JEV_REVIEW_OFF;
-  const suggestion = await supabase
+  if (!connectorOn || ids.length === 0) return { connectorOn, byId: {} };
+  const suggestions = await supabase
     .from("tag_suggestions")
     .select("id,transaction_id,answers")
-    .eq("transaction_id", transactionId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (suggestion.error) throw new Error(suggestion.error.message);
-  const row = suggestion.data;
-  if (!row) return { connectorOn: true, prefill: null };
+    .in("transaction_id", ids)
+    .order("created_at", { ascending: false });
+  if (suggestions.error) throw new Error(suggestions.error.message);
+  const newest = new Map<string, { id: string; transaction_id: string; answers: unknown }>();
+  for (const row of suggestions.data) {
+    if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
+  }
   const projects = await supabase.from("projects").select("id,name,status");
   if (projects.error) throw new Error(projects.error.message);
   const categories = await supabase.from("categories").select("id,name,hidden");
   if (categories.error) throw new Error(categories.error.message);
+  const projectNames = nameMap(projects.data, "project");
+  const categoryNames = nameMap(categories.data, "category");
+  const byId: Record<string, JevPrefill | null> = {};
+  for (const id of ids) {
+    const row = newest.get(id);
+    byId[id] = row
+      ? parseJevSuggestion(row.answers, row.id, row.transaction_id, projectNames, categoryNames)
+      : null;
+  }
+  return { connectorOn: true, byId };
+}
+
+export async function loadJevReview(transactionId: string): Promise<JevReviewState> {
+  const queue = await loadJevQueue([transactionId]);
   return {
-    connectorOn: true,
-    prefill: parseJevSuggestion(
-      row.answers,
-      row.id,
-      row.transaction_id,
-      nameMap(projects.data, "project"),
-      nameMap(categories.data, "category"),
-    ),
+    connectorOn: queue.connectorOn,
+    prefill: queue.byId[transactionId] ?? null,
   };
 }

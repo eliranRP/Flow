@@ -56,7 +56,12 @@ export function Button(props: ButtonProps) {
     <>
       {props.busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
       {props.icon}
-      <span className={variant === "pill" ? "ui-pill-label" : "ui-btn-label"}>{props.children}</span>
+      <span
+        className={variant === "pill" ? "ui-pill-label" : "ui-btn-label"}
+        data-clip-ok={variant === "pill" ? "" : undefined}
+      >
+        {props.children}
+      </span>
       {props.iconEnd}
     </>
   );
