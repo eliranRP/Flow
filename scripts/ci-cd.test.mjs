@@ -132,6 +132,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e\n/);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
+  assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
   assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);
   assert.match(job("e2e"), /bash scripts\/cd-dry-run-pending.sh/);
   assert.match(job("e2e"), /FLOW_CD_PREFLIGHT_LOCAL=1/);
@@ -243,6 +244,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(owners, /^supabase\/migrations\.lock @eliranRP$/m);
   assert.match(owners, /^scripts\/cd-\* @eliranRP$/m);
   assert.match(owners, /^scripts\/check-migration-order\.mjs @eliranRP$/m);
+  assert.match(owners, /^scripts\/check-migration-transaction\.mjs @eliranRP$/m);
   assert.match(owners, /^scripts\/preflight-r23\.sql @eliranRP$/m);
   assert.match(owners, /^\.github\/workflows\/ @eliranRP$/m);
   assert.match(owners, /^\.github\/CODEOWNERS @eliranRP$/m);
