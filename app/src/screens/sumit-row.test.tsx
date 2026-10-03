@@ -499,7 +499,10 @@ describe("SUMIT status row", () => {
     );
     try {
       const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-      await waitFor(() => { expect(router.state.location.search).toBe(""); });
+      await waitFor(() => {
+        expect(router.state.location.search).toBe("");
+        expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
+      });
       const openKey = router.state.location.key;
       window.history.replaceState({ idx: 1 }, "");
       fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
