@@ -117,7 +117,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Split | a percent field | Edits that share. A tap on the left edge, the centre, or the right edge focuses it, and 100 stays fully visible. The row focuses it too. | while saving | no | the remainder line updates | a field over 100% shows "עד 100%" | pass |
 | Split | חזרה לאפשרויות | Restores the previous choice. | while saving | no | the four choices return | none | pass |
 | Split | summary | No שמירה button. ✕ is the save. An invalid choice shows ביטול השינוי next to the reason. | n/a | n/a | the footer is the summary sentence | n/a | pass |
-| Settings | account row | Shows the business name and the Google email on one row. With no company the row is disabled and says "אין עסק עדיין". | no company | no | the row | none | unit |
+| Settings | account row | Shows the business name and the Google email on one row. With no company the row is disabled and shows the Google email, or "עדיין בלי עסק" when there is no email. "אין עסק עדיין" is the עוזר row. | no company | no | the row | none | unit |
 | Settings | חיבור עוזר | Opens the connect sheet. Shown when the assistant is not connected. | no company. The hint says why. | no | sheet title חיבור עוזר | none | pass |
 | Settings | קריאה וכתיבה / קריאה בלבד | Selects the scope. It does not mint. | while יצירת קוד is minting. The reason says why. | no | the row is selected | none | pass |
 | Settings | יצירת קוד | Mints one code for this user. | never | the button is busy | step 2 shows the code once | "לא הצלחנו להתחבר. נסו שוב." The button retries | pass |
