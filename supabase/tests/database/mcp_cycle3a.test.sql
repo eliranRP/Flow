@@ -55,6 +55,7 @@ begin
   );
 end;
 $$;
+grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 
 select tests.authenticate_as('mcp3_owner');
 select lives_ok($$select public.create_company('חברה', true)$$, 'owner creates a company');
@@ -71,6 +72,7 @@ select 'materials', id from public.categories where name = 'חומרים' and ki
 insert into mcp3 (label, id)
 select 'haul', id from public.categories where name = 'הובלה' and kind = 'expense';
 
+reset role;
 insert into public.suppliers (company_id, name)
 select id, 'ספק בדיקה' from public.companies;
 insert into mcp3 (label, id) select 'supplier', id from public.suppliers where name = 'ספק בדיקה';
@@ -309,6 +311,7 @@ select 'other_category', c.id
 from public.categories c
 join mcp3 company on company.label = 'other_company'
 where c.company_id = company.id and c.name = 'חומרים' and c.kind = 'expense';
+reset role;
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
@@ -334,27 +337,27 @@ reset role;
 
 select lives_ok(
   format(
-    $$select public.store_mcp_credential(%L::uuid, 'hash-mcp3-write', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
+    $$select public.store_mcp_credential(%L::uuid, 'hash-mcp3-write1', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
     (select id from auth.users where email = 'mcp3-owner@test.flow')
   ),
   'store the owner write token'
 );
 
 insert into mcp3 (label, id)
-select 'write', id from private.mcp_credentials where token_hash = 'hash-mcp3-write';
+select 'write', id from private.mcp_credentials where token_hash = 'hash-mcp3-write1';
 
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select user_id, company_id, 'hash-mcp3-read', 'pepper-1', array['read'], now() + interval '90 days'
+select user_id, company_id, 'hash-mcp3-read01', 'pepper-1', array['read'], now() + interval '90 days'
 from private.mcp_credentials
-where token_hash = 'hash-mcp3-write';
+where token_hash = 'hash-mcp3-write1';
 
 insert into mcp3 (label, id)
-select 'read', id from private.mcp_credentials where token_hash = 'hash-mcp3-read';
+select 'read', id from private.mcp_credentials where token_hash = 'hash-mcp3-read01';
 
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at, revoked_at)
 select user_id, company_id, 'hash-mcp3-revoked', 'pepper-1', array['read','write'], now() + interval '90 days', now()
 from private.mcp_credentials
-where token_hash = 'hash-mcp3-write';
+where token_hash = 'hash-mcp3-write1';
 
 insert into mcp3 (label, id)
 select 'revoked', id from private.mcp_credentials where token_hash = 'hash-mcp3-revoked';
@@ -733,11 +736,13 @@ select is(
   'a cross-company transaction is refused'
 );
 
+reset role;
 select is(
   (select project_id from public.transactions where idempotency_key = 'mcp3:other'),
   (select id from mcp3 where label = 'other_project'),
   'the other company row is unchanged'
 );
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
   (
@@ -1053,6 +1058,7 @@ select 'sync', t.project_id, t.category_id, t.pnl_role::text, t.user_assigned, t
 from public.transactions t
 where t.idempotency_key = 'mcp3:sync';
 
+reset role;
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
