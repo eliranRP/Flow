@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { spawnSync } from "node:child_process";
 import {
+  acceptPreflightKind,
   backfillVersions,
   backfillVersionsRecorded,
   classifyDryRun,
@@ -177,4 +179,25 @@ test("pending is not accepted from an up-to-date JSON result", () => {
   const result = classifyDryRun(jsonLog(remoteJson), "remote", "pending");
   assert.equal(result.ok, false);
   if (!result.ok) assert.match(result.reason, /pending was required/);
+});
+
+test("preflight kind matches the target, and an empty or crossed kind fails", () => {
+  assert.deepEqual(acceptPreflightKind("up-to-date local", "local"), { ok: true });
+  assert.deepEqual(acceptPreflightKind("up-to-date remote", "remote"), { ok: true });
+  assert.deepEqual(acceptPreflightKind("pending", "remote"), { ok: true });
+  assert.equal(acceptPreflightKind("pending", "local").ok, false);
+  assert.equal(acceptPreflightKind("", "local").ok, false);
+  assert.equal(acceptPreflightKind("up-to-date remote", "local").ok, false);
+  assert.equal(acceptPreflightKind("up-to-date local", "remote").ok, false);
+  assert.equal(acceptPreflightKind("up-to-date remote", "").ok, false);
+  assert.equal(acceptPreflightKind("up-to-date remote", "hosted").ok, false);
+});
+
+test("preflight-kind CLI fails on an empty kind and passes a local up-to-date kind", () => {
+  const script = new URL("./cd-output.mjs", import.meta.url).pathname;
+  const empty = spawnSync(process.execPath, [script, "preflight-kind", "--target", "remote", ""], { encoding: "utf8" });
+  assert.equal(empty.status, 1);
+  assert.match(empty.stderr, /did not match the target/);
+  const ok = spawnSync(process.execPath, [script, "preflight-kind", "--target", "local", "up-to-date local"], { encoding: "utf8" });
+  assert.equal(ok.status, 0);
 });
