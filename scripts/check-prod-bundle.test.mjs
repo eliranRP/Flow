@@ -21,6 +21,20 @@ test("flags a fixture module, a story, and a golden value", () => {
   assert.ok(found.some((line) => line.includes("37700")));
 });
 
+test("flags the review e2e fixture supplier and the e2e=list switch", () => {
+  const found = violations({
+    modules: ["/repo/app/src/main.tsx"],
+    files: [{ name: "app/dist/assets/index.js", body: "supplier מחסן הנמל ?e2e=list" }],
+  });
+  assert.ok(found.some((line) => line.includes("מחסן הנמל")));
+  assert.ok(found.some((line) => line.includes("e2e=list")));
+  const module = violations({
+    modules: ["/repo/app/src/dev/review-e2e-fixture.ts"],
+    files: [],
+  });
+  assert.ok(module.some((line) => line.includes("review-e2e-fixture")));
+});
+
 test("flags a dev route and a reviewer marker in the hosted bundle", () => {
   const found = violations({
     modules: ["/repo/app/src/reviewer-preview.tsx", "/repo/app/src/reviewer-sample.ts"],

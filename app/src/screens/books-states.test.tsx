@@ -304,7 +304,7 @@ describe("rejected writes", () => {
     };
     renderAt("/review");
     expect(await screen.findByText("הוצאה משותפת · אישור יפתח חלוקה")).toBeInTheDocument();
-    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     expect(screen.getByText("חומרים")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeEnabled();
@@ -357,6 +357,49 @@ describe("rejected writes", () => {
     expect(calls).not.toContain("resolve_review");
     expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-split" });
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+  });
+
+  it("approves a project-role card with more than one share through the split", async () => {
+    const calls: string[] = [];
+    const args: unknown[] = [];
+    rpc.impl = (name, input) => {
+      calls.push(name);
+      args.push(input);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r-shares",
+              transaction_id: "t-shares",
+              description: "ליסינג",
+              doc_date: "2026-09-01",
+              doc_kind: "invoice",
+              amount_net: -200000,
+              direction: "expense",
+              reason: "missing_category",
+              pnl_role: "project",
+              share_count: 2,
+              project_id: "p1",
+              category_id: "c1",
+              project_name: "הרצל",
+              category_name: "חומרים",
+              category_suggested: false,
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(calls).toContain("approve_split_review");
+    });
+    expect(calls).not.toContain("resolve_review");
+    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-shares" });
   });
 
   it("unsplits an unallocated shared cost from the project picker", async () => {
@@ -669,8 +712,8 @@ describe("rejected writes", () => {
     );
     expect(screen.getByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(screen.getByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
-    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -682,7 +725,7 @@ describe("rejected writes", () => {
     );
     expect(screen.getByText("שינוע")).toBeInTheDocument();
     expect(screen.getByText("הצעה")).toBeInTheDocument();
-    expect(screen.queryByText("חסר פרויקט, בחרו בשינוי")).not.toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -725,14 +768,12 @@ describe("rejected writes", () => {
       </QueryClientProvider>
     );
     const { rerender } = render(queue(row));
-    const project = screen.getByText("הרצל").closest("p");
-    const category = screen.getByText("חומרים").closest("p");
-    if (!(project instanceof HTMLElement) || !(category instanceof HTMLElement)) throw new Error("line missing");
+    const project = screen.getByRole("button", { name: "פרויקט: הרצל, הצעה" });
+    const category = screen.getByRole("button", { name: "קטגוריה: חומרים" });
     expect(within(project).getByText("הצעה")).toBeInTheDocument();
     expect(within(category).queryByText("הצעה")).not.toBeInTheDocument();
     rerender(queue({ ...row, project_suggested: false }));
-    const owned = screen.getByText("הרצל").closest("p");
-    if (!(owned instanceof HTMLElement)) throw new Error("line missing");
+    const owned = screen.getByRole("button", { name: "פרויקט: הרצל" });
     expect(within(owned).queryByText("הצעה")).not.toBeInTheDocument();
   });
 
@@ -833,7 +874,7 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("חסר קטגוריה, בחרו בשינוי")).toBeInTheDocument();
+    expect(await screen.findByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
   });
 
@@ -863,7 +904,7 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("אין הצעה, בחרו בשינוי")).toBeInTheDocument();
+    expect(await screen.findByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeDisabled();
     expect(getComputedStyle(approve).cursor).toBe("not-allowed");

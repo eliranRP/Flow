@@ -7,7 +7,7 @@ These notes are the section 7 rules used for the PR #6 review: the 12-point self
 ## Self-check
 
 1. Open the design sources for every screen you touch. Hints use `t-hint` and are tied with `aria-describedby`. Rows use the same `ListRow` icon pattern as the neighbouring rows.
-2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. For each text node, measure the nearest ancestor that is not `display: inline` or `display: contents`, once per container. An inline `<bdi>` is not the box. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. Visually hidden text, a box of about 1px, is not measured. A story tagged `clip-no-text` is skipped. `parameters.clipCheck.noText` is not read. Any other story that measures nothing exits 2. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture. The full list is `clip-report.json` and `clip-report.txt` at the repo root. Stdout keeps the first 40 clips.
+2. Clip check: at 320, 360, and 390, light and dark, assert the text fits its own box, not only the page. The command is `pnpm build-storybook` then `pnpm clip-check`. An inline element's box is as wide as its text and never clips, so measure the nearest ancestor that is not `display: inline` or `display: contents`, once per container. An inline `<bdi>` is not the box. The ellipsis exemption is `.ui-row-title` and `[data-clip-ok]`. A single-line `.ui-row-hint` is measured. A hint that wraps is still measured. Visually hidden text, a box of about 1px, is not measured. A story tagged `clip-no-text` is skipped. `parameters.clipCheck.noText` is not read. Any other story that measures nothing exits 2. The tint that sticks out of a row is not text. Zero overflow is not evidence for copy, select, or gesture. The full list is `clip-report.json` and `clip-report.txt` at the repo root. Stdout keeps the first 40 clips.
 3. Walk a changed row together with the states it sits beside. Never show a state you do not know. A failed load is an error with a retry, not an empty or disconnected row with an active action.
 4. Run the repo gate before handoff: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `deno test --allow-env supabase/functions/flow-mcp`, `node --test scripts/*.test.mjs`, the database tests, and `pnpm db:types:check`. Hand off only when CI is green on the pushed head.
 5. A script that reports several outcomes has one exit code per outcome, plus one code for incomplete. Run it once per code against the real response shape. Paste the codes.
@@ -66,6 +66,7 @@ Catch these before handoff. The matching lines are in the two checklists.
 14. A `min-block-size` step-jump fix is re-sampled at 320, where the content wraps.
 15. A button label uses the action name from `ErrorState` and the toasts ("ניסיון חוזר"), not a sentence.
 16. An owner call that is in the code and missing from the decision's state table is spec drift.
+17. An inline element's box is as wide as its text and never clips. Measure the nearest block ancestor, the one whose `display` is not `inline` or `contents`, once per container. A `<bdi>` inside a hint, mixed text, or a display amount is not the clipping box.
 
 ## Order
 
