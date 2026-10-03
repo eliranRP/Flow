@@ -3,6 +3,7 @@ import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useRefreshingNow } from "../israel-clock";
 import { getSupabase } from "../lib/supabase";
+import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { claudeCodeCommand, flowMcpUrl } from "../mcp-address";
 import { israelUsePhrase } from "../sumit-copy";
 import { popSheetLayers, useSheetHistory } from "../ui/back";
@@ -48,8 +49,6 @@ const HELP_TITLE = "איך מחברים ב־Claude";
 const HELP_LEAD = "ב־Claude Code הריצו את הפקודה.";
 const CLAUDE_WEB = "ב־Claude.ai צריך כותרת מותאמת";
 const CLAUDE_HEADER = "Authorization: Bearer <הקוד>";
-/** A shown-once fixture. Not a live token. */
-export const SAMPLE_ASSISTANT_SECRET = "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2";
 
 type CopyField = "url" | "secret" | "command";
 
