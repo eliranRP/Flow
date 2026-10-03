@@ -86,9 +86,8 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-playwright-1.63.0
       - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install-deps chromium
       - name: Install Playwright browsers
@@ -144,9 +143,8 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-playwright-1.63.0
       - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install-deps chromium
       - name: Install Playwright browsers
