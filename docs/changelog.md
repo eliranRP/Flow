@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+UI polish. Sheet and route-sheet titles keep a single-line ellipsis (`data-clip-ok`). Button labels, row hints, meter labels, and project-picker labels wrap. Chip, pill, period, segment, text-link, and switch labels stay one line and use `data-clip-ok`. The add-sheet hint and the unpaid-list hints wrap.
+
 UI polish. A double tap on סיום closes the code sheet once. The button uses the sheet's own close, so a second tap does not pop another history step. Decision [0082](decisions/0082-settings-redesign.md).
 
 UI polish. The Claude command, the address, and the code are each one read-only field on the input surface. The text is monospace and LTR, on one line that scrolls horizontally. The command is named "פקודת חיבור ל־Claude Code" and has no separate label. The copy control is an icon button inside the field, named "העתקה". Decision [0082](decisions/0082-settings-redesign.md). The owner decision is in [PLAN.md](PLAN.md).

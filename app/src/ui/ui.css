@@ -65,9 +65,9 @@
 
 .ui-btn-label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
 }
 
 .ui-pill-label,
@@ -81,7 +81,6 @@
 }
 
 .ui-btn.ui-btn-primary {
-  height: var(--control-height);
   min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-accent);
@@ -94,7 +93,6 @@
 }
 
 .ui-btn.ui-btn-secondary {
-  height: var(--control-height);
   min-height: var(--control-height);
   border-radius: var(--radius-button);
   background: var(--color-tint);
@@ -413,13 +411,12 @@ a.ui-row,
 
 .ui-row-hint {
   display: block;
-  overflow: hidden;
+  overflow-wrap: anywhere;
   color: var(--color-text-muted);
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .ui-row-hint-wrap {
@@ -843,9 +840,8 @@ a.ui-row,
 .ui-meter-label {
   display: block;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ui-budget {
@@ -865,7 +861,9 @@ a.ui-row,
 
 .ui-budget-title {
   display: -webkit-box;
+  min-inline-size: 0;
   overflow: hidden;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1892,6 +1890,7 @@ button.ui-tab-slot {
   margin: 0;
   display: -webkit-box;
   overflow: hidden;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1905,6 +1904,7 @@ button.ui-tab-slot {
   color: var(--color-text-muted);
   display: -webkit-box;
   overflow: hidden;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
@@ -2488,9 +2488,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-banner .ui-row-title,
 .ui-banner .ui-row-hint {
-  white-space: normal;
   display: -webkit-box;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -3126,9 +3127,8 @@ div.ui-check-row {
 
 .ui-pick-label {
   min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .ui-pick-row > .ui-pick-date,
