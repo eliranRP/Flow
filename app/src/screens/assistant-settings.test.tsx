@@ -93,7 +93,10 @@ describe("assistant settings", () => {
     expect(phrase.startsWith("שימוש אחרון")).toBe(true);
     expect(within(sheet).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
     expect(sheet).toHaveTextContent("מחובר · קריאה בלבד");
-    expect(within(sheet).getByText("כדי לשנות את הגישה מנתקים ומחברים שוב.")).toBeInTheDocument();
+    const note = within(sheet).getByText("כדי לשנות את הגישה מנתקים ומחברים שוב.");
+    expect(note).toHaveClass("t-hint");
+    expect(stamp.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stamp.parentElement?.parentElement).toBe(note.parentElement);
   });
 
   it("disables the scope rows while minting, and a failure says to try again", async () => {
@@ -257,7 +260,8 @@ describe("assistant settings", () => {
     fireEvent.click(screen.getByRole("radio", { name: "קריאה בלבד" }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
     expect(await screen.findByRole("heading", { name: "הקוד מוכן" })).toBeInTheDocument();
-    expect(screen.getByText("קריאה בלבד")).toBeInTheDocument();
+    const shown = screen.getByText("גישה: קריאה בלבד. הקוד מוצג פעם אחת.");
+    expect(shown).toHaveClass("t-hint");
     expect(screen.getByRole("button", { name: "איך מחברים ב־Claude" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "סיום" })).toBeInTheDocument();
     expect(bodies).toContainEqual({ body: { scope: "read" } });
@@ -545,8 +549,9 @@ describe("assistant settings", () => {
     );
     const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
     expect(within(ready).getByRole("textbox", { name: "כתובת" })).toHaveValue("https://example.com/functions/v1/flow-mcp");
-    expect(within(ready).getByRole("group", { name: "היקף הגישה" })).toHaveTextContent("קריאה וכתיבה");
-    expect(within(ready).getByText("הקוד מוצג פעם אחת")).toBeInTheDocument();
+    const shown = within(ready).getByText("גישה: קריאה וכתיבה. הקוד מוצג פעם אחת.");
+    expect(shown).toHaveClass("t-hint");
+    expect(within(ready).queryByRole("group", { name: "היקף הגישה" })).not.toBeInTheDocument();
     expect(within(ready).queryByText("הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.")).not.toBeInTheDocument();
     fireEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
     const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
@@ -559,7 +564,10 @@ describe("assistant settings", () => {
     expect(within(help).getByRole("button", { name: "העתקה" })).toBeInTheDocument();
     expect(within(help).getByText("אם Claude Code לא מותקן, התקינו אותו קודם.")).toBeInTheDocument();
     expect(within(help).getByText(/ב־Claude\.ai צריך כותרת מותאמת/)).toBeInTheDocument();
-    expect(within(help).getByText("Authorization: Bearer <הקוד>")).toBeInTheDocument();
+    const header = within(help).getByText("Authorization: Bearer <הקוד>.");
+    expect(header).toHaveClass("ui-nowrap");
+    expect(getComputedStyle(header).whiteSpace).toBe("nowrap");
+    expect(header).toHaveAttribute("dir", "ltr");
     expect(within(help).queryByText("ב־Claude.ai הדביקו את הכתובת ואת הקוד.")).not.toBeInTheDocument();
     expect(within(ready).queryByText(/קטגור/)).not.toBeInTheDocument();
   });
@@ -658,6 +666,46 @@ describe("assistant settings", () => {
     await waitFor(() => { expect(link).toHaveFocus(); });
     fireEvent.click(within(screen.getByRole("dialog", { name: "הקוד מוכן" })).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+  });
+
+  it("keeps the code step and the expired step until the sheet has closed", async () => {
+    const code = renderAssistant(
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        initialSecret={{ id: "mcp-1", secret: "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2", scope: ["read", "write"] }}
+      />,
+    );
+    const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
+    fireEvent.click(within(ready).getByRole("button", { name: "סיום" }));
+    await act(async () => { await Promise.resolve(); });
+    const sliding = screen.queryByRole("dialog");
+    if (sliding) {
+      expect(sliding).toHaveTextContent("גישה: קריאה וכתיבה. הקוד מוצג פעם אחת.");
+      expect(within(sliding).queryByRole("radio", { name: "קריאה וכתיבה" })).not.toBeInTheDocument();
+    }
+    await act(async () => { await new Promise((resolve) => { window.setTimeout(resolve, 400); }); });
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    const step = await screen.findByRole("dialog", { name: "חיבור עוזר AI" });
+    expect(within(step).getByRole("radio", { name: "קריאה וכתיבה" })).toBeChecked();
+    code.unmount();
+
+    renderAssistant(<AssistantSettings sample={{ state: "expired", scope: "read", id: "mcp-1" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    const expired = await screen.findByRole("dialog", { name: "עוזר AI" });
+    fireEvent.click(within(expired).getByRole("button", { name: "סגירה" }));
+    await act(async () => { await Promise.resolve(); });
+    const slidingExpired = screen.queryByRole("dialog");
+    if (slidingExpired) {
+      expect(within(slidingExpired).getByRole("heading", { name: "פג תוקף" })).toBeInTheDocument();
+      expect(within(slidingExpired).queryByRole("radio", { name: "קריאה וכתיבה" })).not.toBeInTheDocument();
+    }
+    await act(async () => { await new Promise((resolve) => { window.setTimeout(resolve, 400); }); });
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    const again = await screen.findByRole("dialog", { name: "עוזר AI" });
+    expect(within(again).getByRole("heading", { name: "פג תוקף" })).toBeInTheDocument();
+    expect(within(again).queryByRole("radio", { name: "קריאה וכתיבה" })).not.toBeInTheDocument();
   });
 
   it("keeps the assistant details open when the confirm layer is popped", async () => {
