@@ -95,6 +95,7 @@ export function Sheet({
   onBeforeClose,
   onRequestClose,
   returnFocusRef,
+  closeOnBackdrop = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -121,6 +122,8 @@ export function Sheet({
   onRequestClose?: RefObject<(() => void) | null>;
   /** ✕ and Escape put focus back on the control that opened the sheet. */
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** A backdrop tap closes the sheet. Step 2 of the one-time code turns this off. */
+  closeOnBackdrop?: boolean;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -280,7 +283,7 @@ export function Sheet({
   return (
     <Drawer.Root
       open={open}
-      dismissible
+      dismissible={closeOnBackdrop}
       modal={modal}
       onOpenChange={(next) => {
         if (!next) void requestClose();
@@ -309,17 +312,26 @@ export function Sheet({
           }}
           onPointerDownOutside={(event) => {
             keepOpenForToast(event);
+            if (!closeOnBackdrop) event.preventDefault();
           }}
           onInteractOutside={(event) => {
             keepOpenForToast(event);
+            if (!closeOnBackdrop) event.preventDefault();
           }}
           onFocusOutside={(event) => {
             keepOpenForToast(event);
           }}
           onEscapeKeyDown={(event) => {
-            if (!onEscape) return;
-            event.preventDefault();
-            onEscape();
+            if (onEscape) {
+              event.preventDefault();
+              onEscape();
+              return;
+            }
+            // Vaul drops every close, including Escape, when dismissible is off.
+            if (!closeOnBackdrop) {
+              event.preventDefault();
+              void requestClose();
+            }
           }}
         >
           <SheetSurface
