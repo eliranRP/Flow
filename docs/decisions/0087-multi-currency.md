@@ -11,14 +11,18 @@ Mercury amounts are US dollars. The books, the typed inputs, and the P&L are she
 
 Each company has one display currency, ₪ or $. One tap switches it, from the Home header and from Settings. Typed inputs stay ₪.
 
-A USD line stores the original gross cents, the rate, and the rate date. Once a day, Flow takes that day's Bank of Israel USD rate, or the newest published rate on or before that day when the calendar is a weekend or a holiday, and sets the shekel amounts with an explicit half-even round. Postgres `round` is not used. The rate is cached for the day. A missing rate fails that sync with `sync_fx_missing` and does not zero a line. Yesterday's shekel amounts stay until a rate is stored. The default policy reprices every USD row. Columns are shaped so a later lock-to-the-line's-date policy is one predicate. That lock is not accepted here.
+A Mercury line keeps its original currency. The stored amount and `currency` stay US dollars. Import does not convert the row to shekels and does not freeze a rate on the row. `fx_rate` and `fx_rate_date` stay null together. `companies.fx_policy` defaults to `original`.
 
-The shekel amount is before VAT, in agorot, as [0041](0041-amounts-before-vat.md) requires. Mercury's VAT is 0 ([0086](0086-mercury.md)), so gross and net match. Allocations are recomputed from `share_bp`. The document fingerprint for a USD line uses the original cents, so a reprice does not look like a new document.
+Conversion happens at display time. The ₪/$ toggle, and a total that mixes currencies, reads `fx_rates`: that day's Bank of Israel USD rate, or the newest published rate on or before that day when the calendar is a weekend or a holiday. The shekel figure uses an explicit half-even round. Postgres `round` is not used. The rate is cached for the day in `fx_rates`. It is not copied onto the transaction. A missing rate does not zero a line and does not block the import. The line stays in dollars, and the mixed total is not invented.
+
+`reprice_usd_lines` runs only if the policy is switched off `original`. `today` stamps the rate for the chosen date onto every USD row. `historical` stamps it only onto rows that do not have one yet. Neither rewrite changes the stored dollar amount or the currency. Locking the rate to each line's own date is not accepted. Switching back to `original` displays from `fx_rates` again.
+
+The displayed shekel amount is before VAT, in agorot, as [0041](0041-amounts-before-vat.md) requires. Mercury's VAT is 0 ([0086](0086-mercury.md)), so gross and net match in cents. The document fingerprint for a USD line uses the original cents, so a later stored rate does not look like a new document.
 
 ## Alternatives rejected
 
-A rate picked by the owner. Refetching a posting-date rate forever. Converting typed inputs when the toggle is on dollars. Storing only shekels and dropping the original dollars. Repricing with a stale rate and labelling it today. Adding the rate columns after Mercury rows already exist.
+A rate picked by the owner. Refetching a posting-date rate forever. Converting typed inputs when the toggle is on dollars. Storing only shekels and dropping the original dollars. Converting each Mercury row to shekels at import. Freezing today's rate onto the row as the default. Repricing with a stale rate and labelling it today. Adding the rate columns after Mercury rows already exist.
 
 ## Consequences
 
-Home can show the same books in ₪ or $. Reports stay in shekels in storage. The Bank of Israel fetch and the `fx_rates` table land with the display work, not in the contract layer. The contract names them.
+Home can show a Mercury line in dollars and a mixed total in the company's display currency. The dollar row stays dollars in storage. The Bank of Israel fetch and the `fx_rates` table land with the display work, not in the contract layer. The contract names them.

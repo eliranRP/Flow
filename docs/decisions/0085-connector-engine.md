@@ -13,7 +13,7 @@ One engine serves every connector. A provider implements a port: `open(secret)` 
 
 SUMIT moves onto that engine in this stack. The `sumit_*` tables and SUMIT-only jobs are dropped. Views of the same names stay, so `sumit-sync` and the existing pgTAP suites keep running. There is no backup and no second store. `upsert_sumit_documents(p_company, p_docs)` stays a wrapper with the same signature. `sumit-sync` and `sumit-connect` stay as aliases until L2a. Vault `flow_sync_url` still targets `/sumit-sync`.
 
-`SUMIT_KEK` and `MERCURY_KEK` are different env vars. The envelope still binds the company id ([0048](0048-sumit-key-envelope.md)). Copying a SUMIT row copies the ciphertext bytes unchanged.
+`SUMIT_KEK` and `MERCURY_KEK` are different env vars. Format 2 still binds the company id ([0048](0048-sumit-key-envelope.md)). Format 3 binds the company id and the provider. A SUMIT row that is already format 2 or 3 is copied with its ciphertext bytes unchanged. A format 1 row is resealed to format 3 before that copy, so the migration stores the resealed bytes.
 
 Refresh floors stay 60 seconds when the owner asks and 6 hours otherwise ([0049](0049-sumit-refresh.md)), per connection. One daily job and one drain job serve every provider. The sync cursor advances in the same transaction as the lines, and only when it still matches the cursor the run started from.
 

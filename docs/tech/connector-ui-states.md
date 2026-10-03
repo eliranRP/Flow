@@ -48,7 +48,7 @@ Both providers. The owner picks a start date, or מההתחלה (`import_from` n
 
 One control, two places: the Home header and Settings. It writes the company display currency. ₪ is `ILS`. $ is `USD`. The other surface updates on the next read.
 
-Typed amounts stay ₪. The toggle does not rewrite an input. Pending lines stay out of the totals in both currencies.
+A Mercury line stays in dollars. The toggle converts a mixed total at read from `fx_rates`. It does not rewrite the row and it does not freeze a rate on the line. Typed amounts stay ₪. The toggle does not rewrite an input. Pending lines stay out of the totals in both currencies.
 
 ## Pending tag
 
