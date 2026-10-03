@@ -34,7 +34,7 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0005](0005-mobile-first.md) | 2026-09-26 | Accepted | Mobile first |
 | [0006](0006-confirm-not-type.md) | 2026-09-26 | Accepted | Confirm, don't type; corrections become supplier rules |
 | [0007](0007-bank-statement-is-primary-input.md) | 2026-09-26 | Accepted | Cash basis: a payment counts and an unpaid invoice stays out of P&L. [0065](0065-review-round5.md) drops the file import |
-| [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used |
+| [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used. [0086](0086-mercury.md) adds תשלומי הלוואה, excluded from P&L |
 | [0009](0009-scalable-pickers.md) | 2026-09-26 | Accepted | Pickers and Home stay usable with many projects |
 | [0010](0010-docs-are-the-source-of-truth.md) | 2026-09-26 | Accepted | These docs, including decision records, are the source of truth |
 | [0011](0011-auto-approve-high-confidence.md) | 2026-09-26 | Accepted | Auto-approve high-confidence items; they skip the review queue |
