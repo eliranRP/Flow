@@ -1397,8 +1397,12 @@ a.ui-row,
 }
 
 .ui-review-queue .ui-banner {
-  margin-top: var(--space-3);
-  padding-block: var(--space-2);
+  margin-top: var(--space-1);
+  padding-block: var(--space-1);
+}
+
+.ui-review-queue .ui-review {
+  margin-top: 0;
 }
 
 .ui-review-queue .ui-banner .ui-row-title {
