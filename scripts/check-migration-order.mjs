@@ -3,6 +3,8 @@
  * The lock stores each filename and the sha256 of that file.
  * Against the lock on main, a change may only append a new file.
  * An existing filename and its sha256 stay put.
+ * An appended version is YYYYMMDDHHmmss and its hour is 00-23.
+ * Locked files that already use hour 24-29 stay, because they are not appended.
  */
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
@@ -101,8 +103,30 @@ export function migrationOrderProblems(files, lock, base, hashes = null) {
   const last = baseLocked[baseLocked.length - 1]?.name.slice(0, 14) ?? "";
   for (const entry of locked.slice(baseLocked.length)) {
     if (entry.name.slice(0, 14) <= last) problems.push(`${entry.name} sorts at or before the last locked migration`);
+    const hourProblem = appendedMigrationHourProblem(entry.name);
+    if (hourProblem) problems.push(hourProblem);
   }
   return problems;
+}
+
+/**
+ * Clock hour of a migration version. The stamp is YYYYMMDDHHmmss.
+ * @param {string} name
+ */
+export function migrationVersionHour(name) {
+  return Number(name.slice(8, 10));
+}
+
+/**
+ * @param {string} name
+ * @returns {string}
+ */
+export function appendedMigrationHourProblem(name) {
+  const hour = migrationVersionHour(name);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    return `${name} hour is outside 00-23`;
+  }
+  return "";
 }
 
 /** @returns {string[]} */

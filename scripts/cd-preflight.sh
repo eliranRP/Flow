@@ -90,9 +90,17 @@ if [[ "${FLOW_CD_PREFLIGHT_LOCAL:-}" == "1" ]]; then
     echo "Preflight did not return a readable dry-run. Migrations were not pushed."
     exit 1
   fi
+  if ! node scripts/cd-output.mjs preflight-kind --target local "$kind"; then
+    echo "Preflight local mode did not return a local up-to-date result. Migrations were not pushed."
+    exit 1
+  fi
 else
   if ! kind="$(node scripts/cd-output.mjs dry-run --target remote <"$dry_log")"; then
     echo "Preflight did not return a readable dry-run. Migrations were not pushed."
+    exit 1
+  fi
+  if ! node scripts/cd-output.mjs preflight-kind --target remote "$kind"; then
+    echo "Preflight remote mode did not return a remote result. Migrations were not pushed."
     exit 1
   fi
 fi
