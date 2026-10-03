@@ -30,8 +30,8 @@ function failureRetries(failure: WriteFailure, error: Error): boolean {
 }
 
 /** A write that checks the PostgREST error, stays busy, and toasts a retry for a transient failure. */
-export function useWrite(options: {
-  run: () => Promise<void>;
+export function useWrite<T = void>(options: {
+  run: (payload: T) => Promise<void>;
   keys: string[];
   success?: string;
   failure: string | ((error: Error) => WriteFailure);
@@ -41,15 +41,15 @@ export function useWrite(options: {
 }) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
-  const retry = useRef<() => void>(() => undefined);
+  const retry = useRef<(payload: T) => void>(() => undefined);
   const mutation = useMutation({
-    mutationFn: options.run,
+    mutationFn: (payload: T) => options.run(payload),
     onSuccess: async () => {
       await invalidate(options.keys);
       if (options.success) toast.show({ message: options.success });
       options.onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error, payload) => {
       const failure = error instanceof Error ? error : new Error("failed");
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
       const retryable = failureRetries(reported, failure);
@@ -61,13 +61,13 @@ export function useWrite(options: {
         ...(split
           ? { action: reported.action, onAction: () => { options.onSplit?.(); } }
           : retryable
-            ? { action: "ניסיון חוזר", onAction: () => { retry.current(); } }
+            ? { action: "ניסיון חוזר", onAction: () => { retry.current(payload); } }
             : {}),
       });
     },
   });
-  retry.current = () => {
-    mutation.mutate();
+  retry.current = (payload) => {
+    mutation.mutate(payload);
   };
   return mutation;
 }

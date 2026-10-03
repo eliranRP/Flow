@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { getSupabase } from "../lib/supabase";
+import { AlertIcon, ChevronDownIcon, TagIcon } from "../ui/icons";
+import { List, ListRow } from "../ui/list-row";
 import { Skeleton } from "../ui/skeleton";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
@@ -104,6 +106,7 @@ export function JevSettingsCard({
   state,
   busy = false,
   optionsOpen = false,
+  showThreshold = false,
   onToggle,
   onThreshold,
   onRetry,
@@ -111,6 +114,8 @@ export function JevSettingsCard({
   state: JevCardState;
   busy?: boolean;
   optionsOpen?: boolean;
+  /** The percent field stays hidden until auto mode. Tests still exercise the save. */
+  showThreshold?: boolean;
   onToggle?: (enabled: boolean) => void;
   onThreshold?: (value: number) => void;
   onRetry?: () => void;
@@ -129,63 +134,80 @@ export function JevSettingsCard({
     setDraftError(false);
   }, [state.threshold]);
 
-  const hint = state.status === "loading"
-    ? <Skeleton width="sm" />
-    : jevStatusWord(state);
-
-  return (
-    <div className="ui-page-pad ui-stack">
-      <Toggle
-        label={TITLE}
-        hint={hint}
-        checked={shownOn}
-        disabled={state.status !== "ready" || busy}
-        onChange={(checked) => {
-          if (state.status !== "ready" || busy) return;
-          onToggle?.(checked);
-        }}
-      />
-      {state.status === "error" && onRetry ? (
+  const row = state.status === "loading" ? (
+    <ListRow variant="static" title={TITLE} icon={<TagIcon size={24} />} hint={<Skeleton width="sm" />} skelHint busy />
+  ) : state.status === "error" ? (
+    <ListRow
+      variant="static"
+      title={TITLE}
+      icon={<AlertIcon size={24} />}
+      tone="muted"
+      describeHint
+      hintStatus
+      hint="שגיאה"
+      action={onRetry ? (
         <TextLink size="label" chevron={false} label="ניסיון חוזר: תיוג חכם" onClick={onRetry}>
           ניסיון חוזר
         </TextLink>
-      ) : null}
+      ) : undefined}
+    />
+  ) : (
+    <Toggle
+      label={TITLE}
+      hint={jevStatusWord(state)}
+      icon={<TagIcon size={24} />}
+      checked={shownOn}
+      busy={busy}
+      onChange={(checked) => {
+        if (busy) return;
+        onToggle?.(checked);
+      }}
+    />
+  );
+
+  return (
+    <div>
+      <List>{row}</List>
       {showOptions ? (
-        <TextLink
-          chevron={false}
-          expanded={open}
-          controls={panelId}
-          onClick={() => { setOpen((current) => !current); }}
-        >
-          אפשרויות
-        </TextLink>
-      ) : null}
-      {showOptions && open ? (
-        <div id={panelId}>
-          <p>צל</p>
-          <p className="t-hint">{SHADOW_HINT}</p>
-          <TextField
-            label="סף"
-            inputMode="decimal"
-            dir="ltr"
-            value={draft}
-            disabled={busy}
-            error={draftError ? "בין 0.50 ל-1.00" : undefined}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              setDraftError(false);
-            }}
-            onBlur={() => {
-              if (busy) return;
-              const parsed = parseJevThreshold(draft);
-              if (parsed == null) {
-                setDraftError(true);
-                return;
-              }
-              setDraft(formatJevThreshold(parsed));
-              if (parsed !== roundJevThreshold(state.threshold)) onThreshold?.(parsed);
-            }}
-          />
+        <div className="ui-jev-options">
+          <TextLink
+            chevron={false}
+            expanded={open}
+            controls={panelId}
+            trailing={<ChevronDownIcon size={16} />}
+            onClick={() => { setOpen((current) => !current); }}
+          >
+            אפשרויות
+          </TextLink>
+          {open ? (
+            <div id={panelId}>
+              <p className="t-hint ui-jev-options-hint">{SHADOW_HINT}</p>
+              {showThreshold ? (
+                <TextField
+                  label="סף"
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={draft}
+                  disabled={busy}
+                  error={draftError ? "בין 0.50 ל-1.00" : undefined}
+                  onChange={(event) => {
+                    setDraft(event.target.value);
+                    setDraftError(false);
+                  }}
+                  onBlur={() => {
+                    if (busy) return;
+                    const parsed = parseJevThreshold(draft);
+                    if (parsed == null) {
+                      setDraftError(true);
+                      return;
+                    }
+                    setDraft(formatJevThreshold(parsed));
+                    if (parsed !== roundJevThreshold(state.threshold)) onThreshold?.(parsed);
+                  }}
+                />
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -204,21 +226,24 @@ export function JevSettings({
   sample,
   noCompany = false,
   blocked,
+  showThreshold = false,
 }: {
   sample?: JevCardState;
   noCompany?: boolean;
   blocked?: () => boolean;
+  showThreshold?: boolean;
 }) {
   if (noCompany) return null;
-  if (sample) return <JevSettingsSample sample={sample} />;
-  return <JevSettingsLive blocked={blocked} />;
+  if (sample) return <JevSettingsSample sample={sample} showThreshold={showThreshold} />;
+  return <JevSettingsLive blocked={blocked} showThreshold={showThreshold} />;
 }
 
-function JevSettingsSample({ sample }: { sample: JevCardState }) {
+function JevSettingsSample({ sample, showThreshold }: { sample: JevCardState; showThreshold: boolean }) {
   const [state, setState] = useState(sample);
   return (
     <JevSettingsCard
       state={state}
+      showThreshold={showThreshold}
       onToggle={(enabled) => {
         setState((current) => ({ ...current, ...turnedOn(current, enabled), status: current.status }));
       }}
@@ -228,7 +253,7 @@ function JevSettingsSample({ sample }: { sample: JevCardState }) {
   );
 }
 
-function JevSettingsLive({ blocked }: { blocked?: () => boolean }) {
+function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; showThreshold: boolean }) {
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["jev-integration"],
@@ -236,33 +261,29 @@ function JevSettingsLive({ blocked }: { blocked?: () => boolean }) {
     queryFn: readJevIntegration,
   });
   const [pending, setPending] = useState<StoredJev | null>(null);
-  const wanted = useRef<StoredJev | null>(null);
   const saving = useRef(false);
-  const save = useWrite({
+  const save = useWrite<StoredJev>({
     failure: "לא הצלחנו לשמור.",
     keys: ["jev-integration"],
-    run: async () => {
-      const next = wanted.current;
-      if (!next) throw new Error("missing");
+    run: async (next) => {
       await saveJevIntegration(next);
       client.setQueryData(["jev-integration"], next);
     },
   });
   const stored: StoredJev | null = query.data ?? null;
   const current = pending ?? stored;
-  const view: JevCardState = query.isPending
-    ? { enabled: false, mode: "shadow", threshold: 0.9, status: "loading" }
-    : query.isError || current == null
-      ? { enabled: false, mode: "shadow", threshold: 0.9, status: "error" }
-      : { ...current, status: "ready" };
+  const view: JevCardState = current != null
+    ? { ...current, status: "ready" }
+    : query.isPending
+      ? { enabled: false, mode: "shadow", threshold: 0.9, status: "loading" }
+      : { enabled: false, mode: "shadow", threshold: 0.9, status: "error" };
 
   function commit(next: StoredJev) {
     if (blocked?.()) return;
     if (saving.current || save.isPending) return;
     saving.current = true;
-    wanted.current = next;
     setPending(next);
-    save.mutate(undefined, {
+    save.mutate(next, {
       onSettled: () => {
         saving.current = false;
         setPending(null);
@@ -274,6 +295,7 @@ function JevSettingsLive({ blocked }: { blocked?: () => boolean }) {
     <JevSettingsCard
       state={view}
       busy={save.isPending}
+      showThreshold={showThreshold}
       onToggle={(enabled) => {
         if (!stored && !pending) return;
         const base = pending ?? stored;

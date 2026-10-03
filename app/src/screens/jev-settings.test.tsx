@@ -17,12 +17,14 @@ const db = vi.hoisted(() => {
     readError: { message: string } | null;
     writeError: { message: string } | null;
     hold: Promise<void> | null;
+    failRefresh: boolean;
     writes: Array<Record<string, unknown>>;
   } = {
     row: null,
     readError: null,
     writeError: null,
     hold: null,
+    failRefresh: false,
     writes: [],
   };
   return state;
@@ -46,6 +48,7 @@ vi.mock("../lib/supabase", () => ({
             mode: String(args.p_mode),
             threshold: Number(args.p_threshold),
           };
+          if (db.failRefresh) db.readError = { message: "down" };
         }
         return { data: {}, error: db.writeError };
       };
@@ -77,6 +80,7 @@ describe("Jev settings card", () => {
     db.readError = null;
     db.writeError = null;
     db.hold = null;
+    db.failRefresh = false;
     db.writes = [];
   });
 
@@ -101,9 +105,13 @@ describe("Jev settings card", () => {
     expect(toggle).toBeChecked();
     expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
-    expect(screen.getByText("צל")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeInTheDocument();
+    expect(screen.queryByText("צל")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("סף")).not.toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    const described = document.getElementById(toggle.getAttribute("aria-describedby") ?? "");
+    expect(described).toHaveTextContent("פעיל · מצב צל");
     fireEvent.click(toggle);
     expect(toggle).not.toBeChecked();
     expect(screen.getByText("כבוי")).toBeInTheDocument();
@@ -116,10 +124,11 @@ describe("Jev settings card", () => {
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
   });
 
-  it("shows שגיאה with a retry and does not offer a working switch", () => {
+  it("shows שגיאה with a retry and does not dim a switch", () => {
     render(<JevSettings sample={{ ...off, enabled: true, status: "error" }} />);
-    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
-    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeChecked();
+    const row = screen.getByRole("group", { name: "תיוג חכם (Jev)" });
+    expect(row).toHaveClass("ui-row-tone-muted");
+    expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
     expect(screen.getByText("שגיאה")).toBeInTheDocument();
     expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
     expect(screen.queryByText("פעיל · מצב צל")).not.toBeInTheDocument();
@@ -128,13 +137,21 @@ describe("Jev settings card", () => {
   });
 
   it("keeps a threshold outside 0.50 to 1.00 off the stored value", () => {
-    render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true }} />);
+    render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true }} showThreshold />);
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
     const field = screen.getByLabelText("סף");
     fireEvent.change(field, { target: { value: "0.20" } });
     fireEvent.blur(field);
     expect(screen.getByText("בין 0.50 ל-1.00")).toBeInTheDocument();
     expect(field).toHaveValue("0.20");
+  });
+
+  it("gives the loading row the hint height and marks it busy", () => {
+    const { container } = render(<JevSettings sample={{ ...JEV_DEFAULT, status: "loading" }} />);
+    const row = container.querySelector(".ui-row");
+    expect(row).toHaveAttribute("aria-busy", "true");
+    expect(row?.querySelector(".ui-row-hint-skel")).not.toBeNull();
+    expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
   });
 
   it("is absent when there is no company", () => {
@@ -177,7 +194,7 @@ describe("Jev settings card", () => {
     let release: () => void = () => undefined;
     db.hold = new Promise((resolve) => { release = resolve; });
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
-    renderLive(<JevSettings />);
+    renderLive(<JevSettings showThreshold />);
     const toggle = await readySwitch();
     expect(toggle).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
@@ -189,7 +206,7 @@ describe("Jev settings card", () => {
       { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
     ]);
     expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("צל")).toBeInTheDocument();
+    expect(screen.queryByText("צל")).not.toBeInTheDocument();
     release();
     await waitFor(() => {
       expect(db.writes).toEqual([
@@ -207,8 +224,12 @@ describe("Jev settings card", () => {
     db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
     renderLive(<JevSettings />);
     const toggle = await readySwitch();
+    toggle.focus();
+    fireEvent.keyDown(toggle, { key: " ", code: "Space" });
     fireEvent.click(toggle);
-    await waitFor(() => expect(toggle).toBeDisabled());
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-busy", "true"));
+    expect(toggle).toHaveFocus();
+    expect(toggle).toBeEnabled();
     fireEvent.click(toggle);
     expect(db.writes).toHaveLength(1);
     release();
@@ -244,13 +265,73 @@ describe("Jev settings card", () => {
     db.readError = { message: "down" };
     renderLive(<JevSettings />);
     expect(await screen.findByText("שגיאה")).toBeInTheDocument();
-    const toggle = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
-    expect(toggle).toBeDisabled();
-    expect(toggle).not.toBeChecked();
+    expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
     expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
     expect(screen.queryByText("פעיל · מצב צל")).not.toBeInTheDocument();
     expect(screen.queryByText("כבוי")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).toBeInTheDocument();
+  });
+
+  it("keeps focus on the switch after a keyboard toggle", async () => {
+    let release: () => void = () => undefined;
+    db.hold = new Promise((resolve) => { release = resolve; });
+    db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    toggle.focus();
+    fireEvent.keyDown(toggle, { key: " ", code: "Space" });
+    fireEvent.click(toggle);
+    fireEvent.keyUp(toggle, { key: " ", code: "Space" });
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-busy", "true"));
+    expect(toggle).toHaveFocus();
+    expect(toggle).toBeEnabled();
+    release();
+    await waitFor(() => expect(toggle).not.toHaveAttribute("aria-busy"));
+    expect(toggle).toHaveFocus();
+    expect(toggle).toBeChecked();
+  });
+
+  it("retries the failed turn-off, not a later threshold save", async () => {
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    db.writeError = { message: "Failed to fetch" };
+    renderLive(<JevSettings showThreshold />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    db.writeError = null;
+    fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
+    const field = screen.getByLabelText("סף");
+    fireEvent.change(field, { target: { value: "0.95" } });
+    fireEvent.blur(field);
+    await waitFor(() => {
+      expect(db.writes.at(-1)).toEqual({
+        p_enabled: true,
+        p_mode: "shadow",
+        p_threshold: 0.95,
+        p_provider: "jev",
+      });
+    });
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(db.writes.at(-1)).toEqual({
+        p_enabled: false,
+        p_mode: "shadow",
+        p_threshold: 0.9,
+        p_provider: "jev",
+      });
+    });
+  });
+
+  it("keeps the saved switch when a later refresh fails", async () => {
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    db.failRefresh = true;
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).not.toBeChecked());
+    expect(screen.getByText("כבוי")).toBeInTheDocument();
+    expect(screen.queryByText("שגיאה")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).not.toBeInTheDocument();
   });
 
   it("reads a missing company row as off", async () => {
