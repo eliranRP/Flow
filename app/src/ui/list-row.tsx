@@ -80,9 +80,9 @@ export function ListRow(props: ListRowProps) {
           <GripIcon />
         </span>
       ) : null}
-      <span className="ui-row-main">
+      <div className="ui-row-main">
         {icon ? <span className="ui-row-icon">{icon}</span> : null}
-        <span className="ui-row-text">
+        <div className="ui-row-text">
           {props.eyebrow ? <span className="ui-row-hint">{props.eyebrow}</span> : null}
           {props.heading ? (
             <h3
@@ -110,8 +110,8 @@ export function ListRow(props: ListRowProps) {
               {props.hint}
             </span>
           ) : null}
-        </span>
-      </span>
+        </div>
+      </div>
       {props.variant === "project" || props.variant === "transaction" ? <RowAmount {...props} /> : null}
       {props.meta ? <span className="ui-row-meta t-hint">{props.meta}</span> : null}
       {props.actionBelow ? null : props.action}

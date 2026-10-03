@@ -195,16 +195,18 @@ describe("assistant settings", () => {
     expect(screen.queryByText("פג תוקף")).not.toBeInTheDocument();
     fireEvent.click(expiredRow);
     const reconnect = screen.getByRole("dialog", { name: "עוזר AI" });
-    expect(within(reconnect).getByRole("heading", { name: "פג תוקף" })).toBeInTheDocument();
+    const expiredHeading = within(reconnect).getByRole("heading", { name: "פג תוקף" });
+    expect(expiredHeading.tagName).toBe("H3");
+    expect(expiredHeading.closest("span")).toBeNull();
     expect(reconnect).toHaveTextContent("הקוד הפסיק לעבוד אחרי 90 יום.");
     expect(within(reconnect).getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
     expect(within(reconnect).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
     fireEvent.click(within(reconnect).getByRole("button", { name: "חיבור מחדש" }));
-    const step = screen.getByRole("dialog", { name: "חיבור עוזר" });
+    const step = screen.getByRole("dialog", { name: "חיבור עוזר AI" });
     expect(step).toBeInTheDocument();
-    expect(within(step).getByRole("heading", { name: "חיבור עוזר" })).toHaveFocus();
+    expect(within(step).getByRole("heading", { name: "חיבור עוזר AI" })).toHaveFocus();
     expect(screen.getByRole("radio", { name: "קריאה וכתיבה" })).toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור עוזר" })).getByRole("button", { name: "ניתוק" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור עוזר AI" })).getByRole("button", { name: "ניתוק" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את העוזר?" })).getByRole("button", { name: "ניתוק" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
@@ -280,6 +282,68 @@ describe("assistant settings", () => {
     fail = false;
     await client.refetchQueries({ queryKey: ["mcp-status"] });
     await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toHaveFocus(); });
+  });
+
+  it("returns focus to the assistant row when a reconnect passes through loading", async () => {
+    let hang = false;
+    let release: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    edge.invoke = () => hang
+      ? new Promise((resolve) => { release = resolve; })
+      : Promise.resolve({ data: null, error: { message: "status" } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <AssistantSettings />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    retry.focus();
+    hang = true;
+    const done = client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => {
+      expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
+    });
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר: עוזר AI" })).not.toBeInTheDocument();
+    release({ data: { state: "connected", id: "mcp-1", scope: ["read", "write"] }, error: null });
+    await done;
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toHaveFocus(); });
+  });
+
+  it("does not move focus when the assistant status recovers away from ניסיון חוזר", async () => {
+    let hang = false;
+    let release: (value: { data: unknown; error: unknown }) => void = () => undefined;
+    edge.invoke = () => hang
+      ? new Promise((resolve) => { release = resolve; })
+      : Promise.resolve({ data: null, error: { message: "status" } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <button type="button">אחר</button>
+            <AssistantSettings />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    retry.focus();
+    const elsewhere = screen.getByRole("button", { name: "אחר" });
+    elsewhere.focus();
+    expect(elsewhere).toHaveFocus();
+    hang = true;
+    const done = client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => {
+      expect(document.querySelector(".ui-project-list .ui-row")).toHaveAttribute("aria-busy", "true");
+    });
+    release({ data: { state: "empty" }, error: null });
+    await done;
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toBeInTheDocument(); });
+    expect(elsewhere).toHaveFocus();
   });
 
   it("preview disconnect closes the confirm", () => {

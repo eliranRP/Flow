@@ -251,7 +251,7 @@ export function AssistantSettings({
     return () => { window.clearTimeout(id); };
   }, [hintNonce]);
 
-  useFocusRowAfterRetry(view.state === "error", retryRef, rowRef);
+  useFocusRowAfterRetry(view.state === "error", retryRef, rowRef, view.state !== "error" && view.state !== "loading");
 
   useEffect(() => {
     if (!focusStep.current || intro || !open || secret != null) return;
@@ -372,7 +372,7 @@ export function AssistantSettings({
       <List>
         {row}
       </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} title={intro && secret == null ? "עוזר AI" : "חיבור עוזר"} titleRef={connectTitleRef}>
+      <Sheet open={open} onOpenChange={setConnectSheet} title={intro && secret == null ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>

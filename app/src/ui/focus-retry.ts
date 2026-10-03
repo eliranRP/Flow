@@ -1,21 +1,23 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
 
 /**
- * A status that recovers while ניסיון חוזר is focused unmounts that link and
- * drops focus on the document. Put it on the row instead.
+ * A status that recovers while ניסיון חוזר is focused unmounts that link.
+ * A reconnect shows the loading row before the button, so hold the focus
+ * until that button is back. Focus that moved elsewhere stays there.
  */
 export function useFocusRowAfterRetry(
   showingRetry: boolean,
   retryRef: RefObject<HTMLElement | null>,
   rowRef: RefObject<HTMLElement | null>,
+  rowReady: boolean,
 ): void {
   const held = useRef(false);
   useLayoutEffect(() => {
     const node = retryRef.current;
     if (node == null) {
-      if (held.current) {
+      if (held.current && rowReady && rowRef.current != null) {
         held.current = false;
-        rowRef.current?.focus();
+        rowRef.current.focus();
       }
       return;
     }
@@ -32,5 +34,5 @@ export function useFocusRowAfterRetry(
       node.removeEventListener("focus", onFocus);
       node.removeEventListener("blur", onBlur);
     };
-  }, [showingRetry, retryRef, rowRef]);
+  }, [showingRetry, rowReady, retryRef, rowRef]);
 }

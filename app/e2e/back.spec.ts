@@ -99,7 +99,7 @@ test("the connect sheet closes on browser back and on its own close", async ({ p
 test("the assistant sheet closes on browser back and on its own close", async ({ page }) => {
   await page.goto("/settings?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "חיבור עוזר" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "חיבור עוזר AI" })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
