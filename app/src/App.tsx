@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "./auth";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
 import { ThemeColor } from "./components/ThemeColor";
+import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
@@ -13,7 +14,7 @@ import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
-import { BackButton, ScrollMemory, useGoBack } from "./ui/back";
+import { BackButton, DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { Button } from "./ui/button";
 import { CheckIcon } from "./ui/icons";
 import { ProgressBar } from "./ui/progress-bar";
@@ -64,6 +65,7 @@ export function App() {
       <BooksProvider>
         <ThemeColor />
         <ScrollMemory />
+        <DropRestoredSheet />
         <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
           <AppRoutes />
         </div>
@@ -461,6 +463,9 @@ function DevProjects() {
   return <ProjectsScreen sample={devDashboard} />;
 }
 
+/** Dev-only. A production build drops the sample secret with this flag. */
+const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
+
 function DevSettings() {
   const [params] = useSearchParams();
   const mode = params.get("connected");
@@ -482,8 +487,6 @@ function DevSettings() {
         lastError: mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
-        expenseCategories: 1,
-        incomeCategories: 1,
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"
@@ -498,6 +501,7 @@ function DevSettings() {
                   ? { state: "no-company" }
                   : { state: "empty" },
       }}
+      sampleSecret={devAssistantSecret}
     />
   );
 }

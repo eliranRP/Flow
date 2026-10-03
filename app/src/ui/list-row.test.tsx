@@ -44,6 +44,22 @@ describe("ListRow", () => {
     expect(screen.getByRole("button", { name: "וילה" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("uses a heading only on a static row", () => {
+    render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="static" title="פג תוקף" heading />
+          <ListRow variant="button" title="שורה" heading onClick={() => undefined} />
+        </>
+      </MemoryRouter>,
+    );
+    const heading = screen.getByRole("heading", { name: "פג תוקף" });
+    expect(heading.tagName).toBe("H3");
+    expect(heading.closest("span")).toBeNull();
+    expect(screen.getByRole("button", { name: "שורה" }).querySelector("[role='heading']")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "שורה" })).not.toBeInTheDocument();
+  });
+
   it("keeps an ltr title from the start", () => {
     render(
       <MemoryRouter>

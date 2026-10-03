@@ -1,23 +1,24 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { SAMPLE_ASSISTANT_SECRET } from "../src/assistant-sample";
 
 const STORY = "/iframe.html?id=screens-routes--settings-assistant-secret&viewMode=story";
 
 async function openSecret(page: Page): Promise<{ secret: Locator; dialog: Locator; text: string }> {
   await page.goto(STORY, { waitUntil: "domcontentloaded" });
-  const dialog = page.getByRole("dialog", { name: "חיבור עוזר AI" });
-  const secret = page.locator(".ui-secret-value");
+  const dialog = page.getByRole("dialog", { name: "הקוד מוכן" });
+  const secret = page.getByRole("group", { name: "קוד" }).locator(".ui-secret-value");
   await expect(dialog).toBeVisible();
   await expect(secret).toBeVisible();
   const fine = await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
   expect(fine).toBe(true);
   const text = (await secret.innerText()).replace(/\s+/g, "");
-  expect(text).toHaveLength(65);
+  expect(text).toBe(SAMPLE_ASSISTANT_SECRET);
   return { secret, dialog, text };
 }
 
 test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false });
 
-test("select-all on the shown-once secret yields 65 characters", async ({ page }) => {
+test("select-all on the shown-once secret yields the code", async ({ page }) => {
   const { secret, dialog, text } = await openSecret(page);
   await page.evaluate(() => {
     Object.defineProperty(navigator, "clipboard", {
@@ -27,11 +28,11 @@ test("select-all on the shown-once secret yields 65 characters", async ({ page }
       },
     });
   });
-  await page.getByRole("button", { name: "העתקה" }).click();
+  await page.getByRole("button", { name: "העתקה: קוד" }).click();
   await expect(page.getByRole("status")).toHaveText("העתיקו ידנית");
   const selected = await page.evaluate(() => window.getSelection()?.toString() ?? "");
   expect(selected).toBe(text);
-  expect(selected).toHaveLength(65);
+  expect(selected).toBe(SAMPLE_ASSISTANT_SECRET);
   await expect(secret).toBeVisible();
   await expect(dialog).toBeVisible();
 });

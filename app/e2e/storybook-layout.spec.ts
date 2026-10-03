@@ -184,6 +184,9 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
     "screens-routes--settings-assistant-connected",
     "screens-routes--settings-assistant-scope",
     "screens-routes--settings-assistant-secret",
+    "screens-routes--settings-assistant-help",
+    "screens-routes--settings-assistant-used",
+    "screens-routes--settings-assistant-unused",
   ];
   const failures: string[] = [];
   for (const theme of ["light", "dark"]) {
@@ -193,11 +196,11 @@ test("the assistant settings stories stay inside 320, 360, and 390", async ({ pa
         const globals = theme === "dark" ? "&globals=theme:dark" : "";
         await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
         await page.locator("#storybook-root").waitFor({ state: "attached" });
-        if (id.endsWith("scope") || id.endsWith("secret")) {
-          await page.locator(".ui-sheet-panel").waitFor({ state: "visible" });
+        if (id.endsWith("scope") || id.endsWith("secret") || id.endsWith("help") || id.endsWith("used") || id.endsWith("unused")) {
+          await page.locator(".ui-sheet-panel").last().waitFor({ state: "visible" });
         }
         const problems = await page.evaluate(() => {
-          const roots = [document.querySelector("#storybook-root"), document.querySelector(".ui-sheet-panel")].filter((node) => node instanceof HTMLElement);
+          const roots = [document.querySelector("#storybook-root"), ...document.querySelectorAll(".ui-sheet-panel")].filter((node) => node instanceof HTMLElement);
           const problems: string[] = [];
           const seen = new Set<Element>();
           for (const root of roots) {
@@ -725,7 +728,8 @@ test("a title focused on open draws no ring", async ({ page }) => {
     });
     if (problem) failures.push(`${story.id}: ${problem}`);
     const sheetProblem = await page.evaluate(() => {
-      const panel = document.querySelector<HTMLElement>(".ui-sheet-panel");
+      const panels = document.querySelectorAll<HTMLElement>(".ui-sheet-panel");
+      const panel = panels[panels.length - 1];
       if (!panel) return "";
       panel.focus();
       const style = getComputedStyle(panel);

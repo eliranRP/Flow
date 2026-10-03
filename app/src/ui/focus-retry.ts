@@ -26,7 +26,12 @@ export function useFocusRowAfterRetry(
     if (seenFailure.current === failureNonce) return;
     seenFailure.current = failureNonce;
     held.current = false;
-  }, [failureNonce]);
+    // A failed retry leaves the link mounted and focused, so no new focus
+    // event arrives. Hold again while focus is still on that link.
+    const retry = retryRef.current;
+    const active = document.activeElement;
+    if (retry != null && active instanceof Node && retry.contains(active)) held.current = true;
+  }, [failureNonce, retryRef]);
 
   useLayoutEffect(() => {
     function onFocusIn(event: FocusEvent) {
