@@ -195,12 +195,14 @@ describe("assistant settings", () => {
     expect(screen.queryByText("פג תוקף")).not.toBeInTheDocument();
     fireEvent.click(expiredRow);
     const reconnect = screen.getByRole("dialog", { name: "עוזר AI" });
-    expect(reconnect).toHaveTextContent("פג תוקף");
+    expect(within(reconnect).getByRole("heading", { name: "פג תוקף" })).toBeInTheDocument();
     expect(reconnect).toHaveTextContent("הקוד הפסיק לעבוד אחרי 90 יום.");
     expect(within(reconnect).getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
     expect(within(reconnect).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
     fireEvent.click(within(reconnect).getByRole("button", { name: "חיבור מחדש" }));
-    expect(screen.getByRole("dialog", { name: "חיבור עוזר" })).toBeInTheDocument();
+    const step = screen.getByRole("dialog", { name: "חיבור עוזר" });
+    expect(step).toBeInTheDocument();
+    expect(within(step).getByRole("heading", { name: "חיבור עוזר" })).toHaveFocus();
     expect(screen.getByRole("radio", { name: "קריאה וכתיבה" })).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור עוזר" })).getByRole("button", { name: "ניתוק" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את העוזר?" })).getByRole("button", { name: "ניתוק" }));
@@ -255,6 +257,29 @@ describe("assistant settings", () => {
     expect(screen.queryByRole("button", { name: "עוזר AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "נסו שוב" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("היקף הגישה")).not.toBeInTheDocument();
+  });
+
+  it("moves focus to the row when the status recovers while ניסיון חוזר is focused", async () => {
+    let fail = true;
+    edge.invoke = () => fail
+      ? Promise.resolve({ data: null, error: { message: "status" } })
+      : Promise.resolve({ data: { state: "connected", id: "mcp-1", scope: ["read", "write"] }, error: null });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <MemoryRouter>
+            <AssistantSettings />
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: עוזר AI" });
+    retry.focus();
+    expect(retry).toHaveFocus();
+    fail = false;
+    await client.refetchQueries({ queryKey: ["mcp-status"] });
+    await waitFor(() => { expect(screen.getByRole("button", { name: (value) => value === "עוזר AI" })).toHaveFocus(); });
   });
 
   it("preview disconnect closes the confirm", () => {

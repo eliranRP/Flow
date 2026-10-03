@@ -3,6 +3,7 @@ import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { popSheetLayers, useSheetHistory } from "../ui/back";
+import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { AlertIcon, LogoutIcon, SparkIcon } from "../ui/icons";
@@ -129,6 +130,8 @@ export function AssistantSettings({
   const [focusRow, setFocusRow] = useState(false);
   const rowRef = useRef<HTMLButtonElement>(null);
   const retryRef = useRef<HTMLButtonElement>(null);
+  const connectTitleRef = useRef<HTMLHeadingElement>(null);
+  const focusStep = useRef(false);
   const openRef = useRef(initialSecret != null || initialOpen);
   const secretRef = useRef<HTMLElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
@@ -248,6 +251,14 @@ export function AssistantSettings({
     return () => { window.clearTimeout(id); };
   }, [hintNonce]);
 
+  useFocusRowAfterRetry(view.state === "error", retryRef, rowRef);
+
+  useEffect(() => {
+    if (!focusStep.current || intro || !open || secret != null) return;
+    focusStep.current = false;
+    connectTitleRef.current?.focus();
+  }, [intro, open, secret]);
+
   useEffect(() => {
     if (!focusRow) return;
     if (rowRef.current == null) return;
@@ -361,7 +372,7 @@ export function AssistantSettings({
       <List>
         {row}
       </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} title={intro && secret == null ? "עוזר AI" : "חיבור עוזר"}>
+      <Sheet open={open} onOpenChange={setConnectSheet} title={intro && secret == null ? "עוזר AI" : "חיבור עוזר"} titleRef={connectTitleRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>
@@ -375,9 +386,19 @@ export function AssistantSettings({
           </div>
         ) : intro ? (
           <div className="ui-stack">
-            <p>פג תוקף</p>
-            <p>הקוד הפסיק לעבוד אחרי 90 יום.</p>
-            <Button type="button" onClick={() => { setIntro(false); }}>חיבור מחדש</Button>
+            <List>
+              <ListRow
+                variant="static"
+                title="פג תוקף"
+                hint="הקוד הפסיק לעבוד אחרי 90 יום."
+                icon={<AlertIcon size={24} />}
+                tone="muted"
+                describeHint
+                wrapHint
+                heading
+              />
+            </List>
+            <Button type="button" onClick={() => { focusStep.current = true; setIntro(false); }}>חיבור מחדש</Button>
           </div>
         ) : (
           <div className="ui-stack ui-assistant-step">

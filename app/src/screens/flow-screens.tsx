@@ -85,6 +85,7 @@ import { formatDayMonth, formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { HoldLine } from "../ui/hold-line";
 import { BackButton, popSheetLayers, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
+import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead, SharedCostNote } from "../ui/layout";
@@ -3248,8 +3249,9 @@ export function SettingsScreen({
   const [connectOpen, setConnectOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
-  const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen);
-  const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen);
+  const adoptSheet = useRef(false);
+  const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
+  const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
@@ -3356,6 +3358,17 @@ export function SettingsScreen({
     return () => { window.clearTimeout(id); };
   }, [sumitNonce]);
 
+  const sumitNoCompany = sample
+    ? sample.noCompany === true
+    : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
+  const sumitPaused = sample == null && preview === "off" && !sumitNoCompany && status.fetchStatus === "paused" && status.data == null;
+  const sumitShowsRetry = sample?.sumit === "error" || (
+    sample == null
+    && !sumitNoCompany
+    && (sumitRetrying || sumitPaused || (status.isError && status.data == null))
+  );
+  useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef);
+
   useEffect(() => {
     if (!focusSumit) return;
     if (sumitRowRef.current == null) return;
@@ -3396,6 +3409,7 @@ export function SettingsScreen({
     });
     sheetApplied.current = true;
     wantSheet.current = false;
+    if (opened === "connected" || opened === "reconnect" || opened === "disconnected") adoptSheet.current = true;
     if (opened === "connected") setStatusOpen(true);
     else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
   }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data]);
