@@ -1,6 +1,6 @@
 import type { Database as GeneratedDatabase } from "./database.types.ts";
 
-type SumitConnection = GeneratedDatabase["public"]["Tables"]["sumit_connections"];
+type SumitConnection = GeneratedDatabase["public"]["Views"]["sumit_connections"];
 
 /** Columns the browser role is not granted. They stay in the generated file. */
 type SecretColumn =
