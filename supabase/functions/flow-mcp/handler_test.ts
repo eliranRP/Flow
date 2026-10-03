@@ -111,7 +111,7 @@ Deno.test("a foreign origin cannot mint", async () => {
   assertEquals(calls.length, 0, "no getUser");
 });
 
-Deno.test("tools/list returns the six read tools and does not throttle a valid secret", async () => {
+Deno.test("tools/list returns the read and write tools and does not throttle a valid secret", async () => {
   const calls: Call[] = [];
   const token = `flow_mcp_${"a".repeat(43)}`;
   const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
@@ -140,7 +140,17 @@ Deno.test("tools/list returns the six read tools and does not throttle a valid s
   assertEquals(response.status, 200, "tools/list");
   const body = await response.json();
   const names = (body.result.tools as { name: string }[]).map((tool) => tool.name);
-  assertEquals(names, ["list_projects", "list_categories", "list_review", "get_expense", "search_expenses", "get_totals"], "read tools");
+  assertEquals(names, [
+    "list_projects",
+    "list_categories",
+    "list_review",
+    "get_expense",
+    "search_expenses",
+    "get_totals",
+    "assign_expense",
+    "set_expense_category",
+    "undo",
+  ], "read and write tools");
   const lookup = calls.find((call) => call.url.endsWith("/lookup_mcp_credential"));
   assertEquals(lookup?.body?.p_token_hash, hash, "lookup hash");
   assertEquals(lookup?.body?.p_pepper_kid, "test", "lookup kid");
@@ -726,4 +736,138 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
   assertEquals(expense.result.structuredContent.data.description, "אלפא", "user A expense ignores the other id's company");
   assertEquals(expense.result.structuredContent.data.id, expenseA, "user A expense id");
   assertEquals(seen.some((call) => call.name === "get_transaction" && call.sub === userB), false, "token A did not read as user B");
+});
+
+Deno.test("a write tool counts as a write, and a read-only token cannot call it", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "write-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"d".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const txn = "22222222-2222-4000-8000-000000000020";
+  const project = "8c1a0b2e-1111-4000-8000-000000000001";
+  const category = "c0ffee00-1111-4000-8000-0000000000a1";
+  const kinds: string[] = [];
+  const ledger: string[] = [];
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  let scope = ["read", "write"];
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      const name = input.split("/").pop() ?? "";
+      if (name === "lookup_mcp_credential") {
+        const asked = typeof body?.p_token_hash === "string" ? body.p_token_hash : "";
+        if (asked !== hash) return Promise.resolve(new Response(JSON.stringify({ found: false })));
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "88888888-8888-4000-8000-000000000008",
+          user_id: "aaaaaaaa-aaaa-4000-8000-00000000000a",
+          company_id: "cccccccc-cccc-4000-8000-00000000000a",
+          scope,
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") {
+        kinds.push(String(body?.p_kind));
+        return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      }
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      ledger.push(name);
+      if (name === "mcp_assign_expense") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: { undo_kind: "reassign", id: "33333333-3333-4000-8000-000000000033", closed_review: false },
+        })));
+      }
+      if (name === "list_categories") return Promise.resolve(new Response(JSON.stringify([])));
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  async function call(tool: string, args: Record<string, unknown>) {
+    return await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: tool, arguments: args } }),
+    }), localDeps);
+  }
+  const assigned = await call("assign_expense", {
+    idempotency_key: "assign-20",
+    transaction_id: txn,
+    project_id: project,
+    category_id: category,
+  });
+  const assignedBody = await assigned.json();
+  assertEquals(assigned.status, 200, "write is not an HTTP error");
+  assertEquals(assignedBody.result.isError, false, "assign succeeded");
+  assertEquals(assignedBody.result.structuredContent.data.closed_review, false, "no review");
+  assertEquals(kinds[0], "write", "assign uses the write bucket");
+  assert(ledger.includes("mcp_assign_expense"), "wrapper was called");
+
+  const listed = await call("list_categories", {});
+  assertEquals((await listed.json()).result.isError, false, "read still works");
+  assertEquals(kinds[1], "read", "a read stays on the read bucket");
+
+  scope = ["read"];
+  kinds.length = 0;
+  ledger.length = 0;
+  const denied = await call("assign_expense", {
+    idempotency_key: "assign-20",
+    transaction_id: txn,
+    project_id: project,
+    category_id: category,
+  });
+  const deniedBody = await denied.json();
+  assertEquals(denied.status, 200, "forbidden is a tool result");
+  assertEquals(deniedBody.result.isError, true, "isError");
+  assertEquals(deniedBody.result.structuredContent.error.code, "forbidden", "read token cannot write");
+  assertEquals(ledger.includes("mcp_assign_expense"), false, "the wrapper was not called");
+  assertEquals(kinds, ["write"], "a read-only write attempt still uses the write bucket");
+
+  scope = ["write"];
+  const writeList = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "tools/list" }),
+  }), localDeps);
+  const writeNames = ((await writeList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
+  assertEquals(writeNames, ["assign_expense", "set_expense_category", "undo"], "write token lists writes only");
+
+  scope = ["read"];
+  const readList = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 6, method: "tools/list" }),
+  }), localDeps);
+  const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
+  assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
+  assertEquals(readNames.length, 6, "six reads");
+});
+
+Deno.test("an over-cap body is refused before the rate limit", async () => {
+  const calls: Call[] = [];
+  const token = `flow_mcp_${"e".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: "x".repeat(65_537),
+  }), deps(calls, {
+    lookup_mcp_credential: {
+      found: true,
+      id: "55555555-5555-4000-8000-000000000005",
+      user_id: "user-1",
+      company_id: "company-1",
+      scope: ["read", "write"],
+      expires_at: "2099-01-01T00:00:00.000Z",
+      revoked_at: null,
+    },
+  }));
+  assertEquals(response.status, 400, "over cap");
+  const payload = await response.json();
+  assertEquals(payload.error, "validation", "validation");
+  assertEquals(calls.some((call) => call.url.endsWith("bump_mcp_rate")), false, "rate limit not called");
+  assertEquals(calls.some((call) => call.url.endsWith("lookup_mcp_credential") && call.body?.p_token_hash === hash), true, "the token was still checked");
 });

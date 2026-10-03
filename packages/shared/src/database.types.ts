@@ -437,7 +437,10 @@ isOneToOne: true
                 }
           }
           Functions: {
-            "approve_split_review":
+            "approve_review_item":
+{ Args: { "p_category_id": string,"p_check_shown"?: boolean,"p_id": string,"p_project_id": string,"p_remember"?: boolean,"p_shown_category_id"?: string,"p_shown_project_id"?: string }; Returns: Json
+                           },
+"approve_split_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
 "bump_mcp_rate":
@@ -502,8 +505,17 @@ isOneToOne: true
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
+"mcp_assign_expense":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_credential_status":
 { Args: { "p_user": string }; Returns: Json
+                           },
+"mcp_set_expense_category":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_undo":
+{ Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
