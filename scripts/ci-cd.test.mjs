@@ -231,7 +231,10 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(owners, /^package\.json @eliranRP$/m);
   assert.match(owners, /^pnpm-lock\.yaml @eliranRP$/m);
   assert.match(owners, /^supabase\/config\.toml @eliranRP$/m);
-  assert.match(readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8"), /cd-output\.mjs" equals/);
+  const smokeScript = readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8");
+  assert.match(smokeScript, /cd-output\.mjs" equals/);
+  assert.match(smokeScript, /\/settings\?preview=1/);
+  assert.match(smokeScript, /settings_code" != "200"/);
 });
 
 test("CI bounds every job, cancels only pull requests, and installs Playwright browsers once", () => {

@@ -11,10 +11,12 @@ test("stamps build.txt and the hosted html", () => {
   const dist = mkdtempSync(path.join(tmpdir(), "flow-stamp-"));
   writeFileSync(path.join(dist, "index.html"), "<head><title>Flow</title></head><body></body>");
   writeFileSync(path.join(dist, "404.html"), "<head></head>");
+  writeFileSync(path.join(dist, "app-shell"), "<head><title>Flow</title></head><body></body>");
   stampBuild(dist, sha);
   assert.equal(readFileSync(path.join(dist, "build.txt"), "utf8"), `${sha}\n`);
   assert.match(readFileSync(path.join(dist, "index.html"), "utf8"), new RegExp(`name="flow-build" content="${sha}"`));
   assert.match(readFileSync(path.join(dist, "404.html"), "utf8"), new RegExp(`name="flow-build" content="${sha}"`));
+  assert.match(readFileSync(path.join(dist, "app-shell"), "utf8"), new RegExp(`name="flow-build" content="${sha}"`));
   stampBuild(dist, sha);
   assert.equal(readFileSync(path.join(dist, "index.html"), "utf8").match(/flow-build/g)?.length, 1);
 });

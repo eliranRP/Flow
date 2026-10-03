@@ -3,6 +3,7 @@ dist
 storybook-static
 app/bundle-graph.json
 .vite
+.wrangler
 .turbo
 *.tsbuildinfo
 .env
