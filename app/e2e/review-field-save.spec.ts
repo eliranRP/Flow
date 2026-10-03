@@ -1,10 +1,11 @@
-import { createClient, type Session } from "@supabase/supabase-js";
+import { createHmac } from "node:crypto";
+import { createClient, type Session, type User } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-function localStatus(): { url: string; anon: string; service: string } | null {
+function localStatus(): { url: string; anon: string; service: string; jwt: string } | null {
   if (!process.env.FLOW_E2E_SUPABASE_URL) return null;
   try {
     const text = execFileSync("supabase", ["status", "-o", "env"], { encoding: "utf8" });
@@ -15,12 +16,42 @@ function localStatus(): { url: string; anon: string; service: string } | null {
     const url = read("API_URL") || process.env.FLOW_E2E_SUPABASE_URL;
     const anon = read("ANON_KEY") || process.env.FLOW_E2E_SUPABASE_ANON_KEY || "";
     const service = read("SERVICE_ROLE_KEY");
+    const jwt = read("JWT_SECRET");
     if (!url.startsWith("http://127.0.0.1:") && !url.startsWith("http://localhost:")) return null;
-    if (!anon || !service) return null;
-    return { url, anon, service };
+    if (!anon || !service || !jwt) return null;
+    return { url, anon, service, jwt };
   } catch {
     return null;
   }
+}
+
+/** Email password login is off. A signed user JWT is the local session. */
+function ownerSession(secret: string, anon: string, user: User): Session {
+  const payload = anon.split(".")[1] ?? "";
+  const issuer = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { iss?: string };
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const body = Buffer.from(JSON.stringify({
+    aud: "authenticated",
+    exp: now + 3600,
+    iat: now,
+    iss: issuer.iss ?? "supabase",
+    sub: user.id,
+    role: "authenticated",
+    email: user.email,
+    app_metadata: user.app_metadata,
+    user_metadata: user.user_metadata,
+  })).toString("base64url");
+  const data = `${header}.${body}`;
+  const signature = createHmac("sha256", secret).update(data).digest("base64url");
+  return {
+    access_token: `${data}.${signature}`,
+    refresh_token: `${data}.${signature}`,
+    token_type: "bearer",
+    expires_in: 3600,
+    expires_at: now + 3600,
+    user,
+  };
 }
 
 test("a card-line category pick stays on the card and shows the new value", async ({ page }) => {
@@ -30,18 +61,18 @@ test("a card-line category pick stays on the card and shows the new value", asyn
 
   const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `field-${stamp}@test.flow`;
-  const password = `field-${stamp}-pass`;
   const supplier = `ספק שדה ${stamp}`;
   const other = `ספק הבא ${stamp}`;
   const admin = createClient(status.url, status.service, { auth: { persistSession: false, autoRefreshToken: false } });
-  const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+  const created = await admin.auth.admin.createUser({ email, email_confirm: true });
   expect(created.error, created.error?.message).toBeNull();
+  const user = created.data.user;
+  expect(user).not.toBeNull();
+  if (!user) return;
+  const session = ownerSession(status.jwt, status.anon, user);
   const anon = createClient(status.url, status.anon, { auth: { persistSession: false, autoRefreshToken: false } });
-  const signed = await anon.auth.signInWithPassword({ email, password });
-  expect(signed.error, signed.error?.message).toBeNull();
-  const session = signed.data.session;
-  expect(session).not.toBeNull();
-  if (!session) return;
+  const applied = await anon.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+  expect(applied.error, applied.error?.message).toBeNull();
 
   const company = await anon.rpc("create_company", { p_name: `שדה ${stamp}`, p_vat_registered: true });
   expect(company.error, company.error?.message).toBeNull();
