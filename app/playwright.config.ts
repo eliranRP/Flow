@@ -19,6 +19,7 @@ export default defineConfig({
     env: {
       VITE_SUPABASE_URL: process.env.FLOW_E2E_SUPABASE_URL ?? "",
       VITE_SUPABASE_ANON_KEY: process.env.FLOW_E2E_SUPABASE_ANON_KEY ?? "",
+      VITE_FLOW_MCP_URL: "https://example.com/functions/v1/flow-mcp",
     },
   },
 });

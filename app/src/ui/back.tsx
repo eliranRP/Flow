@@ -20,9 +20,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** Browser history nests location state under `usr`. Location state is already that object. */
+function historyRecord(state: unknown): Record<string, unknown> | null {
+  if (!isRecord(state)) return null;
+  if (isRecord(state.usr) && !("flowLayer" in state) && !("flowLayers" in state)) return state.usr;
+  return state;
+}
+
+/** Open sheets, bottom to top. A lone `flowLayer` is a one-sheet entry from before the stack. */
+export function sheetStack(state: unknown): string[] {
+  const record = historyRecord(state);
+  if (record == null) return [];
+  const layers = record.flowLayers;
+  if (Array.isArray(layers)) {
+    const names = layers.filter((item): item is string => typeof item === "string" && item !== "");
+    if (names.length > 0) return names;
+  }
+  const layer = record.flowLayer;
+  return typeof layer === "string" && layer !== "" ? [layer] : [];
+}
+
 function layerName(state: unknown): string | null {
-  if (!isRecord(state) || typeof state.flowLayer !== "string") return null;
-  return state.flowLayer;
+  const stack = sheetStack(state);
+  return stack[stack.length - 1] ?? null;
+}
+
+function layerState(state: unknown, name: string): Record<string, unknown> {
+  const record = historyRecord(state) ?? {};
+  const base = { ...record };
+  delete base.idx;
+  delete base.key;
+  delete base.usr;
+  const stack = sheetStack(state);
+  const next = stack.includes(name) ? stack : [...stack, name];
+  return { ...base, flowLayer: name, flowLayers: next };
+}
+
+/** Location state after the top sheet has closed without a browser pop. */
+function droppedStackState(state: unknown, layers: string[]): Record<string, unknown> | null {
+  const record = historyRecord(state) ?? {};
+  const base = { ...record };
+  delete base.idx;
+  delete base.key;
+  delete base.usr;
+  delete base.flowLayer;
+  delete base.flowLayers;
+  const top = layers[layers.length - 1];
+  const next = top == null ? base : { ...base, flowLayer: top, flowLayers: layers };
+  return Object.keys(next).length === 0 ? null : next;
 }
 
 /**
@@ -99,6 +144,9 @@ export function ScrollMemory() {
 
 let pushingLayer = false;
 
+/** Raw open setters, so a close can dismiss this sheet and every layer above it. */
+const sheetClosers = new Map<string, (open: boolean) => void>();
+
 /**
  * A sheet that is not its own route still needs a history entry, so the iOS
  * swipe closes the sheet instead of leaving the page.
@@ -110,7 +158,7 @@ export function useSheetHistory(
   allowClose?: () => boolean | Promise<boolean>,
   /** When set, the next open replaces the current entry instead of pushing one. */
   adopt?: { current: boolean },
-): (next: boolean) => void {
+): (next: boolean) => boolean {
   const navigate = useNavigate();
   const location = useLocation();
   const locationRef = useRef(location);
@@ -123,6 +171,13 @@ export function useSheetHistory(
   const pushed = useRef(false);
   const allowRef = useRef(allowClose);
   allowRef.current = allowClose;
+
+  useEffect(() => {
+    sheetClosers.set(name, onOpenChange);
+    return () => {
+      if (sheetClosers.get(name) === onOpenChange) sheetClosers.delete(name);
+    };
+  }, [name, onOpenChange]);
 
   useEffect(() => {
     if (!open) {
@@ -143,10 +198,9 @@ export function useSheetHistory(
       replaceEntry = true;
       adopt.current = false;
     }
-    const prev = isRecord(location.state) ? location.state : {};
     void navigate(`${location.pathname}${location.search}${location.hash}`, {
       replace: replaceEntry,
-      state: { ...prev, flowLayer: name },
+      state: layerState(location.state, name),
     });
     queueMicrotask(() => {
       pushingLayer = false;
@@ -154,15 +208,16 @@ export function useSheetHistory(
   }, [open, name, layer, navigate, location.pathname, location.search, location.hash, location.state, adopt]);
 
   useEffect(() => {
-    function onPop() {
+    function onPop(event: PopStateEvent) {
       if (!openRef.current) return;
+      // A pop of the sheet above this one leaves this name in the stack.
+      if (sheetStack(event.state).includes(name)) return;
       void (async () => {
         const allowed = allowRef.current ? await allowRef.current() : true;
         if (!allowed) {
           pushed.current = true;
-          const prev = isRecord(window.history.state) ? window.history.state : {};
           void navigate(`${location.pathname}${location.search}${location.hash}`, {
-            state: { ...prev, flowLayer: name },
+            state: layerState(window.history.state, name),
           });
           return;
         }
@@ -176,18 +231,91 @@ export function useSheetHistory(
     };
   }, [name, navigate, location.pathname, location.search, location.hash]);
 
-  return useCallback((next: boolean) => {
+  return useCallback((next: boolean): boolean => {
     if (next) {
       onOpenChange(true);
-      return;
+      return true;
     }
     const current = locationRef.current;
-    if (layerName(current.state) === name && canGoBack()) {
-      void navigate(-1);
+    const stack = sheetStack(current.state);
+    const index = stack.indexOf(name);
+    if (index === -1) {
+      onOpenChange(false);
+      return true;
+    }
+    // A restored Forward entry can still list a sheet that already closed.
+    // Pop this sheet and every layer above it. The popstate handler closes them.
+    // Closing first, before the pop, leaves the reopened sheet on the same entry.
+    const closing = stack.slice(index);
+    const steps = closing.length;
+    const idx = historyIndex();
+    if (idx != null && idx >= steps) {
+      void navigate(-steps);
+      return true;
+    }
+    // MemoryRouter has no browser index, so closing cannot pop. Drop the layers
+    // in place, or a sheet stays stuck below a dead entry.
+    let closed = false;
+    for (const layer of closing) {
+      const close = sheetClosers.get(layer);
+      if (close == null) continue;
+      close(false);
+      closed = true;
+    }
+    if (!closed) return false;
+    void navigate(`${current.pathname}${current.search}${current.hash}`, {
+      replace: true,
+      state: droppedStackState(current.state, stack.slice(0, index)),
+    });
+    return true;
+  }, [name, navigate, onOpenChange]);
+}
+
+let dropDone = false;
+let dropActedKey = "";
+
+/** Tests start from a fresh reload. */
+export function resetDropRestoredSheet(): void {
+  dropDone = false;
+  dropActedKey = "";
+}
+
+/**
+ * A reload restores a sheet history entry while the sheet starts closed.
+ * Pop that entry so the first Back is not a dead step. A `?sheet=` visit
+ * stays, because the screen opens the sheet from the query.
+ */
+export function DropRestoredSheet() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (dropDone) return;
+    const stack = sheetStack(location.state);
+    if (stack.length === 0) {
+      dropDone = true;
       return;
     }
-    onOpenChange(false);
-  }, [name, navigate, onOpenChange]);
+    if (new URLSearchParams(location.search).has("sheet")) {
+      dropDone = true;
+      return;
+    }
+    if (dropActedKey === location.key) return;
+    dropActedKey = location.key;
+    const idx = historyIndex();
+    if (idx != null && idx > 0) {
+      void navigate(-Math.min(stack.length, idx));
+      return;
+    }
+    dropDone = true;
+    const prev = isRecord(location.state) ? { ...location.state } : {};
+    delete prev.flowLayer;
+    delete prev.flowLayers;
+    void navigate(`${location.pathname}${location.search}${location.hash}`, {
+      replace: true,
+      state: Object.keys(prev).length === 0 ? null : prev,
+    });
+  }, [location, navigate]);
+  return null;
 }
 
 /** Drop open sheet entries in one step. A second close must not push another entry. */

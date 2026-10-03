@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Drawer } from "vaul";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
@@ -57,6 +57,17 @@ export function SheetSurface({
   );
 }
 
+const openSheetIds: number[] = [];
+let nextSheetId = 1;
+
+function syncSheetInert(): void {
+  const drawers = [...document.querySelectorAll<HTMLElement>("[data-vaul-drawer][data-state=\"open\"]")];
+  drawers.forEach((node, index) => {
+    if (index < drawers.length - 1) node.setAttribute("inert", "");
+    else node.removeAttribute("inert");
+  });
+}
+
 export function Sheet({
   open,
   onOpenChange,
@@ -73,6 +84,7 @@ export function Sheet({
   onEscape,
   onBeforeClose,
   onRequestClose,
+  returnFocusRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -97,15 +109,81 @@ export function Sheet({
   onBeforeClose?: () => undefined | boolean | Promise<undefined | boolean>;
   /** The sheet's own close. Callers use this instead of the first dialog's ✕. */
   onRequestClose?: RefObject<(() => void) | null>;
+  /** ✕ and Escape put focus back on the control that opened the sheet. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
   const localTitle = useRef<HTMLHeadingElement>(null);
   const titleRef = titleRefProp ?? localTitle;
   const closing = useRef(false);
   const deciding = useRef(false);
+  const wasOpen = useRef(false);
+  const [depth, setDepth] = useState(0);
   useEffect(() => {
     if (open) closing.current = false;
   }, [open]);
+  useLayoutEffect(() => {
+    if (!open) {
+      setDepth(0);
+      return;
+    }
+    const id = nextSheetId;
+    nextSheetId += 1;
+    openSheetIds.push(id);
+    const mine = openSheetIds.length;
+    setDepth(mine);
+    const panelZ = String(31 + (mine - 1) * 2);
+    const scrimZ = String(30 + (mine - 1) * 2);
+    if (panelRef.current) panelRef.current.style.zIndex = panelZ;
+    if (scrimRef.current) scrimRef.current.style.zIndex = scrimZ;
+    syncSheetInert();
+    const frame = window.requestAnimationFrame(syncSheetInert);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      const index = openSheetIds.indexOf(id);
+      if (index >= 0) openSheetIds.splice(index, 1);
+      queueMicrotask(syncSheetInert);
+    };
+  }, [open]);
+  useLayoutEffect(() => {
+    if (!returnFocusRef) return;
+    if (open) {
+      wasOpen.current = true;
+      return;
+    }
+    if (!wasOpen.current) return;
+    const active = document.activeElement;
+    const panel = panelRef.current;
+    const fromBody = active == null || active === document.body || active === document.documentElement;
+    const fromSheet = panel != null && active instanceof Node && panel.contains(active);
+    // Leave focus where the user moved it. Restore only from the page or this sheet.
+    if (!fromBody && !fromSheet) {
+      wasOpen.current = false;
+      return;
+    }
+    const ref = returnFocusRef;
+    const started = performance.now();
+    let frame = 0;
+    const tryFocus = () => {
+      const el = ref.current;
+      const dialogs = [...document.querySelectorAll("[role=\"dialog\"]")];
+      const blocked = dialogs.some((dialog) => el == null || !dialog.contains(el));
+      // Vaul removes the dialog on a 500ms timer, after the close animation.
+      if (blocked && performance.now() - started < 800) {
+        frame = window.requestAnimationFrame(tryFocus);
+        return;
+      }
+      wasOpen.current = false;
+      if (!blocked && el?.isConnected) el.focus();
+    };
+    const timer = window.setTimeout(tryFocus, 0);
+    return () => {
+      window.clearTimeout(timer);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
+  }, [open, returnFocusRef]);
   async function requestClose() {
     if (closing.current || deciding.current) return;
     deciding.current = true;
@@ -113,7 +191,9 @@ export function Sheet({
       const verdict = await onBeforeClose?.();
       if (verdict === false) return;
       closing.current = true;
-      onOpenChange(false);
+      const accepted = (onOpenChange as (open: boolean) => boolean | undefined)(false);
+      // A refused close leaves the sheet open. The flag must not stick.
+      if (accepted === false) closing.current = false;
     } finally {
       deciding.current = false;
     }
@@ -151,8 +231,16 @@ export function Sheet({
       }}
     >
       <Drawer.Portal>
-        {modal ? <Drawer.Overlay className="ui-sheet-scrim" /> : null}
+        {modal ? (
+          <Drawer.Overlay
+            ref={scrimRef}
+            className="ui-sheet-scrim"
+            style={depth > 0 ? { zIndex: 30 + (depth - 1) * 2 } : undefined}
+          />
+        ) : null}
         <Drawer.Content
+          ref={panelRef}
+          style={depth > 0 ? { zIndex: 31 + (depth - 1) * 2 } : undefined}
           className={cx("ui-sheet-panel", panelClassName)}
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {

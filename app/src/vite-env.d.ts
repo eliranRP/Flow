@@ -4,6 +4,7 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string | undefined;
   readonly VITE_SUPABASE_ANON_KEY: string | undefined;
+  readonly VITE_FLOW_MCP_URL: string | undefined;
   readonly VITE_REVIEWER_BUILD: string | undefined;
 }
 

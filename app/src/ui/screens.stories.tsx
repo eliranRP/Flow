@@ -1,7 +1,9 @@
 import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from "@flow/shared";
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { userEvent, within } from "@storybook/test";
 import { Route, Routes } from "react-router-dom";
+import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { AssistantSettings } from "../screens/assistant-settings";
 import { HelpScreen } from "../screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "../screens/HomeScreen";
@@ -775,14 +777,22 @@ export const SettingsAssistantNoCompany: Story = {
   ),
 };
 
+function storyBody(canvasElement: HTMLElement) {
+  return within(canvasElement.ownerDocument.body);
+}
+
 export const SettingsAssistantScope: Story = {
   name: "Assistant scope",
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} initialOpen />
+      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "חיבור עוזר AI" });
+  },
 };
 
 export const SettingsAssistantSecret: Story = {
@@ -790,16 +800,65 @@ export const SettingsAssistantSecret: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
+      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const body = storyBody(canvasElement);
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
+    const sheet = await body.findByRole("dialog", { name: "חיבור עוזר AI" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "יצירת קוד" }));
+    await body.findByRole("dialog", { name: "הקוד מוכן" });
+  },
+};
+
+export const SettingsAssistantHelp: Story = {
+  name: "Assistant help",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const body = storyBody(canvasElement);
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
+    const sheet = await body.findByRole("dialog", { name: "חיבור עוזר AI" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "יצירת קוד" }));
+    const ready = await body.findByRole("dialog", { name: "הקוד מוכן" });
+    await userEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
+    await body.findByRole("dialog", { name: "איך מחברים ב־Claude" });
+  },
+};
+
+export const SettingsAssistantUsed: Story = {
+  name: "Assistant used",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
       <AssistantSettings
-        sample={{ state: "empty" }}
-        initialSecret={{
-          id: "mcp-1",
-          secret: "flow_mcp_abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrst",
-          scope: ["read"],
-        }}
+        sample={{ state: "connected", scope: "read_write", id: "mcp-1", lastUsedAt: "2026-09-30T11:05:00.000Z" }}
       />
     </StoryRoute>
   ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "עוזר AI" });
+  },
+};
+
+export const SettingsAssistantUnused: Story = {
+  name: "Assistant unused",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <AssistantSettings sample={{ state: "connected", scope: "read", id: "mcp-1", lastUsedAt: null }} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוזר AI" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "עוזר AI" });
+  },
 };
 
 export const SettingsConnected: Story = {
@@ -813,8 +872,6 @@ export const SettingsConnected: Story = {
           companyId: 1001,
           lastError: null,
           email: "owner@example.com",
-          expenseCategories: 7,
-          incomeCategories: 2,
         }}
       />
     </StoryRoute>

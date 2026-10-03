@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useRefreshingNow } from "../israel-clock";
 import { getSupabase } from "../lib/supabase";
+import { claudeCodeCommand, flowMcpUrl } from "../mcp-address";
+import { israelUsePhrase } from "../sumit-copy";
 import { popSheetLayers, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { Button } from "../ui/button";
@@ -36,31 +39,60 @@ type Minted = { id: string; secret: string; scope: string[] };
 
 const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
 const MINT_REASON = "יוצרים קוד. אי אפשר לשנות עכשיו.";
+const INSTALL_HINT = "אם Claude Code לא מותקן, התקינו אותו קודם.";
+const SCOPE_INTRO = "בחרו מה העוזר יכול לעשות.";
+const SHOWN_ONCE = "הקוד מוצג פעם אחת";
+const SCOPE_FIELD = "היקף הגישה";
+const CHANGE_SCOPE = "כדי לשנות את הגישה מנתקים ומחברים שוב.";
+const HELP_TITLE = "איך מחברים ב־Claude";
+const HELP_LEAD = "ב־Claude Code הריצו את הפקודה.";
+const CLAUDE_WEB = "ב־Claude.ai צריך כותרת מותאמת";
+const CLAUDE_HEADER = "Authorization: Bearer <הקוד>";
 
-export function formatAssistantUse(iso: string): string {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date(iso));
-  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
-  return `${part("day")}/${part("month")}/${part("year")}, ${part("hour")}:${part("minute")}`;
-}
+type CopyField = "url" | "secret" | "command";
 
 function scopeChoice(scope: string[] | undefined): AssistantScope {
   return scope?.includes("write") ? "read_write" : "read";
+}
+
+function CopyRow({
+  label,
+  labelId,
+  value,
+  valueRef,
+  failed,
+  onCopy,
+}: {
+  label: string;
+  labelId: string;
+  value: string;
+  valueRef?: RefObject<HTMLElement | null>;
+  failed: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="ui-copy-row" role="group" aria-labelledby={labelId}>
+      <div className="ui-copy-main">
+        <p className="ui-field-label" id={labelId}>{label}</p>
+        <bdi ref={valueRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="">{value}</bdi>
+        {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
+      </div>
+      <TextLink chevron={false} label={`העתקה: ${label}`} onClick={onCopy}>העתקה</TextLink>
+    </div>
+  );
 }
 
 function scopeLabel(scope: AssistantScope): string {
   return scope === "read" ? "קריאה בלבד" : "קריאה וכתיבה";
 }
 
-function connectedHint(scope: AssistantScope): string {
-  return `מחובר · ${scopeLabel(scope)}`;
+function connectedHint(scope: AssistantScope): ReactNode {
+  return (
+    <>
+      מחובר
+      <span className="ui-nowrap">{` · ${scopeLabel(scope)}`}</span>
+    </>
+  );
 }
 
 async function readStatus(): Promise<Status> {
@@ -88,6 +120,7 @@ async function revokeCode(id: string): Promise<void> {
 
 export function AssistantSettings({
   sample,
+  sampleSecret,
   noCompany = false,
   blocked,
   initialSecret,
@@ -96,6 +129,8 @@ export function AssistantSettings({
   announceLoading = true,
 }: {
   sample?: AssistantSample;
+  /** A preview mint shows this secret. Stories and the dev route pass it. */
+  sampleSecret?: string;
   noCompany?: boolean;
   blocked?: () => boolean;
   initialSecret?: Minted;
@@ -115,12 +150,14 @@ export function AssistantSettings({
   });
   const [open, setOpen] = useState(initialSecret != null || initialOpen);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [now] = useRefreshingNow();
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [choice, setChoice] = useState<AssistantScope>("read_write");
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
   const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
-  const [manualCopy, setManualCopy] = useState(false);
+  const [manualField, setManualField] = useState<CopyField | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [intro, setIntro] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -130,12 +167,18 @@ export function AssistantSettings({
   const [focusRow, setFocusRow] = useState(false);
   const rowRef = useRef<HTMLButtonElement>(null);
   const retryRef = useRef<HTMLButtonElement>(null);
+  const disconnectRef = useRef<HTMLButtonElement>(null);
+  const helpLinkRef = useRef<HTMLButtonElement>(null);
   const connectTitleRef = useRef<HTMLHeadingElement>(null);
+  const urlRef = useRef<HTMLElement>(null);
+  const commandRef = useRef<HTMLElement>(null);
   const focusStep = useRef(false);
+  const hadSecret = useRef(initialSecret != null);
   const openRef = useRef(initialSecret != null || initialOpen);
   const secretRef = useRef<HTMLElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
   const setDetailsSheet = useSheetHistory("assistant-details", detailsOpen, setDetailsOpen);
+  const setHelpSheet = useSheetHistory("assistant-help", helpOpen, setHelpOpen);
   const setDisconnectSheet = useSheetHistory("assistant-disconnect", disconnectOpen, setDisconnectOpen);
   const setConnectSheet = useSheetHistory("assistant-connect", open, (next) => {
     closeConnectRef.current(next);
@@ -166,7 +209,7 @@ export function AssistantSettings({
     setOpen(next);
     if (!next) {
       setMintError(false);
-      setManualCopy(false);
+      setManualField(null);
       setSecret(null);
       setChoice("read_write");
       setIntro(false);
@@ -177,6 +220,15 @@ export function AssistantSettings({
   async function mint() {
     if (minting) return;
     if (blocked?.()) return;
+    if (sample != null) {
+      if (sampleSecret == null || sampleSecret === "") return;
+      setSecret({
+        id: "mcp-sample",
+        secret: sampleSecret,
+        scope: choice === "read" ? ["read"] : ["read", "write"],
+      });
+      return;
+    }
     setMinting(true);
     setMintError(false);
     try {
@@ -195,14 +247,12 @@ export function AssistantSettings({
     }
   }
 
-  async function copySecret() {
-    if (!secret) return;
+  async function copyValue(field: CopyField, value: string, node: HTMLElement | null) {
     try {
-      await navigator.clipboard.writeText(secret.secret);
-      setManualCopy(false);
+      await navigator.clipboard.writeText(value);
+      setManualField(null);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
-      const node = secretRef.current;
       if (node) {
         const range = document.createRange();
         range.selectNodeContents(node);
@@ -210,7 +260,7 @@ export function AssistantSettings({
         selection?.removeAllRanges();
         selection?.addRange(range);
       }
-      setManualCopy(true);
+      setManualField(field);
     }
   }
 
@@ -253,11 +303,22 @@ export function AssistantSettings({
 
   useFocusRowAfterRetry(view.state === "error", retryRef, rowRef, view.state !== "error" && view.state !== "loading", hintNonce);
 
+  useEffect(() => onlineManager.subscribe((online) => {
+    if (online) setOfflineNote(0);
+  }), []);
+
   useEffect(() => {
     if (!focusStep.current || intro || !open || secret != null) return;
     focusStep.current = false;
     connectTitleRef.current?.focus();
   }, [intro, open, secret]);
+
+  useLayoutEffect(() => {
+    const arrived = secret != null && !hadSecret.current;
+    hadSecret.current = secret != null;
+    if (!arrived || !open) return;
+    connectTitleRef.current?.focus();
+  }, [open, secret]);
 
   useEffect(() => {
     if (!focusRow) return;
@@ -291,6 +352,10 @@ export function AssistantSettings({
     });
   }
 
+  const mcpUrl = flowMcpUrl();
+  const urlReady = mcpUrl !== "";
+  const command = secret != null && urlReady ? claudeCodeCommand(mcpUrl, secret.secret) : "";
+  const useLine = view.lastUsedAt ? israelUsePhrase(view.lastUsedAt, now) : null;
   const spark = <SparkIcon size={24} />;
   const row = view.state === "loading" ? (
     <ListRow variant="static" title="עוזר AI" icon={spark} hint={<Skeleton width="sm" />} skelHint busy />
@@ -372,16 +437,33 @@ export function AssistantSettings({
       <List>
         {row}
       </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} title={intro && secret == null ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef}>
+      <Sheet open={open} onOpenChange={setConnectSheet} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
-            <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>
-            <p className="ui-field-label" id="assistant-secret-label">קוד החיבור</p>
-            <bdi ref={secretRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="" aria-labelledby="assistant-secret-label">{secret.secret}</bdi>
-            <p className="ui-field-label" id="assistant-scope-label">היקף הגישה</p>
-            <p aria-labelledby="assistant-scope-label">{scopeLabel(scopeChoice(secret.scope))}</p>
-            {manualCopy ? <p className="t-hint" id="assistant-manual-copy" role="status">העתיקו ידנית</p> : null}
-            <Button type="button" variant="secondary" aria-describedby={manualCopy ? "assistant-manual-copy" : undefined} onClick={() => { void copySecret(); }}>העתקה</Button>
+            <p>{SHOWN_ONCE}</p>
+            <div role="group" aria-labelledby="assistant-scope-label">
+              <p className="ui-field-label" id="assistant-scope-label">{SCOPE_FIELD}</p>
+              <p>{scopeLabel(scopeChoice(secret.scope))}</p>
+            </div>
+            <CopyRow
+              label="כתובת"
+              labelId="assistant-url-label"
+              value={mcpUrl}
+              valueRef={urlRef}
+              failed={manualField === "url"}
+              onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
+            />
+            <CopyRow
+              label="קוד"
+              labelId="assistant-secret-label"
+              value={secret.secret}
+              valueRef={secretRef}
+              failed={manualField === "secret"}
+              onCopy={() => { void copyValue("secret", secret.secret, secretRef.current); }}
+            />
+            {urlReady ? (
+              <TextLink chevron={false} buttonRef={helpLinkRef} onClick={() => { setHelpSheet(true); }}>{HELP_TITLE}</TextLink>
+            ) : null}
             <Button type="button" onClick={() => { setConnectSheet(false); }}>סיום</Button>
           </div>
         ) : intro ? (
@@ -402,7 +484,8 @@ export function AssistantSettings({
           </div>
         ) : (
           <div className="ui-stack ui-assistant-step">
-            <div role="radiogroup" aria-label="היקף הגישה">
+            <p>{SCOPE_INTRO}</p>
+            <div role="radiogroup" aria-label={SCOPE_FIELD}>
               <RadioRow
                 marker="start"
                 label="קריאה וכתיבה"
@@ -425,28 +508,41 @@ export function AssistantSettings({
         )}
         {showDisconnect && view.id && view.state === "expired" ? (
           <List>
-            <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
+            <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={disconnectRef} onClick={() => { setDisconnectSheet(true); }} />
           </List>
         ) : null}
       </Sheet>
-      <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI">
+      <Sheet open={helpOpen} onOpenChange={setHelpSheet} title={HELP_TITLE} returnFocusRef={helpLinkRef}>
         <div className="ui-stack">
-          <p>
-            {view.lastUsedAt ? (
-              <>
-                שימוש אחרון{" "}
-                <bdi className="ui-nowrap" dir="ltr">{formatAssistantUse(view.lastUsedAt)}</bdi>
-              </>
-            ) : "עדיין אין שימוש"}
-          </p>
+          <p>{HELP_LEAD}</p>
+          {command !== "" ? (
+            <CopyRow
+              label="Claude Code"
+              labelId="assistant-command-label"
+              value={command}
+              valueRef={commandRef}
+              failed={manualField === "command"}
+              onCopy={() => { void copyValue("command", command, commandRef.current); }}
+            />
+          ) : null}
+          <p className="t-hint">{INSTALL_HINT}</p>
+          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr">{CLAUDE_HEADER}</bdi></p>
+        </div>
+      </Sheet>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI" returnFocusRef={rowRef}>
+        <div className="ui-stack">
+          <p>{connectedHint(scope)}</p>
+          <p>{CHANGE_SCOPE}</p>
+          <p className={useLine != null ? "ui-nowrap" : undefined}>{useLine ?? "עדיין אין שימוש"}</p>
         </div>
         <List>
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={disconnectRef} onClick={() => { setDisconnectSheet(true); }} />
         </List>
       </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
         onOpenChange={setDisconnectSheet}
+        returnFocusRef={disconnectRef}
         title="לנתק את העוזר?"
         consequence="הקוד יפסיק לעבוד. הספרים נשארים."
         confirmLabel="ניתוק"

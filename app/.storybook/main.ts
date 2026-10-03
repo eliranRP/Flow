@@ -11,6 +11,10 @@ const config: StorybookConfig = {
     config.server ??= {};
     config.server.strictPort = false;
     delete config.server.port;
+    config.define = {
+      ...config.define,
+      "import.meta.env.VITE_FLOW_MCP_URL": JSON.stringify("https://example.com/functions/v1/flow-mcp"),
+    };
     return config;
   },
 };

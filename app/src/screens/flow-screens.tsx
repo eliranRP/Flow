@@ -10,7 +10,7 @@ import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
-import { useFlowSearch, useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
+import { keepPreview, useFlowSearch, useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import {
   activeProjects,
@@ -28,6 +28,7 @@ import {
 } from "../split-math";
 import { withSheetBackground } from "../sheet-background";
 import { safeAppPath } from "../safe-return";
+import { useRefreshingNow } from "../israel-clock";
 import { hebrewSumitError, israelSyncPhrase, retryClockParts } from "../sumit-copy";
 import { isStandalone } from "../ui/install-prompt";
 import {
@@ -166,7 +167,7 @@ export function OnboardingScreen() {
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const previewSearch = usePreviewSearch();
-  const returnTo = safeAppPath(params.get("return")) ?? `/${previewSearch}`;
+  const returnTo = keepPreview(safeAppPath(params.get("return")) ?? "/", previewSearch);
   const save = useWrite({
     failure: "לא הצלחנו לשמור.",
     keys: ["home", "dashboard", "sumit"],
@@ -3197,8 +3198,6 @@ type SettingsSample = {
   noCompany?: boolean;
   /** Story fixture. Live status comes from the query. */
   sumit?: "loading" | "error";
-  expenseCategories?: number;
-  incomeCategories?: number;
   assistant?: AssistantSample;
 };
 
@@ -3231,8 +3230,11 @@ function onboardingFromSettings(search: string): string {
 
 export function SettingsScreen({
   sample,
+  sampleSecret,
 }: {
   sample?: SettingsSample;
+  /** Dev route only. Production preview never mints a local code. */
+  sampleSecret?: string;
 } = {}) {
   const preview = useHomePreview();
   const [params, setParams] = useSearchParams();
@@ -3243,7 +3245,6 @@ export function SettingsScreen({
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
-  const categories = useCategoriesQuery(sample == null);
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
@@ -3254,7 +3255,7 @@ export function SettingsScreen({
   const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
-  const [clockNow, setClockNow] = useState(() => Date.now());
+  const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
   const [sumitRetrying, setSumitRetrying] = useState(false);
   const [sumitHint, setSumitHint] = useState("לא הצלחנו לטעון");
@@ -3263,6 +3264,7 @@ export function SettingsScreen({
   const wantedOverhead = useRef(false);
   const sumitRowRef = useRef<HTMLButtonElement>(null);
   const sumitRetryRef = useRef<HTMLButtonElement>(null);
+  const sumitDisconnectRef = useRef<HTMLButtonElement>(null);
   const sheetApplied = useRef(false);
   const wantSheet = useRef(false);
   const retrySource = sample ? sample.nextAttemptAt : status.data?.next_attempt_at;
@@ -3273,7 +3275,7 @@ export function SettingsScreen({
     if (!Number.isFinite(wait) || wait <= 0) return;
     const id = window.setTimeout(() => { setClockNow(Date.now()); }, wait + 25);
     return () => { window.clearTimeout(id); };
-  }, [retrySource]);
+  }, [retrySource, setClockNow]);
   useEffect(() => {
     if (sample) return;
     if (dashboard.data) setOverheadOn(dashboard.data.after_overhead === true);
@@ -3375,6 +3377,10 @@ export function SettingsScreen({
     && !(sample == null && !sumitNoCompany && status.isLoading && !sumitRetrying);
   useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef, sumitRowReady, sumitNonce);
 
+  useEffect(() => onlineManager.subscribe((online) => {
+    if (online) setSumitOffline(0);
+  }), []);
+
   useEffect(() => {
     if (!focusSumit) return;
     if (sumitRowRef.current == null) return;
@@ -3472,11 +3478,6 @@ export function SettingsScreen({
   );
   const refreshHint = retryHint;
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
-  const expenseCount = sample?.expenseCategories ?? categories.data?.filter((category) => category.kind === "expense" && !category.hidden).length;
-  const incomeCount = sample?.incomeCategories ?? categories.data?.filter((category) => category.kind === "income" && !category.hidden).length;
-  const categoryHint = expenseCount == null || incomeCount == null
-    ? undefined
-    : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
   const namedBusiness = (businessName ?? "").trim();
   const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
   const showInstall = !isStandalone();
@@ -3586,10 +3587,11 @@ export function SettingsScreen({
                 : undefined
         }
         noCompany={noCompany}
-        blocked={blocked}
+        blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
+        sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
         showHeading={false}
       />
-      <Sheet open={connectOpen} onOpenChange={setConnectSheet} title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"}>
+      <Sheet open={connectOpen} onOpenChange={setConnectSheet} title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"} returnFocusRef={sumitRowRef}>
         {noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
@@ -3612,18 +3614,18 @@ export function SettingsScreen({
             </form>
             {authReconnect ? (
               <List>
-                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
+                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { setDisconnectSheet(true); }} />
               </List>
             ) : null}
           </div>
         )}
       </Sheet>
-      <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT">
+      <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT" returnFocusRef={sumitRowRef}>
         <div className="ui-stack">
           <p>
             מחובר
-            {sumitId != null ? <> · מספר חברה <bdi dir="ltr">{String(sumitId)}</bdi></> : null}
-            {syncPhrase != null ? <> · <span className="ui-nowrap">{syncPhrase}</span></> : null}
+            {sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
+            {syncPhrase != null ? <span className="ui-nowrap">{` · ${syncPhrase}`}</span> : null}
           </p>
           {refreshHeld && rawError != null && rawError !== "sumit_auth" ? <p>הרענון נכשל</p> : null}
           {!refreshHeld && rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}
@@ -3646,12 +3648,13 @@ export function SettingsScreen({
               refresh.mutate();
             }}
           />
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { setDisconnectSheet(true); }} />
         </List>
       </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
         onOpenChange={setDisconnectSheet}
+        returnFocusRef={sumitDisconnectRef}
         title="לנתק את SUMIT?"
         consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
         confirmLabel="ניתוק"
@@ -3666,7 +3669,7 @@ export function SettingsScreen({
         <>
           <SectionHead title="תצוגה" />
           <List>
-            <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" hint={categoryHint} icon={<TagIcon />} chevron />
+            <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" icon={<TagIcon />} chevron />
           </List>
           <div className="ui-page-pad">
             <Toggle

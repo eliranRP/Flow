@@ -41,6 +41,13 @@ test("flags the review e2e fixture supplier and the e2e=list switch", () => {
   });
   assert.ok(found.some((line) => line.includes("מחסן הנמל")));
   assert.ok(found.some((line) => line.includes("e2e=list")));
+  const stack = violations({
+    modules: ["/repo/app/src/assistant-sample.ts"],
+    files: [{ name: "app/dist/assets/index.js", body: "e2e=stack flw_test_7f3c9a1e2b8046d5c0a91e44b7d2" }],
+  });
+  assert.ok(stack.some((line) => line.includes("e2e=stack")));
+  assert.ok(stack.some((line) => line.includes("flw_test_")));
+  assert.ok(stack.some((line) => line.includes("assistant-sample")));
   const module = violations({
     modules: ["/repo/app/src/dev/review-e2e-fixture.ts"],
     files: [],
