@@ -33,8 +33,8 @@ function failureRetries(failure: WriteFailure, error: Error): boolean {
 }
 
 /** A write that checks the PostgREST error, stays busy, and toasts a retry for a transient failure. */
-export function useWrite(options: {
-  run: () => Promise<void>;
+export function useWrite<T = void>(options: {
+  run: (payload: T) => Promise<void>;
   keys: string[];
   success?: string;
   failure: string | ((error: Error) => WriteFailure);
@@ -46,34 +46,43 @@ export function useWrite(options: {
 }) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
-  const retry = useRef<() => void>(() => undefined);
+  const retry = useRef<(payload: T) => void>(() => undefined);
+  const retryToast = useRef<number | null>(null);
   const mutation = useMutation({
-    mutationFn: options.run,
+    mutationFn: (payload: T) => options.run(payload),
+    onMutate: () => {
+      const id = retryToast.current;
+      if (id == null) return;
+      retryToast.current = null;
+      toast.dismiss(id);
+    },
     onSuccess: async () => {
       await invalidate(options.keys);
       if (options.success) toast.show({ message: options.success });
       options.onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error, payload) => {
       const failure = error instanceof Error ? error : new Error("failed");
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
       const retryable = failureRetries(reported, failure);
       const tone = typeof reported === "string" ? "bad" : (reported.tone ?? "bad");
       const split = typeof reported !== "string" && reported.action != null && options.onSplit != null;
-      toast.show({
+      const id = toast.show({
         tone,
         message: failureMessage(reported),
         ...(split
           ? { action: reported.action, onAction: () => { options.onSplit?.(); } }
           : retryable
-            ? { action: "ניסיון חוזר", onAction: () => { retry.current(); } }
+            ? { action: "ניסיון חוזר", onAction: () => { retry.current(payload); } }
             : {}),
       });
+      if (retryable && !split) retryToast.current = id;
     },
   });
-  retry.current = () => {
+  retry.current = (payload) => {
+    if (mutation.isPending) return;
     options.retryFocus?.();
-    mutation.mutate();
+    mutation.mutate(payload);
   };
   return mutation;
 }
