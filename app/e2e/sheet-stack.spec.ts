@@ -41,7 +41,7 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });
   await expect(code).toBeVisible();
-  await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+  await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
   const link = code.getByRole("button", { name: "איך מחברים ב־Claude" });
 
   for (const how of ["close", "escape", "back"] as const) {
@@ -60,7 +60,7 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
     await dismissTop(page, how, help);
     await expect(help).toBeHidden();
     await expect(code).toBeVisible();
-    await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+    await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
     await expect(link).toBeFocused();
   }
 });
@@ -83,7 +83,7 @@ test("Back then Forward still closes the sheet under the restored entry", async 
     await page.goForward();
     await expect(help).toBeHidden();
     await expect(code).toBeVisible();
-    await expect(code.getByText(SAMPLE_ASSISTANT_SECRET)).toBeVisible();
+    await expect(code.getByRole("textbox", { name: "קוד" })).toHaveValue(SAMPLE_ASSISTANT_SECRET);
     if (how === "escape") await page.keyboard.press("Escape");
     else await code.getByRole("button", { name: "סגירה" }).click();
     await expect(code).toBeHidden();

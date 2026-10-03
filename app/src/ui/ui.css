@@ -535,30 +535,42 @@ a.ui-row,
   line-height: var(--type-hint-line);
 }
 
-.ui-secret-value {
-  display: block;
-  max-inline-size: 100%;
-  min-inline-size: 0;
-  overflow-wrap: anywhere;
-  word-break: break-all;
-  user-select: text;
-  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
-}
-
-.ui-copy-row {
+.ui-code-field {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--label-gap);
+  inline-size: 100%;
   min-inline-size: 0;
 }
 
-.ui-copy-main {
-  flex: 1;
+.ui-code-field-box {
+  position: relative;
+  inline-size: 100%;
   min-inline-size: 0;
+  direction: ltr;
 }
 
-.ui-copy-row > .ui-text-link {
-  flex: none;
+.ui-code-field-input {
+  direction: ltr;
+  text-align: start;
+  font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-overflow: clip;
+  user-select: text;
+  padding-inline-end: calc(var(--touch-min) + var(--space-2));
+}
+
+.ui-code-field-copy {
+  position: absolute;
+  z-index: 1;
+  inset-inline-end: 0;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  background: var(--color-surface);
 }
 
 .ui-assistant-step {

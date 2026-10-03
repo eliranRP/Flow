@@ -6,6 +6,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { ToastProvider } from "../ui/toast";
 import { israelUsePhrase } from "../sumit-copy";
 import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
+import { claudeCodeCommand } from "../mcp-address";
 import { AssistantSettings } from "./assistant-settings";
 
 const edge = vi.hoisted(() => ({
@@ -166,11 +167,11 @@ describe("assistant settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
     const code = await screen.findByRole("group", { name: "קוד" });
-    expect(code).toHaveTextContent("flow_mcp_once");
-    fireEvent.click(within(code).getByRole("button", { name: "העתקה: קוד" }));
+    expect(within(code).getByRole("textbox", { name: "קוד" })).toHaveValue("flow_mcp_once");
+    fireEvent.click(within(code).getByRole("button", { name: "העתקה" }));
     await waitFor(() => expect(screen.getByText("הועתק")).toBeInTheDocument());
     writeText.mockRejectedValueOnce(new Error("denied"));
-    fireEvent.click(within(code).getByRole("button", { name: "העתקה: קוד" }));
+    fireEvent.click(within(code).getByRole("button", { name: "העתקה" }));
     const manual = await within(code).findByRole("status");
     expect(manual).toHaveTextContent("העתיקו ידנית");
     expect(manual.closest("[role=\"dialog\"]")).toBe(screen.getByRole("dialog", { name: "הקוד מוכן" }));
@@ -543,17 +544,19 @@ describe("assistant settings", () => {
       />,
     );
     const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
-    expect(within(ready).getByRole("group", { name: "כתובת" })).toHaveTextContent("https://example.com/functions/v1/flow-mcp");
+    expect(within(ready).getByRole("textbox", { name: "כתובת" })).toHaveValue("https://example.com/functions/v1/flow-mcp");
     expect(within(ready).getByRole("group", { name: "היקף הגישה" })).toHaveTextContent("קריאה וכתיבה");
     expect(within(ready).getByText("הקוד מוצג פעם אחת")).toBeInTheDocument();
     expect(within(ready).queryByText("הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.")).not.toBeInTheDocument();
     fireEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
     const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
     expect(within(help).getByText("ב־Claude Code הריצו את הפקודה.")).toBeInTheDocument();
-    expect(help).toHaveTextContent("--scope user");
-    expect(help).toHaveTextContent('flow "https://example.com/functions/v1/flow-mcp"');
-    expect(help).toHaveTextContent("Authorization: Bearer flw_test_7f3c9a1e2b8046d5c0a91e44b7d2");
-    expect(within(help).getByRole("group", { name: "Claude Code" })).toBeInTheDocument();
+    const command = within(help).getByRole("textbox", { name: "פקודת חיבור ל־Claude Code" });
+    expect(command).toHaveValue(claudeCodeCommand("https://example.com/functions/v1/flow-mcp", "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2"));
+    expect(command).toHaveAttribute("dir", "ltr");
+    expect(command).toHaveAttribute("readonly");
+    expect(within(help).queryByRole("group", { name: "Claude Code" })).not.toBeInTheDocument();
+    expect(within(help).getByRole("button", { name: "העתקה" })).toBeInTheDocument();
     expect(within(help).getByText("אם Claude Code לא מותקן, התקינו אותו קודם.")).toBeInTheDocument();
     expect(within(help).getByText(/ב־Claude\.ai צריך כותרת מותאמת/)).toBeInTheDocument();
     expect(within(help).getByText("Authorization: Bearer <הקוד>")).toBeInTheDocument();
@@ -622,7 +625,7 @@ describe("assistant settings", () => {
     const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
     fireEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
     const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
-    fireEvent.click(within(help).getByRole("button", { name: "העתקה: Claude Code" }));
+    fireEvent.click(within(help).getByRole("button", { name: "העתקה" }));
     const manual = await within(help).findByRole("status");
     expect(manual).toHaveTextContent("העתיקו ידנית");
     expect(within(ready).queryByRole("status")).not.toBeInTheDocument();
@@ -651,7 +654,7 @@ describe("assistant settings", () => {
     });
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "איך מחברים ב־Claude" })).not.toBeInTheDocument(); });
     expect(screen.getByRole("dialog", { name: "הקוד מוכן" })).toBeInTheDocument();
-    expect(screen.getByText("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2")).toBeInTheDocument();
     await waitFor(() => { expect(link).toHaveFocus(); });
     fireEvent.click(within(screen.getByRole("dialog", { name: "הקוד מוכן" })).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
