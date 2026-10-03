@@ -6,12 +6,16 @@ test("the Jev switch turns on and off, and off hides the options", async ({ page
   const toggle = page.getByRole("switch", { name: "תיוג חכם (Jev)" });
   await expect(toggle).toBeVisible();
   await expect(toggle).not.toBeChecked();
+  await expect(page.getByText("כבוי")).toBeVisible();
   await expect(page.getByRole("button", { name: "אפשרויות" })).toHaveCount(0);
 
   await toggle.click();
   await expect(toggle).toBeChecked();
+  await expect(page.getByText("פעיל · מצב צל")).toBeVisible();
   await page.getByRole("button", { name: "אפשרויות" }).click();
-  await expect(page.getByRole("radio", { name: "צל" })).toBeChecked();
+  await expect(page.getByText("צל", { exact: true })).toBeVisible();
+  await expect(page.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
   await expect(page.getByLabel("סף")).toHaveValue("0.90");
 
   await toggle.click();

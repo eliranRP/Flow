@@ -29,8 +29,10 @@ An Edge Function env var `JEV_API_KEY` as a second copy of the Vault secret. Put
 
 ## Consequences
 
-The tagging job calls `read_jev_api_key`. The Settings card calls `set_company_integration` only. It does not read the Vault secret, and the bundle does not name it. A lost Vault secret stops labelling until the secret is put back under the same name. Rotating it is a Vault change, not a client release. The card can show אין מפתח, but the live screen cannot tell a missing secret from a present one until a later status function exists. That function is not in this change.
+The tagging job calls `read_jev_api_key`. The Settings card calls `set_company_integration` only. It does not read the Vault secret, and the bundle does not name it. A lost Vault secret stops labelling until the secret is put back under the same name. Rotating it is a Vault change, not a client release. The card says כבוי when the switch is off, including `enabled` true with `mode` off, and פעיל · מצב צל when it is on. It says שגיאה when its own read fails, and when the settings dashboard fails to load. It does not say מחובר or אין מפתח. Those words need a real status source, and this change does not add one.
 
 ## Decisions needed
 
 The tagging job will allow `mode` `auto`. What that mode does is [0084](0084-jev-auto-prefill.md): a suggestion never approves a line, and at or above the threshold it pre-fills a project and category the user has not set and leaves the item in לאישור. This record does not accept `auto`. Allowing it is a later migration.
+
+Backlog, no migration in this change: an owner-only RPC that returns whether Vault holds `jev_api_key` (`has_key`) and the last `jev-tag` run or its error. Members cannot read Vault, so the card cannot show a missing key or a failed run until that function exists.

@@ -10,6 +10,8 @@ Decision [0083](../decisions/0083-jev-connector.md). J-1 stores the setting and 
 
 `public.read_jev_api_key()` is the only read. Execute is `service_role` only, because the tagging job runs as an Edge Function. The function also requires `auth.jwt()->>'role'` to be `service_role`. The production Vault already holds `jev_api_key`. Do not select `decrypted_secret` to check that.
 
+Backlog: an owner-only RPC that returns `has_key` and the last `jev-tag` run or error. The Settings card does not show a missing key until that exists. Do not add it while another migration is in the slot.
+
 This permission check is read-only. It does not read the secret.
 
 ```sql

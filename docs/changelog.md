@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-Jev settings. חיבורים includes תיוג חכם (Jev): one switch, a status of מחובר, אין מפתח, or שגיאה, and אפשרויות for mode and threshold. Off hides those options. The switch calls `set_company_integration`. No migration. Decision [0083](decisions/0083-jev-connector.md).
+Jev settings, review. The switch says כבוי when off and פעיל · מצב צל when on. מחובר and אין מפתח are not live statuses. אפשרויות stays open while a save is in flight. צל is text, with one hint that suggestions are stored for review and are not filled in. The threshold saves at two decimals and accepts a comma. A failed read, and a failed dashboard load, show שגיאה on the card. The save uses the shared write path, so a dropped connection offers ניסיון חוזר. No migration. An owner-only status RPC (`has_key`, and the last jev-tag run or error) is backlog. Decision [0083](decisions/0083-jev-connector.md).
 
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
 

@@ -16,11 +16,13 @@ const db = vi.hoisted(() => {
     row: { enabled: boolean; mode: string; threshold: number } | null;
     readError: { message: string } | null;
     writeError: { message: string } | null;
+    hold: Promise<void> | null;
     writes: Array<Record<string, unknown>>;
   } = {
     row: null,
     readError: null,
     writeError: null,
+    hold: null,
     writes: [],
   };
   return state;
@@ -37,7 +39,18 @@ vi.mock("../lib/supabase", () => ({
     }),
     rpc: (_name: string, args: Record<string, unknown>) => {
       db.writes.push(args);
-      return Promise.resolve({ data: {}, error: db.writeError });
+      const finish = () => {
+        if (!db.writeError) {
+          db.row = {
+            enabled: Boolean(args.p_enabled),
+            mode: String(args.p_mode),
+            threshold: Number(args.p_threshold),
+          };
+        }
+        return { data: {}, error: db.writeError };
+      };
+      if (db.hold) return db.hold.then(finish);
+      return Promise.resolve(finish());
     },
   }),
 }));
@@ -51,49 +64,65 @@ function renderLive(ui: ReactNode) {
   );
 }
 
-const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "connected" };
+const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "ready" };
+
+async function readySwitch() {
+  await waitFor(() => expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeEnabled());
+  return screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+}
 
 describe("Jev settings card", () => {
   beforeEach(() => {
     db.row = null;
     db.readError = null;
     db.writeError = null;
+    db.hold = null;
     db.writes = [];
   });
 
-  it("accepts a threshold from 0.50 to 1.00", () => {
+  it("rounds a threshold to two decimals and accepts a comma", () => {
     expect(parseJevThreshold("0.49")).toBeNull();
     expect(parseJevThreshold("0.50")).toBe(0.5);
+    expect(parseJevThreshold("0,95")).toBe(0.95);
+    expect(parseJevThreshold("0.955")).toBe(0.96);
     expect(parseJevThreshold("1")).toBe(1);
     expect(parseJevThreshold("1.01")).toBeNull();
   });
 
-  it("hides the options while the switch is off, and shows them when it is on", () => {
-    render(<JevSettings sample={off} />);
+  it("says כבוי when off and פעיל · מצב צל when on", () => {
+    const { unmount } = render(<JevSettings sample={off} />);
     const toggle = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
     expect(toggle).not.toBeChecked();
-    expect(screen.getByText("מחובר")).toBeInTheDocument();
+    expect(screen.getByText("כבוי")).toBeInTheDocument();
+    expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
+    expect(screen.queryByText("אין מפתח")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
+    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
-    expect(screen.getByRole("radio", { name: "צל" })).toBeChecked();
+    expect(screen.getByText("צל")).toBeInTheDocument();
+    expect(screen.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).not.toBeChecked();
+    expect(screen.getByText("כבוי")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
-  });
+    unmount();
 
-  it("shows אין מפתח and does not offer the switch or the options", () => {
-    render(<JevSettings sample={{ ...off, enabled: true, status: "missing-key" }} />);
-    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
-    expect(screen.getByText("אין מפתח")).toBeInTheDocument();
+    render(<JevSettings sample={{ ...off, enabled: true, mode: "off" }} />);
+    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeChecked();
+    expect(screen.getByText("כבוי")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
   });
 
   it("shows שגיאה with a retry and does not offer a working switch", () => {
-    render(<JevSettings sample={{ ...off, status: "error" }} />);
+    render(<JevSettings sample={{ ...off, enabled: true, status: "error" }} />);
     expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeChecked();
     expect(screen.getByText("שגיאה")).toBeInTheDocument();
+    expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
+    expect(screen.queryByText("פעיל · מצב צל")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
   });
@@ -116,9 +145,9 @@ describe("Jev settings card", () => {
   it("stores the switch through set_company_integration and sends shadow when turning on", async () => {
     db.row = { enabled: false, mode: "off", threshold: 0.9 };
     renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeEnabled());
-    const toggle = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+    const toggle = await readySwitch();
     expect(toggle).not.toBeChecked();
+    expect(screen.getByText("כבוי")).toBeInTheDocument();
     fireEvent.click(toggle);
     await waitFor(() => {
       expect(db.writes).toEqual([
@@ -126,17 +155,102 @@ describe("Jev settings card", () => {
       ]);
     });
     expect(toggle).toBeChecked();
+    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+  });
+
+  it("keeps the stored mode when turning off", async () => {
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    await waitFor(() => {
+      expect(db.writes).toEqual([
+        { p_enabled: false, p_mode: "shadow", p_threshold: 0.9, p_provider: "jev" },
+      ]);
+    });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText("כבוי")).toBeInTheDocument();
+  });
+
+  it("saves a comma threshold at two decimals and keeps אפשרויות open while busy", async () => {
+    let release: () => void = () => undefined;
+    db.hold = new Promise((resolve) => { release = resolve; });
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    expect(toggle).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
+    const field = screen.getByLabelText("סף");
+    fireEvent.change(field, { target: { value: "0,95" } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(screen.getByLabelText("סף")).toBeDisabled());
+    expect(db.writes).toEqual([
+      { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
+    ]);
+    expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("צל")).toBeInTheDocument();
+    release();
+    await waitFor(() => {
+      expect(db.writes).toEqual([
+        { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
+      ]);
+    });
+    expect(screen.getByLabelText("סף")).toHaveValue("0.95");
+    expect(screen.getByLabelText("סף")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("ignores a second toggle while the write is in flight", async () => {
+    let release: () => void = () => undefined;
+    db.hold = new Promise((resolve) => { release = resolve; });
+    db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toBeDisabled());
+    fireEvent.click(toggle);
+    expect(db.writes).toHaveLength(1);
+    release();
+    await waitFor(() => expect(toggle).toBeEnabled());
+    expect(db.writes).toEqual([
+      { p_enabled: true, p_mode: "shadow", p_threshold: 0.9, p_provider: "jev" },
+    ]);
   });
 
   it("returns the switch and toasts when the save fails", async () => {
     db.row = { enabled: false, mode: "shadow", threshold: 0.9 };
     db.writeError = { message: "validation" };
     renderLive(<JevSettings />);
-    await waitFor(() => expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeEnabled());
-    const toggle = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+    const toggle = await readySwitch();
     fireEvent.click(toggle);
     expect(await screen.findByText("לא הצלחנו לשמור.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
     await waitFor(() => expect(toggle).not.toBeChecked());
+  });
+
+  it("offers ניסיון חוזר when the save fails on the network", async () => {
+    db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
+    db.writeError = { message: "Failed to fetch" };
+    renderLive(<JevSettings />);
+    const toggle = await readySwitch();
+    fireEvent.click(toggle);
+    expect(await screen.findByText("לא הצלחנו לשמור.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    await waitFor(() => expect(toggle).toBeChecked());
+  });
+
+  it("shows שגיאה when the row fails to load, not an on state", async () => {
+    db.readError = { message: "down" };
+    renderLive(<JevSettings />);
+    expect(await screen.findByText("שגיאה")).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
+    expect(toggle).toBeDisabled();
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
+    expect(screen.queryByText("פעיל · מצב צל")).not.toBeInTheDocument();
+    expect(screen.queryByText("כבוי")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).toBeInTheDocument();
   });
 
   it("reads a missing company row as off", async () => {

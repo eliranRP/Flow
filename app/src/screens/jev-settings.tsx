@@ -1,15 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { getSupabase } from "../lib/supabase";
-import { RadioRow } from "../ui/radio-row";
 import { Skeleton } from "../ui/skeleton";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
-import { useToast } from "../ui/toast";
 import { Toggle } from "../ui/toggle";
+import { useWrite } from "../use-write";
 
 export type JevMode = "off" | "shadow";
-export type JevStatus = "connected" | "missing-key" | "error" | "loading";
+export type JevStatus = "ready" | "error" | "loading";
 
 export type JevCardState = {
   enabled: boolean;
@@ -22,7 +21,7 @@ export const JEV_DEFAULT: JevCardState = {
   enabled: false,
   mode: "shadow",
   threshold: 0.9,
-  status: "connected",
+  status: "ready",
 };
 
 type StoredJev = {
@@ -32,21 +31,34 @@ type StoredJev = {
 };
 
 const TITLE = "תיוג חכם (Jev)";
+const SHADOW_HINT = "ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.";
 
-export function jevStatusWord(status: JevStatus): string {
-  if (status === "missing-key") return "אין מפתח";
-  if (status === "error") return "שגיאה";
-  return "מחובר";
+/** On only when the stored row is enabled and not mode off. */
+export function jevSwitchOn(state: Pick<JevCardState, "enabled" | "mode" | "status">): boolean {
+  return state.status === "ready" && state.enabled && state.mode !== "off";
+}
+
+export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "status">): string {
+  if (state.status === "error") return "שגיאה";
+  if (jevSwitchOn(state)) return "פעיל · מצב צל";
+  return "כבוי";
 }
 
 export function formatJevThreshold(value: number): string {
-  return value.toFixed(2);
+  return roundJevThreshold(value).toFixed(2);
 }
 
+/** Two decimal places. A comma is a decimal point. Out of 0.50–1.00 is refused. */
 export function parseJevThreshold(value: string): number | null {
-  const parsed = Number(value.trim());
-  if (!Number.isFinite(parsed) || parsed < 0.5 || parsed > 1) return null;
-  return parsed;
+  const parsed = Number(value.trim().replace(",", "."));
+  if (!Number.isFinite(parsed)) return null;
+  const rounded = roundJevThreshold(parsed);
+  if (rounded < 0.5 || rounded > 1) return null;
+  return rounded;
+}
+
+function roundJevThreshold(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function storedFromRow(data: unknown): StoredJev | null {
@@ -55,8 +67,10 @@ function storedFromRow(data: unknown): StoredJev | null {
   const row = data as Record<string, unknown>;
   if (typeof row.enabled !== "boolean") return null;
   if (row.mode !== "off" && row.mode !== "shadow") return null;
-  const threshold = typeof row.threshold === "number" ? row.threshold : Number(row.threshold);
-  if (!Number.isFinite(threshold) || threshold < 0.5 || threshold > 1) return null;
+  const raw = typeof row.threshold === "number" ? row.threshold : Number(row.threshold);
+  if (!Number.isFinite(raw)) return null;
+  const threshold = roundJevThreshold(raw);
+  if (threshold < 0.5 || threshold > 1) return null;
   return { enabled: row.enabled, mode: row.mode, threshold };
 }
 
@@ -80,7 +94,7 @@ export async function saveJevIntegration(input: StoredJev): Promise<void> {
   const { error } = await supabase.rpc("set_company_integration", {
     p_enabled: input.enabled,
     p_mode: input.mode,
-    p_threshold: input.threshold,
+    p_threshold: roundJevThreshold(input.threshold),
     p_provider: "jev",
   });
   if (error) throw new Error(error.message);
@@ -91,7 +105,6 @@ export function JevSettingsCard({
   busy = false,
   optionsOpen = false,
   onToggle,
-  onMode,
   onThreshold,
   onRetry,
 }: {
@@ -99,14 +112,13 @@ export function JevSettingsCard({
   busy?: boolean;
   optionsOpen?: boolean;
   onToggle?: (enabled: boolean) => void;
-  onMode?: (mode: JevMode) => void;
   onThreshold?: (value: number) => void;
   onRetry?: () => void;
 }) {
   const panelId = useId();
-  const actionable = state.status === "connected" && !busy;
-  const showOptions = actionable && state.enabled;
-  const [open, setOpen] = useState(optionsOpen);
+  const shownOn = jevSwitchOn(state);
+  const showOptions = shownOn;
+  const [open, setOpen] = useState(optionsOpen && shownOn);
   const [draft, setDraft] = useState(formatJevThreshold(state.threshold));
   const [draftError, setDraftError] = useState(false);
   useEffect(() => {
@@ -119,17 +131,17 @@ export function JevSettingsCard({
 
   const hint = state.status === "loading"
     ? <Skeleton width="sm" />
-    : jevStatusWord(state.status);
+    : jevStatusWord(state);
 
   return (
     <div className="ui-page-pad ui-stack">
       <Toggle
         label={TITLE}
         hint={hint}
-        checked={state.enabled}
-        disabled={!actionable}
+        checked={shownOn}
+        disabled={state.status !== "ready" || busy}
         onChange={(checked) => {
-          if (!actionable) return;
+          if (state.status !== "ready" || busy) return;
           onToggle?.(checked);
         }}
       />
@@ -150,32 +162,28 @@ export function JevSettingsCard({
       ) : null}
       {showOptions && open ? (
         <div id={panelId}>
-          <div role="radiogroup" aria-label="מצב">
-            <RadioRow
-              marker="start"
-              label="צל"
-              selected={state.mode === "shadow"}
-              onSelect={() => { onMode?.("shadow"); }}
-            />
-          </div>
+          <p>צל</p>
+          <p className="t-hint">{SHADOW_HINT}</p>
           <TextField
             label="סף"
             inputMode="decimal"
             dir="ltr"
             value={draft}
+            disabled={busy}
             error={draftError ? "בין 0.50 ל-1.00" : undefined}
             onChange={(event) => {
               setDraft(event.target.value);
               setDraftError(false);
             }}
             onBlur={() => {
+              if (busy) return;
               const parsed = parseJevThreshold(draft);
               if (parsed == null) {
                 setDraftError(true);
                 return;
               }
               setDraft(formatJevThreshold(parsed));
-              if (parsed !== state.threshold) onThreshold?.(parsed);
+              if (parsed !== roundJevThreshold(state.threshold)) onThreshold?.(parsed);
             }}
           />
         </div>
@@ -188,7 +196,7 @@ function turnedOn(current: StoredJev, enabled: boolean): StoredJev {
   return {
     enabled,
     mode: enabled && current.mode === "off" ? "shadow" : current.mode,
-    threshold: current.threshold,
+    threshold: roundJevThreshold(current.threshold),
   };
 }
 
@@ -214,7 +222,6 @@ function JevSettingsSample({ sample }: { sample: JevCardState }) {
       onToggle={(enabled) => {
         setState((current) => ({ ...current, ...turnedOn(current, enabled), status: current.status }));
       }}
-      onMode={(mode) => { setState((current) => ({ ...current, mode })); }}
       onThreshold={(threshold) => { setState((current) => ({ ...current, threshold })); }}
       onRetry={() => undefined}
     />
@@ -222,7 +229,6 @@ function JevSettingsSample({ sample }: { sample: JevCardState }) {
 }
 
 function JevSettingsLive({ blocked }: { blocked?: () => boolean }) {
-  const toast = useToast();
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["jev-integration"],
@@ -230,47 +236,54 @@ function JevSettingsLive({ blocked }: { blocked?: () => boolean }) {
     queryFn: readJevIntegration,
   });
   const [pending, setPending] = useState<StoredJev | null>(null);
-  const [busy, setBusy] = useState(false);
-  const stored: StoredJev | null = query.data ?? null;
-  const view: JevCardState = query.isPending
-    ? { ...JEV_DEFAULT, status: "loading" }
-    : query.isError || stored == null
-      ? { ...JEV_DEFAULT, enabled: false, status: "error" }
-      : { ...(pending ?? stored), status: "connected" };
-
-  async function commit(next: StoredJev) {
-    if (blocked?.()) return;
-    setPending(next);
-    setBusy(true);
-    try {
+  const wanted = useRef<StoredJev | null>(null);
+  const saving = useRef(false);
+  const save = useWrite({
+    failure: "לא הצלחנו לשמור.",
+    keys: ["jev-integration"],
+    run: async () => {
+      const next = wanted.current;
+      if (!next) throw new Error("missing");
       await saveJevIntegration(next);
       client.setQueryData(["jev-integration"], next);
-      setPending(null);
-    } catch {
-      setPending(null);
-      toast.show({ tone: "bad", message: "לא הצלחנו לשמור." });
-    } finally {
-      setBusy(false);
-    }
+    },
+  });
+  const stored: StoredJev | null = query.data ?? null;
+  const current = pending ?? stored;
+  const view: JevCardState = query.isPending
+    ? { enabled: false, mode: "shadow", threshold: 0.9, status: "loading" }
+    : query.isError || current == null
+      ? { enabled: false, mode: "shadow", threshold: 0.9, status: "error" }
+      : { ...current, status: "ready" };
+
+  function commit(next: StoredJev) {
+    if (blocked?.()) return;
+    if (saving.current || save.isPending) return;
+    saving.current = true;
+    wanted.current = next;
+    setPending(next);
+    save.mutate(undefined, {
+      onSettled: () => {
+        saving.current = false;
+        setPending(null);
+      },
+    });
   }
 
   return (
     <JevSettingsCard
       state={view}
-      busy={busy}
+      busy={save.isPending}
       onToggle={(enabled) => {
-        if (!stored) return;
-        void commit(turnedOn(pending ?? stored, enabled));
-      }}
-      onMode={(mode) => {
-        if (!stored) return;
-        const current = pending ?? stored;
-        if (current.mode === mode) return;
-        void commit({ ...current, mode });
+        if (!stored && !pending) return;
+        const base = pending ?? stored;
+        if (!base) return;
+        commit(turnedOn(base, enabled));
       }}
       onThreshold={(threshold) => {
-        if (!stored) return;
-        void commit({ ...(pending ?? stored), threshold });
+        const base = pending ?? stored;
+        if (!base) return;
+        commit({ ...base, threshold: roundJevThreshold(threshold) });
       }}
       onRetry={() => { void query.refetch(); }}
     />

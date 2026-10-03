@@ -401,6 +401,8 @@ describe("SUMIT status row", () => {
     };
     renderSettings();
     expect(await screen.findByText("לא הצלחנו לטעון את הנתונים")).toBeInTheDocument();
+    expect(screen.getByText("שגיאה")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
   });
