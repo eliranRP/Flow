@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   acceptPreflightKind,
   backfillVersions,
@@ -200,4 +200,27 @@ test("preflight-kind CLI fails on an empty kind and passes a local up-to-date ki
   assert.match(empty.stderr, /did not match the target/);
   const ok = spawnSync(process.execPath, [script, "preflight-kind", "--target", "local", "up-to-date local"], { encoding: "utf8" });
   assert.equal(ok.status, 0);
+  const matched = spawnSync(process.execPath, [script, "equals", "hello"], { input: "noise\nhello\n", encoding: "utf8" });
+  assert.equal(matched.status, 0);
+  const missed = spawnSync(process.execPath, [script, "equals", "hello"], { input: "other\n", encoding: "utf8" });
+  assert.equal(missed.status, 1);
+});
+
+test("preflight-kind does not read stdin", async () => {
+  const script = new URL("./cd-output.mjs", import.meta.url).pathname;
+  const child = spawn(process.execPath, [script, "preflight-kind", "--target", "local", "up-to-date local"], {
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  const code = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error("preflight-kind waited for stdin"));
+    }, 500);
+    child.on("exit", (status) => {
+      clearTimeout(timer);
+      resolve(status);
+    });
+  });
+  child.stdin.destroy();
+  assert.equal(code, 0);
 });

@@ -10,9 +10,19 @@ const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url),
 const push = readFileSync(new URL("./cd-push.sh", import.meta.url), "utf8");
 const preflight = readFileSync(new URL("./cd-preflight.sh", import.meta.url), "utf8");
 
-const USES_PIN = /^\s*(?:-\s*)?uses: [A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/;
-const PLAYWRIGHT_KEY = "key: ${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}";
-const CACHE_HIT_IF = "if: steps.playwright-cache.outputs.cache-hit != 'true'";
+const USES_PIN = /^\s*(?:-\s*)?uses: ([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)@([0-9a-f]{40}) # v\d+\.\d+\.\d+$/;
+const ACTION_SHA = {
+  "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+  "actions/setup-node": "820762786026740c76f36085b0efc47a31fe5020",
+  "actions/cache": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+  "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+  "pnpm/action-setup": "ea17c68df8912ef543352723c149a84f56e3d413",
+  "supabase/setup-cli": "45a513f8c64c0bc8e0e3dfe572b5c95be85f6359",
+  "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed",
+};
+const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
+const PLAYWRIGHT_KEY = `key: \${{ runner.os }}-playwright-${playwrightVersion}`;
+const INSTALL_DEPS = "run: pnpm --filter @flow/app exec playwright install-deps chromium";
 const DENO_SHA256_X64 = "c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490";
 const DENO_SHA256_ARM64 = "c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf";
 const SUPABASE_SHA256_AMD64 = "f6089a86fb9d9221c958193a277338daddd6822f706929943812fa32e106c86d";
@@ -39,21 +49,50 @@ function usesProblems(text) {
   const problems = [];
   for (const line of text.split("\n")) {
     if (!/^\s*(?:-\s*)?uses:/.test(line)) continue;
-    if (!USES_PIN.test(line)) problems.push(line.trim());
+    const match = USES_PIN.exec(line);
+    if (!match || ACTION_SHA[match[1]] !== match[2]) problems.push(line.trim());
   }
   return problems;
 }
 
+/** @param {string} body */
+function installDepsStep(body) {
+  const marker = "      - name: Install Playwright system dependencies\n";
+  const start = body.indexOf(marker);
+  if (start < 0) return "";
+  const rest = body.slice(start);
+  const next = rest.slice(marker.length).search(/\n      - /);
+  return next === -1 ? rest : rest.slice(0, marker.length + next);
+}
+
 /** @param {string} text */
-function playwrightCacheProblems(text) {
+function playwrightProblems(text) {
   /** @type {string[]} */
   const problems = [];
   for (const name of ["check", "e2e"]) {
     const body = jobIn(text, name);
     if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
-    if (!body.includes(CACHE_HIT_IF)) problems.push(`${name} cache-hit`);
+    if (body.includes("env.ImageOS") || body.includes("env.ImageVersion")) problems.push(`${name} runner image`);
+    const step = installDepsStep(body);
+    if (!step.includes(INSTALL_DEPS)) problems.push(`${name} install-deps`);
+    if (/\bif:/.test(step)) problems.push(`${name} install-deps condition`);
   }
   return problems;
+}
+
+/**
+ * @param {string} text
+ * @param {string} jobName
+ * @param {string} from
+ * @param {string} to
+ */
+function replaceInJob(text, jobName, from, to) {
+  const body = jobIn(text, jobName);
+  assert.equal(body.includes(from), true, from);
+  const replaced = body.replace(from, to);
+  const at = text.indexOf(body);
+  assert.ok(at >= 0, jobName);
+  return text.slice(0, at) + replaced + text.slice(at + body.length);
 }
 
 /** @param {string} script */
@@ -204,31 +243,79 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(ci.includes("timeout-minutes: 40"), false);
   assert.equal(ci.includes("timeout-minutes: 10"), false);
   assert.equal(ci.includes("--with-deps"), false);
+  assert.equal(ci.includes("env.ImageOS"), false);
+  assert.equal(ci.includes("env.ImageVersion"), false);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install-deps chromium/);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
+  assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
+  assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
+  assert.match(ci, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/);
+  assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
-  assert.deepEqual(playwrightCacheProblems(ci), []);
+  assert.deepEqual(playwrightProblems(ci), []);
   for (const name of ["check", "e2e"]) {
-    const body = job(name);
-    assert.equal(body.includes(PLAYWRIGHT_KEY), true, `${name} cache key`);
-    assert.equal(body.includes(CACHE_HIT_IF), true, `${name} cache-hit`);
+    const step = installDepsStep(job(name));
+    assert.equal(step.includes(INSTALL_DEPS), true, `${name} install-deps`);
+    assert.equal(/\bif:/.test(step), false, `${name} install-deps condition`);
+    assert.equal(job(name).includes(PLAYWRIGHT_KEY), true, `${name} cache key`);
   }
   assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
 });
 
-test("dropping the e2e cache condition or one action SHA fails", () => {
-  const e2eAt = ci.indexOf("\n  e2e:\n");
-  assert.ok(e2eAt > 0);
-  const dropped = ci.slice(0, e2eAt) + ci.slice(e2eAt).replace(`        ${CACHE_HIT_IF}\n`, "");
-  assert.deepEqual(playwrightCacheProblems(dropped), ["e2e cache-hit"]);
-  assert.equal(jobIn(dropped, "check").includes(CACHE_HIT_IF), true);
+test("a wrong pin in one job fails, and install-deps stays unconditional", () => {
+  const lintPnpm = replaceInJob(
+    ci,
+    "lint",
+    `uses: pnpm/action-setup@${ACTION_SHA["pnpm/action-setup"]}`,
+    `uses: pnpm/action-setup@${ACTION_SHA["actions/checkout"]}`,
+  );
+  assert.deepEqual(usesProblems(lintPnpm), [
+    `- uses: pnpm/action-setup@${ACTION_SHA["actions/checkout"]} # v6.1.0`,
+  ]);
+  assert.equal(jobIn(lintPnpm, "e2e").includes(`pnpm/action-setup@${ACTION_SHA["pnpm/action-setup"]}`), true);
+
+  const e2eCli = replaceInJob(
+    ci,
+    "e2e",
+    `uses: supabase/setup-cli@${ACTION_SHA["supabase/setup-cli"]}`,
+    `uses: supabase/setup-cli@${ACTION_SHA["actions/setup-node"]}`,
+  );
+  assert.deepEqual(usesProblems(e2eCli), [
+    `- uses: supabase/setup-cli@${ACTION_SHA["actions/setup-node"]} # v3.0.1`,
+  ]);
+  assert.equal(jobIn(e2eCli, "deploy").includes(`supabase/setup-cli@${ACTION_SHA["supabase/setup-cli"]}`), true);
+
+  const oneUpload = replaceInJob(
+    ci,
+    "check",
+    `uses: actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`,
+    `uses: actions/upload-artifact@${ACTION_SHA["denoland/setup-deno"]}`,
+  );
+  assert.deepEqual(usesProblems(oneUpload), [
+    `uses: actions/upload-artifact@${ACTION_SHA["denoland/setup-deno"]} # v7.0.1`,
+  ]);
+  assert.equal(
+    jobIn(oneUpload, "check").split(`actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`).length - 1,
+    2,
+  );
 
   const swapped = ci.replace(
-    "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+    `uses: actions/checkout@${ACTION_SHA["actions/checkout"]} # v7.0.1`,
     "uses: actions/checkout@v4",
   );
   assert.deepEqual(usesProblems(swapped), ["- uses: actions/checkout@v4"]);
   assert.deepEqual(usesProblems(ci), []);
+  assert.deepEqual(playwrightProblems(ci), []);
+
+  const e2eBody = jobIn(ci, "e2e");
+  const conditional = e2eBody.replace(
+    "      - name: Install Playwright system dependencies\n",
+    "      - name: Install Playwright system dependencies\n        if: steps.playwright-cache.outputs.cache-hit != 'true'\n",
+  );
+  const at = ci.indexOf(e2eBody);
+  const withIf = ci.slice(0, at) + conditional + ci.slice(at + e2eBody.length);
+  assert.deepEqual(playwrightProblems(withIf), ["e2e install-deps condition"]);
+  assert.equal(/\bif:/.test(installDepsStep(jobIn(withIf, "check"))), false);
 });
 
 test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {
@@ -247,6 +334,24 @@ test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, an
   const strippedProblems = checksumProblems(stripped);
   assert.equal(strippedProblems.includes("deno order"), true);
   assert.equal(strippedProblems.includes("supabase order"), true);
+});
+
+test("aarch64 selects the arm64 Deno checksum", () => {
+  const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
+  const hashesAt = install.indexOf('deno_sha256_x86_64=');
+  const hashesEnd = install.indexOf("if ! command -v deno");
+  const blockAt = install.indexOf('  asset="deno-x86_64-unknown-linux-gnu.zip"');
+  const blockEnd = install.indexOf("  esac", blockAt);
+  assert.ok(hashesAt >= 0 && hashesEnd > hashesAt && blockAt > hashesEnd && blockEnd > blockAt);
+  const snippet = `${install.slice(hashesAt, hashesEnd)}\n${install.slice(blockAt, blockEnd + "  esac".length)}`;
+  const selected = (arch) => execFileSync(
+    "bash",
+    ["-c", `arch="$1"\nuname() { echo "$arch"; }\n${snippet}\nprintf '%s\\n%s\\n' "$asset" "$deno_sha256"`, "bash", arch],
+    { encoding: "utf8" },
+  ).trim().split("\n");
+  assert.deepEqual(selected("aarch64"), ["deno-aarch64-unknown-linux-gnu.zip", DENO_SHA256_ARM64]);
+  assert.deepEqual(selected("arm64"), ["deno-aarch64-unknown-linux-gnu.zip", DENO_SHA256_ARM64]);
+  assert.deepEqual(selected("x86_64"), ["deno-x86_64-unknown-linux-gnu.zip", DENO_SHA256_X64]);
 });
 
 test("verify_sha256 rejects a download that does not match the pinned checksum", () => {

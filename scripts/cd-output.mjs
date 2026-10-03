@@ -277,10 +277,19 @@ function flagValue(argv, name) {
   return argv[index + 1] ?? "";
 }
 
+const modesThatReadStdin = new Set([
+  "read-only",
+  "counts",
+  "dry-run",
+  "backfill-recorded",
+  "rule-risk",
+  "equals",
+]);
+
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  const text = readFileSync(0, "utf8");
   const mode = process.argv[2];
+  const text = modesThatReadStdin.has(mode) ? readFileSync(0, "utf8") : "";
   if (mode === "read-only") {
     const result = readOnlySession(text);
     if (!result.ok) {
