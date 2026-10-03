@@ -1,8 +1,8 @@
 // flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status.
-// Decision 0080. Cycle 2 lists the six read tools. verify_jwt is false.
+// Decision 0080. Reads and the three single-expense writes. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
 
-import { callTool, toolsFor } from "./tools.ts";
+import { callTool, isWriteTool, READ_TOOL_NAMES, toolsFor } from "./tools.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 
 const PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
@@ -377,10 +377,17 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   if (row?.found !== true || row.revoked_at != null || expired || typeof row.id !== "string") {
     return unauthorized(req, await noteFailure(deps, req));
   }
+  const body = await readBody(req);
+  const method = body && typeof body.method === "string" ? body.method : "";
+  const params = body?.params;
+  const record = params != null && typeof params === "object" && !Array.isArray(params)
+    ? params as Record<string, unknown>
+    : null;
+  const toolName = method === "tools/call" && typeof record?.name === "string" ? record.name : "";
   const limited = await rpc(deps, "bump_mcp_rate", {
     p_token: row.id,
     p_user: row.user_id,
-    p_kind: "read",
+    p_kind: isWriteTool(toolName) ? "write" : "read",
   });
   const limit = limited.json as { allowed?: unknown; retry_after_seconds?: unknown } | null;
   if (limited.status >= 400 || typeof limit?.allowed !== "boolean") {
@@ -398,9 +405,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
   if (version != null && version !== PROTOCOL) {
     return jsonResponse(req, { error: "unsupported protocol" }, 400);
   }
-  const body = await readBody(req);
   if (body == null) return jsonResponse(req, { error: "one message per request" }, 400);
-  const method = typeof body.method === "string" ? body.method : "";
   if (method.startsWith("notifications/")) return emptyResponse(req, 202);
   const id = "id" in body ? body.id : null;
   if (method === "initialize") {
@@ -421,11 +426,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     return jsonResponse(req, { jsonrpc: "2.0", id, result: { tools } }, 200);
   }
   if (method === "tools/call") {
-    const params = body.params;
-    const record = params != null && typeof params === "object" && !Array.isArray(params)
-      ? params as Record<string, unknown>
-      : null;
-    const name = typeof record?.name === "string" ? record.name : "";
+    const name = toolName;
     const toolError = (code: string, message: string) => {
       const structured = { ok: false, error: { code, message } };
       return jsonResponse(req, {
@@ -438,7 +439,12 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
         },
       }, 200);
     };
-    if (!scope.includes("read")) return toolError("forbidden", "forbidden");
+    const knownRead = (READ_TOOL_NAMES as readonly string[]).includes(name);
+    if (isWriteTool(name)) {
+      if (!scope.includes("write")) return toolError("forbidden", "forbidden");
+    } else if (knownRead && !scope.includes("read")) {
+      return toolError("forbidden", "forbidden");
+    }
     const key = signingKey(deps);
     if (!key) return toolError("unavailable", "unavailable");
     const userId = typeof row.user_id === "string" ? row.user_id : "";
@@ -513,4 +519,3 @@ function finish(route: Route, response: Response): Response {
   headers.set("cache-control", "no-store");
   return new Response(response.body, { status: response.status, headers });
 }
-
