@@ -2,15 +2,15 @@
 
 ## 2026-10-03
 
+Settings cycle 2. The account row shows the business name and the Google email. With no company (`company_id` null, live or preview) it is a static email in `<bdi dir="ltr">`, and it is omitted when the email is empty. "עדיין בלי עסק" is not used. SUMIT stays enabled and says "לא מחובר". עוזר AI is disabled and says "אין עסק עדיין". תצוגה, including the overhead switch, is hidden. ניתוק stays inside the sheets. The sections are חיבורים, תצוגה, and עוד, and the footer is "Flow 0.1". The switch label is "רווח אחרי כלליות". Decision [0082](decisions/0082-settings-redesign.md).
+
+Settings becomes one screen: the account row, חיבורים, תצוגה, and עוד. The footer is "Flow 0.1". No company means `company_id` is null, live or preview. The empty account row is a static email in `<bdi dir="ltr">`, and "עדיין בלי עסק" is not used. "אין עסק עדיין" is the עוזר AI row only (Q-C3-3). SUMIT with no company stays enabled and says "לא מחובר" (Q-C3-2). An expired עוזר says "צריך לחבר מחדש" (Q-C3-1). A SUMIT sync failure that is not the key keeps "מחובר" (Q-C3-4). Decision [0082](decisions/0082-settings-redesign.md) amends the Settings section of [0080](decisions/0080-mcp-connector.md). The screen is unchanged in this record. 0081 stays the review-queue list.
+
 Review queue, round 4. A SUMIT sync keeps a line pick: `category_assigned` owns the category, and a project pick keeps the project, the role, the allocations, and the overhead row. Picking the suggested category clears הצעה. אישור on a shared or split card still calls `approve_split_review`, because `resolve_review` raises. A confirmation toast stays under the header after the sheet closes. Decision [0081](decisions/0081-review-queue-list.md).
 
 Review queue, round 3. A project pick from a card line removes the overhead row and refuses a shared cost, on the same guard as אישור. A field-only save owns only that field: `project_assigned` marks the project, and the other line keeps הצעה. The line-pick toast sits under the header. Focus returns to the line on a list-opened card. ✕ on a picker that is not a card line returns to the summary. Decision [0081](decisions/0081-review-queue-list.md).
 
 ## 2026-10-02
-
-Settings cycle 2. The account row shows the business name and the Google email. With no company it is disabled and shows the Google email, or "עדיין בלי עסק" when there is no email. "אין עסק עדיין" stays on the עוזר row. The sections are חיבורים, תצוגה, and עוד, and the footer is "Flow 0.1". The פרויקטים row and the three disabled switches are gone. SUMIT and עוזר keep their current actions. Decision [0082](decisions/0082-settings-redesign.md).
-
-Settings becomes one screen: the account row, חיבורים, תצוגה, and עוד. The footer is "Flow 0.1". Three disabled switches and the פרויקטים row leave the screen. SUMIT and עוזר each open one sheet, and a failed status is one "ניסיון חוזר". Decision [0082](decisions/0082-settings-redesign.md) amends the Settings section of [0080](decisions/0080-mcp-connector.md). The screen is unchanged in this record. "אין עסק עדיין" is the עוזר AI row only (Q-C3-3), not the account row. 0081 stays the review-queue list.
 
 Review queue, round 2. The in-memory review fixture stays on the dev server and is absent from the hosted bundle. A pick from a card line saves only that field (`resolve_review` with `p_resolve` false) and leaves the item open, so the card stays and shows the new value. The queue address advances only on `/review`. A confirmation toast sits under the header, not on the tab bar. Decision [0081](decisions/0081-review-queue-list.md).
 
