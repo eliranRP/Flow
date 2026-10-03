@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useRefreshingNow } from "../israel-clock";
@@ -40,25 +40,47 @@ type Minted = { id: string; secret: string; scope: string[] };
 const MINT_ERROR = "לא הצלחנו להתחבר. נסו שוב.";
 const MINT_REASON = "יוצרים קוד. אי אפשר לשנות עכשיו.";
 const INSTALL_HINT = "אם Claude Code לא מותקן, התקינו אותו קודם.";
-const CLAUDE_WEB = "ב־Claude.ai הדביקו את הכתובת ואת הקוד.";
+const SCOPE_INTRO = "בחרו מה העוזר יכול לעשות.";
+const SHOWN_ONCE = "הקוד מוצג פעם אחת";
+const SCOPE_FIELD = "היקף הגישה";
+const CHANGE_SCOPE = "כדי לשנות את הגישה מנתקים ומחברים שוב.";
+const HELP_TITLE = "איך מחברים ב־Claude";
+const HELP_LEAD = "ב־Claude Code הריצו את הפקודה.";
+const CLAUDE_WEB = "ב־Claude.ai צריך כותרת מותאמת";
+const CLAUDE_HEADER = "Authorization: Bearer <הקוד>";
+/** A shown-once fixture. Not a live token. */
+export const SAMPLE_ASSISTANT_SECRET = "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2";
+
+type CopyField = "url" | "secret" | "command";
 
 function scopeChoice(scope: string[] | undefined): AssistantScope {
   return scope?.includes("write") ? "read_write" : "read";
 }
 
-function CopyButton({
+function CopyRow({
   label,
-  described,
+  labelId,
+  value,
+  valueRef,
+  failed,
   onCopy,
 }: {
   label: string;
-  described?: string;
+  labelId: string;
+  value: string;
+  valueRef?: RefObject<HTMLElement | null>;
+  failed: boolean;
   onCopy: () => void;
 }) {
   return (
-    <Button type="button" variant="secondary" aria-label={label} aria-describedby={described} onClick={onCopy}>
-      העתקה
-    </Button>
+    <div className="ui-copy-row" role="group" aria-labelledby={labelId}>
+      <div className="ui-copy-main">
+        <p className="ui-field-label" id={labelId}>{label}</p>
+        <bdi ref={valueRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="">{value}</bdi>
+        {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
+      </div>
+      <TextLink chevron={false} label={`העתקה: ${label}`} onClick={onCopy}>העתקה</TextLink>
+    </div>
   );
 }
 
@@ -104,9 +126,6 @@ export function AssistantSettings({
   blocked,
   initialSecret,
   initialOpen = false,
-  initialDetails = false,
-  initialHelp = false,
-  address,
   showHeading = true,
   announceLoading = true,
 }: {
@@ -115,10 +134,6 @@ export function AssistantSettings({
   blocked?: () => boolean;
   initialSecret?: Minted;
   initialOpen?: boolean;
-  initialDetails?: boolean;
-  initialHelp?: boolean;
-  /** Story fixture. Live settings use the MCP address. */
-  address?: string;
   /** Settings puts this block under חיבורים, so the עוזר heading would repeat. */
   showHeading?: boolean;
   /** Settings already announced טוען… for the SUMIT row. */
@@ -133,15 +148,15 @@ export function AssistantSettings({
     queryFn: readStatus,
   });
   const [open, setOpen] = useState(initialSecret != null || initialOpen);
-  const [detailsOpen, setDetailsOpen] = useState(initialDetails);
-  const [helpOpen, setHelpOpen] = useState(initialHelp);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [now] = useRefreshingNow();
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [choice, setChoice] = useState<AssistantScope>("read_write");
   const [minting, setMinting] = useState(false);
   const [mintError, setMintError] = useState(false);
   const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
-  const [manualCopy, setManualCopy] = useState(false);
+  const [manualField, setManualField] = useState<CopyField | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [intro, setIntro] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -192,7 +207,7 @@ export function AssistantSettings({
     setOpen(next);
     if (!next) {
       setMintError(false);
-      setManualCopy(false);
+      setManualField(null);
       setSecret(null);
       setChoice("read_write");
       setIntro(false);
@@ -203,6 +218,14 @@ export function AssistantSettings({
   async function mint() {
     if (minting) return;
     if (blocked?.()) return;
+    if (sample != null) {
+      setSecret({
+        id: "mcp-sample",
+        secret: SAMPLE_ASSISTANT_SECRET,
+        scope: choice === "read" ? ["read"] : ["read", "write"],
+      });
+      return;
+    }
     setMinting(true);
     setMintError(false);
     try {
@@ -221,10 +244,10 @@ export function AssistantSettings({
     }
   }
 
-  async function copyValue(value: string, node: HTMLElement | null) {
+  async function copyValue(field: CopyField, value: string, node: HTMLElement | null) {
     try {
       await navigator.clipboard.writeText(value);
-      setManualCopy(false);
+      setManualField(null);
       toast.show({ tone: "info", message: "הועתק" });
     } catch {
       if (node) {
@@ -234,7 +257,7 @@ export function AssistantSettings({
         selection?.removeAllRanges();
         selection?.addRange(range);
       }
-      setManualCopy(true);
+      setManualField(field);
     }
   }
 
@@ -319,10 +342,10 @@ export function AssistantSettings({
     });
   }
 
-  const mcpUrl = address ?? flowMcpUrl();
-  const command = secret ? claudeCodeCommand(mcpUrl, secret.secret) : "";
+  const mcpUrl = flowMcpUrl();
+  const urlReady = mcpUrl !== "";
+  const command = secret != null && urlReady ? claudeCodeCommand(mcpUrl, secret.secret) : "";
   const useLine = view.lastUsedAt ? israelUsePhrase(view.lastUsedAt, now) : null;
-  const manualId = manualCopy ? "assistant-manual-copy" : undefined;
   const spark = <SparkIcon size={24} />;
   const row = view.state === "loading" ? (
     <ListRow variant="static" title="עוזר AI" icon={spark} hint={<Skeleton width="sm" />} skelHint busy />
@@ -407,15 +430,30 @@ export function AssistantSettings({
       <Sheet open={open} onOpenChange={setConnectSheet} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
-            <p className="ui-field-label" id="assistant-url-label">כתובת</p>
-            <bdi ref={urlRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="" aria-labelledby="assistant-url-label">{mcpUrl}</bdi>
-            <CopyButton label="העתקת הכתובת" described={manualId} onCopy={() => { void copyValue(mcpUrl, urlRef.current); }} />
-            <p className="ui-field-label" id="assistant-secret-label">קוד</p>
-            <bdi ref={secretRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="" aria-labelledby="assistant-secret-label">{secret.secret}</bdi>
-            <CopyButton label="העתקת הקוד" described={manualId} onCopy={() => { void copyValue(secret.secret, secretRef.current); }} />
-            <p>{scopeLabel(scopeChoice(secret.scope))}</p>
-            {manualCopy ? <p className="t-hint" id="assistant-manual-copy" role="status">העתיקו ידנית</p> : null}
-            <TextLink chevron={false} buttonRef={helpLinkRef} onClick={() => { setHelpSheet(true); }}>איך מחברים ב־Claude</TextLink>
+            <p>{SHOWN_ONCE}</p>
+            <div role="group" aria-labelledby="assistant-scope-label">
+              <p className="ui-field-label" id="assistant-scope-label">{SCOPE_FIELD}</p>
+              <p>{scopeLabel(scopeChoice(secret.scope))}</p>
+            </div>
+            <CopyRow
+              label="כתובת"
+              labelId="assistant-url-label"
+              value={mcpUrl}
+              valueRef={urlRef}
+              failed={manualField === "url"}
+              onCopy={() => { void copyValue("url", mcpUrl, urlRef.current); }}
+            />
+            <CopyRow
+              label="קוד"
+              labelId="assistant-secret-label"
+              value={secret.secret}
+              valueRef={secretRef}
+              failed={manualField === "secret"}
+              onCopy={() => { void copyValue("secret", secret.secret, secretRef.current); }}
+            />
+            {urlReady ? (
+              <TextLink chevron={false} buttonRef={helpLinkRef} onClick={() => { setHelpSheet(true); }}>{HELP_TITLE}</TextLink>
+            ) : null}
             <Button type="button" onClick={() => { setConnectSheet(false); }}>סיום</Button>
           </div>
         ) : intro ? (
@@ -436,11 +474,11 @@ export function AssistantSettings({
           </div>
         ) : (
           <div className="ui-stack ui-assistant-step">
-            <div role="radiogroup" aria-label="היקף הגישה">
+            <p>{SCOPE_INTRO}</p>
+            <div role="radiogroup" aria-label={SCOPE_FIELD}>
               <RadioRow
                 marker="start"
                 label="קריאה וכתיבה"
-                description="גם כתיבה"
                 selected={choice === "read_write"}
                 disabled={minting}
                 onSelect={() => { setChoice("read_write"); }}
@@ -448,7 +486,6 @@ export function AssistantSettings({
               <RadioRow
                 marker="start"
                 label="קריאה בלבד"
-                description="בלי כתיבה"
                 selected={choice === "read"}
                 disabled={minting}
                 onSelect={() => { setChoice("read"); }}
@@ -465,17 +502,27 @@ export function AssistantSettings({
           </List>
         ) : null}
       </Sheet>
-      <Sheet open={helpOpen} onOpenChange={setHelpSheet} title="חיבור ב־Claude" returnFocusRef={helpLinkRef}>
+      <Sheet open={helpOpen} onOpenChange={setHelpSheet} title={HELP_TITLE} returnFocusRef={helpLinkRef}>
         <div className="ui-stack">
-          <p className="ui-field-label">Claude Code</p>
-          <bdi ref={commandRef} className="ui-secret-value" dir="ltr" data-vaul-no-drag="">{command}</bdi>
-          <CopyButton label="העתקת הפקודה" described={manualId} onCopy={() => { void copyValue(command, commandRef.current); }} />
+          <p>{HELP_LEAD}</p>
+          {command !== "" ? (
+            <CopyRow
+              label="Claude Code"
+              labelId="assistant-command-label"
+              value={command}
+              valueRef={commandRef}
+              failed={manualField === "command"}
+              onCopy={() => { void copyValue("command", command, commandRef.current); }}
+            />
+          ) : null}
           <p className="t-hint">{INSTALL_HINT}</p>
-          <p>{CLAUDE_WEB}</p>
+          <p className="t-hint">{CLAUDE_WEB} <bdi dir="ltr">{CLAUDE_HEADER}</bdi></p>
         </div>
       </Sheet>
       <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI" returnFocusRef={rowRef}>
         <div className="ui-stack">
+          <p>{connectedHint(scope)}</p>
+          <p>{CHANGE_SCOPE}</p>
           <p className={useLine != null ? "ui-nowrap" : undefined}>{useLine ?? "עדיין אין שימוש"}</p>
         </div>
         <List>

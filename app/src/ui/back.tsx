@@ -20,9 +20,40 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** Browser history nests location state under `usr`. Location state is already that object. */
+function historyRecord(state: unknown): Record<string, unknown> | null {
+  if (!isRecord(state)) return null;
+  if (isRecord(state.usr) && !("flowLayer" in state) && !("flowLayers" in state)) return state.usr;
+  return state;
+}
+
+/** Open sheets, bottom to top. A lone `flowLayer` is a one-sheet entry from before the stack. */
+export function sheetStack(state: unknown): string[] {
+  const record = historyRecord(state);
+  if (record == null) return [];
+  const layers = record.flowLayers;
+  if (Array.isArray(layers)) {
+    const names = layers.filter((item): item is string => typeof item === "string" && item !== "");
+    if (names.length > 0) return names;
+  }
+  const layer = record.flowLayer;
+  return typeof layer === "string" && layer !== "" ? [layer] : [];
+}
+
 function layerName(state: unknown): string | null {
-  if (!isRecord(state) || typeof state.flowLayer !== "string") return null;
-  return state.flowLayer;
+  const stack = sheetStack(state);
+  return stack[stack.length - 1] ?? null;
+}
+
+function layerState(state: unknown, name: string): Record<string, unknown> {
+  const record = historyRecord(state) ?? {};
+  const base = { ...record };
+  delete base.idx;
+  delete base.key;
+  delete base.usr;
+  const stack = sheetStack(state);
+  const next = stack.includes(name) ? stack : [...stack, name];
+  return { ...base, flowLayer: name, flowLayers: next };
 }
 
 /**
@@ -143,10 +174,9 @@ export function useSheetHistory(
       replaceEntry = true;
       adopt.current = false;
     }
-    const prev = isRecord(location.state) ? location.state : {};
     void navigate(`${location.pathname}${location.search}${location.hash}`, {
       replace: replaceEntry,
-      state: { ...prev, flowLayer: name },
+      state: layerState(location.state, name),
     });
     queueMicrotask(() => {
       pushingLayer = false;
@@ -154,15 +184,16 @@ export function useSheetHistory(
   }, [open, name, layer, navigate, location.pathname, location.search, location.hash, location.state, adopt]);
 
   useEffect(() => {
-    function onPop() {
+    function onPop(event: PopStateEvent) {
       if (!openRef.current) return;
+      // A pop of the sheet above this one leaves this name in the stack.
+      if (sheetStack(event.state).includes(name)) return;
       void (async () => {
         const allowed = allowRef.current ? await allowRef.current() : true;
         if (!allowed) {
           pushed.current = true;
-          const prev = isRecord(window.history.state) ? window.history.state : {};
           void navigate(`${location.pathname}${location.search}${location.hash}`, {
-            state: { ...prev, flowLayer: name },
+            state: layerState(window.history.state, name),
           });
           return;
         }
@@ -181,11 +212,14 @@ export function useSheetHistory(
       onOpenChange(true);
       return;
     }
-    const current = locationRef.current;
-    if (layerName(current.state) === name && canGoBack()) {
+    const stack = sheetStack(locationRef.current.state);
+    const top = stack[stack.length - 1] === name;
+    if (top && canGoBack()) {
       void navigate(-1);
       return;
     }
+    // The sheet underneath stays. Only the top layer handles ✕, Escape, and Back.
+    if (stack.includes(name) && !top) return;
     onOpenChange(false);
   }, [name, navigate, onOpenChange]);
 }
@@ -209,8 +243,8 @@ export function DropRestoredSheet() {
   const navigate = useNavigate();
   useEffect(() => {
     if (dropDone) return;
-    const layer = layerName(location.state);
-    if (layer == null) {
+    const stack = sheetStack(location.state);
+    if (stack.length === 0) {
       dropDone = true;
       return;
     }
@@ -222,12 +256,13 @@ export function DropRestoredSheet() {
     dropActedKey = location.key;
     const idx = historyIndex();
     if (idx != null && idx > 0) {
-      void navigate(-1);
+      void navigate(-Math.min(stack.length, idx));
       return;
     }
     dropDone = true;
     const prev = isRecord(location.state) ? { ...location.state } : {};
     delete prev.flowLayer;
+    delete prev.flowLayers;
     void navigate(`${location.pathname}${location.search}${location.hash}`, {
       replace: true,
       state: Object.keys(prev).length === 0 ? null : prev,

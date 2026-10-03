@@ -50,7 +50,10 @@ describe("assistant settings", () => {
     edge.invoke = () => Promise.resolve({ data: null, error: null });
   }
   beforeEach(resetEdge);
-  afterEach(resetEdge);
+  afterEach(() => {
+    resetEdge();
+    vi.unstubAllEnvs();
+  });
 
   it("ties the row hint to the control", () => {
     renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
@@ -87,6 +90,8 @@ describe("assistant settings", () => {
     expect(getComputedStyle(stamp).whiteSpace).toBe("nowrap");
     expect(phrase.startsWith("שימוש אחרון")).toBe(true);
     expect(within(sheet).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
+    expect(sheet).toHaveTextContent("מחובר · קריאה בלבד");
+    expect(within(sheet).getByText("כדי לשנות את הגישה מנתקים ומחברים שוב.")).toBeInTheDocument();
   });
 
   it("disables the scope rows while minting, and a failure says to try again", async () => {
@@ -159,12 +164,15 @@ describe("assistant settings", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "עוזר AI" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(screen.getByRole("button", { name: "יצירת קוד" }));
-    expect(await screen.findByLabelText("קוד")).toHaveTextContent("flow_mcp_once");
-    fireEvent.click(screen.getByRole("button", { name: "העתקת הקוד" }));
+    const code = await screen.findByRole("group", { name: "קוד" });
+    expect(code).toHaveTextContent("flow_mcp_once");
+    fireEvent.click(within(code).getByRole("button", { name: "העתקה: קוד" }));
     await waitFor(() => expect(screen.getByText("הועתק")).toBeInTheDocument());
     writeText.mockRejectedValueOnce(new Error("denied"));
-    fireEvent.click(screen.getByRole("button", { name: "העתקת הקוד" }));
-    expect(await screen.findByText("העתיקו ידנית")).toBeInTheDocument();
+    fireEvent.click(within(code).getByRole("button", { name: "העתקה: קוד" }));
+    const manual = await within(code).findByRole("status");
+    expect(manual).toHaveTextContent("העתיקו ידנית");
+    expect(manual.closest("[role=\"dialog\"]")).toBe(screen.getByRole("dialog", { name: "הקוד מוכן" }));
   });
 
   it("confirms disconnect, and an expired row opens the connect sheet", async () => {
@@ -240,6 +248,7 @@ describe("assistant settings", () => {
       }
       return Promise.resolve({ data: { state: "empty" }, error: null });
     };
+    vi.stubEnv("VITE_FLOW_MCP_URL", "https://example.com/functions/v1/flow-mcp");
     renderAssistant(<AssistantSettings />);
     await waitFor(() => expect(screen.getByRole("button", { name: "עוזר AI" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
@@ -525,31 +534,39 @@ describe("assistant settings", () => {
   });
 
   it("shows the address, the scope, and the Claude command", async () => {
+    vi.stubEnv("VITE_FLOW_MCP_URL", "https://example.com/functions/v1/flow-mcp");
     renderAssistant(
       <AssistantSettings
         sample={{ state: "empty" }}
-        address="https://example.com/functions/v1/flow-mcp"
-        initialSecret={{ id: "mcp-1", secret: "once", scope: ["read", "write"] }}
+        initialSecret={{ id: "mcp-1", secret: "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2", scope: ["read", "write"] }}
       />,
     );
     const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
-    expect(within(ready).getByLabelText("כתובת")).toHaveTextContent("https://example.com/functions/v1/flow-mcp");
-    expect(within(ready).getByText("קריאה וכתיבה")).toBeInTheDocument();
+    expect(within(ready).getByRole("group", { name: "כתובת" })).toHaveTextContent("https://example.com/functions/v1/flow-mcp");
+    expect(within(ready).getByRole("group", { name: "היקף הגישה" })).toHaveTextContent("קריאה וכתיבה");
+    expect(within(ready).getByText("הקוד מוצג פעם אחת")).toBeInTheDocument();
     expect(within(ready).queryByText("הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.")).not.toBeInTheDocument();
     fireEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
-    const help = await screen.findByRole("dialog", { name: "חיבור ב־Claude" });
+    const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
+    expect(within(help).getByText("ב־Claude Code הריצו את הפקודה.")).toBeInTheDocument();
     expect(help).toHaveTextContent("--scope user");
-    expect(help).toHaveTextContent("Authorization: Bearer once");
+    expect(help).toHaveTextContent('flow "https://example.com/functions/v1/flow-mcp"');
+    expect(help).toHaveTextContent("Authorization: Bearer flw_test_7f3c9a1e2b8046d5c0a91e44b7d2");
+    expect(within(help).getByRole("group", { name: "Claude Code" })).toBeInTheDocument();
     expect(within(help).getByText("אם Claude Code לא מותקן, התקינו אותו קודם.")).toBeInTheDocument();
-    expect(within(help).getByText("ב־Claude.ai הדביקו את הכתובת ואת הקוד.")).toBeInTheDocument();
+    expect(within(help).getByText(/ב־Claude\.ai צריך כותרת מותאמת/)).toBeInTheDocument();
+    expect(within(help).getByText("Authorization: Bearer <הקוד>")).toBeInTheDocument();
+    expect(within(help).queryByText("ב־Claude.ai הדביקו את הכתובת ואת הקוד.")).not.toBeInTheDocument();
     expect(within(ready).queryByText(/קטגור/)).not.toBeInTheDocument();
   });
 
   it("names read and write on the scope step", async () => {
     renderAssistant(<AssistantSettings sample={{ state: "empty" }} initialOpen />);
     const sheet = await screen.findByRole("dialog", { name: "חיבור עוזר AI" });
-    expect(within(sheet).getByRole("radio", { name: "קריאה וכתיבה" })).toHaveAccessibleDescription("גם כתיבה");
-    expect(within(sheet).getByRole("radio", { name: "קריאה בלבד" })).toHaveAccessibleDescription("בלי כתיבה");
+    expect(within(sheet).getByText("בחרו מה העוזר יכול לעשות.")).toBeInTheDocument();
+    expect(within(sheet).getByRole("radio", { name: "קריאה וכתיבה" })).toBeChecked();
+    expect(within(sheet).queryByText("גם כתיבה")).not.toBeInTheDocument();
+    expect(within(sheet).queryByText("בלי כתיבה")).not.toBeInTheDocument();
   });
 
   it("returns focus to the row on close and on Escape", async () => {
@@ -566,5 +583,86 @@ describe("assistant settings", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
     await waitFor(() => { expect(row).toHaveFocus(); });
+  });
+
+  it("hides the command and the help link when no address is configured", async () => {
+    vi.stubEnv("VITE_FLOW_MCP_URL", "");
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    renderAssistant(
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        initialSecret={{ id: "mcp-1", secret: "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2", scope: ["read"] }}
+      />,
+    );
+    const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
+    expect(within(ready).queryByRole("button", { name: "איך מחברים ב־Claude" })).not.toBeInTheDocument();
+    expect(within(ready).queryByText(/claude mcp add/)).not.toBeInTheDocument();
+  });
+
+  it("announces a failed command copy from the help sheet", async () => {
+    vi.stubEnv("VITE_FLOW_MCP_URL", "https://example.com/functions/v1/flow-mcp");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    renderAssistant(
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        initialSecret={{ id: "mcp-1", secret: "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2", scope: ["read", "write"] }}
+      />,
+    );
+    const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
+    fireEvent.click(within(ready).getByRole("button", { name: "איך מחברים ב־Claude" }));
+    const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
+    fireEvent.click(within(help).getByRole("button", { name: "העתקה: Claude Code" }));
+    const manual = await within(help).findByRole("status");
+    expect(manual).toHaveTextContent("העתיקו ידנית");
+    expect(within(ready).queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("closes only the history layer that was popped", async () => {
+    vi.stubEnv("VITE_FLOW_MCP_URL", "https://example.com/functions/v1/flow-mcp");
+    let layer: string | null = null;
+    renderAssistant(
+      <AssistantSettings
+        sample={{ state: "empty" }}
+        initialSecret={{ id: "mcp-1", secret: "flw_test_7f3c9a1e2b8046d5c0a91e44b7d2", scope: ["read", "write"] }}
+      />,
+      (next) => { layer = next; },
+    );
+    const ready = await screen.findByRole("dialog", { name: "הקוד מוכן" });
+    const link = within(ready).getByRole("button", { name: "איך מחברים ב־Claude" });
+    fireEvent.click(link);
+    const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
+    await waitFor(() => { expect(layer).toBe("assistant-help"); });
+    fireEvent.click(within(ready).getByRole("button", { name: "סגירה", hidden: true }));
+    expect(help).toBeInTheDocument();
+    expect(ready).toBeInTheDocument();
+    expect(ready).toHaveTextContent("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2");
+    help.focus();
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate", {
+        state: { usr: { flowLayer: "assistant-connect", flowLayers: ["assistant-connect"] } },
+      }));
+    });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "איך מחברים ב־Claude" })).not.toBeInTheDocument(); });
+    expect(screen.getByRole("dialog", { name: "הקוד מוכן" })).toBeInTheDocument();
+    expect(screen.getByText("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2")).toBeInTheDocument();
+    await waitFor(() => { expect(link).toHaveFocus(); });
+  });
+
+  it("keeps the assistant details open when the confirm layer is popped", async () => {
+    renderAssistant(<AssistantSettings sample={{ state: "connected", scope: "read_write", id: "mcp-1" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
+    const details = await screen.findByRole("dialog", { name: "עוזר AI" });
+    fireEvent.click(within(details).getByRole("button", { name: "ניתוק" }));
+    expect(await screen.findByRole("dialog", { name: "לנתק את העוזר?" })).toBeInTheDocument();
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate", {
+        state: { usr: { flowLayer: "assistant-details", flowLayers: ["assistant-details"] } },
+      }));
+    });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לנתק את העוזר?" })).not.toBeInTheDocument(); });
+    expect(screen.getByRole("dialog", { name: "עוזר AI" })).toBeInTheDocument();
   });
 });

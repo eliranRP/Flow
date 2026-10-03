@@ -545,6 +545,22 @@ a.ui-row,
   font-family: ui-monospace, "Cascadia Mono", "Segoe UI Mono", monospace;
 }
 
+.ui-copy-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.ui-copy-main {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-copy-row > .ui-text-link {
+  flex: none;
+}
+
 .ui-assistant-step {
   min-block-size: 22rem;
 }

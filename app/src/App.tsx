@@ -483,8 +483,6 @@ function DevSettings() {
         lastError: mode === "auth" ? "sumit_auth" : null,
         email,
         noCompany,
-        expenseCategories: 1,
-        incomeCategories: 1,
         assistant: noCompany
           ? { state: "no-company" }
           : assistant === "connected"

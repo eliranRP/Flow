@@ -60,6 +60,39 @@ describe("restored sheet history", () => {
     await waitFor(() => { expect(router.state.location.pathname).toBe("/"); });
   });
 
+  it("pops every restored layer so Back does not stop on a dead sheet", async () => {
+    resetDropRestoredSheet();
+    const router = createMemoryRouter(
+      [{
+        path: "*",
+        element: (
+          <>
+            <Stamp idx={3} />
+            <DropRestoredSheet />
+            <Place />
+          </>
+        ),
+      }],
+      {
+        initialEntries: [
+          "/",
+          "/settings",
+          { pathname: "/settings", state: { flowLayer: "assistant-connect", flowLayers: ["assistant-connect"] } },
+          {
+            pathname: "/settings",
+            state: {
+              flowLayer: "assistant-help",
+              flowLayers: ["assistant-connect", "assistant-help"],
+            },
+          },
+        ],
+        initialIndex: 3,
+      },
+    );
+    render(<RouterProvider router={router} />);
+    await waitFor(() => { expect(screen.getByText("/settings", { exact: true })).toBeInTheDocument(); });
+  });
+
   it("leaves a sheet query so the screen can open it", async () => {
     resetDropRestoredSheet();
     const router = createMemoryRouter(
