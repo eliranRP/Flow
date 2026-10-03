@@ -21,6 +21,19 @@ test("flags a fixture module, a story, and a golden value", () => {
   assert.ok(found.some((line) => line.includes("37700")));
 });
 
+test("flags a Jev needle from the shared list", () => {
+  const found = violations({
+    modules: ["/repo/app/src/main.tsx"],
+    files: [{ name: "app/dist/assets/index.js", body: "https://api.typesafe.ai/v1/systemone" }],
+  });
+  assert.ok(found.some((line) => line.includes("api.typesafe.ai")));
+  const reviewer = reviewerNameViolations(
+    [{ name: "app/dist/assets/index.js", body: "read_jev_api_key" }],
+    [],
+  );
+  assert.ok(reviewer.some((line) => line.includes("read_jev_api_key")));
+});
+
 test("flags the review e2e fixture supplier and the e2e=list switch", () => {
   const found = violations({
     modules: ["/repo/app/src/main.tsx"],

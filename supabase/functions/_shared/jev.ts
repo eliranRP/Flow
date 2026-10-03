@@ -245,8 +245,9 @@ export async function callJev(apiKey: string, input: JevCall, deps: JevDeps): Pr
       if (response.ok) return await parseResult(response);
       await response.body?.cancel();
     } catch (error) {
+      if (timedOut) throw new JevError("timeout");
       if (error instanceof JevError) throw error;
-      if (isTimeout(error, timedOut) || isAbortError(error)) throw new JevError("timeout");
+      if (isTimeout(error, false)) throw new JevError("timeout");
       throw new JevError("unavailable");
     } finally {
       armed.cancel();
