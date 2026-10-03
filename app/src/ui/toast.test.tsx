@@ -266,6 +266,37 @@ describe("placeToast", () => {
     host.remove();
   });
 
+  it("keeps a page toast under the header while a sheet is open", () => {
+    const page = document.createElement("header");
+    page.className = "ui-page";
+    const bar = document.createElement("nav");
+    bar.className = "ui-tabbar";
+    const sheet = document.createElement("div");
+    sheet.setAttribute("data-vaul-drawer", "");
+    sheet.setAttribute("data-state", "open");
+    const choice = document.createElement("button");
+    sheet.appendChild(choice);
+    const host = document.createElement("div");
+    host.dataset.place = "page";
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(page, bar, sheet, host);
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    page.getBoundingClientRect = () => box(155, 40);
+    bar.getBoundingClientRect = () => box(844, 60);
+    sheet.getBoundingClientRect = () => box(844, 480);
+    choice.getBoundingClientRect = () => box(200, 40);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(host.style.top).toBe("163px");
+    expect(Number.parseFloat(host.style.top) + 48).toBeLessThan(364);
+    page.remove();
+    bar.remove();
+    sheet.remove();
+    host.remove();
+  });
+
   it("does not clip the toast when the free gap is shorter than two lines", () => {
     const header = document.createElement("header");
     header.className = "ui-page";

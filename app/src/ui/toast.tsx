@@ -6,6 +6,8 @@ type ToastInput = {
   tone?: "ok" | "bad" | "info";
   action?: string;
   onAction?: () => void;
+  /** Sit under the page header even while a sheet is open. A card-line pick closes that sheet. */
+  place?: "page";
 };
 
 type ToastItem = ToastInput & { id: number };
@@ -58,9 +60,10 @@ export function toastMinBlock(): number {
   return pad * 2 + size * line * 2;
 }
 
-/** The open sheet, or the page header, and the spacing tokens that sit the toast under it. */
-export function toastAnchor(): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
-  const sheet = document.querySelector("[data-vaul-drawer][data-state='open']");
+/** The open sheet, or the page header, and the spacing tokens that sit the toast under it. A page toast ignores the sheet. */
+export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
+  const page = layer?.dataset.place === "page";
+  const sheet = page ? null : document.querySelector("[data-vaul-drawer][data-state='open']");
   const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
     ?? document.querySelector("header.ui-page, header.ui-band");
   return { sheet, anchor, gap: cssPx("--space-2"), inset: cssPx("--space-4") };
@@ -68,10 +71,11 @@ export function toastAnchor(): { sheet: Element | null; anchor: Element | null; 
 
 type ToastBox = { top: number; bottom: number };
 
-function toastControls(layer: HTMLElement, sheet: Element | null): ToastBox[] {
+function toastControls(layer: HTMLElement, sheet: Element | null, skip?: Element | null): ToastBox[] {
   const boxes: ToastBox[] = [];
   for (const control of document.querySelectorAll("button, a[href], input, textarea, select")) {
     if (!(control instanceof HTMLElement) || layer.contains(control)) continue;
+    if (skip instanceof Element && skip.contains(control)) continue;
     if (sheet instanceof Element && !sheet.contains(control)) continue;
     const rect = control.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
@@ -227,13 +231,16 @@ export function placeToast(layer: HTMLElement): void {
     toast.style.overflow = "";
   }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
-  const { sheet, anchor, gap, inset } = toastAnchor();
+  const { sheet, anchor, gap, inset } = toastAnchor(layer);
   const safe = cssPx("--safe-top");
+  const skip = layer.dataset.place === "page"
+    ? document.querySelector("[data-vaul-drawer][data-state='open']")
+    : null;
   const measured = anchor instanceof HTMLElement
     ? anchor.getBoundingClientRect().bottom + gap
     : safe + inset;
   const floor = window.innerHeight - gap;
-  const boxes = toastControls(layer, sheet);
+  const boxes = toastControls(layer, sheet, skip);
   const sheetTop = sheet instanceof HTMLElement ? restingSheetTop(sheet) : null;
   const pageHeader = document.querySelector("header.ui-page, header.ui-band");
   if (sheet instanceof HTMLElement && sheetTop != null && height > 0) {
@@ -410,6 +417,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const node = host.current;
     if (!toast || !node) {
+      if (node && !toast) delete node.dataset.place;
       if (!toast) {
         // A retry replaces this toast on the next turn. Leave the pad until
         // that turn has had a chance to claim it, so it never eases through 0.
@@ -428,6 +436,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
     padToken.current += 1;
     const layer = node;
+    if (toast.place === "page") layer.dataset.place = "page";
+    else delete layer.dataset.place;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let generation = 0;
     let waiting = false;
@@ -442,7 +452,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     let settleFrame = 0;
 
     function snap() {
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       const surface = sheet instanceof Element ? sheetSurface(sheet) : null;
       if (surface) {
         const previous = surface.style.transition;
@@ -457,13 +467,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
 
     function rememberSheet() {
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       contentKey = sheet instanceof Element ? sheetContentKey(sheet) : "";
     }
 
     function onSheetChange() {
       if (settling) return;
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       if (!(sheet instanceof Element)) return;
       const next = sheetContentKey(sheet);
       if (next === contentKey) return;
@@ -484,7 +494,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
 
     function watchSheet() {
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       if (typeof ResizeObserver !== "undefined" && sheet instanceof Element && !resizeObserver) {
         resizeObserver = new ResizeObserver(() => {
           onSheetChange();
@@ -556,7 +566,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
 
     function sheetShape(): string {
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       if (!(sheet instanceof Element)) return "none";
       return sheet.classList.contains("ui-sheet-tall") ? "tall" : "fit";
     }
@@ -564,7 +574,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     function commitPlacement(gen: number) {
       if (gen !== generation) return;
       settling = false;
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       const surface = sheet instanceof Element ? sheetSurface(sheet) : null;
       const before = surface ? shiftPad(surface) : 0;
       if (surface) surface.style.transition = reduce ? "none" : "";
@@ -611,7 +621,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       // With no sheet, there is no shape change to wait for. A new toast over a
       // sheet waits until the shape is the same across three frames, so a pick
       // that returns to the summary does not flash the tall position.
-      if (revealNow.current || !(toastAnchor().sheet instanceof Element)) {
+      if (revealNow.current || !(toastAnchor(layer).sheet instanceof Element)) {
         commitPlacement(gen);
         return;
       }
@@ -654,7 +664,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         window.visualViewport?.removeEventListener("resize", onViewport);
         window.visualViewport?.removeEventListener("scroll", onViewport);
       }
-      const sheet = toastAnchor().sheet;
+      const sheet = toastAnchor(layer).sheet;
       const surface = sheet instanceof Element ? sheetSurface(sheet) : null;
       if (surface) surface.style.transition = "";
     };
