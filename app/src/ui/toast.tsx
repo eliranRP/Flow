@@ -569,8 +569,30 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }, 220);
     }
 
+    function openDrawer(): Element | null {
+      return document.querySelector("[data-vaul-drawer][data-state='open']");
+    }
+
+    /** A confirmation stays under the header. It stays hidden while the sheet's controls still cross that slot. */
+    function toastBlockedByDrawer(): boolean {
+      if (layer.dataset.place !== "page") return false;
+      const toast = layer.querySelector(".ui-toast");
+      const sheet = openDrawer();
+      if (!(toast instanceof HTMLElement) || !(sheet instanceof Element)) return false;
+      const toastRect = toast.getBoundingClientRect();
+      if (toastRect.height === 0) return false;
+      const gap = cssPx("--space-2");
+      for (const control of sheet.querySelectorAll("button, a[href], input, textarea, select")) {
+        if (!(control instanceof HTMLElement)) continue;
+        const rect = control.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
+        if (rect.top < toastRect.bottom + gap - 1 && rect.bottom > toastRect.top) return true;
+      }
+      return false;
+    }
+
     function sheetShape(): string {
-      const sheet = toastAnchor(layer).sheet;
+      const sheet = openDrawer();
       if (!(sheet instanceof Element)) return "none";
       return sheet.classList.contains("ui-sheet-tall") ? "tall" : "fit";
     }
@@ -625,8 +647,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       // With no sheet, there is no shape change to wait for. A new toast over a
       // sheet waits until the shape is the same across three frames, so a pick
       // that returns to the summary does not flash the tall position.
-      if (revealNow.current || !(toastAnchor(layer).sheet instanceof Element)) {
+      if (revealNow.current || !(openDrawer() instanceof Element)) {
         commitPlacement(gen);
+        return;
+      }
+      if (layer.dataset.place === "page") {
+        placeToast(layer);
+        const started = performance.now();
+        let clear = 0;
+        const wait = () => {
+          if (gen !== generation) return;
+          placeToast(layer);
+          if (toastBlockedByDrawer()) clear = 0;
+          else clear += 1;
+          if (clear >= 2 || performance.now() - started > 700) {
+            commitPlacement(gen);
+            return;
+          }
+          settleFrame = requestAnimationFrame(wait);
+        };
+        settleFrame = requestAnimationFrame(wait);
         return;
       }
       settling = true;
