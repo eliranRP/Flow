@@ -1,0 +1,784 @@
+// Tagging job. Decision 0084.
+// Off does not call Jev. Shadow stores a suggestion. Auto at or above the
+// threshold pre-fills a project and category the user has not set, marks that
+// fill as a suggestion, and leaves the line in לאישור. Nothing here approves.
+
+import {
+  JEV_MODEL,
+  JEV_TIMEOUT_MS,
+  JevError,
+  callJev,
+  type FetchLike,
+  type JevCall,
+  type JevQuestion,
+  type JevResult,
+  type JevState,
+  type JevTimer,
+} from "./jev.ts";
+import { readJevApiKey } from "./jev_key.ts";
+import { empty, json } from "./http.ts";
+
+export const JEV_TAG_DEFAULT_LIMIT = 50;
+export const JEV_TAG_MAX_LIMIT = 100;
+export const JEV_TAG_ATTEMPTS = 2;
+export const JEV_TAG_BUDGET_MS = 120_000;
+export const JEV_TAG_INTERVAL_MS = 60_000;
+const CHOICE_CAP = 255;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type TagMode = "shadow" | "auto";
+
+export type TagProject = { id: string; name: string };
+export type TagCategory = { id: string; name: string };
+
+export type TagExpense = {
+  id: string;
+  companyId: string;
+  description: string;
+  docDate: string;
+  supplierName: string | null;
+  amountGross: number;
+  amountNet: number;
+  vatAmount: number;
+  projectId: string | null;
+  categoryId: string | null;
+  projectAssigned: boolean;
+  categoryAssigned: boolean;
+  userAssigned: boolean;
+  pnlRole: string | null;
+  allocationCount: number;
+};
+
+export type TagCompanyWork = {
+  companyId: string;
+  mode: TagMode;
+  threshold: number;
+  projects: TagProject[];
+  categories: TagCategory[];
+  expenses: TagExpense[];
+};
+
+export type SuggestionRow = {
+  companyId: string;
+  transactionId: string;
+  answers: Record<string, unknown>;
+  confidence: number;
+  modelVersion: string;
+  responseModel: string;
+};
+
+export type PrefillWrite = {
+  companyId: string;
+  transactionId: string;
+  projectId?: string;
+  categoryId?: string;
+  categorySuggested?: boolean;
+  allocation: { projectId: string; amountNet: number } | null;
+};
+
+export type TagPlan = {
+  confidence: number;
+  answers: Record<string, unknown>;
+  write: PrefillWrite | null;
+};
+
+export class StoreConflict extends Error {
+  constructor() {
+    super("conflict");
+    this.name = "StoreConflict";
+  }
+}
+
+export class TagStop extends Error {
+  readonly code: "unauthorized" | "missing_key";
+  constructor(code: "unauthorized" | "missing_key") {
+    super(code);
+    this.name = "TagStop";
+    this.code = code;
+  }
+}
+
+export type TagStore = {
+  listWork(limit: number, companyId?: string | null): Promise<TagCompanyWork[]>;
+  saveSuggestion(row: SuggestionRow): Promise<void>;
+  prefill(write: PrefillWrite): Promise<void>;
+  deleteSuggestion(transactionId: string, modelVersion: string): Promise<void>;
+};
+
+export type TagCaller = (apiKey: string, input: JevCall) => Promise<JevResult>;
+
+export type TagReport = {
+  companies: number;
+  tagged: number;
+  prefilled: number;
+  skipped: number;
+  failed: number;
+  input_tokens: number;
+  output_tokens: number;
+  budget_skipped: number;
+};
+
+export type TagRunOptions = {
+  now?: () => number;
+  budgetMs?: number;
+  log?: (line: string) => void;
+};
+
+type JsonObject = { [key: string]: unknown };
+
+function isObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function choiceCriteria(rows: readonly { id: string; name: string }[]): Record<string, string> | null {
+  const usable = rows.filter((row) => row.id.trim() !== "" && row.name.trim() !== "");
+  if (usable.length === 0 || usable.length > CHOICE_CAP) return null;
+  const criteria: Record<string, string> = {};
+  for (const row of usable) criteria[row.id] = row.name;
+  return criteria;
+}
+
+export function buildTagQuestions(
+  projects: readonly TagProject[],
+  categories: readonly TagCategory[],
+): Record<string, JevQuestion> {
+  const questions: Record<string, JevQuestion> = {};
+  const projectCriteria = choiceCriteria(projects);
+  if (projectCriteria) {
+    questions.project = {
+      type: "choice",
+      instructions: "Choose the project id for this expense.",
+      criteria: projectCriteria,
+    };
+  }
+  const categoryCriteria = choiceCriteria(categories);
+  if (categoryCriteria) {
+    questions.category = {
+      type: "choice",
+      instructions: "Choose the expense category id for this expense.",
+      criteria: categoryCriteria,
+    };
+  }
+  return questions;
+}
+
+/** Amounts are context for the model. planTag does not write them back. */
+export function buildTagState(expense: TagExpense): JevState {
+  return {
+    description: expense.description,
+    doc_date: expense.docDate,
+    direction: "expense",
+    supplier: expense.supplierName,
+    amount_gross: expense.amountGross,
+    amount_net: expense.amountNet,
+    vat_amount: expense.vatAmount,
+  };
+}
+
+function readChoice(value: unknown, allowed: ReadonlySet<string>): { id: string; confidence: number } | null {
+  if (!isObject(value)) return null;
+  const choice = value.choice;
+  const confidence = value.confidence;
+  if (typeof choice !== "string" || !allowed.has(choice)) return null;
+  if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1) return null;
+  return { id: choice, confidence };
+}
+
+function projectBlocked(expense: TagExpense): boolean {
+  return expense.userAssigned
+    || expense.projectAssigned
+    || expense.pnlRole === "shared"
+    || expense.pnlRole === "overhead"
+    || expense.allocationCount > 1;
+}
+
+export function planTag(
+  expense: TagExpense,
+  mode: TagMode,
+  threshold: number,
+  projects: readonly TagProject[],
+  categories: readonly TagCategory[],
+  answers: Record<string, unknown>,
+): TagPlan {
+  const questions = buildTagQuestions(projects, categories);
+  const parts: number[] = [];
+  const projectAllowed = new Set(projects.map((row) => row.id));
+  const categoryAllowed = new Set(categories.map((row) => row.id));
+  const project = "project" in questions ? readChoice(answers.project, projectAllowed) : undefined;
+  const category = "category" in questions ? readChoice(answers.category, categoryAllowed) : undefined;
+  if (project !== undefined) parts.push(project?.confidence ?? 0);
+  if (category !== undefined) parts.push(category?.confidence ?? 0);
+  const confidence = parts.length === 0 ? 0 : Math.min(...parts);
+  const gate = mode === "auto" && parts.length > 0 && confidence >= threshold;
+
+  const write: PrefillWrite = {
+    companyId: expense.companyId,
+    transactionId: expense.id,
+    allocation: null,
+  };
+  if (gate && project && !projectBlocked(expense)) {
+    write.projectId = project.id;
+    if (Number.isFinite(expense.amountNet)) {
+      write.allocation = { projectId: project.id, amountNet: expense.amountNet };
+    }
+  }
+  if (gate && category && !expense.userAssigned && !expense.categoryAssigned) {
+    write.categoryId = category.id;
+    write.categorySuggested = true;
+  }
+  const hasWrite = write.projectId !== undefined || write.categoryId !== undefined;
+  return { confidence, answers, write: hasWrite ? write : null };
+}
+
+/** Non-finite, missing, and values below 1 use the default. Above the hard max clamps to it. */
+export function clampTagLimit(value: unknown): number {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim() !== ""
+    ? Number(value)
+    : Number.NaN;
+  if (!Number.isFinite(parsed)) return JEV_TAG_DEFAULT_LIMIT;
+  const whole = Math.floor(parsed);
+  if (whole < 1) return JEV_TAG_DEFAULT_LIMIT;
+  return Math.min(JEV_TAG_MAX_LIMIT, whole);
+}
+
+/** Newest doc_date, then id, then the clamped cap. The SQL query uses the same order and limit. */
+export function capNewest(expenses: readonly TagExpense[], limit: number): TagExpense[] {
+  const cap = clampTagLimit(limit);
+  return expenses
+    .slice()
+    .sort((left, right) => right.docDate.localeCompare(left.docDate) || right.id.localeCompare(left.id))
+    .slice(0, cap);
+}
+
+function emptyReport(companies = 0): TagReport {
+  return {
+    companies,
+    tagged: 0,
+    prefilled: 0,
+    skipped: 0,
+    failed: 0,
+    input_tokens: 0,
+    output_tokens: 0,
+    budget_skipped: 0,
+  };
+}
+
+export function logTagRun(report: TagReport, log?: (line: string) => void): void {
+  const line = [
+    "jev-tag",
+    `input_tokens=${report.input_tokens}`,
+    `output_tokens=${report.output_tokens}`,
+    `tagged=${report.tagged}`,
+    `skipped=${report.skipped}`,
+    `failed=${report.failed}`,
+    `budget_skipped=${report.budget_skipped}`,
+  ].join(" ");
+  (log ?? ((message: string) => console.info(message)))(line);
+}
+
+function budgetSpent(started: number, budgetMs: number, now: number): boolean {
+  if (!Number.isFinite(now) || !Number.isFinite(started) || !Number.isFinite(budgetMs)) return true;
+  return now - started >= budgetMs;
+}
+
+export async function tagWork(
+  work: readonly TagCompanyWork[],
+  store: Pick<TagStore, "saveSuggestion" | "prefill" | "deleteSuggestion">,
+  call: TagCaller,
+  apiKey: string,
+  options: TagRunOptions = {},
+): Promise<TagReport> {
+  const report = emptyReport(work.length);
+  const now = options.now ?? Date.now;
+  const budgetMs = options.budgetMs ?? JEV_TAG_BUDGET_MS;
+  const started = now();
+  let stop = false;
+  for (const company of work) {
+    if (stop) {
+      report.skipped += company.expenses.length;
+      report.budget_skipped += company.expenses.length;
+      continue;
+    }
+    const questions = buildTagQuestions(company.projects, company.categories);
+    if (Object.keys(questions).length === 0) {
+      report.skipped += company.expenses.length;
+      continue;
+    }
+    for (const expense of company.expenses) {
+      if (budgetSpent(started, budgetMs, now())) {
+        report.skipped += 1;
+        report.budget_skipped += 1;
+        stop = true;
+        continue;
+      }
+      if (expense.companyId !== company.companyId) {
+        report.failed += 1;
+        continue;
+      }
+      let result: JevResult;
+      try {
+        result = await call(apiKey, { state: buildTagState(expense), questions });
+      } catch (error) {
+        if (error instanceof JevError && (error.code === "unauthorized" || error.code === "missing_key")) {
+          logTagRun(report, options.log);
+          throw new TagStop(error.code);
+        }
+        report.failed += 1;
+        continue;
+      }
+      const usage = result.usage;
+      if (usage) {
+        report.input_tokens += usage.input_tokens;
+        report.output_tokens += usage.output_tokens;
+      }
+      const plan = planTag(
+        expense,
+        company.mode,
+        company.threshold,
+        company.projects,
+        company.categories,
+        result.answers,
+      );
+      try {
+        await store.saveSuggestion({
+          companyId: expense.companyId,
+          transactionId: expense.id,
+          answers: plan.answers,
+          confidence: plan.confidence,
+          modelVersion: JEV_MODEL,
+          responseModel: result.model,
+        });
+      } catch (error) {
+        if (error instanceof StoreConflict) {
+          report.skipped += 1;
+          continue;
+        }
+        report.failed += 1;
+        continue;
+      }
+      if (!plan.write) {
+        report.tagged += 1;
+        continue;
+      }
+      try {
+        await store.prefill(plan.write);
+        report.tagged += 1;
+        report.prefilled += 1;
+      } catch {
+        try {
+          await store.deleteSuggestion(expense.id, JEV_MODEL);
+        } catch {
+          // The row stays. The next run will see the conflict and skip it.
+        }
+        report.failed += 1;
+      }
+    }
+  }
+  logTagRun(report, options.log);
+  return report;
+}
+
+/** Either flag disables the connector. enabled false and mode off are the same outcome. */
+export function connectorDisabled(enabled: unknown, mode: unknown): boolean {
+  if (enabled !== true) return true;
+  if (mode === "off") return true;
+  return mode !== "shadow" && mode !== "auto";
+}
+
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
+export function integrationsPath(companyId?: string | null): string {
+  const base = "/rest/v1/company_integrations?provider=eq.jev&select=company_id,enabled,mode,threshold";
+  if (companyId && isUuid(companyId)) return `${base}&company_id=eq.${companyId}`;
+  return base;
+}
+
+export function projectsPath(companyId: string): string {
+  return `/rest/v1/projects?company_id=eq.${companyId}&status=eq.active&select=id,name`;
+}
+
+export function categoriesPath(companyId: string): string {
+  return `/rest/v1/categories?company_id=eq.${companyId}&kind=eq.expense&hidden=eq.false&select=id,name`;
+}
+
+/**
+ * Open untagged expenses, newest first, limited in SQL.
+ * `tagged=is.null` with the model filter is the PostgREST anti-join: no
+ * tag_suggestions row for the pin. The URL does not list transaction ids.
+ */
+export function transactionsPath(companyId: string, limit: number): string {
+  const cap = clampTagLimit(limit);
+  return [
+    `/rest/v1/transactions?company_id=eq.${companyId}`,
+    "direction=eq.expense",
+    "removed_at=is.null",
+    "review_queue.status=eq.open",
+    "select=id,company_id,description,doc_date,supplier_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,review_queue!inner(status),allocations(id),suppliers(name),tagged:tag_suggestions()",
+    `tagged.model_version=eq.${JEV_MODEL}`,
+    "tagged=is.null",
+    "order=doc_date.desc,id.desc",
+    `limit=${cap}`,
+  ].join("&");
+}
+
+type RestRow = Record<string, unknown>;
+
+function asNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  return Number.NaN;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function asBool(value: unknown): boolean {
+  return value === true;
+}
+
+async function rest(
+  fetch: FetchLike,
+  url: string,
+  serviceKey: string,
+  init: { method: string; body?: unknown },
+): Promise<unknown> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: init.method,
+      headers: {
+        authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    });
+  } catch {
+    throw new Error("store");
+  }
+  if (response.status === 409) {
+    await response.body?.cancel();
+    throw new StoreConflict();
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error("store");
+  }
+  if (response.status === 204) return null;
+  const text = await response.text();
+  if (text.trim() === "") return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("store");
+  }
+}
+
+function rows(value: unknown): RestRow[] {
+  if (!Array.isArray(value)) throw new Error("store");
+  return value.filter(isObject);
+}
+
+function embeddedRows(value: unknown): RestRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isObject);
+}
+
+function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
+  const queue = embeddedRows(row.review_queue);
+  if (!queue.some((item) => item.status === "open")) return [];
+  const tagged = row.tagged;
+  if (tagged != null && (!Array.isArray(tagged) || tagged.length > 0)) return [];
+  const id = asString(row.id);
+  const docDate = asString(row.doc_date);
+  const rowCompany = asString(row.company_id);
+  if (!id || !isUuid(id) || !docDate || rowCompany !== companyId) return [];
+  const supplier = isObject(row.suppliers) ? asString(row.suppliers.name) : null;
+  return [{
+    id,
+    companyId,
+    description: asString(row.description) ?? "",
+    docDate,
+    supplierName: supplier,
+    amountGross: asNumber(row.amount_gross),
+    amountNet: asNumber(row.amount_net),
+    vatAmount: asNumber(row.vat_amount),
+    projectId: asString(row.project_id),
+    categoryId: asString(row.category_id),
+    projectAssigned: asBool(row.project_assigned),
+    categoryAssigned: asBool(row.category_assigned),
+    userAssigned: asBool(row.user_assigned),
+    pnlRole: asString(row.pnl_role),
+    allocationCount: embeddedRows(row.allocations).length,
+  }];
+}
+
+export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey: string): TagStore {
+  const base = supabaseUrl.replace(/\/+$/, "");
+  const get = (path: string) => rest(fetch, `${base}${path}`, serviceKey, { method: "GET" });
+
+  return {
+    async listWork(limit: number, onlyCompanyId?: string | null): Promise<TagCompanyWork[]> {
+      const integrations = rows(await get(integrationsPath(onlyCompanyId)));
+      const work: TagCompanyWork[] = [];
+      let remaining = clampTagLimit(limit);
+      for (const integration of integrations) {
+        if (remaining < 1) break;
+        const companyId = asString(integration.company_id);
+        const mode = integration.mode === "auto" || integration.mode === "shadow" ? integration.mode : null;
+        const threshold = asNumber(integration.threshold);
+        if (!companyId || !isUuid(companyId) || connectorDisabled(integration.enabled, integration.mode) || !mode || !Number.isFinite(threshold)) {
+          continue;
+        }
+        if (onlyCompanyId && companyId !== onlyCompanyId) continue;
+        const projects = rows(await get(projectsPath(companyId))).flatMap((row) => {
+          const id = asString(row.id);
+          const name = asString(row.name);
+          return id && name ? [{ id, name }] : [];
+        });
+        const categories = rows(await get(categoriesPath(companyId))).flatMap((row) => {
+          const id = asString(row.id);
+          const name = asString(row.name);
+          return id && name ? [{ id, name }] : [];
+        });
+        const transactions = rows(await get(transactionsPath(companyId, remaining)));
+        const loaded = transactions.flatMap((row) => expenseFromRow(row, companyId));
+        const expenses = capNewest(loaded, remaining);
+        remaining -= expenses.length;
+        work.push({
+          companyId,
+          mode,
+          threshold,
+          projects,
+          categories,
+          expenses,
+        });
+      }
+      return work;
+    },
+
+    async saveSuggestion(row: SuggestionRow): Promise<void> {
+      await rest(fetch, `${base}/rest/v1/tag_suggestions`, serviceKey, {
+        method: "POST",
+        body: {
+          company_id: row.companyId,
+          transaction_id: row.transactionId,
+          answers: row.answers,
+          confidence: row.confidence,
+          model_version: row.modelVersion,
+          response_model: row.responseModel,
+        },
+      });
+    },
+
+    async prefill(write: PrefillWrite): Promise<void> {
+      const body: JsonObject = {};
+      if (write.projectId) body.project_id = write.projectId;
+      if (write.categoryId) {
+        body.category_id = write.categoryId;
+        body.category_suggested = true;
+      }
+      if (Object.keys(body).length > 0) {
+        await rest(
+          fetch,
+          `${base}/rest/v1/transactions?id=eq.${write.transactionId}&company_id=eq.${write.companyId}`,
+          serviceKey,
+          { method: "PATCH", body },
+        );
+      }
+      if (write.allocation) {
+        await rest(
+          fetch,
+          `${base}/rest/v1/allocations?transaction_id=eq.${write.transactionId}&company_id=eq.${write.companyId}`,
+          serviceKey,
+          { method: "DELETE" },
+        );
+        await rest(fetch, `${base}/rest/v1/allocations`, serviceKey, {
+          method: "POST",
+          body: {
+            company_id: write.companyId,
+            transaction_id: write.transactionId,
+            project_id: write.allocation.projectId,
+            share_bp: 10000,
+            amount_net: write.allocation.amountNet,
+          },
+        });
+      }
+    },
+
+    async deleteSuggestion(transactionId: string, modelVersion: string): Promise<void> {
+      await rest(
+        fetch,
+        `${base}/rest/v1/tag_suggestions?transaction_id=eq.${transactionId}&model_version=eq.${modelVersion}`,
+        serviceKey,
+        { method: "DELETE" },
+      );
+    },
+  };
+}
+
+function constantTimeEqual(left: string, right: string): boolean {
+  const a = new TextEncoder().encode(left);
+  const b = new TextEncoder().encode(right);
+  const length = Math.max(a.length, b.length);
+  let diff = a.length ^ b.length;
+  for (let index = 0; index < length; index += 1) {
+    diff |= (a[index] ?? 0) ^ (b[index] ?? 0);
+  }
+  return diff === 0;
+}
+
+export type TagRateState = { lastAt: number };
+
+export function allowTagRun(
+  state: TagRateState,
+  now: number,
+  intervalMs = JEV_TAG_INTERVAL_MS,
+): { ok: true } | { ok: false; retryAfterSeconds: number } {
+  if (!Number.isFinite(now) || intervalMs < 1) {
+    return { ok: false, retryAfterSeconds: 60 };
+  }
+  if (state.lastAt >= 0 && now - state.lastAt < intervalMs) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((intervalMs - (now - state.lastAt)) / 1000));
+    return { ok: false, retryAfterSeconds };
+  }
+  state.lastAt = now;
+  return { ok: true };
+}
+
+const tagRateState: TagRateState = { lastAt: -1 };
+
+export type JevTagDeps = {
+  fetch: FetchLike;
+  env(name: string): string;
+  readKey?: (source: { fetch: FetchLike; supabaseUrl: string; serviceKey: string }) => Promise<string>;
+  call?: TagCaller;
+  now?: () => number;
+  rateState?: TagRateState;
+  intervalMs?: number;
+  log?: (line: string) => void;
+};
+
+/** Hosted functions inject SUPABASE_SECRET_KEYS. The legacy service-role env var is ignored. */
+export function serviceRoleKey(env: (name: string) => string): string {
+  return readJsonKey(env("SUPABASE_SECRET_KEYS"), "default");
+}
+
+function readJsonKey(raw: string, field: string): string {
+  if (raw.trim() === "") return "";
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const value = parsed[field];
+    return typeof value === "string" ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+export function tagJevCall(fetchImpl: FetchLike, timer?: JevTimer): TagCaller {
+  return (apiKey, input) => callJev(apiKey, input, {
+    fetch: fetchImpl,
+    timer,
+    timeoutMs: JEV_TIMEOUT_MS,
+    maxAttempts: JEV_TAG_ATTEMPTS,
+  });
+}
+
+type TagRequest = { limit: number; companyId: string | null; error: string | null };
+
+export async function readTagRequest(req: Request): Promise<TagRequest> {
+  const text = await req.text();
+  if (text.trim() === "") return { limit: JEV_TAG_DEFAULT_LIMIT, companyId: null, error: null };
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return { limit: JEV_TAG_DEFAULT_LIMIT, companyId: null, error: "invalid_request" };
+  }
+  if (!isObject(body)) return { limit: JEV_TAG_DEFAULT_LIMIT, companyId: null, error: "invalid_request" };
+  const rawCompany = body.company_id;
+  if (rawCompany !== undefined && rawCompany !== null) {
+    if (typeof rawCompany !== "string" || !isUuid(rawCompany)) {
+      return { limit: JEV_TAG_DEFAULT_LIMIT, companyId: null, error: "invalid_request" };
+    }
+  }
+  const companyId = typeof rawCompany === "string" ? rawCompany : null;
+  const limit = body.limit === undefined ? JEV_TAG_DEFAULT_LIMIT : clampTagLimit(body.limit);
+  return { limit, companyId, error: null };
+}
+
+function bearerToken(header: string): string {
+  const match = /^Bearer\s+(\S+)/i.exec(header);
+  return match?.[1] ?? "";
+}
+
+/** Cron secret or the service-role key. A user or anon JWT is neither. */
+export function tagCallerKind(input: {
+  cronHeader: string;
+  cronSecret: string;
+  authorization: string;
+  serviceKey: string;
+}): "cron" | "service" | null {
+  const cronOk = input.cronSecret.trim() !== ""
+    && input.cronHeader.trim() !== ""
+    && constantTimeEqual(input.cronHeader, input.cronSecret);
+  if (cronOk) return "cron";
+  const bearer = bearerToken(input.authorization);
+  const serviceOk = input.serviceKey.trim() !== ""
+    && bearer !== ""
+    && constantTimeEqual(bearer, input.serviceKey);
+  if (serviceOk) return "service";
+  return null;
+}
+
+export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Response> {
+  if (req.method === "OPTIONS") return empty();
+  if (req.method !== "POST") return json({ error: "method" }, 405);
+  const cronSecret = deps.env("CRON_SECRET");
+  const serviceKey = serviceRoleKey(deps.env);
+  const kind = tagCallerKind({
+    cronHeader: req.headers.get("x-flow-cron") ?? "",
+    cronSecret,
+    authorization: req.headers.get("authorization") ?? "",
+    serviceKey,
+  });
+  if (kind === null) return json({ error: "unauthorized" }, 401);
+  const supabaseUrl = deps.env("SUPABASE_URL");
+  if (supabaseUrl.trim() === "" || serviceKey.trim() === "") return json({ error: "missing_key" }, 500);
+  const requested = await readTagRequest(req);
+  if (requested.error) return json({ error: requested.error }, 400);
+  const gate = allowTagRun(deps.rateState ?? tagRateState, deps.now ? deps.now() : Date.now(), deps.intervalMs);
+  if (!gate.ok) {
+    const response = json({ error: "rate_limited", retry_after_seconds: gate.retryAfterSeconds }, 429);
+    response.headers.set("retry-after", String(gate.retryAfterSeconds));
+    return response;
+  }
+  const readKey = deps.readKey ?? readJevApiKey;
+  const call = deps.call ?? tagJevCall(deps.fetch);
+  try {
+    const store = createTagStore(deps.fetch, supabaseUrl, serviceKey);
+    const work = await store.listWork(requested.limit, requested.companyId);
+    const pending = work.reduce((sum, company) => sum + company.expenses.length, 0);
+    if (pending === 0) {
+      const report = emptyReport(work.length);
+      logTagRun(report, deps.log);
+      return json({ ok: true, ...report });
+    }
+    const apiKey = await readKey({ fetch: deps.fetch, supabaseUrl, serviceKey });
+    const report = await tagWork(work, store, call, apiKey, {
+      now: deps.now,
+      log: deps.log,
+    });
+    return json({ ok: true, ...report });
+  } catch (error) {
+    if (error instanceof TagStop) return json({ error: error.code }, 500);
+    if (error instanceof JevError && error.code === "missing_key") return json({ error: "missing_key" }, 500);
+    return json({ error: "tag_failed" }, 500);
+  }
+}

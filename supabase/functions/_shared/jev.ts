@@ -78,6 +78,8 @@ export type JevDeps = {
   fetch: FetchLike;
   timer?: JevTimer;
   timeoutMs?: number;
+  /** Defaults to JEV_MAX_ATTEMPTS. The tagging job passes 2. */
+  maxAttempts?: number;
 };
 
 const realTimer: JevTimer = {
@@ -92,6 +94,11 @@ const realTimer: JevTimer = {
 
 function fail(code: JevErrorCode): never {
   throw new JevError(code);
+}
+
+function resolveAttempts(value: number | undefined): number {
+  if (value === undefined || !Number.isInteger(value) || value < 1) return JEV_MAX_ATTEMPTS;
+  return Math.min(value, JEV_MAX_ATTEMPTS);
 }
 
 function isObject(value: unknown): value is JsonObject {
@@ -222,8 +229,9 @@ export async function callJev(apiKey: string, input: JevCall, deps: JevDeps): Pr
   const body = buildJevBody(input);
   const timer = deps.timer ?? realTimer;
   const timeoutMs = deps.timeoutMs ?? JEV_TIMEOUT_MS;
+  const maxAttempts = resolveAttempts(deps.maxAttempts);
 
-  for (let attempt = 0; attempt < JEV_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const controller = new AbortController();
     let timedOut = false;
     const armed = timer.arm(timeoutMs, () => {
@@ -245,14 +253,15 @@ export async function callJev(apiKey: string, input: JevCall, deps: JevDeps): Pr
       if (response.ok) return await parseResult(response);
       await response.body?.cancel();
     } catch (error) {
+      if (timedOut) throw new JevError("timeout");
       if (error instanceof JevError) throw error;
-      if (isTimeout(error, timedOut) || isAbortError(error)) throw new JevError("timeout");
+      if (isTimeout(error, false)) throw new JevError("timeout");
       throw new JevError("unavailable");
     } finally {
       armed.cancel();
     }
 
-    if (response && (response.status === 429 || response.status === 529) && attempt < JEV_MAX_ATTEMPTS - 1) {
+    if (response && (response.status === 429 || response.status === 529) && attempt < maxAttempts - 1) {
       await timer.sleep(backoffMs(attempt, response));
       continue;
     }

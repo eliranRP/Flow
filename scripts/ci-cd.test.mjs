@@ -164,6 +164,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /node scripts\/cd-mcp-secrets\.mjs/);
   assert.match(deploy, /--env-file/);
   assert.match(deploy, /functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq/);
+  assert.match(deploy, /functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq/);
   assert.match(job("check"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
@@ -190,9 +191,10 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const probe = deploy.indexOf("functions list");
   const secretsFile = deploy.indexOf("--env-file");
   const fn = deploy.indexOf("functions deploy flow-mcp");
+  const jevFn = deploy.indexOf("functions deploy jev-tag");
   const mktemp = deploy.indexOf("mktemp");
   assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
-  assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < smoke);
+  assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < jevFn && jevFn < smoke);
   assert.equal(deploy.slice(probe, migrate).includes("mktemp"), false);
   assert.equal(deploy.slice(probe, migrate).includes("FLOW_MCP_PEPPER"), false);
   assert.match(deploy, /mktemp "\$RUNNER_TEMP\/flow-mcp-secrets\.XXXXXX"/);

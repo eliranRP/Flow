@@ -250,6 +250,32 @@ Deno.test("a stalled body times out at the limit and is not retried", async () =
   assert(elapsed < 1000, "did not hang past the limit");
 });
 
+Deno.test("the timeout flag wins over a body error", async () => {
+  let calls = 0;
+  const error = await assertRejects(() => callJev("test-key", sample, {
+    timer: {
+      sleep() {
+        return Promise.resolve();
+      },
+      arm(_ms, fire) {
+        fire();
+        return { cancel() {} };
+      },
+    },
+    fetch: () => {
+      calls += 1;
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.error(new Error("trickle"));
+        },
+      });
+      return Promise.resolve(new Response(stream, { status: 200, headers: { "content-type": "application/json" } }));
+    },
+  }), "timeout");
+  assertEquals(error.status, null, "no status");
+  assertEquals(calls, 1, "one attempt");
+});
+
 Deno.test("a returned model other than the pin is kept", async () => {
   const result = await callJev("test-key", sample, {
     timer: quietTimer([]),
