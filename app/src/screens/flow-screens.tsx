@@ -164,7 +164,8 @@ export function OnboardingScreen() {
   const blocked = useBlockedPreview();
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
-  const returnTo = safeAppPath(params.get("return")) ?? "/";
+  const previewSearch = usePreviewSearch();
+  const returnTo = safeAppPath(params.get("return")) ?? `/${previewSearch}`;
   const save = useWrite({
     failure: "לא הצלחנו לשמור.",
     keys: ["home", "dashboard", "sumit"],

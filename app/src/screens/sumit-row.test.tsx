@@ -379,6 +379,33 @@ describe("SUMIT status row", () => {
     expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
   });
 
+  it("keeps a preview onboarding visit on Home", async () => {
+    function Place() {
+      const location = useLocation();
+      return <p>{`${location.pathname}${location.search}`}</p>;
+    }
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/onboarding?preview=1"]}>
+              <Routes>
+                <Route path="/onboarding" element={<OnboardingScreen />} />
+                <Route path="/" element={<h1>בית</h1>} />
+                <Route path="/sign-in" element={<h1>התחברות</h1>} />
+              </Routes>
+              <Place />
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
+    expect(screen.getByText("/?preview=1")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "התחברות" })).not.toBeInTheDocument();
+  });
+
   it("shows the error row when the status query is paused and leaves previews disconnected", async () => {
     onlineManager.setOnline(false);
     try {
