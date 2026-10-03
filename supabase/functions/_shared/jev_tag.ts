@@ -48,6 +48,7 @@ export type SuggestionRow = {
   answers: Record<string, unknown>;
   confidence: number;
   modelVersion: string;
+  responseModel: string;
 };
 
 export type PrefillWrite = {
@@ -258,6 +259,7 @@ export async function tagWork(
           answers: plan.answers,
           confidence: plan.confidence,
           modelVersion: JEV_MODEL,
+          responseModel: result.model,
         });
       } catch (error) {
         if (error instanceof StoreConflict) {
@@ -482,6 +484,7 @@ export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey
           answers: row.answers,
           confidence: row.confidence,
           model_version: row.modelVersion,
+          response_model: row.responseModel,
         },
       });
     },
