@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-Jev review prefill. לאישור shows a Jev project and category, with הצעה, when the connector is on and a suggestion is stored. אישור sends those ids in one tap. The existing picker can change them. Each confirm or fix calls `record_jev_correction`. Off, or no suggestion, the card is unchanged. The corrections table is `supabase/pending/20261005120000_jev_corrections.sql` and is not applied. Decision [0084](decisions/0084-jev-auto-prefill.md).
+Jev review prefill. לאישור shows a Jev project and category, with הצעה, when the connector is on and a suggestion is stored. אישור sends those ids in one tap. Off, or no suggestion, the card is unchanged. Corrections are not written yet. `supabase/pending/20261005120000_jev_corrections.sql` stays pending and is not applied. Decision [0084](decisions/0084-jev-auto-prefill.md).
 
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
 
