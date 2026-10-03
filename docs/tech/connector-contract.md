@@ -77,7 +77,7 @@ Mercury currency is USD only. SUMIT currency is ILS only. The row check is `sour
 | `linked_external_id` | Text or null |
 | `provider_meta` | `{ kind? }`. See redaction |
 
-The engine writes signed `amount_gross` and `amount_net` in the line's own currency. A SUMIT line is ILS agorot. A Mercury line is USD cents. Import does not convert that line to shekels and does not write `fx_rate` or `fx_rate_date`. The adapter does not either. The sign is `amount_negated`, not a rebuild from `direction` and `doc_kind`. A positive-valued expense document and a negative receipt both occur on SUMIT, and `company_pnl` sums the signed `amount_net` in that stored currency. A mixed-currency total converts at read.
+The engine writes signed `amount_gross` and `amount_net` in the line's own currency. A SUMIT line is ILS agorot. A Mercury line is USD cents. Import does not convert that line to shekels and does not write `fx_rate` or `fx_rate_date`. The adapter does not either. The sign is `amount_negated`, not a rebuild from `direction` and `doc_kind`. A positive-valued expense document and a negative receipt both occur on SUMIT. Aggregates do not add that signed `amount_net` across currencies. Each total sums `private.to_display_minor`, specified under Display conversion.
 
 ```text
 amount_gross = amount_negated ? -amount_original : amount_original
@@ -101,7 +101,7 @@ Conflict target is `(company_id, source, external_id)`.
 
 Owned on update: `user_assigned`, `project_assigned`, `category_assigned`. When `user_assigned` or `project_assigned` is set, keep `project_id` and `pnl_role`. When `user_assigned` or `category_assigned` is set, keep `category_id`. A pending line may be assigned and approved. Those flags and ids stay when the same `external_id` posts. The line stays out of totals until `line_status` is `posted`.
 
-Allocations on an assigned line are recomputed from `share_bp` when `amount_net` changes, including a posting that changes the amount. The remainder still lands on the first project, as today's SUMIT update does. A display conversion does not change `amount_net`.
+Allocations on an assigned line are stored in the line's currency, the same minor units as `amount_net`. They are recomputed from `share_bp` when `amount_net` changes, including a posting that changes the amount. The remainder still lands on the first project, as today's SUMIT update does. A display conversion does not rewrite `amount_net` or `allocations.amount_net`. A read of an allocation amount goes through `private.to_display_minor` with that line's currency, date, and stored pair.
 
 ## Status map
 
@@ -272,11 +272,14 @@ Envelope format `"3"` binds `company_id || '|' || provider` as AES-GCM additiona
 
 Old SUMIT rows store a null `envelope_version`; some of those stored the format in `kek_version`. The resolved format is `coalesce(envelope_version, case when kek_version = '2' then '2' else '1' end)`. A row that already resolves to `'2'` or `'3'` is copied with its ciphertext bytes unchanged. A row that resolves to `'1'` is resealed before the copy, so the migration stores the resealed bytes, not the format-1 bytes.
 
-`sumit-reseal` ships in L1a. The production job deploys the format-3-aware readers before it runs, then pushes the database. The order is:
+`sumit-reseal` ships in L1a. Only `service_role` and the CD job may invoke it. `authenticated` and `anon` have no execute grant. Today `.github/workflows/ci.yml` deploys `flow-mcp` and `jev-tag` after `db push`, and it does not deploy `sumit-sync` or `sumit-connect`. L1a adds a functions-deploy step before `db push` and updates `scripts/ci-cd.test.mjs` to assert that order. The production order is:
 
-1. Deploy `sumit-sync` and `sumit-connect` built with that `envelope.ts`. They open format 1 with no additional data, format 2 with the company id, and format 3 with `company_id|provider`. `sumit-connect` still writes format `"2"`.
-2. Invoke `sumit-reseal`. It selects only SUMIT rows whose resolved format is `'1'`. It does not select `'2'` or `'3'`. Each selected row is one `UPDATE`: open format 1 with no additional data, write format 3 with `company_id|sumit`, and set `envelope_version` to `'3'`. The function is idempotent. A re-run after a partial failure selects only the rows that still resolve to `'1'`.
-3. `db push`. The migration raises if any SUMIT row still resolves to `'1'`. A failed reseal stops the push. Format `'2'` and `'3'` ciphertext is copied unchanged.
+1. The read-only preflight (`scripts/cd-preflight.sh`) passes.
+2. Deploy `sumit-sync` and `sumit-connect` built with that `envelope.ts`. They open format 1 with no additional data, format 2 with the company id, and format 3 with `company_id|provider`. `sumit-connect` still writes format `"2"`. `flow-mcp` and `jev-tag` keep their existing deploy step.
+3. Invoke `sumit-reseal`. It selects only SUMIT rows whose resolved format is `'1'`. It does not select `'2'` or `'3'`. Each selected row is one `UPDATE` that matches the ciphertext just read (`key_ciphertext` and `dek_ciphertext` equal to those values) and then writes format 3 with `company_id|sumit` and sets `envelope_version` to `'3'`. A row whose ciphertext changed after the read is not updated. The function is idempotent. A re-run after a partial failure selects only the rows that still resolve to `'1'`.
+4. `db push`. The migration raises if any SUMIT row still resolves to `'1'`. A failed reseal stops the push. Format `'2'` and `'3'` ciphertext is copied unchanged.
+
+A rollback stays on a build whose `envelope.ts` opens format 3. A build that opens only format 2 cannot read a resealed row.
 
 `replace_connector_connection` and `replace_sumit_connection` require `p_validated` true. Until L2a they accept `p_envelope_version` `'2'` or `'3'`. They reject `'1'`. L2a is the deploy where `sumit-connect` seals `'3'`, and from that deploy both RPCs require `'3'`.
 
@@ -496,7 +499,7 @@ Authenticated `select` on `sumit_connections` is limited to `id`, `company_id`, 
 
 `sumit_connection_status` exposes `company_id`, `sumit_company_id`, `connected`, `last_sync_at`, and `last_error`. It does not select ciphertext. `select` is granted to `authenticated` and `service_role`.
 
-The `instead of insert` trigger on `sumit_connections` writes `connector_connections` with these defaults when the insert omits them: `provider = 'sumit'`, `kek_ref = 'SUMIT_KEK'`, `envelope_version = coalesce(new.envelope_version, case when new.kek_version = '2' then '2' else '1' end)`, `settings = '{}'` when `sumit_company_id` is null and otherwise `{ "sumit_company_id": <bigint> }`, `import_from` null, `sync_cursor` null, `account_labels` `'[]'`, `reject_attempts = coalesce(new.reject_attempts, 0)`. `last_error` is translated on write (`sumit_auth` to `auth`, `sumit_rejected` to `rejected`, any other value unchanged). The `instead of insert` trigger on `sumit_refresh_requests` sets `provider = 'sumit'` and `forced = false`, and `requested_at` defaults to `now()` when omitted.
+The `instead of insert` trigger on `sumit_connections` writes `connector_connections` with these defaults when the insert omits them: `provider = 'sumit'`, `kek_ref = 'SUMIT_KEK'`, `envelope_version = coalesce(new.envelope_version, case when new.kek_version = '2' then '2' else '1' end)`, `settings = '{}'` when `sumit_company_id` is null and otherwise `{ "sumit_company_id": <bigint> }`, `import_from` null, `sync_cursor` null, `account_labels` `'[]'`, `reject_attempts = coalesce(new.reject_attempts, 0)`. `last_error` is translated on write (`sumit_auth` to `auth`, `sumit_rejected` to `rejected`, any other value unchanged). The trigger function returns `NEW`. The e2e insert uses `.select()`, which reads that returned row. The `instead of insert` trigger on `sumit_refresh_requests` returns `NEW` the same way. It sets `provider = 'sumit'` and `forced = false`, and `requested_at` defaults to `now()` when omitted.
 
 `packages/shared/src/database.ts` types the client `Tables.sumit_connections` from `GeneratedDatabase["public"]["Tables"]["sumit_connections"]`. After this layer the name is a view, so `supabase gen types` puts it under `public.Views` and that `Tables` key is gone. L1a regenerates `database.types.ts` and leaves it as CLI output (`pnpm db:types`, checked by `scripts/check-db-types.sh`). `database.ts` then builds the client table entry from `Views["sumit_connections"]`. `Row` is the view row without the secret columns (`key_ciphertext`, `key_nonce`, `dek_ciphertext`, `dek_nonce`, `kek_version`, `envelope_version`). `Insert` and `Update` use those same public columns. `Relationships` is whatever the generator emits for the view. The client type still has `Tables.sumit_connections`, so callers keep typechecking. It does not point `Tables` at a table that no longer exists.
 
@@ -534,7 +537,7 @@ These tests are not ported. The views and the wrappers keep them green:
 | `public.note_sync_failure(p_company uuid, p_code text)` | `timestamptz` | `service_role` |
 | `public.stamp_sumit_sync(p_company uuid)` | `void` | `service_role` |
 
-Each of those is revoked from `public`, `anon`, and, except `sumit_status` and `disconnect_sumit`, from `authenticated`. `upsert_sumit_documents` maps each document to a canonical line (`external_id` = the document id, `project_hint` from the section id and name, `counterparty.kind` supplier or customer, `doc_kind` and `pnl_role` from today's `deriveLine`) and calls `upsert_connector_lines`. It returns `inserted + updated`. `list_due_refresh_requests` keeps its body against the `sumit_refresh_requests` view, so the current edge function keeps working. `note_sumit_rejection` still accepts `sumit_auth` and `sumit_rejected` and writes `auth` and `rejected`.
+Each of those is revoked from `public`, `anon`, and, except `sumit_status` and `disconnect_sumit`, from `authenticated`. `upsert_sumit_documents` maps each document to a canonical line (`external_id` = the document id, `project_hint` from the section id and name, `counterparty.kind` supplier or customer, `doc_kind` and `pnl_role` from today's `deriveLine`) and calls `upsert_connector_lines`. An empty counterparty name is null, and `kind` is null with it. It returns `inserted + updated`. `list_due_refresh_requests` keeps its body against the `sumit_refresh_requests` view, so the current edge function keeps working. `note_sumit_rejection` still accepts `sumit_auth` and `sumit_rejected` and writes `auth` and `rejected`.
 
 ### Drop list
 
@@ -562,7 +565,7 @@ Replace the literal `source = 'sumit'` with `private.is_connector_source(t.sourc
 
 Sweep and company-id retirement are not these three. They run inside `upsert_connector_lines` and the SUMIT wrapper, scoped by `p_provider`.
 
-`list_review` items gain `line_status`. The function signature stays `() returns jsonb`.
+`list_review` items gain `line_status`, `currency`, and `amount_original`. The function signature stays `() returns jsonb`. `get_transaction` gains `currency` and `amount_original` on the line it already returns. `search_transactions` adds those two fields on each expense object beside `line_status`. `list_auto_assigned_today` adds them on each filed row. The MCP tools `list_review`, `get_transaction`, and `search_expenses` return that JSON, so a USD line carries `currency` and `amount_original` and is not shown as shekels. Signatures and grants stay.
 
 ### Pending is excluded from totals
 
@@ -584,11 +587,66 @@ Totals sum `line_status = 'posted'` only. `pending` and `void` do not count. Exi
 
 `list_review` shows pending. `get_transaction(p_id uuid) returns jsonb` still returns a line opened from review, including pending. `list_unpaid() returns jsonb` stays document-based and does not gain Mercury cash lines.
 
-On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice_receipt`, plus a Mercury `receipt`. A Mercury receipt counts as income there. Nothing checks it against a SUMIT invoice, so both can count. That is a known limitation. On the cash basis a receipt already counts, and that predicate is unchanged.
+On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice_receipt`, plus a receipt for which `private.cash_receipt_counts_on_invoiced(p_source)` is true. That predicate sits beside `private.is_connector_source` and is the only place that names the Mercury source. `company_pnl` does not contain the literal `mercury`. The predicate is false until the later migration that may use the `mercury` enum value. That migration is not the one that adds the value. A Mercury receipt counts as income there. Nothing checks it against a SUMIT invoice, so both can count. That is a known limitation. On the cash basis a receipt already counts, and that predicate is unchanged.
 
-`search_transactions(p_query text, p_scope text, p_limit integer, p_offset integer)` adds `line_status` on each expense object. The `filed` scope also requires `line_status = 'posted'`. The `all` scope may include pending and still returns `line_status`. `search_expenses` returns that JSON, so the MCP output carries `line_status` without a second shape. Signature and grants stay.
+`search_transactions(p_query text, p_scope text, p_limit integer, p_offset integer)` adds `line_status`, `currency`, and `amount_original` on each expense object. The `filed` scope also requires `line_status = 'posted'`. The `all` scope may include pending and still returns those fields. `search_expenses` returns that JSON. Signature and grants stay.
 
 `project_waiting` is a list, not a profit figure. It is not one of these sums.
+
+### Display conversion
+
+A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and under `fx_policy` `original` its `fx_rate` and `fx_rate_date` stay null. No aggregate adds that integer to an ILS `amount_net`.
+
+Every total calls one helper:
+
+```sql
+create function private.to_display_minor(
+  p_company uuid,
+  p_currency text,
+  p_amount_minor bigint,
+  p_line_date date,
+  p_fx_rate numeric,
+  p_fx_rate_date date
+) returns bigint
+language sql
+stable
+set search_path = '';
+```
+
+`revoke all` from `public` and `anon`. `grant execute` to `authenticated` and `service_role`. The function returns minor units of the company's `display_currency`. The default is `ILS`, so the number is agorot and every `*_agorot` field stays shekels. When `display_currency` is `USD`, those same keys hold US cents. The key names stay.
+
+`p_line_date` is the line's Jerusalem date. It is not the rate date.
+
+The rate, and this is the only rule:
+
+- `p_currency` equal to `display_currency`: return `p_amount_minor`. No rate is read. `p_fx_rate` is ignored.
+- `fx_policy` `original` or `today`: the newest `fx_rates` row whose `rate_date` is on or before today in `Asia/Jerusalem`. The line's stored pair is not read. `p_line_date` is not that date.
+- `fx_policy` `historical`: the stored pair. `p_fx_rate` and `p_fx_rate_date` must both be set. `p_line_date` is not a second lookup.
+
+`display_currency` `ILS` and `p_currency` `USD`: the sign of `p_amount_minor` times `private.round_half_even(abs(p_amount_minor) * ils_per_unit)`, in agorot. One dollar is 100 cents and one shekel is 100 agorot, so the factors cancel.
+
+`display_currency` `USD` and `p_currency` `ILS`: the sign of `p_amount_minor` times `private.round_half_even(abs(p_amount_minor) / ils_per_unit)`, in cents. The same `ils_per_unit` row, the other direction.
+
+Postgres `round` is not used. The absolute value is rounded, then the sign is restored.
+
+A conversion that needs a rate and does not have one returns null. It does not return `p_amount_minor`.
+
+These functions sum `private.to_display_minor` for each posted line that already belongs in the total, and they skip a null. A skipped null is not added as raw cents or raw agorot.
+
+| Function | What it converts |
+| --- | --- |
+| `public.company_pnl(uuid, date, date, text)` | Every P&L total. `get_dashboard` returns this payload |
+| `public.get_home()` | `net_profit_agorot` |
+| `public.get_project(uuid)` | `income_agorot`, `direct_agorot`, `shared_agorot`, and the category sums |
+| `public.list_project_category(uuid, uuid, integer, integer)` | `total_agorot`, through `private.project_category_entries` |
+| `private.overhead_share(uuid)` | The overhead it shares |
+| allocation amounts on those reads | `allocations.amount_net`, in the line's currency, through the same helper |
+
+Each payload includes `fx_missing_count`, the number of posted lines in that total for which the helper returned null. When the count is above zero the payload also includes `sync_fx_missing`. That status is display-time only. Import does not write it on `last_error`, does not fail the batch, and does not zero the stored line.
+
+pgTAP in this same layer: one company, one posted ILS line and one posted USD line, read through `company_pnl`, `get_dashboard`, `get_home`, `get_project`, `list_project_category`, and `private.overhead_share`. One case with no `fx_rates` row: `fx_missing_count` is 1, the ILS amount is unchanged, and the USD cents are absent from the sum. One allocation stored in USD cents reads back in the display minor unit.
+
+The helper and these rewrites are L1b. They land before L2b inserts a Mercury row.
 
 ### Off-P&L loan payments and transfers
 
@@ -599,13 +657,13 @@ alter table public.categories
   add column excluded_from_pnl boolean not null default false;
 ```
 
-`private.seed_default_categories` also inserts three rows, each `is_default` true and `excluded_from_pnl` true: expense `תשלומי הלוואה` (loan payments), `sort_order` 8; expense `העברות` (transfers), `sort_order` 9; income `העברות` (transfers), `sort_order` 3. The same migration inserts those rows for companies that already exist. A category hint matches `name` and `kind` together, and `kind` must match the line direction, so an inbound transfer does not land on the expense row. There is no balance-sheet model. This flag is how a category stays in cash and review and out of P&L.
+`private.seed_default_categories` also inserts three rows, each `is_default` true and `excluded_from_pnl` true: expense `תשלומי הלוואה` (loan payments), `sort_order` 8; expense `העברות` (transfers), `sort_order` 9; income `העברות` (transfers), `sort_order` 3. L1a adds unique index `categories_company_kind_name_uidx` on `(company_id, kind, name)`. The same migration inserts those rows for companies that already exist, `on conflict (company_id, kind, name) do nothing`. A category hint matches `name` and `kind` together, and `kind` must match the line direction, so an inbound transfer does not land on the expense row. There is no balance-sheet model. This flag is how a category stays in cash and review and out of P&L.
 
 A line in either category stays in the books. It is a cash movement, so לאישור (`list_review`) and `get_transaction` still show it. There is no separate cash-flow total. The P&L sums skip it, including while the review row is still open. The upsert may set the category from `category_hint` and must leave `category_assigned` false, so the owner can change it. Changing it to a normal category puts the line back into P&L.
 
 The Mercury adapter sets `category_hint` to `תשלומי הלוואה` when the counterparty name is NEWREZ, Lakeview, or Servease, compared case-insensitively. Those three are the interim list. The core does not match lender names. It sets `העברות` for an unconnected own-account transfer, as above. The engine resolves that hint by `kind` and `name`.
 
-These sums gain `not exists (select 1 from public.categories c where c.id = t.category_id and c.excluded_from_pnl)`:
+These sums gain `not exists (select 1 from public.categories c where c.id = t.category_id and c.excluded_from_pnl)`. Each amount they add is `private.to_display_minor`, not the raw `amount_net`:
 
 | Function | What it sums |
 | --- | --- |
@@ -679,15 +737,15 @@ set search_path = '';
 
 `fx_rates` is insert-only. `authenticated` can select and cannot insert, update, or delete. `service_role` can select and insert and cannot update or delete. A rate for a date is written once. A later fetch does not overwrite it.
 
-`ils_per_unit` is shekels per one US dollar. Display conversion of a USD gross is `private.round_half_even(amount_original * ils_per_unit)` agorot. One dollar is 100 cents and one shekel is 100 agorot, so the factors cancel. Postgres `round` is half away from zero, so the conversion does not call it. `private.round_half_even` sends an exact `.5` to the even integer and sends every other value to the nearest integer. Mercury VAT is 0, so `amount_net = amount_gross` in cents while the row stays in dollars.
+`ils_per_unit` is shekels per one US dollar. `private.round_half_even` sends an exact `.5` to the even integer and sends every other value to the nearest integer. Postgres `round` is not used. Mercury VAT is 0, so `amount_net = amount_gross` in cents while the row stays in dollars. Display conversion of a total is only `private.to_display_minor`, under Display conversion. That helper is the rate rule: `original` and `today` use the newest `fx_rates` row on or before today, and `historical` uses the line's stored pair. [0087](../decisions/0087-multi-currency.md).
 
-The Bank of Israel does not publish a rate on a weekend or a holiday. The rate for a date is the newest `fx_rates` row on or before that date. That row is the display-conversion source. It is not copied onto the transaction by default.
+The Bank of Israel does not publish a rate on a weekend or a holiday. The rate for a date is the newest `fx_rates` row on or before that date. It is not copied onto the transaction by default.
 
-The default `fx_policy` is `original`. A Mercury row keeps `currency = 'USD'` and `amount_original` in cents. `amount_gross` and `amount_net` are the signed cents from `amount_negated`. `fx_rate` and `fx_rate_date` stay null. The pair check still requires both null, or `fx_rate > 0` together with `fx_rate_date`. Import does not call `reprice_usd_lines` and does not raise `sync_fx_missing`. A missing Bank of Israel rate does not block the upsert and does not zero a line.
+The default `fx_policy` is `original`. A Mercury row keeps `currency = 'USD'` and `amount_original` in cents. `amount_gross` and `amount_net` are the signed cents from `amount_negated`. `fx_rate` and `fx_rate_date` stay null. The pair check still requires both null, or `fx_rate > 0` together with `fx_rate_date`. Import does not call `reprice_usd_lines` and does not raise `sync_fx_missing`. A missing Bank of Israel rate does not block the upsert and does not zero a line. A later read leaves that row out of the converted total and counts it in `fx_missing_count`.
 
-A line is shown in its own currency. A Mercury line is dollars, amount and currency as stored. The ₪/$ toggle (`display_currency`) and a mixed-currency total convert at read, from `fx_rates`, and they do not update the row. While `display_currency` is `ILS`, a USD amount converts with the newest `fx_rates` row on or before today. While it is `USD`, an ILS amount converts the other way with that same row. If that row is missing, the line stays in its own currency, the mixed total is not invented, and the read reports `sync_fx_missing`. [0087](../decisions/0087-multi-currency.md).
+A line is shown in its own currency. A Mercury line is dollars, amount and currency as stored. The ₪/$ toggle (`display_currency`) does not update the row. Totals convert at read through `private.to_display_minor`.
 
-`reprice_usd_lines` runs only when `fx_policy` is switched off `original`. Under `original` it changes nothing. Under `today` it writes `fx_rate` and `fx_rate_date` from the stored rate for `p_rate_date` (the newest row on or before that date) onto every USD row of the company. Under `historical` it writes that pair only on USD rows whose `fx_rate_date` is null. It does not change `currency`, `amount_original`, `amount_gross`, or `amount_net`. Locking the rate to each line's own date is not accepted. Switching back to `original` leaves any stored pair in place and stops using it: display reads `fx_rates` again.
+`reprice_usd_lines` runs only when `fx_policy` is switched off `original`. Under `original` it changes nothing. Under `today` it writes `fx_rate` and `fx_rate_date` from the stored rate for `p_rate_date` (the newest row on or before that date) onto every USD row of the company. Under `historical` it writes that pair only on USD rows whose `fx_rate_date` is null. It does not change `currency`, `amount_original`, `amount_gross`, or `amount_net`. Locking the rate to each line's own date is not accepted. Switching back to `original` leaves any stored pair in place. Display ignores that pair and reads the newest `fx_rates` row on or before today.
 
 `reprice_usd_lines` takes no free-rate argument. It reads `fx_rates`. It is service role. `private.audit_row` skips a write when `auth.uid()` is null. Reprice sets `flow.system_actor` to `reprice` for the transaction. `audit_log.actor_id` becomes nullable. `audit_log.system_actor` is null or `reprice`. The check, added `not valid` then validated, requires exactly one of `actor_id` and `system_actor`. When the setting is `reprice`, the trigger writes `system_actor` and a null `actor_id`. When both the user and the setting are absent, it still skips, as it does today.
 
@@ -710,10 +768,10 @@ Stored `last_error` on `connector_connections` uses one vocabulary.
 | sweep empty | `sync_sweep_empty` | `sync_sweep_empty` | `refresh.failed` |
 | sweep suspicious | `sync_sweep_suspicious` | `sync_sweep_suspicious` | `refresh.failed` |
 | page cap | `sync_page_cap` | `sync_page_cap` | `refresh.failed` |
-| missing FX | `sync_fx_missing` | `sync_fx_missing` | `refresh.failed` |
+| missing FX, display time | not stored on import | `sync_fx_missing` with `fx_missing_count` on the aggregate JSON | the total omits those rows |
 | cursor conflict | `sync_cursor_conflict` | not a SUMIT code | `refresh.failed` |
 
-`note_sync_failure` still accepts only `sync_failed` and `sync_page_cap`. `note_connector_failure` accepts the classes above. `retry_after` from `classifyError` is what a rate limit stores in `next_attempt_at` when the provider sent one. Hebrew strings are in [connector UI states](connector-ui-states.md).
+`note_sync_failure` still accepts only `sync_failed` and `sync_page_cap`. `note_connector_failure` accepts the stored classes above and does not accept `sync_fx_missing`. That code is display-time only. `retry_after` from `classifyError` is what a rate limit stores in `next_attempt_at` when the provider sent one. Hebrew strings are in [connector UI states](connector-ui-states.md).
 
 ## Add connector number 3
 
@@ -733,15 +791,15 @@ Not in this stack:
 - KEK rotation. Format 3 names the binding. The procedure for a new KEK version is not specified.
 - A check that the pasted Mercury token is read-only beyond a successful GET. The fetch guard refuses a non-GET method. It does not ask Mercury whether the token could POST.
 - Review nits that this round did not list. The listed nits are in the sections above: calendar dates, `auth.role()` on every service RPC, the schema-equals-type check, `api.d.ts` in `deno test`, text bounds, `source_account_id`, and a derived `connected`.
-- Backlog from the round-2 review, not specified in this contract: S4, S5, the unfinished part of S12, and items B2 through B13 of that report. The format-3 deploy order, the compatibility-view grants, the insert-trigger defaults, a null `counterparty.kind`, insert-only `fx_rates`, and the sign, party, P&L, transfer, exemption, and view-type rules above are not that backlog.
+- Backlog from the round-2 review, not specified in this contract: S4, S5, the unfinished part of S12, and items B3 through B13 of that report. B2, the insert trigger returning `NEW`, is specified above. B1's `security_invoker` column-access question is backlog. The format-3 deploy order, the compatibility-view grants, the insert-trigger defaults, a null `counterparty.kind`, insert-only `fx_rates`, and the sign, party, P&L, transfer, exemption, and view-type rules above are not that backlog.
 
 ## Layers
 
 | Layer | What lands |
 | --- | --- |
 | L0 | This contract, decisions 0085–0087, types, Mercury GET types, the credit type, the GET guard, redact |
-| L1a | `connector_connections` and the other tables, SUMIT copy, compatibility views, upsert, three filters, jobs and the cron check in the same migration, drop of the `sumit_*` tables behind those views, `line_status = 'posted'` on totals, `categories.excluded_from_pnl`, FX columns, format-3 readers deployed before the format-1 reseal, then the migration |
-| L1b | `fx_rates` (insert-only), `display_currency`, `fx_policy`, `set_display_currency`, `reprice_usd_lines`, the system actor |
+| L1a | `connector_connections` and the other tables, SUMIT copy, compatibility views, upsert, three filters, jobs and the cron check in the same migration, drop of the `sumit_*` tables behind those views, `line_status = 'posted'` on totals, `categories.excluded_from_pnl` with `on conflict (company_id, kind, name) do nothing`, FX columns, `ci.yml` deploy of `sumit-sync` and `sumit-connect` then `sumit-reseal` then `db push` (`scripts/ci-cd.test.mjs` asserts it; today the workflow deploys only `flow-mcp` and `jev-tag`) |
+| L1b | `fx_rates` (insert-only), `display_currency`, `fx_policy`, `set_display_currency`, `reprice_usd_lines`, `private.to_display_minor`, the aggregate rewrite and `fx_missing_count`, `currency` and `amount_original` on review, transaction, search, and the MCP line tools, the mixed-currency pgTAP. This lands before L2b imports a Mercury row. The system actor |
 | L2a | Registry `open`, engine, `connector-sync` / `connector-connect`, `fx.ts`, aliases, `sumit-sync` moved off the views, `sumit-connect` seals format 3 and the connection RPCs require `'3'` |
 | L2b | Mercury adapter and SUMIT `normalize` over the current mapper. Verifies pending and posted share an id |
 | L3a | ₪/$ toggle |

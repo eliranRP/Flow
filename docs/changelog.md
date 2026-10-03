@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector contract, display conversion. Aggregates sum `private.to_display_minor` into the company's display currency. `original` and `today` use the newest `fx_rates` row on or before today. `historical` uses the stored pair. A missing rate omits the row and sets `fx_missing_count`. Review, transaction, search, and the MCP line tools carry `currency` and `amount_original`. `sync_fx_missing` is display-time only. Decision [0087](decisions/0087-multi-currency.md).
+
 Connector contract, original currency. A Mercury line stays USD. Import does not convert it to shekels and does not store a rate. `fx_policy` defaults to `original`. The ₪/$ toggle and a mixed total convert at display time from `fx_rates`. Reprice runs only if that policy is switched. Decision [0087](decisions/0087-multi-currency.md).
 
 Connector contract, review round 2 delta. Format 3 is readable before any reseal: `envelope.ts` opens formats 1, 2, and 3, the format-3-aware SUMIT functions deploy before `sumit-reseal`, and the reseal updates only format-1 rows, one row at a time. Connection replace accepts format 2 or 3 until `sumit-connect` seals 3. A canonical line carries `amount_negated` so the stored sign is not rebuilt. A SUMIT id that is both a supplier and a customer is two party refs. Mercury inflows are receipts and count as income on the invoiced basis, with no invoice match. `העברות` is seeded for income and expense. VAT exemption matches supplier names. Decision [0085](decisions/0085-connector-engine.md). The order is in [the connector contract](tech/connector-contract.md).
