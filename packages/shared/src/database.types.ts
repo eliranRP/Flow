@@ -106,6 +106,63 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"connector_connections": {
+                  Row: {
+                    "account_labels": NonNullable<Json>,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id": string,"import_from": string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts": number,"settings": NonNullable<Json>,"sync_claimed_at": string | null,"sync_cursor": string | null,"updated_at": string
+                  }
+                  Insert: {
+                    "account_labels"?: NonNullable<Json>,"company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id"?: string,"import_from"?: string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "account_labels"?: NonNullable<Json>,"company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string,"id"?: string,"import_from"?: string | null,"kek_ref"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"],"reject_attempts"?: number,"settings"?: NonNullable<Json>,"sync_claimed_at"?: string | null,"sync_cursor"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "connector_connections_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"connector_refresh_requests": {
+                  Row: {
+                    "claimed_at": string | null,"company_id": string,"forced": boolean,"id": number,"provider": Database["public"]['Enums']["connector_provider"],"requested_at": string
+                  }
+                  Insert: {
+                    "claimed_at"?: string | null,"company_id": string,"forced"?: boolean,"id"?: never,"provider": Database["public"]['Enums']["connector_provider"],"requested_at"?: string
+                  }
+                  Update: {
+                    "claimed_at"?: string | null,"company_id"?: string,"forced"?: boolean,"id"?: never,"provider"?: Database["public"]['Enums']["connector_provider"],"requested_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "connector_refresh_requests_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"connector_skips": {
+                  Row: {
+                    "company_id": string,"external_id": string | null,"id": number,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at": string
+                  }
+                  Insert: {
+                    "company_id": string,"external_id"?: string | null,"id"?: never,"provider": Database["public"]['Enums']["connector_provider"],"reason": string,"skipped_at"?: string
+                  }
+                  Update: {
+                    "company_id"?: string,"external_id"?: string | null,"id"?: never,"provider"?: Database["public"]['Enums']["connector_provider"],"reason"?: string,"skipped_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "connector_skips_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"customers": {
                   Row: {
                     "company_id": string,"company_number": string | null,"created_at": string,"id": string,"name": string,"sumit_external_id": number | null,"updated_at": string
@@ -147,6 +204,37 @@ isOneToOne: false
       columns: ["company_id","transaction_id"]
 isOneToOne: false
       referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"party_external_refs": {
+                  Row: {
+                    "company_id": string,"customer_id": string | null,"external_id": string,"kind": string,"provider": Database["public"]['Enums']["connector_provider"],"supplier_id": string | null
+                  }
+                  Insert: {
+                    "company_id": string,"customer_id"?: string | null,"external_id": string,"kind": string,"provider": Database["public"]['Enums']["connector_provider"],"supplier_id"?: string | null
+                  }
+                  Update: {
+                    "company_id"?: string,"customer_id"?: string | null,"external_id"?: string,"kind"?: string,"provider"?: Database["public"]['Enums']["connector_provider"],"supplier_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "party_external_refs_company_id_customer_id_fkey"
+      columns: ["company_id","customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "party_external_refs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "party_external_refs_company_id_supplier_id_fkey"
+      columns: ["company_id","supplier_id"]
+isOneToOne: false
+      referencedRelation: "suppliers"
       referencedColumns: ["company_id","id"]
     }
                   ]
@@ -275,44 +363,6 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
-                },"sumit_connections": {
-                  Row: {
-                    "company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string | null,"id": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"reject_attempts": number,"sumit_company_id": number | null,"updated_at": string
-                  }
-                  Insert: {
-                    "company_id": string,"created_at"?: string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version"?: string | null,"id"?: string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"reject_attempts"?: number,"sumit_company_id"?: number | null,"updated_at"?: string
-                  }
-                  Update: {
-                    "company_id"?: string,"created_at"?: string,"dek_ciphertext"?: string,"dek_nonce"?: string,"envelope_version"?: string | null,"id"?: string,"kek_version"?: string,"key_ciphertext"?: string,"key_nonce"?: string,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"reject_attempts"?: number,"sumit_company_id"?: number | null,"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "sumit_connections_company_id_fkey"
-      columns: ["company_id"]
-isOneToOne: true
-      referencedRelation: "companies"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"sumit_refresh_requests": {
-                  Row: {
-                    "claimed_at": string | null,"company_id": string,"id": number,"requested_at": string
-                  }
-                  Insert: {
-                    "claimed_at"?: string | null,"company_id": string,"id"?: never,"requested_at"?: string
-                  }
-                  Update: {
-                    "claimed_at"?: string | null,"company_id"?: string,"id"?: never,"requested_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "sumit_refresh_requests_company_id_fkey"
-      columns: ["company_id"]
-isOneToOne: false
-      referencedRelation: "companies"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"suppliers": {
                   Row: {
                     "company_id": string,"company_number": string | null,"created_at": string,"id": string,"name": string,"remembered_category_id": string | null,"remembered_project_id": string | null,"sumit_external_id": number | null,"updated_at": string,"vat_exempt": boolean
@@ -415,21 +465,66 @@ isOneToOne: false
                 }
           }
           Views: {
-            "sumit_connection_status": {
+            "connector_connection_status": {
+                  Row: {
+                    "account_labels": Json | null,"company_id": string | null,"connected": boolean | null,"import_from": string | null,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"] | null,"skip_count": number | null
+                  }
+                  Insert: {
+                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never
+                         }
+                        Update: {
+                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never
+                         }
+                        Relationships: [
+                    {
+      foreignKeyName: "connector_connections_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sumit_connection_status": {
                   Row: {
                     "company_id": string | null,"connected": boolean | null,"last_error": string | null,"last_sync_at": string | null,"sumit_company_id": number | null
                   }
                   Insert: {
-                           "company_id"?: string | null,"connected"?: never,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null
+                           "company_id"?: never,"connected"?: never,"last_error"?: never,"last_sync_at"?: never,"sumit_company_id"?: never
                          }
                         Update: {
-                           "company_id"?: string | null,"connected"?: never,"last_error"?: string | null,"last_sync_at"?: string | null,"sumit_company_id"?: number | null
+                           "company_id"?: never,"connected"?: never,"last_error"?: never,"last_sync_at"?: never,"sumit_company_id"?: never
+                         }
+                        Relationships: [
+                    
+                  ]
+                },"sumit_connections": {
+                  Row: {
+                    "company_id": string | null,"created_at": string | null,"dek_ciphertext": string | null,"dek_nonce": string | null,"envelope_version": string | null,"id": string | null,"kek_version": string | null,"key_ciphertext": string | null,"key_nonce": string | null,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"reject_attempts": number | null,"sumit_company_id": number | null,"updated_at": string | null
+                  }
+                  Insert: {
+                           "company_id"?: string | null,"created_at"?: string | null,"dek_ciphertext"?: string | null,"dek_nonce"?: string | null,"envelope_version"?: string | null,"id"?: string | null,"kek_version"?: string | null,"key_ciphertext"?: string | null,"key_nonce"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"reject_attempts"?: number | null,"sumit_company_id"?: number | null,"updated_at"?: string | null
+                         }
+                        Update: {
+                           "company_id"?: string | null,"created_at"?: string | null,"dek_ciphertext"?: string | null,"dek_nonce"?: string | null,"envelope_version"?: string | null,"id"?: string | null,"kek_version"?: string | null,"key_ciphertext"?: string | null,"key_nonce"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"reject_attempts"?: number | null,"sumit_company_id"?: number | null,"updated_at"?: string | null
+                         }
+                        Relationships: [
+                    
+                  ]
+                },"sumit_refresh_requests": {
+                  Row: {
+                    "claimed_at": string | null,"company_id": string | null,"id": number | null,"requested_at": string | null
+                  }
+                  Insert: {
+                           "claimed_at"?: string | null,"company_id"?: string | null,"id"?: number | null,"requested_at"?: string | null
+                         }
+                        Update: {
+                           "claimed_at"?: string | null,"company_id"?: string | null,"id"?: number | null,"requested_at"?: string | null
                          }
                         Relationships: [
                     {
-      foreignKeyName: "sumit_connections_company_id_fkey"
+      foreignKeyName: "connector_refresh_requests_company_id_fkey"
       columns: ["company_id"]
-isOneToOne: true
+isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     }
@@ -445,6 +540,11 @@ isOneToOne: true
                            },
 "bump_mcp_rate":
 { Args: { "p_kind": string,"p_token": string,"p_user": string }; Returns: Json
+                           },
+"claim_connector_refreshes":
+{ Args: { "p_limit": number }; Returns: {
+              "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
+            }[]
                            },
 "collapse_split":
 { Args: { "p_id": string,"p_project_id": string }; Returns: string
@@ -463,6 +563,9 @@ isOneToOne: true
                            },
 "delete_transaction":
 { Args: { "p_id": string }; Returns: undefined
+                           },
+"disconnect_connector":
+{ Args: { "p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
                            },
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
@@ -484,6 +587,11 @@ isOneToOne: true
                            },
 "list_categories":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"list_due_connector_refreshes":
+{ Args: { "p_limit": number }; Returns: {
+              "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
+            }[]
                            },
 "list_due_refresh_requests":
 { Args: { "p_limit": number }; Returns: {
@@ -523,6 +631,12 @@ isOneToOne: true
 "note_auth_failure":
 { Args: { "p_address": string }; Returns: Json
                            },
+"note_connector_failure":
+{ Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: string
+                           },
+"note_connector_rejection":
+{ Args: { "p_code": string,"p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: Json
+                           },
 "note_sumit_rejection":
 { Args: { "p_code": string,"p_company": string }; Returns: Json
                            },
@@ -541,8 +655,14 @@ isOneToOne: true
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"replace_connector_connection":
+{ Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_provider": Database["public"]['Enums']["connector_provider"],"p_settings": Json,"p_validated": boolean }; Returns: undefined
+                           },
 "replace_sumit_connection":
 { Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number,"p_validated": boolean }; Returns: undefined
+                           },
+"request_connector_refresh":
+{ Args: { "p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: string
                            },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean,"p_resolve"?: boolean }; Returns: undefined
@@ -565,11 +685,17 @@ isOneToOne: true
 "set_company_integration":
 { Args: { "p_enabled": boolean,"p_mode"?: string,"p_provider"?: string,"p_threshold"?: number }; Returns: Json
                            },
+"set_import_from":
+{ Args: { "p_from": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
+                           },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
                            },
 "set_transaction_category":
 { Args: { "p_category_id": string,"p_id": string,"p_resolve"?: boolean }; Returns: string
+                           },
+"stamp_connector_sync":
+{ Args: { "p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
                            },
 "stamp_sumit_sync":
 { Args: { "p_company": string }; Returns: undefined
@@ -597,7 +723,7 @@ isOneToOne: true
                            }
           }
           Enums: {
-            "category_kind": "expense"|"income","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo","vat_status": "source"|"derived"|"assumed"|"unknown"
+            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -713,7 +839,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "category_kind": ["expense", "income"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo"],"vat_status": ["source", "derived", "assumed", "unknown"]
+            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo"],"vat_status": ["source", "derived", "assumed", "unknown"]
           }
         }
 } as const
