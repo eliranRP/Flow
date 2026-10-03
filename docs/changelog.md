@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Review queue, round 4. A SUMIT sync keeps a line pick: `category_assigned` owns the category, and a project pick keeps the project, the role, the allocations, and the overhead row. Picking the suggested category clears הצעה. אישור on a shared or split card still calls `approve_split_review`, because `resolve_review` raises. A confirmation toast stays under the header after the sheet closes. Decision [0081](decisions/0081-review-queue-list.md).
+
 Review queue, round 3. A project pick from a card line removes the overhead row and refuses a shared cost, on the same guard as אישור. A field-only save owns only that field: `project_assigned` marks the project, and the other line keeps הצעה. The line-pick toast sits under the header. Focus returns to the line on a list-opened card. ✕ on a picker that is not a card line returns to the summary. Decision [0081](decisions/0081-review-queue-list.md).
 
 ## 2026-10-02
