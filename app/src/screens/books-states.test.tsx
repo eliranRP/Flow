@@ -359,6 +359,49 @@ describe("rejected writes", () => {
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
   });
 
+  it("approves a project-role card with more than one share through the split", async () => {
+    const calls: string[] = [];
+    const args: unknown[] = [];
+    rpc.impl = (name, input) => {
+      calls.push(name);
+      args.push(input);
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "r-shares",
+              transaction_id: "t-shares",
+              description: "ליסינג",
+              doc_date: "2026-09-01",
+              doc_kind: "invoice",
+              amount_net: -200000,
+              direction: "expense",
+              reason: "missing_category",
+              pnl_role: "project",
+              share_count: 2,
+              project_id: "p1",
+              category_id: "c1",
+              project_name: "הרצל",
+              category_name: "חומרים",
+              category_suggested: false,
+              supplier_name: "מחסן",
+            },
+          ],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(calls).toContain("approve_split_review");
+    });
+    expect(calls).not.toContain("resolve_review");
+    expect(args.find((entry) => isRecord(entry) && "p_id" in entry)).toEqual({ p_id: "r-shares" });
+  });
+
   it("unsplits an unallocated shared cost from the project picker", async () => {
     const calls: string[] = [];
     rpc.impl = (name) => {

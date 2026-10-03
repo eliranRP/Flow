@@ -1,16 +1,26 @@
 -- A card-line pick writes one field and leaves the review open.
 -- p_resolve defaults to true, so אישור, דלג, and a complete שינוי still close the item.
 -- A field-only save owns only that field. project_assigned marks the project
--- without setting user_assigned, so the category guess stays. Decision 0081.
+-- and category_assigned marks the category, without setting user_assigned,
+-- so the other guess stays. A later SUMIT sync keeps an owned field.
+-- Decision 0081.
 
 alter table public.transactions
   add column project_assigned boolean not null default false;
 
+alter table public.transactions
+  add column category_assigned boolean not null default false;
+
 comment on column public.transactions.project_assigned is
   'True when the owner picked the project and the category guess may still stand. Decision 0081.';
 
+comment on column public.transactions.category_assigned is
+  'True when the owner picked the category and the project guess may still stand. Decision 0081.';
+
 -- The project write and the resolving write share one guard: the same raises,
 -- then the overhead row is removed. A split is not collapsed into one project.
+-- resolve_review therefore raises on a shared or split expense, including
+-- p_resolve true. אישור of those cards calls approve_split_review instead.
 create or replace function private.guard_review_assignment(
   p_company uuid,
   p_txn uuid,
@@ -135,9 +145,12 @@ begin
       if cat_kind is distinct from direction::text then
         raise exception 'category kind must match the direction';
       end if;
-      -- The category is the owner's. user_assigned stays, so a project guess remains.
+      -- The category is the owner's, including a pick of the suggested id.
+      -- user_assigned stays, so a project guess remains.
       update public.transactions
-      set category_id = p_category_id
+      set category_id = p_category_id,
+          category_assigned = true,
+          category_suggested = false
       where id = txn and company_id = cid;
     end if;
     if direction is distinct from 'income' and p_project_id is not null then
@@ -324,6 +337,8 @@ begin
 
   update public.transactions
   set category_id = p_category_id,
+      category_assigned = case when p_resolve then category_assigned else true end,
+      category_suggested = case when p_resolve then category_suggested else false end,
       user_assigned = case when p_resolve then true else user_assigned end
   where id = p_id and company_id = cid;
 
@@ -446,3 +461,363 @@ $$;
 
 revoke all on function public.list_review() from public, anon;
 grant execute on function public.list_review() to authenticated, service_role;
+
+-- An owned field survives the next SUMIT sync. user_assigned still owns the
+-- whole row. project_assigned keeps the project, role, shares, and overhead.
+-- category_assigned keeps the category. Decision 0081.
+
+create or replace function private.fill_suggested_category()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  picked uuid;
+begin
+  -- The owner's category is not a guess, and a sync must not replace it.
+  if new.user_assigned or new.category_assigned then
+    new.category_suggested := false;
+    return new;
+  end if;
+
+  if new.category_id is not null then
+    if tg_op = 'INSERT' then
+      new.category_suggested := false;
+    elsif new.category_id is distinct from old.category_id
+      and new.category_suggested is not distinct from old.category_suggested then
+      new.category_suggested := false;
+    end if;
+    return new;
+  end if;
+
+  picked := null;
+  if new.supplier_id is not null then
+    select s.remembered_category_id into picked
+    from public.suppliers s
+    join public.categories c
+      on c.id = s.remembered_category_id
+     and c.company_id = s.company_id
+    where s.id = new.supplier_id
+      and s.company_id = new.company_id
+      and not c.hidden
+      and c.kind::text = new.direction::text;
+  end if;
+
+  if picked is null and new.supplier_id is not null then
+    select chosen.category_id into picked
+    from (
+      select t.category_id
+      from public.transactions t
+      join public.categories c
+        on c.id = t.category_id
+       and c.company_id = t.company_id
+      where t.company_id = new.company_id
+        and t.supplier_id = new.supplier_id
+        and t.direction = new.direction
+        and t.id is distinct from new.id
+        and t.removed_at is null
+        and t.user_assigned
+        and not c.hidden
+        and c.kind::text = new.direction::text
+      group by t.category_id
+      order by count(*) desc, max(t.doc_date) desc
+      limit 1
+    ) chosen;
+  end if;
+
+  if picked is null then
+    select c.id into picked
+    from public.categories c
+    where c.company_id = new.company_id
+      and c.kind::text = new.direction::text
+      and c.is_default
+      and not c.hidden
+    order by c.sort_order, c.name
+    limit 1;
+  end if;
+
+  if picked is null then
+    new.category_suggested := false;
+    return new;
+  end if;
+
+  new.category_id := picked;
+  -- A remembered supplier rule is the assignment. History and the default stay a suggestion.
+  new.category_suggested := not exists (
+    select 1
+    from public.suppliers s
+    where s.id = new.supplier_id
+      and s.company_id = new.company_id
+      and s.remembered_category_id = picked
+  );
+  return new;
+end;
+$$;
+
+create or replace function public.upsert_sumit_documents(p_company uuid, p_docs jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  doc jsonb;
+  seen text[] := array[]::text[];
+  key text;
+  party_name text;
+  party_kind text;
+  party_external bigint;
+  section_name text;
+  section_id bigint;
+  project uuid;
+  named uuid;
+  mapped_section bigint;
+  supplier uuid;
+  customer uuid;
+  remembered uuid;
+  income_category uuid;
+  role public.pnl_role;
+  direction public.txn_direction;
+  kind public.doc_kind;
+  gross bigint;
+  net bigint;
+  vat bigint;
+  txn uuid;
+  assigned boolean;
+  written integer := 0;
+  allocated bigint;
+  existing_count integer;
+  remove_count integer;
+begin
+  if coalesce(auth.role(), '') is distinct from 'service_role' then
+    raise exception 'forbidden';
+  end if;
+  if p_company is null or not exists (select 1 from public.companies c where c.id = p_company) then
+    raise exception 'no company';
+  end if;
+  if jsonb_typeof(p_docs) <> 'array' then
+    raise exception 'documents must be an array';
+  end if;
+
+  perform 1 from public.companies where id = p_company for update;
+
+  select c.id into income_category
+  from public.categories c
+  where c.company_id = p_company
+    and c.kind = 'income'
+    and c.is_default = true
+    and c.hidden = false
+  order by c.sort_order
+  limit 1;
+
+  for doc in select value from jsonb_array_elements(p_docs)
+  loop
+    key := doc->>'idempotency_key';
+    if key is null or key = '' then
+      raise exception 'document is missing an idempotency key';
+    end if;
+    seen := array_append(seen, key);
+    direction := (doc->>'direction')::public.txn_direction;
+    kind := (doc->>'doc_kind')::public.doc_kind;
+    role := nullif(doc->>'pnl_role', '')::public.pnl_role;
+    gross := (doc->>'amount_gross')::bigint;
+    net := (doc->>'amount_net')::bigint;
+    vat := (doc->>'vat_amount')::bigint;
+    if gross is null or net is null or vat is null or gross <> net + vat then
+      raise exception 'document amounts do not balance';
+    end if;
+
+    section_name := nullif(btrim(coalesce(doc->>'budget_section_name', '')), '');
+    section_id := nullif(doc->>'budget_section_id', '')::bigint;
+    project := null;
+    if section_id is not null then
+      select p.id into project
+      from public.projects p
+      where p.company_id = p_company and p.sumit_budget_section_id = section_id
+      limit 1;
+    end if;
+    if project is null and section_name is not null then
+      select p.id, p.sumit_budget_section_id into named, mapped_section
+      from public.projects p
+      where p.company_id = p_company and p.name = section_name;
+      if named is null then
+        insert into public.projects (company_id, name, sumit_budget_section_id)
+        values (p_company, section_name, section_id)
+        on conflict (company_id, name) do update
+          set sumit_budget_section_id = coalesce(public.projects.sumit_budget_section_id, excluded.sumit_budget_section_id)
+        returning id into project;
+        select p.sumit_budget_section_id into mapped_section
+        from public.projects p where p.id = project;
+        if section_id is not null and mapped_section is distinct from section_id then
+          project := null;
+        end if;
+      elsif mapped_section is null then
+        update public.projects
+        set sumit_budget_section_id = section_id
+        where id = named and sumit_budget_section_id is null;
+        project := named;
+      elsif section_id is null or mapped_section = section_id then
+        project := named;
+      end if;
+    end if;
+
+    party_name := nullif(btrim(coalesce(doc->>'party_name', '')), '');
+    party_kind := doc->>'party_kind';
+    party_external := nullif(doc->>'party_external_id', '')::bigint;
+    supplier := null;
+    customer := null;
+    remembered := null;
+    if party_name is not null and party_kind = 'supplier' then
+      insert into public.suppliers (company_id, name, sumit_external_id)
+      values (p_company, party_name, party_external)
+      on conflict (company_id, name) do update
+        set sumit_external_id = coalesce(excluded.sumit_external_id, public.suppliers.sumit_external_id)
+      returning id, remembered_category_id into supplier, remembered;
+    elsif party_name is not null and party_kind = 'customer' then
+      insert into public.customers (company_id, name, sumit_external_id)
+      values (p_company, party_name, party_external)
+      on conflict (company_id, name) do update
+        set sumit_external_id = coalesce(excluded.sumit_external_id, public.customers.sumit_external_id)
+      returning id into customer;
+    end if;
+
+    if direction = 'income' or role is distinct from 'project' then
+      project := null;
+    end if;
+    if direction = 'income' then
+      role := null;
+    end if;
+
+    insert into public.transactions (
+      company_id, direction, doc_kind, pnl_role,
+      amount_gross, amount_net, vat_amount, vat_status,
+      doc_date, cash_date, source, external_id, idempotency_key,
+      project_id, customer_id, supplier_id, category_id,
+      description, linked_external_id, user_assigned, removed_at
+    ) values (
+      p_company,
+      direction,
+      kind,
+      role,
+      gross,
+      net,
+      vat,
+      (doc->>'vat_status')::public.vat_status,
+      (doc->>'doc_date')::date,
+      nullif(doc->>'cash_date', '')::date,
+      'sumit',
+      nullif(doc->>'external_id', ''),
+      key,
+      project,
+      customer,
+      supplier,
+      case
+        when direction = 'income' then income_category
+        when direction = 'expense' then remembered
+        else null
+      end,
+      coalesce(doc->>'description', ''),
+      nullif(doc->>'linked_external_id', ''),
+      false,
+      null
+    )
+    on conflict (company_id, idempotency_key) do update
+      set direction = excluded.direction,
+          doc_kind = excluded.doc_kind,
+          amount_gross = excluded.amount_gross,
+          amount_net = excluded.amount_net,
+          vat_amount = excluded.vat_amount,
+          vat_status = excluded.vat_status,
+          doc_date = excluded.doc_date,
+          cash_date = excluded.cash_date,
+          external_id = excluded.external_id,
+          description = excluded.description,
+          linked_external_id = excluded.linked_external_id,
+          customer_id = excluded.customer_id,
+          supplier_id = excluded.supplier_id,
+          removed_at = null,
+          project_id = case
+            when public.transactions.user_assigned or public.transactions.project_assigned then public.transactions.project_id
+            else excluded.project_id
+          end,
+          category_id = case
+            when public.transactions.user_assigned or public.transactions.category_assigned then public.transactions.category_id
+            else excluded.category_id
+          end,
+          pnl_role = case
+            when public.transactions.user_assigned or public.transactions.project_assigned then public.transactions.pnl_role
+            else excluded.pnl_role
+          end
+    returning id, (user_assigned or project_assigned), project_id, pnl_role, amount_net
+    into txn, assigned, project, role, net;
+
+    if assigned then
+      update public.allocations
+      set amount_net = (net * share_bp) / 10000
+      where transaction_id = txn;
+      select coalesce(sum(a.amount_net), 0) into allocated
+      from public.allocations a
+      where a.transaction_id = txn;
+      if allocated <> 0 and allocated <> net then
+        update public.allocations
+        set amount_net = amount_net + (net - allocated)
+        where id = (
+          select a.id from public.allocations a
+          where a.transaction_id = txn
+          order by a.project_id
+          limit 1
+        );
+      end if;
+    else
+      delete from public.allocations where transaction_id = txn;
+      delete from public.overhead where transaction_id = txn;
+      if direction <> 'income' and role = 'project' and project is not null then
+        insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+        values (p_company, txn, project, 10000, net);
+      elsif direction <> 'income' and role = 'overhead' then
+        insert into public.overhead (company_id, transaction_id)
+        values (p_company, txn);
+      end if;
+    end if;
+
+    written := written + 1;
+  end loop;
+
+  select count(*) into existing_count
+  from public.transactions t
+  where t.company_id = p_company and t.source = 'sumit' and t.removed_at is null;
+
+  select count(*) into remove_count
+  from public.transactions t
+  where t.company_id = p_company
+    and t.source = 'sumit'
+    and t.removed_at is null
+    and not (t.idempotency_key = any (seen));
+
+  if coalesce(array_length(seen, 1), 0) = 0 then
+    update public.sumit_connections
+    set last_error = 'sync_sweep_empty'
+    where company_id = p_company;
+  elsif existing_count > 0 and remove_count * 2 > existing_count then
+    update public.sumit_connections
+    set last_error = 'sync_sweep_suspicious'
+    where company_id = p_company;
+  else
+    update public.transactions t
+    set removed_at = now()
+    where t.company_id = p_company
+      and t.source = 'sumit'
+      and t.removed_at is null
+      and not (t.idempotency_key = any (seen));
+  end if;
+
+  perform public.sync_review_queue(p_company);
+  return written;
+end;
+$$;
+
+-- Trigger functions run as their owner. Authenticated does not need EXECUTE.
+
+comment on function public.approve_split_review(uuid) is
+  'Closes a categorised split review. Shares, amounts, and the supplier rule stay. resolve_review raises on a shared or split expense, so אישור uses this function. Decision 0075.';

@@ -71,11 +71,11 @@ export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null
 
 type ToastBox = { top: number; bottom: number };
 
-function toastControls(layer: HTMLElement, sheet: Element | null, skip?: Element | null): ToastBox[] {
+function toastControls(layer: HTMLElement, sheet: Element | null, ignoreDrawers = false): ToastBox[] {
   const boxes: ToastBox[] = [];
   for (const control of document.querySelectorAll("button, a[href], input, textarea, select")) {
     if (!(control instanceof HTMLElement) || layer.contains(control)) continue;
-    if (skip instanceof Element && skip.contains(control)) continue;
+    if (ignoreDrawers && control.closest("[data-vaul-drawer]")) continue;
     if (sheet instanceof Element && !sheet.contains(control)) continue;
     const rect = control.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
@@ -233,14 +233,12 @@ export function placeToast(layer: HTMLElement): void {
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
   const { sheet, anchor, gap, inset } = toastAnchor(layer);
   const safe = cssPx("--safe-top");
-  const skip = layer.dataset.place === "page"
-    ? document.querySelector("[data-vaul-drawer][data-state='open']")
-    : null;
+  const ignoreDrawers = layer.dataset.place === "page";
   const measured = anchor instanceof HTMLElement
     ? anchor.getBoundingClientRect().bottom + gap
     : safe + inset;
   const floor = window.innerHeight - gap;
-  const boxes = toastControls(layer, sheet, skip);
+  const boxes = toastControls(layer, sheet, ignoreDrawers);
   const sheetTop = sheet instanceof HTMLElement ? restingSheetTop(sheet) : null;
   const pageHeader = document.querySelector("header.ui-page, header.ui-band");
   if (sheet instanceof HTMLElement && sheetTop != null && height > 0) {
@@ -362,11 +360,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       acting.current = false;
       seq.current += 1;
       clearTimer();
-      remaining.current = toastMs(input);
+      const confirmation = input.tone == null || input.tone === "ok";
+      const next = confirmation ? { ...input, place: "page" as const } : input;
+      remaining.current = toastMs(next);
       const current = phaseRef.current;
       revealNow.current = current === "pad" || current === "fade" || current === "in";
       if (!revealNow.current) setPhase("measure");
-      setToast({ ...input, id: seq.current });
+      if (host.current) {
+        if (next.place === "page") host.current.dataset.place = "page";
+        else delete host.current.dataset.place;
+      }
+      setToast({ ...next, id: seq.current });
     },
     [],
   );
@@ -649,6 +653,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
     begin();
 
+    // A confirmation is placed while the sheet is still closing. Vaul keeps the
+    // drawer mounted, and its rect still looks open, until the animation ends.
+    // Place again when that drawer closes or leaves, so the toast stays under
+    // the header instead of the gap the sheet used to occupy.
+    let drawerWatch: MutationObserver | null = null;
+    if (layer.dataset.place === "page" && typeof MutationObserver !== "undefined") {
+      drawerWatch = new MutationObserver((records) => {
+        const drawerMoved = records.some((record) => {
+          if (record.type === "attributes" && record.attributeName === "data-state") {
+            return record.target instanceof Element && record.target.hasAttribute("data-vaul-drawer");
+          }
+          return [...record.addedNodes, ...record.removedNodes].some((node) => (
+            node instanceof Element
+            && (node.hasAttribute("data-vaul-drawer") || node.querySelector("[data-vaul-drawer]") != null)
+          ));
+        });
+        if (drawerMoved) placeToast(layer);
+      });
+      drawerWatch.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-state"],
+      });
+    }
+
     return () => {
       generation += 1;
       waiting = false;
@@ -659,6 +689,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       removeEnd?.();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
+      drawerWatch?.disconnect();
       if (onViewport) {
         window.removeEventListener("resize", onViewport);
         window.visualViewport?.removeEventListener("resize", onViewport);

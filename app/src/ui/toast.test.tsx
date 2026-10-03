@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { placeToast, toastMinBlock, ToastProvider, useToast } from "./toast";
 
@@ -212,6 +213,83 @@ describe("Toast", () => {
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("במצב תצוגה זה לא נשמר.");
     expect(status.querySelector(".ui-toast-bad")).toBeNull();
+  });
+
+  it("keeps a confirmation under the header after the sheet closes", async () => {
+    const innerHeight = window.innerHeight;
+    const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
+    if (!rect?.value) throw new Error("getBoundingClientRect is missing");
+    const original = rect.value as (this: Element) => DOMRect;
+    function box(bottom: number, height: number): DOMRect {
+      return {
+        x: 0,
+        y: bottom - height,
+        width: 120,
+        height,
+        top: bottom - height,
+        right: 120,
+        bottom,
+        left: 0,
+        toJSON: () => ({}),
+      };
+    }
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (this.classList.contains("ui-toast")) return box(48, 48);
+      if (this.classList.contains("ui-page")) return box(155, 40);
+      if (this.classList.contains("ui-tabbar")) return box(844, 60);
+      // Still the open sheet's box while it animates shut. Anchoring there is 554px.
+      if (this.hasAttribute("data-vaul-drawer")) return box(844, 234);
+      if (this.closest("[data-vaul-drawer]")) return box(400, 220);
+      return original.call(this);
+    };
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    function Show() {
+      const toast = useToast();
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          {open ? (
+            <div data-vaul-drawer="" data-state="open">
+              <button type="button">בטון</button>
+            </div>
+          ) : null}
+          <button type="button" onClick={() => { toast.show({ message: "השיוך נשמר" }); }}>
+            הצגה
+          </button>
+          <button type="button" onClick={() => { setOpen(false); }}>
+            סגירה
+          </button>
+        </>
+      );
+    }
+    try {
+      render(
+        <ToastProvider>
+          <header className="ui-page" />
+          <nav className="ui-tabbar" />
+          <Show />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "הצגה" }));
+      const host = document.querySelector(".ui-toast-host");
+      expect(host).toHaveStyle({ top: "163px" });
+      const sheet = document.querySelector("[data-vaul-drawer]");
+      expect(sheet).not.toBeNull();
+      await act(async () => {
+        sheet?.setAttribute("data-state", "closed");
+        await Promise.resolve();
+      });
+      expect(host).toHaveStyle({ top: "163px" });
+      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(document.querySelector("[data-vaul-drawer]")).toBeNull();
+      expect(document.querySelector(".ui-toast-host")).toHaveStyle({ top: "163px" });
+    } finally {
+      Element.prototype.getBoundingClientRect = original;
+      Object.defineProperty(window, "innerHeight", { configurable: true, value: innerHeight });
+    }
   });
 });
 
