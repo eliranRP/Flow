@@ -425,6 +425,10 @@ a.ui-row,
   line-height: var(--type-title-3-line);
 }
 
+.t-hint {
+  text-wrap: pretty;
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -591,6 +595,11 @@ a.ui-row,
   inset-block-start: 50%;
   transform: translateY(-50%);
   background: var(--color-surface);
+}
+
+/* The shared icon ring is offset 2px, which runs past this field's end border. */
+.ui-code-field-copy.ui-icon-btn:focus-visible {
+  outline-offset: -2px;
 }
 
 .ui-assistant-step {
@@ -1987,6 +1996,8 @@ button.ui-tab-slot {
   z-index: 30;
   border: 0;
   background: var(--color-scrim);
+  /* Duration is set without a property, which would otherwise animate z-index. */
+  transition-property: opacity;
 }
 
 .ui-sheet-panel {
