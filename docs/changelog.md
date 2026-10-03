@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
+
 Settings cycle 5, review. A sheet keeps its own history layer. Closing the Claude help sheet or a ניתוק confirm pops only that layer, so הקוד מוכן and the details sheet stay open and focus returns to the control that opened the top sheet. The top sheet draws its own scrim over the one underneath. Step 1 leads with "בחרו מה העוזר יכול לעשות." Step 2 says the code is shown once, labels the scope, and copies the address and the code with a text link. The help sheet is titled "איך מחברים ב־Claude" and says Claude.ai needs an Authorization bearer header. A failed copy is announced in the sheet that owns the button. The קטגוריות row has no counts. Decision [0082](decisions/0082-settings-redesign.md).
 
 Server hardening follow-ups. The post-push cron check requires Vault `flow_sync_url` when the drain should exist, and the drain command reads that URL. It does not fall back to Kong and it does not embed a literal `x-flow-cron` header. A trailing slash such as `/settings/` redirects once to the path without the slash. The production smoke checks the stamped SHA in the homepage and in `/settings`, and a missing asset is 404. `/app-shell` is served as HTML. Decision [0066](decisions/0066-review-round7.md). The exit codes are in [CI and CD](runbooks/ci-cd.md).

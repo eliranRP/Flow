@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { ToastProvider } from "../ui/toast";
 import { israelUsePhrase } from "../sumit-copy";
+import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { AssistantSettings } from "./assistant-settings";
 
 const edge = vi.hoisted(() => ({
@@ -570,7 +571,7 @@ describe("assistant settings", () => {
   });
 
   it("focuses the code title when the code step replaces the scope step", async () => {
-    renderAssistant(<AssistantSettings sample={{ state: "empty" }} />);
+    renderAssistant(<AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />);
     fireEvent.click(screen.getByRole("button", { name: "עוזר AI" }));
     fireEvent.click(await screen.findByRole("button", { name: "יצירת קוד" }));
     expect(screen.getByRole("heading", { name: "הקוד מוכן" })).toHaveFocus();
@@ -642,10 +643,6 @@ describe("assistant settings", () => {
     fireEvent.click(link);
     const help = await screen.findByRole("dialog", { name: "איך מחברים ב־Claude" });
     await waitFor(() => { expect(layer).toBe("assistant-help"); });
-    fireEvent.click(within(ready).getByRole("button", { name: "סגירה", hidden: true }));
-    expect(help).toBeInTheDocument();
-    expect(ready).toBeInTheDocument();
-    expect(ready).toHaveTextContent("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2");
     help.focus();
     act(() => {
       window.dispatchEvent(new PopStateEvent("popstate", {
@@ -656,6 +653,8 @@ describe("assistant settings", () => {
     expect(screen.getByRole("dialog", { name: "הקוד מוכן" })).toBeInTheDocument();
     expect(screen.getByText("flw_test_7f3c9a1e2b8046d5c0a91e44b7d2")).toBeInTheDocument();
     await waitFor(() => { expect(link).toHaveFocus(); });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "הקוד מוכן" })).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
   });
 
   it("keeps the assistant details open when the confirm layer is popped", async () => {

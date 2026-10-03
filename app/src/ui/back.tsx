@@ -144,6 +144,9 @@ export function ScrollMemory() {
 
 let pushingLayer = false;
 
+/** Raw open setters, so a close can dismiss this sheet and every layer above it. */
+const sheetClosers = new Map<string, (open: boolean) => void>();
+
 /**
  * A sheet that is not its own route still needs a history entry, so the iOS
  * swipe closes the sheet instead of leaving the page.
@@ -155,7 +158,7 @@ export function useSheetHistory(
   allowClose?: () => boolean | Promise<boolean>,
   /** When set, the next open replaces the current entry instead of pushing one. */
   adopt?: { current: boolean },
-): (next: boolean) => void {
+): (next: boolean) => boolean {
   const navigate = useNavigate();
   const location = useLocation();
   const locationRef = useRef(location);
@@ -168,6 +171,13 @@ export function useSheetHistory(
   const pushed = useRef(false);
   const allowRef = useRef(allowClose);
   allowRef.current = allowClose;
+
+  useEffect(() => {
+    sheetClosers.set(name, onOpenChange);
+    return () => {
+      if (sheetClosers.get(name) === onOpenChange) sheetClosers.delete(name);
+    };
+  }, [name, onOpenChange]);
 
   useEffect(() => {
     if (!open) {
@@ -221,28 +231,42 @@ export function useSheetHistory(
     };
   }, [name, navigate, location.pathname, location.search, location.hash]);
 
-  return useCallback((next: boolean) => {
+  return useCallback((next: boolean): boolean => {
     if (next) {
       onOpenChange(true);
-      return;
+      return true;
     }
-    const stack = sheetStack(locationRef.current.state);
-    const top = stack[stack.length - 1] === name;
-    if (top && canGoBack()) {
-      void navigate(-1);
-      return;
-    }
-    // The sheet underneath stays. Only the top layer handles ✕, Escape, and Back.
-    if (stack.includes(name) && !top) return;
-    onOpenChange(false);
-    // MemoryRouter has no browser index, so closing cannot pop. Drop the layer
-    // in place, or the sheet under this one stays stuck below a dead entry.
-    if (!top) return;
     const current = locationRef.current;
+    const stack = sheetStack(current.state);
+    const index = stack.indexOf(name);
+    if (index === -1) {
+      onOpenChange(false);
+      return true;
+    }
+    // A restored Forward entry can still list a sheet that already closed.
+    // Close this sheet and every layer above it, instead of ignoring the request.
+    const closing = stack.slice(index);
+    let closed = false;
+    for (const layer of closing) {
+      const close = sheetClosers.get(layer);
+      if (close == null) continue;
+      close(false);
+      closed = true;
+    }
+    if (!closed) return false;
+    const steps = closing.length;
+    const idx = historyIndex();
+    if (idx != null && idx >= steps) {
+      void navigate(-steps);
+      return true;
+    }
+    // MemoryRouter has no browser index, so closing cannot pop. Drop the layers
+    // in place, or a sheet stays stuck below a dead entry.
     void navigate(`${current.pathname}${current.search}${current.hash}`, {
       replace: true,
-      state: droppedStackState(current.state, stack.slice(0, -1)),
+      state: droppedStackState(current.state, stack.slice(0, index)),
     });
+    return true;
   }, [name, navigate, onOpenChange]);
 }
 
