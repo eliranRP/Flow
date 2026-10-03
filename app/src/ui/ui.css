@@ -417,6 +417,7 @@ a.ui-row,
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
   white-space: normal;
+  text-wrap: pretty;
 }
 
 .ui-row-hint-wrap {
@@ -558,20 +559,22 @@ a.ui-row,
   overflow-y: hidden;
   text-overflow: clip;
   user-select: text;
-  padding-inline-end: calc(var(--touch-min) + var(--space-2));
+  touch-action: pan-x;
+}
+
+/* Vaul sets touch-action: none on the drawer. The field has to win so a sideways swipe pans the value. */
+[data-vaul-drawer] .ui-code-field-input {
+  touch-action: pan-x;
 }
 
 .ui-code-field-copy {
   position: absolute;
   z-index: 1;
-  inset-inline-end: 0;
+  /* Sit inside the field border so the surface does not cover the end edge. */
+  inset-inline-end: 1px;
   inset-block-start: 50%;
   transform: translateY(-50%);
   background: var(--color-surface);
-}
-
-.ui-code-field-box[data-copy="off"] .ui-code-field-input {
-  padding-inline-end: var(--field-pad);
 }
 
 .ui-assistant-step {
@@ -605,6 +608,15 @@ a.ui-row,
   box-sizing: border-box;
   font-size: max(16px, var(--type-body-size));
   font-weight: var(--type-body-weight);
+}
+
+/* After .ui-field-control. That rule's padding-inline would otherwise put the value under the copy button. */
+.ui-code-field-box[data-copy="on"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: calc(var(--touch-min) + var(--space-2));
+}
+
+.ui-code-field-box[data-copy="off"] .ui-code-field-input.ui-field-control {
+  padding-inline-end: var(--field-pad);
 }
 
 .ui-money-field.ui-field-control {

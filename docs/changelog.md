@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+UI polish, design review. A sideways swipe pans the code field, and Home, End, and the arrows move along the value. The copy button sits inside the field border, and the end of the value stays clear of it. Hints wrap with `text-wrap: pretty`.
+
 UI polish, review. The code field lives in `app/src/ui/code-field.tsx`. An empty value hides העתקה. The accessible names are "העתקה: כתובת", "העתקה: קוד", and "העתקה: פקודה". Reopening a sheet before the close animation finishes still resets it, and Escape notifies the close once. The panel is inert while it closes. The Claude.ai header is not a tab stop. The reviewer leasing split opens ליסינג הדרך. The queue banner count stays on the preview rows.
 
 UI polish. The code sheet and the expired sheet keep their step until the close animation ends. Step 2 is one muted line, "גישה: קריאה וכתיבה. הקוד מוצג פעם אחת." The connected sheet groups the status with last use, and the change-scope note is muted. The Claude.ai header stays on one line and ends with a period. Decision [0082](decisions/0082-settings-redesign.md).

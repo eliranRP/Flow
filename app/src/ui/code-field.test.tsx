@@ -55,4 +55,29 @@ describe("CodeField", () => {
     expect(screen.getByRole("status")).toHaveTextContent("העתיקו ידנית");
     expect(screen.getByRole("textbox")).toHaveAttribute("autocomplete", "off");
   });
+
+  it("moves Home, End, and the arrows along the value", () => {
+    render(
+      <CodeField
+        label="קוד"
+        labelId="code-keys"
+        value="abcdef"
+        failed={false}
+        copyLabel="העתקה: קוד"
+        onCopy={() => undefined}
+      />,
+    );
+    const input = screen.getByRole("textbox");
+    input.focus();
+    fireEvent.keyDown(input, { key: "End" });
+    expect(input).toHaveProperty("selectionStart", 6);
+    expect(input).toHaveProperty("selectionEnd", 6);
+    fireEvent.keyDown(input, { key: "ArrowLeft" });
+    expect(input).toHaveProperty("selectionStart", 5);
+    fireEvent.keyDown(input, { key: "Home" });
+    expect(input).toHaveProperty("selectionStart", 0);
+    expect(input).toHaveProperty("scrollLeft", 0);
+    fireEvent.keyDown(input, { key: "ArrowRight" });
+    expect(input).toHaveProperty("selectionStart", 1);
+  });
 });
