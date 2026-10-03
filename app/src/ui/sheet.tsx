@@ -191,7 +191,9 @@ export function Sheet({
       const verdict = await onBeforeClose?.();
       if (verdict === false) return;
       closing.current = true;
-      onOpenChange(false);
+      const accepted = (onOpenChange as (open: boolean) => boolean | undefined)(false);
+      // A refused close leaves the sheet open. The flag must not stick.
+      if (accepted === false) closing.current = false;
     } finally {
       deciding.current = false;
     }

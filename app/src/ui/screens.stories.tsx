@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { Route, Routes } from "react-router-dom";
+import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { AssistantSettings } from "../screens/assistant-settings";
 import { HelpScreen } from "../screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "../screens/HomeScreen";
@@ -785,7 +786,7 @@ export const SettingsAssistantScope: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} />
+      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -799,7 +800,7 @@ export const SettingsAssistantSecret: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} />
+      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {
@@ -816,7 +817,7 @@ export const SettingsAssistantHelp: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <AssistantSettings sample={{ state: "empty" }} />
+      <AssistantSettings sample={{ state: "empty" }} sampleSecret={SAMPLE_ASSISTANT_SECRET} />
     </StoryRoute>
   ),
   play: async ({ canvasElement }) => {

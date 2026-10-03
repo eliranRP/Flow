@@ -3230,8 +3230,11 @@ function onboardingFromSettings(search: string): string {
 
 export function SettingsScreen({
   sample,
+  sampleSecret,
 }: {
   sample?: SettingsSample;
+  /** Dev route only. Production preview never mints a local code. */
+  sampleSecret?: string;
 } = {}) {
   const preview = useHomePreview();
   const [params, setParams] = useSearchParams();
@@ -3584,7 +3587,8 @@ export function SettingsScreen({
                 : undefined
         }
         noCompany={noCompany}
-        blocked={params.get("e2e") === "stack" ? undefined : blocked}
+        blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
+        sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
         showHeading={false}
       />
       <Sheet open={connectOpen} onOpenChange={setConnectSheet} title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"} returnFocusRef={sumitRowRef}>

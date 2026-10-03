@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "./auth";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
 import { ThemeColor } from "./components/ThemeColor";
+import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
@@ -462,6 +463,9 @@ function DevProjects() {
   return <ProjectsScreen sample={devDashboard} />;
 }
 
+/** Dev-only. A production build drops the sample secret with this flag. */
+const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
+
 function DevSettings() {
   const [params] = useSearchParams();
   const mode = params.get("connected");
@@ -497,6 +501,7 @@ function DevSettings() {
                   ? { state: "no-company" }
                   : { state: "empty" },
       }}
+      sampleSecret={devAssistantSecret}
     />
   );
 }

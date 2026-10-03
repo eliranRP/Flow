@@ -3,7 +3,6 @@ import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useRefreshingNow } from "../israel-clock";
 import { getSupabase } from "../lib/supabase";
-import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { claudeCodeCommand, flowMcpUrl } from "../mcp-address";
 import { israelUsePhrase } from "../sumit-copy";
 import { popSheetLayers, useSheetHistory } from "../ui/back";
@@ -121,6 +120,7 @@ async function revokeCode(id: string): Promise<void> {
 
 export function AssistantSettings({
   sample,
+  sampleSecret,
   noCompany = false,
   blocked,
   initialSecret,
@@ -129,6 +129,8 @@ export function AssistantSettings({
   announceLoading = true,
 }: {
   sample?: AssistantSample;
+  /** A preview mint shows this secret. Stories and the dev route pass it. */
+  sampleSecret?: string;
   noCompany?: boolean;
   blocked?: () => boolean;
   initialSecret?: Minted;
@@ -219,9 +221,10 @@ export function AssistantSettings({
     if (minting) return;
     if (blocked?.()) return;
     if (sample != null) {
+      if (sampleSecret == null || sampleSecret === "") return;
       setSecret({
         id: "mcp-sample",
-        secret: SAMPLE_ASSISTANT_SECRET,
+        secret: sampleSecret,
         scope: choice === "read" ? ["read"] : ["read", "write"],
       });
       return;

@@ -45,6 +45,7 @@ const modulePatterns = [
   /[/\\]reviewer-preview\./,
   /[/\\]reviewer-sample\./,
   /[/\\]review-e2e-fixture\./,
+  /[/\\]assistant-sample\./,
 ];
 
 /**
@@ -97,6 +98,8 @@ export function violations(input) {
     if (file.body.includes("draft:")) found.push(`${file.name} contains a story id prefix`);
     if (file.body.includes("מחסן הנמל")) found.push(`${file.name} contains the review e2e supplier מחסן הנמל`);
     if (file.body.includes("e2e=list")) found.push(`${file.name} contains e2e=list`);
+    if (file.body.includes("e2e=stack")) found.push(`${file.name} contains e2e=stack`);
+    if (file.body.includes("flw_test_")) found.push(`${file.name} contains flw_test_`);
   }
   return found;
 }
