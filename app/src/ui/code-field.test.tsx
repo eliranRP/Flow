@@ -81,29 +81,42 @@ describe("CodeField", () => {
     expect(input).toHaveProperty("selectionStart", 1);
   });
 
-  it("binds a non-passive wheel listener again when the field remounts", () => {
-    const spy = vi.spyOn(HTMLInputElement.prototype, "addEventListener");
+  it("rebinds pan when dropping the label replaces the input", () => {
+    const nativeAdd = Reflect.get(HTMLInputElement.prototype, "addEventListener") as (this: HTMLInputElement, type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => void;
+    const nativeRemove = Reflect.get(HTMLInputElement.prototype, "removeEventListener") as (this: HTMLInputElement, type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => void;
+    const live = new Map<EventTarget, Map<string, boolean | undefined>>();
+    const note = (node: EventTarget, type: string, passive: boolean | undefined | null) => {
+      const types = live.get(node) ?? new Map<string, boolean | undefined>();
+      if (passive === null) types.delete(type);
+      else types.set(type, passive);
+      live.set(node, types);
+    };
+    const add = vi.spyOn(HTMLInputElement.prototype, "addEventListener").mockImplementation(function (this: HTMLInputElement, type, listener, options) {
+      const passive = options != null && typeof options === "object" ? options.passive : undefined;
+      note(this, type, passive);
+      nativeAdd.call(this, type, listener, options);
+    });
+    const remove = vi.spyOn(HTMLInputElement.prototype, "removeEventListener").mockImplementation(function (this: HTMLInputElement, type, listener, options) {
+      note(this, type, null);
+      nativeRemove.call(this, type, listener, options);
+    });
     const props = {
-      label: "קוד",
-      labelId: "code-wheel",
       value: "abcdef",
-      failed: false,
+      failed: false as const,
       copyLabel: "העתקה: קוד",
       onCopy: () => undefined,
-    } as const;
-    const wheels = () => spy.mock.calls.filter((call) => call[0] === "wheel");
-    const passive = (call: (typeof spy.mock.calls)[number]) => {
-      const options = call[2];
-      return options != null && typeof options === "object" && "passive" in options && options.passive === false;
     };
-    const { rerender, unmount } = render(<CodeField key="a" {...props} />);
-    expect(wheels().length).toBeGreaterThan(0);
-    expect(wheels().every(passive)).toBe(true);
-    const before = wheels().length;
-    rerender(<CodeField key="b" {...props} />);
-    expect(wheels().length).toBeGreaterThan(before);
-    expect(wheels().every(passive)).toBe(true);
+    const { rerender, unmount } = render(<CodeField {...props} label="קוד" labelId="code-wheel" />);
+    const first = screen.getByRole("textbox");
+    expect(live.get(first)?.get("touchmove")).toBe(false);
+    rerender(<CodeField {...props} fieldLabel="קוד" />);
+    const second = screen.getByRole("textbox");
+    expect(second).not.toBe(first);
+    expect(live.get(first)?.has("touchmove")).toBe(false);
+    expect(live.get(second)?.get("touchmove")).toBe(false);
+    expect(live.get(second)?.get("wheel")).toBe(false);
     unmount();
-    spy.mockRestore();
+    add.mockRestore();
+    remove.mockRestore();
   });
 });

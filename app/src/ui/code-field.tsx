@@ -153,39 +153,45 @@ export function CodeField({
     if (inputNode == null) return;
     return bindFieldPan(inputNode);
   }, [inputNode]);
-  const control = (
-    <>
-      {named ? <p className="ui-field-label" id={labelId}>{label}</p> : null}
-      <div className="ui-code-field-box" data-copy={value === "" ? "off" : "on"}>
-        <input
-          ref={setInput}
-          className="ui-field-control ui-code-field-input"
-          readOnly
-          dir="ltr"
-          value={value}
-          aria-label={named ? undefined : fieldLabel}
-          aria-labelledby={named ? labelId : undefined}
-          autoComplete="off"
-          spellCheck={false}
-          data-vaul-no-drag=""
-          onPointerDown={(event) => {
-            holdFieldPointer(event);
-          }}
-          onKeyDown={onFieldKeyDown}
-        />
-        {value === "" ? null : (
-          <IconButton label={copyLabel} className="ui-code-field-copy" onClick={onCopy}>
-            <CopyIcon />
-          </IconButton>
-        )}
-      </div>
-      {failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null}
-    </>
+  const field = (
+    <div className="ui-code-field-box" data-copy={value === "" ? "off" : "on"}>
+      <input
+        ref={setInput}
+        className="ui-field-control ui-code-field-input"
+        readOnly
+        dir="ltr"
+        value={value}
+        aria-label={named ? undefined : fieldLabel}
+        aria-labelledby={named ? labelId : undefined}
+        autoComplete="off"
+        spellCheck={false}
+        data-vaul-no-drag=""
+        onPointerDown={(event) => {
+          holdFieldPointer(event);
+        }}
+        onKeyDown={onFieldKeyDown}
+      />
+      {value === "" ? null : (
+        <IconButton label={copyLabel} className="ui-code-field-copy" onClick={onCopy}>
+          <CopyIcon />
+        </IconButton>
+      )}
+    </div>
   );
-  if (!named) return <div className="ui-code-field">{control}</div>;
+  const hint = failed ? <p className="t-hint" role="status">העתיקו ידנית</p> : null;
+  if (!named) {
+    return (
+      <div className="ui-code-field">
+        {field}
+        {hint}
+      </div>
+    );
+  }
   return (
     <div className="ui-code-field" role="group" aria-labelledby={labelId}>
-      {control}
+      <p className="ui-field-label" id={labelId}>{label}</p>
+      {field}
+      {hint}
     </div>
   );
 }
