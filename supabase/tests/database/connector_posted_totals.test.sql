@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(6);
+select plan(12);
 
 do $users$
 begin
@@ -66,6 +66,86 @@ select is(
   (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'cash') ->> 'expense_agorot')::bigint,
   10000::bigint,
   'company profit counts the posted expense only'
+);
+
+reset role;
+
+insert into public.transactions (
+  company_id, direction, doc_kind,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, description
+)
+select id, 'income', 'invoice',
+  8000, 8000, 0, 'unknown',
+  current_date, 'manual', 'posted:invoice', (select id from posted_ref where label = 'project'), 'חשבונית'
+from posted_ref where label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, description
+)
+select id, 'income', 'receipt',
+  3000, 3000, 0, 'unknown',
+  current_date, 'manual', 'posted:receipt', (select id from posted_ref where label = 'project'), 'קבלה'
+from posted_ref where label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, description
+)
+select id, 'income', 'invoice', 'pending',
+  90000, 90000, 0, 'unknown',
+  current_date, 'manual', 'pending:invoice', (select id from posted_ref where label = 'project'), 'חשבונית ממתינה'
+from posted_ref where label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, description
+)
+select id, 'expense', 'expense', 'project', 'void',
+  -40000, -40000, 0, 'unknown',
+  current_date, 'manual', 'void:line', (select id from posted_ref where label = 'project'), 'בוטל'
+from posted_ref where label = 'company';
+
+select tests.authenticate_as('posted_owner');
+
+select is(
+  (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'invoiced') ->> 'income_agorot')::bigint,
+  8000::bigint,
+  'the invoiced basis counts the posted invoice'
+);
+
+select is(
+  (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'cash') ->> 'income_agorot')::bigint,
+  3000::bigint,
+  'the cash basis counts the posted receipt'
+);
+
+select is(
+  (public.company_pnl((select id from posted_ref where label = 'company'), null, null, 'cash') ->> 'expense_agorot')::bigint,
+  10000::bigint,
+  'a void line stays out of the expense total'
+);
+
+select is(
+  (public.get_project((select id from posted_ref where label = 'project')) ->> 'income_agorot')::bigint,
+  8000::bigint,
+  'project income counts the posted invoice'
+);
+
+select is(
+  (public.get_project((select id from posted_ref where label = 'project')) ->> 'direct_agorot')::bigint,
+  10000::bigint,
+  'project direct cost skips the void line'
+);
+
+select is(
+  (public.get_home() ->> 'net_profit_agorot')::bigint,
+  -7000::bigint,
+  'home profit counts the receipt and skips the invoice and the void'
 );
 
 select * from finish();

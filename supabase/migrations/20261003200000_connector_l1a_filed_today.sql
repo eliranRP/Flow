@@ -4,6 +4,10 @@
 -- would make ON CONFLICT (company_id, kind, name) ambiguous. That duplicate
 -- index stays the L1b backlog item.
 
+begin;
+
+set local lock_timeout = '5s';
+
 create type public.line_status as enum ('pending', 'posted', 'void');
 
 alter table public.transactions
@@ -14,29 +18,31 @@ alter table public.transactions
   add column fx_rate_date date,
   add column provider_meta jsonb not null default '{}'::jsonb;
 
+-- The touch trigger would stamp updated_at on this backfill. Leave the old clock.
+alter table public.transactions disable trigger transactions_touch;
+
 update public.transactions
 set amount_original = abs(amount_gross)
 where amount_original is null;
+
+alter table public.transactions enable trigger transactions_touch;
 
 alter table public.transactions
   alter column amount_original set not null;
 
 alter table public.transactions
-  add constraint transactions_amount_original_nonneg check (amount_original >= 0) not valid,
-  add constraint transactions_currency_code check (currency ~ '^[A-Z]{3}$') not valid,
+  add constraint transactions_amount_original_nonneg check (amount_original >= 0),
+  add constraint transactions_currency_code check (currency ~ '^[A-Z]{3}$'),
   add constraint transactions_fx_pair check (
     (fx_rate is null and fx_rate_date is null)
     or (fx_rate > 0 and fx_rate_date is not null)
-  ) not valid,
+  ),
   add constraint transactions_source_currency check (
     (source::text <> 'mercury' or currency = 'USD')
     and (source::text <> 'sumit' or currency = 'ILS')
-  ) not valid;
+  );
 
-alter table public.transactions validate constraint transactions_amount_original_nonneg;
-alter table public.transactions validate constraint transactions_currency_code;
-alter table public.transactions validate constraint transactions_fx_pair;
-alter table public.transactions validate constraint transactions_source_currency;
+commit;
 
 -- Existing writers omit amount_original. Fill it from the stored gross so the
 -- not-null column does not reject those inserts.

@@ -188,12 +188,15 @@ Client: `ConnectorClientDescriptor` with `provider`, `nameHe`, `icon`, and `copy
 
 L1a applies this. Grants are explicit. New definer functions set `search_path = ''` and start with `if coalesce(auth.role(), '') is distinct from '<role>' then raise exception 'forbidden'; end if`. `private.current_company_id()` is the company predicate. Adding `mercury` to `txn_source` must not use the new value in that same transaction. Checks compare `source::text`.
 
-`amount_original` is backfilled with `abs(amount_gross)` because expenses are stored negative. New checks are added `not valid`, then `validate`d.
+`amount_original` is backfilled with `abs(amount_gross)` because expenses are stored negative. That update runs with `transactions_touch` disabled, so it does not stamp `updated_at`. The adds, the backfill, `set not null`, and the four checks share one transaction with `lock_timeout` of five seconds. The checks are ordinary, not `not valid`: a validate in that same transaction would not release the lock any sooner.
 
 ```sql
 create type public.connector_provider as enum ('sumit', 'mercury');
 alter type public.txn_source add value 'mercury';
 create type public.line_status as enum ('pending', 'posted', 'void');
+
+begin;
+set local lock_timeout = '5s';
 
 alter table public.transactions
   add column line_status public.line_status not null default 'posted',
@@ -203,29 +206,27 @@ alter table public.transactions
   add column fx_rate_date date,
   add column provider_meta jsonb not null default '{}'::jsonb;
 
+alter table public.transactions disable trigger transactions_touch;
 update public.transactions
 set amount_original = abs(amount_gross)
 where amount_original is null;
+alter table public.transactions enable trigger transactions_touch;
 
 alter table public.transactions
   alter column amount_original set not null;
 
 alter table public.transactions
-  add constraint transactions_amount_original_nonneg check (amount_original >= 0) not valid,
-  add constraint transactions_currency_code check (currency ~ '^[A-Z]{3}$') not valid,
+  add constraint transactions_amount_original_nonneg check (amount_original >= 0),
+  add constraint transactions_currency_code check (currency ~ '^[A-Z]{3}$'),
   add constraint transactions_fx_pair check (
     (fx_rate is null and fx_rate_date is null)
     or (fx_rate > 0 and fx_rate_date is not null)
-  ) not valid,
+  ),
   add constraint transactions_source_currency check (
     (source::text <> 'mercury' or currency = 'USD')
     and (source::text <> 'sumit' or currency = 'ILS')
-  ) not valid;
-
-alter table public.transactions validate constraint transactions_amount_original_nonneg;
-alter table public.transactions validate constraint transactions_currency_code;
-alter table public.transactions validate constraint transactions_fx_pair;
-alter table public.transactions validate constraint transactions_source_currency;
+  );
+commit;
 
 create table public.connector_connections (
   id uuid not null default gen_random_uuid() unique,
@@ -816,6 +817,6 @@ Not in this stack:
 | L3a | ₪/$ toggle |
 | L3b | Connection card, range, ממתין |
 
-L1b backlog, named here and not specified in this contract: pgTAP expected values for a negative amount, an exact `.5`, a USD display, and `historical`; whether `today` stays the same rule as `original`; the allocation rounding rule; the overhead rounding rule; the duplicate unique index; `sumit-reseal` rejecting a caller that is not `service_role`; the unpaid-list currency note.
+L1b backlog, named here and not specified in this contract: pgTAP expected values for a negative amount, an exact `.5`, a USD display, and `historical`; whether `today` stays the same rule as `original`; the allocation rounding rule; the overhead rounding rule; the duplicate unique index; `sumit-reseal` rejecting a caller that is not `service_role`; the unpaid-list currency note. Reviewer 2 r1, also not in L1a: mixed-sign VAT (B2), B3, the pre-existing lock order (B4), B6, B7, and B8.
 
 The SUMIT pgTAP suites (`owner_ledger`, `round4`, `round5`, `review_field_save`, `mcp_cycle3a`, `sumit_*`) stay on the compatibility views, except `sumit_daily_schedule.test.sql`, which is ported 1:1 onto the pinned job text in L1a. `ledger-parity.test.ts` and the demo-data to expected-pnl golden stay green or move one for one. Each new id-taking RPC gets a cross-tenant negative.
