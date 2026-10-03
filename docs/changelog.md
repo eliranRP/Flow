@@ -2,6 +2,10 @@
 
 ## 2026-10-03
 
+Jev connector, review. The client timeout covers the response body. `tag_suggestions.response_model` stores the model the API returned, including when it is not the pin. Until the tagging job, the setting accepts only `off` or `shadow`, and the threshold is 0.50 to 1.00. `read_jev_api_key` checks `auth.jwt()->>'role'` and stays service role only, because that job is an Edge Function. Decision [0083](decisions/0083-jev-connector.md).
+
+Jev connector plumbing. `company_integrations` and `tag_suggestions` are per company. The connector is off by default, in shadow, with threshold 0.90. Members read suggestions and turn the connector on through `set_company_integration`. The service role writes suggestions. The API key is Vault secret `jev_api_key`, read by `read_jev_api_key` for the service role only. The client pins `jev-1.13.0` and retries 429 and 529. CI does not call TypeSafe. Decision [0083](decisions/0083-jev-connector.md). The bundle scan and its exit codes are in [the Jev runbook](runbooks/jev.md).
+
 Settings cycle 3, review. Onboarding accepts only `/settings` and `/settings?sheet=sumit` as `return`. A paused SUMIT status is the row error, not לא מחובר. A rejected key opens a sheet titled SUMIT: the reason, the key form, חיבור מחדש, then ניתוק. A held refresh says הרענון נכשל, and `?sheet=sumit` is removed after the sheet opens.
 
 Settings cycle 3. The SUMIT row is titled SUMIT and shows one status word: מחובר, לא מחובר, or צריך לחבר מחדש in the warning colour when the key was rejected. A sync failure that is not the key stays מחובר, and the detail sits in the sheet next to רענון עכשיו. A failed status load is only that row, with ניסיון חוזר, and a dashboard failure is still a screen error. Loading is a skeleton in the hint slot. With no company the sheet still points at onboarding, and creating the company from that link returns to Settings with the SUMIT sheet open. The no-company עוזר AI row stays focusable with `aria-disabled`. Decision [0082](decisions/0082-settings-redesign.md).
