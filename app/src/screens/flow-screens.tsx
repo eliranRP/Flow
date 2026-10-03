@@ -1947,6 +1947,7 @@ export function AddForm() {
           disabled
           title="צילום חשבונית"
           hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
+          wrapHint
           icon={<CameraIcon size={26} />}
         />
         <ListRow
@@ -2006,6 +2007,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
             variant="project"
             title={row.customer_name ?? row.description}
             hint={unpaidHintLine(row)}
+            wrapHint
             agorot={absAgorot(row.open_gross_agorot)}
             loss={false}
             actionBelow

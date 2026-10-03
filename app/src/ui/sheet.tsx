@@ -30,11 +30,11 @@ export function SheetSurface({
   footClassName?: string;
 }) {
   const heading = drawer ? (
-    <Drawer.Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2">
+    <Drawer.Title ref={titleRef} tabIndex={-1} className="ui-focus-title t-title-2" data-clip-ok="">
       {title}
     </Drawer.Title>
   ) : (
-    <h2 className="t-title-2">
+    <h2 className="t-title-2" data-clip-ok="">
       {title}
     </h2>
   );

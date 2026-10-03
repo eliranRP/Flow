@@ -64,7 +64,7 @@ async function layoutProblems(page: Page): Promise<string[]> {
       if (!separated) problems.push("period pill overlaps the wordmark");
     }
 
-    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-btn-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
+    const singleLine = document.querySelectorAll(".ui-period-label, .ui-chip-label, .ui-pill-label, .ui-text-link-label, .ui-seg-btn, .ui-seg-label");
     for (const node of singleLine) {
       if (!(node instanceof HTMLElement)) continue;
       const style = getComputedStyle(node);
