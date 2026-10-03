@@ -440,9 +440,11 @@ describe("SUMIT status row", () => {
     expect(router.state.location.pathname).toBe("/settings");
     const openKey = router.state.location.key;
     await act(async () => { await router.navigate(-1); });
-    expect(router.state.location.pathname).toBe("/settings");
-    expect(router.state.location.search).toBe("");
-    expect(router.state.location.key).not.toBe(openKey);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/settings");
+      expect(router.state.location.search).toBe("");
+      expect(router.state.location.key).not.toBe(openKey);
+    });
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
     expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
@@ -509,7 +511,7 @@ describe("SUMIT status row", () => {
       await waitFor(() => { expect(router.state.location.key).not.toBe(openKey); });
       act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
-      expect(router.state.location.pathname).toBe("/settings");
+      await waitFor(() => { expect(router.state.location.pathname).toBe("/settings"); });
       const closedKey = router.state.location.key;
 
       fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
@@ -517,9 +519,11 @@ describe("SUMIT status row", () => {
       await waitFor(() => { expect(router.state.location.key).not.toBe(closedKey); });
       const again = router.state.location.key;
       await act(async () => { await router.navigate(-1); });
-      expect(router.state.location.pathname).toBe("/settings");
-      expect(router.state.location.search).toBe("");
-      expect(router.state.location.key).not.toBe(again);
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/settings");
+        expect(router.state.location.search).toBe("");
+        expect(router.state.location.key).not.toBe(again);
+      });
       act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
       expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
@@ -568,16 +572,20 @@ describe("SUMIT status row", () => {
       window.history.replaceState({ idx: 2 }, "");
       fireEvent.click(within(screen.getByRole("dialog", { name: "לנתק את SUMIT?" })).getByRole("button", { name: "ניתוק" }));
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
-      expect(router.state.location.pathname).toBe("/settings");
-      expect(router.state.location.search).toBe("");
-      expect(router.state.location.key).not.toBe(sheetKey);
-      const deepLink = seen.find((key) => key !== sheetKey);
-      expect(deepLink).toBeTruthy();
-      expect(router.state.location.key).toBe(deepLink);
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/settings");
+        expect(router.state.location.search).toBe("");
+        expect(router.state.location.key).not.toBe(sheetKey);
+        const deepLink = seen.find((key) => key !== sheetKey);
+        expect(deepLink).toBeTruthy();
+        expect(router.state.location.key).toBe(deepLink);
+      });
       const landed = router.state.location.key;
       await act(async () => { await router.navigate(-1); });
-      expect(router.state.location.key).toBe(landed);
-      expect(router.state.location.pathname).toBe("/settings");
+      await waitFor(() => {
+        expect(router.state.location.key).toBe(landed);
+        expect(router.state.location.pathname).toBe("/settings");
+      });
       expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
     } finally {
       window.history.replaceState(null, "");
@@ -935,9 +943,9 @@ describe("SUMIT status row", () => {
     fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
     expect(await screen.findByRole("heading", { name: "פרטי העסק" })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/onboarding");
+    await waitFor(() => { expect(router.state.location.pathname).toBe("/onboarding"); });
     await act(async () => { await router.navigate(-1); });
-    expect(router.state.location.pathname).toBe("/settings");
+    await waitFor(() => { expect(router.state.location.pathname).toBe("/settings"); });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
@@ -953,8 +961,10 @@ describe("SUMIT status row", () => {
     expect(sheet).not.toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
     const returned = router.state.location.key;
     await act(async () => { await router.navigate(-1); });
-    expect(router.state.location.pathname).not.toBe("/onboarding");
-    expect(router.state.location.key).not.toBe(returned);
+    await waitFor(() => {
+      expect(router.state.location.pathname).not.toBe("/onboarding");
+      expect(router.state.location.key).not.toBe(returned);
+    });
   });
 
   it("reuses the returned settings entry, so Back twice and close-then-Back leave Settings", async () => {
@@ -1002,8 +1012,10 @@ describe("SUMIT status row", () => {
       window.history.replaceState({ idx: 1 }, "");
       fireEvent.click(screen.getByRole("button", { name: "המשך" }));
       await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-      await waitFor(() => { expect(router.state.location.pathname).toBe("/settings"); });
-      expect(router.state.location.search).not.toContain("sheet=");
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe("/settings");
+        expect(router.state.location.search).not.toContain("sheet=");
+      });
       return { router, original, unmount: view.unmount };
     }
 
@@ -1013,10 +1025,12 @@ describe("SUMIT status row", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
-    expect(backs.router.state.location.pathname).toBe("/settings");
-    expect(backs.router.state.location.key).toBe(backs.original);
+    await waitFor(() => {
+      expect(backs.router.state.location.pathname).toBe("/settings");
+      expect(backs.router.state.location.key).toBe(backs.original);
+    });
     await act(async () => { await backs.router.navigate(-1); });
-    expect(backs.router.state.location.pathname).toBe("/");
+    await waitFor(() => { expect(backs.router.state.location.pathname).toBe("/"); });
     window.history.replaceState(null, "");
     backs.unmount();
 
@@ -1026,9 +1040,9 @@ describe("SUMIT status row", () => {
     await waitFor(() => { expect(closed.router.state.location.key).toBe(closed.original); });
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
-    expect(closed.router.state.location.pathname).toBe("/settings");
+    await waitFor(() => { expect(closed.router.state.location.pathname).toBe("/settings"); });
     await act(async () => { await closed.router.navigate(-1); });
-    expect(closed.router.state.location.pathname).toBe("/");
+    await waitFor(() => { expect(closed.router.state.location.pathname).toBe("/"); });
     window.history.replaceState(null, "");
     closed.unmount();
   });
