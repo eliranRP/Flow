@@ -1536,7 +1536,7 @@ a.ui-row,
 }
 
 @media (hover: hover) {
-  .ui-row:hover::before,
+  .ui-row:hover:not(:is(:disabled, [aria-disabled="true"]))::before,
   .ui-radio-row:hover::before,
   .ui-review-line:hover::before {
     background: var(--surface-hover);
@@ -1551,7 +1551,7 @@ a.ui-row,
 }
 
 /* Press changes the colour token only. No margin, padding, border, or transform. */
-.ui-row:active::before,
+.ui-row:active:not(:is(:disabled, [aria-disabled="true"]))::before,
 .ui-radio-row:active::before,
 .ui-review-line:active::before {
   background: var(--surface-hover);

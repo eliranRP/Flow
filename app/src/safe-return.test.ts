@@ -2,16 +2,36 @@ import { describe, expect, it } from "vitest";
 import { safeAppPath } from "./safe-return";
 
 describe("safeAppPath", () => {
-  it("keeps a same-app path and drops an open redirect", () => {
+  it("accepts only the two settings paths", () => {
+    expect(safeAppPath("/settings")).toBe("/settings");
     expect(safeAppPath("/settings?sheet=sumit")).toBe("/settings?sheet=sumit");
-    expect(safeAppPath("/settings?preview=empty&sheet=sumit")).toBe("/settings?preview=empty&sheet=sumit");
-    expect(safeAppPath(" /onboarding ")).toBe("/onboarding");
-    expect(safeAppPath(null)).toBeNull();
-    expect(safeAppPath("")).toBeNull();
-    expect(safeAppPath("https://evil.example/settings")).toBeNull();
-    expect(safeAppPath("//evil.example")).toBeNull();
-    expect(safeAppPath("/\\evil.example")).toBeNull();
-    expect(safeAppPath("settings")).toBeNull();
-    expect(safeAppPath("/settings\n")).toBeNull();
+  });
+
+  it("drops dot-segment, scheme, and encoded open redirects", () => {
+    const rejected = [
+      "/..//evil.com",
+      "/.//evil.com",
+      "/%2e%2e//evil.com",
+      "/a/..//evil.com",
+      "/\\evil",
+      "\\\\evil",
+      "javascript:alert(1)",
+      "data:text/html,hi",
+      "/%2F%2Fevil.com",
+      "/%5Cevil",
+      "/settings\t",
+      "/settings\n",
+      "/settings@evil.com",
+      " /settings",
+      "https://flow.invalid/settings?sheet=sumit",
+      "https://evil.example/settings",
+      "//evil.example",
+      "/settings?preview=empty&sheet=sumit",
+      "/onboarding",
+      "settings",
+      "",
+      null,
+    ];
+    for (const value of rejected) expect(safeAppPath(value)).toBeNull();
   });
 });

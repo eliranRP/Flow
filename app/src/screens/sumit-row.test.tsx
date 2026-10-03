@@ -1,9 +1,10 @@
 import type { Session } from "@supabase/supabase-js";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { OnboardingScreen, SettingsScreen } from "./flow-screens";
@@ -121,12 +122,42 @@ describe("SUMIT status row", () => {
     retry.focus();
     fireEvent.click(retry);
     expect(retry).toHaveAttribute("aria-busy", "true");
-    expect(within(screen.getByRole("group", { name: "SUMIT" })).getByText("לא הצלחנו לטעון")).toHaveAttribute("role", "status");
+    const hint = within(screen.getByRole("group", { name: "SUMIT" })).getByText("לא הצלחנו לטעון");
+    const seen = [hint.textContent];
+    const observer = new MutationObserver(() => { seen.push(hint.textContent); });
+    observer.observe(hint, { characterData: true, childList: true, subtree: true });
     release({ data: null, error: { message: "down" } });
     await waitFor(() => {
+      expect(seen).toContain("");
+      expect(hint).toHaveTextContent("לא הצלחנו לטעון");
+      expect(hint).toHaveAttribute("role", "status");
       expect(screen.getByRole("button", { name: "ניסיון חוזר: SUMIT" })).toHaveFocus();
-      expect(within(screen.getByRole("group", { name: "SUMIT" })).getByText("לא הצלחנו לטעון")).toHaveAttribute("role", "status");
     });
+    observer.disconnect();
+    expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
+  });
+
+  it("leaves focus where the user moved it when the retry fails", async () => {
+    const failed = Promise.resolve({ data: null, error: { message: "down" } });
+    let attempt: Promise<{ data: unknown; error: { message: string } | null }> = failed;
+    let release: (value: { data: unknown; error: { message: string } | null }) => void = () => undefined;
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return attempt;
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: SUMIT" });
+    attempt = new Promise((resolve) => { release = resolve; });
+    fireEvent.click(retry);
+    const elsewhere = screen.getByRole("button", { name: "התנתקות" });
+    elsewhere.focus();
+    release({ data: null, error: { message: "down" } });
+    await waitFor(() => {
+      expect(within(screen.getByRole("group", { name: "SUMIT" })).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
+    });
+    expect(elsewhere).toHaveFocus();
     expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
   });
 
@@ -247,20 +278,34 @@ describe("SUMIT status row", () => {
       const location = useLocation();
       return <p>{`${location.pathname}${location.search}`}</p>;
     }
+    const router = createMemoryRouter(
+      [
+        { path: "/settings", element: <><Place /><SettingsScreen /></> },
+        { path: "/", element: <h1>בית</h1> },
+      ],
+      { initialEntries: ["/settings?sheet=sumit"] },
+    );
     const { unmount } = render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <ToastProvider>
           <BooksProvider>
-            <MemoryRouter initialEntries={["/settings?sheet=sumit"]}>
-              <Place />
-              <SettingsScreen />
-            </MemoryRouter>
+            <RouterProvider router={router} />
           </BooksProvider>
         </ToastProvider>
       </QueryClientProvider>,
     );
     const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
     expect(within(sheet).getByLabelText("מספר חברה")).toBeInTheDocument();
+    await waitFor(() => { expect(router.state.location.search).toBe(""); });
+    expect(router.state.location.pathname).toBe("/settings");
+    const openKey = router.state.location.key;
+    await act(async () => { await router.navigate(-1); });
+    expect(router.state.location.pathname).toBe("/settings");
+    expect(router.state.location.search).toBe("");
+    expect(router.state.location.key).not.toBe(openKey);
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
     unmount();
 
     render(
@@ -329,5 +374,106 @@ describe("SUMIT status row", () => {
     fireEvent.change(screen.getByLabelText("שם העסק"), { target: { value: "אלפא" } });
     fireEvent.click(screen.getByRole("button", { name: "המשך" }));
     expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
+  });
+
+  it("shows the error row when the status query is paused and leaves previews disconnected", async () => {
+    onlineManager.setOnline(false);
+    try {
+      rpc.impl = (name) => {
+        if (name === "sumit_status") return new Promise(() => undefined);
+        return Promise.resolve({ data: null, error: null });
+      };
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      client.setQueryData(["dashboard", "off", thisMonth()], dashboard);
+      client.setQueryData(["categories", "off"], []);
+      const { unmount } = render(
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <BooksProvider>
+              <MemoryRouter>
+                <SettingsScreen />
+              </MemoryRouter>
+            </BooksProvider>
+          </ToastProvider>
+        </QueryClientProvider>,
+      );
+      const group = await screen.findByRole("group", { name: "SUMIT" });
+      expect(within(group).getByText("לא הצלחנו לטעון")).toBeInTheDocument();
+      expect(within(group).queryByText("לא מחובר")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("מספר חברה")).not.toBeInTheDocument();
+      unmount();
+
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <ToastProvider>
+            <BooksProvider>
+              <MemoryRouter initialEntries={["/settings?preview=1"]}>
+                <SettingsScreen />
+              </MemoryRouter>
+            </BooksProvider>
+          </ToastProvider>
+        </QueryClientProvider>,
+      );
+      const previewRow = screen.getByRole("button", { name: "SUMIT" });
+      expect(document.getElementById(previewRow.getAttribute("aria-describedby") ?? "")).toHaveTextContent("לא מחובר");
+      expect(screen.queryByRole("button", { name: "ניסיון חוזר: SUMIT" })).not.toBeInTheDocument();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it("shows a last-sync clock when the status has one, and a short failure while refresh is held", async () => {
+    const synced = "2026-10-03T09:05:00.000Z";
+    const clock = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jerusalem",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(synced));
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") {
+        return Promise.resolve({
+          data: sumit({ connected: true, sumit_company_id: 1001, last_sync_at: synced }),
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    const { unmount } = renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    const sheet = screen.getByRole("dialog", { name: "SUMIT" });
+    expect(sheet).toHaveTextContent(`עודכן ב-${clock}`);
+    unmount();
+
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") {
+        return Promise.resolve({
+          data: sumit({
+            connected: true,
+            sumit_company_id: 1001,
+            last_error: "rate_limited",
+            next_attempt_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+          }),
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderSettings();
+    const row = await screen.findByRole("button", { name: "SUMIT" });
+    expect(document.getElementById(row.getAttribute("aria-describedby") ?? "")).toHaveTextContent("מחובר");
+    fireEvent.click(row);
+    const held = screen.getByRole("dialog", { name: "SUMIT" });
+    expect(within(held).getByText("הרענון נכשל")).toBeInTheDocument();
+    expect(within(held).queryByText("החיבור נכשל")).not.toBeInTheDocument();
+    expect(within(held).queryByText(/נסו שוב/)).not.toBeInTheDocument();
+    expect(within(held).queryByText("עודכן")).not.toBeInTheDocument();
+    expect(within(held).getByRole("button", { name: /רענון עכשיו/ })).toBeDisabled();
+    expect(within(held).getByText(/אפשר לנסות שוב ב-/)).toBeInTheDocument();
   });
 });
