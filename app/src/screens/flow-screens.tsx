@@ -89,7 +89,7 @@ import { BackButton, historyIndex, popSheetLayers, transactionParent, useGoBack,
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, SectionHead, SharedCostNote } from "../ui/layout";
+import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
@@ -460,13 +460,11 @@ function ProjectCategories({
 }) {
   const pending = project.pending_count ?? 0;
   const waiting = pending > 0;
-  const shared = project.categories.some((category) => category.has_shared_share === true);
   if (project.categories.length === 0 && !waiting) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
   return (
     <>
-      {shared ? <SharedCostNote /> : null}
       <List>
       {project.categories.map((category) => (
         <ListRow
@@ -477,6 +475,10 @@ function ProjectCategories({
           loss={false}
           chevron={category.id != null}
           href={category.id == null ? undefined : (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`)}
+          wrapHint={category.has_shared_share === true}
+          hint={category.has_shared_share === true ? (
+            <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
+          ) : undefined}
         />
       ))}
       {waiting ? (
