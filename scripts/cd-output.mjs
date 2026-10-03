@@ -254,6 +254,22 @@ export function classifyDryRun(text, target, expect = "auto") {
   return { ok: false, reason: "dry-run JSON did not match Supabase CLI 2.118.0" };
 }
 
+/**
+ * The local preflight is an up-to-date check. Pending belongs to the separate local dry-run.
+ * Production may be up to date or list migrations that the push will apply.
+ * @param {string} kind
+ * @param {string} target
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function acceptPreflightKind(kind, target) {
+  if (target !== "remote" && target !== "local") {
+    return { ok: false, reason: "preflight target must be remote or local" };
+  }
+  if (target === "local" && kind === "up-to-date local") return { ok: true };
+  if (target === "remote" && (kind === "up-to-date remote" || kind === "pending")) return { ok: true };
+  return { ok: false, reason: "preflight dry-run kind did not match the target" };
+}
+
 /** @param {string[]} argv @param {string} name */
 function flagValue(argv, name) {
   const index = argv.indexOf(name);
@@ -305,6 +321,17 @@ if (isMain) {
     }
     if (!ruleRiskIsZero(result.counts)) {
       console.error("rule_transactions_at_risk or rule_undo_rows_at_risk is not zero");
+      process.exit(1);
+    }
+  } else if (mode === "preflight-kind") {
+    const target = flagValue(process.argv, "--target");
+    const kind = process.argv.slice(3).filter((arg, index) => {
+      const previous = process.argv[3 + index - 1];
+      return arg !== "--target" && previous !== "--target";
+    }).join(" ");
+    const result = acceptPreflightKind(kind, target);
+    if (!result.ok) {
+      console.error(result.reason);
       process.exit(1);
     }
   } else if (mode === "equals") {
