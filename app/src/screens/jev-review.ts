@@ -16,16 +16,6 @@ export type JevReviewState = {
 
 export const JEV_REVIEW_OFF: JevReviewState = { connectorOn: false, prefill: null };
 
-export type JevCorrection = {
-  transactionId: string;
-  suggestionId: string;
-  action: "confirm" | "fix";
-  suggestedProjectId: string | null;
-  suggestedCategoryId: string | null;
-  chosenProjectId: string | null;
-  chosenCategoryId: string | null;
-};
-
 type JevRow = {
   transaction_id: string;
   direction?: "income" | "expense" | null;
@@ -83,28 +73,6 @@ export function withJev<T extends JevRow>(row: T, state: JevReviewState): T & {
     next.category_suggested = true;
   }
   return next;
-}
-
-export function jevCorrectionFor(
-  row: JevRow,
-  state: JevReviewState,
-  chosen: { projectId: string | null; categoryId: string | null },
-): JevCorrection | null {
-  if (!state.connectorOn || !state.prefill || state.prefill.transactionId !== row.transaction_id) return null;
-  const suggestedProjectId = projectOpen(row) ? (state.prefill.project?.id ?? null) : null;
-  const suggestedCategoryId = categoryOpen(row) ? (state.prefill.category?.id ?? null) : null;
-  if (suggestedProjectId == null && suggestedCategoryId == null) return null;
-  const projectFix = suggestedProjectId != null && chosen.projectId !== suggestedProjectId;
-  const categoryFix = suggestedCategoryId != null && chosen.categoryId !== suggestedCategoryId;
-  return {
-    transactionId: row.transaction_id,
-    suggestionId: state.prefill.suggestionId,
-    action: projectFix || categoryFix ? "fix" : "confirm",
-    suggestedProjectId,
-    suggestedCategoryId,
-    chosenProjectId: chosen.projectId,
-    chosenCategoryId: chosen.categoryId,
-  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -185,31 +153,4 @@ export async function loadJevReview(transactionId: string): Promise<JevReviewSta
       nameMap(categories.data, "category"),
     ),
   };
-}
-
-type CorrectionCall = {
-  rpc(name: string, args: Record<string, unknown>): Promise<{ error: { message: string; code?: string } | null }>;
-};
-
-function correctionCall(client: unknown): CorrectionCall | null {
-  if (!isRecord(client) || typeof client.rpc !== "function") return null;
-  return client as CorrectionCall;
-}
-
-/** Writes one confirm or fix. A missing record_jev_correction does not throw: that function is still pending. */
-export async function saveJevCorrection(input: JevCorrection): Promise<void> {
-  const call = correctionCall(getSupabase());
-  if (!call) throw new Error("supabase");
-  const { error } = await call.rpc("record_jev_correction", {
-    p_transaction_id: input.transactionId,
-    p_suggestion_id: input.suggestionId,
-    p_action: input.action,
-    p_suggested_project_id: input.suggestedProjectId,
-    p_suggested_category_id: input.suggestedCategoryId,
-    p_chosen_project_id: input.chosenProjectId,
-    p_chosen_category_id: input.chosenCategoryId,
-  });
-  if (!error) return;
-  if (error.code === "PGRST202" || error.message.includes("record_jev_correction")) return;
-  throw new Error(error.message);
 }

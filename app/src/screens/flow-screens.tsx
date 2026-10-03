@@ -77,7 +77,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { useJevReview } from "./jev-review-card";
-import { jevCorrectionFor, saveJevCorrection, withJev } from "./jev-review";
+import { withJev } from "./jev-review";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -1213,13 +1213,6 @@ export function ReviewQueue({
       if (!filled?.category_id) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      if (row) {
-        const correction = jevCorrectionFor(row, jev, {
-          projectId: filled.direction === "income" ? null : filled.project_id,
-          categoryId: filled.category_id,
-        });
-        if (correction) await saveJevCorrection(correction);
-      }
       if (reviewIsSplit(filled) && filled.reason !== "unallocated_shared") {
         if (row && filled.category_id !== row.category_id && row.transaction_id) {
           assertNoError(await supabase.rpc("set_transaction_category", {
@@ -1735,13 +1728,6 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const supabase = getSupabase();
       const next = picked.current;
       if (!supabase || item === "") throw new Error("supabase");
-      if (row) {
-        const correction = jevCorrectionFor(row, jev, {
-          projectId: income ? null : next.projectId,
-          categoryId: next.categoryId,
-        });
-        if (correction) await saveJevCorrection(correction);
-      }
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",
@@ -1767,13 +1753,6 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const transactionId = sharedTx.current;
       const nextCategory = picked.current.categoryId;
       if (!supabase || transactionId == null || nextCategory === "") throw new Error("supabase");
-      if (row) {
-        const correction = jevCorrectionFor(row, jev, {
-          projectId: projectId === "" ? null : projectId,
-          categoryId: nextCategory,
-        });
-        if (correction) await saveJevCorrection(correction);
-      }
       assertNoError(await supabase.rpc("set_transaction_category", {
         p_id: transactionId,
         p_category_id: nextCategory,
@@ -1795,13 +1774,6 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const supabase = getSupabase();
       const next = fieldSave.current;
       if (!supabase || item === "" || next == null) throw new Error("supabase");
-      if (row) {
-        const correction = jevCorrectionFor(row, jev, {
-          projectId: next.kind === "project" ? next.id : (projectId === "" ? null : projectId),
-          categoryId: next.kind === "category" ? next.id : (categoryId === "" ? null : categoryId),
-        });
-        if (correction) await saveJevCorrection(correction);
-      }
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",

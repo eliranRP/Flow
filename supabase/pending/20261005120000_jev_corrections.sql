@@ -1,6 +1,6 @@
 -- Jev corrections. Not applied. Not in supabase/migrations.lock.
--- A confirm accepts the suggestion. A fix stores the chosen ids.
--- Wait until the migration slot is free. Decision 0084.
+-- The app does not call record_jev_correction yet. That write is a follow-up.
+-- The migration slot is taken. Move this after 20261003180000 once the slot is free. Decision 0084.
 
 create table public.corrections (
   id uuid primary key default gen_random_uuid(),

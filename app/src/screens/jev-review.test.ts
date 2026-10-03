@@ -1,12 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import {
-  jevCorrectionFor,
-  parseJevSuggestion,
-  saveJevCorrection,
-  withJev,
-  type JevPrefill,
-  type JevReviewState,
-} from "./jev-review";
+import { describe, expect, it } from "vitest";
+import { parseJevSuggestion, withJev, type JevPrefill, type JevReviewState } from "./jev-review";
 
 const prefill: JevPrefill = {
   suggestionId: "s1",
@@ -71,21 +64,6 @@ describe("Jev review prefill", () => {
     expect(withJev(empty, { connectorOn: false, prefill })).toBe(empty);
   });
 
-  it("writes a confirm when the chosen ids match, and a fix when one changes", () => {
-    expect(jevCorrectionFor(empty, on, { projectId: "p1", categoryId: "c1" })).toMatchObject({
-      action: "confirm",
-      suggestedProjectId: "p1",
-      suggestedCategoryId: "c1",
-      chosenProjectId: "p1",
-      chosenCategoryId: "c1",
-    });
-    expect(jevCorrectionFor(empty, on, { projectId: "p1", categoryId: "c2" })).toMatchObject({
-      action: "fix",
-      chosenCategoryId: "c2",
-    });
-    expect(jevCorrectionFor(empty, off, { projectId: "p2", categoryId: "c2" })).toBeNull();
-  });
-
   it("reads a choice only when the id is one of ours and the confidence is in range", () => {
     const answers = {
       project: { choice: "p1", confidence: 0.91 },
@@ -98,40 +76,5 @@ describe("Jev review prefill", () => {
       category: null,
     });
     expect(parseJevSuggestion({ project: { choice: "p1", confidence: 2 } }, "s1", "t1", projects, categories)).toBeNull();
-  });
-});
-
-describe("saveJevCorrection", () => {
-  it("sends the confirm payload", async () => {
-    const writes: Array<Record<string, unknown>> = [];
-    vi.spyOn(await import("../lib/supabase"), "getSupabase").mockReturnValue({
-      rpc: (_name: string, args: Record<string, unknown>) => {
-        writes.push(args);
-        return Promise.resolve({ error: null });
-      },
-    } as never);
-    const correction = jevCorrectionFor(empty, on, { projectId: "p1", categoryId: "c1" });
-    if (!correction) throw new Error("missing");
-    await saveJevCorrection(correction);
-    expect(writes).toEqual([{
-      p_transaction_id: "t1",
-      p_suggestion_id: "s1",
-      p_action: "confirm",
-      p_suggested_project_id: "p1",
-      p_suggested_category_id: "c1",
-      p_chosen_project_id: "p1",
-      p_chosen_category_id: "c1",
-    }]);
-    vi.restoreAllMocks();
-  });
-
-  it("continues when the correction function is not deployed yet", async () => {
-    vi.spyOn(await import("../lib/supabase"), "getSupabase").mockReturnValue({
-      rpc: () => Promise.resolve({ error: { code: "PGRST202", message: "Could not find the function record_jev_correction" } }),
-    } as never);
-    const correction = jevCorrectionFor(empty, on, { projectId: "p1", categoryId: "c1" });
-    if (!correction) throw new Error("missing");
-    await expect(saveJevCorrection(correction)).resolves.toBeUndefined();
-    vi.restoreAllMocks();
   });
 });
