@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ListRow } from "./list-row";
 import { expectRtl, expectTarget } from "./test-support";
 
@@ -86,5 +86,31 @@ describe("ListRow", () => {
     expect(button.querySelector(".ui-row-chevron")).toBeNull();
     expect(button).toHaveClass("ui-row-clear-hint");
     expect(getComputedStyle(button.querySelector(".ui-row-hint") as Element).opacity).toBe("1");
+  });
+
+  it("keeps an aria-disabled row focusable and ignores the click", () => {
+    const onClick = vi.fn();
+    render(
+      <MemoryRouter>
+        <ListRow
+          variant="button"
+          title="עוזר AI"
+          hint="אין עסק עדיין"
+          describeHint
+          clearHint
+          ariaDisabled
+          onClick={onClick}
+        />
+      </MemoryRouter>,
+    );
+    const row = screen.getByRole("button", { name: "עוזר AI" });
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    expect(row).not.toHaveAttribute("disabled");
+    expect(row).toHaveClass("ui-row-clear-hint");
+    expect(row.querySelector(".ui-row-chevron")).toBeNull();
+    row.focus();
+    expect(row).toHaveFocus();
+    fireEvent.click(row);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });

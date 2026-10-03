@@ -272,7 +272,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   const operationsBefore = operationsUsed(await sumit("/website/companies/listquotas/", {}));
 
   await page.goto("/settings");
-  await page.getByRole("button", { name: "חיבור SUMIT" }).click();
+  await page.getByRole("button", { name: "SUMIT" }).click();
   await page.getByLabel("מספר חברה").fill(String(sumitCompanyId));
   await page.getByLabel("מפתח API").fill(sumitKey);
   const connecting = page.waitForResponse((response) => response.url().includes("/functions/v1/sumit-connect"));
@@ -387,7 +387,9 @@ async function expectProbeAbsent(page: Page, token: string, probe: string): Prom
 
 async function sync(page: Page) {
   const pending = page.waitForResponse((response) => response.url().includes("/functions/v1/sumit-sync"));
-  await page.getByRole("button", { name: "רענון עכשיו" }).click();
+  const dialog = page.getByRole("dialog", { name: "SUMIT" });
+  if (await dialog.count() === 0) await page.getByRole("button", { name: "SUMIT" }).click();
+  await dialog.getByRole("button", { name: "רענון עכשיו" }).click();
   const response = await pending;
   const body = (await response.json()) as { ok?: boolean; skipped?: boolean; error?: string; sumit_reads?: number };
   expect(response.ok(), body.error ?? "sync failed").toBe(true);

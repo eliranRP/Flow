@@ -38,7 +38,7 @@ Each cycle is its own pull request and works without the later ones. Cycle 1 is 
 | --- | --- | --- |
 | 1 | #9 | This decision |
 | 2 | #10 | The account row, the section order, the removals, and the footer. With no company, תצוגה is hidden, including the overhead switch. Sign-out works in the empty preview. The עוזר heading is dropped. ניתוק lives inside the sheets, not as a second row under חיבורים, and a successful ניתוק closes that sheet. SUMIT stays enabled and says "לא מחובר", and with no company its sheet is the onboarding line. עוזר AI is disabled and says "אין עסק עדיין" |
-| 3 | later | The SUMIT row: one status word, one sheet, one inline ניסיון חוזר. Q-C3-4 |
+| 3 | #12 | The SUMIT row: one status word, one sheet, one inline ניסיון חוזר. Q-C3-4 |
 | 4 | later | The עוזר AI row: spark icon, one status word, and a skeleton. Q-C3-1, an expired עוזר shows "צריך לחבר מחדש" |
 | 5 | later | The עוזר sheet, the address, the shown-once code, and the Claude help sheet |
 | 6 | later | The 320, 360, and 390 check in light and dark is every cycle, not only this one |
