@@ -106,6 +106,25 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"company_viewers": {
+                  Row: {
+                    "company_id": string,"created_at": string,"user_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"created_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_viewers_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"connector_connections": {
                   Row: {
                     "account_labels": NonNullable<Json>,"company_id": string,"created_at": string,"dek_ciphertext": string,"dek_nonce": string,"envelope_version": string,"id": string,"import_from": string | null,"kek_ref": string,"kek_version": string,"key_ciphertext": string,"key_nonce": string,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"],"reject_attempts": number,"settings": NonNullable<Json>,"sync_claimed_at": string | null,"sync_cursor": string | null,"updated_at": string
