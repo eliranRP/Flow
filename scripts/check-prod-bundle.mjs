@@ -6,6 +6,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { jevBundleNeedles } from "./check-jev-bundle.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -83,6 +84,9 @@ export function violations(input) {
     }
     for (const value of goldenNeedles()) {
       if (file.body.includes(value)) found.push(`${file.name} contains golden value ${value}`);
+    }
+    for (const needle of jevBundleNeedles) {
+      if (file.body.includes(needle)) found.push(`${file.name} contains ${needle}`);
     }
     if (file.body.includes("Example data")) found.push(`${file.name} contains Example data`);
     if (file.body.includes("/e2e/")) found.push(`${file.name} contains /e2e/`);
@@ -228,6 +232,9 @@ export function reviewerNameViolations(files, hosted) {
     }
     for (const value of goldenNeedles()) {
       if (file.body.includes(value)) found.push(`${file.name} contains golden value ${value}`);
+    }
+    for (const needle of jevBundleNeedles) {
+      if (file.body.includes(needle)) found.push(`${file.name} contains ${needle}`);
     }
     for (const marker of markers) {
       const kind = marker.startsWith("http")

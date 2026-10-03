@@ -77,6 +77,10 @@ FLOW_MCP_APP_ORIGINS = "http://127.0.0.1:43123,http://localhost:43123,https://fl
 [functions.sumit-sync]
 verify_jwt = false
 
+# Jev tagging uses the same cron header. It is not scheduled. Decision 0084.
+[functions.jev-tag]
+verify_jwt = false
+
 # The bearer is the MCP secret or the app JWT, checked inside the function.
 [functions.flow-mcp]
 verify_jwt = false
