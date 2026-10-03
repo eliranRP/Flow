@@ -3,8 +3,11 @@ import { useRef } from "react";
 import { useInvalidateBooks } from "./use-books";
 import { useToast } from "./ui/toast";
 
-export function assertNoError(result: { error: { message: string } | null }): void {
-  if (result.error) throw new Error(result.error.message);
+export function assertNoError(result: { error: { message: string; code?: string } | null }): void {
+  if (!result.error) return;
+  const error = new Error(result.error.message);
+  if (result.error.code) Object.assign(error, { code: result.error.code });
+  throw error;
 }
 
 export type WriteFailure = string | {
@@ -38,6 +41,8 @@ export function useWrite(options: {
   onSuccess?: () => void;
   /** Where לחלוקה goes when the database refuses one project on a shared cost. */
   onSplit?: () => void;
+  /** Runs before a retry, while the toast action is still focused. */
+  retryFocus?: () => void;
 }) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
@@ -67,6 +72,7 @@ export function useWrite(options: {
     },
   });
   retry.current = () => {
+    options.retryFocus?.();
     mutation.mutate();
   };
   return mutation;
