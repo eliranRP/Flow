@@ -3,11 +3,12 @@
 
 begin;
 
-select plan(24);
+select plan(32);
 
 do $users$
 begin
   perform tests.create_supabase_user('c3b_owner', 'c3b-owner@test.flow');
+  perform tests.create_supabase_user('c3b_mate', 'c3b-mate@test.flow');
   perform tests.create_supabase_user('c3b_other', 'c3b-other@test.flow');
 end
 $users$;
@@ -233,7 +234,6 @@ select is(
 drop trigger c3b_lock_error on public.transactions;
 
 select tests.authenticate_as('c3b_owner');
-do $$ begin perform set_config('flow.test_lock_log', 'on', true); end $$;
 
 select is(
   (
@@ -251,10 +251,51 @@ select is(
   'approve succeeds once the lock error is gone'
 );
 
-select is(
-  current_setting('flow.test_lock_log', true),
-  'on>transactions>review_queue',
+create or replace function pg_temp.locks_transaction_then_review(p_sig regprocedure)
+returns boolean
+language plpgsql
+as $$
+declare
+  def text;
+  txn int;
+  unlocked int;
+  locked_review int;
+begin
+  def := pg_get_functiondef(p_sig);
+  txn := strpos(def, 'from public.transactions t');
+  unlocked := strpos(def, 'from public.review_queue q');
+  if txn = 0 or unlocked = 0 then
+    return false;
+  end if;
+  locked_review := unlocked + strpos(substr(def, unlocked + 1), 'from public.review_queue q');
+  return txn > unlocked
+    and locked_review > txn
+    and strpos(substr(def, 1, txn), 'for update') = 0
+    and strpos(substr(def, txn, locked_review - txn), 'for update') > 0
+    and strpos(substr(def, locked_review), 'for update') > 0;
+end;
+$$;
+
+select ok(
+  pg_temp.locks_transaction_then_review('public.approve_review_item(uuid, uuid, uuid, boolean, uuid, uuid, boolean)'),
   'approve locks the transaction before the review'
+);
+
+select ok(
+  pg_temp.locks_transaction_then_review('public.approve_split_review(uuid)'),
+  'approve_split_review locks the transaction before the review'
+);
+
+select ok(
+  pg_temp.locks_transaction_then_review('public.reopen_review(uuid)'),
+  'reopen_review locks the transaction before the review'
+);
+
+select ok(
+  strpos(pg_get_functiondef('public.approve_review_item(uuid, uuid, uuid, boolean, uuid, uuid, boolean)'::regprocedure), 'note_lock_step') = 0
+  and strpos(pg_get_functiondef('public.approve_split_review(uuid)'::regprocedure), 'note_lock_step') = 0
+  and strpos(pg_get_functiondef('public.reopen_review(uuid)'::regprocedure), 'note_lock_step') = 0,
+  'the lock order is the function body, not a test log'
 );
 
 reset role;
@@ -352,6 +393,87 @@ select
 from public.transactions t
 where t.idempotency_key = 'c3b:undone';
 
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -11000, -11000, 0, 'unknown',
+  current_date, 'sumit', 'c3b:yesterday', a.id, m.id, 'אתמול',
+  (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') - interval '1 minute'
+from c3b c
+join c3b a on a.label = 'alpha'
+join c3b m on m.label = 'materials'
+where c.label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -12000, -12000, 0, 'unknown',
+  current_date, 'sumit', 'c3b:late', a.id, m.id, 'כמעט',
+  (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') + interval '23 hours 59 minutes'
+from c3b c
+join c3b a on a.label = 'alpha'
+join c3b m on m.label = 'materials'
+where c.label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -13000, -13000, 0, 'unknown',
+  current_date - 4, 'manual', 'c3b:reopened', a.id, m.id, 'חזר', now() - interval '4 days'
+from c3b c
+join c3b a on a.label = 'alpha'
+join c3b m on m.label = 'materials'
+where c.label = 'company';
+
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select t.company_id, t.id, 'open', 'missing_project'
+from public.transactions t
+where t.idempotency_key = 'c3b:reopened';
+
+insert into private.mcp_writes (token_id, user_id, transaction_id, review_id, kind, created_at)
+select
+  (select id from c3b where label = 'write'),
+  (select id from auth.users where email = 'c3b-owner@test.flow'),
+  t.id,
+  gen_random_uuid(),
+  'review',
+  now()
+from public.transactions t
+where t.idempotency_key = 'c3b:reopened';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -14000, -14000, 0, 'unknown',
+  current_date - 4, 'manual', 'c3b:mate', a.id, m.id, 'של חבר', now() - interval '4 days'
+from c3b c
+join c3b a on a.label = 'alpha'
+join c3b m on m.label = 'materials'
+where c.label = 'company';
+
+insert into private.mcp_writes (token_id, user_id, transaction_id, review_id, kind, created_at)
+select
+  (select id from c3b where label = 'write'),
+  (select id from auth.users where email = 'c3b-mate@test.flow'),
+  t.id,
+  gen_random_uuid(),
+  'review',
+  now()
+from public.transactions t
+where t.idempotency_key = 'c3b:mate';
+
 select tests.authenticate_as('c3b_other');
 select lives_ok($$select public.create_company('אחרת', true)$$, 'the other user creates a company');
 
@@ -433,15 +555,25 @@ select is(
   (
     select count(*)
     from jsonb_array_elements(public.list_auto_assigned_today()) elem
-    where elem->>'description' in ('פתוח', 'בוטל', 'הכנסה')
+    where elem->>'description' in ('פתוח', 'בוטל', 'הכנסה', 'אתמול', 'חזר', 'של חבר')
   ),
   0::bigint,
-  'an open review, an undone approval, and another company stay out'
+  'an open review, an undone approval, another company, yesterday, a reopened approval, and the other member stay out'
+);
+
+select is(
+  (
+    select count(*)
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'description' = 'כמעט'
+  ),
+  1::bigint,
+  'a filing at 23:59 Jerusalem time is still today'
 );
 
 select is(
   (select jsonb_array_length(public.list_auto_assigned_today())),
-  3,
+  4,
   'the owner count is the union'
 );
 
@@ -475,6 +607,49 @@ select is(
   (select (public.list_review() -> 0 ->> 'assistant_filed_today')::boolean),
   false,
   'their banner stays on the old set'
+);
+
+reset role;
+update public.companies
+set owner_id = (select id from auth.users where email = 'c3b-mate@test.flow')
+where id = (select id from c3b where label = 'company');
+
+select tests.authenticate_as('c3b_mate');
+
+select is(
+  (
+    select count(*)
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'description' = 'צבע'
+  ),
+  0::bigint,
+  'the same company does not list the other member''s assistant approval'
+);
+
+select is(
+  (
+    select count(*)
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'description' = 'של חבר'
+  ),
+  1::bigint,
+  'the member sees their own assistant approval'
+);
+
+select is(
+  (
+    select count(*)
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'description' in ('חול', 'כמעט')
+  ),
+  2::bigint,
+  'SUMIT filings stay visible to every member of the company'
+);
+
+select is(
+  (select (public.list_review() -> 0 ->> 'assistant_filed_today')::boolean),
+  true,
+  'the member banner follows their own assistant approval'
 );
 
 select * from finish();

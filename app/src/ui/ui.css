@@ -1401,6 +1401,16 @@ a.ui-row,
   padding-block: var(--space-2);
 }
 
+.ui-review-queue .ui-banner .ui-row-title {
+  -webkit-line-clamp: 3;
+}
+
+.ui-review-count {
+  display: inline-block;
+  min-inline-size: 2ch;
+  text-align: center;
+}
+
 .ui-review-ai .ui-row {
   border-bottom: 0;
   padding-block: 0;
@@ -1520,6 +1530,10 @@ a.ui-row,
   flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-2) var(--space-side) 0;
+}
+
+.ui-review-approve {
+  display: contents;
 }
 
 .ui-review-actions-row {

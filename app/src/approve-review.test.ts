@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApproveNotice, isApproveRetry, readApproveOutcome } from "./approve-review";
+import { assertNoError } from "./use-write";
 
 describe("approve outcome", () => {
   it("treats an empty body as success", () => {
@@ -12,6 +13,8 @@ describe("approve outcome", () => {
     expect(readApproveOutcome({ ok: false, error: { code: "already_closed" } })).toBe("already_closed");
     expect(readApproveOutcome({ ok: false, error: { code: "not_found" } })).toBe("not_found");
     expect(readApproveOutcome({ ok: false, error: { code: "refused" } })).toBe("refused");
+    expect(readApproveOutcome({ surprise: true })).toBe("refused");
+    expect(readApproveOutcome("nope")).toBe("refused");
   });
 
   it("uses the two info sentences", () => {
@@ -19,11 +22,24 @@ describe("approve outcome", () => {
     expect(new ApproveNotice("already_closed").message).toBe("הפריט כבר טופל.");
   });
 
-  it("retries a deadlock or a serialization failure", () => {
-    expect(isApproveRetry(new Error("deadlock detected"))).toBe(true);
-    expect(isApproveRetry(new Error("40P01"))).toBe(true);
-    expect(isApproveRetry(new Error("40001"))).toBe(true);
-    expect(isApproveRetry(new Error("serialization failure"))).toBe(true);
-    expect(isApproveRetry(new Error("category is required"))).toBe(false);
+  it("retries a serialization failure from the database error", () => {
+    const thrown = (error: { message: string; code?: string }): Error => {
+      try {
+        assertNoError({ error });
+      } catch (caught) {
+        return caught as Error;
+      }
+      throw new Error("expected a database error");
+    };
+    const serialized = thrown({
+      message: "could not serialize access due to concurrent update",
+      code: "40001",
+    });
+    expect(serialized.message).toBe("could not serialize access due to concurrent update");
+    expect(isApproveRetry(serialized)).toBe(true);
+    expect(isApproveRetry(thrown({ message: "could not serialize access due to concurrent update" }))).toBe(false);
+    expect(isApproveRetry(thrown({ message: "deadlock detected", code: "40P01" }))).toBe(true);
+    expect(isApproveRetry(thrown({ message: "serialization failure" }))).toBe(true);
+    expect(isApproveRetry(thrown({ message: "category is required" }))).toBe(false);
   });
 });

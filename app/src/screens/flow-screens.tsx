@@ -1163,6 +1163,8 @@ export function ReviewQueue({
   const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
+  const approvedId = useRef<string | null>(null);
+  const approveSlot = useRef<HTMLDivElement>(null);
   const [, bumpVisit] = useState(0);
   const openIds = rows.map((item) => item.id);
   const present = notePresence(visit.current, openIds);
@@ -1213,29 +1215,37 @@ export function ReviewQueue({
       return { message: "לא הצלחנו לאשר.", retry: false };
     },
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
+    retryFocus: () => {
+      approveSlot.current?.querySelector("button")?.focus();
+    },
     run: async () => {
+      const target = shown;
+      approvedId.current = target?.id ?? null;
       if (previewWrite) {
         await previewWrite.run();
-        if (row) markHandled(row.id);
+        if (target) markHandled(target.id);
         return;
       }
-      if (!row?.category_id) throw new Error("missing");
+      if (!target?.category_id) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      if (reviewIsSplit(row) && row.reason !== "unallocated_shared") {
-        assertNoError(await supabase.rpc("approve_split_review", { p_id: row.id }));
-        markHandled(row.id);
+      if (reviewIsSplit(target) && target.reason !== "unallocated_shared") {
+        assertNoError(await supabase.rpc("approve_split_review", { p_id: target.id }));
+        markHandled(target.id);
         return;
       }
-      if (row.direction !== "income" && !row.project_id) throw new Error("missing");
+      if (target.direction !== "income" && target.project_id == null) throw new Error("missing");
+      const projectId = target.direction === "income"
+        ? (null as unknown as string)
+        : target.project_id ?? "";
       const result = await supabase.rpc("approve_review_item", {
-        p_id: row.id,
-        p_project_id: row.project_id as string,
-        p_category_id: row.category_id,
+        p_id: target.id,
+        p_project_id: projectId,
+        p_category_id: target.category_id,
         p_remember: false,
         p_check_shown: true,
-        ...(row.project_id == null ? {} : { p_shown_project_id: row.project_id }),
-        p_shown_category_id: row.category_id,
+        ...(target.project_id == null ? {} : { p_shown_project_id: target.project_id }),
+        p_shown_category_id: target.category_id,
       });
       assertNoError(result);
       const outcome = readApproveOutcome(result.data);
@@ -1243,12 +1253,16 @@ export function ReviewQueue({
         await invalidate([...LEDGER_FOCUS_KEYS]);
         throw new ApproveNotice(outcome);
       }
+      if (outcome === "not_found") {
+        await invalidate([...LEDGER_FOCUS_KEYS]);
+        throw new Error("not_found");
+      }
       if (outcome !== "ok") throw new Error("refused");
-      markHandled(row.id);
+      markHandled(target.id);
     },
     onSuccess: () => {
-      if (!row) return;
-      const id = row.id;
+      const id = approvedId.current;
+      if (!id) return;
       if (previewWrite) {
         previewWrite.onDone(id);
         toast.show({
@@ -1316,13 +1330,13 @@ export function ReviewQueue({
   const place = visitPlace(visit.current, openIds);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
-  const splitCard = reviewIsSplit(row);
-  const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
+  const splitCard = reviewIsSplit(card);
+  const approvable = !leaving && (card.reason === "unallocated_shared"
     || (splitCard
-      ? row.category_id != null
-      : row.direction === "income"
-        ? row.category_id != null
-        : row.project_id != null && row.category_id != null));
+      ? card.category_id != null
+      : card.direction === "income"
+        ? card.category_id != null
+        : card.project_id != null && card.category_id != null));
   return (
     <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
@@ -1337,7 +1351,9 @@ export function ReviewQueue({
             />
           ) : null}
           <span className="t-hint">
-            <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
+            <bdi className="ui-num ui-review-count" dir="ltr">{String(index)}</bdi>
+            {" מתוך "}
+            <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
           </span>
           {changeTo == null ? (
             <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
@@ -1374,28 +1390,30 @@ export function ReviewQueue({
         />
       </div>
       <div className="ui-review-actions">
-        <Button
-          full
-          busy={approve.isPending}
-          disabled={!approvable}
-          onClick={() => {
-            if (row == null || !approvable) return;
-            if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
-            if (row.reason === "unallocated_shared") {
-              if (!row.transaction_id) return;
-              if (onShared) {
-                onShared(row.transaction_id);
+        <div className="ui-review-approve" ref={approveSlot}>
+          <Button
+            full
+            busy={approve.isPending}
+            disabled={!approvable}
+            onClick={() => {
+              if (!approvable) return;
+              if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
+              if (card.reason === "unallocated_shared") {
+                if (!card.transaction_id) return;
+                if (onShared) {
+                  onShared(card.transaction_id);
+                  return;
+                }
+                void navigate(`/transactions/${card.transaction_id}/split${search}`);
                 return;
               }
-              void navigate(`/transactions/${row.transaction_id}/split${search}`);
-              return;
-            }
-            approve.mutate();
-          }}
-          icon={<CheckIcon />}
-        >
-          אישור
-        </Button>
+              approve.mutate();
+            }}
+            icon={<CheckIcon />}
+          >
+            אישור
+          </Button>
+        </div>
         <div className="ui-review-actions-row">
           <Button variant="secondary" to={change}>שינוי</Button>
           <Button

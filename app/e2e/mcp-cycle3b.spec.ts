@@ -33,6 +33,25 @@ async function expectNoOverflow(page: Page) {
   expect(await horizontalOverflow(page)).toEqual([]);
 }
 
+/** Line-clamp keeps the text in the DOM, so a text query cannot see the cut. */
+async function bannerTitleClipped(page: Page): Promise<boolean> {
+  return page.locator(".ui-banner .ui-row-title").evaluate((node) => {
+    if (!(node instanceof HTMLElement) || node.parentElement == null) return true;
+    const clone = node.cloneNode(true);
+    if (!(clone instanceof HTMLElement)) return true;
+    clone.style.setProperty("-webkit-line-clamp", "unset");
+    clone.style.setProperty("display", "block");
+    clone.style.setProperty("overflow", "visible");
+    clone.style.setProperty("position", "absolute");
+    clone.style.setProperty("visibility", "hidden");
+    clone.style.setProperty("width", `${String(node.clientWidth)}px`);
+    node.parentElement.append(clone);
+    const clipped = clone.getBoundingClientRect().height > node.getBoundingClientRect().height + 1;
+    clone.remove();
+    return clipped;
+  });
+}
+
 test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
   const cases = [
     ["/reviewer/review?banner=assistant", "4 תנועות שויכו היום"],
@@ -49,6 +68,7 @@ test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
         const banner = page.locator(".ui-banner");
         await expect(banner).toContainText(title);
         if (!title.includes("בלי להמתין")) await expect(banner).not.toContainText("בלי להמתין");
+        if (width === 320) expect(await bannerTitleClipped(page)).toBe(false);
         await expectNoOverflow(page);
       }
     }

@@ -23,7 +23,7 @@ import { HomeScreen } from "./HomeScreen";
 
 const rpc = vi.hoisted(() => ({
   handlers: [] as Array<(event: string, session: Session | null) => void>,
-  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string } | null }> =>
+  impl: (_name: string, _args?: unknown): Promise<{ data: unknown; error: { message: string; code?: string } | null }> =>
     Promise.resolve({ data: null, error: { message: "db down" } }),
 }));
 
@@ -368,13 +368,133 @@ describe("rejected writes", () => {
           error: null,
         });
       }
-      if (name === "approve_review_item") return Promise.resolve({ data: null, error: { message: "deadlock detected" } });
+      if (name === "approve_review_item") {
+        return Promise.resolve({
+          data: null,
+          error: { message: "could not serialize access due to concurrent update", code: "40001" },
+        });
+      }
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
     fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
     expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+  });
+
+  it("focuses אישור before retrying a serialization failure", async () => {
+    let attempts = 0;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        attempts += 1;
+        if (attempts === 1) {
+          return Promise.resolve({
+            data: null,
+            error: { message: "could not serialize access due to concurrent update", code: "40001" },
+          });
+        }
+        return new Promise(() => undefined);
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר" });
+    expect(screen.getByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    retry.focus();
+    fireEvent.click(retry);
+    const approve = screen.getByRole("button", { name: "אישור" });
+    await waitFor(() => {
+      expect(approve).toHaveFocus();
+    });
+    expect(approve).toHaveAttribute("aria-busy", "true");
+    expect(document.body).not.toHaveFocus();
+  });
+
+  it("refreshes the queue when the item is gone", async () => {
+    let open = true;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: open ? [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }] : [],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") {
+        open = false;
+        return Promise.resolve({ data: { ok: false, error: { code: "not_found" } }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+  });
+
+  it("does not treat a malformed approve body as success", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{
+            id: "r1",
+            transaction_id: "t1",
+            description: "מלט",
+            doc_date: "2026-09-01",
+            amount_net: -100,
+            direction: "expense",
+            reason: null,
+            project_id: "p1",
+            category_id: "c1",
+            supplier_name: "מחסן",
+            project_name: "הרצל",
+            category_name: "חומרים",
+          }],
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") return Promise.resolve({ data: { surprise: true }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
+    expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
     expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
   });
 
