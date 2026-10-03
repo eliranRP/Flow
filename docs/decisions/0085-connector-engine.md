@@ -9,13 +9,13 @@ SUMIT is the first data source ([0035](0035-sumit-api-first.md), [0042](0042-sum
 
 ## Decision
 
-One engine serves every connector. A provider implements a port: validate, fetch, normalize, capabilities, a GET allowlist, error class, and redact. The server registry is a map from provider to adapter, key-encryption env, and schedule. The client has a descriptor (Hebrew name, icon, copy). The core does not branch on the provider name.
+One engine serves every connector. A provider implements a port: `open(secret)` per company, `validate(session)`, `fetchSince(session, input)`, `normalize(raw, ctx)`, capabilities, a GET allowlist, an error class with `retry_after`, and redact. The server registry is a map from provider to factory, `kek_ref`, and schedule. It is not one stateful adapter. The client has a descriptor (Hebrew name, icon, copy). The core does not branch on the provider name.
 
-SUMIT moves onto that engine in this stack. Objects named `sumit_*` that are tables, views, or SUMIT-only jobs are dropped. There is no backup and no shadow run. Parity is the existing tests. `upsert_sumit_documents(p_company, p_docs)` stays a wrapper with the same signature, so its pgTAP suites stay. `sumit-sync` and `sumit-connect` stay as aliases. Vault `flow_sync_url` still targets `/sumit-sync`.
+SUMIT moves onto that engine in this stack. The `sumit_*` tables and SUMIT-only jobs are dropped. Views of the same names stay, so `sumit-sync` and the existing pgTAP suites keep running. There is no backup and no second store. `upsert_sumit_documents(p_company, p_docs)` stays a wrapper with the same signature. `sumit-sync` and `sumit-connect` stay as aliases until L2a. Vault `flow_sync_url` still targets `/sumit-sync`.
 
 `SUMIT_KEK` and `MERCURY_KEK` are different env vars. The envelope still binds the company id ([0048](0048-sumit-key-envelope.md)). Copying a SUMIT row copies the ciphertext bytes unchanged.
 
-Refresh floors stay 60 seconds when the owner asks and 6 hours otherwise ([0049](0049-sumit-refresh.md)), per connection. One daily job and one drain job serve every provider. The sync cursor advances in the same transaction as the lines.
+Refresh floors stay 60 seconds when the owner asks and 6 hours otherwise ([0049](0049-sumit-refresh.md)), per connection. One daily job and one drain job serve every provider. The sync cursor advances in the same transaction as the lines, and only when it still matches the cursor the run started from.
 
 The stack is one migration. No other migration merges while it is open. The coordinator merges it after both code reviewers approve and CI is green.
 
