@@ -12,11 +12,12 @@ test("the Jev switch turns on and off, and off hides the options", async ({ page
   await toggle.click();
   await expect(toggle).toBeChecked();
   await expect(page.getByText("פעיל · מצב צל")).toBeVisible();
-  await page.getByRole("button", { name: "אפשרויות" }).click();
-  await expect(page.getByText("צל", { exact: true })).toBeVisible();
+  const options = page.getByRole("button", { name: "אפשרויות" });
+  await options.click();
+  await expect(options).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeVisible();
   await expect(page.getByRole("radio")).toHaveCount(0);
-  await expect(page.getByLabel("סף")).toHaveValue("0.90");
+  await expect(page.getByLabel("סף")).toHaveCount(0);
 
   await toggle.click();
   await expect(toggle).not.toBeChecked();

@@ -76,7 +76,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   return response.data;
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
-import { JEV_DEFAULT, JevSettings, JevSettingsCard, type JevCardState } from "./jev-settings";
+import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -3442,19 +3442,11 @@ export function SettingsScreen({
 
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
-      <>
-        <ScreenState
-          title="הגדרות"
-          phase={phase}
-          onRetry={() => { void dashboard.refetch(); }}
-        />
-        {phase.kind === "error" ? (
-          <JevSettingsCard
-            state={{ enabled: false, mode: "shadow", threshold: 0.9, status: "error" }}
-            onRetry={() => { void dashboard.refetch(); }}
-          />
-        ) : null}
-      </>
+      <ScreenState
+        title="הגדרות"
+        phase={phase}
+        onRetry={() => { void dashboard.refetch(); }}
+      />
     );
   }
 

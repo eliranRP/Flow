@@ -2458,6 +2458,20 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   background: var(--color-tint-pressed);
 }
 
+/* The Jev switch uses the same row box as SUMIT: 14px pad, body title, hint line, one border. */
+.ui-row.ui-switch-row {
+  padding-block: var(--row-pad);
+  cursor: pointer;
+}
+
+.ui-jev-options {
+  padding-inline: var(--space-side);
+}
+
+.ui-jev-options-hint {
+  margin: var(--space-2) 0 var(--space-4);
+}
+
 .ui-page-title-row {
   display: flex;
   align-items: center;
