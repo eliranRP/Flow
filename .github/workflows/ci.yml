@@ -164,6 +164,11 @@ jobs:
           grep -F "Preflight passed. Local database is up to date." "$log"
           rm -f "$log"
           FLOW_CD_PREFLIGHT_LOCAL=1 SUPABASE_DB_URL="$db_url" bash scripts/cd-dry-run-pending.sh
+      - name: SUMIT cron jobs
+        run: |
+          set -euo pipefail
+          db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
+          SUPABASE_DB_URL="$db_url" bash scripts/check-sumit-cron.sh
       - name: Main Playwright suite against local Supabase
         run: |
           set -euo pipefail

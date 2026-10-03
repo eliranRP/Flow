@@ -23,3 +23,4 @@ if ! supabase --yes db push --db-url "$SUPABASE_DB_URL" >"$log" 2>&1; then
 fi
 redact <"$log"
 echo "Migrations pushed."
+bash scripts/check-sumit-cron.sh
