@@ -9,7 +9,7 @@
 
 This amends the Settings section of [0080](0080-mcp-connector.md). Mint, revoke, scope, and the one active token stay as 0080 wrote them. [0022](0022-after-overhead-starts-off.md) still owns the overhead switch. The project screen keeps `overheadHint`.
 
-0081 is the review-queue list, already accepted on the review pull request and not on `main` yet. This record is 0082 so the two do not share a number.
+0081 is the review-queue list, now on `main`. This record is 0082 so the two do not share a number.
 
 ## Decision
 

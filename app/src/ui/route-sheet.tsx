@@ -44,11 +44,16 @@ export function RouteSheet({
     const ref = returnFocusRef;
     return () => {
       if (!ref) return;
-      window.setTimeout(() => {
-        if (document.querySelector('[role="dialog"]')) return;
+      const started = performance.now();
+      const tryFocus = () => {
+        if (document.querySelector('[role="dialog"]')) {
+          if (performance.now() - started < 400) window.requestAnimationFrame(tryFocus);
+          return;
+        }
         const el = ref.current;
         if (el?.isConnected) el.focus();
-      }, 0);
+      };
+      window.setTimeout(tryFocus, 0);
     };
   }, [returnFocusRef]);
 

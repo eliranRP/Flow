@@ -1,5 +1,7 @@
+import type { Ref } from "react";
 import { formatAmount } from "./big-number";
 import { DocumentIcon } from "./icons";
+import { ListRow } from "./list-row";
 import { SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
@@ -20,27 +22,70 @@ type ReviewCardProps = {
   suggestion?: ReviewSuggestion;
   /** Queue reason. An unallocated shared cost is not a missing project. */
   reason?: string | null;
+  /** Income has no project row. */
+  direction?: "income" | "expense";
+  /** Opens the project picker, or the split when this line is a split. */
+  onProject?: () => void;
+  /** Opens the category picker. A line pick saves that field and does not resolve. */
+  onCategory?: () => void;
+  projectButtonRef?: Ref<HTMLButtonElement>;
+  categoryButtonRef?: Ref<HTMLButtonElement>;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
-export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestion, reason }: ReviewCardProps) {
+export function ReviewCard({
+  supplier,
+  sourceLine,
+  netAgorot,
+  vatLine,
+  suggestion,
+  reason,
+  direction = "expense",
+  onProject,
+  onCategory,
+  projectButtonRef,
+  categoryButtonRef,
+}: ReviewCardProps) {
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
-  const lines = [
-    suggestion?.project
-      ? { label: "פרויקט", value: suggestion.project, suggested: suggestion.projectSuggested === true }
-      : null,
-    suggestion?.category
-      ? { label: "קטגוריה", value: suggestion.category, suggested: suggestion.categorySuggested === true }
-      : null,
-  ].filter((line): line is { label: string; value: string; suggested: boolean } => line != null);
   const shared = reason === "unallocated_shared";
+  const projectValue = suggestion?.project;
+  const categoryValue = suggestion?.category;
+  const lines: Array<{
+    key: string;
+    label: string;
+    value: string;
+    suggested: boolean;
+    onOpen?: () => void;
+  }> = [];
+  if (direction !== "income" && (projectValue || onProject)) {
+    lines.push({
+      key: "project",
+      label: "פרויקט",
+      value: projectValue ?? "לא נבחר",
+      suggested: suggestion?.projectSuggested === true && projectValue != null,
+      onOpen: onProject,
+    });
+  }
+  if (categoryValue || onCategory) {
+    lines.push({
+      key: "category",
+      label: "קטגוריה",
+      value: categoryValue ?? "לא נבחר",
+      suggested: suggestion?.categorySuggested === true && categoryValue != null,
+      onOpen: onCategory,
+    });
+  }
   const note = shared
     ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה"
-    : suggestion?.category != null && suggestion.project == null
-      ? "חסר פרויקט, בחרו בשינוי"
-      : suggestion?.project != null && suggestion.category == null
-        ? "חסר קטגוריה, בחרו בשינוי"
-        : null;
+    : direction === "income"
+      ? (categoryValue == null ? "אין הצעה, הקישו לבחירה" : null)
+      : categoryValue != null && projectValue == null
+        ? "חסר פרויקט, הקישו לבחירה"
+        : projectValue != null && categoryValue == null
+          ? "חסר קטגוריה, הקישו לבחירה"
+          : projectValue == null && categoryValue == null
+            ? "אין הצעה, הקישו לבחירה"
+            : null;
   return (
     <article className="ui-review">
       <div className="ui-review-doc">
@@ -58,28 +103,30 @@ export function ReviewCard({ supplier, sourceLine, netAgorot, vatLine, suggestio
         <bdi dir="ltr">{formatAmount(shown, "detail")}</bdi>
       </p>
       <p className="t-hint">{vatLine}</p>
-      {lines.length > 0 ? (
-        <div className="ui-review-ai">
-          {lines.map((line) => (
-            <p className="ui-review-line" key={line.label}>
-              <span className="t-label">{line.label}</span>
-              <span>
-                {line.value}
-                {line.suggested ? <SuggestTag /> : null}
-              </span>
-            </p>
-          ))}
-          {note ? <p className="t-label">{note}</p> : null}
-        </div>
-      ) : note ? (
-        <div className="ui-review-ai">
-          <p className="t-label">{note}</p>
-        </div>
-      ) : (
-        <div className="ui-review-ai">
-          <p className="t-label">אין הצעה, בחרו בשינוי</p>
-        </div>
-      )}
+      <div className="ui-review-ai">
+        {lines.map((line) => line.onOpen ? (
+          <ListRow
+            key={line.key}
+            variant="button"
+            eyebrow={line.label}
+            title={line.value}
+            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : ""}`}
+            tag={line.suggested ? <SuggestTag /> : undefined}
+            chevron
+            buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
+            onClick={line.onOpen}
+          />
+        ) : (
+          <p className="ui-review-line" key={line.key}>
+            <span className="t-label">{line.label}</span>
+            <span>
+              {line.value}
+              {line.suggested ? <SuggestTag /> : null}
+            </span>
+          </p>
+        ))}
+        {note ? <p className="t-label">{note}</p> : null}
+      </div>
     </article>
   );
 }

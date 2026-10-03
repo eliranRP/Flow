@@ -1,8 +1,9 @@
 import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import { useEffect, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
+import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
 import { useAuth } from "../auth";
 import { addTriggerRef } from "../add-trigger";
@@ -794,14 +795,170 @@ export function FiledTodayScreen({
   );
 }
 
+const EMPTY_REVIEW: ReviewRow[] = [];
+
+/** The row opened from the list. A later URL replace must not move this. */
+let reviewReturnId: string | null = null;
+
+/** The card line that opened the picker. The sheet focuses it after close. */
+export const reviewLineFocus: {
+  project: { current: HTMLButtonElement | null };
+  category: { current: HTMLButtonElement | null };
+} = {
+  project: { current: null },
+  category: { current: null },
+};
+
+export function resetReviewListFocus(): void {
+  reviewReturnId = null;
+  reviewLineFocus.project.current = null;
+  reviewLineFocus.category.current = null;
+}
+
+/** Dev-only fixture. A production build folds this to null and drops the module. */
+const reviewE2e = import.meta.env.DEV ? reviewE2eFixture : null;
+
+function useE2eReviewRows(active: boolean): ReviewRow[] {
+  const [, bump] = useState(0);
+  useEffect(() => {
+    if (!import.meta.env.DEV || !active || reviewE2e == null) return;
+    return reviewE2e.subscribe(() => {
+      bump((n) => n + 1);
+    });
+  }, [active]);
+  if (!import.meta.env.DEV || !active || reviewE2e == null) return EMPTY_REVIEW;
+  return reviewE2e.currentRows();
+}
+
+export function reviewListPath(search: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.delete("item");
+  params.delete("from");
+  params.delete("pick");
+  params.delete("list");
+  const text = params.toString();
+  return text === "" ? "/review/all" : `/review/all?${text}`;
+}
+
+export function reviewFocusPath(search: string, id: string): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.delete("pick");
+  params.delete("list");
+  params.set("item", id);
+  params.set("from", "all");
+  return `/review?${params.toString()}`;
+}
+
+export function rotateReview<T extends { id: string }>(rows: T[], id: string): T[] {
+  const index = rows.findIndex((row) => row.id === id);
+  if (index <= 0) return rows;
+  return [...rows.slice(index), ...rows.slice(0, index)];
+}
+
+/** Keeps a card opened from the list, then the item that followed it once that card leaves. */
+export function queueAfterFocus<T extends { id: string }>(
+  rows: T[],
+  focusId: string,
+  prior: readonly T[] | null,
+): { rows: T[]; order: T[] } {
+  if (rows.some((row) => row.id === focusId)) {
+    const order = rotateReview(rows, focusId);
+    return { rows: order, order };
+  }
+  const index = prior?.findIndex((row) => row.id === focusId) ?? -1;
+  const rest = prior == null || index < 0 ? [] : [...prior.slice(index + 1), ...prior.slice(0, index)];
+  const nextId = rest.find((row) => rows.some((item) => item.id === row.id))?.id;
+  const order = nextId ? rotateReview(rows, nextId) : rows;
+  return { rows: order, order };
+}
+
+/** The list card under a line picker. from=all opens it; list=all keeps it while the picker is open. */
+function listFocusId(params: URLSearchParams): string | null {
+  const item = params.get("item");
+  if (item == null || item === "") return null;
+  if (params.get("from") === "all" || params.get("list") === "all") return item;
+  return null;
+}
+
+function assignmentPath(
+  changeTo: string | undefined,
+  search: string,
+  id: string,
+  pick?: "project" | "category",
+  fromList = false,
+  fromLine = false,
+): string {
+  const base = changeTo ?? `/review/change${search}`;
+  const [path, query = ""] = base.split("?");
+  const params = new URLSearchParams(query);
+  params.set("item", id);
+  if (pick) params.set("pick", pick);
+  else params.delete("pick");
+  if (fromLine) {
+    params.set("from", "line");
+    if (fromList) params.set("list", "all");
+    else params.delete("list");
+  } else if (fromList) {
+    params.set("from", "all");
+    params.delete("list");
+  }
+  return `${String(path)}?${params.toString()}`;
+}
+
 export function ReviewScreen() {
   const preview = useHomePreview();
   const search = useFlowSearch();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
+  const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
   const review = useReviewQuery();
   const waiting = useProjectWaitingQuery(projectFilter ?? "");
-  const phase = screenPhase(preview, review);
+  const focusedOrder = useRef<ReviewRow[] | null>(null);
+  const e2eList = reviewE2e != null && params.get("preview") != null && params.get("e2e") === "list";
+  const e2eRows = useE2eReviewRows(e2eList);
+  const phase = e2eList ? ({ kind: "ready" } as const) : screenPhase(preview, review);
+  const source = e2eList ? e2eRows : (review.data ?? EMPTY_REVIEW);
+  const activeRows = useMemo(() => {
+    if (projectFilter == null || preview !== "off") return source;
+    const held = waiting.data;
+    if (held == null || held.length === 0 || !held.every((row) => row.review_id != null)) return source;
+    const ids = new Set(held.map((row) => row.review_id));
+    return source.filter((row) => ids.has(row.id));
+  }, [projectFilter, preview, source, waiting.data]);
+  useEffect(() => {
+    if (location.pathname !== "/review") {
+      if (listing) focusedOrder.current = null;
+      return;
+    }
+    const urlId = listFocusId(params);
+    if (urlId == null) {
+      focusedOrder.current = null;
+      return;
+    }
+    if (reviewReturnId == null) reviewReturnId = urlId;
+    if (phase.kind !== "ready") return;
+    if (activeRows.length === 0) {
+      if (projectFilter == null) void navigate(`/review${search}`, { replace: true });
+      return;
+    }
+    if (activeRows.some((row) => row.id === urlId)) {
+      focusedOrder.current = rotateReview(activeRows, urlId);
+      return;
+    }
+    const head = queueAfterFocus(activeRows, urlId, focusedOrder.current).rows[0]?.id;
+    if (head != null && head !== urlId) void navigate(reviewFocusPath(search, head), { replace: true });
+  }, [location.pathname, listing, params, activeRows, phase.kind, search, navigate, projectFilter]);
+  function rowsForFocus(rows: ReviewRow[]): ReviewRow[] {
+    const urlId = listFocusId(params);
+    if (listing || urlId == null) return rows;
+    if (rows.some((row) => row.id === urlId)) return rotateReview(rows, urlId);
+    return queueAfterFocus(rows, urlId, focusedOrder.current).rows;
+  }
+  const e2eWrite: ReviewPreviewWrite | undefined = reviewE2e != null && e2eList
+    ? reviewE2e.e2ePreviewWrite()
+    : undefined;
   if (projectFilter != null && preview === "off") {
     const back = `/projects/${projectFilter}`;
     const waitingPhase = screenPhase(preview, waiting);
@@ -815,13 +972,17 @@ export function ReviewScreen() {
         return <ScreenState title="לאישור" backTo={back} phase={phase} onRetry={() => { void review.refetch(); }} />;
       }
       const ids = new Set(held.map((row) => row.review_id));
-      const rows = (review.data ?? []).filter((row) => ids.has(row.id));
+      const rows = source.filter((row) => ids.has(row.id));
       if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
+      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+      const fromList = listFocusId(params) != null;
+      const ordered = rowsForFocus(rows);
       return (
         <ReviewQueue
-          rows={rows}
+          rows={ordered}
           search={search}
-          backTo={back}
+          listPlace={listPlace(rows, ordered, fromList)}
+          backTo={fromList ? reviewListPath(search) : back}
           homeTo={back}
           homeLabel="חזרה לפרויקט"
         />
@@ -829,14 +990,75 @@ export function ReviewScreen() {
     }
     return <ProjectWaitingList rows={held} search={search} backTo={back} />;
   }
-  const rows = review.data ?? [];
+  const rows = source;
+  const fromList = listFocusId(params) != null;
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    return <ReviewEmpty search={search} />;
+    return <ReviewEmpty search={search} backTo={listing || fromList ? `/review${search}` : undefined} />;
   }
   if (phase.kind !== "ready") {
-    return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} />;
+    return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
   }
-  return <ReviewQueue rows={rows} search={search} />;
+  if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+  const ordered = rowsForFocus(rows);
+  return (
+    <ReviewQueue
+      rows={ordered}
+      search={search}
+      previewWrite={e2eWrite}
+      listPlace={listPlace(rows, ordered, fromList)}
+      backTo={fromList ? reviewListPath(search) : undefined}
+    />
+  );
+}
+
+function listPlace(rows: ReviewRow[], ordered: ReviewRow[], fromList: boolean): { index: number; total: number } | undefined {
+  if (!fromList) return undefined;
+  const head = ordered[0];
+  if (!head) return undefined;
+  const index = rows.findIndex((row) => row.id === head.id);
+  if (index < 0) return undefined;
+  return { index: index + 1, total: rows.length };
+}
+
+export function ReviewAllList({
+  rows,
+  search,
+  backTo,
+}: {
+  rows: ReviewRow[];
+  search: string;
+  backTo: string;
+}) {
+  useEffect(() => {
+    const id = reviewReturnId;
+    if (id == null) return;
+    const href = reviewFocusPath(search, id);
+    const link = [...document.querySelectorAll("a[href]")].find((node) => node.getAttribute("href") === href);
+    if (link instanceof HTMLElement) link.focus();
+    const timer = window.setTimeout(() => {
+      if (reviewReturnId === id) reviewReturnId = null;
+    }, 0);
+    return () => { window.clearTimeout(timer); };
+  }, [search, rows]);
+  return (
+    <div>
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+      <List>
+        {rows.map((row) => (
+          <ListRow
+            key={row.id}
+            variant="transaction"
+            title={row.supplier_name ?? row.description}
+            hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
+            agorot={row.amount_net}
+            sign={row.direction === "income" ? "in" : "out"}
+            source="invoice"
+            href={reviewFocusPath(search, row.id)}
+          />
+        ))}
+      </List>
+    </div>
+  );
 }
 
 export function ProjectWaitingList({
@@ -892,6 +1114,7 @@ export function ReviewQueue({
   homeTo,
   homeLabel,
   onShared,
+  listPlace,
 }: {
   rows: ReviewRow[];
   search: string;
@@ -903,6 +1126,8 @@ export function ReviewQueue({
   /** Preview sends צפייה to its own filed list. */
   filedTo?: string;
   backTo?: string;
+  /** A card opened from the list. Position in the remaining queue, not visit progress. */
+  listPlace?: { index: number; total: number };
   /** Preview returns an empty queue to its index. */
   homeTo?: string;
   /** Label for that return. The product queue says לדף הבית. */
@@ -912,6 +1137,8 @@ export function ReviewQueue({
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
+  const [queueParams] = useSearchParams();
+  const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
   const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
@@ -1030,11 +1257,27 @@ export function ReviewQueue({
   });
   const card = shown;
   if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
-  const change = changeTo ? withItem(changeTo, card.id) : `/review/change${search}${search ? "&" : "?"}item=${card.id}`;
+  const current = card;
+  const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
+  function openProject() {
+    if (reviewIsSplit(current)) {
+      if (!current.transaction_id) return;
+      if (onShared) {
+        onShared(current.transaction_id);
+        return;
+      }
+      void navigate(`/transactions/${current.transaction_id}/split${search}`);
+      return;
+    }
+    void navigate(assignmentPath(changeTo, search, current.id, "project", fromList, true));
+  }
+  function openCategory() {
+    void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
+  }
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
-  const total = Math.max(visit.current.total, 1);
-  const index = row ? total - rows.length + 1 : total;
+  const total = listPlace?.total ?? Math.max(visit.current.total, 1);
+  const index = listPlace?.index ?? (row ? total - rows.length + 1 : total);
   const splitCard = reviewIsSplit(row);
   const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
     || (splitCard
@@ -1043,20 +1286,23 @@ export function ReviewQueue({
         ? row.category_id != null
         : row.project_id != null && row.category_id != null));
   return (
-    <div>
+    <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       <div className="ui-review-meter">
-        <ProgressBar
-          variant="thin"
-          label="התקדמות התור"
-          value={index}
-          max={total}
-          caption={
-            <span className="t-hint">
-              <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
-            </span>
-          }
-        />
+        {listPlace == null ? (
+          <ProgressBar
+            variant="thin"
+            label="התקדמות התור"
+            value={index}
+            max={total}
+          />
+        ) : null}
+        <span className="t-hint">
+          <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
+        </span>
+        {changeTo == null ? (
+          <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+        ) : null}
       </div>
       {auto > 0 && !hideAuto ? (
         <Banner
@@ -1084,6 +1330,11 @@ export function ReviewQueue({
           vatLine={reviewVatLine(card.vat_agorot)}
           suggestion={suggestion}
           reason={card.reason}
+          direction={card.direction}
+          projectButtonRef={reviewLineFocus.project}
+          categoryButtonRef={reviewLineFocus.category}
+          onProject={card.direction === "income" ? undefined : openProject}
+          onCategory={openCategory}
         />
       </div>
       <div className="ui-review-actions">
@@ -1127,13 +1378,6 @@ export function ReviewQueue({
       </div>
     </div>
   );
-}
-
-function withItem(to: string, id: string): string {
-  const [path, query = ""] = to.split("?");
-  const params = new URLSearchParams(query);
-  params.set("item", id);
-  return `${String(path)}?${params.toString()}`;
 }
 
 function invoiceDate(iso: string): string {
@@ -1345,7 +1589,9 @@ export function reviewSplitTitle(row: { project_name?: string | null; share_coun
   return "עלות משותפת · טרם פוצלה";
 }
 
-export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
+export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
+  const [params] = useSearchParams();
+  const sample: ChangeSample | undefined = given ?? (reviewE2e != null && params.get("e2e") === "list" ? reviewE2e.e2eChangeSample : undefined);
   const search = useFlowSearch();
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -1355,7 +1601,6 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const review = useReviewQuery(sample == null);
-  const [params] = useSearchParams();
   const item = params.get("item") ?? "";
   const live = (review.data ?? []).find((entry) => entry.id === item);
   const [kept, setKept] = useState<ReviewRow | null>(null);
@@ -1461,12 +1706,16 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       }));
     },
   });
+  const lineField = useRef(false);
   const setSharedCategory = useWrite({
     failure: changeSaveFailure,
-    success: "השיוך נשמר",
     keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
     onSuccess: () => {
       setCategoryId(picked.current.categoryId);
+      toast.show({
+        message: "השיוך נשמר",
+        ...(lineField.current ? { place: "page" as const } : {}),
+      });
     },
     run: async () => {
       const supabase = getSupabase();
@@ -1476,6 +1725,29 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
       assertNoError(await supabase.rpc("set_transaction_category", {
         p_id: transactionId,
         p_category_id: nextCategory,
+        ...(lineField.current ? { p_resolve: false } : {}),
+      }));
+    },
+  });
+  const fieldSave = useRef<{ kind: "project" | "category"; id: string } | null>(null);
+  const saveField = useWrite({
+    failure: changeSaveFailure,
+    keys: ["review", "dashboard", "project", "project-category", "project-waiting", "txn"],
+    onSuccess: () => {
+      const pickedField = fieldSave.current;
+      if (pickedField?.kind === "project") setProjectId(pickedField.id);
+      else if (pickedField) setCategoryId(pickedField.id);
+      toast.show({ message: "השיוך נשמר", place: "page" });
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      const next = fieldSave.current;
+      if (!supabase || item === "" || next == null) throw new Error("supabase");
+      assertNoError(await supabase.rpc("resolve_review", {
+        p_id: item,
+        p_action: "changed",
+        p_resolve: false,
+        ...(next.kind === "project" ? { p_project_id: next.id } : { p_category_id: next.id }),
       }));
     },
   });
@@ -1534,9 +1806,17 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
     }, invalidate);
   }
 
+  const fromList = (params.get("from") === "all" || params.get("list") === "all") && item !== "";
+  const closeTo = fromList ? reviewFocusPath(search, item) : `/review${search}`;
+  const linePick = params.get("from") === "line" ? params.get("pick") : null;
+  const returnFocusRef = linePick === "project"
+    ? reviewLineFocus.project
+    : linePick === "category"
+      ? reviewLineFocus.category
+      : undefined;
   if (formPhase.kind !== "ready") {
     return (
-      <RouteSheet title="שינוי שיוך" closeTo={`/review${search}`}>
+      <RouteSheet title="שינוי שיוך" closeTo={closeTo} returnFocusRef={returnFocusRef}>
         <ScreenState title="שינוי שיוך" phase={formPhase} onRetry={() => { void dashboard.refetch(); void categories.refetch(); void review.refetch(); }} />
       </RouteSheet>
     );
@@ -1545,7 +1825,8 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
   return (
     <ChangeAssignment
       host="route"
-      closeTo={`/review${search}`}
+      closeTo={closeTo}
+      returnFocusRef={returnFocusRef}
       supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
       amount={sample?.amount ?? (row ? formatIls(absAgorot(row.amount_net)) : "")}
       direction={income ? "income" : "expense"}
@@ -1579,6 +1860,7 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
         picked.current = { projectId: nextProject, categoryId: nextCategory, remember };
+        const fromLine = params.get("from") === "line";
         if (splitReview) {
           if (kind === "project") {
             if (!row?.transaction_id || id === "") throw new Error("supabase");
@@ -1586,13 +1868,19 @@ export function ChangeForm({ sample }: { sample?: ChangeSample } = {}) {
             return undefined;
           }
           if (!row?.transaction_id) throw new Error("supabase");
+          lineField.current = fromLine;
           await setSharedCategory.mutateAsync();
+          return undefined;
+        }
+        if (fromLine) {
+          fieldSave.current = { kind, id };
+          await saveField.mutateAsync();
           return undefined;
         }
         const complete = income ? nextCategory !== "" : nextProject !== "" && nextCategory !== "";
         if (!complete) {
           setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
-          return undefined;
+          return "hold";
         }
         setHold("");
         if (closedReview.current) {
