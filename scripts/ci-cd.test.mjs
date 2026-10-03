@@ -1,19 +1,81 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 const push = readFileSync(new URL("./cd-push.sh", import.meta.url), "utf8");
 const preflight = readFileSync(new URL("./cd-preflight.sh", import.meta.url), "utf8");
 
+const USES_PIN = /^\s*(?:-\s*)?uses: [A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/;
+const PLAYWRIGHT_KEY = "key: ${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}";
+const CACHE_HIT_IF = "if: steps.playwright-cache.outputs.cache-hit != 'true'";
+const DENO_SHA256_X64 = "c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490";
+const DENO_SHA256_ARM64 = "c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf";
+const SUPABASE_SHA256_AMD64 = "f6089a86fb9d9221c958193a277338daddd6822f706929943812fa32e106c86d";
+const SUPABASE_SHA256_ARM64 = "0cd35fea97c2c93dce8a2cd661311be88c107233946cbe3692566196238859c5";
+
 /** @param {string} name */
 function job(name) {
+  return jobIn(ci, name);
+}
+
+/** @param {string} text @param {string} name */
+function jobIn(text, name) {
   const marker = `\n  ${name}:\n`;
-  const start = ci.indexOf(marker);
+  const start = text.indexOf(marker);
   assert.ok(start >= 0, name);
-  const rest = ci.slice(start + 1);
+  const rest = text.slice(start + 1);
   const next = rest.slice(1).search(/\n {2}[a-z0-9-]+:\n/);
   return next === -1 ? rest : rest.slice(0, next + 1);
+}
+
+/** @param {string} text */
+function usesProblems(text) {
+  /** @type {string[]} */
+  const problems = [];
+  for (const line of text.split("\n")) {
+    if (!/^\s*(?:-\s*)?uses:/.test(line)) continue;
+    if (!USES_PIN.test(line)) problems.push(line.trim());
+  }
+  return problems;
+}
+
+/** @param {string} text */
+function playwrightCacheProblems(text) {
+  /** @type {string[]} */
+  const problems = [];
+  for (const name of ["check", "e2e"]) {
+    const body = jobIn(text, name);
+    if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
+    if (!body.includes(CACHE_HIT_IF)) problems.push(`${name} cache-hit`);
+  }
+  return problems;
+}
+
+/** @param {string} script */
+function checksumProblems(script) {
+  /** @type {string[]} */
+  const problems = [];
+  const denoAt = script.indexOf("deno_version=");
+  const supabaseAt = script.indexOf("supabase_version=");
+  const deno = script.slice(denoAt, supabaseAt);
+  const supabase = script.slice(supabaseAt);
+  const ordered = (section, unpack) => {
+    const curl = section.indexOf("curl ");
+    const verify = section.indexOf("verify_sha256 ");
+    const unpackAt = section.indexOf(unpack);
+    return curl >= 0 && verify > curl && unpackAt > verify;
+  };
+  if (!ordered(deno, "unzip ")) problems.push("deno order");
+  if (!ordered(supabase, "tar ")) problems.push("supabase order");
+  for (const hash of [DENO_SHA256_X64, DENO_SHA256_ARM64, SUPABASE_SHA256_AMD64, SUPABASE_SHA256_ARM64]) {
+    if (!script.includes(hash)) problems.push(hash);
+  }
+  return problems;
 }
 
 test("CI keeps the hosted and reviewer builds apart and skips live writers", () => {
@@ -107,8 +169,8 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(preflight, /cd-output.mjs read-only/);
   assert.match(preflight, /cd-output.mjs counts/);
   assert.match(preflight, /cd-output.mjs dry-run --target remote/);
-  assert.match(preflight, /cd-output.mjs preflight-kind --target local/);
-  assert.match(preflight, /cd-output.mjs preflight-kind --target remote/);
+  assert.match(preflight, /node scripts\/cd-output\.mjs preflight-kind --target local "\$kind" <\/dev\/null/);
+  assert.match(preflight, /node scripts\/cd-output\.mjs preflight-kind --target remote "\$kind" <\/dev\/null/);
   assert.match(preflight, /db push --db-url "\$SUPABASE_DB_URL" --dry-run --output-format json/);
   assert.match(readFileSync(new URL("./cd-dry-run-pending.sh", import.meta.url), "utf8"), /--output-format json/);
   assert.match(preflight, /--dry-run/);
@@ -142,18 +204,31 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(ci.includes("timeout-minutes: 40"), false);
   assert.equal(ci.includes("timeout-minutes: 10"), false);
   assert.equal(ci.includes("--with-deps"), false);
-  assert.match(ci, /if: steps\.playwright-cache\.outputs\.cache-hit != 'true'/);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install-deps chromium/);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
-  assert.match(ci, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\.0\.1/);
-  assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
-  assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
-  assert.match(ci, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/);
-  assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
-  assert.equal(ci.includes("uses: actions/checkout@v"), false);
-  assert.equal(ci.includes("uses: pnpm/action-setup@v"), false);
-  assert.equal(ci.includes("uses: supabase/setup-cli@v"), false);
+  assert.deepEqual(usesProblems(ci), []);
+  assert.deepEqual(playwrightCacheProblems(ci), []);
+  for (const name of ["check", "e2e"]) {
+    const body = job(name);
+    assert.equal(body.includes(PLAYWRIGHT_KEY), true, `${name} cache key`);
+    assert.equal(body.includes(CACHE_HIT_IF), true, `${name} cache-hit`);
+  }
   assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
+});
+
+test("dropping the e2e cache condition or one action SHA fails", () => {
+  const e2eAt = ci.indexOf("\n  e2e:\n");
+  assert.ok(e2eAt > 0);
+  const dropped = ci.slice(0, e2eAt) + ci.slice(e2eAt).replace(`        ${CACHE_HIT_IF}\n`, "");
+  assert.deepEqual(playwrightCacheProblems(dropped), ["e2e cache-hit"]);
+  assert.equal(jobIn(dropped, "check").includes(CACHE_HIT_IF), true);
+
+  const swapped = ci.replace(
+    "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+    "uses: actions/checkout@v4",
+  );
+  assert.deepEqual(usesProblems(swapped), ["- uses: actions/checkout@v4"]);
+  assert.deepEqual(usesProblems(ci), []);
 });
 
 test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {
@@ -167,4 +242,34 @@ test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, an
   assert.match(install, /\/usr\/local\/bin\/deno/);
   assert.match(install, /\/usr\/local\/bin\/supabase/);
   assert.equal(install.includes("SUPABASE_ACCESS_TOKEN"), false);
+  assert.deepEqual(checksumProblems(install), []);
+  const stripped = install.replaceAll("verify_sha256", "skip_sha256");
+  const strippedProblems = checksumProblems(stripped);
+  assert.equal(strippedProblems.includes("deno order"), true);
+  assert.equal(strippedProblems.includes("supabase order"), true);
+});
+
+test("verify_sha256 rejects a download that does not match the pinned checksum", () => {
+  const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
+  const start = install.indexOf("verify_sha256()");
+  const end = install.indexOf("\n}\n", start);
+  assert.ok(start >= 0 && end > start, "verify_sha256");
+  const fn = install.slice(start, end + 3);
+  const dir = mkdtempSync(join(tmpdir(), "cloud-sha-"));
+  const file = join(dir, "blob");
+  try {
+    writeFileSync(file, "not-the-archive");
+    const good = createHash("sha256").update("not-the-archive").digest("hex");
+    execFileSync("bash", ["-c", `${fn}\nverify_sha256 "$1" "$2"`, "bash", file, good], { stdio: "pipe" });
+    let failed = false;
+    try {
+      execFileSync("bash", ["-c", `${fn}\nverify_sha256 "$1" "$2"`, "bash", file, "0".repeat(64)], { stdio: "pipe" });
+    } catch (error) {
+      failed = true;
+      assert.equal(error.status, 1);
+    }
+    assert.equal(failed, true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
