@@ -10,6 +10,8 @@ import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sa
 import { getSupabase } from "./lib/supabase";
 import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
+import { LedgerFocusRefresh } from "./books-focus";
+import { ListHoldRoot } from "./list-hold";
 import { BooksProvider } from "./use-books";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
@@ -64,6 +66,8 @@ export function App() {
     <AuthProvider>
       <BooksProvider>
         <ThemeColor />
+        <LedgerFocusRefresh />
+        <ListHoldRoot />
         <ScrollMemory />
         <DropRestoredSheet />
         <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
