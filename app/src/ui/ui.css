@@ -3138,6 +3138,7 @@ div.ui-check-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
   gap: var(--space-2);
   overflow: visible;
   -webkit-line-clamp: unset;
@@ -3145,9 +3146,12 @@ div.ui-check-row {
 
 .ui-change-summary .ui-row-title-text {
   display: -webkit-box;
+  flex: 0 1 auto;
   min-inline-size: 0;
   max-inline-size: 100%;
   overflow: hidden;
+  text-align: start;
+  text-overflow: clip;
   white-space: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

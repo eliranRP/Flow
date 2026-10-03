@@ -79,19 +79,17 @@ export function ReviewCard({
       onOpen: onCategory,
     });
   }
-  const note = pending && !shared
-    ? null
-    : shared
-      ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה"
-      : direction === "income"
-        ? (categoryValue == null ? "אין הצעה, הקישו לבחירה" : null)
-        : categoryValue != null && projectValue == null
-          ? "חסר פרויקט, הקישו לבחירה"
-          : projectValue != null && categoryValue == null
-            ? "חסר קטגוריה, הקישו לבחירה"
-            : projectValue == null && categoryValue == null
-              ? "אין הצעה, הקישו לבחירה"
-              : null;
+  const note = shared
+    ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה"
+    : direction === "income"
+      ? (categoryValue == null ? "אין הצעה, הקישו לבחירה" : null)
+      : categoryValue != null && projectValue == null
+        ? "חסר פרויקט, הקישו לבחירה"
+        : projectValue != null && categoryValue == null
+          ? "חסר קטגוריה, הקישו לבחירה"
+          : projectValue == null && categoryValue == null
+            ? "אין הצעה, הקישו לבחירה"
+            : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">

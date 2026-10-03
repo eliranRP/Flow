@@ -4,12 +4,17 @@ import { Button } from "../ui/button";
 import { CheckIcon } from "../ui/icons";
 import { ReviewCard } from "../ui/review-card";
 import {
+  JEV_CONNECTOR_STALE_MS,
   JEV_REVIEW_OFF,
+  jevConnectorQueryKey,
   jevQueueQueryKey,
   jevReadable,
-  loadJevQueue,
+  loadJevConnector,
   loadJevReview,
+  loadJevSuggestions,
+  withJevDeadline,
   type JevPrefill,
+  type JevQueueData,
   type JevReviewState,
 } from "./jev-review";
 
@@ -20,38 +25,52 @@ export const JEV_REVIEW_SAMPLE: JevPrefill = {
   category: { id: "c-materials", name: "חומרים" },
 };
 
+const JEV_QUEUE_OFF: JevQueueData = { connectorOn: false, byId: {} };
+
 export function useJevReview(transactionId: string | null, live: boolean): JevReviewState & { loading: boolean } {
   const query = useQuery({
     queryKey: ["jev-review", transactionId],
     enabled: live && transactionId != null && transactionId !== "",
     retry: false,
-    queryFn: () => loadJevReview(transactionId ?? ""),
+    queryFn: ({ signal }) => withJevDeadline(signal, (linked) => loadJevReview(transactionId ?? "", linked), JEV_REVIEW_OFF),
   });
   const loading = live && transactionId != null && transactionId !== "" && query.isPending;
   if (!live || query.isError || !query.data) return { ...JEV_REVIEW_OFF, loading };
   return { ...query.data, loading };
 }
 
-/** One read for every open line. A later card uses the same result. */
+/** One read for every open line. Pending only after the connector is already known on. */
 export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const readable = live && jevReadable() && transactionIds.some((id) => id !== "");
-  const query = useQuery({
-    queryKey: jevQueueQueryKey(transactionIds),
+  const connector = useQuery({
+    queryKey: jevConnectorQueryKey,
     enabled: readable,
     retry: false,
+    staleTime: JEV_CONNECTOR_STALE_MS,
+    queryFn: ({ signal }) => withJevDeadline(signal, loadJevConnector, false),
+  });
+  const knownOn = connector.data === true;
+  const suggestions = useQuery({
+    queryKey: jevQueueQueryKey(transactionIds),
+    enabled: readable && knownOn,
+    retry: false,
     placeholderData: keepPreviousData,
-    queryFn: () => loadJevQueue(transactionIds),
+    queryFn: ({ signal }) => withJevDeadline(
+      signal,
+      (linked) => loadJevSuggestions(transactionIds, linked),
+      JEV_QUEUE_OFF,
+    ),
   });
   function loadingFor(transactionId: string | null): boolean {
-    if (!readable || query.isError) return false;
-    if (query.isPending || transactionId == null) return query.isPending;
-    return query.isFetching && !Object.prototype.hasOwnProperty.call(query.data.byId, transactionId);
+    if (!knownOn || suggestions.isError) return false;
+    if (suggestions.isPending || transactionId == null) return suggestions.isPending;
+    return suggestions.isFetching && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
   function stateFor(transactionId: string | null): JevReviewState {
-    if (!readable || query.isError || query.data == null || loadingFor(transactionId)) return JEV_REVIEW_OFF;
+    if (!knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) return JEV_REVIEW_OFF;
     return {
-      connectorOn: query.data.connectorOn,
-      prefill: transactionId == null ? null : (query.data.byId[transactionId] ?? null),
+      connectorOn: suggestions.data.connectorOn,
+      prefill: transactionId == null ? null : (suggestions.data.byId[transactionId] ?? null),
     };
   }
   return { loadingFor, stateFor };
