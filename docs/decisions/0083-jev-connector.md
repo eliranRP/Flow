@@ -29,7 +29,7 @@ An Edge Function env var `JEV_API_KEY` as a second copy of the Vault secret. Put
 
 ## Consequences
 
-The tagging job and the Settings control are later changes. They call `read_jev_api_key` and `set_company_integration`. They do not add a new place to store the key. A lost Vault secret stops labelling until the secret is put back under the same name. Rotating it is a Vault change, not a client release.
+The tagging job calls `read_jev_api_key`. The Settings card calls `set_company_integration` only. It does not read the Vault secret, and the bundle does not name it. A lost Vault secret stops labelling until the secret is put back under the same name. Rotating it is a Vault change, not a client release. The card can show אין מפתח, but the live screen cannot tell a missing secret from a present one until a later status function exists. That function is not in this change.
 
 ## Decisions needed
 
