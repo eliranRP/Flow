@@ -2468,6 +2468,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   padding-inline: var(--space-side);
 }
 
+/* The closed אפשרויות link is one touch row. Loading holds that height so תצוגה does not jump. */
+.ui-jev-options-reserve {
+  display: block;
+  min-block-size: var(--touch-min);
+}
+
 .ui-jev-options-hint {
   margin: var(--space-2) 0 var(--space-4);
 }

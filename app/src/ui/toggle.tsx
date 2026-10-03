@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import { cx } from "./cx";
 
 type ToggleProps = {
@@ -10,11 +10,13 @@ type ToggleProps = {
   busy?: boolean;
   /** Draws the switch as a grouped list row, with the icon in the same slot as SUMIT. */
   icon?: ReactNode;
+  /** The checkbox. A recovered Jev retry moves focus here. */
+  inputRef?: Ref<HTMLInputElement>;
   onChange: (checked: boolean) => void;
 };
 
 /** A 44px row. The switch is off, on, or disabled with not-allowed. */
-export function Toggle({ label, hint, checked, disabled = false, busy = false, icon, onChange }: ToggleProps) {
+export function Toggle({ label, hint, checked, disabled = false, busy = false, icon, inputRef, onChange }: ToggleProps) {
   const hintId = useId();
   const described = hint != null ? hintId : undefined;
   const row = icon != null;
@@ -37,6 +39,7 @@ export function Toggle({ label, hint, checked, disabled = false, busy = false, i
         </span>
       )}
       <input
+        ref={inputRef}
         type="checkbox"
         role="switch"
         checked={checked}
