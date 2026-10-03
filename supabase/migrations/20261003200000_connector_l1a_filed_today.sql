@@ -1,5 +1,7 @@
 -- L1a slice. Line currency columns, the filed-today list, and the off-P&L seed.
--- private.filed_today_rows() stays out until MCP 3b (20261003180000) merges.
+-- private.filed_today_rows() is the MCP 3b version: assistant approvals, the
+-- banner, and the id tiebreak. Connector rows use is_connector_source and
+-- line_status = 'posted'. Cards still carry currency and amount_original.
 -- categories already has unique (company_id, kind, name). A second unique index
 -- would make ON CONFLICT (company_id, kind, name) ambiguous. That duplicate
 -- index stays the L1b backlog item.
@@ -79,6 +81,73 @@ $$;
 revoke all on function private.is_connector_source(public.txn_source) from public, anon;
 grant execute on function private.is_connector_source(public.txn_source) to authenticated, service_role;
 
+-- One row per transaction on שויכו היום. assistant is true when this user's
+-- assistant approved it today and the approval is not undone. Connector rows
+-- are posted only. A pending line stays off the list.
+create or replace function private.filed_today_rows()
+returns table (id uuid, assistant boolean)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with bounds as (
+    select (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') as start_at
+  ),
+  assistant_rows as (
+    select distinct w.transaction_id as id
+    from private.mcp_writes w
+    join public.transactions t on t.id = w.transaction_id
+    cross join bounds
+    where w.user_id = auth.uid()
+      and w.kind = 'review'
+      and w.undone_at is null
+      and w.transaction_id is not null
+      and w.created_at >= bounds.start_at
+      and t.company_id = private.current_company_id()
+      and t.removed_at is null
+      and t.line_status = 'posted'
+      and not exists (
+        select 1
+        from public.review_queue open_row
+        where open_row.transaction_id = t.id
+          and open_row.status = 'open'
+      )
+  ),
+  connector_rows as (
+    select filed.id
+    from public.transactions filed
+    cross join bounds
+    where filed.company_id = private.current_company_id()
+      and private.is_connector_source(filed.source)
+      and filed.line_status = 'posted'
+      and filed.removed_at is null
+      and filed.created_at >= bounds.start_at
+      and filed.category_id is not null
+      and (
+        coalesce(filed.pnl_role, 'project') <> 'project'
+        or filed.project_id is not null
+        or filed.direction <> 'expense'
+      )
+      and not exists (
+        select 1
+        from public.review_queue open_row
+        where open_row.transaction_id = filed.id
+          and open_row.status = 'open'
+      )
+  )
+  select ids.id, (assistant_rows.id is not null) as assistant
+  from (
+    select connector_rows.id from connector_rows
+    union
+    select assistant_rows.id from assistant_rows
+  ) ids
+  left join assistant_rows on assistant_rows.id = ids.id;
+$$;
+
+revoke all on function private.filed_today_rows() from public, anon;
+grant execute on function private.filed_today_rows() to authenticated, service_role;
+
 create or replace function public.list_auto_assigned_today()
 returns jsonb
 language sql
@@ -98,28 +167,12 @@ as $$
     'supplier_name', s.name,
     'project_name', p.name,
     'category_name', c.name
-  ) order by filed.created_at desc), '[]'::jsonb)
+  ) order by filed.created_at desc, filed.id), '[]'::jsonb)
   from public.transactions filed
+  join private.filed_today_rows() ids on ids.id = filed.id
   left join public.suppliers s on s.id = filed.supplier_id
   left join public.projects p on p.id = filed.project_id
-  left join public.categories c on c.id = filed.category_id
-  where filed.company_id = (select private.current_company_id())
-    and private.is_connector_source(filed.source)
-    and filed.line_status = 'posted'
-    and filed.removed_at is null
-    and filed.created_at >= (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem')
-    and filed.category_id is not null
-    and (
-      coalesce(filed.pnl_role, 'project') <> 'project'
-      or filed.project_id is not null
-      or filed.direction <> 'expense'
-    )
-    and not exists (
-      select 1
-      from public.review_queue open_row
-      where open_row.transaction_id = filed.id
-        and open_row.status = 'open'
-    );
+  left join public.categories c on c.id = filed.category_id;
 $$;
 
 revoke all on function public.list_auto_assigned_today() from public, anon;
@@ -177,27 +230,8 @@ as $$
     ),
     'confidence', null,
     'supplier_name', s.name,
-    'auto_approved_today', (
-      select count(*)::int
-      from public.transactions filed
-      where filed.company_id = q.company_id
-        and private.is_connector_source(filed.source)
-        and filed.line_status = 'posted'
-        and filed.removed_at is null
-        and filed.created_at >= (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem')
-        and filed.category_id is not null
-        and (
-          coalesce(filed.pnl_role, 'project') <> 'project'
-          or filed.project_id is not null
-          or filed.direction <> 'expense'
-        )
-        and not exists (
-          select 1
-          from public.review_queue open_row
-          where open_row.transaction_id = filed.id
-            and open_row.status = 'open'
-        )
-    )
+    'auto_approved_today', (select count(*)::int from private.filed_today_rows()),
+    'assistant_filed_today', coalesce((select bool_or(filed.assistant) from private.filed_today_rows() filed), false)
   ) order by t.doc_date, q.created_at), '[]'::jsonb)
   from public.review_queue q
   join public.transactions t on t.id = q.transaction_id
