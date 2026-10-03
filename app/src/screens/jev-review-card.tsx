@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "../ui/button";
 import { CheckIcon } from "../ui/icons";
 import { ReviewCard } from "../ui/review-card";
 import {
   JEV_REVIEW_OFF,
+  jevQueueQueryKey,
+  jevReadable,
+  loadJevQueue,
   loadJevReview,
   type JevPrefill,
   type JevReviewState,
@@ -29,12 +32,39 @@ export function useJevReview(transactionId: string | null, live: boolean): JevRe
   return { ...query.data, loading };
 }
 
+/** One read for every open line. A later card uses the same result. */
+export function useJevQueue(transactionIds: readonly string[], live: boolean) {
+  const readable = live && jevReadable() && transactionIds.some((id) => id !== "");
+  const query = useQuery({
+    queryKey: jevQueueQueryKey(transactionIds),
+    enabled: readable,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: () => loadJevQueue(transactionIds),
+  });
+  function loadingFor(transactionId: string | null): boolean {
+    if (!readable || query.isError) return false;
+    if (query.isPending || transactionId == null) return query.isPending;
+    return query.isFetching && !Object.prototype.hasOwnProperty.call(query.data.byId, transactionId);
+  }
+  function stateFor(transactionId: string | null): JevReviewState {
+    if (!readable || query.isError || query.data == null || loadingFor(transactionId)) return JEV_REVIEW_OFF;
+    return {
+      connectorOn: query.data.connectorOn,
+      prefill: transactionId == null ? null : (query.data.byId[transactionId] ?? null),
+    };
+  }
+  return { loadingFor, stateFor };
+}
+
 export function JevReviewCard({
   connectorOn,
   prefill,
+  supplier = "חומרי בניין השרון בע״מ",
 }: {
   connectorOn: boolean;
   prefill: JevPrefill | null;
+  supplier?: string;
 }) {
   const project = connectorOn ? prefill?.project ?? null : null;
   const category = connectorOn ? prefill?.category ?? null : null;
@@ -43,7 +73,7 @@ export function JevReviewCard({
   return (
     <div>
       <ReviewCard
-        supplier="חומרי בניין השרון בע״מ"
+        supplier={supplier}
         sourceLine="הוצאה · 12/04/2026"
         netAgorot={-2_200_000n}
         vatLine="לפני מע״מ · מע״מ ₪3,960"
@@ -63,8 +93,25 @@ export function JevReviewCard({
   );
 }
 
+const LONG_PROJECT = "וילה רעננה — שיפוץ מלא של הקומה העליונה והחצר האחורית";
+const LONG_CATEGORY = "חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי והסביבה הקרובה";
+const LONG_SUPPLIER = "ספק חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי";
+
 export function JevReviewE2e() {
   const [params] = useSearchParams();
   const on = params.get("on") === "1";
-  return <JevReviewCard connectorOn={on} prefill={JEV_REVIEW_SAMPLE} />;
+  const long = params.get("long") === "1";
+  const project = JEV_REVIEW_SAMPLE.project ?? { id: "p-villa", name: "וילה רעננה" };
+  const category = JEV_REVIEW_SAMPLE.category ?? { id: "c-materials", name: "חומרים" };
+  return (
+    <JevReviewCard
+      connectorOn={on || long}
+      supplier={long ? LONG_SUPPLIER : undefined}
+      prefill={{
+        ...JEV_REVIEW_SAMPLE,
+        project: { ...project, name: long ? LONG_PROJECT : project.name },
+        category: { ...category, name: long ? LONG_CATEGORY : category.name },
+      }}
+    />
+  );
 }

@@ -127,6 +127,20 @@ export function transactionParent(projectId: string | null | undefined, search: 
 }
 
 const scrollPositions = new Map<string, number>();
+const jsdom = navigator.userAgent.includes("jsdom");
+let scrollToWarned = false;
+
+/** Tests start from a fresh warning. jsdom prints scrollTo once per process otherwise. */
+export function resetScrollToWarning(): void {
+  scrollToWarned = false;
+}
+
+function scrollToSaved(y: number): void {
+  // jsdom emits "Not implemented: Window's scrollTo()" on every call.
+  if (jsdom && scrollToWarned) return;
+  window.scrollTo(0, y);
+  scrollToWarned = true;
+}
 
 /** Restores the scroll of a history entry. The period and the tab live elsewhere. */
 export function ScrollMemory() {
@@ -134,7 +148,7 @@ export function ScrollMemory() {
   useEffect(() => {
     const key = location.key;
     const saved = scrollPositions.get(key);
-    if (saved != null) window.scrollTo(0, saved);
+    if (saved != null) scrollToSaved(saved);
     return () => {
       scrollPositions.set(key, window.scrollY);
     };

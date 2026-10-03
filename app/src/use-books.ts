@@ -25,6 +25,7 @@ import { createContext, createElement, useCallback, useContext, useMemo, useStat
 import { getSupabase } from "./lib/supabase";
 import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
+import { jevQueueKey, jevQueueQueryKey, loadJevQueue } from "./screens/jev-review";
 
 interface BooksContextValue {
   period: PeriodChoice;
@@ -112,12 +113,20 @@ export function useReviewQuery(active = true) {
   return useQuery({
     queryKey: ["review", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<ReviewRow[]> => {
+    queryFn: async ({ client }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("list_review");
       if (error) throw error;
-      return reviewRowSchema.array().parse(data);
+      const rows = reviewRowSchema.array().parse(data);
+      const ids = rows.map((row) => row.transaction_id);
+      if (jevQueueKey(ids) !== "" && typeof supabase.from === "function") {
+        void client.query({
+          queryKey: jevQueueQueryKey(ids),
+          queryFn: () => loadJevQueue(ids),
+        }).catch(() => undefined);
+      }
+      return rows;
     },
   });
 }

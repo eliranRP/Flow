@@ -76,7 +76,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   return response.data;
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
-import { useJevReview } from "./jev-review-card";
+import { useJevQueue, useJevReview } from "./jev-review-card";
 import { withJev } from "./jev-review";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
@@ -91,7 +91,7 @@ import { BackButton, historyIndex, popSheetLayers, transactionParent, useGoBack,
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
-import { BandFigures, BandHero, SectionHead, SharedCostNote } from "../ui/layout";
+import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
@@ -462,13 +462,11 @@ function ProjectCategories({
 }) {
   const pending = project.pending_count ?? 0;
   const waiting = pending > 0;
-  const shared = project.categories.some((category) => category.has_shared_share === true);
   if (project.categories.length === 0 && !waiting) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
   return (
     <>
-      {shared ? <SharedCostNote /> : null}
       <List>
       {project.categories.map((category) => (
         <ListRow
@@ -479,6 +477,10 @@ function ProjectCategories({
           loss={false}
           chevron={category.id != null}
           href={category.id == null ? undefined : (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`)}
+          wrapHint={category.has_shared_share === true}
+          hint={category.has_shared_share === true ? (
+            <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
+          ) : undefined}
         />
       ))}
       {waiting ? (
@@ -1154,10 +1156,13 @@ export function ReviewQueue({
   const invalidate = useInvalidateBooks();
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
-  const jev = useJevReview(
-    (shown ?? rows[0])?.transaction_id ?? null,
+  const jevQueue = useJevQueue(
+    rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
   );
+  const shownId = (shown ?? rows[0])?.transaction_id ?? null;
+  const jevLoading = jevQueue.loadingFor(shownId);
+  const jev = jevQueue.stateFor(shownId);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef({ total: rows.length, seen: new Set(rows.map((item) => item.id)) });
   let added = 0;
@@ -1180,7 +1185,8 @@ export function ReviewQueue({
           || next.category_suggested !== shown.category_suggested
           || next.project_suggested !== shown.project_suggested
           || next.project_name !== shown.project_name
-          || next.share_count !== shown.share_count)
+          || next.share_count !== shown.share_count
+          || next.auto_approved_today !== shown.auto_approved_today)
       ) {
         setShown(next);
       }
@@ -1303,7 +1309,7 @@ export function ReviewQueue({
   const total = listPlace?.total ?? Math.max(visit.current.total, 1);
   const index = listPlace?.index ?? (row ? total - rows.length + 1 : total);
   const splitCard = reviewIsSplit(row);
-  const approvable = !leaving && row != null && (head.reason === "unallocated_shared"
+  const approvable = !leaving && !jevLoading && row != null && (head.reason === "unallocated_shared"
     || (splitCard
       ? head.category_id != null
       : head.direction === "income"
@@ -1353,6 +1359,7 @@ export function ReviewQueue({
           netAgorot={card.amount_net}
           vatLine={reviewVatLine(card.vat_agorot)}
           suggestion={suggestion}
+          pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
           projectButtonRef={reviewLineFocus.project}
@@ -1367,7 +1374,7 @@ export function ReviewQueue({
           busy={approve.isPending}
           disabled={!approvable}
           onClick={() => {
-            if (row == null || !approvable) return;
+            if (row == null || jevLoading || !approvable) return;
             if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
             if (row.reason === "unallocated_shared") {
               if (!row.transaction_id) return;
@@ -1970,6 +1977,7 @@ export function AddForm() {
           disabled
           title="צילום חשבונית"
           hint="מצלמה או PDF · קורא ספק, סכום, מע״מ ותאריך"
+          wrapHint
           icon={<CameraIcon size={26} />}
         />
         <ListRow
@@ -2029,6 +2037,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
             variant="project"
             title={row.customer_name ?? row.description}
             hint={unpaidHintLine(row)}
+            wrapHint
             agorot={absAgorot(row.open_gross_agorot)}
             loss={false}
             actionBelow
@@ -2371,7 +2380,7 @@ export function TransactionScreen({
         trailing={<IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
-        <p className="t-title-3">{party}</p>
+        <p className="t-title-3 ui-party">{party}</p>
         <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" /></p>
         <p className="t-hint">לפני מע״מ · <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi></p>
         {reviewLabel || paymentLabel ? (

@@ -19,6 +19,8 @@ const empty = {
   project_name: null,
   category_name: null,
   reason: null,
+  project_suggested: false,
+  category_suggested: false,
 };
 
 const projects = new Map([["p1", "וילה רעננה"]]);
@@ -47,6 +49,49 @@ describe("Jev review prefill", () => {
       project_suggested: true,
       category_id: "c1",
       category_name: "חומרים",
+      category_suggested: true,
+    });
+  });
+
+  it("fills an empty category when list_review reports category_suggested false", () => {
+    expect(empty.category_suggested).toBe(false);
+    expect(empty.category_id).toBeNull();
+    expect(withJev(empty, on).category_id).toBe("c1");
+  });
+
+  it("leaves a field the user assigned", () => {
+    const owned = {
+      ...empty,
+      project_id: "owned",
+      project_name: "הרצל",
+      project_suggested: true,
+      project_assigned: true,
+      category_id: "c9",
+      category_name: "הובלה",
+      category_suggested: false,
+      category_assigned: true,
+      user_assigned: false,
+    };
+    expect(withJev(owned, on)).toBe(owned);
+  });
+
+  it("fills a stored category when the assignment flags say the user has not set it", () => {
+    const unset = {
+      ...empty,
+      project_id: "p9",
+      project_name: "הרצל",
+      project_suggested: false,
+      project_assigned: false,
+      user_assigned: false,
+      category_id: "c9",
+      category_name: "הובלה",
+      category_suggested: false,
+      category_assigned: false,
+    };
+    expect(withJev(unset, on)).toMatchObject({
+      project_id: "p1",
+      project_suggested: true,
+      category_id: "c1",
       category_suggested: true,
     });
   });
