@@ -1,3 +1,4 @@
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
@@ -27,7 +28,7 @@ import {
 } from "../split-math";
 import { withSheetBackground } from "../sheet-background";
 import { safeAppPath } from "../safe-return";
-import { hebrewSumitError, israelClock, retryClockParts } from "../sumit-copy";
+import { hebrewSumitError, israelSyncPhrase, retryClockParts } from "../sumit-copy";
 import { isStandalone } from "../ui/install-prompt";
 import {
   useBooks,
@@ -158,21 +159,23 @@ async function saveNewProject(
 
 export function OnboardingScreen() {
   const navigate = useNavigate();
+  const client = useQueryClient();
   const [params] = useSearchParams();
-  const search = usePreviewSearch();
   const blocked = useBlockedPreview();
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
+  const returnTo = safeAppPath(params.get("return")) ?? "/";
   const save = useWrite({
     failure: "לא הצלחנו לשמור.",
     keys: ["home", "dashboard", "sumit"],
     onSuccess: () => {
-      void navigate(safeAppPath(params.get("return")) ?? "/", { replace: true });
+      void navigate(returnTo, { replace: true });
     },
     run: async () => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("create_company", { p_name: name.trim(), p_vat_registered: vat === "registered" }));
+      await client.refetchQueries({ queryKey: ["dashboard"], type: "all" });
     },
   });
 
@@ -199,7 +202,7 @@ export function OnboardingScreen() {
           }
         />
       </div>
-      <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." backTo={`/sign-in${search}`} />
+      <ScreenHeader title="פרטי העסק" subtitle="השם שיופיע בבית." backTo={returnTo} />
       <form className="ui-page-pad" onSubmit={submit}>
         <TextField label="שם העסק" value={name} onChange={(event) => { setName(event.target.value); }} required minLength={2} />
         <SegmentedControl
@@ -3252,6 +3255,7 @@ export function SettingsScreen({
   const [focusSumit, setFocusSumit] = useState(false);
   const [sumitRetrying, setSumitRetrying] = useState(false);
   const [sumitHint, setSumitHint] = useState("לא הצלחנו לטעון");
+  const [sumitOffline, setSumitOffline] = useState(0);
   const [sumitNonce, setSumitNonce] = useState(0);
   const wantedOverhead = useRef(false);
   const sumitRowRef = useRef<HTMLButtonElement>(null);
@@ -3317,6 +3321,7 @@ export function SettingsScreen({
       setStatusOpen(false);
       setConnectOpen(false);
       popSheetLayers(navigate, 2);
+      setFocusSumit(true);
     },
     run: async () => {
       const supabase = getSupabase();
@@ -3352,10 +3357,12 @@ export function SettingsScreen({
 
   useEffect(() => {
     if (!focusSumit) return;
-    const node = sumitRowRef.current;
-    if (node == null) return;
-    node.focus();
-    setFocusSumit(false);
+    if (sumitRowRef.current == null) return;
+    const id = window.setTimeout(() => {
+      sumitRowRef.current?.focus();
+      setFocusSumit(false);
+    }, 0);
+    return () => { window.clearTimeout(id); };
   }, [focusSumit, status.data, status.isError, status.isLoading]);
 
   useEffect(() => {
@@ -3366,6 +3373,8 @@ export function SettingsScreen({
     if (params.get("sheet") === "sumit") {
       if (phase.kind === "loading" || phase.kind === "error") return;
       if (sample == null && !noCo && status.isLoading) return;
+      const companySettling = sample == null && preview === "off" && dashboard.isFetching && dashboard.data?.company_id == null;
+      if (companySettling) return;
       wantSheet.current = true;
       const next = new URLSearchParams(params);
       next.delete("sheet");
@@ -3388,7 +3397,7 @@ export function SettingsScreen({
     wantSheet.current = false;
     if (opened === "connected") setStatusOpen(true);
     else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
-  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, status.isLoading, status.isError, status.fetchStatus, status.data]);
+  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data]);
 
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
@@ -3421,7 +3430,7 @@ export function SettingsScreen({
     authReconnect,
     connected,
   });
-  const syncedClock = israelClock(sample ? sample.lastSyncAt : status.data?.last_sync_at);
+  const syncPhrase = israelSyncPhrase(sample ? sample.lastSyncAt : status.data?.last_sync_at, clockNow);
   const retryHint = retry == null ? undefined : (
     <>
       {retry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
@@ -3473,7 +3482,12 @@ export function SettingsScreen({
             tone="muted"
             describeHint
             hintStatus
-            hint={sumitHint}
+            hint={(
+              <>
+                {sumitHint}
+                {sumitOffline > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
+              </>
+            )}
             action={(
               <TextLink
                 size="label"
@@ -3483,14 +3497,23 @@ export function SettingsScreen({
                 buttonRef={sumitRetryRef}
                 onClick={() => {
                   if (sample != null || sumitRetrying) return;
+                  if (!onlineManager.isOnline()) {
+                    setSumitOffline((nonce) => nonce + 1);
+                    return;
+                  }
                   setSumitRetrying(true);
                   void status.refetch().then((result) => {
+                    const stayed = document.activeElement === sumitRetryRef.current;
                     setSumitRetrying(false);
+                    if (result.fetchStatus === "paused" || !onlineManager.isOnline()) {
+                      setSumitOffline((nonce) => nonce + 1);
+                      return;
+                    }
                     if (result.isError || result.data == null) {
                       setSumitNonce((nonce) => nonce + 1);
                       return;
                     }
-                    setFocusSumit(true);
+                    if (stayed) setFocusSumit(true);
                   });
                 }}
               >
@@ -3518,6 +3541,7 @@ export function SettingsScreen({
         )}
       </List>
       <AssistantSettings
+        announceLoading={kind !== "loading"}
         sample={
           // A missing company, and any preview, must not call flow-mcp/status.
           sample
@@ -3536,7 +3560,7 @@ export function SettingsScreen({
         {noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search)}>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search)} replace>פרטי העסק</TextLink>
           </div>
         ) : (
           <div className="ui-stack">
@@ -3566,7 +3590,7 @@ export function SettingsScreen({
           <p>
             מחובר
             {sumitId != null ? <> · מספר חברה <bdi dir="ltr">{String(sumitId)}</bdi></> : null}
-            {syncedClock != null ? <> · עודכן ב-<bdi className="ui-num" dir="ltr">{syncedClock}</bdi></> : null}
+            {syncPhrase != null ? <> · <span className="ui-nowrap">{syncPhrase}</span></> : null}
           </p>
           {refreshHeld && rawError != null && rawError !== "sumit_auth" ? <p>הרענון נכשל</p> : null}
           {!refreshHeld && rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}

@@ -12,6 +12,8 @@ describe("safeAppPath", () => {
       "/..//evil.com",
       "/.//evil.com",
       "/%2e%2e//evil.com",
+      "/%252e%252e//evil.com",
+      "/%2e%2e/%2e%2e//evil.com",
       "/a/..//evil.com",
       "/\\evil",
       "\\\\evil",

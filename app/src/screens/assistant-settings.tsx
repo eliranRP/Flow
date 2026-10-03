@@ -1,15 +1,17 @@
-import { useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { getSupabase } from "../lib/supabase";
 import { popSheetLayers, useSheetHistory } from "../ui/back";
 import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
-import { AlertIcon, InboxIcon, LogoutIcon } from "../ui/icons";
+import { AlertIcon, LogoutIcon, SparkIcon } from "../ui/icons";
 import { FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
 import { Sheet } from "../ui/sheet";
+import { Skeleton } from "../ui/skeleton";
+import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 
 export type AssistantScope = "read" | "read_write";
@@ -56,15 +58,8 @@ function scopeLabel(scope: AssistantScope): string {
   return scope === "read" ? "קריאה בלבד" : "קריאה וכתיבה";
 }
 
-function connectedHint(scope: AssistantScope, lastUsedAt: string | null | undefined) {
-  const label = scopeLabel(scope);
-  if (!lastUsedAt) return `מחובר · ${label} · עדיין אין שימוש`;
-  return (
-    <>
-      {`מחובר · ${label} · שימוש אחרון `}
-      <bdi className="ui-nowrap" dir="ltr">{formatAssistantUse(lastUsedAt)}</bdi>
-    </>
-  );
+function connectedHint(scope: AssistantScope): string {
+  return `מחובר · ${scopeLabel(scope)}`;
 }
 
 async function readStatus(): Promise<Status> {
@@ -97,6 +92,7 @@ export function AssistantSettings({
   initialSecret,
   initialOpen = false,
   showHeading = true,
+  announceLoading = true,
 }: {
   sample?: AssistantSample;
   noCompany?: boolean;
@@ -105,6 +101,8 @@ export function AssistantSettings({
   initialOpen?: boolean;
   /** Settings puts this block under חיבורים, so the עוזר heading would repeat. */
   showHeading?: boolean;
+  /** Settings already announced טוען… for the SUMIT row. */
+  announceLoading?: boolean;
 }) {
   const toast = useToast();
   const navigate = useNavigate();
@@ -123,6 +121,14 @@ export function AssistantSettings({
   const [secret, setSecret] = useState<Minted | null>(initialSecret ?? null);
   const [manualCopy, setManualCopy] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  const [intro, setIntro] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [hint, setHint] = useState("לא הצלחנו לטעון");
+  const [offlineNote, setOfflineNote] = useState(0);
+  const [hintNonce, setHintNonce] = useState(0);
+  const [focusRow, setFocusRow] = useState(false);
+  const rowRef = useRef<HTMLButtonElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
   const openRef = useRef(initialSecret != null || initialOpen);
   const secretRef = useRef<HTMLElement>(null);
   const closeConnectRef = useRef<(next: boolean) => void>(() => undefined);
@@ -133,11 +139,13 @@ export function AssistantSettings({
   });
 
   const live = status.data;
+  const paused = sample == null && !noCompany && status.fetchStatus === "paused" && status.data == null;
+  const failed = sample == null && (retrying || paused || (status.isError && status.data == null));
   const view: AssistantSample = sample
     ? (sample.state === "error" || sample.error ? { ...sample, state: "error" } : sample)
     : noCompany
       ? { state: "no-company" }
-      : status.isError && live == null
+      : failed
         ? { state: "error" }
         : live
           ? {
@@ -158,6 +166,7 @@ export function AssistantSettings({
       setManualCopy(false);
       setSecret(null);
       setChoice("read_write");
+      setIntro(false);
     }
   }
   closeConnectRef.current = closeSheet;
@@ -217,6 +226,7 @@ export function AssistantSettings({
       popSheetLayers(navigate, 2);
       toast.show({ tone: "info", message: "העוזר נותק." });
       await client.invalidateQueries({ queryKey: ["mcp-status"] });
+      setFocusRow(true);
     } catch {
       toast.show({ tone: "bad", message: "לא הצלחנו לנתק. נסו שוב." });
     } finally {
@@ -224,32 +234,134 @@ export function AssistantSettings({
     }
   }
 
+  useEffect(() => {
+    if (hintNonce === 0) return;
+    setHint("");
+    const id = window.setTimeout(() => {
+      setHint("לא הצלחנו לטעון");
+      const retry = retryRef.current;
+      const active = document.activeElement;
+      if (retry == null || active === retry) return;
+      if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) return;
+      retry.focus();
+    }, 30);
+    return () => { window.clearTimeout(id); };
+  }, [hintNonce]);
+
+  useEffect(() => {
+    if (!focusRow) return;
+    if (rowRef.current == null) return;
+    const id = window.setTimeout(() => {
+      rowRef.current?.focus();
+      setFocusRow(false);
+    }, 0);
+    return () => { window.clearTimeout(id); };
+  }, [focusRow, view.state, status.data]);
+
+  function retryStatus() {
+    if (sample != null || retrying) return;
+    if (!onlineManager.isOnline()) {
+      setOfflineNote((nonce) => nonce + 1);
+      return;
+    }
+    setRetrying(true);
+    void status.refetch().then((result) => {
+      const stayed = document.activeElement === retryRef.current;
+      setRetrying(false);
+      if (result.fetchStatus === "paused" || !onlineManager.isOnline()) {
+        setOfflineNote((nonce) => nonce + 1);
+        return;
+      }
+      if (result.isError || result.data == null) {
+        setHintNonce((nonce) => nonce + 1);
+        return;
+      }
+      if (stayed) setFocusRow(true);
+    });
+  }
+
+  const spark = <SparkIcon size={24} />;
   const row = view.state === "loading" ? (
-    <ListRow variant="button" title="עוזר AI" hint="טוען" icon={<InboxIcon />} wrapHint describeHint busy disabled />
+    <ListRow variant="static" title="עוזר AI" icon={spark} hint={<Skeleton width="sm" />} skelHint busy />
   ) : view.state === "no-company" ? (
-    <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint clearHint ariaDisabled className="ui-row-ring" />
+    <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={spark} wrapHint describeHint clearHint ariaDisabled className="ui-row-ring" buttonRef={rowRef} />
   ) : view.state === "error" ? (
-    <ListRow variant="static" title="עוזר AI" hint="לא הצלחנו לטעון את החיבור." icon={<AlertIcon />} wrapHint describeHint />
+    <ListRow
+      variant="static"
+      title="עוזר AI"
+      icon={<AlertIcon size={24} />}
+      tone="muted"
+      describeHint
+      hintStatus
+      hint={(
+        <>
+          {hint}
+          {offlineNote > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
+        </>
+      )}
+      action={(
+        <TextLink
+          size="label"
+          chevron={false}
+          label="ניסיון חוזר: עוזר AI"
+          busy={retrying}
+          buttonRef={retryRef}
+          onClick={retryStatus}
+        >
+          ניסיון חוזר
+        </TextLink>
+      )}
+    />
   ) : view.state === "connected" ? (
-    <ListRow variant="button" title="עוזר AI" hint={connectedHint(scope, view.lastUsedAt)} icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setDetailsSheet(true); }} />
+    <ListRow
+      variant="button"
+      title="עוזר AI"
+      hint={connectedHint(scope)}
+      icon={spark}
+      wrapHint
+      describeHint
+      chevron
+      className="ui-row-ring"
+      buttonRef={rowRef}
+      onClick={() => { setDetailsSheet(true); }}
+    />
   ) : view.state === "expired" ? (
-    <ListRow variant="button" title="עוזר AI" hint="התוקף פג" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setConnectSheet(true); }} />
+    <ListRow
+      variant="button"
+      title="עוזר AI"
+      hint="צריך לחבר מחדש"
+      icon={<AlertIcon size={24} />}
+      tone="warning"
+      wrapHint
+      describeHint
+      chevron
+      className="ui-row-ring"
+      buttonRef={rowRef}
+      onClick={() => { setIntro(true); setConnectSheet(true); }}
+    />
   ) : (
-    <ListRow variant="button" title="עוזר AI" hint="לא מחובר" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setConnectSheet(true); }} />
+    <ListRow
+      variant="button"
+      title="עוזר AI"
+      hint="לא מחובר"
+      icon={spark}
+      wrapHint
+      describeHint
+      chevron
+      className="ui-row-ring"
+      buttonRef={rowRef}
+      onClick={() => { setIntro(false); setConnectSheet(true); }}
+    />
   );
 
   return (
     <>
       {showHeading ? <SectionHead title="עוזר AI" /> : null}
+      {view.state === "loading" && announceLoading ? <p className="sr-only" role="status">טוען…</p> : null}
       <List>
         {row}
       </List>
-      {view.state === "error" ? (
-        <div className="ui-page-pad">
-          <Button type="button" variant="secondary" onClick={() => { void status.refetch(); }}>נסו שוב</Button>
-        </div>
-      ) : null}
-      <Sheet open={open} onOpenChange={setConnectSheet} title="חיבור עוזר">
+      <Sheet open={open} onOpenChange={setConnectSheet} title={intro && secret == null ? "עוזר AI" : "חיבור עוזר"}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p>הקוד מוצג פעם אחת. העתיקו אותו לחלון העוזר.</p>
@@ -260,6 +372,12 @@ export function AssistantSettings({
             {manualCopy ? <p className="t-hint" id="assistant-manual-copy" role="status">העתיקו ידנית</p> : null}
             <Button type="button" variant="secondary" aria-describedby={manualCopy ? "assistant-manual-copy" : undefined} onClick={() => { void copySecret(); }}>העתקה</Button>
             <Button type="button" onClick={() => { setConnectSheet(false); }}>סיום</Button>
+          </div>
+        ) : intro ? (
+          <div className="ui-stack">
+            <p>פג תוקף</p>
+            <p>הקוד הפסיק לעבוד אחרי 90 יום.</p>
+            <Button type="button" onClick={() => { setIntro(false); }}>חיבור מחדש</Button>
           </div>
         ) : (
           <div className="ui-stack ui-assistant-step">
@@ -291,6 +409,16 @@ export function AssistantSettings({
         ) : null}
       </Sheet>
       <Sheet open={detailsOpen} onOpenChange={setDetailsSheet} title="עוזר AI">
+        <div className="ui-stack">
+          <p>
+            {view.lastUsedAt ? (
+              <>
+                שימוש אחרון{" "}
+                <bdi className="ui-nowrap" dir="ltr">{formatAssistantUse(view.lastUsedAt)}</bdi>
+              </>
+            ) : "עדיין אין שימוש"}
+          </p>
+        </div>
         <List>
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectSheet(true); }} />
         </List>

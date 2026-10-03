@@ -408,6 +408,10 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await toast(page, previewToast);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/e2e/settings?preview=1&assistant=connected");
+  const assistantRow = page.getByRole("button", { name: "עוזר AI" });
+  await expect(assistantRow).toContainText("מחובר · קריאה וכתיבה");
+  await expect(page.getByText("30/09/2026, 14:05")).toHaveCount(0);
+  await assistantRow.click();
   await expect(page.getByText("30/09/2026, 14:05")).toBeVisible();
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "dark";
@@ -415,7 +419,6 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   const stampLines = await page.locator("bdi", { hasText: "30/09/2026, 14:05" }).evaluate((node) => node.getClientRects().length);
   expect(stampLines).toBe(1);
   await expect(page.getByRole("button", { name: "עוזר AI" })).toContainText("מחובר");
-  await page.getByRole("button", { name: "עוזר AI" }).click();
   await page.getByRole("dialog", { name: "עוזר AI" }).getByRole("button", { name: "ניתוק" }).click();
   const confirm = page.getByRole("dialog", { name: "לנתק את העוזר?" });
   await expect(confirm).toBeVisible();
@@ -423,8 +426,10 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
   await expect(confirm).toBeHidden();
   await toast(page, previewToast);
   await page.goto("/e2e/settings?preview=1&assistant=loading");
-  await expect(page.getByRole("button", { name: "עוזר AI" })).toContainText("טוען");
-  await expect(page.getByRole("button", { name: "עוזר AI" })).not.toContainText("מחובר");
+  const loadingRow = page.locator(".ui-row", { hasText: "עוזר AI" });
+  await expect(loadingRow).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByRole("button", { name: "עוזר AI" })).toHaveCount(0);
+  await expect(loadingRow).not.toContainText("מחובר");
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/settings?preview=1");
   await page.getByRole("button", { name: "עוזר AI" }).click();
@@ -464,7 +469,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
 
   await page.goto("/e2e/settings?preview=1&connected=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
-  const connectedSheet = page.getByRole("dialog", { name: "SUMIT" });
+  const connectedSheet = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await connectedSheet.getByRole("button", { name: "רענון עכשיו" }).click();
   await toast(page, previewToast);
   await connectedSheet.getByRole("button", { name: "ניתוק" }).click();
@@ -508,7 +513,7 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   const reconnect = page.getByRole("button", { name: "SUMIT" });
   await expect(reconnect).toContainText("צריך לחבר מחדש");
   await reconnect.click();
-  const authSheet = page.getByRole("dialog", { name: "SUMIT" });
+  const authSheet = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await expect(authSheet).toBeVisible();
   await expect(authSheet.getByText("המזהה או המפתח לא התקבלו")).toBeVisible();
   await expect(authSheet.getByRole("button", { name: "חיבור מחדש" })).toBeVisible();
