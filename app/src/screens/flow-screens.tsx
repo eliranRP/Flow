@@ -3322,7 +3322,13 @@ export function SettingsScreen({
       <ScreenHeader title="הגדרות" />
       <List>
         {emptyAccount ? (
-          <ListRow variant="button" title="אין עסק עדיין" icon={<GoogleIcon />} disabled onClick={() => undefined} />
+          <ListRow
+            variant="button"
+            title={email ?? "עדיין בלי עסק"}
+            icon={<GoogleIcon />}
+            disabled
+            onClick={() => undefined}
+          />
         ) : (
           <ListRow
             variant="static"

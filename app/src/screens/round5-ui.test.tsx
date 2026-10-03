@@ -440,8 +440,11 @@ describe("settings account", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const account = screen.getByRole("button", { name: "אין עסק עדיין" });
+    const account = screen.getByRole("button", { name: "עדיין בלי עסק" });
     expect(account).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "אין עסק עדיין" })).not.toBeInTheDocument();
+    const assistant = screen.getByRole("button", { name: "עוזר" });
+    expect(document.getElementById(assistant.getAttribute("aria-describedby") ?? "")).toHaveTextContent("אין עסק עדיין");
     expect(account.querySelector("path[fill='#4285F4']")).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "תצוגה" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();

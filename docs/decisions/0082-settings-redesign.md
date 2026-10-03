@@ -14,8 +14,8 @@ This amends the Settings section of [0080](0080-mcp-connector.md). Mint, revoke,
 ## Decision
 
 1. One screen, 390×844, light and dark, RTL, also checked at 320 and 360. Sections, in order: the account row, חיבורים, תצוגה, עוד, then the footer "Flow 0.1". Components come from `app/src/ui`. The structure is a quiet list and sheets. The palette does not change.
-2. The account row shows the business name and the Google email, with the G icon. It does not say עוסק מורשה or עוסק פטור. With no company, the row is disabled and says "אין עסק עדיין".
-3. חיבורים has two rows. SUMIT, and "עוזר AI" with a spark icon (`SparkIcon` in `icons.tsx`). Each row shows a one-word status and opens one sheet. The exact status words wait for the mock. Loading is a skeleton row, not a busy connected row.
+2. The account row shows the business name and the Google email, with the G icon. It does not say עוסק מורשה or עוסק פטור. With no company, the row is disabled and shows the Google email, or "עדיין בלי עסק" when there is no email. It does not say "אין עסק עדיין".
+3. חיבורים has two rows. SUMIT, and "עוזר AI" with a spark icon (`SparkIcon` in `icons.tsx`). Each row shows a one-word status and opens one sheet. The exact status words wait for the mock. Loading is a skeleton row, not a busy connected row. "אין עסק עדיין" is only the disabled עוזר AI row when there is no company (Q-C3-3).
 4. A failed status is one inline "ניסיון חוזר" on that row. SUMIT does not also show a form error, a חיבור מחדש button, and a ניתוק row for the same failure. עוזר does not add a second ניתוק row under the status. Disconnect stays available inside the sheet. 0080's confirm copy for ניתוק stays.
 5. תצוגה has the categories row and the overhead switch. The switch label is "רווח אחרי כלליות". The hint is "חלק מהכלליות נכנס לכל פרויקט". The switch still calls `set_after_overhead`.
 6. עוד has install and sign out. Install stays hidden when the app is already installed.
@@ -41,6 +41,6 @@ Each cycle is its own pull request and works without the later ones. Cycle 1 is 
 | 1 | This decision |
 | 2 | The account row, the section order, the removals, and the footer. SUMIT and עוזר keep today's actions |
 | 3 | The SUMIT row: one status word, one sheet, one inline ניסיון חוזר |
-| 4 | The עוזר AI row: spark icon, one status word, skeleton, and the disabled empty row |
+| 4 | The עוזר AI row: spark icon, one status word, skeleton, and the disabled empty row "אין עסק עדיין" |
 | 5 | The עוזר sheet, the address, the shown-once code, and the Claude help sheet |
 | 6 | תצוגה, עוד, and the 320, 360, and 390 pass in light and dark |
