@@ -82,6 +82,8 @@ export const reviewRowSchema = z.object({
   /** Present only when a suggestion carries a confidence. AI tagging is off, so live rows omit it. */
   confidence: z.number().int().min(0).max(100).nullable().optional(),
   auto_approved_today: z.number().int().nonnegative().optional(),
+  /** True when today's filed set includes an assistant approval. Decision 0080. */
+  assistant_filed_today: z.boolean().optional(),
 });
 
 /** A SUMIT row filed today with no open review item. Same filter as auto_approved_today. */
