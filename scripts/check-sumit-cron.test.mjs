@@ -13,12 +13,24 @@ const sqlFiles = [
   new URL("./check-sumit-cron.sql", import.meta.url),
 ];
 
-function dollarCron(sql) {
+function dollarBlocks(sql) {
   const marker = "$cron$";
-  const start = sql.indexOf(marker);
-  const end = sql.indexOf(marker, start + marker.length);
-  assert.ok(start >= 0 && end > start);
-  return sql.slice(start + marker.length, end);
+  const blocks = [];
+  let from = 0;
+  while (from < sql.length) {
+    const start = sql.indexOf(marker, from);
+    if (start < 0) break;
+    const end = sql.indexOf(marker, start + marker.length);
+    assert.ok(end > start);
+    blocks.push(sql.slice(start + marker.length, end));
+    from = end + marker.length;
+  }
+  assert.ok(blocks.length > 0);
+  return blocks;
+}
+
+function dollarCron(sql) {
+  return dollarBlocks(sql)[0];
 }
 
 test("the daily command matches the phase 1 insert", () => {
@@ -33,6 +45,24 @@ test("the daily command matches the phase 1 insert", () => {
   assert.equal(/\bcron\.schedule\b/.test(shell), false);
   assert.equal(/\bcron\.unschedule\b/.test(shell), false);
   assert.match(shell, /SET TRANSACTION READ ONLY/);
+  assert.match(shell, /cron_secret decides whether flow-sumit-drain should exist/);
+  assert.match(shell, /flow_sync_url is the drain URL/);
+});
+
+test("the drain command reads Vault and has no Kong fallback or literal header", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20261003160000_sumit_drain_url.sql", import.meta.url),
+    "utf8",
+  );
+  const check = readFileSync(new URL("./check-sumit-cron.sql", import.meta.url), "utf8");
+  const command = dollarBlocks(migration)[0];
+  assert.equal(dollarBlocks(check)[1], command);
+  assert.match(command, /where name = 'flow_sync_url'/);
+  assert.match(command, /where name = 'cron_secret'/);
+  assert.equal(command.includes("http://kong:8000"), false);
+  assert.equal(/x-flow-cron',\s*'/.test(command), false);
+  assert.match(check, /name = 'flow_sync_url'/);
+  assert.match(check, /not has_url/);
 });
 
 function runCheck({ url = "postgresql://postgres@127.0.0.1:54322/postgres", cron = "t", status = "ok", fail = "" }) {

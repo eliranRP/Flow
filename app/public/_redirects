@@ -1,26 +1,49 @@
 # Pages rejects `/* /index.html 200`: /index.html strips back to `/` and matches the splat, so the rule is ignored.
 # 404.html stays, so a missing file, including /assets/*, is 404.
 # These routes serve the built shell with status 200 and keep the URL.
+# A trailing slash 301s to the same path without the slash. The no-slash rule does not redirect back.
 # Static rules stay above placeholders.
 /sign-in /app-shell 200
+/sign-in/ /sign-in 301
 /auth/callback /app-shell 200
+/auth/callback/ /auth/callback 301
 /preview /app-shell 200
+/preview/ /preview 301
 /terms /app-shell 200
+/terms/ /terms 301
 /privacy /app-shell 200
+/privacy/ /privacy 301
 /help /app-shell 200
+/help/ /help 301
 /onboarding /app-shell 200
+/onboarding/ /onboarding 301
 /install /app-shell 200
+/install/ /install 301
 /add /app-shell 200
+/add/ /add 301
 /projects /app-shell 200
+/projects/ /projects 301
 /review /app-shell 200
+/review/ /review 301
 /review/all /app-shell 200
+/review/all/ /review/all 301
 /review/change /app-shell 200
+/review/change/ /review/change 301
 /review/filed /app-shell 200
+/review/filed/ /review/filed 301
 /unpaid /app-shell 200
+/unpaid/ /unpaid 301
 /notifications /app-shell 200
+/notifications/ /notifications 301
 /settings /app-shell 200
+/settings/ /settings 301
 /settings/categories /app-shell 200
-/projects/:projectId /app-shell 200
+/settings/categories/ /settings/categories 301
 /projects/:projectId/categories/:categoryId /app-shell 200
-/transactions/:transactionId /app-shell 200
+/projects/:projectId/categories/:categoryId/ /projects/:projectId/categories/:categoryId 301
+/projects/:projectId /app-shell 200
+/projects/:projectId/ /projects/:projectId 301
 /transactions/:transactionId/split /app-shell 200
+/transactions/:transactionId/split/ /transactions/:transactionId/split 301
+/transactions/:transactionId /app-shell 200
+/transactions/:transactionId/ /transactions/:transactionId 301

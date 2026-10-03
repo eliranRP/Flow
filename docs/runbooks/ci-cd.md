@@ -26,18 +26,19 @@ When the secrets are present, in this order:
 1. The hosted dist is built from that commit, stamped with the commit SHA, and checked with `pnpm check:bundle`. A failed build or a failed check stops the job. The database is unchanged and the previous app stays live.
 2. The job runs `supabase functions list --project-ref sxqpnetmtufkzowutduq`. That probe is read-only. It does not write the pepper file. If it fails, migrations and Pages do not run.
 3. A read-only preflight opens the session pooler. It refuses the session unless the last line of the read-only check is `on`. It reads versions `20260929240000`, `20260929250000`, and `20260929260000`. When all three are recorded, it skips `scripts/preflight-r23.sql`. When any is missing, it runs that query and continues only when `rule_transactions_at_risk` and `rule_undo_rows_at_risk` are both 0. It then runs `supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --output-format json` and classifies the output with `--target remote`. CLI 2.118.0 prints a JSON object when `--output-format json` is set, and also when a coding-agent variable is set (`CURSOR_AGENT`, `CURSOR_TRACE_ID`, and the others in `@vercel/detect-agent`). `CI=true` does not select JSON, and a non-TTY stdout does not either, so the GitHub Actions e2e job printed plain text until this flag was passed. The deploy job passes the flag, so it emits the JSON object. The classifier requires that object and the DRY RUN line. Up to date means `upToDate` is true and `migrations`, `seeds`, and `roles` are empty. Production also requires `message` to start with `Remote`. A non-empty `migrations` array is pending. A pending text list next to an up-to-date result fails, and pending JSON next to an up-to-date text line fails. When both lists are present, the names must be equal. A log with no JSON result fails. Nothing is pushed.
-4. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code. The next command is `bash scripts/check-sumit-cron.sh`. It opens a read-only session and reads `cron.job`. It does not schedule a job. `flow-sumit-daily` must be one row at `0 3 * * *` with the phase 1 refresh insert. `flow-sumit-drain` must be one row at `*/5 * * * *` when Vault `cron_secret` is non-empty and `pg_net` is installed, and must be absent otherwise. The secret it reads is Vault `cron_secret`. That secret's scope is the drain expectation only.
+4. `supabase db push --db-url "$SUPABASE_DB_URL"` applies pending migrations. Seed data is not included. The database is not reset. Success is the command's exit code. The next command is `bash scripts/check-sumit-cron.sh`. It opens a read-only session and reads `cron.job`. It does not schedule a job. `flow-sumit-daily` must be one row at `0 3 * * *` with the phase 1 refresh insert. `flow-sumit-drain` must be one row at `*/5 * * * *` when Vault `cron_secret` is non-empty and `pg_net` is installed, and must be absent otherwise. When that job should exist, Vault `flow_sync_url` must be non-empty and the command must read that URL. The command must not contain `http://kong:8000/functions/v1/sumit-sync` and must not put a literal in the `x-flow-cron` header. `cron_secret` decides whether the drain should exist. `flow_sync_url` is the drain URL. The check does not print either value.
 5. `pnpm exec wrangler pages deploy` publishes that dist to the Cloudflare Pages project `flow-app` on the production branch `main`. Wrangler 4.144.0 comes from the lockfile. Success is the command's exit code.
 6. The job writes `FLOW_MCP_PEPPER` and `FLOW_MCP_APP_ORIGINS` into a file from `mktemp "$RUNNER_TEMP/..."`, with a trap on EXIT, INT, and TERM, and an `if: always()` step that deletes the file. This is the only step that writes that file. `supabase secrets set --env-file` reads it. The origin list is `https://flow-app-dx5.pages.dev` only. The job then runs `supabase functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq` and `supabase functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq`. `verify_jwt` stays false, from `supabase/config.toml`. The job does not set `FLOW_MCP_SIGNING_KEY`, `FLOW_JWT_LEGACY`, or `FLOW_SECRET_KEY`. Hosted functions receive `SUPABASE_SECRET_KEYS` from Supabase. The deploy token can read those injected secrets. `SUPABASE_DB_URL` is in the same GitHub environment.
-7. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage contains the stamped `flow-build` meta tag. It also requests `/settings?preview=1` and requires status 200 with `Content-Type: text/html`. That check is the Pages hostname. A production smoke of `flow-mcp` is backlog N8. It is not this step.
+7. A read-only fetch of `https://flow-app-dx5.pages.dev` checks that the last line of `build.txt` is that commit SHA, and that the homepage and `/settings?preview=1` contain the stamped `flow-build` meta tag. Each request adds `n` set to the commit SHA so a cached page cannot satisfy the check. `/settings?preview=1` must be status 200 with `Content-Type: text/html`. A missing file under `/assets/` must be 404. A curl failure names the URL and the curl error. That check is the Pages hostname. A production smoke of `flow-mcp` is backlog N8. It is not this step.
 
 `scripts/cd-smoke.sh` uses these exits:
 
 | Exit | Outcome |
 | --- | --- |
-| 0 | `build.txt`, the homepage, and `/settings` match this commit |
-| 1 | The SHA was missing, `build.txt` did not match, or the homepage did not include the build tag |
+| 0 | `build.txt`, the homepage, `/settings`, and a missing asset match this commit |
+| 1 | The SHA was missing, a body did not include the build tag, or a fetch failed |
 | 2 | `/settings?preview=1` was not 200 HTML |
+| 3 | A missing asset was not 404 |
 
 `scripts/check-sumit-cron.sh` in step 4 uses these exits:
 
@@ -46,10 +47,10 @@ When the secrets are present, in this order:
 | 0 | `flow-sumit-daily` and `flow-sumit-drain` match the schedule rules |
 | 1 | Incomplete. `SUPABASE_DB_URL` is missing, `psql` failed, or the status line was not a known token |
 | 2 | `flow-sumit-daily` is missing, or its schedule or command is wrong |
-| 3 | `flow-sumit-drain` is missing when Vault `cron_secret` and `pg_net` are present, present when they are not, or its schedule is wrong |
+| 3 | `flow-sumit-drain` is missing, extra, or has the wrong schedule or command, or Vault `flow_sync_url` is missing while `cron_secret` and `pg_net` are present |
 | 4 | `cron.job` is missing. `pg_cron` is not installed |
 
-If exit 3 is because `flow-sumit-drain` is missing while Vault `cron_secret` is non-empty and `pg_net` is installed, run `select private.schedule_drain();` after those Vault rows exist. The check does not schedule the job.
+If exit 3 is because `flow-sumit-drain` is missing while Vault `cron_secret` and `pg_net` are present, set Vault `flow_sync_url` to the functions URL and run `select private.schedule_drain();`. The check does not schedule the job.
 
 To run only the read-only preflight against production, set `SUPABASE_DB_URL` to the session pooler URL and run `bash scripts/cd-preflight.sh`. That script does not apply migrations. Its commands are:
 
