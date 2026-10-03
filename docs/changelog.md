@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+UI polish. A hero figure still steps down when the document has no font set, and measures again once fonts are ready.
+
 UI polish. The reviewer split button stays in the preview. Unsplit shows the saved toast after the sheet closes. The queue banner counts every filed-today row, including an approved split. The last-sync separator stays on the time, and the time stays on one line. 
 
 UI polish. The shared-cost note sits on the category line that includes a share. The project story's lines add up: חומרים 72 and הובלה 4. Decision [0071](decisions/0071-shared-cost-copy.md).

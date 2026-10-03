@@ -91,9 +91,13 @@ export function BigNumber({ agorot, presentation = "summary", size, loss = false
     const observer = new ResizeObserver(measure);
     observer.observe(column);
     let cancelled = false;
-    void document.fonts.ready.then(() => {
-      if (!cancelled && host.isConnected) measure();
-    });
+    // jsdom has no FontFaceSet. The assertion is the runtime check.
+    const fonts = document.fonts as FontFaceSet | undefined;
+    if (fonts != null) {
+      void fonts.ready.then(() => {
+        if (!cancelled && host.isConnected) measure();
+      });
+    }
     return () => {
       cancelled = true;
       observer.disconnect();
