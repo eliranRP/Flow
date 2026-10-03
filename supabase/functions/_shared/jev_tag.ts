@@ -8,6 +8,7 @@ import { readJevApiKey } from "./jev_key.ts";
 import { empty, json } from "./http.ts";
 
 export const JEV_TAG_LIMIT = 20;
+export const JEV_TAG_INTERVAL_MS = 60_000;
 const CHOICE_CAP = 255;
 
 export type TagMode = "shadow" | "auto";
@@ -234,6 +235,10 @@ export async function tagWork(
       continue;
     }
     for (const expense of company.expenses) {
+      if (expense.companyId !== company.companyId) {
+        report.failed += 1;
+        continue;
+      }
       let result: JevResult;
       try {
         result = await call(apiKey, { state: buildTagState(expense), questions });
@@ -290,8 +295,15 @@ export async function tagWork(
   return report;
 }
 
+/** Either flag disables the connector. enabled false and mode off are the same outcome. */
+export function connectorDisabled(enabled: unknown, mode: unknown): boolean {
+  if (enabled !== true) return true;
+  if (mode === "off") return true;
+  return mode !== "shadow" && mode !== "auto";
+}
+
 export function integrationsPath(): string {
-  return "/rest/v1/company_integrations?provider=eq.jev&enabled=eq.true&select=company_id,mode,threshold";
+  return "/rest/v1/company_integrations?provider=eq.jev&select=company_id,enabled,mode,threshold";
 }
 
 export function projectsPath(companyId: string): string {
@@ -386,7 +398,9 @@ export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey
         const companyId = asString(integration.company_id);
         const mode = integration.mode === "auto" || integration.mode === "shadow" ? integration.mode : null;
         const threshold = asNumber(integration.threshold);
-        if (!companyId || !mode || !Number.isFinite(threshold)) continue;
+        if (!companyId || connectorDisabled(integration.enabled, integration.mode) || !mode || !Number.isFinite(threshold)) {
+          continue;
+        }
         const projects = rows(await get(projectsPath(companyId))).flatMap((row) => {
           const id = asString(row.id);
           const name = asString(row.name);
@@ -441,7 +455,8 @@ export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey
           loaded = transactions.flatMap((row) => {
             const id = asString(row.id);
             const docDate = asString(row.doc_date);
-            if (!id || !docDate) return [];
+            const rowCompany = asString(row.company_id);
+            if (!id || !docDate || rowCompany !== companyId) return [];
             const supplierId = asString(row.supplier_id);
             const expense: TagExpense = {
               id,
@@ -546,24 +561,80 @@ function constantTimeEqual(left: string, right: string): boolean {
   return diff === 0;
 }
 
+export type TagRateState = { lastAt: number };
+
+export function allowTagRun(
+  state: TagRateState,
+  now: number,
+  intervalMs = JEV_TAG_INTERVAL_MS,
+): { ok: true } | { ok: false; retryAfterSeconds: number } {
+  if (!Number.isFinite(now) || intervalMs < 1) {
+    return { ok: false, retryAfterSeconds: 60 };
+  }
+  if (state.lastAt >= 0 && now - state.lastAt < intervalMs) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((intervalMs - (now - state.lastAt)) / 1000));
+    return { ok: false, retryAfterSeconds };
+  }
+  state.lastAt = now;
+  return { ok: true };
+}
+
+const tagRateState: TagRateState = { lastAt: -1 };
+
 export type JevTagDeps = {
   fetch: FetchLike;
   env(name: string): string;
   readKey?: (source: { fetch: FetchLike; supabaseUrl: string; serviceKey: string }) => Promise<string>;
   call?: TagCaller;
+  now?: () => number;
+  rateState?: TagRateState;
+  intervalMs?: number;
 };
+
+function bearerToken(header: string): string {
+  const match = /^Bearer\s+(\S+)/i.exec(header);
+  return match?.[1] ?? "";
+}
+
+/** Cron secret or the service-role key. A user or anon JWT is neither. */
+export function tagCallerKind(input: {
+  cronHeader: string;
+  cronSecret: string;
+  authorization: string;
+  serviceKey: string;
+}): "cron" | "service" | null {
+  const cronOk = input.cronSecret.trim() !== ""
+    && input.cronHeader.trim() !== ""
+    && constantTimeEqual(input.cronHeader, input.cronSecret);
+  if (cronOk) return "cron";
+  const bearer = bearerToken(input.authorization);
+  const serviceOk = input.serviceKey.trim() !== ""
+    && bearer !== ""
+    && constantTimeEqual(bearer, input.serviceKey);
+  if (serviceOk) return "service";
+  return null;
+}
 
 export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Response> {
   if (req.method === "OPTIONS") return empty();
   if (req.method !== "POST") return json({ error: "method" }, 405);
   const cronSecret = deps.env("CRON_SECRET");
-  const presented = req.headers.get("x-flow-cron") ?? "";
-  if (cronSecret.trim() === "" || presented.trim() === "" || !constantTimeEqual(presented, cronSecret)) {
-    return json({ error: "unauthorized" }, 401);
-  }
-  const supabaseUrl = deps.env("SUPABASE_URL");
   const serviceKey = deps.env("SUPABASE_SERVICE_ROLE_KEY");
+  const kind = tagCallerKind({
+    cronHeader: req.headers.get("x-flow-cron") ?? "",
+    cronSecret,
+    authorization: req.headers.get("authorization") ?? "",
+    serviceKey,
+  });
+  if (kind === null) return json({ error: "unauthorized" }, 401);
+  const supabaseUrl = deps.env("SUPABASE_URL");
   if (supabaseUrl.trim() === "" || serviceKey.trim() === "") return json({ error: "missing_key" }, 500);
+  const gate = allowTagRun(deps.rateState ?? tagRateState, deps.now ? deps.now() : Date.now(), deps.intervalMs);
+  if (!gate.ok) {
+    const response = json({ error: "rate_limited", retry_after_seconds: gate.retryAfterSeconds }, 429);
+    response.headers.set("retry-after", String(gate.retryAfterSeconds));
+    return response;
+  }
   const readKey = deps.readKey ?? readJevApiKey;
   const call = deps.call ?? ((apiKey, input) => callJev(apiKey, input, { fetch: deps.fetch }));
   try {

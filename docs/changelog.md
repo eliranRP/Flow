@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-Jev tagging. An off company is not sent to Jev. Shadow stores a suggestion and leaves the line in לאישור. Auto, at or above the threshold, pre-fills a project and category the user has not set, marks that fill as a suggestion, and still waits for one tap. It never approves. The job is not scheduled. The stored suggestion includes the model the API returned. Decision [0084](decisions/0084-jev-auto-prefill.md).
+Jev tagging. `enabled` false or `mode` off disables the connector; either one is enough. Shadow stores a suggestion and leaves the line in לאישור. Auto, at or above the threshold, pre-fills a project and category the user has not set, marks that fill as a suggestion, and still waits for one tap. It never approves. Only the cron secret or the service-role key may call the job, and a second call inside 60 seconds is refused. The stored suggestion includes the model the API returned. The job is not scheduled. Allowing `auto` in the database is written under `supabase/pending` and is not in the migration lock. Decision [0084](decisions/0084-jev-auto-prefill.md).
 
 Jev connector, review. The client timeout covers the response body. `tag_suggestions.response_model` stores the model the API returned, including when it is not the pin. Until the tagging job, the setting accepts only `off` or `shadow`, and the threshold is 0.50 to 1.00. `read_jev_api_key` checks `auth.jwt()->>'role'` and stays service role only, because that job is an Edge Function. Decision [0083](decisions/0083-jev-connector.md).
 

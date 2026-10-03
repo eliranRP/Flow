@@ -9,7 +9,7 @@
 
 ## Decision
 
-The tagging job calls Jev only for an open לאישור expense that has no `tag_suggestions` row for the pinned model. A company with no `company_integrations` row, or `enabled` false, is off. The job does not call Jev.
+The tagging job calls Jev only for an open לאישור expense that has no `tag_suggestions` row for the pinned model. A company with no `company_integrations` row is off. `enabled` false disables the connector, and `mode` `off` disables it too. Either one is enough. The job does not call Jev for that company.
 
 `shadow` stores the suggestion and does not change the expense. The review stays open.
 
@@ -23,6 +23,8 @@ The choice keys are the company's active project ids and its visible expense cat
 
 `model_version` is the pin the client sent. `response_model` is the model string in the response, including when it is not the pin.
 
+The function accepts only the `CRON_SECRET` header `x-flow-cron` or a bearer token equal to the service-role key. A member JWT is refused and does not call Jev. One accepted run per isolate per 60 seconds; the next returns 429 and does not call Jev. An expense whose company is not the company being labelled is not sent and is not stored.
+
 ## Alternatives rejected
 
 Approving the line when confidence is high. Treating `auto` as [0011](0011-auto-approve-high-confidence.md). Overwriting a project or category the user already set. Gating each field on its own confidence, which would pre-fill one field while the other answer was weak.
@@ -31,7 +33,7 @@ Approving the line when confidence is high. Treating `auto` as [0011](0011-auto-
 
 The card can show the pre-fill as הצעה, and אישור sends that project and category. The job is not scheduled. A `pg_cron` row would be a migration, and this change does not add one. The next SUMIT sync can replace a pre-fill the user has not accepted, because `project_assigned` and `category_assigned` stay false. The suggestion row remains.
 
-`mode` `auto` is implemented here and covered by the mock. The connector migration still refuses to store `auto`. Allowing it is a separate migration, and this change does not add that file while the connector pull request is open.
+`mode` `auto` is implemented here and covered by the mock. The released connector migration still refuses to store `auto`. The follow-up SQL is `supabase/pending/20261004120000_jev_auto_mode.sql`. It is not in `supabase/migrations.lock` and it is not applied. It waits until the migration slot is free.
 
 ## Decisions needed
 
