@@ -694,13 +694,14 @@ describe("settings account", () => {
     expect(screen.getByRole("button", { name: /חיבור SUMIT/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "התנתקות" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "SUMIT", exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: (name) => name === "SUMIT" })).not.toBeInTheDocument();
   });
 
   function cssPx(value: string): number {
     const root = getComputedStyle(document.documentElement);
     const named = /^var\((--[^),\s]+)\)$/.exec(value.trim());
-    const resolved = named ? root.getPropertyValue(named[1]).trim() : value.trim();
+    const token = named?.[1];
+    const resolved = token != null ? root.getPropertyValue(token).trim() : value.trim();
     if (resolved.endsWith("rem")) return Number.parseFloat(resolved) * 16;
     if (resolved.endsWith("px")) return Number.parseFloat(resolved);
     return Number.parseFloat(resolved);
