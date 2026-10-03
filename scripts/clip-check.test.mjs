@@ -1,10 +1,20 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { CLIP_OK_SELECTOR, isClipped, passLine, reportsClip, storySkipsText, storyViewPhrase, THEMES, WIDTHS } from "./clip-check.mjs";
+
+const playwrightSkip = (() => {
+  try {
+    createRequire(new URL("../app/package.json", import.meta.url)).resolve("playwright");
+    return false;
+  } catch {
+    return "Playwright is not installed";
+  }
+})();
 
 test("a text element is clipped only when its text is wider than its box by more than 1px", () => {
   assert.equal(isClipped(100, 100), false);
@@ -108,7 +118,7 @@ test("a setup failure deletes a stale crash report", async () => {
   }
 });
 
-test("a crash exits 3", async () => {
+test("a crash exits 3", { skip: playwrightSkip }, async () => {
   const { execute } = await import("./clip-check.mjs");
   const dir = staticSite("<div id=\"storybook-root\"><p class=\"t-hint\">שלום</p></div>");
   try {
@@ -149,7 +159,7 @@ test("the preview server binds an ephemeral port", async () => {
   }
 });
 
-test("a crash keeps the views measured before it", async () => {
+test("a crash keeps the views measured before it", { skip: playwrightSkip }, async () => {
   const { execute } = await import("./clip-check.mjs");
   const dir = staticSite("<div id=\"storybook-root\"><span>שלום</span></div>", {
     first: { type: "story", id: "first", title: "First", name: "First" },
