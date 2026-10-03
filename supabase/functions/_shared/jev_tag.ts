@@ -190,9 +190,23 @@ function readChoice(value: unknown, allowed: ReadonlySet<string>): { id: string;
 function projectBlocked(expense: TagExpense): boolean {
   return expense.userAssigned
     || expense.projectAssigned
-    || expense.pnlRole === "shared"
+    || skipsProjectQuestion(expense);
+}
+
+/** Auto never writes one project on these lines, so the job does not ask for one. */
+function skipsProjectQuestion(expense: TagExpense): boolean {
+  return expense.pnlRole === "shared"
     || expense.pnlRole === "overhead"
     || expense.allocationCount > 1;
+}
+
+function withoutProject(answers: Record<string, unknown>): Record<string, unknown> {
+  if (!("project" in answers)) return answers;
+  const rest: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(answers)) {
+    if (key !== "project") rest[key] = value;
+  }
+  return rest;
 }
 
 export function planTag(
@@ -203,7 +217,8 @@ export function planTag(
   categories: readonly TagCategory[],
   answers: Record<string, unknown>,
 ): TagPlan {
-  const questions = buildTagQuestions(projects, categories);
+  const askProject = !skipsProjectQuestion(expense);
+  const questions = buildTagQuestions(askProject ? projects : [], categories);
   const parts: number[] = [];
   const projectAllowed = new Set(projects.map((row) => row.id));
   const categoryAllowed = new Set(categories.map((row) => row.id));
@@ -230,7 +245,7 @@ export function planTag(
     write.categorySuggested = true;
   }
   const hasWrite = write.projectId !== undefined || write.categoryId !== undefined;
-  return { confidence, answers, write: hasWrite ? write : null };
+  return { confidence, answers: askProject ? answers : withoutProject(answers), write: hasWrite ? write : null };
 }
 
 /** Non-finite, missing, and values below 1 use the default. Above the hard max clamps to it. */
@@ -321,8 +336,7 @@ export async function tagWork(
       report.budget_skipped += company.expenses.length;
       continue;
     }
-    const questions = buildTagQuestions(company.projects, company.categories);
-    if (Object.keys(questions).length === 0) {
+    if (Object.keys(buildTagQuestions(company.projects, company.categories)).length === 0) {
       report.skipped += company.expenses.length;
       continue;
     }
@@ -335,6 +349,14 @@ export async function tagWork(
       }
       if (expense.companyId !== company.companyId) {
         report.failed += 1;
+        continue;
+      }
+      const questions = buildTagQuestions(
+        skipsProjectQuestion(expense) ? [] : company.projects,
+        company.categories,
+      );
+      if (Object.keys(questions).length === 0) {
+        report.skipped += 1;
         continue;
       }
       let result: JevResult;
