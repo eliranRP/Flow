@@ -3316,7 +3316,7 @@ export function SettingsScreen({
   const categoryHint = expenseCount == null || incomeCount == null
     ? undefined
     : `${String(expenseCount)} הוצאות · ${String(incomeCount)} הכנסות`;
-  // A preview story has no live session. Leaving this undefined fetches flow-mcp/status.
+  // Runs whenever ?preview= is set, including the hosted app. Leaving this undefined fetches flow-mcp/status.
   const assistantSample: AssistantSample | undefined = sample
     ? (sample.assistant ?? { state: "empty" })
     : preview === "off"
