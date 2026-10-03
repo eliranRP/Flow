@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { flushSync } from "react-dom";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { useFocusRowAfterRetry } from "./focus-retry";
 import { padded } from "./story-support";
 
@@ -29,12 +29,8 @@ function RetryHold() {
   const retryRef = useRef<HTMLButtonElement>(null);
   const rowRef = useRef<HTMLButtonElement>(null);
   const [phase, setPhase] = useState<Phase>("error");
-  useEffect(() => {
-    setHoldPhase = setPhase;
-    return () => {
-      setHoldPhase = () => undefined;
-    };
-  }, []);
+  // Play can run before effects. The render assigns the setter the test calls.
+  setHoldPhase = setPhase;
   useFocusRowAfterRetry(phase === "error", retryRef, rowRef, phase === "ready", 0);
 
   return (
