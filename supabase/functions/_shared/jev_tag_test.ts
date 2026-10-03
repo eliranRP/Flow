@@ -1,22 +1,26 @@
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
-import { JEV_MODEL, JevError, type JevCall } from "./jev.ts";
+import { JEV_MODEL, JEV_TIMEOUT_MS, JevError, callJev, type JevCall, type JevTimer } from "./jev.ts";
 import {
-  JEV_TAG_LIMIT,
+  JEV_TAG_ATTEMPTS,
+  JEV_TAG_BUDGET_MS,
+  JEV_TAG_DEFAULT_LIMIT,
+  JEV_TAG_MAX_LIMIT,
   StoreConflict,
   TagStop,
+  allowTagRun,
   buildTagQuestions,
   buildTagState,
+  capNewest,
   categoriesPath,
-  createTagStore,
-  allowTagRun,
+  clampTagLimit,
   connectorDisabled,
+  createTagStore,
   handleJevTag,
   integrationsPath,
   planTag,
   projectsPath,
-  reviewQueuePath,
-  selectUntagged,
-  suggestionsPath,
+  serviceRoleKey,
+  tagJevCall,
   tagWork,
   transactionsPath,
   type PrefillWrite,
@@ -49,6 +53,30 @@ function expense(overrides: Partial<TagExpense> = {}): TagExpense {
     userAssigned: false,
     pnlRole: "project",
     allocationCount: 0,
+    ...overrides,
+  };
+}
+
+function txnRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: EXPENSE,
+    company_id: COMPANY,
+    description: "מלט",
+    doc_date: "2026-04-12",
+    supplier_id: null,
+    amount_gross: -11800,
+    amount_net: -10000,
+    vat_amount: -1800,
+    project_id: null,
+    category_id: null,
+    project_assigned: false,
+    category_assigned: false,
+    user_assigned: false,
+    pnl_role: "project",
+    review_queue: [{ status: "open" }],
+    allocations: [{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab" }],
+    suppliers: { name: "מחסן" },
+    tagged: null,
     ...overrides,
   };
 }
@@ -162,19 +190,22 @@ Deno.test("an unknown choice or a missing answer fails closed and stores confide
   assertEquals(missing.write, null);
 });
 
-Deno.test("selectUntagged keeps open untagged expenses, oldest first, and respects the limit", () => {
+Deno.test("capNewest keeps the newest expenses and clamps the run cap", () => {
   const older = expense({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", docDate: "2026-04-01" });
   const newer = expense({ id: EXPENSE, docDate: "2026-04-12" });
-  const tagged = expense({ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", docDate: "2026-03-01" });
-  const closed = expense({ id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", docDate: "2026-01-01" });
-  const picked = selectUntagged(
-    [older.id, newer.id, tagged.id],
-    [tagged.id],
-    [newer, tagged, closed, older],
-    1,
-  );
-  assertEquals(picked.map((row) => row.id), [older.id]);
-  assertEquals(JEV_TAG_LIMIT, 20);
+  const picked = capNewest([older, newer], 1);
+  assertEquals(picked.map((row) => row.id), [EXPENSE]);
+  assertEquals(JEV_TAG_DEFAULT_LIMIT, 50);
+  assertEquals(JEV_TAG_MAX_LIMIT, 100);
+  assertEquals(clampTagLimit(undefined), 50);
+  assertEquals(clampTagLimit(0), 50);
+  assertEquals(clampTagLimit(-3), 50);
+  assertEquals(clampTagLimit("nope"), 50);
+  assertEquals(clampTagLimit(1.9), 1);
+  assertEquals(clampTagLimit(80), 80);
+  assertEquals(clampTagLimit(100), 100);
+  assertEquals(clampTagLimit(101), 100);
+  assertEquals(clampTagLimit("1000"), 100);
 });
 
 Deno.test("the store reads only enabled Jev rows and open untagged expenses", async () => {
@@ -205,38 +236,23 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
     }
     if (url.includes("/transactions") && (!init || init.method === "GET" || init.method === undefined)) {
       return Promise.resolve(Response.json([
-        {
-          id: EXPENSE,
-          company_id: COMPANY,
-          description: "מלט",
-          doc_date: "2026-04-12",
-          supplier_id: null,
-          amount_gross: -11800,
-          amount_net: -10000,
-          vat_amount: -1800,
-          project_id: null,
-          category_id: null,
-          project_assigned: false,
-          category_assigned: false,
-          user_assigned: false,
-          pnl_role: "project",
-        },
-        {
+        txnRow(),
+        txnRow({
           id: "88888888-8888-4888-8888-888888888888",
           company_id: "66666666-6666-4666-8666-666666666666",
           description: "other",
           doc_date: "2026-04-01",
-          supplier_id: null,
-          amount_gross: -11800,
-          amount_net: -10000,
-          vat_amount: -1800,
-          project_id: null,
-          category_id: null,
-          project_assigned: false,
-          category_assigned: false,
-          user_assigned: false,
-          pnl_role: "project",
-        },
+        }),
+        txnRow({
+          id: "99999999-9999-4999-8999-999999999999",
+          doc_date: "2026-04-11",
+          tagged: [{ model_version: JEV_MODEL }],
+        }),
+        txnRow({
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          doc_date: "2026-04-10",
+          review_queue: [{ status: "approved" }],
+        }),
       ]));
     }
     if (url.includes("/allocations") && (!init || init.method === "GET" || init.method === undefined)) {
@@ -252,14 +268,27 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
   assertEquals(work[0].expenses.length, 1);
   assertEquals(work[0].expenses[0].companyId, COMPANY);
   assertEquals(work[0].expenses[0].id, EXPENSE);
+  assertEquals(work[0].expenses[0].supplierName, "מחסן");
+  assertEquals(work[0].expenses[0].allocationCount, 1);
   assert(urls.every((url) => !url.includes("66666666-6666-4666-8666-666666666666")));
   assert(urls.every((url) => !url.includes("77777777-7777-4777-8777-777777777777")));
   assert(urls.some((url) => url.includes(integrationsPath())));
   assert(urls.some((url) => url.includes(projectsPath(COMPANY))));
   assert(urls.some((url) => url.includes(categoriesPath(COMPANY))));
-  assert(urls.some((url) => url.includes(reviewQueuePath(COMPANY))));
-  assert(urls.some((url) => url.includes(suggestionsPath(COMPANY, JEV_MODEL))));
-  assert(urls.some((url) => url.includes(`company_id=eq.${COMPANY}`) && url.includes("/transactions") && url.includes(EXPENSE)));
+  assert(urls.every((url) => !url.includes("/review_queue?")));
+  assert(urls.every((url) => !url.includes("/tag_suggestions?")));
+  assert(urls.every((url) => !url.includes("/allocations?")));
+  assert(urls.every((url) => !url.includes("/suppliers?")));
+  assert(urls.every((url) => !url.includes("id=in.")));
+  const transactions = urls.find((url) => url.includes("/transactions"));
+  assert(transactions);
+  assert(transactions.includes(`company_id=eq.${COMPANY}`));
+  assert(transactions.includes("order=doc_date.desc,id.desc"));
+  assert(transactions.endsWith("limit=20"));
+  assert(transactions.includes("tagged=is.null"));
+  assert(transactions.includes(`tagged.model_version=eq.${JEV_MODEL}`));
+  assert(transactions.includes("review_queue!inner(status)"));
+  assert(!transactions.includes(EXPENSE));
   assert(urls.every((url) => !url.includes("status=eq.approved")));
 });
 
@@ -450,7 +479,7 @@ Deno.test("off and a bad cron secret do not call Jev", async () => {
     env: (name) => {
       if (name === "CRON_SECRET") return "cron-test";
       if (name === "SUPABASE_URL") return "http://db.test";
-      if (name === "SUPABASE_SERVICE_ROLE_KEY") return "service-role-test";
+      if (name === "SUPABASE_SECRET_KEYS") return JSON.stringify({ default: "service-role-test" });
       return "";
     },
     rateState: { lastAt: -1 },
@@ -465,6 +494,7 @@ Deno.test("off and a bad cron secret do not call Jev", async () => {
   assertEquals(calls.includes("jev"), false);
   assert(calls.some((url) => url.includes("provider=eq.jev")));
   assert(calls.every((url) => !url.includes("enabled=eq.true")));
+  assert(calls.every((url) => !url.includes("read_jev_api_key")));
 });
 
 Deno.test("either enabled false or mode off disables the connector", () => {
@@ -498,7 +528,7 @@ Deno.test("an expense from another company is not sent or stored", async () => {
 function tagEnv(name: string): string {
   if (name === "CRON_SECRET") return "cron-test";
   if (name === "SUPABASE_URL") return "http://db.test";
-  if (name === "SUPABASE_SERVICE_ROLE_KEY") return "service-role-test";
+  if (name === "SUPABASE_SECRET_KEYS") return JSON.stringify({ default: "service-role-test" });
   return "";
 }
 
@@ -546,8 +576,101 @@ Deno.test("a second run inside the interval is rate limited and does not call Je
   assertEquals(allowTagRun({ lastAt: -1 }, Number.NaN, 60_000).ok, false);
 
   const calls: string[] = [];
+  const lines: string[] = [];
   const rateState = { lastAt: -1 };
   const run = (now: number) => handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test" },
+  }), {
+    fetch: (input) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([
+          { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
+        ]));
+      }
+      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+      if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+      if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow()]));
+      return Promise.resolve(new Response(null, { status: 204 }));
+    },
+    env: tagEnv,
+    now: () => now,
+    rateState,
+    intervalMs: 60_000,
+    log: (line) => lines.push(line),
+    readKey: () => {
+      calls.push("key");
+      return Promise.resolve("jev-test-key");
+    },
+    call: () => {
+      calls.push("jev");
+      return Promise.resolve({
+        model: JEV_MODEL,
+        answers: answers(),
+        usage: { input_tokens: 12, output_tokens: 3 },
+      });
+    },
+  });
+  const before = calls.filter((item) => item === "jev").length;
+  const first = await run(10_000);
+  assertEquals(first.status, 200);
+  const firstBody = await first.json();
+  assertEquals(firstBody.input_tokens, 12);
+  assertEquals(firstBody.output_tokens, 3);
+  const firstJev = calls.filter((item) => item === "jev").length - before;
+  assert(firstJev >= 1);
+  assertEquals(lines.length, 1);
+  assert(lines[0].includes("input_tokens=12"));
+  assert(lines[0].includes("output_tokens=3"));
+  assert(!lines[0].includes("מלט"));
+  assert(!lines[0].includes(EXPENSE));
+  const jevAfterFirst = calls.filter((item) => item === "jev").length;
+  const second = await run(11_000);
+  assertEquals(second.status, 429);
+  assertEquals(second.headers.get("retry-after"), "59");
+  const body = await second.json();
+  assertEquals(body.error, "rate_limited");
+  assertEquals(calls.filter((item) => item === "jev").length - jevAfterFirst, 0);
+  assertEquals(calls.filter((item) => item === "key"), ["key"]);
+});
+
+Deno.test("a wrong non-empty cron header is 401 and does not call Jev", async () => {
+  const calls: string[] = [];
+  const response = await handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "not-the-secret" },
+  }), {
+    fetch: () => {
+      calls.push("fetch");
+      return Promise.resolve(Response.json([]));
+    },
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+    call: () => {
+      calls.push("jev");
+      return Promise.resolve({ model: JEV_MODEL, answers: {}, usage: null });
+    },
+  });
+  assertEquals(response.status, 401);
+  assertEquals(calls, []);
+  const body = await response.json();
+  assertEquals(body.error, "unauthorized");
+});
+
+Deno.test("a missing service key fails closed and ignores the legacy env var", async () => {
+  assertEquals(serviceRoleKey(() => ""), "");
+  assertEquals(serviceRoleKey((name) => name === "SUPABASE_SECRET_KEYS" ? "not-json" : ""), "");
+  assertEquals(serviceRoleKey((name) => name === "SUPABASE_SECRET_KEYS" ? "{}" : ""), "");
+  assertEquals(serviceRoleKey((name) => name === "SUPABASE_SECRET_KEYS" ? JSON.stringify({ default: 1 }) : ""), "");
+  assertEquals(
+    serviceRoleKey((name) => name === "SUPABASE_SECRET_KEYS" ? JSON.stringify({ default: "service-role-test" }) : ""),
+    "service-role-test",
+  );
+
+  const calls: string[] = [];
+  const response = await handleJevTag(new Request("http://local/jev-tag", {
     method: "POST",
     headers: { "x-flow-cron": "cron-test" },
   }), {
@@ -555,26 +678,250 @@ Deno.test("a second run inside the interval is rate limited and does not call Je
       calls.push("fetch");
       return Promise.resolve(Response.json([]));
     },
-    env: tagEnv,
-    now: () => now,
-    rateState,
-    intervalMs: 60_000,
-    readKey: () => {
-      calls.push("key");
-      return Promise.resolve("jev-test-key");
+    env: (name) => {
+      if (name === "CRON_SECRET") return "cron-test";
+      if (name === "SUPABASE_URL") return "http://db.test";
+      if (name === "SUPABASE_SERVICE_ROLE_KEY") return "legacy-ignored";
+      return "";
     },
+    rateState: { lastAt: -1 },
     call: () => {
       calls.push("jev");
       return Promise.resolve({ model: JEV_MODEL, answers: {}, usage: null });
     },
   });
-  const first = await run(10_000);
-  assertEquals(first.status, 200);
-  const second = await run(11_000);
-  assertEquals(second.status, 429);
-  assertEquals(second.headers.get("retry-after"), "59");
-  const body = await second.json();
-  assertEquals(body.error, "rate_limited");
-  assertEquals(calls.filter((item) => item === "jev"), []);
-  assertEquals(calls.filter((item) => item === "key"), ["key"]);
+  assertEquals(response.status, 500);
+  assertEquals((await response.json()).error, "missing_key");
+  assertEquals(calls, []);
+});
+
+Deno.test("the handler clamps a passed cap, filters one company, and skips Vault when nothing is enabled", async () => {
+  const urls: string[] = [];
+  const keys: string[] = [];
+  const run = (body: string | undefined, rateState: { lastAt: number }) => handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: {
+      "x-flow-cron": "cron-test",
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    body,
+  }), {
+    fetch: (input) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([
+          { company_id: COMPANY, enabled: false, mode: "shadow", threshold: 0.9 },
+          { company_id: "66666666-6666-4666-8666-666666666666", enabled: true, mode: "off", threshold: 0.9 },
+        ]));
+      }
+      return Promise.resolve(Response.json([]));
+    },
+    env: tagEnv,
+    rateState,
+    log: () => {},
+    readKey: () => {
+      keys.push("key");
+      return Promise.resolve("jev-test-key");
+    },
+    call: () => {
+      keys.push("jev");
+      return Promise.resolve({ model: JEV_MODEL, answers: {}, usage: null });
+    },
+  });
+
+  const disabled = await run(JSON.stringify({ limit: 1000, company_id: COMPANY }), { lastAt: -1 });
+  assertEquals(disabled.status, 200);
+  assertEquals(keys, []);
+  assert(urls.some((url) => url.includes(`company_id=eq.${COMPANY}`) && url.includes("provider=eq.jev")));
+  assert(urls.every((url) => !url.includes("/transactions")));
+  assert(urls.every((url) => !url.includes("read_jev_api_key")));
+
+  const enabledUrls: string[] = [];
+  const capped = await handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test", "content-type": "application/json" },
+    body: JSON.stringify({ limit: 1 }),
+  }), {
+    fetch: (input) => {
+      const url = String(input);
+      enabledUrls.push(url);
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([
+          { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
+          { company_id: "66666666-6666-4666-8666-666666666666", enabled: true, mode: "shadow", threshold: 0.9 },
+        ]));
+      }
+      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+      if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+      if (url.includes("/transactions") && url.includes(`company_id=eq.${COMPANY}`)) {
+        return Promise.resolve(Response.json([txnRow()]));
+      }
+      if (url.includes("/transactions")) return Promise.resolve(Response.json([]));
+      return Promise.resolve(new Response(null, { status: 204 }));
+    },
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+    log: () => {},
+    readKey: () => Promise.resolve("jev-test-key"),
+    call: () => Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null }),
+  });
+  assertEquals(capped.status, 200);
+  const transactionUrls = enabledUrls.filter((url) => url.includes("/transactions"));
+  assertEquals(transactionUrls.length, 1);
+  assert(transactionUrls[0].endsWith("limit=1"));
+  assert(transactionUrls[0].includes("order=doc_date.desc"));
+  assert(!transactionUrls[0].includes("id=in."));
+  assert(enabledUrls.every((url) => !url.includes("66666666-6666-4666-8666-666666666666")));
+
+  const hardCapUrls: string[] = [];
+  const hardCap = await handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { "x-flow-cron": "cron-test", "content-type": "application/json" },
+    body: JSON.stringify({ limit: 1000 }),
+  }), {
+    fetch: (input) => {
+      const url = String(input);
+      hardCapUrls.push(url);
+      if (url.includes("/company_integrations")) {
+        return Promise.resolve(Response.json([
+          { company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 },
+        ]));
+      }
+      if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+      if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+      if (url.includes("/transactions")) return Promise.resolve(Response.json([]));
+      return Promise.resolve(Response.json([]));
+    },
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+    log: () => {},
+    readKey: () => Promise.reject(new Error("vault")),
+  });
+  assertEquals(hardCap.status, 200);
+  const hardTransactions = hardCapUrls.filter((url) => url.includes("/transactions"));
+  assertEquals(hardTransactions.length, 1);
+  assert(hardTransactions[0].endsWith("limit=100"));
+  assert(!hardTransactions[0].includes("limit=1000"));
+
+  const bad = await handleJevTag(new Request("http://local/jev-tag", {
+    method: "POST",
+    headers: { authorization: "Bearer service-role-test", "content-type": "application/json" },
+    body: JSON.stringify({ company_id: "not-a-uuid" }),
+  }), {
+    fetch: () => Promise.reject(new Error("fetch")),
+    env: tagEnv,
+    rateState: { lastAt: -1 },
+  });
+  assertEquals(bad.status, 400);
+});
+
+Deno.test("the run stops at the time budget and reports the expenses it skipped", async () => {
+  const second = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const third = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  let clock = 0;
+  let calls = 0;
+  const store = memoryStore();
+  const report = await tagWork([company({
+    mode: "shadow",
+    expenses: [
+      expense(),
+      expense({ id: second, docDate: "2026-04-11" }),
+      expense({ id: third, docDate: "2026-04-10" }),
+    ],
+  })], store, () => {
+    calls += 1;
+    clock = JEV_TAG_BUDGET_MS;
+    return Promise.resolve({
+      model: JEV_MODEL,
+      answers: answers(),
+      usage: { input_tokens: 10, output_tokens: 4 },
+    });
+  }, "jev-test-key", {
+    now: () => clock,
+    budgetMs: JEV_TAG_BUDGET_MS,
+    log: () => {},
+  });
+  assertEquals(calls, 1);
+  assertEquals(report.tagged, 1);
+  assertEquals(report.budget_skipped, 2);
+  assertEquals(report.skipped, 2);
+  assertEquals(report.input_tokens, 10);
+  assertEquals(report.output_tokens, 4);
+  assertEquals(store.suggestions.length, 1);
+
+  let blocked = 0;
+  const none = await tagWork([company({
+    expenses: [expense(), expense({ id: second })],
+  })], memoryStore(), () => {
+    blocked += 1;
+    return Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null });
+  }, "jev-test-key", {
+    now: (() => {
+      let reads = 0;
+      return () => {
+        reads += 1;
+        return reads === 1 ? 0 : JEV_TAG_BUDGET_MS;
+      };
+    })(),
+    budgetMs: JEV_TAG_BUDGET_MS,
+    log: () => {},
+  });
+  assertEquals(blocked, 0);
+  assertEquals(none.budget_skipped, 2);
+  assertEquals(none.tagged, 0);
+});
+
+Deno.test("the candidate query orders by date descending and limits to the cap", () => {
+  const path = transactionsPath(COMPANY, 1000);
+  assert(path.includes("order=doc_date.desc,id.desc"));
+  assert(path.endsWith("limit=100"));
+  assert(path.includes("tagged=is.null"));
+  assert(path.includes("review_queue!inner(status)"));
+  assert(!path.includes("id=in."));
+  assert(!path.includes(EXPENSE));
+  assertEquals(transactionsPath(COMPANY, 20).includes("limit=20"), true);
+});
+
+const quietTimer: JevTimer = {
+  sleep() {
+    return Promise.resolve();
+  },
+  arm(_ms, _fire) {
+    return { cancel() {} };
+  },
+};
+
+Deno.test("each expense gets at most two attempts and the body has no max-output field", async () => {
+  const bodies: string[] = [];
+  let calls = 0;
+  const sample: JevCall = {
+    state: { description: "מלט" },
+    questions: {
+      project: { type: "choice", instructions: "Choose the project id for this expense.", criteria: { [PROJECT]: "שיפוץ" } },
+    },
+  };
+  await assertRejects(() => tagJevCall((_url, init) => {
+    calls += 1;
+    bodies.push(String(init?.body ?? ""));
+    return Promise.resolve(new Response("{}", { status: 429, headers: { "retry-after": "1" } }));
+  }, quietTimer)("test-key", sample), JevError, "rate_limited");
+  assertEquals(calls, JEV_TAG_ATTEMPTS);
+  assertEquals(JEV_TAG_ATTEMPTS, 2);
+  assertEquals(JEV_TIMEOUT_MS, 8000);
+  const sent = JSON.parse(bodies[0]) as Record<string, unknown>;
+  assertEquals(sent.model, JEV_MODEL);
+  assertEquals("max_tokens" in sent, false);
+  assertEquals("max_output_tokens" in sent, false);
+  assertEquals("question" in sent, false);
+
+  let uncapped = 0;
+  await assertRejects(() => callJev("test-key", sample, {
+    timer: quietTimer,
+    fetch: () => {
+      uncapped += 1;
+      return Promise.resolve(new Response("{}", { status: 429 }));
+    },
+  }), JevError, "rate_limited");
+  assertEquals(uncapped, 4);
 });
