@@ -45,7 +45,12 @@ import {
   useTransactionQuery,
   useUnpaidQuery,
 } from "../use-books";
-import { assertNoError, useWrite } from "../use-write";
+import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-review";
+import { LEDGER_FOCUS_KEYS } from "../books-focus";
+import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
+import { useHeldOrder } from "../list-hold";
+import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
+import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -513,6 +518,7 @@ export function ProjectDetailScreen({
   const [moves, setMoves] = useState(false);
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
+  const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
   useEffect(() => {
     if (sample) return;
     if (detail.data) setOverheadOn(detail.data.after_overhead === true);
@@ -617,11 +623,11 @@ export function ProjectDetailScreen({
         </TextLink>
       </p>
       {moves ? (
-        project.transactions.length === 0 ? (
+        heldTransactions.length === 0 ? (
           <EmptyState icon={<DocumentIcon />} title="אין עדיין תנועות" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
         ) : (
           <List>
-            {project.transactions.map((txn) => (
+            {heldTransactions.map((txn) => (
               <ListRow
                 key={txn.id}
                 variant="transaction"
@@ -775,7 +781,7 @@ export function FiledTodayScreen({
   const shown = sample ?? fixture;
   const filed = useFiledTodayQuery(shown == null);
   const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
-  const rows = shown ?? filed.data ?? [];
+  const rows = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
   return (
     <ScreenState
       title="שויכו היום"
@@ -783,7 +789,7 @@ export function FiledTodayScreen({
       backTo={backTo ?? `/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
-      empty={<EmptyState icon={<ReviewIcon />} title="אין תנועות ששויכו היום" body="כש־SUMIT משייך תנועה בלי תור, היא תופיע כאן." />}
+      empty={<EmptyState icon={<ReviewIcon />} title={FILED_TODAY_EMPTY_TITLE} body={FILED_TODAY_EMPTY_BODY} />}
     >
       <List>
         {rows.map((row) => (
@@ -1048,11 +1054,12 @@ export function ReviewAllList({
     }, 0);
     return () => { window.clearTimeout(timer); };
   }, [search, rows]);
+  const ordered = useHeldOrder(rows, (row) => row.id);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       <List>
-        {rows.map((row) => (
+        {ordered.map((row) => (
           <ListRow
             key={row.id}
             variant="transaction"
@@ -1080,11 +1087,12 @@ export function ProjectWaitingList({
   backTo?: string;
   hrefFor?: (row: ProjectWaitingRow) => string;
 }) {
+  const ordered = useHeldOrder(rows, (row) => row.transaction_id);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
       <List>
-        {rows.map((row) => (
+        {ordered.map((row) => (
           <ListRow
             key={row.transaction_id}
             variant="transaction"
@@ -1112,7 +1120,7 @@ export type ReviewPreviewWrite = {
 };
 
 export function ReviewQueue({
-  rows,
+  rows: incoming,
   search,
   sample = false,
   previewWrite,
@@ -1150,17 +1158,19 @@ export function ReviewQueue({
   const toast = useToast();
   const blocked = useBlockedPreview();
   const invalidate = useInvalidateBooks();
+  const rows = useHeldOrder(incoming, (item) => item.id);
   const [hideAuto, setHideAuto] = useState(false);
-  const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
+  const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
-  const visit = useRef({ total: rows.length, seen: new Set(rows.map((item) => item.id)) });
-  let added = 0;
-  for (const item of rows) {
-    if (visit.current.seen.has(item.id)) continue;
-    visit.current.seen.add(item.id);
-    added += 1;
+  const visit = useRef(emptyVisit());
+  const [, bumpVisit] = useState(0);
+  const openIds = rows.map((item) => item.id);
+  const present = notePresence(visit.current, openIds);
+  if (present !== visit.current) visit.current = present;
+  function markHandled(id: string) {
+    visit.current = noteHandled(visit.current, id);
+    bumpVisit((value) => value + 1);
   }
-  if (added > 0) visit.current.total += added;
   const row = rows[0];
   const leaving = motion === "out";
   useEffect(() => {
@@ -1196,11 +1206,17 @@ export function ReviewQueue({
     };
   }, [rows, shown]);
   const approve = useWrite({
-    failure: previewWrite ? changeSaveFailure : "לא הצלחנו לאשר.",
+    failure: (error) => {
+      if (previewWrite) return changeSaveFailure(error);
+      if (error instanceof ApproveNotice) return { message: error.message, tone: "info", retry: false };
+      if (isApproveRetry(error) || isTransientWriteError(error)) return { message: "לא הצלחנו לאשר.", retry: true };
+      return { message: "לא הצלחנו לאשר.", retry: false };
+    },
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
     run: async () => {
       if (previewWrite) {
         await previewWrite.run();
+        if (row) markHandled(row.id);
         return;
       }
       if (!row?.category_id) throw new Error("missing");
@@ -1208,16 +1224,27 @@ export function ReviewQueue({
       if (!supabase) throw new Error("supabase");
       if (reviewIsSplit(row) && row.reason !== "unallocated_shared") {
         assertNoError(await supabase.rpc("approve_split_review", { p_id: row.id }));
+        markHandled(row.id);
         return;
       }
       if (row.direction !== "income" && !row.project_id) throw new Error("missing");
-      assertNoError(await supabase.rpc("resolve_review", {
+      const result = await supabase.rpc("approve_review_item", {
         p_id: row.id,
-        p_action: "approved",
-        ...(row.direction === "income" || row.project_id == null ? {} : { p_project_id: row.project_id }),
+        p_project_id: row.project_id as string,
         p_category_id: row.category_id,
         p_remember: false,
-      }));
+        p_check_shown: true,
+        ...(row.project_id == null ? {} : { p_shown_project_id: row.project_id }),
+        p_shown_category_id: row.category_id,
+      });
+      assertNoError(result);
+      const outcome = readApproveOutcome(result.data);
+      if (outcome === "stale" || outcome === "already_closed") {
+        await invalidate([...LEDGER_FOCUS_KEYS]);
+        throw new ApproveNotice(outcome);
+      }
+      if (outcome !== "ok") throw new Error("refused");
+      markHandled(row.id);
     },
     onSuccess: () => {
       if (!row) return;
@@ -1249,6 +1276,7 @@ export function ReviewQueue({
     run: async () => {
       if (previewWrite) {
         await previewWrite.run();
+        if (row) markHandled(row.id);
         return;
       }
       if (!row) throw new Error("missing");
@@ -1258,6 +1286,7 @@ export function ReviewQueue({
         p_id: row.id,
         p_action: "skipped",
       }));
+      markHandled(row.id);
     },
     onSuccess: () => {
       if (previewWrite && row) previewWrite.onDone(row.id);
@@ -1284,8 +1313,9 @@ export function ReviewQueue({
   }
   const auto = card.auto_approved_today ?? 0;
   const suggestion = reviewSuggestion(card);
-  const total = listPlace?.total ?? Math.max(visit.current.total, 1);
-  const index = listPlace?.index ?? (row ? total - rows.length + 1 : total);
+  const place = visitPlace(visit.current, openIds);
+  const total = listPlace?.total ?? place.total;
+  const index = listPlace?.index ?? place.index;
   const splitCard = reviewIsSplit(row);
   const approvable = !leaving && row != null && (row.reason === "unallocated_shared"
     || (splitCard
@@ -1296,30 +1326,28 @@ export function ReviewQueue({
   return (
     <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
-      <div className="ui-review-meter">
-        {listPlace == null ? (
-          <ProgressBar
-            variant="thin"
-            label="התקדמות התור"
-            value={index}
-            max={total}
-          />
-        ) : null}
-        <span className="t-hint">
-          <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
-        </span>
-        {changeTo == null ? (
-          <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
-        ) : null}
-      </div>
+      {rows.length > 0 ? (
+        <div className="ui-review-meter">
+          {listPlace == null ? (
+            <ProgressBar
+              variant="thin"
+              label="התקדמות התור"
+              value={index}
+              max={total}
+            />
+          ) : null}
+          <span className="t-hint">
+            <bdi dir="ltr">{String(index)}</bdi> מתוך <bdi dir="ltr">{String(total)}</bdi>
+          </span>
+          {changeTo == null ? (
+            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+          ) : null}
+        </div>
+      ) : null}
       {auto > 0 && !hideAuto ? (
         <Banner
           icon={<ReviewIcon />}
-          title={
-            <>
-              <bdi dir="ltr">{String(auto)}</bdi> תנועות שויכו היום בלי להמתין בתור
-            </>
-          }
+          title={filedTodayBannerTitle(auto, card.assistant_filed_today === true)}
           action={
             <>
               <TextLink to={filedTo ?? `/review/filed${search}`}>צפייה</TextLink>
@@ -1504,6 +1532,8 @@ export function ProjectCategoryScreen({
   const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const [sampleOpen, setSampleOpen] = useState(false);
+  const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
+  const heldRows = useHeldOrder(loadedRows, (row) => row.id);
   const back = `/projects/${projectId}${search}`;
   if (phase.kind === "loading" || phase.kind === "error") {
     return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
@@ -1514,7 +1544,7 @@ export function ProjectCategoryScreen({
   }
   const name = sample?.categoryName ?? first?.category_name ?? "קטגוריה";
   const projectName = sample?.projectName ?? first?.project_name ?? "";
-  const allRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
+  const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
   const more = sample?.pageSize != null ? !sampleOpen && allRows.length > sample.pageSize : !sample && category.hasNextPage;
   return (
@@ -1985,7 +2015,7 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
   const [hidden, setHidden] = useState<string[]>([]);
   const [marking, setMarking] = useState<UnpaidRow | null>(null);
   const all = sample ?? unpaid.data ?? [];
-  const rows = all.filter((row) => !hidden.includes(row.id));
+  const rows = useHeldOrder(all.filter((row) => !hidden.includes(row.id)), (row) => row.id);
   const gross = all.reduce((sum, row) => sum + absAgorot(row.open_gross_agorot), 0n);
   return (
     <ScreenState

@@ -132,9 +132,18 @@ function ReviewerHome() {
   );
 }
 
+/** Sample banner counts for the cycle 3b stories. The default queue is unchanged. */
+function reviewerBannerRows(rows: ReviewRow[], banner: string | null): ReviewRow[] {
+  if (banner !== "assistant" && banner !== "one" && banner !== "one-assistant") return rows;
+  const assistant = banner !== "one";
+  const count = banner === "assistant" ? (rows[0]?.auto_approved_today ?? 0) : 1;
+  return rows.map((row) => ({ ...row, auto_approved_today: count, assistant_filed_today: assistant }));
+}
+
 function ReviewerQueue() {
   const [params] = useSearchParams();
-  const rows = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
+  const stored = useSyncExternalStore(subscribeReviewerQueue, reviewerQueueView, reviewerQueueView);
+  const rows = reviewerBannerRows(stored, params.get("banner"));
   const mode = sampleSaveMode(params.get("save"));
   const search = `?save=${mode}`;
   return (

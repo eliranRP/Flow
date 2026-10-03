@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+MCP cycle 3b. אישור calls `approve_review_item` with the shown project and category. A stale card and an already-closed card each show one info toast. The visit counter advances only on a local skip or approve, and ביטול grows the total by one. Focusing the window refetches the ledger lists. A list keeps its order while a row or its sheet is held and until scrolling settles. שויכו היום includes this user's assistant approvals from today. `approve_review_item` locks the transaction before the review, and a deadlock or serialization failure inside `resolve_review` is re-raised. Decision [0080](decisions/0080-mcp-connector.md).
+
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
 
 Settings cycle 5, review. A sheet keeps its own history layer. Closing the Claude help sheet or a ניתוק confirm pops only that layer, so הקוד מוכן and the details sheet stay open and focus returns to the control that opened the top sheet. The top sheet draws its own scrim over the one underneath. Step 1 leads with "בחרו מה העוזר יכול לעשות." Step 2 says the code is shown once, labels the scope, and copies the address and the code with a text link. The help sheet is titled "איך מחברים ב־Claude" and says Claude.ai needs an Authorization bearer header. A failed copy is announced in the sheet that owns the button. The קטגוריות row has no counts. Decision [0082](decisions/0082-settings-redesign.md).
