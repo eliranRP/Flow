@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector contract. Decisions [0085](decisions/0085-connector-engine.md), [0086](decisions/0086-mercury.md), and [0087](decisions/0087-multi-currency.md). One engine will serve SUMIT and Mercury. The port, the SQL signatures, and the Hebrew card copy are in [the connector contract](tech/connector-contract.md) and [the UI states](tech/connector-ui-states.md). This change does not migrate. [0087](decisions/0087-multi-currency.md) supersedes the README and spec lines that listed multi-currency as out of scope.
+
 Settings cycle 5, review. Closing a sheet also closes every layer history still lists above it, so Back then Forward does not leave ✕, Escape, or סיום dead. The shown-once sample code and the `e2e=stack` switch stay out of the hosted build. Decision [0082](decisions/0082-settings-redesign.md).
 
 Settings cycle 5, review. A sheet keeps its own history layer. Closing the Claude help sheet or a ניתוק confirm pops only that layer, so הקוד מוכן and the details sheet stay open and focus returns to the control that opened the top sheet. The top sheet draws its own scrim over the one underneath. Step 1 leads with "בחרו מה העוזר יכול לעשות." Step 2 says the code is shown once, labels the scope, and copies the address and the code with a text link. The help sheet is titled "איך מחברים ב־Claude" and says Claude.ai needs an Authorization bearer header. A failed copy is announced in the sheet that owns the button. The קטגוריות row has no counts. Decision [0082](decisions/0082-settings-redesign.md).

@@ -105,3 +105,6 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0082](0082-settings-redesign.md) | 2026-10-03 | Accepted | Settings is the account row, חיבורים, תצוגה, and עוד. No company is `company_id` null. This amends the Settings section of 0080 |
 | [0083](0083-jev-connector.md) | 2026-10-03 | Accepted | Jev is an optional connector, off by default. The API key stays in Vault and is read only by the service role |
 | [0084](0084-jev-auto-prefill.md) | 2026-10-03 | Accepted | Jev auto pre-fills a project and category and still waits in לאישור. It never approves |
+| [0085](0085-connector-engine.md) | 2026-10-03 | Accepted | One connector engine. SUMIT moves onto it. `sumit_*` tables are dropped in that stack. The contract names the port |
+| [0086](0086-mercury.md) | 2026-10-03 | Accepted | Mercury is a pasted read-only token. GET only. Pending is tagged and excluded from totals. No VAT, no dedup |
+| [0087](0087-multi-currency.md) | 2026-10-03 | Accepted | Display currency is ₪ or $ per company. USD is stored and repriced with today's Bank of Israel rate |
