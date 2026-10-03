@@ -595,7 +595,7 @@ On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice
 
 ### Display conversion
 
-A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and under `fx_policy` `original` its `fx_rate` and `fx_rate_date` stay null. No aggregate adds that integer to an ILS `amount_net`.
+A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and under `fx_policy` `original` and `today` its `fx_rate` and `fx_rate_date` stay null. No aggregate adds that integer to an ILS `amount_net`.
 
 Every total calls one helper:
 
@@ -647,13 +647,13 @@ These functions sum `private.to_display_minor` for each posted line that already
 
 `get_project`'s `pending_agorot` is the negation of the sum of `private.to_display_minor` over the waiting lines from `project_waiting`. Each call uses that line's currency, `doc_date`, and stored pair. It does not sum raw `amount_net`. A null is left out of the sum and still counts in `fx_missing_count`. Those lines may be pending. This figure is not a posted P&L total. The sign matches today's `-sum(amount_net)`, in display minor units.
 
-`budget_agorot` stays the stored project budget in ILS agorot. It is not a line. It has no `doc_date` and no stored pair, so `private.to_display_minor` is not applied and a `$` display does not turn the number into cents. `get_project` returns `budget_currency` with the value `ILS` beside `budget_agorot`.
+`budget_agorot` stays the stored project budget in ILS agorot. It is not a line. It has no `doc_date` and no stored pair, so `private.to_display_minor` is not applied and a `$` display does not turn the number into cents. `get_project` and each object in `company_pnl`'s `projects` array return `budget_currency` with the value `ILS` beside `budget_agorot`.
 
 `get_project`'s `transactions` items, `list_project_category`'s `rows`, and `project_waiting` items each include `currency` and `amount_original`. `amount_net` on those items stays in the line's currency. The converted amounts stay on the totals.
 
 Each of these payloads includes `display_currency` and `fx_missing_count`. `fx_missing_count` is the number of lines in that total for which the helper returned null, including a waiting line omitted from `pending_agorot`. When the count is above zero the payload also includes `sync_fx_missing`. That status is display-time only. Import does not write it on `last_error`, does not fail the batch, and does not zero the stored line.
 
-MCP `get_totals` and `list_projects` read `get_dashboard`. `totalsOf` and `projectRow` in `supabase/functions/flow-mcp/tools.ts` pass `fx_missing_count` and `display_currency` through from that payload. They do not drop those keys. `list_projects` copies the company `display_currency` and `fx_missing_count` onto each project row, because `projectRow` returns only the fields it copies. `fx_missing_count` is 0 when the payload omits it.
+MCP `get_totals` and `list_projects` read `get_dashboard`. `totalsOf` and `projectRow` in `supabase/functions/flow-mcp/tools.ts` pass `fx_missing_count` and `display_currency` through from that payload. They do not drop those keys. `list_projects` copies the company `display_currency` and `fx_missing_count` onto each project row, because `projectRow` returns only the fields it copies. `projectRow` also returns `budget_currency` with the value `ILS` beside `budget_agorot`. `fx_missing_count` is 0 when the payload omits it.
 
 pgTAP in this same layer: one company, one posted ILS line and one posted USD line, read through `company_pnl`, `get_dashboard`, `get_home`, `get_project`, `list_project_category`, and `private.overhead_share`. One case with no `fx_rates` row: `fx_missing_count` is 1, the ILS amount is unchanged, and the USD cents are absent from the sum. One allocation stored in USD cents reads back in the display minor unit.
 
@@ -810,7 +810,7 @@ Not in this stack:
 | --- | --- |
 | L0 | This contract, decisions 0085–0087, types, Mercury GET types, the credit type, the GET guard, redact |
 | L1a | `connector_connections` and the other tables, SUMIT copy, compatibility views, upsert, three filters, jobs and the cron check in the same migration, drop of the `sumit_*` tables behind those views, `line_status = 'posted'` on totals, `categories.excluded_from_pnl` with `on conflict (company_id, kind, name) do nothing`, FX columns, `ci.yml` deploy of `sumit-sync` and `sumit-connect` then `sumit-reseal` then `db push` (`scripts/ci-cd.test.mjs` asserts it; today the workflow deploys only `flow-mcp` and `jev-tag`) |
-| L1b | `fx_rates` (insert-only), `display_currency`, `fx_policy`, `set_display_currency`, `reprice_usd_lines`, `private.to_display_minor`, the aggregate rewrite, `pending_agorot` through that helper, `budget_currency` on `get_project`, `fx_missing_count` and `display_currency` passed through MCP `get_totals` and `list_projects`, `currency` and `amount_original` on review, transaction, search, the MCP line tools, `get_project` transactions, `list_project_category` rows, and `project_waiting` items, and the mixed-currency pgTAP. This lands before L2b imports a Mercury row. The system actor |
+| L1b | `fx_rates` (insert-only), `display_currency`, `fx_policy`, `set_display_currency`, `reprice_usd_lines`, `private.to_display_minor`, the aggregate rewrite, `pending_agorot` through that helper, `budget_currency` `ILS` on `get_project`, on each `company_pnl` `projects` object, and on MCP `projectRow`, `fx_missing_count` and `display_currency` passed through MCP `get_totals` and `list_projects`, `currency` and `amount_original` on review, transaction, search, the MCP line tools, `get_project` transactions, `list_project_category` rows, and `project_waiting` items, and the mixed-currency pgTAP. This lands before L2b imports a Mercury row. The system actor |
 | L2a | Registry `open`, engine, `connector-sync` / `connector-connect`, `fx.ts`, aliases, `sumit-sync` moved off the views, `sumit-connect` seals format 3 and the connection RPCs require `'3'` |
 | L2b | Mercury adapter and SUMIT `normalize` over the current mapper. Verifies pending and posted share an id |
 | L3a | ₪/$ toggle |

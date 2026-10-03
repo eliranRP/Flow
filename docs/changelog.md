@@ -2,7 +2,7 @@
 
 ## 2026-10-03
 
-Connector contract, review. `get_project`'s `pending_agorot` sums `private.to_display_minor`. `budget_agorot` stays shekels, and the payload adds `budget_currency` `ILS`. MCP `get_totals` and `list_projects` pass `fx_missing_count` and `display_currency`. Under `historical`, an ILS line is unchanged in shekels and uses the line date's rate in dollars, and import stamps `fx_rate` and `fx_rate_date` on each USD row. `get_project` transactions, `list_project_category` rows, and `project_waiting` items carry `currency` and `amount_original`. Decision [0087](decisions/0087-multi-currency.md).
+Connector contract, review. `get_project`'s `pending_agorot` sums `private.to_display_minor`. `budget_agorot` stays shekels, and the payload adds `budget_currency` `ILS`. MCP `get_totals` and `list_projects` pass `fx_missing_count` and `display_currency`. Under `historical`, an ILS line is unchanged in shekels and uses the line date's rate in dollars, and under `historical` import stamps `fx_rate` and `fx_rate_date` on each USD row. `get_project` transactions, `list_project_category` rows, and `project_waiting` items carry `currency` and `amount_original`. Decision [0087](decisions/0087-multi-currency.md).
 
 Connector contract, display conversion. Aggregates sum `private.to_display_minor` into the company's display currency. `original` and `today` use the newest `fx_rates` row on or before today. `historical` uses the stored pair. A missing rate omits the row and sets `fx_missing_count`. Review, transaction, search, and the MCP line tools carry `currency` and `amount_original`. `sync_fx_missing` is display-time only. Decision [0087](decisions/0087-multi-currency.md).
 
