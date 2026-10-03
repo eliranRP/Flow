@@ -415,7 +415,7 @@ export function AssistantSettings({
       <List>
         {row}
       </List>
-      <Sheet open={open} onOpenChange={setConnectSheet} onClosed={finishConnectClose} onRequestClose={connectCloseRef} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
+      <Sheet open={open} onOpenChange={setConnectSheet} onClosed={finishConnectClose} onRequestClose={connectCloseRef} closeOnBackdrop={secret == null} title={secret != null ? "הקוד מוכן" : intro ? "עוזר AI" : "חיבור עוזר AI"} titleRef={connectTitleRef} returnFocusRef={rowRef}>
         {secret ? (
           <div className="ui-stack ui-assistant-step">
             <p className="t-hint">{scopeShownOnce(scopeChoice(secret.scope))}</p>
