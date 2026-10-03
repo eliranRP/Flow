@@ -142,6 +142,7 @@ function AppRoutes() {
               <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
               <Route element={<ReviewWithSheet />}>
                 <Route path="review" element={null} />
+                <Route path="review/all" element={null} />
                 <Route path="review/change" element={<ChangeForm />} />
               </Route>
               <Route path="review/filed" element={<FiledTodayScreen />} />
