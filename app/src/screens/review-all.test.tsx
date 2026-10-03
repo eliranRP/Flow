@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
-import { MemoryRouter, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
@@ -269,16 +269,26 @@ describe("review queue list", () => {
     expect(screen.queryByRole("link", { name: /עגורני החוף/ })).not.toBeInTheDocument();
   });
 
-  it("opens the project picker from the card and holds a half-filled choice", async () => {
+  it("opens the project picker from the card and saves only the project", async () => {
+    let savedProject = false;
     rpc.impl = (name) => {
       if (name === "list_review") {
         return Promise.resolve({
-          data: [reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null, project_name: null })],
+          data: [reviewRow("r1", "מחסן הנמל", savedProject ? "p1" : null, {
+            category_id: null,
+            category_name: null,
+            project_name: savedProject ? "הרצל" : null,
+            project_suggested: false,
+          })],
           error: null,
         });
       }
       if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
       if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      if (name === "resolve_review") {
+        savedProject = true;
+        return Promise.resolve({ data: null, error: null });
+      }
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
@@ -286,8 +296,56 @@ describe("review queue list", () => {
     fireEvent.click(screen.getByRole("button", { name: "פרויקט: לא נבחר" }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
-    expect(await screen.findByText("בחרו פרויקט וקטגוריה.")).toBeInTheDocument();
-    expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
+    });
+    expect(rpc.calls.find((call) => call.name === "resolve_review")?.args).toEqual({
+      p_id: "r1",
+      p_action: "changed",
+      p_resolve: false,
+      p_project_id: "p1",
+    });
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
+    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
+  });
+
+  it("saves a category on a card with no project and stays there", async () => {
+    let savedCategory = false;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [reviewRow("r1", "מחסן הנמל", null, savedCategory
+            ? { category_id: "c1", category_name: "חומרים", category_suggested: false, project_name: null }
+            : { category_id: null, category_name: null, project_name: null })],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      if (name === "resolve_review") {
+        savedCategory = true;
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "חומרים" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
+    });
+    expect(rpc.calls.find((call) => call.name === "resolve_review")?.args).toEqual({
+      p_id: "r1",
+      p_action: "changed",
+      p_resolve: false,
+      p_category_id: "c1",
+    });
+    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים" })).toBeInTheDocument();
+    expect(screen.getByText("חסר פרויקט, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
   });
 
   it("saves a complete category tap and returns to the same card", async () => {
@@ -314,10 +372,10 @@ describe("review queue list", () => {
       expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
     });
     const saved = rpc.calls.find((call) => call.name === "resolve_review");
-    expect(saved?.args).toMatchObject({
+    expect(saved?.args).toEqual({
       p_id: "r1",
       p_action: "changed",
-      p_project_id: "p1",
+      p_resolve: false,
       p_category_id: "c2",
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
@@ -401,6 +459,7 @@ describe("review queue list", () => {
     expect(rpc.calls.find((call) => call.name === "set_transaction_category")?.args).toEqual({
       p_id: "t-r1",
       p_category_id: "c1",
+      p_resolve: false,
     });
     expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(false);
   });
@@ -502,5 +561,144 @@ describe("review queue list", () => {
       expect(router.state.location.pathname).toBe("/review");
     });
     expect(router.state.location.search).not.toContain("from=all");
+  });
+
+  it("does not replace the change sheet when the open item leaves", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({ data: [reviewRow("r2", "עגורני החוף", "p1")], error: null });
+      }
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        {
+          element: <><ReviewScreen /><Outlet /></>,
+          children: [
+            { path: "/review", element: null },
+            { path: "/review/all", element: null },
+            { path: "/review/change", element: <ChangeForm /> },
+          ],
+        },
+      ],
+      { initialEntries: ["/review/change?item=r1&from=all"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/review/change");
+    });
+    expect(router.state.location.search).toContain("item=r1");
+  });
+
+  it("still advances on /review when the focused item has left", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({ data: [reviewRow("r2", "עגורני החוף", "p1")], error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        {
+          element: <><ReviewScreen /><Outlet /></>,
+          children: [
+            { path: "/review", element: null },
+            { path: "/review/change", element: <ChangeForm /> },
+          ],
+        },
+      ],
+      { initialEntries: ["/review?item=r1&from=all"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.search).toContain("item=r2");
+    });
+    expect(router.state.location.pathname).toBe("/review");
+  });
+
+  it("sends a refreshed change picker back to the summary", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null, project_name: null })],
+          error: null,
+        });
+      }
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review/change?item=r1&pick=category");
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
+    expect(await screen.findByText("בחרו פרויקט וקטגוריה.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "בחירת קטגוריה" })).not.toBeInTheDocument();
+  });
+
+  it("returns focus to the line that opened the picker", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        {
+          element: <><ReviewScreen /><Outlet /></>,
+          children: [
+            { path: "/review", element: null },
+            { path: "/review/change", element: <ChangeForm /> },
+          ],
+        },
+      ],
+      { initialEntries: ["/review"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const line = await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" });
+    fireEvent.click(line);
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toHaveFocus();
+    });
   });
 });

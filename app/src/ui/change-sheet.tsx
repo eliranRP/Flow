@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type RefObject, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { isTransientWriteError, type WriteFailure } from "../use-write";
 import { Button } from "./button";
@@ -109,7 +109,7 @@ type Shared = {
 };
 
 type Props = Shared & (
-  | { host: "route"; closeTo: string }
+  | { host: "route"; closeTo: string; returnFocusRef?: RefObject<HTMLElement | null> }
   | { host: "overlay"; open: boolean; onOpenChange: (open: boolean) => void }
 );
 
@@ -279,12 +279,23 @@ export function ChangeAssignment(props: Props) {
     go(searchOf(nextParams), true);
   }
 
-  /** A picker opened from a card line. Depth 0 means the owner never saw the summary. */
+  /** A picker opened from a card line. from=line is that entry. A refreshed שינוי URL has no marker. */
   function landedOnPicker(): boolean {
     if (props.host !== "route" || props.contained) return false;
     if (depth.current > 0) return false;
-    const pick = new URLSearchParams(locationRef.current.search).get("pick");
-    return pick === "project" || pick === "category";
+    const search = new URLSearchParams(locationRef.current.search);
+    const pick = search.get("pick");
+    return search.get("from") === "line" && (pick === "project" || pick === "category");
+  }
+
+  /** A refreshed שינוי picker. ✕ returns to the summary instead of the card. */
+  function summaryUnderPicker(): boolean {
+    if (props.host !== "route" || props.contained) return false;
+    if (depth.current > 0) return false;
+    const search = new URLSearchParams(locationRef.current.search);
+    const pick = search.get("pick");
+    if (pick !== "project" && pick !== "category") return false;
+    return search.get("from") !== "line";
   }
 
   function back() {
@@ -467,6 +478,7 @@ export function ChangeAssignment(props: Props) {
       return closeSheet(false);
     }
     if (landedOnPicker()) return closeSheet(true);
+    if (summaryUnderPicker()) closePickLevel();
     const current = propsRef.current;
     if (current.hold) {
       if (!warned.current) {
@@ -624,7 +636,7 @@ export function ChangeAssignment(props: Props) {
   };
 
   if (props.host === "route") {
-    return <RouteSheet closeTo={props.closeTo} {...chrome} />;
+    return <RouteSheet closeTo={props.closeTo} returnFocusRef={props.returnFocusRef} {...chrome} />;
   }
   return <Sheet open={props.open} onOpenChange={props.onOpenChange} {...chrome} />;
 }

@@ -486,7 +486,7 @@ isOneToOne: true
 { Args: { "p_company": string,"p_dek_ciphertext": string,"p_dek_nonce": string,"p_envelope_version": string,"p_kek_version": string,"p_key_ciphertext": string,"p_key_nonce": string,"p_sumit_company_id": number,"p_validated": boolean }; Returns: undefined
                            },
 "resolve_review":
-{ Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean }; Returns: undefined
+{ Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean,"p_resolve"?: boolean }; Returns: undefined
                            },
 "revoke_mcp_credential":
 { Args: { "p_id": string,"p_user": string }; Returns: Json
@@ -507,7 +507,7 @@ isOneToOne: true
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
                            },
 "set_transaction_category":
-{ Args: { "p_category_id": string,"p_id": string }; Returns: string
+{ Args: { "p_category_id": string,"p_id": string,"p_resolve"?: boolean }; Returns: string
                            },
 "stamp_sumit_sync":
 { Args: { "p_company": string }; Returns: undefined
