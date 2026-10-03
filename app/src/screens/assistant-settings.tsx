@@ -112,6 +112,7 @@ export function AssistantSettings({
     queryFn: readStatus,
   });
   const [open, setOpen] = useState(initialSecret != null || initialOpen);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [choice, setChoice] = useState<AssistantScope>("read_write");
   const [minting, setMinting] = useState(false);
@@ -213,11 +214,11 @@ export function AssistantSettings({
   const row = view.state === "loading" ? (
     <ListRow variant="button" title="עוזר" hint="טוען" icon={<InboxIcon />} wrapHint describeHint busy disabled onClick={() => undefined} />
   ) : view.state === "no-company" ? (
-    <ListRow variant="button" title="עוזר" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint disabled onClick={() => undefined} />
+    <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={<InboxIcon />} wrapHint describeHint disabled onClick={() => undefined} />
   ) : view.state === "error" ? (
     <ListRow variant="static" title="עוזר" hint="לא הצלחנו לטעון את החיבור." icon={<AlertIcon />} wrapHint describeHint />
   ) : view.state === "connected" ? (
-    <ListRow variant="static" title="עוזר" hint={connectedHint(scope, view.lastUsedAt)} icon={<InboxIcon />} wrapHint describeHint />
+    <ListRow variant="button" title="עוזר" hint={connectedHint(scope, view.lastUsedAt)} icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { setDetailsOpen(true); }} />
   ) : view.state === "expired" ? (
     <ListRow variant="button" title="חיבור מחדש" hint="התוקף פג" icon={<InboxIcon />} wrapHint describeHint chevron onClick={() => { closeSheet(true); }} />
   ) : (
@@ -229,9 +230,6 @@ export function AssistantSettings({
       {showHeading ? <SectionHead title="עוזר" /> : null}
       <List>
         {row}
-        {showDisconnect && view.id ? (
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} describeHint onClick={() => { setDisconnectOpen(true); }} />
-        ) : null}
       </List>
       {view.state === "error" ? (
         <div className="ui-page-pad">
@@ -273,6 +271,16 @@ export function AssistantSettings({
             <Button type="button" busy={minting} aria-describedby={minting ? "assistant-mint-reason" : undefined} onClick={() => { void mint(); }}>יצירת קוד</Button>
           </div>
         )}
+        {showDisconnect && view.id && view.state === "expired" ? (
+          <List>
+            <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectOpen(true); }} />
+          </List>
+        ) : null}
+      </Sheet>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen} title="עוזר">
+        <List>
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} onClick={() => { setDisconnectOpen(true); }} />
+        </List>
       </Sheet>
       <ConfirmSheet
         open={disconnectOpen}
