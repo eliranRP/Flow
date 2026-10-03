@@ -43,7 +43,7 @@ test("a rename, a removal, a content change, or an inserted version fails, and a
 
   const badHour = [...lock, `20261002240000_bad_hour.sql ${"f".repeat(64)}`];
   assert.ok(migrationOrderProblems(names(badHour), badHour, lock).some((line) => line.includes("hour is outside 00-23")));
-  const hourZero = [...lock, `20261003000000_midnight.sql ${"a".repeat(64)}`];
+  const hourZero = [...lock, `20261004000000_midnight.sql ${"a".repeat(64)}`];
   assert.deepEqual(migrationOrderProblems(names(hourZero), hourZero, lock), []);
   assert.deepEqual(migrationOrderProblems(files, lock, lock, hashes), []);
 
