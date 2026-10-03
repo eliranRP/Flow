@@ -133,6 +133,14 @@ from public.connector_connections;
 revoke all on public.connector_connection_status from public, anon;
 grant select on public.connector_connection_status to authenticated, service_role;
 
+-- Hold writers out until the copy and the drop commit. A concurrent update
+-- otherwise lands on the table this migration then drops.
+begin;
+
+set local lock_timeout = '5s';
+
+lock table public.sumit_connections, public.sumit_refresh_requests in access exclusive mode;
+
 -- Format 1 is resealed before this migration. Copy only 2 and 3.
 do $format1$
 begin
@@ -182,21 +190,30 @@ select
   s.updated_at
 from public.sumit_connections s;
 
--- One open row per company. A second open row would miss connector_refresh_open_uidx.
-insert into public.connector_refresh_requests (company_id, provider, requested_at, claimed_at, forced)
-select r.company_id, 'sumit'::public.connector_provider, r.requested_at, r.claimed_at, false
+-- One open row per company, keeping its id. A second open row would miss
+-- connector_refresh_open_uidx. The same id lets an in-flight unclaim find the row.
+insert into public.connector_refresh_requests (id, company_id, provider, requested_at, claimed_at, forced)
+overriding system value
+select r.id, r.company_id, 'sumit'::public.connector_provider, r.requested_at, r.claimed_at, false
 from (
   select distinct on (company_id)
-    company_id, requested_at, claimed_at
+    id, company_id, requested_at, claimed_at
   from public.sumit_refresh_requests
   where claimed_at is null
   order by company_id, requested_at desc, id desc
 ) r;
 
-insert into public.connector_refresh_requests (company_id, provider, requested_at, claimed_at, forced)
-select r.company_id, 'sumit'::public.connector_provider, r.requested_at, r.claimed_at, false
+insert into public.connector_refresh_requests (id, company_id, provider, requested_at, claimed_at, forced)
+overriding system value
+select r.id, r.company_id, 'sumit'::public.connector_provider, r.requested_at, r.claimed_at, false
 from public.sumit_refresh_requests r
 where r.claimed_at is not null;
+
+select pg_catalog.setval(
+  pg_catalog.pg_get_serial_sequence('public.connector_refresh_requests', 'id'),
+  coalesce((select max(id) from public.connector_refresh_requests), 1),
+  exists (select 1 from public.connector_refresh_requests)
+);
 
 insert into public.party_external_refs (company_id, provider, kind, external_id, supplier_id)
 select s.company_id, 'sumit'::public.connector_provider, 'supplier', s.sumit_external_id::text, s.id
@@ -208,9 +225,53 @@ select c.company_id, 'sumit'::public.connector_provider, 'customer', c.sumit_ext
 from public.customers c
 where c.sumit_external_id is not null;
 
+do $copycount$
+declare
+  source_count bigint;
+  target_count bigint;
+begin
+  select count(*) into source_count from public.sumit_connections;
+  select count(*) into target_count
+  from public.connector_connections
+  where provider = 'sumit';
+  if source_count <> target_count then
+    raise exception 'sumit connection copy count mismatch';
+  end if;
+
+  select
+    (select count(*) from public.sumit_refresh_requests where claimed_at is not null)
+    + (select count(distinct company_id) from public.sumit_refresh_requests where claimed_at is null)
+  into source_count;
+  select count(*) into target_count
+  from public.connector_refresh_requests
+  where provider = 'sumit';
+  if source_count <> target_count then
+    raise exception 'sumit refresh copy count mismatch';
+  end if;
+
+  select count(*) into source_count from public.suppliers where sumit_external_id is not null;
+  select count(*) into target_count
+  from public.party_external_refs
+  where provider = 'sumit' and kind = 'supplier';
+  if source_count <> target_count then
+    raise exception 'sumit supplier ref copy count mismatch';
+  end if;
+
+  select count(*) into source_count from public.customers where sumit_external_id is not null;
+  select count(*) into target_count
+  from public.party_external_refs
+  where provider = 'sumit' and kind = 'customer';
+  if source_count <> target_count then
+    raise exception 'sumit customer ref copy count mismatch';
+  end if;
+end
+$copycount$;
+
 drop view public.sumit_connection_status;
 drop table public.sumit_connections;
 drop table public.sumit_refresh_requests;
+
+commit;
 
 -- security_invoker checks every column the view body reads. Authenticated is not
 -- granted ciphertext or settings, so the view reads through this definer function.
@@ -809,7 +870,7 @@ begin
   set reject_attempts = reject_attempts + 1,
       last_error = 'rejected',
       next_attempt_at = pg_catalog.now() + (
-        case least(pg_catalog.greatest(reject_attempts + 1, 1), 5)
+        case least(greatest(reject_attempts + 1, 1), 5)
           when 1 then interval '5 minutes'
           when 2 then interval '15 minutes'
           when 3 then interval '1 hour'
@@ -928,7 +989,7 @@ begin
     and (c.next_attempt_at is null or c.next_attempt_at <= pg_catalog.now())
     and c.last_error is distinct from 'auth'
   order by r.requested_at
-  limit least(pg_catalog.greatest(coalesce(p_limit, 20), 1), 100);
+  limit least(greatest(coalesce(p_limit, 20), 1), 100);
 end;
 $$;
 
@@ -957,7 +1018,7 @@ begin
       and c.last_error is distinct from 'auth'
       and (c.sync_claimed_at is null or c.sync_claimed_at < pg_catalog.now() - interval '15 minutes')
     order by r.requested_at
-    limit least(pg_catalog.greatest(coalesce(p_limit, 20), 1), 100)
+    limit least(greatest(coalesce(p_limit, 20), 1), 100)
     for update of r, c skip locked
   ),
   marked as (
@@ -1096,5 +1157,11 @@ $$;
 revoke all on function private.schedule_connector_jobs() from public, anon, authenticated;
 grant execute on function private.schedule_connector_jobs() to service_role;
 
-select set_config('request.jwt.claim.role', 'service_role', true);
-select private.schedule_connector_jobs();
+-- The copy above commits, so a local setting on its own statement is gone
+-- before this call. One block keeps the role for the schedule.
+do $schedule$
+begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform private.schedule_connector_jobs();
+end
+$schedule$;

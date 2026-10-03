@@ -3,6 +3,10 @@
 -- private.filed_today_rows(), list_review, and list_auto_assigned_today stay
 -- until MCP 3b (20261003180000) merges.
 
+begin;
+
+set local lock_timeout = '5s';
+
 create or replace function private.fill_amount_original()
 returns trigger
 language plpgsql
@@ -65,3 +69,5 @@ $$;
 
 revoke all on function public.sumit_status() from public, anon;
 grant execute on function public.sumit_status() to authenticated, service_role;
+
+commit;

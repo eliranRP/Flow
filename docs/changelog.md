@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector engine L1a, copy lock. The SUMIT copy takes an access-exclusive lock before the format-1 check, keeps each refresh request id, and raises when a copied count does not match. The schedule call sits in the same block as the service-role setting, after that copy commits. The currency backfill does not stamp `updated_at`, and its checks are added in that same lock instead of a later validate. Claim, the due list, and a rejection clamp use `greatest` and `least` as grammar: `pg_catalog` has no such function, and an empty search path made the qualified call fail. Mixed-sign VAT, B3, the pre-existing lock order, B6, B7, and B8 stay backlog. `private.filed_today_rows()` still waits for MCP 3b.
+
 Connector engine L1a, review. The deploy job deploys `sumit-reseal` after `sumit-connect` and before the invoke, so the first production call is not a 404. The refresh copy keeps the newest open row per company. `sumit_status()` is security definer and reads the caller's company on `connector_connections`. `fill_amount_original` also follows an update of `amount_gross`. The sweep matches `external_id`: a legacy row whose id is null cannot be swept, and a document with no id raises. A party id is cast to bigint only for SUMIT. P&L exclusion of `excluded_from_pnl` stays in L1b, before L2b. `private.filed_today_rows()` still waits for MCP 3b.
 
 Connector engine L1a, posted totals. `company_pnl`, `get_home`, `get_project`, `overhead_share`, and `project_category_entries` sum `line_status = 'posted'` only. A pending line stays on the project list and out of the figure. `private.filed_today_rows()` still waits for MCP 3b.
