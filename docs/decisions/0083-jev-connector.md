@@ -33,4 +33,4 @@ The tagging job and the Settings control are later changes. They call `read_jev_
 
 ## Decisions needed
 
-The tagging job will allow `mode` `auto`. The owner decided that even then a suggestion never approves a line: at or above the threshold it pre-fills a project and category the user has not set and leaves the item in לאישור. This record does not accept `auto`.
+The tagging job will allow `mode` `auto`. What that mode does is [0084](0084-jev-auto-prefill.md): a suggestion never approves a line, and at or above the threshold it pre-fills a project and category the user has not set and leaves the item in לאישור. This record does not accept `auto`. Allowing it is a later migration.

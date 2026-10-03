@@ -104,3 +104,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0081](0081-review-queue-list.md) | 2026-10-02 | Accepted | הצג הכול lists every pending item at `/review/all`. Card lines open the picker, and the notes say הקישו לבחירה |
 | [0082](0082-settings-redesign.md) | 2026-10-03 | Accepted | Settings is the account row, חיבורים, תצוגה, and עוד. No company is `company_id` null. This amends the Settings section of 0080 |
 | [0083](0083-jev-connector.md) | 2026-10-03 | Accepted | Jev is an optional connector, off by default. The API key stays in Vault and is read only by the service role |
+| [0084](0084-jev-auto-prefill.md) | 2026-10-03 | Accepted | Jev auto pre-fills a project and category and still waits in לאישור. It never approves |
