@@ -508,9 +508,11 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   const reconnect = page.getByRole("button", { name: "SUMIT" });
   await expect(reconnect).toContainText("צריך לחבר מחדש");
   await reconnect.click();
-  const authSheet = page.getByRole("dialog", { name: "חיבור SUMIT" });
+  const authSheet = page.getByRole("dialog", { name: "SUMIT" });
   await expect(authSheet).toBeVisible();
+  await expect(authSheet.getByText("המזהה או המפתח לא התקבלו")).toBeVisible();
   await expect(authSheet.getByRole("button", { name: "חיבור מחדש" })).toBeVisible();
+  await expect(authSheet.getByRole("button", { name: "ניתוק" })).toBeVisible();
 });
 
 test("categories filter, hide, merge, and create", async ({ page }) => {

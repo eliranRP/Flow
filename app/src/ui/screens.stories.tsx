@@ -871,7 +871,7 @@ export const SettingsSumitConnected: Story = {
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, connected: true }} />
+      <SettingsScreen sample={{ ...sumitBusiness, connected: true, lastSyncAt: "2026-10-03T09:05:00.000Z" }} />
     </StoryRoute>
   ),
 };

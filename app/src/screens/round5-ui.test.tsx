@@ -1011,7 +1011,9 @@ describe("settings account", () => {
     expect(getComputedStyle(heldButton).opacity).toBe("1");
     expect(getComputedStyle(heldButton.querySelector(".ui-row-title") as Element).opacity).toBe("0.45");
     expect(getComputedStyle(heldButton.querySelector(".ui-row-icon") as Element).opacity).toBe("0.45");
-    expect(within(sheet).getByText("SUMIT לא זמין כרגע.")).toBeInTheDocument();
+    expect(within(sheet).getByText("הרענון נכשל")).toBeInTheDocument();
+    expect(within(sheet).queryByText(/נסו שוב/)).not.toBeInTheDocument();
+    expect(within(sheet).queryByText("החיבור נכשל")).not.toBeInTheDocument();
     expect(screen.queryByText(/נבדוק שוב מאוחר יותר/)).toBeNull();
     const hint = within(sheet).getByText(/אפשר לנסות שוב/);
     expect(hint.closest("button")).toBe(heldButton);
@@ -1081,10 +1083,19 @@ describe("settings account", () => {
     expect(screen.queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
     expect(screen.getAllByText(/מחדש/)).toHaveLength(1);
     fireEvent.click(reconnect);
-    const authSheet = screen.getByRole("dialog", { name: "חיבור SUMIT" });
+    const authSheet = screen.getByRole("dialog", { name: "SUMIT" });
+    const sheetText = authSheet.textContent;
+    const reasonAt = sheetText.indexOf("המזהה או המפתח לא התקבלו");
+    const companyAt = sheetText.indexOf("מספר חברה");
+    const reconnectAt = sheetText.indexOf("חיבור מחדש");
+    const disconnectAt = sheetText.indexOf("ניתוק");
+    expect(reasonAt).toBeGreaterThanOrEqual(0);
+    expect(reasonAt).toBeLessThan(companyAt);
+    expect(companyAt).toBeLessThan(reconnectAt);
+    expect(reconnectAt).toBeLessThan(disconnectAt);
     expect(within(authSheet).getByRole("button", { name: "חיבור מחדש" })).toBeInTheDocument();
+    expect(within(authSheet).getByRole("button", { name: "ניתוק" })).toBeInTheDocument();
     expect(within(authSheet).queryByText("החיבור ל־SUMIT נכשל.")).not.toBeInTheDocument();
-    expect(within(authSheet).queryByRole("button", { name: "ניתוק" })).not.toBeInTheDocument();
   });
 });
 
