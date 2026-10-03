@@ -1,6 +1,6 @@
 -- L1a upsert. Canonical lines land in transactions. The SUMIT wrapper keeps
 -- today's document shape, idempotency key, and integer count.
--- private.filed_today_rows() stays out until MCP 3b merges.
+-- private.filed_today_rows() is rebuilt in 20261003200000 from the MCP 3b version.
 
 create type public.connector_upsert_result as (
   inserted integer,

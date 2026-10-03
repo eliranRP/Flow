@@ -1,7 +1,7 @@
 -- L1a review. Fill amount_original when amount_gross changes, and read SUMIT
 -- status from the base table as security definer.
--- private.filed_today_rows(), list_review, and list_auto_assigned_today stay
--- until MCP 3b (20261003180000) merges.
+-- private.filed_today_rows(), list_review, and list_auto_assigned_today are
+-- rebuilt in 20261003200000 from the MCP 3b versions.
 -- CLI 2.118.0 runs each statement on its own. begin is first and commit is
 -- last, so lock_timeout covers the trigger change.
 

@@ -1,9 +1,10 @@
 -- L1a. Today's connector filings carry currency and amount_original.
--- A pending line is not filed. Assistant approvals wait for MCP 3b.
+-- A pending line is not filed. An assistant approval is filed, and a tied
+-- created_at keeps the id order.
 
 begin;
 
-select plan(14);
+select plan(19);
 
 do $users$
 begin
@@ -103,6 +104,66 @@ from l1a c
 join l1a m on m.label = 'other_materials'
 where c.label = 'other_company';
 
+select lives_ok(
+  format(
+    $$select public.store_mcp_credential(%L::uuid, 'hash-l1a-write01', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
+    (select id from auth.users where email = 'l1a-owner@test.flow')
+  ),
+  'store the owner write token'
+);
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -30000, -30000, 0, 'unknown',
+  current_date - 2, 'manual', 'l1a:assistant', a.id, m.id, 'צבע', now() - interval '2 days'
+from l1a c
+join l1a a on a.label = 'alpha'
+join l1a m on m.label = 'materials'
+where c.label = 'company';
+
+insert into private.mcp_writes (token_id, user_id, transaction_id, review_id, kind, created_at)
+select
+  (select id from private.mcp_credentials where token_hash = 'hash-l1a-write01'),
+  (select id from auth.users where email = 'l1a-owner@test.flow'),
+  t.id,
+  gen_random_uuid(),
+  'review',
+  now()
+from public.transactions t
+where t.idempotency_key = 'l1a:assistant';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -21000, -21000, 0, 'unknown',
+  current_date, 'sumit', 'l1a:tie-a', a.id, m.id, 'קודם',
+  (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') + interval '2 hours'
+from l1a c
+join l1a a on a.label = 'alpha'
+join l1a m on m.label = 'materials'
+where c.label = 'company';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role,
+  amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, created_at
+)
+select c.id, 'expense', 'expense', 'project',
+  -22000, -22000, 0, 'unknown',
+  current_date, 'sumit', 'l1a:tie-b', a.id, m.id, 'אחר',
+  (date_trunc('day', now() at time zone 'Asia/Jerusalem') at time zone 'Asia/Jerusalem') + interval '2 hours'
+from l1a c
+join l1a a on a.label = 'alpha'
+join l1a m on m.label = 'materials'
+where c.label = 'company';
+
 select is(
   private.is_connector_source('sumit'),
   true,
@@ -158,15 +219,51 @@ select is(
 );
 
 select is(
+  (
+    select count(*)
+    from jsonb_array_elements(public.list_auto_assigned_today()) elem
+    where elem->>'description' = 'צבע'
+  ),
+  1::bigint,
+  'an assistant-filed row appears in filed today'
+);
+
+select is(
   (select jsonb_array_length(public.list_auto_assigned_today())),
-  1,
-  'the owner count is today''s posted connector filing'
+  4,
+  'the owner count is the posted connector filings plus the assistant row'
+);
+
+select is(
+  (
+    select string_agg(filed.elem->>'description', '>' order by filed.ord)
+    from jsonb_array_elements(public.list_auto_assigned_today()) with ordinality as filed(elem, ord)
+    where filed.elem->>'description' in ('קודם', 'אחר')
+  ),
+  (
+    select string_agg(t.description, '>' order by t.created_at desc, t.id)
+    from public.transactions t
+    where t.idempotency_key in ('l1a:tie-a', 'l1a:tie-b')
+  ),
+  'equal created_at keeps the id order'
 );
 
 select is(
   (select (public.list_review() -> 0 ->> 'auto_approved_today')::int),
   (select jsonb_array_length(public.list_auto_assigned_today())),
   'the banner count matches the list'
+);
+
+select ok(
+  (public.list_review() -> 0) ? 'assistant_filed_today'
+    and (public.list_review() -> 0) ? 'auto_approved_today',
+  'the banner fields exist'
+);
+
+select is(
+  (select (public.list_review() -> 0 ->> 'assistant_filed_today')::boolean),
+  true,
+  'the banner sees the assistant filing'
 );
 
 select is(

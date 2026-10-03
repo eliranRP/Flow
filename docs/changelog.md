@@ -2,6 +2,8 @@
 
 ## 2026-10-03
 
+Connector engine L1a, filed today. `private.filed_today_rows()`, `list_auto_assigned_today`, and `list_review` are the MCP 3b versions. An assistant approval that is still approved is on שויכו היום, the banner carries `assistant_filed_today`, and a tied `created_at` orders by id. Connector rows stay `is_connector_source` and `line_status = 'posted'`, and the cards still carry `currency`, `amount_original`, and `line_status`. The whole-file `begin` and `commit` stay.
+
 Connector engine L1a, one transaction. CLI 2.118.0 runs each statement on its own, so the currency migration, the SUMIT copy, and the review migration open with `begin` and close with `commit`. A commit after the drop would remove the SUMIT tables, skip the views, and leave the migration unrecorded. `lock_timeout` and the access-exclusive lock stay inside that transaction. The cash-basis fixture includes a pending receipt. `private.filed_today_rows()` still waits for MCP 3b.
 
 Connector engine L1a, copy lock. The SUMIT copy takes an access-exclusive lock before the format-1 check, keeps each refresh request id, and raises when a copied count does not match. The schedule call sits in the same block as the service-role setting. The currency backfill does not stamp `updated_at`, and its checks are added in that same lock instead of a later validate. Claim, the due list, and a rejection clamp use `greatest` and `least` as grammar: `pg_catalog` has no such function, and an empty search path made the qualified call fail. Mixed-sign VAT, B3, the pre-existing lock order, B6, B7, and B8 stay backlog. `private.filed_today_rows()` still waits for MCP 3b.

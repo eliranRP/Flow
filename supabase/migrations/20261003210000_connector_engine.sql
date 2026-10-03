@@ -1,6 +1,6 @@
 -- L1a engine. Connector tables, the SUMIT copy, compatibility views, and the jobs.
 -- A SUMIT row that still resolves to format 1 stops this migration.
--- private.filed_today_rows() stays out until MCP 3b merges.
+-- private.filed_today_rows() is rebuilt in 20261003200000 from the MCP 3b version.
 -- suppliers.sumit_external_id and customers.sumit_external_id stay. The upsert still writes them.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction:
 -- begin is first, commit is last. A commit after the drop would remove the
