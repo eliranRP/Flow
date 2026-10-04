@@ -743,7 +743,7 @@ a.ui-row,
 
 .ui-toggle:disabled,
 .ui-toggle:has(input:disabled) {
-  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .ui-toggle input:focus-visible {
@@ -1595,6 +1595,14 @@ a.ui-row,
   flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-2) var(--space-side) 0;
+}
+
+.ui-viewer-note {
+  margin-block-start: var(--space-2);
+}
+
+.ui-review-queue > .ui-viewer-note {
+  margin-inline: var(--space-side);
 }
 
 .ui-review-approve {
@@ -2527,11 +2535,18 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-switch-row:has(input:disabled) {
-  opacity: 0.45;
-  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
 .ui-switch-row input:disabled + .ui-switch {
+  background: var(--color-disabled-bg);
+}
+
+.ui-switch-row input:disabled:checked + .ui-switch {
+  background: var(--color-disabled-text);
+}
+
+.ui-switch-row input:disabled:checked + .ui-switch i {
   background: var(--color-disabled-bg);
 }
 
