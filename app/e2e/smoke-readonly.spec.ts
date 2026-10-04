@@ -44,11 +44,31 @@ function rpcName(url: string): string | null {
   return /\/rest\/v1\/rpc\/([a-z0-9_]+)/.exec(url)?.[1] ?? null;
 }
 
+function requestPath(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return "";
+  }
+}
+
+/** Token refresh and the user read only. Other `/auth/v1/` paths, including signup and admin, are writes. */
+function isAuthAllowed(request: Request): boolean {
+  const path = requestPath(request.url());
+  const user = path.endsWith("/auth/v1/user");
+  const token = path.endsWith("/auth/v1/token");
+  if (!user && !token) return false;
+  const method = request.method();
+  if (method === "OPTIONS" || method === "HEAD") return true;
+  if (user) return method === "GET";
+  return method === "POST";
+}
+
 function isRead(request: Request): boolean {
+  const url = request.url();
+  if (requestPath(url).includes("/auth/v1/")) return isAuthAllowed(request);
   const method = request.method();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return true;
-  const url = request.url();
-  if (url.includes("/auth/v1/")) return true;
   if (method === "POST" && /\/functions\/v1\/flow-mcp\/status(?:\?|$)/.test(url)) return true;
   const rpc = rpcName(url);
   return method === "POST" && rpc != null && readRpcs.has(rpc);

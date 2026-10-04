@@ -93,6 +93,8 @@ where u.email = 'smoke@example.com';
 
 The name is `Flow Test` and `is_demo` is true. Any other result means stop. Do not point this user at a real company. The trigger rejects that insert. The viewer can read the real SUMIT data on Flow Test. Eliran accepted that on 2026-10-04.
 
+Never set `is_demo` on a company just to make that block succeed. Flow Test is already the one demo company. Setting the flag on a real company would attach this viewer to it, and the viewer can read that company's rows. If the count is not 1, stop.
+
 ## GitHub secrets
 
 The deploy job uses the GitHub environment `production`. Add both secrets there, not as repository secrets. A job that does not select `production` cannot see them.
@@ -106,4 +108,4 @@ Where: GitHub → Settings → Environments → `production` → Environment sec
 
 `smoke@example.com` is not a mailbox. Replace it in both commands with the address you created, and store that same address as `SMOKE_EMAIL`. Do not commit the real address.
 
-If either secret is missing, the deploy step writes a warning to the job summary and exits 0. That does not fail the deploy. When both are set, the step installs Chromium and runs `pnpm --filter @flow/app test:e2e:smoke` against `https://flow-app-dx5.pages.dev` after the hostname check. A failed smoke writes a job summary that production is already live and quotes the Playwright output, then exits 1. Pages is not rolled back. GitHub masks the password because it is a secret. The workflow does not mask it again.
+If either secret is missing, the deploy step writes a warning to the job summary and exits 0. That does not fail the deploy. When both are set, the step installs Chromium and runs `pnpm --filter @flow/app test:e2e:smoke` against `https://flow-app-dx5.pages.dev` after the hostname check. The workflow sets `SMOKE_COMPANY_NAME` to Flow Test for that step. A failed smoke writes a job summary that production is already live and that the Playwright smoke failed. The summary does not include the Playwright log. That log stays in the step log. Then the step exits 1. Pages is not rolled back. The smoke retries once. When the first attempt fails and the retry passes, the job summary gets a warning and the deploy still succeeds. GitHub masks the password because it is a secret. The workflow does not mask it again.
