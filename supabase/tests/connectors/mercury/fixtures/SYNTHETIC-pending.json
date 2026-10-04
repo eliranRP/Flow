@@ -1,0 +1,60 @@
+{
+  "transactions": [
+    {
+      "id": "6e91abc0-6cfb-4a85-891a-23912c05ef86",
+      "feeId": null,
+      "amount": -57.5,
+      "createdAt": "2026-07-30T14:10:50.473402Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2026-08-05T21:00:00Z",
+      "status": "pending",
+      "note": null,
+      "bankDescription": "Cloud Office Suite_example",
+      "externalMemo": null,
+      "counterpartyId": "311c8f88-7188-4e1f-96f5-6fbdad1622de",
+      "details": {
+        "creditCardInfo": {
+          "id": "57ffc3ac-3f58-468c-a301-34546a9bd375",
+          "email": "name@example.com",
+          "paymentMethod": "Credit Card ••0000"
+        }
+      },
+      "cardId": "57ffc3ac-3f58-468c-a301-34546a9bd375",
+      "reasonForFailure": null,
+      "failedAt": null,
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "Cloud Office Suite",
+      "counterpartyNickname": null,
+      "kind": "creditCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": "68dd3440-10ab-45ef-abac-d252f05359f9",
+      "mercuryCategory": "Software",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": {
+        "id": "47772ad4-0a08-4015-9e0b-c2090241c99b",
+        "name": "Software & Subscriptions",
+        "visibleForReimbursements": true,
+        "visibleForCardSpend": true,
+        "visibleForOther": true
+      },
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09",
+      "merchant": {
+        "categoryCode": "4816",
+        "id": "m_651c85a0ccd72",
+        "category": "Software",
+        "amount": -5750,
+        "currency": "USD"
+      },
+      "_synthetic": "No pending line existed on 2026-08-02. Derived from a sent creditCardTransaction in page 1."
+    }
+  ],
+  "page": {}
+}

@@ -1,0 +1,47 @@
+{
+  "id": "311a05f7-70ad-41c9-83fc-064084390d97",
+  "feeId": null,
+  "amount": -35300,
+  "createdAt": "2026-07-31T13:45:18.220205Z",
+  "postedAt": "2026-07-31T14:32:33.449112Z",
+  "estimatedDeliveryDate": "2026-08-06T21:00:00Z",
+  "status": "sent",
+  "note": null,
+  "bankDescription": "Send Money transaction initiated on Mercury",
+  "externalMemo": null,
+  "counterpartyId": "1566ad33-7ca6-4a44-8277-c81a6a7c3cee",
+  "details": {
+    "electronicRoutingInfo": {
+      "bankName": "EXAMPLE BANK N.A.",
+      "electronicAccountType": "businessChecking"
+    }
+  },
+  "cardId": null,
+  "reasonForFailure": null,
+  "failedAt": null,
+  "dashboardLink": "https://example.invalid/redacted",
+  "counterpartyName": "Acme Garage Doors",
+  "counterpartyNickname": null,
+  "kind": "outgoingPayment",
+  "currencyExchangeInfo": null,
+  "compliantWithReceiptPolicy": true,
+  "hasGeneratedReceipt": true,
+  "creditAccountPeriodId": null,
+  "mercuryCategory": null,
+  "generalLedgerCodeName": null,
+  "glAllocations": [],
+  "attachments": [
+    {
+      "fileName": "receipt.pdf",
+      "url": "https://example.invalid/redacted",
+      "attachmentType": "other"
+    }
+  ],
+  "relatedTransactions": [],
+  "categoryData": null,
+  "checkNumber": null,
+  "trackingNumber": null,
+  "requestId": "fc7fdb0a-995e-439a-9ad1-5ee884f56c0a",
+  "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+  "merchant": null
+}

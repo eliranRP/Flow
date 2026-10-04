@@ -1,0 +1,235 @@
+{
+  "transactions": [
+    {
+      "id": "d154086a-bfee-45d8-bd6b-e496aefd27ac",
+      "feeId": null,
+      "amount": 0,
+      "createdAt": "2024-12-31T22:19:09.768868Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-01-07T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "TICKET SELLER A, INC.",
+      "externalMemo": null,
+      "counterpartyId": "69a246ba-9b77-40e2-9b47-5b593f3ca8dd",
+      "details": {
+        "debitCardInfo": {
+          "id": "7596e7a0-bac2-4f70-896e-ec2f684b5e97"
+        }
+      },
+      "cardId": "7596e7a0-bac2-4f70-896e-ec2f684b5e97",
+      "reasonForFailure": "The merchant canceled this transaction, possibly due to incorrect billing information.",
+      "failedAt": "2024-12-31T23:15:47.457709Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "Ticket Seller A",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": "Entertainment",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+      "merchant": {
+        "categoryCode": "7922",
+        "id": "m_467905ad511de",
+        "category": "Entertainment",
+        "amount": 0,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "e03ea5a3-4e41-425f-9aeb-02744d787fa5",
+      "feeId": null,
+      "amount": -1150,
+      "createdAt": "2025-01-03T17:50:08.277432Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-01-09T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "EXAMPLE-RISK SECU",
+      "externalMemo": null,
+      "counterpartyId": "9d256189-9ae7-4ee4-a6dd-a4793f1349a2",
+      "details": {
+        "debitCardInfo": {
+          "id": "85913f6d-d62a-447f-a4d8-3cb61741f6b8"
+        }
+      },
+      "cardId": "85913f6d-d62a-447f-a4d8-3cb61741f6b8",
+      "reasonForFailure": "This transaction failed due to an incorrect CVC or expiration date.",
+      "failedAt": "2025-01-03T17:50:49.957039Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "EXAMPLE-RISK SECU",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": null,
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+      "merchant": {
+        "categoryCode": "6300",
+        "id": "m_3d0cdbce6b7aa",
+        "amount": -115000,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "db4d3020-b474-44a9-b4cd-5b7501cd06d6",
+      "feeId": null,
+      "amount": 0,
+      "createdAt": "2025-01-03T17:50:23.862721Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-01-09T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "SOFTWARE *TEMP HOLD",
+      "externalMemo": null,
+      "counterpartyId": "4a580b28-d998-4576-b30f-d9f07a78397a",
+      "details": {
+        "debitCardInfo": {
+          "id": "85913f6d-d62a-447f-a4d8-3cb61741f6b8"
+        }
+      },
+      "cardId": "85913f6d-d62a-447f-a4d8-3cb61741f6b8",
+      "reasonForFailure": "This transaction failed due to an incorrect CVC or expiration date.",
+      "failedAt": "2025-01-03T17:50:41.601078Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "SOFTWARE *TEMP HOLD",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": null,
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+      "merchant": {
+        "categoryCode": "7399",
+        "id": "m_288a0bffb794c",
+        "amount": 0,
+        "currency": "ILS"
+      }
+    },
+    {
+      "id": "6017c3c1-d637-4d30-b619-bec52a9bd111",
+      "feeId": null,
+      "amount": 0,
+      "createdAt": "2025-01-30T11:50:19.097361Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-02-05T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "PAYMENT WALLET A",
+      "externalMemo": null,
+      "counterpartyId": "0d9960e1-376c-44c9-a2da-346cad686cfe",
+      "details": {
+        "debitCardInfo": {
+          "id": "85913f6d-d62a-447f-a4d8-3cb61741f6b8"
+        }
+      },
+      "cardId": "85913f6d-d62a-447f-a4d8-3cb61741f6b8",
+      "reasonForFailure": "The merchant canceled this transaction, possibly due to incorrect billing information.",
+      "failedAt": "2025-01-30T11:50:46.244179Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "Payment Wallet A",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": "Retail",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+      "merchant": {
+        "categoryCode": "5999",
+        "id": "m_919652cc8ac5e",
+        "category": "Retail",
+        "amount": 0,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "d409977f-0ac9-46e4-98a3-4f39b07da423",
+      "feeId": null,
+      "amount": -960,
+      "createdAt": "2025-03-19T05:38:56.440555Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-03-26T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "HARDWARESTORE.EXAMPLE",
+      "externalMemo": null,
+      "counterpartyId": "2b6033d4-2bc2-4123-8b2a-0dd74b37fc31",
+      "details": {
+        "debitCardInfo": {
+          "id": "12a75e18-a79c-43d9-84c7-d086dd9de0a7"
+        }
+      },
+      "cardId": "12a75e18-a79c-43d9-84c7-d086dd9de0a7",
+      "reasonForFailure": "This transaction failed because it exceeded the spend limit for the card.",
+      "failedAt": "2025-03-19T05:38:44.375762Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "Hardware Store A",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": "Retail",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6",
+      "merchant": {
+        "categoryCode": "5200",
+        "id": "m_da535726e162e",
+        "category": "Retail",
+        "amount": -96000,
+        "currency": "USD"
+      }
+    }
+  ],
+  "page": {
+    "nextPage": "d409977f-0ac9-46e4-98a3-4f39b07da423"
+  }
+}

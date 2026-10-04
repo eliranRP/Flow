@@ -1,0 +1,526 @@
+import { assertEquals, assertThrows } from "jsr:@std/assert@1";
+import page1 from "./fixtures/transactions-desc-page1.json" with { type: "json" };
+import page2 from "./fixtures/transactions-desc-page2.json" with { type: "json" };
+import failedFile from "./fixtures/transactions-status-failed.json" with { type: "json" };
+import pendingFile from "./fixtures/transactions-status-pending.json" with { type: "json" };
+import byId from "./fixtures/transaction-by-id.json" with { type: "json" };
+import notFound from "./fixtures/transaction-not-found-404.json" with { type: "json" };
+import syntheticPending from "./fixtures/SYNTHETIC-pending.json" with { type: "json" };
+import syntheticSent from "./fixtures/SYNTHETIC-pending-then-sent.json" with { type: "json" };
+import accountsFile from "./fixtures/accounts.json" with { type: "json" };
+import creditFile from "./fixtures/credit.json" with { type: "json" };
+import categoriesFile from "./fixtures/categories.json" with { type: "json" };
+import snapshot from "./fixtures/canonical-snapshot.json" with { type: "json" };
+import { MERCURY_SKIP_REASONS } from "../../../functions/_shared/connectors/mercury/capabilities.ts";
+import { jerusalemDate } from "../../../functions/_shared/connectors/mercury/dates.ts";
+import { dollarsToCents } from "../../../functions/_shared/connectors/mercury/money.ts";
+import { classifyMercuryError, httpStatusVoids } from "../../../functions/_shared/connectors/mercury/client.ts";
+import { MercuryCardAccountError, normalizeMercury, settlementPlan } from "../../../functions/_shared/connectors/mercury/normalize.ts";
+import { postedSnapshot } from "./replay_fixture.ts";
+import { redactMercury } from "../../../functions/_shared/connectors/mercury/redact.ts";
+import { openConnector } from "../../../functions/_shared/connectors/registry.ts";
+import { parseCanonicalLine, type CanonicalLine, type NormalizeContext } from "../../../functions/_shared/connectors/types.ts";
+
+interface RawPage {
+  transactions: RawTxn[];
+  page?: { nextPage?: string };
+}
+
+interface RawTxn {
+  id: string;
+  status: string;
+  kind: string;
+  amount: number;
+  createdAt: string;
+  postedAt?: string | null;
+  counterpartyName: string;
+  accountId: string;
+  [key: string]: unknown;
+}
+
+const postedPages = [page1, page2] as RawPage[];
+const postedLines = postedPages.flatMap((page) => page.transactions);
+
+function ownAccountIds(): string[] {
+  return [
+    ...accountsFile.accounts.map((account) => account.id),
+    ...creditFile.accounts.map((account) => account.id),
+  ];
+}
+
+function ctx(extra: Partial<NormalizeContext> = {}): NormalizeContext {
+  return {
+    ownAccountIds: ownAccountIds(),
+    ownCounterpartyIds: [],
+    vatRateBp: 1800,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    linkedDocuments: [],
+    ...extra,
+  };
+}
+
+function replay(rows: readonly unknown[], context = ctx()) {
+  const imported: CanonicalLine[] = [];
+  const skipped: Record<string, number> = {};
+  const skippedRows: { external_id: string; reason: string }[] = [];
+  for (const row of rows) {
+    const result = normalizeMercury(row, context);
+    if (!result.ok) {
+      skipped[result.skip] = (skipped[result.skip] ?? 0) + 1;
+      const id = row && typeof row === "object" && "id" in row && typeof row.id === "string" ? row.id : "";
+      skippedRows.push({ external_id: id, reason: result.skip });
+      continue;
+    }
+    imported.push(result.line);
+  }
+  skippedRows.sort((a, b) => a.external_id.localeCompare(b.external_id));
+  return { imported, skipped, skippedRows };
+}
+
+const FORBIDDEN_SNAPSHOT = [
+  "secret-token:",
+  "accountNumber",
+  "routingNumber",
+  "dashboardLink",
+  "Authorization",
+  "https://",
+  "http://",
+  "@",
+];
+
+Deno.test("dollars become cents from the decimal string", () => {
+  assertEquals(dollarsToCents(0.29), 29);
+  assertEquals(dollarsToCents(1234.56), 123456);
+  assertEquals(dollarsToCents(-318.41), -31841);
+  assertEquals(dollarsToCents(JSON.parse("0.29")), 29);
+  assertEquals(dollarsToCents(JSON.parse("1234.56")), 123456);
+  assertEquals(dollarsToCents(JSON.parse("-318.41")), -31841);
+  assertEquals(dollarsToCents(2650), 265000);
+  assertEquals(dollarsToCents(1.005), null);
+  assertEquals(dollarsToCents(Number.NaN), null);
+  assertEquals(dollarsToCents(1e-7), null);
+  assertEquals(dollarsToCents(1e21), null);
+  assertEquals(dollarsToCents(1e2), 10000);
+  assertEquals(dollarsToCents(-0), 0);
+  assertEquals(Object.is(dollarsToCents(-0), -0), false);
+  assertEquals(dollarsToCents("12.34"), null);
+  assertEquals(dollarsToCents(""), null);
+  assertEquals(dollarsToCents(null), null);
+});
+
+Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and the refund", () => {
+  const { imported, skipped } = replay(postedLines);
+  assertEquals(postedLines.length, 100);
+  assertEquals(imported.length, 73);
+  assertEquals(imported.filter((line) => line.line_status === "pending").length, 0);
+  assertEquals(skipped, {
+    treasury_transfer: 3,
+    internal_transfer: 4,
+    own_account_transfer: 14,
+    void_status: 6,
+  });
+  for (const reason of Object.keys(skipped)) {
+    assertEquals(MERCURY_SKIP_REASONS.includes(reason as typeof MERCURY_SKIP_REASONS[number]), true);
+  }
+
+  const loans = imported.filter((line) => line.category_hint === "תשלומי הלוואה");
+  const cashback = imported.filter((line) => line.category_hint === "הכנסה אחרת");
+  const refunds = imported.filter((line) => line.doc_kind === "credit");
+  assertEquals(loans.length, 6);
+  assertEquals(cashback.length, 7);
+  assertEquals(refunds.length, 1);
+  assertEquals(loans.every((line) => line.direction === "expense" && line.currency === "USD"), true);
+  assertEquals(cashback.every((line) => line.direction === "income" && line.doc_kind === "receipt"), true);
+  assertEquals(refunds[0].direction, "expense");
+  assertEquals(refunds[0].amount_negated, false);
+  assertEquals(refunds[0].vat, { amount: 0, status: "source" });
+  assertEquals(refunds[0].amount_original, 925);
+  assertEquals(refunds[0].counterparty.name, "Online Retailer");
+
+  assertEquals(imported.some((line) => line.counterparty.name === "RentPortal" && line.direction === "income"), true);
+  assertEquals(imported.some((line) => line.counterparty.name === "Metro Housing Authority"), true);
+  assertEquals(imported.some((line) => line.counterparty.name === "Mercury Credit"), false);
+  assertEquals(imported.some((line) => line.counterparty.name === "Treasury" && line.direction === "income"), true);
+
+  const differing = imported.filter((line) => line.doc_date !== line.cash_date);
+  assertEquals(differing.length, 23);
+  for (const line of imported) {
+    assertEquals(parseCanonicalLine(line), line);
+    assertEquals(line.currency, "USD");
+    assertEquals(line.vat, { amount: 0, status: "source" });
+    assertEquals(line.pnl_role, null);
+  }
+});
+
+Deno.test("Jerusalem doc_date and cash_date can differ on a posted line", () => {
+  let differ = 0;
+  for (const row of postedLines) {
+    if (row.status !== "sent" || !row.postedAt) continue;
+    if (jerusalemDate(row.createdAt) !== jerusalemDate(row.postedAt)) differ += 1;
+  }
+  assertEquals(differ, 24);
+});
+
+Deno.test("the canonical snapshot has no token and no forbidden field", () => {
+  const actual = postedSnapshot();
+  assertEquals(JSON.stringify(actual), JSON.stringify(snapshot));
+  const text = JSON.stringify(actual);
+  for (const needle of FORBIDDEN_SNAPSHOT) {
+    assertEquals(text.includes(needle), false, needle);
+  }
+  assertEquals(text.includes("secret-token:"), false);
+});
+
+Deno.test("a card refund, a loan prefix, and cashback keep their hints", () => {
+  const { imported } = replay(postedLines);
+  const loan = imported.find((line) => line.counterparty.name === "Lakeview Loan Servicing");
+  assertEquals(loan?.category_hint, "תשלומי הלוואה");
+  assertEquals(dollarsToCents(-2600), -260000);
+  assertEquals(loan?.amount_original, 260000);
+  const servease = imported.filter((line) => line.counterparty.name === "Servease");
+  assertEquals(servease.length, 2);
+  assertEquals(servease.every((line) => line.category_hint === "תשלומי הלוואה"), true);
+  const cashback = imported.find((line) => line.counterparty.name === "Mercury IO Cashback" && line.amount_original === 275);
+  assertEquals(cashback?.category_hint, "הכנסה אחרת");
+  assertEquals(cashback?.amount_negated, false);
+});
+
+Deno.test("treasury and internal skips follow the counterparty, not the kind alone", () => {
+  const treasury = postedLines.filter((row) => row.kind === "treasuryTransfer");
+  const internal = postedLines.filter((row) => row.kind === "internalTransfer");
+  assertEquals(treasury.length, 6);
+  assertEquals(internal.length, 4);
+  const { imported, skipped } = replay(postedLines);
+  const liquidation = imported.filter((line) => line.counterparty.name === "Treasury");
+  assertEquals(liquidation.length, 3);
+  assertEquals(liquidation.every((line) => line.direction === "income" && line.category_hint === null), true);
+  assertEquals(skipped.treasury_transfer, 3);
+  assertEquals(skipped.internal_transfer, 4);
+  assertEquals(internal.every((row) => ownAccountIds().includes(String(row.counterpartyId))), true);
+
+  const base = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(base), true);
+  if (!base) return;
+  const own = ownAccountIds()[0];
+  const kept = normalizeMercury({
+    ...base,
+    kind: "treasuryTransfer",
+    amount: 100,
+    counterpartyId: "not-an-own-account",
+    counterpartyName: "Treasury",
+  }, ctx());
+  assertEquals(kept.ok, true);
+  if (!kept.ok) return;
+  assertEquals(kept.line.category_hint, null);
+  assertEquals(kept.line.direction, "income");
+  assertEquals(
+    normalizeMercury({ ...base, kind: "internalTransfer", counterpartyId: own }, ctx()),
+    { ok: false, skip: "internal_transfer" },
+  );
+  assertEquals(
+    normalizeMercury({ ...base, kind: "treasuryTransfer", counterpartyId: own }, ctx()),
+    { ok: false, skip: "treasury_transfer" },
+  );
+  const otherInternal = normalizeMercury({
+    ...base,
+    kind: "internalTransfer",
+    counterpartyId: "not-an-own-account",
+  }, ctx());
+  assertEquals(otherInternal.ok, true);
+});
+
+Deno.test("the fourteen autopay skips are paired payments between own checking and own credit", () => {
+  const { skippedRows } = replay(postedLines);
+  const autopay = skippedRows.filter((row) => row.reason === "own_account_transfer");
+  assertEquals(autopay.length, 14);
+  const byId = new Map(postedLines.map((row) => [row.id, row]));
+  for (const row of autopay) {
+    const raw = byId.get(row.external_id);
+    assertEquals(Boolean(raw), true);
+    if (!raw) return;
+    assertEquals(raw.kind, "other");
+    assertEquals(raw.status, "sent");
+    const description = String(raw.bankDescription);
+    assertEquals(/IO AUTOPAY|IO PAYMENT/.test(description), true);
+    const name = String(raw.counterpartyName);
+    assertEquals(name === "Mercury Credit" || name.startsWith("Mercury Checking"), true);
+    const upper = name.toUpperCase();
+    assertEquals(upper.startsWith("NEWREZ") || upper.startsWith("LAKEVIEW LOAN") || upper.startsWith("SERVEASE"), false);
+  }
+});
+
+function normaliseName(value: string): string {
+  return value.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+function denyNamesFromEnv(raw: string | undefined): Set<string> {
+  const names = new Set<string>();
+  if (!raw) return names;
+  for (const line of raw.split(/\r?\n/)) {
+    const name = normaliseName(line);
+    if (name) names.add(name);
+  }
+  return names;
+}
+
+// Fork pull requests run in eliranRP/Flow but GitHub does not pass Actions secrets.
+function denyListRequiredInThisRun(): boolean {
+  if (Deno.env.get("GITHUB_ACTIONS") !== "true") return false;
+  if ((Deno.env.get("GITHUB_REPOSITORY") ?? "").toLowerCase() !== "eliranrp/flow") return false;
+  return Deno.env.get("GITHUB_EVENT_HEAD_REPO_FORK") !== "true";
+}
+
+function wordGrams(text: string): Set<string> {
+  const words = text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 0);
+  const grams = new Set<string>();
+  for (let size = 1; size <= 3; size += 1) {
+    for (let index = 0; index + size <= words.length; index += 1) {
+      grams.add(words.slice(index, index + size).join(" "));
+    }
+  }
+  return grams;
+}
+
+const fixtureDenyNames = denyNamesFromEnv(Deno.env.get("MERCURY_FIXTURE_DENYLIST"));
+const fixtureDenyListRequired = denyListRequiredInThisRun();
+if (fixtureDenyNames.size === 0 && !fixtureDenyListRequired) {
+  console.log("skipping fixture deny-list: MERCURY_FIXTURE_DENYLIST is not set");
+}
+
+Deno.test({
+  name: "fixtures contain none of the denied personal names",
+  ignore: fixtureDenyNames.size === 0 && !fixtureDenyListRequired,
+  fn() {
+    if (fixtureDenyNames.size === 0) {
+      throw new Error("MERCURY_FIXTURE_DENYLIST is required in CI on eliranRP/Flow");
+    }
+    const dir = new URL("./fixtures/", import.meta.url);
+    let files = 0;
+    for (const entry of Deno.readDirSync(dir)) {
+      if (!entry.isFile) continue;
+      files += 1;
+      const text = Deno.readTextFileSync(new URL(entry.name, dir));
+      let denied = false;
+      for (const gram of wordGrams(text)) {
+        if (fixtureDenyNames.has(gram)) {
+          denied = true;
+          break;
+        }
+      }
+      assertEquals(denied, false, entry.name);
+    }
+    assertEquals(files >= 12, true);
+  },
+});
+
+Deno.test("fixtures keep no counterparty nickname", () => {
+  const dir = new URL("./fixtures/", import.meta.url);
+  for (const entry of Deno.readDirSync(dir)) {
+    if (!entry.isFile || !entry.name.endsWith(".json")) continue;
+    const text = Deno.readTextFileSync(new URL(entry.name, dir));
+    assertEquals(text.includes("\"counterpartyNickname\": \""), false, entry.name);
+  }
+});
+
+Deno.test("a Jerusalem instant is not the UTC date, and providerCategory is kept", () => {
+  const base = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(base), true);
+  if (!base) return;
+  const line = normalizeMercury({
+    ...base,
+    createdAt: "2026-10-03T21:30:00Z",
+    postedAt: "2026-10-03T21:30:00Z",
+    mercuryCategory: "Software",
+  }, ctx());
+  assertEquals(line.ok, true);
+  if (!line.ok) return;
+  assertEquals(line.line.doc_date, "2026-10-04");
+  assertEquals(line.line.cash_date, "2026-10-04");
+  assertEquals(jerusalemDate("2026-10-03T21:30:00Z"), "2026-10-04");
+  assertEquals(line.line.provider_meta, { kind: "outgoingPayment", providerCategory: "Software" });
+});
+
+Deno.test("a non-USD line is refused and a bad amount is not not_a_line", () => {
+  const base = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(base), true);
+  if (!base) return;
+  assertEquals(normalizeMercury({ ...base, currency: "EUR" }, ctx()), { ok: false, skip: "non_usd" });
+  assertEquals(
+    normalizeMercury({ ...base, currencyExchangeInfo: { convertedToCurrency: "EUR" } }, ctx()),
+    { ok: false, skip: "non_usd" },
+  );
+  const merchant = normalizeMercury({ ...base, merchant: { currency: "ILS", amount: 100 } }, ctx());
+  assertEquals(merchant.ok, true);
+  if (!merchant.ok) return;
+  assertEquals(merchant.line.currency, "USD");
+  assertEquals(normalizeMercury({ ...base, amount: "12.34" }, ctx()), { ok: false, skip: "refused_amount" });
+  assertEquals(normalizeMercury({ ...base, amount: 1e-7 }, ctx()), { ok: false, skip: "refused_amount" });
+  assertEquals(normalizeMercury({ ...base, amount: null }, ctx()), { ok: false, skip: "refused_amount" });
+  assertEquals(normalizeMercury({ ...base, amount: 0 }, ctx()), { ok: false, skip: "not_a_line" });
+});
+
+Deno.test("card spend throws when its account is missing from the connected set", () => {
+  const card = postedLines.find((row) => row.kind === "creditCardTransaction");
+  assertEquals(Boolean(card), true);
+  if (!card) return;
+  assertEquals(card.accountId, creditFile.accounts[0].id);
+  assertEquals(ownAccountIds().includes(creditFile.accounts[0].id), true);
+  const cardKinds = postedLines.filter((row) =>
+    row.kind.startsWith("creditCard") || row.kind.startsWith("debitCard") || row.kind.startsWith("cardInternational")
+  );
+  assertEquals(cardKinds.length > 0, true);
+  for (const row of cardKinds) {
+    assertEquals(ownAccountIds().includes(row.accountId), true, row.id);
+  }
+  const withoutCredit = ownAccountIds().filter((id) => id !== creditFile.accounts[0].id);
+  const error = assertThrows(
+    () => normalizeMercury(card, ctx({ ownAccountIds: withoutCredit })),
+    MercuryCardAccountError,
+  );
+  assertEquals(classifyMercuryError(error), { class: "rejected", retry_after: null });
+});
+
+Deno.test("a fee rebate and a fee reversal stay expense credits", () => {
+  const base = postedLines.find((row) => row.kind === "creditCardCredit" && row.status === "sent");
+  assertEquals(Boolean(base), true);
+  if (!base) return;
+  for (const kind of ["cardInternationalTransactionFeeRebate", "cardInternationalTransactionFeeReversal"] as const) {
+    const line = normalizeMercury({ ...base, kind, amount: 1.25, counterpartyName: "Intl Fee" }, ctx());
+    assertEquals(line.ok, true, kind);
+    if (!line.ok) return;
+    assertEquals(line.line.direction, "expense");
+    assertEquals(line.line.doc_kind, "credit");
+    assertEquals(line.line.amount_negated, false);
+    assertEquals(line.line.amount_original, 125);
+  }
+  const rebateReversal = normalizeMercury({
+    ...base,
+    kind: "cardInternationalTransactionFeeRebateReversal",
+    amount: -1.25,
+  }, ctx());
+  assertEquals(rebateReversal.ok, true);
+  if (!rebateReversal.ok) return;
+  assertEquals(rebateReversal.line.direction, "expense");
+  assertEquals(rebateReversal.line.doc_kind, "expense");
+});
+
+Deno.test("synthetic pending posts onto the same id and keeps the assignment", () => {
+  const pendingRaw = (syntheticPending as RawPage).transactions[0];
+  const sentRaw = (syntheticSent as RawPage).transactions[0];
+  const pending = normalizeMercury(pendingRaw, ctx());
+  const sent = normalizeMercury(sentRaw, ctx());
+  assertEquals(pending.ok, true);
+  assertEquals(sent.ok, true);
+  if (!pending.ok || !sent.ok) return;
+  assertEquals(pending.line.line_status, "pending");
+  assertEquals(pending.line.cash_date, null);
+  assertEquals(pending.line.external_id, sent.line.external_id);
+  assertEquals(sent.line.line_status, "posted");
+  assertEquals(sent.line.doc_date === sent.line.cash_date, false);
+  assertEquals(pending.line.amount_original, 5750);
+  const assignment = new Map([[pending.line.external_id, "user-category"]]);
+  assertEquals(settlementPlan(pending.line.external_id, sent.line.external_id), { action: "update" });
+  assertEquals(assignment.get(sent.line.external_id), "user-category");
+});
+
+Deno.test("a changed Mercury id voids the stored pending line and inserts the new one", () => {
+  const pendingRaw = (syntheticPending as RawPage).transactions[0];
+  const sentRaw = (syntheticSent as RawPage).transactions[0];
+  const pending = normalizeMercury(pendingRaw, ctx());
+  const sent = normalizeMercury({ ...sentRaw, id: "posted-other-id" }, ctx());
+  assertEquals(pending.ok && sent.ok, true);
+  if (!pending.ok || !sent.ok) return;
+  assertEquals(settlementPlan(pending.line.external_id, sent.line.external_id), {
+    action: "void_and_reinsert",
+    voidId: pending.line.external_id,
+  });
+});
+
+Deno.test("a 404 lookup voids, and a first-seen failed line is skipped", () => {
+  assertEquals(notFound.status, 404);
+  assertEquals(httpStatusVoids(notFound.status), true);
+  assertEquals(httpStatusVoids(200), false);
+  const failed = replay(failedFile.transactions);
+  assertEquals(failed.imported.length, 0);
+  assertEquals(failed.skipped, { void_status: failedFile.transactions.length });
+  assertEquals(pendingFile.transactions.length, 0);
+});
+
+Deno.test("an unknown status is rejected, and a transfer outside the connected set is hinted העברות", () => {
+  const base = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(base), true);
+  if (!base) return;
+  const unknown = normalizeMercury({ ...base, status: "settled" }, ctx());
+  assertEquals(unknown, { ok: false, skip: "unknown_status" });
+  const outside = normalizeMercury(
+    { ...base, kind: "other", accountId: "not-our-account", counterpartyId: "someone-else" },
+    ctx(),
+  );
+  assertEquals(outside, { ok: false, skip: "not_own_account" });
+  const transfer = normalizeMercury(
+    { ...base, kind: "externalTransfer", counterpartyId: "external-own-1" },
+    ctx({ ownCounterpartyIds: ["external-own-1"] }),
+  );
+  assertEquals(transfer.ok, true);
+  if (!transfer.ok) return;
+  assertEquals(transfer.line.category_hint, "העברות");
+});
+
+Deno.test("a bare transaction and a redacted description stay inside the schema", () => {
+  const line = normalizeMercury(byId, ctx());
+  assertEquals(line.ok, true);
+  if (!line.ok) return;
+  assertEquals(line.line.line_status, "posted");
+  assertEquals(parseCanonicalLine(line.line).source, "mercury");
+  const dirty = normalizeMercury({
+    ...postedLines[0],
+    bankDescription: "wire 123456789 secret-token:should-not-survive",
+  }, ctx());
+  assertEquals(dirty.ok, true);
+  if (!dirty.ok) return;
+  assertEquals(dirty.line.description.includes("123456789"), false);
+  assertEquals(dirty.line.description.includes("should-not-survive"), false);
+  assertEquals(dirty.line.description.includes("secret-token:[redacted]"), true);
+  const cleaned = redactMercury({
+    Authorization: "Bearer secret-token:abc123",
+    message: "failed secret-token:abc123",
+  });
+  const text = JSON.stringify(cleaned);
+  assertEquals(text.includes("abc123"), false);
+  assertEquals(text.includes("secret-token:abc"), false);
+});
+
+Deno.test("the committed fixtures contain no token and no routing number", () => {
+  const text = JSON.stringify({
+    page1,
+    page2,
+    failedFile,
+    pendingFile,
+    byId,
+    notFound,
+    syntheticPending,
+    syntheticSent,
+    accountsFile,
+    creditFile,
+    categoriesFile,
+  });
+  assertEquals(text.includes("secret-token:"), false);
+  assertEquals(text.includes("accountNumber"), false);
+  assertEquals(text.includes("routingNumber"), false);
+  assertEquals(text.includes("Authorization"), false);
+});
+
+Deno.test("openConnector does not put the secret on the session", () => {
+  const secret = `test-${crypto.randomUUID()}`;
+  const session = openConnector("mercury", secret);
+  assertEquals(session.provider, "mercury");
+  assertEquals(JSON.stringify(session).includes(secret), false);
+  let unavailable = false;
+  try {
+    openConnector("sumit", secret);
+  } catch (error) {
+    unavailable = error instanceof Error && error.message === "connector_unavailable";
+  }
+  assertEquals(unavailable, true);
+});

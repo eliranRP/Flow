@@ -63,7 +63,12 @@ jobs:
         run: deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
       - run: pnpm typecheck
       # Root bundle tests, then @flow/app and @flow/shared unit tests.
-      - run: pnpm test
+      # The Mercury fixture deny-list is an Actions secret. Fork PRs do not receive it.
+      - name: Unit and connector tests
+        env:
+          MERCURY_FIXTURE_DENYLIST: ${{ secrets.MERCURY_FIXTURE_DENYLIST }}
+          GITHUB_EVENT_HEAD_REPO_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: pnpm test
       - name: Build the hosted dist
         run: pnpm build
       - name: Stamp the commit and check the hosted bundle
