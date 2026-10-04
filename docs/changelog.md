@@ -2,6 +2,10 @@
 
 ## 2026-10-03
 
+Company insert. `authenticated` cannot insert `public.companies`. `create_company` stays the only path, and it still rejects a viewer. A direct insert is what the viewer test refuses. The viewer can still read the demo `audit_log`. The live smoke still names Flow Test 2 and the production host. Both stay backlog.
+
+Smoke user, list screens. A viewer of Flow Test 2 can read `get_home`, `get_dashboard`, `company_pnl`, `list_unpaid`, `list_review`, and `sumit_status`, plus the Jev row on `company_integrations`. `get_project`, `list_project_category`, `project_waiting`, `overhead_share`, `get_transaction`, filed today, and `list_categories` stay on the owner. The live check opens only `/`, `/projects`, `/review`, and `/settings`, waits for those list RPCs to return 200, and does not open a detail screen. A missing `SMOKE_EMAIL` or `SMOKE_PASSWORD` warns in the job summary and does not fail the deploy. A failed smoke says production is already live. Hiding the write controls is backlog. Query cache keys stay shared across users and are not cleared on sign-out; that is backlog too. Provisioning is in [the smoke-user runbook](runbooks/smoke-user.md).
+
 Connector engine L1a, filed today. `private.filed_today_rows()`, `list_auto_assigned_today`, and `list_review` are the MCP 3b versions. An assistant approval that is still approved is on שויכו היום, the banner carries `assistant_filed_today`, and a tied `created_at` orders by id. Connector rows stay `is_connector_source` and `line_status = 'posted'`, and the cards still carry `currency`, `amount_original`, and `line_status`. The whole-file `begin` and `commit` stay.
 
 Connector engine L1a, one transaction. CLI 2.118.0 runs each statement on its own, so the currency migration, the SUMIT copy, and the review migration open with `begin` and close with `commit`. A commit after the drop would remove the SUMIT tables, skip the views, and leave the migration unrecorded. `lock_timeout` and the access-exclusive lock stay inside that transaction. The cash-basis fixture includes a pending receipt. `private.filed_today_rows()` still waits for MCP 3b.
