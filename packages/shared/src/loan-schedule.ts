@@ -11,9 +11,8 @@ export const LOAN_TERM_MONTHS_MAX = 600;
 
 const MONTHS_IN_YEAR = 12n;
 const MONTHLY_DENOMINATOR = MONTHS_IN_YEAR * BigInt(RATE_PPM_SCALE);
-/** A final payment more than 1 percent above the contractual one is a balloon. */
-const BALLOON_OVER_PPM = 10_000n;
-const BALLOON_SCALE = 1_000_000n;
+/** One minor unit. A shortfall must be strictly greater than this to be a balloon. */
+const ONE_CENT = 1n;
 
 export type LoanScheduleErrorCode =
   | "principal"
@@ -55,14 +54,18 @@ export type LoanScheduleRow = {
   readonly balanceMinor: bigint;
 };
 
-/** Set when the last payment is materially larger than the contractual one. */
+/**
+ * Set when principal-and-interest is more than one cent below the exact annuity.
+ * Escrow is not part of that comparison. `amountMinor` is the final payment.
+ */
 export type LoanBalloon = {
   /** The final payment, in the loan's minor units. */
   readonly amountMinor: bigint;
   readonly ratioToPayment: number;
 };
 
-export type LoanSchedule = readonly LoanScheduleRow[] & {
+export type LoanSchedule = {
+  readonly rows: readonly LoanScheduleRow[];
   readonly balloon: LoanBalloon | null;
 };
 
@@ -117,14 +120,48 @@ function assertTerms(terms: LoanTerms): void {
   parseStartDate(terms.startDate);
 }
 
-function balloonOf(rows: readonly LoanScheduleRow[], contractual: bigint): LoanBalloon | null {
+function powBig(base: bigint, exponent: number): bigint {
+  let result = 1n;
+  let factor = base;
+  let remaining = exponent;
+  while (remaining > 0) {
+    if (remaining % 2 === 1) result *= factor;
+    remaining = Math.floor(remaining / 2);
+    if (remaining > 0) factor *= factor;
+  }
+  return result;
+}
+
+/** Exact unrounded annuity, as a rational in minor units. Zero rate is principal / term. */
+function exactAnnuity(
+  principalMinor: bigint,
+  annualRatePpm: number,
+  termMonths: number,
+): { numerator: bigint; denominator: bigint } {
+  if (annualRatePpm === 0) return { numerator: principalMinor, denominator: BigInt(termMonths) };
+  const rate = BigInt(annualRatePpm);
+  const grown = powBig(MONTHLY_DENOMINATOR + rate, termMonths);
+  const untouched = powBig(MONTHLY_DENOMINATOR, termMonths);
+  return {
+    numerator: principalMinor * rate * grown,
+    denominator: MONTHLY_DENOMINATOR * (grown - untouched),
+  };
+}
+
+/** True when principal-and-interest is more than one minor unit below the exact annuity. */
+function piBelowAnnuity(terms: LoanTerms): boolean {
+  const pi = terms.paymentMinor - terms.escrowMinor;
+  const { numerator, denominator } = exactAnnuity(terms.principalMinor, terms.annualRatePpm, terms.termMonths);
+  return numerator > (pi + ONE_CENT) * denominator;
+}
+
+function balloonOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): LoanBalloon | null {
+  if (!piBelowAnnuity(terms)) return null;
   const last = rows.at(-1);
   if (last == null) return null;
-  const extra = last.paymentMinor - contractual;
-  if (extra * BALLOON_SCALE <= contractual * BALLOON_OVER_PPM) return null;
   return {
     amountMinor: last.paymentMinor,
-    ratioToPayment: Number(last.paymentMinor) / Number(contractual),
+    ratioToPayment: Number(last.paymentMinor) / Number(terms.paymentMinor),
   };
 }
 
@@ -133,7 +170,8 @@ function balloonOf(rows: readonly LoanScheduleRow[], contractual: bigint): LoanB
  * Interest is the remaining balance times the nominal annual rate divided by 12,
  * rounded half to even. A month that would not finish inside the term pays the
  * rest of the balance. A payment that clears the balance early ends the schedule.
- * A final payment more than 1 percent above the contractual one sets `balloon`.
+ * `balloon` is set only when principal-and-interest is more than one cent below
+ * the exact, unrounded annuity. Escrow is excluded from that comparison.
  */
 export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
   assertTerms(terms);
@@ -163,5 +201,37 @@ export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
     });
   }
 
-  return Object.assign(rows, { balloon: balloonOf(rows, terms.paymentMinor) });
+  return { rows, balloon: balloonOf(rows, terms) };
+}
+
+function assertAnnuityInput(input: {
+  readonly principalMinor: bigint;
+  readonly annualRatePpm: number;
+  readonly termMonths: number;
+}): void {
+  if (input.principalMinor <= 0n) throw new LoanScheduleError("principal");
+  if (!Number.isSafeInteger(input.annualRatePpm) || input.annualRatePpm < 0 || input.annualRatePpm > RATE_PPM_SCALE) {
+    throw new LoanScheduleError("rate");
+  }
+  if (
+    !Number.isSafeInteger(input.termMonths) ||
+    input.termMonths < 1 ||
+    input.termMonths > LOAN_TERM_MONTHS_MAX
+  ) {
+    throw new LoanScheduleError("term");
+  }
+}
+
+/**
+ * The exact annuity rounded half to even, in minor units.
+ * Escrow is not included. The start date does not change the payment.
+ */
+export function contractualPaymentMinor(input: {
+  readonly principalMinor: bigint;
+  readonly annualRatePpm: number;
+  readonly termMonths: number;
+}): bigint {
+  assertAnnuityInput(input);
+  const { numerator, denominator } = exactAnnuity(input.principalMinor, input.annualRatePpm, input.termMonths);
+  return divHalfEven(numerator, denominator);
 }

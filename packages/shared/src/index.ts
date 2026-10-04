@@ -58,7 +58,12 @@ export type {
   TransactionDetail,
   UnpaidRow,
 } from "./dashboard.ts";
-export { buildLoanSchedule, LOAN_TERM_MONTHS_MAX, LoanScheduleError } from "./loan-schedule.ts";
+export {
+  buildLoanSchedule,
+  contractualPaymentMinor,
+  LOAN_TERM_MONTHS_MAX,
+  LoanScheduleError,
+} from "./loan-schedule.ts";
 export type {
   LoanBalloon,
   LoanSchedule,
