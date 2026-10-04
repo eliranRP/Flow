@@ -7,6 +7,7 @@ const readRpcs = new Set(["get_dashboard", "list_review", "list_unpaid", "sumit_
 
 const email = process.env.SMOKE_EMAIL ?? "";
 const password = process.env.SMOKE_PASSWORD ?? "";
+const companyName = process.env.SMOKE_COMPANY_NAME?.trim() || "Flow Test";
 
 function hostedEnv(): { url: string; anonKey: string } {
   const fromEnv = {
@@ -154,7 +155,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const unpaidRows = await responseAt(homeResponses, 1).json() as unknown;
   expect(isRecord(home)).toBe(true);
   if (!isRecord(home)) throw new Error("dashboard");
-  expect(home.name).toBe("Flow Test 2");
+  expect(home.name).toBe(companyName);
   expect(isUnknownArray(unpaidRows)).toBe(true);
   const projects = isUnknownArray(home.projects) ? home.projects : [];
   const hasBooks = jsonAmount(home.income_agorot) !== 0 || jsonAmount(home.expense_agorot) !== 0 || projects.length > 0;
@@ -171,7 +172,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const projectHome = await responseAt(projectResponses, 0).json() as unknown;
   expect(isRecord(projectHome)).toBe(true);
   if (!isRecord(projectHome)) throw new Error("dashboard");
-  expect(projectHome.name).toBe("Flow Test 2");
+  expect(projectHome.name).toBe(companyName);
   await expect(page.getByRole("heading", { name: "פרויקטים" })).toBeVisible();
   const listed = isUnknownArray(projectHome.projects) ? projectHome.projects : [];
   const first = listed[0];
@@ -211,12 +212,12 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const sumitStatus = await responseAt(settingsResponses, 1).json() as unknown;
   expect(isRecord(settingsHome)).toBe(true);
   if (!isRecord(settingsHome)) throw new Error("dashboard");
-  expect(settingsHome.name).toBe("Flow Test 2");
+  expect(settingsHome.name).toBe(companyName);
   expect(isRecord(sumitStatus)).toBe(true);
   if (!isRecord(sumitStatus)) throw new Error("sumit_status");
   expect(typeof sumitStatus.connected).toBe("boolean");
   await expect(page.getByRole("heading", { name: "הגדרות" })).toBeVisible();
-  await expect(page.getByText("Flow Test 2", { exact: true })).toBeVisible();
+  await expect(page.getByText(companyName, { exact: true })).toBeVisible();
   await expect(page.getByText("תיוג חכם (Jev)", { exact: true })).toBeVisible();
   const sumitWord = sumitStatus.connected === true ? "מחובר" : "לא מחובר";
   await expect(page.getByRole("button", { name: "SUMIT", exact: true }).getByText(sumitWord, { exact: true })).toBeVisible();
