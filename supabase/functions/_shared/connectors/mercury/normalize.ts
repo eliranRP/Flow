@@ -3,8 +3,10 @@ import { dollarsToCents } from "./money.ts";
 import { jerusalemDate } from "./dates.ts";
 import { redactMercury } from "./redact.ts";
 import {
+  MERCURY_CASHBACK_CATEGORY,
   isCardAccountKind,
   isExpenseCreditKind,
+  isTreasuryYieldType,
   isVoidMercuryStatus,
   mercuryCategoryHint,
 } from "./rules.ts";
@@ -81,13 +83,14 @@ function bounded(value: string | null): string | null {
  * A transfer whose counterparty is only in ownCounterpartyIds is imported
  * with category_hint העברות. It is not skipped.
  *
- * Treasury yield and dividends are income in הכנסה אחרת. These fixtures only
- * carry "Liquidation of Treasury assets" legs, and this adapter does not
- * call the treasury transactions endpoint.
- * TODO(PR2): import treasury yield and dividends as הכנסה אחרת from that endpoint.
+ * Treasury yield and dividends (interestPosted, dividendPosted) are income
+ * in הכנסה אחרת. They come from GET /treasury/{id}/transactions. Other
+ * treasury-ledger types are skipped, so a deposit or withdrawal is not a
+ * second copy of the checking transfer.
  */
 export function normalizeMercury(raw: unknown, ctx: NormalizeContext): NormalizeResult {
   if (!isRecord(raw)) return skip("not_a_line");
+  if (isTreasuryLedgerRow(raw)) return normalizeTreasuryLedger(raw, ctx);
   const id = stringField(raw.id);
   if (!id || id.length > TEXT_LIMITS.externalId) return skip("not_a_line");
 
@@ -192,6 +195,58 @@ export function normalizeMercury(raw: unknown, ctx: NormalizeContext): Normalize
     provider_meta: { kind, providerCategory },
   };
 
+  const parsed = canonicalLineSchema.safeParse(line);
+  if (!parsed.success) return skip("not_a_line");
+  return { ok: true, line: parsed.data };
+}
+
+/** A treasury-ledger row has a type and a canonical day, and no bank status. */
+function isTreasuryLedgerRow(raw: Record<string, unknown>): boolean {
+  return typeof raw.type === "string" && typeof raw.canonicalDay === "string" && raw.status == null;
+}
+
+function normalizeTreasuryLedger(raw: Record<string, unknown>, ctx: NormalizeContext): NormalizeResult {
+  const id = stringField(raw.id);
+  if (!id || id.length > TEXT_LIMITS.externalId) return skip("not_a_line");
+  const type = stringField(raw.type);
+  if (!type || type.length > TEXT_LIMITS.kind) return skip("not_a_line");
+  const accountId = bounded(stringField(raw.accountId));
+  if (stringField(raw.accountId) && !accountId) return skip("not_a_line");
+  if (ctx.ownAccountIds.length > 0 && (!accountId || !ctx.ownAccountIds.includes(accountId))) {
+    return skip("not_own_account");
+  }
+  if (!isTreasuryYieldType(type)) return skip("treasury_activity");
+
+  const day = stringField(raw.canonicalDay);
+  if (!day) return skip("not_a_line");
+  if (typeof raw.amount !== "number") return skip("refused_amount");
+  const signed = dollarsToCents(raw.amount);
+  if (signed == null) return skip("refused_amount");
+  if (signed === 0) return skip("not_a_line");
+  if (signed < 0) return skip("treasury_activity");
+
+  const description = String(redactMercury(stringField(raw.description) ?? "Treasury")).slice(0, TEXT_LIMITS.description);
+  const line: CanonicalLine = {
+    source: "mercury",
+    external_id: id,
+    direction: "income",
+    line_status: "posted",
+    doc_kind: "receipt",
+    pnl_role: null,
+    currency: "USD",
+    amount_original: signed,
+    amount_negated: false,
+    doc_date: day,
+    cash_date: day,
+    source_account_id: accountId,
+    counterparty: { name: "Mercury Treasury", external_id: accountId, kind: "customer" },
+    description,
+    vat: { amount: 0, status: "source" },
+    project_hint: null,
+    category_hint: MERCURY_CASHBACK_CATEGORY,
+    linked_external_id: null,
+    provider_meta: { kind: type, providerCategory: null },
+  };
   const parsed = canonicalLineSchema.safeParse(line);
   if (!parsed.success) return skip("not_a_line");
   return { ok: true, line: parsed.data };

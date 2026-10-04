@@ -106,6 +106,8 @@ export interface ClassifiedError {
   class: ConnectorErrorClass;
   /** ISO-8601 timestamp, or null when the class has no wait. */
   retry_after: string | null;
+  /** Stored last_error when it is narrower than the class. Page cap is sync_page_cap. */
+  code?: string;
 }
 
 export type ValidateResult =
@@ -143,6 +145,12 @@ export interface FetchSinceResult {
    * A single page of a multi-page listing is false.
    */
   complete: boolean;
+  /**
+   * Calendar date sent as the provider start filter, when this fetch has one.
+   * Null is מההתחלה. The engine uses it to recheck a stored line that the
+   * window cannot return.
+   */
+  windowStart?: string | null;
 }
 
 /** A source document the VAT split of a linked row needs. Amounts are minor units. */

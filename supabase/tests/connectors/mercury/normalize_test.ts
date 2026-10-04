@@ -10,6 +10,7 @@ import syntheticSent from "./fixtures/SYNTHETIC-pending-then-sent.json" with { t
 import accountsFile from "./fixtures/accounts.json" with { type: "json" };
 import creditFile from "./fixtures/credit.json" with { type: "json" };
 import treasuryFile from "./fixtures/treasury.json" with { type: "json" };
+import treasuryTxns from "./fixtures/SYNTHETIC-treasury-transactions.json" with { type: "json" };
 import categoriesFile from "./fixtures/categories.json" with { type: "json" };
 import snapshot from "./fixtures/canonical-snapshot.json" with { type: "json" };
 import { MERCURY_SKIP_REASONS } from "../../../functions/_shared/connectors/mercury/capabilities.ts";
@@ -239,6 +240,36 @@ Deno.test("treasury and internal skips follow the counterparty, not the kind alo
     counterpartyId: "not-an-own-account",
   }, ctx());
   assertEquals(otherInternal.ok, true);
+  const otherTreasury = normalizeMercury({
+    ...base,
+    kind: "treasuryTransfer",
+    amount: 100,
+    counterpartyId: "not-an-own-account",
+    counterpartyName: "Outside Treasury",
+  }, ctx());
+  assertEquals(otherTreasury.ok, true);
+  if (!otherTreasury.ok) return;
+  assertEquals(otherTreasury.line.direction, "income");
+  assertEquals(otherTreasury.line.category_hint, null);
+});
+
+Deno.test("treasury yield and dividends import as other income", () => {
+  const treasuryId = treasuryFile.accounts[0].id;
+  for (const row of treasuryTxns.transactions) {
+    const normalized = normalizeMercury(row, ctx());
+    if (row.type === "interestPosted" || row.type === "dividendPosted") {
+      assertEquals(normalized.ok, true);
+      if (!normalized.ok) return;
+      assertEquals(normalized.line.direction, "income");
+      assertEquals(normalized.line.category_hint, "הכנסה אחרת");
+      assertEquals(normalized.line.currency, "USD");
+      assertEquals(normalized.line.doc_date, row.canonicalDay);
+      assertEquals(normalized.line.provider_meta.kind, row.type);
+      assertEquals(normalized.line.source_account_id, treasuryId);
+    } else {
+      assertEquals(normalized, { ok: false, skip: "treasury_activity" });
+    }
+  }
 });
 
 Deno.test("the fourteen autopay skips are paired payments between own checking and own credit", () => {
@@ -327,6 +358,11 @@ Deno.test("a fork of this repo skips the deny-list when the secret is absent", (
   assertEquals(fixtureDenyListRequired(env({
     GITHUB_ACTIONS: "true",
     GITHUB_REPOSITORY: "eliranRP/Flow",
+  })), true);
+  assertEquals(fixtureDenyListRequired(env({
+    GITHUB_ACTIONS: "true",
+    GITHUB_REPOSITORY: "eliranRP/Flow",
+    GITHUB_EVENT_HEAD_REPO_FORK: "false",
   })), true);
   assertEquals(fixtureTokens("José  García"), ["jose", "garcia"]);
   assertEquals(normalisedDenyEntry("  José   García "), "jose garcia");
