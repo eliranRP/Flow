@@ -364,10 +364,35 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("₪866.94")).toBeInTheDocument();
     expect(screen.getAllByText("₪2,541.65")).toHaveLength(1);
     expect(screen.getByText("2.9")).toBeInTheDocument();
+    expect(screen.queryByText("2.90")).not.toBeInTheDocument();
     expect(screen.getByText(/התשלום האחרון גבוה פי/)).toBeInTheDocument();
     expect(screen.queryByText(/תשלום אחרון מותאם/)).not.toBeInTheDocument();
     expect(screen.queryByText(/כפול/)).not.toBeInTheDocument();
     expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
+  });
+
+  it("drops a trailing zero when the final payment is a whole number of times higher", () => {
+    renderForm(
+      <LoanSetupForm
+        companyCurrency="ILS"
+        advancedOpen
+        initial={{
+          name: "הלוואת דוגמה",
+          principal: "0.06",
+          rate: "0",
+          term: "4",
+          startDate: "2026-11-01",
+          escrow: "0",
+          payment: "0.01",
+        }}
+      />,
+    );
+    expect(screen.getByText("₪0.01")).toBeInTheDocument();
+    expect(screen.getByText("₪0.03")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.queryByText("3.0")).not.toBeInTheDocument();
+    expect(screen.getByText(/התשלום האחרון גבוה פי/)).toBeInTheDocument();
+    expect(screen.queryByText(/כפול/)).not.toBeInTheDocument();
   });
 
   it("keeps the adjusted line when the final payment is just under twice", () => {
