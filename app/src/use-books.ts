@@ -25,6 +25,15 @@ import { createContext, createElement, useCallback, useContext, useMemo, useStat
 import { getSupabase } from "./lib/supabase";
 import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
+import {
+  JEV_CONNECTOR_STALE_MS,
+  jevConnectorQueryKey,
+  jevQueueKey,
+  jevQueueQueryKey,
+  loadJevConnector,
+  loadJevSuggestions,
+  withJevDeadline,
+} from "./screens/jev-review";
 
 interface BooksContextValue {
   period: PeriodChoice;
@@ -112,12 +121,33 @@ export function useReviewQuery(active = true) {
   return useQuery({
     queryKey: ["review", preview],
     enabled: active && preview === "off",
-    queryFn: async (): Promise<ReviewRow[]> => {
+    queryFn: async ({ client }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       const { data, error } = await supabase.rpc("list_review");
       if (error) throw error;
-      return reviewRowSchema.array().parse(data);
+      const rows = reviewRowSchema.array().parse(data);
+      const ids = rows.map((row) => row.transaction_id);
+      if (jevQueueKey(ids) !== "" && typeof supabase.from === "function") {
+        void client.query({
+          queryKey: jevConnectorQueryKey,
+          retry: false,
+          staleTime: JEV_CONNECTOR_STALE_MS,
+          queryFn: ({ signal }) => withJevDeadline(signal, loadJevConnector, false),
+        }).then((on) => {
+          if (!on) return undefined;
+          return client.query({
+            queryKey: jevQueueQueryKey(ids),
+            retry: false,
+            queryFn: ({ signal }) => withJevDeadline(
+              signal,
+              (linked) => loadJevSuggestions(ids, linked),
+              { connectorOn: false, byId: {} },
+            ),
+          });
+        }).catch(() => undefined);
+      }
+      return rows;
     },
   });
 }

@@ -43,6 +43,7 @@ import {
   TransactionScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
+import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
 
 export function App() {
@@ -112,6 +113,7 @@ function AppRoutes() {
               <Route path="/e2e/project" element={<DevProject />} />
               <Route path="/e2e/expense" element={<DevExpense />} />
               <Route path="/e2e/review" element={<DevReview />} />
+              <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
               <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
               <Route path="/e2e/filed" element={<DevFiled />} />
               <Route path="/e2e/home" element={<DevHome />} />
