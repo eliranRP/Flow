@@ -29,6 +29,7 @@ import {
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
+import { LoanBalanceList, useLoanBalances } from "./loan-match";
 
 export type { LoanCurrency } from "./loan-form";
 
@@ -320,6 +321,7 @@ export function LoanSettingsSection({
     setOpenState(next);
   }, [clearDraft]);
   const setSheet = useSheetHistory("loan-new", open, setOpen);
+  const balances = useLoanBalances(companyId);
   const query = useQuery({
     queryKey: ["loan-currency", companyId],
     enabled: companyCurrency == null && companyId != null,
@@ -335,7 +337,7 @@ export function LoanSettingsSection({
       return "לא הצלחנו לשמור את ההלוואה.";
     },
     success: "ההלוואה נשמרה",
-    keys: [],
+    keys: ["loans"],
     onSuccess: () => {
       clearDraft();
       setSheet(false);
@@ -356,6 +358,7 @@ export function LoanSettingsSection({
   return (
     <>
       <SectionHead title="הלוואות" />
+      <LoanBalanceList rows={balances.data ?? []} />
       <List>
         <ListRow
           variant="button"
