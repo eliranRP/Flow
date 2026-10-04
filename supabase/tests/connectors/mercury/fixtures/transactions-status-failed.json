@@ -1,0 +1,235 @@
+{
+  "transactions": [
+    {
+      "id": "e2900776-6348-5386-9a10-67a1a4da4e14",
+      "feeId": null,
+      "amount": 0,
+      "createdAt": "2025-03-04T22:19:22.690399Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-03-11T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "STUBHUB, INC.",
+      "externalMemo": null,
+      "counterpartyId": "a277236c-5eab-58a2-b987-eb21c0e4591f",
+      "details": {
+        "debitCardInfo": {
+          "id": "2f2a3cf0-26d8-56fa-9f3e-380c4d49d2a5"
+        }
+      },
+      "cardId": "2f2a3cf0-26d8-56fa-9f3e-380c4d49d2a5",
+      "reasonForFailure": "The merchant canceled this transaction, possibly due to incorrect billing information.",
+      "failedAt": "2025-03-04T23:15:24.052148Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "StubHub",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": "Entertainment",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "merchant": {
+        "categoryCode": "7922",
+        "id": "m_7700558a75de5",
+        "category": "Entertainment",
+        "amount": 0,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "def88bdb-ee03-519a-a35a-8021c9791293",
+      "feeId": null,
+      "amount": -1454.88,
+      "createdAt": "2025-03-07T17:50:36.009165Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-03-13T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "BRECKENRIDGE-RISK SECU",
+      "externalMemo": null,
+      "counterpartyId": "7d193a5d-dc79-5f1c-acd6-8e2a032f6ffc",
+      "details": {
+        "debitCardInfo": {
+          "id": "75cae4be-a109-598d-ae9b-f5abdcd059ad"
+        }
+      },
+      "cardId": "75cae4be-a109-598d-ae9b-f5abdcd059ad",
+      "reasonForFailure": "This transaction failed due to an incorrect CVC or expiration date.",
+      "failedAt": "2025-03-07T17:50:36.036624Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "BRECKENRIDGE-RISK SECU",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": null,
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "merchant": {
+        "categoryCode": "6300",
+        "id": "m_0745405690a15",
+        "amount": -145488,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "d0a1c594-4c1b-53dd-96af-b536154f013f",
+      "feeId": null,
+      "amount": 0,
+      "createdAt": "2025-03-07T17:50:41.385049Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-03-13T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "GOOGLE *CHROME TEMP",
+      "externalMemo": null,
+      "counterpartyId": "323e7b9b-1468-5ab1-96e6-018c89ca8612",
+      "details": {
+        "debitCardInfo": {
+          "id": "75cae4be-a109-598d-ae9b-f5abdcd059ad"
+        }
+      },
+      "cardId": "75cae4be-a109-598d-ae9b-f5abdcd059ad",
+      "reasonForFailure": "This transaction failed due to an incorrect CVC or expiration date.",
+      "failedAt": "2025-03-07T17:50:41.411384Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "GOOGLE *CHROME TEMP",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": null,
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "merchant": {
+        "categoryCode": "7399",
+        "id": "m_06edeb2191385",
+        "amount": 0,
+        "currency": "ILS"
+      }
+    },
+    {
+      "id": "83f36787-8a20-5194-bf14-7b5b8e342cf6",
+      "feeId": null,
+      "amount": 0,
+      "createdAt": "2025-04-03T11:50:26.368701Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-04-09T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "PAYPAL",
+      "externalMemo": null,
+      "counterpartyId": "f26c26d7-88c4-561b-b2f4-af4ada05af20",
+      "details": {
+        "debitCardInfo": {
+          "id": "75cae4be-a109-598d-ae9b-f5abdcd059ad"
+        }
+      },
+      "cardId": "75cae4be-a109-598d-ae9b-f5abdcd059ad",
+      "reasonForFailure": "The merchant canceled this transaction, possibly due to incorrect billing information.",
+      "failedAt": "2025-04-03T11:50:41.378603Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "PayPal",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": "Retail",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "merchant": {
+        "categoryCode": "5999",
+        "id": "m_d73cc51709915",
+        "category": "Retail",
+        "amount": 0,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "be03598e-aad4-5a5e-8d3e-4bab68c50d02",
+      "feeId": null,
+      "amount": -799.24,
+      "createdAt": "2025-05-21T05:38:29.799111Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2025-05-28T22:00:00Z",
+      "status": "failed",
+      "note": null,
+      "bankDescription": "HOMEDEPOT.COM",
+      "externalMemo": null,
+      "counterpartyId": "149d38fa-66c8-543e-8d60-3def5e18e06e",
+      "details": {
+        "debitCardInfo": {
+          "id": "96f54ab7-f76a-5143-88d4-6673ae9c49c8"
+        }
+      },
+      "cardId": "96f54ab7-f76a-5143-88d4-6673ae9c49c8",
+      "reasonForFailure": "This transaction failed because it exceeded the spend limit for the card.",
+      "failedAt": "2025-05-21T05:38:29.867001Z",
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "The Home Depot",
+      "counterpartyNickname": null,
+      "kind": "debitCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": null,
+      "mercuryCategory": "Retail",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": null,
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "merchant": {
+        "categoryCode": "5200",
+        "id": "m_20d9346609795",
+        "category": "Retail",
+        "amount": -79924,
+        "currency": "USD"
+      }
+    }
+  ],
+  "page": {
+    "nextPage": "be03598e-aad4-5a5e-8d3e-4bab68c50d02"
+  }
+}

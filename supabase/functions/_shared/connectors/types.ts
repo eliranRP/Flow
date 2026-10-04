@@ -155,7 +155,7 @@ export interface LinkedDocument {
 
 /** What normalize may read besides the raw payload. No network and no clock. */
 export interface NormalizeContext {
-  /** Ids from the company's connected accounts, including card accounts. */
+  /** Ids from the company's connected accounts, including card and treasury accounts. */
   ownAccountIds: readonly string[];
   /**
    * Owner-set counterparty ids that are the owner's own external accounts.
@@ -195,6 +195,13 @@ export interface ProjectHint {
  */
 export interface ProviderMeta {
   kind?: string | null;
+  /**
+   * The provider's own category label, when the wire payload has one.
+   * Mercury copies raw.mercuryCategory here. Absent for other providers.
+   * The L1b brief stores this beside kind. The contract's earlier
+   * "kind only" rule is the one the brief replaces.
+   */
+  providerCategory?: string | null;
 }
 
 /**
@@ -254,6 +261,7 @@ const nullableName = z.string().max(TEXT_LIMITS.name).nullable();
 
 export const providerMetaSchema = z.strictObject({
   kind: z.string().max(TEXT_LIMITS.kind).nullable().optional(),
+  providerCategory: z.string().max(TEXT_LIMITS.hint).nullable().optional(),
 });
 
 const namedParty = z.strictObject({

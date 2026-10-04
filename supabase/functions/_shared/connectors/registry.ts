@@ -1,10 +1,13 @@
+import { mercuryAdapter } from "./mercury/adapter.ts";
 import { MERCURY_CAPABILITIES, MERCURY_KEK_REF } from "./mercury/capabilities.ts";
 import { SUMIT_CAPABILITIES, SUMIT_KEK_REF } from "./sumit/capabilities.ts";
 import {
   CONNECTOR_SCHEDULE,
   type ConnectorCapabilities,
   type ConnectorFactory,
+  type ConnectorPort,
   type ConnectorSchedule,
+  type ConnectorSession,
 } from "./types.ts";
 
 export const PROVIDERS = ["sumit", "mercury"] as const;
@@ -22,6 +25,20 @@ export interface ConnectorModule {
  */
 export interface ConnectorRegistration extends ConnectorModule {
   open: ConnectorFactory["open"];
+}
+
+/**
+ * Mercury implements the port. SUMIT's normalize lands with the engine.
+ * `open` keeps the secret inside the session. CONNECTOR_MODULES stays metadata.
+ */
+export const mercuryConnector: ConnectorPort & ConnectorFactory = mercuryAdapter;
+
+const registeredPort: ConnectorPort & ConnectorFactory = mercuryConnector;
+void registeredPort;
+
+export function openConnector(provider: ProviderId, secret: string): ConnectorSession {
+  if (provider === "mercury") return mercuryConnector.open(secret);
+  throw new Error("connector_unavailable");
 }
 
 export const CONNECTOR_MODULES: Readonly<Record<ProviderId, ConnectorModule>> = {

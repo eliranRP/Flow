@@ -1,0 +1,47 @@
+{
+  "id": "be2caf77-7b14-5a95-a119-ac640c62ce00",
+  "feeId": null,
+  "amount": -28663.16,
+  "createdAt": "2026-10-02T13:45:59.169723Z",
+  "postedAt": "2026-10-02T14:32:48.287759Z",
+  "estimatedDeliveryDate": "2026-10-08T21:00:00Z",
+  "status": "sent",
+  "note": null,
+  "bankDescription": "Send Money transaction initiated on Mercury",
+  "externalMemo": null,
+  "counterpartyId": "5ba36dfc-3940-5b61-aa0d-eb18d48853c6",
+  "details": {
+    "electronicRoutingInfo": {
+      "bankName": "BANK OF AMERICA N.A.",
+      "electronicAccountType": "businessChecking"
+    }
+  },
+  "cardId": null,
+  "reasonForFailure": null,
+  "failedAt": null,
+  "dashboardLink": "https://example.invalid/redacted",
+  "counterpartyName": "A1 garage door",
+  "counterpartyNickname": null,
+  "kind": "outgoingPayment",
+  "currencyExchangeInfo": null,
+  "compliantWithReceiptPolicy": true,
+  "hasGeneratedReceipt": true,
+  "creditAccountPeriodId": null,
+  "mercuryCategory": null,
+  "generalLedgerCodeName": null,
+  "glAllocations": [],
+  "attachments": [
+    {
+      "fileName": "receipt.pdf",
+      "url": "https://example.invalid/redacted",
+      "attachmentType": "other"
+    }
+  ],
+  "relatedTransactions": [],
+  "categoryData": null,
+  "checkNumber": null,
+  "trackingNumber": null,
+  "requestId": "b5f07364-8edd-5d83-92ab-f7cec366e2f2",
+  "accountId": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+  "merchant": null
+}
