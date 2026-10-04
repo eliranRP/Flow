@@ -1,5 +1,6 @@
 /* Step demos inside the phone. Motion is transform and opacity only.
-   The skeleton shine stays off: the storyboard uses a still skeleton. */
+   The skeleton shine stays off: the storyboard uses a still skeleton.
+   The fingertip is a dot on the control. There is no arrow. */
 
 .ui-setup-demo {
   position: relative;
@@ -18,7 +19,7 @@
   position: absolute;
   z-index: 1;
   inset-inline: 0;
-  bottom: calc(var(--radius-band) / var(--demo-scale));
+  bottom: 0;
   width: 100%;
   max-width: none;
 }
@@ -28,23 +29,33 @@
   opacity: 0;
 }
 
-.ui-setup-example {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+.ui-setup-demo .ui-review {
+  margin-inline: 0;
+  max-inline-size: 100%;
 }
 
-.ui-setup-stack {
-  display: grid;
+.ui-setup-layer {
+  position: absolute;
+  inset: 0;
   min-inline-size: 0;
-  flex: 1;
 }
 
-.ui-setup-stack > * {
-  grid-area: 1 / 1;
-  min-inline-size: 0;
+.ui-setup-dock {
+  position: absolute;
+  z-index: 1;
+  inset-inline: 0;
+  inset-block-end: 0;
+}
+
+.ui-setup-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+  pointer-events: none;
+}
+
+.ui-setup-scrim {
+  opacity: var(--setup-opacity, 0);
 }
 
 .ui-setup-sheet,
@@ -57,7 +68,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  transform: translateY(calc(var(--setup-out, 0) * 24px));
+  box-sizing: border-box;
+  padding: var(--space-3);
+  border-radius: var(--radius-band) var(--radius-band) 0 0;
+  background: var(--color-surface);
+}
+
+.ui-setup-sheet {
+  transform: translateY(calc(var(--setup-out, 0) * 120%));
+}
+
+.ui-setup-handle {
+  inline-size: 40px;
+  block-size: 5px;
+  margin-inline: auto;
+  border-radius: 999px;
+  background: var(--color-control-off);
+}
+
+.ui-setup-sumit-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: 44px;
+}
+
+.ui-setup-sumit-row span {
+  flex: 1;
+  min-inline-size: 0;
 }
 
 .ui-setup-drop {
@@ -81,7 +120,7 @@
 
 .ui-setup-rise {
   opacity: var(--setup-rise, 0);
-  transform: translateY(calc((1 - var(--setup-rise, 0)) * 16px));
+  transform: translateY(calc((1 - var(--setup-rise, 0)) * 40%));
 }
 
 .ui-setup-land {
@@ -94,23 +133,41 @@
   min-inline-size: 0;
 }
 
+/* Fingertip dot, centered on the control it marks. */
 .ui-setup-ring {
   position: absolute;
   z-index: 1;
-  inline-size: 44px;
-  block-size: 44px;
-  inset-inline-end: var(--space-2);
+  inline-size: 12px;
+  block-size: 12px;
+  inset-inline-start: 50%;
   inset-block-start: 50%;
-  margin-block-start: -22px;
-  border: 2px solid var(--color-accent);
+  margin-inline-start: -6px;
+  margin-block-start: -6px;
   border-radius: 999px;
-  opacity: var(--setup-ring, 0);
+  background: var(--color-accent);
   pointer-events: none;
+}
+
+.ui-setup-ring {
+  opacity: var(--setup-ring, 0);
   transform: scale(calc(0.92 + var(--setup-ring, 0) * 0.08));
 }
 
 .ui-setup-demo .ui-btn.ui-setup-pressed {
   background: var(--color-accent-pressed);
+}
+
+.ui-setup-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-setup-head p {
+  margin: 0;
+  min-inline-size: 0;
 }
 
 .ui-setup-pills {
@@ -120,49 +177,39 @@
   min-inline-size: 0;
 }
 
-.ui-setup-count {
-  margin: 0;
-}
-
-.ui-setup-approve .ui-review-ai,
-.ui-setup-jev .ui-review-ai {
-  display: none;
-}
-
-.ui-setup-approve .ui-review {
-  margin-inline: 0;
+.ui-setup-skel {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  pointer-events: none;
 }
 
 .ui-setup-skel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
   opacity: var(--setup-fade, 1);
-}
-
-.ui-setup-safari {
-  display: flex;
-  min-inline-size: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-3);
-  direction: ltr;
 }
 
 .ui-setup-safari-bar {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
+  box-sizing: border-box;
   min-inline-size: 0;
+  margin: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-chip);
   background: var(--color-surface);
 }
 
-.ui-setup-url,
+.ui-setup-safari-bar .ui-setup-host {
+  flex: 1;
+  text-align: center;
+}
+
 .ui-setup-host {
   min-inline-size: 0;
   overflow-wrap: anywhere;
@@ -175,13 +222,20 @@
 .ui-setup-dialog,
 .ui-setup-add {
   display: flex;
+  box-sizing: border-box;
   min-inline-size: 0;
   flex-direction: column;
   gap: var(--space-2);
+  margin: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+}
+
+.ui-setup-dialog {
+  border-radius: var(--radius-band) var(--radius-band) 0 0;
+  margin: 0;
 }
 
 .ui-setup-menu-row {
@@ -199,13 +253,25 @@
   color: var(--color-accent-text);
 }
 
+.ui-setup-actions {
+  display: flex;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-setup-actions > * {
+  flex: 1;
+  min-inline-size: 0;
+}
+
 .ui-setup-home {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-  align-items: start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  align-content: start;
   justify-items: center;
-  margin-block-start: auto;
+  box-sizing: border-box;
+  padding: var(--space-3);
 }
 
 .ui-setup-tile {
@@ -224,6 +290,7 @@
   text-align: center;
 }
 
-.ui-setup-host {
-  text-align: center;
+.ui-setup-icon span {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
 }
