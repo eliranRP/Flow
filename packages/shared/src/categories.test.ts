@@ -2,7 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "./categories.ts";
+import {
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
+  LOAN_ESCROW_CATEGORY,
+  LOAN_INTEREST_CATEGORY,
+  LOAN_PRINCIPAL_CATEGORY,
+} from "./categories.ts";
 
 const migration = readFileSync(
   join(
@@ -22,5 +28,18 @@ describe("default categories", () => {
     );
     expect(expense).toEqual([...DEFAULT_EXPENSE_CATEGORIES]);
     expect(income).toEqual([...DEFAULT_INCOME_CATEGORIES]);
+  });
+
+  it("seeds the loan split categories from the loans migration", () => {
+    const loans = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../../../supabase/migrations/20261004055306_loans_l1.sql",
+      ),
+      "utf8",
+    );
+    expect(loans).toContain(`'${LOAN_INTEREST_CATEGORY}', 'expense', 10, true, false`);
+    expect(loans).toContain(`'${LOAN_ESCROW_CATEGORY}', 'expense', 11, true, false`);
+    expect(loans).toContain(`'${LOAN_PRINCIPAL_CATEGORY}', 'expense', 8, true, true`);
   });
 });

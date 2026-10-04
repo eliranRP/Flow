@@ -31,4 +31,4 @@ A read-write token. Skipping income. Deduping against SUMIT. Treating a Mercury 
 
 Card spend is one expense line. The autopay that moves money from checking onto the card is skipped, so it is not a second expense. A window of lines is not a full listing, so a missing page does not delete history.
 
-Loans and amortization are a future decision record, not accepted here. The paragraph is in the connector contract.
+Loans and amortization are accepted in [0088](0088-loans.md).
