@@ -1473,6 +1473,11 @@ a.ui-row,
   -webkit-line-clamp: 3;
 }
 
+/* Waiting reserves the settled note line: the label's height, with no pill and no words. */
+.ui-review-note-slot {
+  min-block-size: calc(var(--type-label-size) * var(--type-label-line));
+}
+
 .ui-review-count {
   display: inline-block;
   min-inline-size: 2ch;
@@ -1498,17 +1503,6 @@ a.ui-row,
 .ui-review-ai .ui-row-title {
   flex: 1 1 auto;
   min-inline-size: 0;
-}
-
-.ui-review-note {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) var(--space-side) 0;
-  padding: var(--space-3) var(--field-pad);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
 }
 
 .ui-review {
