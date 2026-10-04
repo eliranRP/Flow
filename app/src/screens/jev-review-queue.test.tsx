@@ -147,7 +147,7 @@ describe("Jev review one tap", () => {
     db.writes = [];
     db.rows = [];
     db.closed = new Set();
-    bindJevConnectorScope(null);
+    bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
   });
