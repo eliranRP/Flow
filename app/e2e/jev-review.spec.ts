@@ -14,6 +14,26 @@ test("a Jev suggestion prefills the review card, and off leaves it unchanged", a
   await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
 });
 
+test("a waiting card keeps the settled height for a fill, a note, and a complete row", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1400 });
+  await page.goto("/e2e/jev-review?layout=1");
+  for (const id of ["filled", "note", "sumit"]) {
+    const waiting = page.locator(`[data-layout="${id}"] [data-phase="waiting"] .ui-review`);
+    const settled = page.locator(`[data-layout="${id}"] [data-phase="settled"] .ui-review`);
+    await expect(waiting).toBeVisible();
+    const waitingBox = await waiting.boundingBox();
+    const settledBox = await settled.boundingBox();
+    expect(waitingBox?.height).toBe(settledBox?.height);
+  }
+  await expect(page.locator(".ui-review-note")).toHaveCount(0);
+  await expect(page.locator("[data-phase=waiting]").getByText("אין הצעה, הקישו לבחירה")).toHaveCount(0);
+  await expect(page.locator("[data-phase=waiting]").getByText("חסר קטגוריה, הקישו לבחירה")).toHaveCount(0);
+  await expect(page.locator("[data-layout=note] [data-phase=waiting] .ui-review-note-slot")).toBeVisible();
+  await expect(page.locator("[data-layout=filled] [data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
+  await expect(page.locator("[data-layout=sumit] [data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
+  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByText("חסר קטגוריה, הקישו לבחירה")).toBeVisible();
+});
+
 test("a long suggestion keeps הצעה inside the row at 320", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/jev-review?on=1&long=1");

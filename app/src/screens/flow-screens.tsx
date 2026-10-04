@@ -82,7 +82,7 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { useJevQueue, useJevReview } from "./jev-review-card";
-import { withJev } from "./jev-review";
+import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
@@ -3333,6 +3333,11 @@ export function SettingsScreen({
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
+  const signedInUserId = session?.user.id;
+  const signedInCompanyId = dashboard.data?.company_id;
+  if (signedInUserId && signedInCompanyId) {
+    bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
+  }
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
@@ -3431,6 +3436,7 @@ export function SettingsScreen({
       if (!supabase) throw new Error("supabase");
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      clearJevConnectorFlag(session?.user.id ?? null);
     },
   });
 
