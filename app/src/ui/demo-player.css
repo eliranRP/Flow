@@ -76,7 +76,8 @@
 }
 
 .ui-demo[data-demo-state="playing"] .ui-demo-replay {
-  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ui-demo .ui-demo-replay:active:not(:disabled) {

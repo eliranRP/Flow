@@ -293,7 +293,7 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
         </div>
       </div>
       {replayVisible ? (
-        <Button variant="pill" className="ui-demo-replay" icon={<RefreshIcon size={14} />} onClick={replay}>
+        <Button variant="pill" className="ui-demo-replay" icon={<RefreshIcon size={14} />} aria-hidden={settled ? undefined : true} onClick={replay}>
           שוב
         </Button>
       ) : null}
