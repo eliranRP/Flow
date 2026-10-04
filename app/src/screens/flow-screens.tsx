@@ -3325,6 +3325,7 @@ export function SettingsScreen({
   sampleSecret?: string;
 } = {}) {
   const preview = useHomePreview();
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const previewValue = params.get("preview");
   const search = usePreviewSearch();
@@ -3437,6 +3438,7 @@ export function SettingsScreen({
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       clearJevConnectorFlag(session?.user.id ?? null);
+      queryClient.removeQueries({ queryKey: ["jev-connector"] });
     },
   });
 

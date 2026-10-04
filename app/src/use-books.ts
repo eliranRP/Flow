@@ -135,7 +135,7 @@ export function useReviewQuery(active = true) {
       const ids = rows.map((row) => row.transaction_id);
       if (jevQueueKey(ids) !== "" && typeof supabase.from === "function") {
         void client.query({
-          queryKey: jevConnectorQueryKey,
+          queryKey: jevConnectorQueryKey(),
           retry: false,
           staleTime: JEV_CONNECTOR_STALE_MS,
           queryFn: ({ signal }) => fetchJevConnector(signal),

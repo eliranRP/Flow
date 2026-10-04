@@ -288,8 +288,8 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
       client.setQueryData(["jev-integration"], next);
       const on = jevConnectorOn(next);
       writeJevConnectorFlag(on);
-      client.setQueryData(jevConnectorQueryKey, on);
-      await client.invalidateQueries({ queryKey: jevConnectorQueryKey });
+      client.setQueryData(jevConnectorQueryKey(), on);
+      await client.invalidateQueries({ queryKey: jevConnectorQueryKey() });
     },
   });
   const retryRef = useRef<HTMLButtonElement>(null);

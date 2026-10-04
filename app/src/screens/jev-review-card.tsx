@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useHomePreview } from "../preview";
@@ -52,18 +52,15 @@ function companyIdFrom(data: unknown): string | null {
   return typeof id === "string" && id !== "" ? id : null;
 }
 
-/** Session plus the cached dashboard, or a scope bound by the caller. */
+/** Session plus a cached dashboard, or a scope bound by the caller. The read does not subscribe. */
 function useJevConnectorScope(): JevConnectorScope | null {
   const { session } = useAuth();
   const books = useOptionalBooks();
   const preview = useHomePreview();
-  const dashboard = useQuery({
-    queryKey: books == null ? ["jev-connector-scope"] : ["dashboard", preview, books.period],
-    enabled: false,
-    queryFn: () => Promise.resolve(null),
-  });
+  const client = useQueryClient();
   const userId = session?.user.id ?? null;
-  const companyId = books == null ? null : companyIdFrom(dashboard.data);
+  const cached = books == null ? undefined : client.getQueryData(["dashboard", preview, books.period]);
+  const companyId = companyIdFrom(cached);
   const hooked = userId != null && companyId != null ? { userId, companyId } : null;
   if (hooked) bindJevConnectorScope(hooked);
   return hooked ?? boundJevConnectorScope();
@@ -78,7 +75,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const scope = useJevConnectorScope();
   const remembered = readable && scope != null && readJevConnectorFlag(scope) === true;
   const connector = useQuery({
-    queryKey: jevConnectorQueryKey,
+    queryKey: jevConnectorQueryKey(scope),
     enabled: readable,
     retry: false,
     staleTime: JEV_CONNECTOR_STALE_MS,
