@@ -110,7 +110,7 @@ select is(
 
 select is(
   (public.company_pnl((select id from ils_co), null, null, 'cash') ->> 'income_agorot')::bigint,
-  5000,
+  5000::bigint,
   'a 100 dollar receipt does not change the shekel income'
 );
 
@@ -122,7 +122,7 @@ select is(
     ) item
     where item ->> 'currency' = 'USD'
   ),
-  10000,
+  10000::bigint,
   'the dollar receipt is returned on its own'
 );
 
