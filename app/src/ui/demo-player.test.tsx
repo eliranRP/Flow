@@ -248,6 +248,7 @@ describe("DemoPlayer", () => {
     expect(css.slice(supportAt)).toContain("var(--demo-phone) / 320px");
     expect(css).toContain("inset-block-start: 20px");
     expect(css).toContain("block-size: calc(100% + 40px)");
+    expect(css).toContain("padding-block-end: calc(60px / var(--demo-scale))");
     expect(css).not.toContain("inset-block-end: calc(var(--radius-band) * -1)");
     expect(css).toContain("padding-inline: 14px");
     expect(css).toContain("font-weight: 500");
