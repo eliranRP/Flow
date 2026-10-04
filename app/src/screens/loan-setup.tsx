@@ -183,7 +183,7 @@ export function LoanSetupForm({
           ) : null}
           {preview.largeFinalMinor != null ? (
             <p className="t-hint ui-loan-caution">
-              התשלום האחרון יותר מכפול,{" "}
+              התשלום האחרון כפול,{" "}
               <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.largeFinalMinor, currency)}</bdi>
             </p>
           ) : null}

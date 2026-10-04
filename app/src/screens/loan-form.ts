@@ -96,7 +96,7 @@ export type LoanPreview =
       /** The schedule's adjusted final payment. Null on an early payoff. */
       finalAdjustment: LoanFinalAdjustment | null;
       /**
-       * Set when the final principal-and-interest is more than twice the regular
+       * Set when the final principal-and-interest is at least twice the regular
        * one, and the loan is not a balloon. Escrow is left out of both sides.
        */
       largeFinalMinor: bigint | null;
@@ -133,7 +133,7 @@ function largeFinal(schedule: LoanSchedule, paymentMinor: bigint, escrowMinor: b
   if (last == null) return null;
   const pi = paymentMinor - escrowMinor;
   const finalPi = last.paymentMinor - last.escrowMinor;
-  if (finalPi <= pi * 2n) return null;
+  if (finalPi < pi * 2n) return null;
   return last.paymentMinor;
 }
 
