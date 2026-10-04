@@ -163,12 +163,10 @@ function SetupStepBody({
   if (step === 1) {
     return (
       <StepSumit
-        failed={false}
         onBack={backTo ? back : undefined}
         onSkip={skip}
-        onConnect={() => {
-          const back = fromCard ? "/setup/1?from=card" : "/setup/1";
-          go(`/settings?sheet=sumit&return=${encodeURIComponent(back)}`);
+        onConnected={() => {
+          go(continuePath(1, fromCard));
         }}
       />
     );

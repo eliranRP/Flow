@@ -46,33 +46,12 @@
 }
 
 .ui-setup-stage-host {
+  order: 1;
   margin-block-start: var(--space-5);
-  padding-inline: var(--space-card-inset);
-}
-
-.ui-setup-stage {
-  position: relative;
-  overflow: hidden;
-  block-size: 320px;
-  border-radius: var(--radius-card);
-  background: var(--color-tint);
-}
-
-.ui-setup-phone {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
-  margin-inline: auto;
-  inline-size: 196px;
-  block-size: 78%;
-  border: 1px solid var(--color-line);
-  border-block-end: 0;
-  border-start-start-radius: var(--radius-band);
-  border-start-end-radius: var(--radius-band);
-  background: var(--color-bg);
 }
 
 .ui-setup-body {
+  order: 2;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -179,14 +158,4 @@
 
 .ui-setup-card-advanced {
   color: var(--color-text-secondary);
-}
-
-@media (max-width: 320px) {
-  .ui-setup-stage {
-    block-size: 200px;
-  }
-
-  .ui-setup-phone {
-    inline-size: 150px;
-  }
 }
