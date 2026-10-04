@@ -243,7 +243,9 @@ export function loanFinalLine(preview: Extract<LoanPreview, { status: "ready" }>
     }
     if (finalPi > pi * 2n) {
       const tenths = divHalfEven(finalPi * 10n, pi);
-      const times = `${(tenths / 10n).toString()}.${(tenths % 10n).toString()}`;
+      const whole = tenths / 10n;
+      const frac = tenths % 10n;
+      const times = frac === 0n ? whole.toString() : `${whole.toString()}.${frac.toString()}`;
       return { tone: "caution", lead: "התשלום האחרון גבוה פי", times, amountMinor: preview.largeFinalMinor };
     }
   }
