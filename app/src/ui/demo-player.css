@@ -54,10 +54,12 @@
   display: flex;
   inset-block-start: 0;
   inset-inline-start: 50%;
+  box-sizing: border-box;
   flex-direction: column;
   inline-size: 320px;
   block-size: calc(100% / var(--demo-scale));
   margin-inline-start: -160px;
+  padding-block-end: calc(60px / var(--demo-scale));
   transform: scale(var(--demo-scale));
   transform-origin: top center;
 }
