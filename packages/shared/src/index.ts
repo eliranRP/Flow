@@ -58,8 +58,14 @@ export type {
   TransactionDetail,
   UnpaidRow,
 } from "./dashboard.ts";
-export { buildLoanSchedule } from "./loan-schedule.ts";
-export type { LoanScheduleRow, LoanTerms } from "./loan-schedule.ts";
+export { buildLoanSchedule, LOAN_TERM_MONTHS_MAX, LoanScheduleError } from "./loan-schedule.ts";
+export type {
+  LoanBalloon,
+  LoanSchedule,
+  LoanScheduleErrorCode,
+  LoanScheduleRow,
+  LoanTerms,
+} from "./loan-schedule.ts";
 export {
   LOAN_ESCROW_CATEGORY,
   LOAN_INTEREST_CATEGORY,
