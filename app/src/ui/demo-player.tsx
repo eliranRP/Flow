@@ -2,9 +2,9 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { Button } from "./button";
 import "./demo-player.css";
 
-/** Setup demos play for 3–5 seconds. The player accepts other lengths for tests. */
+/** Setup demos play for 3.0–4.6 seconds. The player accepts other lengths for tests. */
 export const DEMO_DURATION_MIN_MS = 3000;
-export const DEMO_DURATION_MAX_MS = 5000;
+export const DEMO_DURATION_MAX_MS = 4600;
 
 export type DemoPlayback = {
   /** 0 on the first frame, 1 on the last frame. */
@@ -61,7 +61,8 @@ export type DemoPlayerProps = {
  * Tint stage with a phone outline rising from the bottom.
  * Plays once, rests on the last frame, then shows שוב in the end corner.
  * Sets `--inline-sign` (−1 under RTL) and `--demo-progress` (0 to 1).
- * `prefers-reduced-motion` shows the last frame. שוב stays on that frame.
+ * `prefers-reduced-motion` shows the last frame and does not render שוב.
+ * Pauses while the tab is hidden or the stage is off screen, and does not restart on resize.
  * The phone is scaled from a 320px screen (0.6125 at a 390 viewport).
  */
 export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
@@ -71,6 +72,8 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
   const [settled, setSettled] = useState(readReducedMotion);
   const [sign, setSign] = useState(() => inlineSignForDirection(document.documentElement.dir || "rtl"));
   const rootRef = useRef<HTMLDivElement>(null);
+  const restoreFocus = useRef(false);
+  const wasSettled = useRef(settled);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -106,12 +109,29 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
     }
     setSettled(false);
     setProgress(0);
+    const root = rootRef.current;
     let started: number | null = null;
     let lastElapsed = -1;
+    let resume = false;
     let frame = 0;
+    let stopped = false;
+    let running = false;
+    let hidden = document.hidden;
+    let onScreen = typeof IntersectionObserver !== "function";
+
+    const stopFrame = () => {
+      cancelAnimationFrame(frame);
+      running = false;
+    };
+
     const tick = (now: number) => {
+      running = false;
+      if (stopped || hidden || !onScreen) return;
       const stamp = Number.isFinite(now) ? now : 0;
-      if (started === null) started = stamp;
+      if (started === null || resume) {
+        started = stamp - Math.max(lastElapsed, 0);
+        resume = false;
+      }
       let elapsed = stamp - started;
       // A clock that does not move still has to finish, or the play would loop.
       if (lastElapsed >= 0 && elapsed <= lastElapsed) elapsed = lastElapsed + 16;
@@ -124,19 +144,60 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
         return;
       }
       frame = requestAnimationFrame(tick);
+      running = true;
     };
-    frame = requestAnimationFrame(tick);
+
+    const kick = () => {
+      if (stopped || hidden || !onScreen || running || lastElapsed >= durationMs) return;
+      frame = requestAnimationFrame(tick);
+      running = true;
+    };
+
+    const pause = () => {
+      stopFrame();
+      resume = true;
+    };
+
+    const onVis = () => {
+      hidden = document.hidden;
+      if (hidden) pause();
+      else kick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    let observer: IntersectionObserver | null = null;
+    if (root && typeof IntersectionObserver === "function") {
+      observer = new IntersectionObserver((entries) => {
+        const visible = entries.some((entry) => entry.isIntersecting && entry.target === root);
+        onScreen = visible;
+        if (!visible) pause();
+        else kick();
+      });
+      observer.observe(root);
+    } else {
+      kick();
+    }
+
     return () => {
-      cancelAnimationFrame(frame);
+      stopped = true;
+      stopFrame();
+      document.removeEventListener("visibilitychange", onVis);
+      observer?.disconnect();
     };
   }, [reduced, durationMs, runId]);
 
+  useLayoutEffect(() => {
+    const returned = settled && !wasSettled.current;
+    wasSettled.current = settled;
+    if (!returned || reduced || !restoreFocus.current) return;
+    const button = rootRef.current?.querySelector(".ui-demo-replay");
+    if (button instanceof HTMLButtonElement) button.focus();
+    restoreFocus.current = false;
+  }, [settled, reduced]);
+
   function replay() {
-    if (reduced) {
-      setProgress(1);
-      setSettled(true);
-      return;
-    }
+    if (reduced) return;
+    restoreFocus.current = true;
     setRunId((id) => id + 1);
   }
 
@@ -156,7 +217,7 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
           </div>
         </div>
       </div>
-      {settled ? (
+      {settled && !reduced ? (
         <Button variant="pill" className="ui-demo-replay" aria-label="הצגה חוזרת" onClick={replay}>
           שוב
         </Button>

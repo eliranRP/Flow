@@ -1,5 +1,6 @@
-/* Setup demo stage. Drop 1: tint card, phone outline from the bottom, שוב in the end corner.
-   Motion on the scene is transform and opacity only. The host leaves 20px under the step line. */
+/* Setup demo stage. Drop 2: tint card, phone outline from the bottom, שוב in the end corner.
+   The stage is 200px at a 320 viewport and 320px at 390. The host leaves 20px under the step line.
+   Motion on the scene is transform and opacity only. */
 
 .ui-demo {
   position: relative;
@@ -8,7 +9,7 @@
   margin-inline: var(--space-card-inset);
   border-radius: var(--radius-card);
   background: var(--color-tint);
-  block-size: clamp(220px, calc(220px + (100vw - 320px) * 100 / 70), 320px);
+  block-size: clamp(200px, calc(200px + (100vw - 320px) * 120 / 70), 320px);
   --demo-phone: clamp(150px, calc(150px + (100vw - 320px) * 46 / 70), 196px);
   /* 196 / 320 = 0.6125 at a 390 viewport. 150 / 320 at 320. */
   --demo-scale: calc(var(--demo-phone) / 320px);
