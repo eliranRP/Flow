@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(61);
+select plan(75);
 
 do $users$
 begin
@@ -338,6 +338,61 @@ select throws_ok(
 
 select throws_ok(
   $$
+    update public.categories
+    set excluded_from_pnl = false
+    where company_id = (select id from public.companies where name = 'הלוואות בדיקה')
+      and name = 'תשלומי הלוואה'
+      and kind = 'expense';
+    insert into public.loan_splits (
+      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
+    )
+    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    from public.loans l
+    join public.transactions t
+      on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
+    cross join (
+      values
+        ('interest', 'ריבית משכנתא', 5000),
+        ('escrow', 'מסים וביטוח', 2000),
+        ('principal', 'תשלומי הלוואה', 3000)
+    ) as v(part, category, amount)
+    join public.categories c
+      on c.company_id = l.company_id and c.name = v.category and c.kind = 'expense';
+    set constraints all immediate;
+  $$,
+  '23514',
+  'loan_split_category',
+  'principal stays on an excluded category'
+);
+
+select throws_ok(
+  $$
+    insert into public.loan_splits (
+      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
+    )
+    select l.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    from public.loans l
+    join public.transactions t
+      on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
+    cross join (
+      values
+        ('interest', 'ריבית משכנתא', 'expense', 5000),
+        ('escrow', 'מסים וביטוח', 'expense', 2000),
+        ('principal', 'העברות', 'income', 3000)
+    ) as v(part, category, kind, amount)
+    join public.categories c
+      on c.company_id = l.company_id
+     and c.name = v.category
+     and c.kind = v.kind::public.category_kind;
+    set constraints all immediate;
+  $$,
+  '23514',
+  'loan_split_category',
+  'principal cannot use an income category'
+);
+
+select throws_ok(
+  $$
     insert into public.loans (
       company_id, name, principal_minor, annual_rate_ppm, term_months,
       start_date, payment_minor, escrow_minor, currency
@@ -613,6 +668,25 @@ select is(
   'the re-sync keeps the new line amount'
 );
 
+update public.transactions
+set amount_original = 10000
+where idempotency_key = 'loan:paid';
+
+select is(
+  (
+    select bool_and(s.needs_review)
+    from public.loan_splits s
+    join public.transactions t on t.id = s.transaction_id
+    where t.idempotency_key = 'loan:paid'
+  ),
+  true,
+  'reverting the line amount leaves the review flag set'
+);
+
+update public.transactions
+set amount_original = 9000
+where idempotency_key = 'loan:paid';
+
 select throws_ok(
   $$
     update public.loan_splits s
@@ -674,6 +748,21 @@ select is(
   ),
   true,
   'a re-sync that changes the currency marks every part'
+);
+
+update public.transactions
+set currency = 'USD'
+where idempotency_key = 'loan:paid';
+
+select is(
+  (
+    select bool_and(s.needs_review)
+    from public.loan_splits s
+    join public.transactions t on t.id = s.transaction_id
+    where t.idempotency_key = 'loan:paid'
+  ),
+  true,
+  'reverting the line currency leaves the review flag set'
 );
 
 select lives_ok(
@@ -863,6 +952,31 @@ select throws_ok(
   'the owner cannot change which part a row is'
 );
 
+select throws_ok(
+  $$update public.loan_splits set needs_review = true$$,
+  '42501',
+  null,
+  'the owner cannot mark a split for review'
+);
+
+select throws_ok(
+  $$
+    insert into public.loan_splits (
+      company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
+    )
+    select l.company_id, l.id, t.id, 'interest', 1, 1, c.id, true
+    from public.loans l
+    join public.transactions t
+      on t.company_id = l.company_id and t.idempotency_key = 'loan:partial'
+    join public.categories c
+      on c.company_id = l.company_id and c.name = 'ריבית משכנתא' and c.kind = 'expense'
+    where l.name = 'משכנתא לדוגמה'
+  $$,
+  '42501',
+  null,
+  'the owner cannot insert a split already flagged'
+);
+
 select lives_ok(
   $$
     update public.loan_splits
@@ -896,6 +1010,107 @@ select lives_ok(
 );
 
 select is((select count(*)::int from public.loans), 2, 'the owner reads both loans');
+
+select tests.clear_authentication();
+reset role;
+
+update public.loan_splits s
+set needs_review = true
+from public.transactions t
+where s.transaction_id = t.id
+  and t.idempotency_key = 'loan:paid';
+
+update public.loan_splits s
+set amount_minor = 100000
+from public.transactions t
+where s.transaction_id = t.id
+  and t.idempotency_key = 'loan:paid'
+  and s.part = 'principal';
+
+select lives_ok(
+  $$set constraints all immediate$$,
+  'a flagged line can hold an amount that does not sum'
+);
+set constraints all deferred;
+
+select tests.authenticate_as('loan_owner');
+
+select is(
+  (
+    select balance_minor
+    from public.loan_balances
+    where loan_id = (select id from public.loans where name = 'משכנתא לדוגמה')
+  ),
+  120000::bigint,
+  'a flagged principal part stays out of the balance'
+);
+
+select is(
+  (
+    select flagged_parts
+    from public.loan_balances
+    where loan_id = (select id from public.loans where name = 'משכנתא לדוגמה')
+  ),
+  3,
+  'flagged parts are counted for review'
+);
+
+select throws_ok(
+  $$
+    select public.clear_loan_split_review(id)
+    from public.transactions
+    where idempotency_key = 'loan:paid'
+  $$,
+  '23514',
+  'loan_split_sum',
+  'clearing review while the parts do not sum is refused'
+);
+
+select lives_ok(
+  $$
+    update public.loan_splits
+    set amount_minor = 3000
+    where part = 'principal'
+      and transaction_id = (
+        select id from public.transactions where idempotency_key = 'loan:paid'
+      );
+    select public.clear_loan_split_review(id)
+    from public.transactions
+    where idempotency_key = 'loan:paid';
+  $$,
+  'a matching line can clear review'
+);
+
+select is(
+  (
+    select bool_or(s.needs_review)
+    from public.loan_splits s
+    join public.transactions t on t.id = s.transaction_id
+    where t.idempotency_key = 'loan:paid'
+  ),
+  false,
+  'review is clear once the parts match'
+);
+
+select is(
+  (
+    select balance_minor
+    from public.loan_balances
+    where loan_id = (select id from public.loans where name = 'משכנתא לדוגמה')
+  ),
+  117000::bigint,
+  'cleared principal reduces the balance again'
+);
+
+select is(
+  (
+    select flagged_parts
+    from public.loan_balances
+    where loan_id = (select id from public.loans where name = 'משכנתא לדוגמה')
+  ),
+  0,
+  'a clear line has no flagged parts'
+);
 
 select tests.clear_authentication();
 
