@@ -16,6 +16,9 @@ export function reviewAwaitingLabel(count: number): string {
 type TabBarProps = {
   label?: string;
   reviewCount?: number;
+  fabPressed?: boolean;
+  /** A viewer has no add. The slot stays, as a disabled control. */
+  allowAdd?: boolean;
 };
 
 type Section = "home" | "projects" | "review" | "settings";
@@ -29,7 +32,7 @@ export function tabSection(pathname: string): Section | null {
   return null;
 }
 
-export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPressed = false }: TabBarProps & { fabPressed?: boolean }) {
+export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPressed = false, allowAdd = true }: TabBarProps) {
   const search = usePreviewSearch();
   const location = useLocation();
   const goBack = useGoBack();
@@ -70,7 +73,7 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPres
           >
             {fab}
           </button>
-        ) : (
+        ) : allowAdd ? (
           <Link
             ref={(node) => {
               addTriggerRef.current = node;
@@ -82,6 +85,10 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPres
           >
             {fab}
           </Link>
+        ) : (
+          <button type="button" aria-label="הוספה" className={`${slot} ui-tab-slot-fab`} disabled>
+            {fab}
+          </button>
         )}
         <Link
           to={`/review${search}`}
