@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contractualPaymentMinor } from "@flow/shared";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
@@ -98,6 +98,23 @@ function renderSection(ui: ReactNode) {
 
 function openLoan() {
   fireEvent.click(screen.getByRole("button", { name: "הלוואה חדשה" }));
+}
+
+async function expectReopenedBlank(inserts: number) {
+  await waitFor(() => {
+    expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
+  });
+  openLoan();
+  expect(screen.getByLabelText("מלווה")).toHaveValue("");
+  expect(screen.getByLabelText("סכום מקורי")).toHaveValue("");
+  expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("");
+  const save = screen.getByRole("button", { name: "שמירה" });
+  expect(save).toBeDisabled();
+  fireEvent.click(save);
+  await act(async () => {
+    await new Promise((resolve) => { setTimeout(resolve, 40); });
+  });
+  expect(db.inserts).toHaveLength(inserts);
 }
 
 function fillSavable() {
@@ -271,6 +288,8 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
+    const lender = screen.getByLabelText("מלווה");
+    expect(document.getElementById(lender.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חסר מלווה.");
     expect(screen.getByText("חסר מלווה.")).toBeInTheDocument();
     expect(screen.getByText("חסר סכום.")).toBeInTheDocument();
     expect(screen.getByText("חסרה תקופה.")).toBeInTheDocument();
@@ -546,16 +565,58 @@ describe("LoanSettingsSection", () => {
     fillSavable();
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(screen.getByRole("status")).toHaveTextContent("ההלוואה נשמרה"); });
-    await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
-    });
+    await expectReopenedBlank(1);
   });
 
-  it("does not insert when preview mode blocks the save", () => {
+  it("discards the draft when the sheet is closed", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    openLoan();
+    fillSavable();
+    fireEvent.click(within(screen.getByRole("dialog", { name: "הלוואה" })).getByRole("button", { name: "סגירה" }));
+    await expectReopenedBlank(0);
+  });
+
+  it("discards the draft on Escape", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    openLoan();
+    fillSavable();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await expectReopenedBlank(0);
+  });
+
+  it("discards the draft on Back", async () => {
+    const router = createMemoryRouter(
+      [{ path: "/settings", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" /> }],
+      { initialEntries: ["/settings"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    openLoan();
+    await waitFor(() => {
+      expect(router.state.location.state).toMatchObject({ flowLayer: "loan-new" });
+    });
+    fillSavable();
+    await act(async () => {
+      await router.navigate(-1);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await expectReopenedBlank(0);
+  });
+
+  it("does not insert when preview mode blocks the save", async () => {
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" blocked={() => true} />);
     openLoan();
     fillSavable();
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await act(async () => {
+      await new Promise((resolve) => { setTimeout(resolve, 40); });
+    });
     expect(db.inserts).toHaveLength(0);
     expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
     expect(screen.queryByText("ההלוואה נשמרה")).not.toBeInTheDocument();
