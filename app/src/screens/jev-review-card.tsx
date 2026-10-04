@@ -6,12 +6,13 @@ import { ReviewCard } from "../ui/review-card";
 import {
   JEV_CONNECTOR_STALE_MS,
   JEV_REVIEW_OFF,
+  fetchJevConnector,
   jevConnectorQueryKey,
   jevQueueQueryKey,
   jevReadable,
-  loadJevConnector,
   loadJevReview,
   loadJevSuggestions,
+  readJevConnectorFlag,
   withJevDeadline,
   type JevPrefill,
   type JevQueueData,
@@ -42,12 +43,14 @@ export function useJevReview(transactionId: string | null, live: boolean): JevRe
 /** One read for every open line. Pending only after the connector is already known on. */
 export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const readable = live && jevReadable() && transactionIds.some((id) => id !== "");
+  const remembered = readable ? readJevConnectorFlag() : undefined;
   const connector = useQuery({
     queryKey: jevConnectorQueryKey,
     enabled: readable,
     retry: false,
     staleTime: JEV_CONNECTOR_STALE_MS,
-    queryFn: ({ signal }) => withJevDeadline(signal, loadJevConnector, false),
+    ...(remembered == null ? {} : { initialData: remembered, initialDataUpdatedAt: 0 }),
+    queryFn: ({ signal }) => fetchJevConnector(signal),
   });
   const knownOn = connector.data === true;
   const suggestions = useQuery({

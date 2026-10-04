@@ -138,7 +138,11 @@ export function ReviewCard({
             </span>
           </p>
         ))}
-        {note ? <p className="t-label">{note}</p> : null}
+        {pending || note != null ? (
+          <p className={pending ? "t-label ui-review-note" : "t-label"} aria-hidden={note == null ? true : undefined}>
+            {note}
+          </p>
+        ) : null}
       </div>
     </article>
   );

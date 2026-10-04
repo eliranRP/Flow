@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-04
+
+Jev review follow-up. A supplier rule stays when both assignment flags are false. אישור ignores extra clicks while a write is in flight. A Jev read that misses its second becomes off. Turning Jev on replaces a cached off flag, and that flag is still there after a reload. Project and category names load together. The waiting card keeps a note line. No migration. Decision [0084](decisions/0084-jev-auto-prefill.md).
+
 ## 2026-10-03
 
 Company insert. `authenticated` cannot insert `public.companies`. `create_company` stays the only path, and it still rejects a viewer. A direct insert is what the viewer test refuses. The viewer can still read the demo `audit_log`. The live smoke still names Flow Test 2 and the production host. Both stay backlog.

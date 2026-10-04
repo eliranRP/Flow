@@ -27,10 +27,10 @@ import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import {
   JEV_CONNECTOR_STALE_MS,
+  fetchJevConnector,
   jevConnectorQueryKey,
   jevQueueKey,
   jevQueueQueryKey,
-  loadJevConnector,
   loadJevSuggestions,
   withJevDeadline,
 } from "./screens/jev-review";
@@ -133,7 +133,7 @@ export function useReviewQuery(active = true) {
           queryKey: jevConnectorQueryKey,
           retry: false,
           staleTime: JEV_CONNECTOR_STALE_MS,
-          queryFn: ({ signal }) => withJevDeadline(signal, loadJevConnector, false),
+          queryFn: ({ signal }) => fetchJevConnector(signal),
         }).then((on) => {
           if (!on) return undefined;
           return client.query({

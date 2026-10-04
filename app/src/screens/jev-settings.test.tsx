@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
+import { jevConnectorQueryKey } from "./jev-review";
 import {
   JEV_DEFAULT,
   JevSettings,
@@ -64,13 +65,15 @@ vi.mock("../lib/supabase", () => ({
   }),
 }));
 
-function renderLive(ui: ReactNode) {
+function renderLive(ui: ReactNode, prepare?: (client: QueryClient) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  prepare?.(client);
+  const view = render(
     <QueryClientProvider client={client}>
       <ToastProvider>{ui}</ToastProvider>
     </QueryClientProvider>,
   );
+  return Object.assign(view, { client });
 }
 
 const off: JevCardState = { ...JEV_DEFAULT, enabled: false, status: "ready" };
@@ -89,6 +92,7 @@ describe("Jev settings card", () => {
     db.readHold = null;
     db.failRefresh = false;
     db.writes = [];
+    localStorage.removeItem("flow.jev-connector");
   });
 
   it("rounds a threshold to two decimals and accepts a comma", () => {
@@ -182,6 +186,19 @@ describe("Jev settings card", () => {
     });
     expect(toggle).toBeChecked();
     expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+  });
+
+  it("replaces a cached Jev off flag when the connector is turned on", async () => {
+    db.row = { enabled: false, mode: "off", threshold: 0.9 };
+    const { client } = renderLive(<JevSettings />, (query) => {
+      query.setQueryData(jevConnectorQueryKey, false);
+    });
+    expect(client.getQueryData(jevConnectorQueryKey)).toBe(false);
+    fireEvent.click(await readySwitch());
+    await waitFor(() => {
+      expect(client.getQueryData(jevConnectorQueryKey)).toBe(true);
+    });
+    expect(localStorage.getItem("flow.jev-connector")).toBe("1");
   });
 
   it("keeps the stored mode when turning off", async () => {

@@ -1177,6 +1177,7 @@ export function ReviewQueue({
   const visit = useRef(emptyVisit());
   const approvedId = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
+  const approveGuard = useRef(false);
   const [, bumpVisit] = useState(0);
   const openIds = rows.map((item) => item.id);
   const present = notePresence(visit.current, openIds);
@@ -1420,7 +1421,7 @@ export function ReviewQueue({
             busy={approve.isPending}
             disabled={!approvable}
             onClick={() => {
-              if (jevLoading || !approvable) return;
+              if (approveGuard.current || jevLoading || !approvable) return;
               if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
               if (card.reason === "unallocated_shared") {
                 if (!card.transaction_id) return;
@@ -1431,7 +1432,12 @@ export function ReviewQueue({
                 void navigate(`/transactions/${card.transaction_id}/split${search}`);
                 return;
               }
-              approve.mutate();
+              approveGuard.current = true;
+              approve.mutate(undefined, {
+                onSettled: () => {
+                  approveGuard.current = false;
+                },
+              });
             }}
             icon={<CheckIcon />}
           >

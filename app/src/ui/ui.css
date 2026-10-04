@@ -1473,6 +1473,11 @@ a.ui-row,
   -webkit-line-clamp: 3;
 }
 
+/* The waiting card keeps a note line, so אין הצעה does not push אישור down after the read. */
+.ui-review[data-jev-pending] .ui-review-note {
+  min-block-size: calc(var(--type-label-size) * var(--type-label-line));
+}
+
 .ui-review-count {
   display: inline-block;
   min-inline-size: 2ch;

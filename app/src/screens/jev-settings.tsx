@@ -9,6 +9,7 @@ import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
 import { useWrite } from "../use-write";
+import { jevConnectorOn, jevConnectorQueryKey, writeJevConnectorFlag } from "./jev-review";
 
 export type JevMode = "off" | "shadow";
 export type JevStatus = "ready" | "error" | "loading";
@@ -285,6 +286,10 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
     run: async (next) => {
       await saveJevIntegration(next);
       client.setQueryData(["jev-integration"], next);
+      const on = jevConnectorOn(next);
+      writeJevConnectorFlag(on);
+      client.setQueryData(jevConnectorQueryKey, on);
+      await client.invalidateQueries({ queryKey: jevConnectorQueryKey });
     },
   });
   const retryRef = useRef<HTMLButtonElement>(null);
