@@ -2,13 +2,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   JEV_READ_MS,
   JEV_REVIEW_OFF,
+  beginJevScopeLookup,
   bindJevConnectorScope,
+  boundJevConnectorScope,
   clearJevConnectorFlag,
   companyIdFromReviewPayload,
+  completeJevScopeLookup,
   fetchJevConnector,
   jevConnectorStorageKey,
+  jevScopePhase,
+  noteJevAuthUser,
   parseJevSuggestion,
   readJevConnectorFlag,
+  resetJevScopeMemory,
   withJev,
   withJevDeadline,
   writeJevConnectorFlag,
@@ -243,12 +249,45 @@ describe("Jev review prefill", () => {
   });
 });
 
+describe("review scope finish guards", () => {
+  afterEach(() => {
+    resetJevScopeMemory();
+  });
+
+  it("drops a stale generation even when the user is unchanged", () => {
+    noteJevAuthUser(scope.userId);
+    const first = beginJevScopeLookup();
+    const second = beginJevScopeLookup();
+    expect(completeJevScopeLookup(first, { userId: scope.userId, companyId: "stale" })).toBe(false);
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(completeJevScopeLookup(second, scope)).toBe(true);
+    expect(boundJevConnectorScope()).toEqual(scope);
+  });
+
+  it("drops a lookup whose user changed without a new generation", () => {
+    noteJevAuthUser(scope.userId);
+    const lookup = beginJevScopeLookup();
+    noteJevAuthUser("user-2");
+    expect(completeJevScopeLookup(lookup, { userId: "user-2", companyId: scope.companyId })).toBe(false);
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(jevScopePhase()).toBe("pending");
+  });
+
+  it("drops a scope that finishes after the user is signed out", () => {
+    noteJevAuthUser(null);
+    const lookup = beginJevScopeLookup();
+    expect(completeJevScopeLookup(lookup, scope)).toBe(false);
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(jevScopePhase()).toBe("off");
+  });
+});
+
 afterEach(() => {
   vi.useRealTimers();
   connectorDb.integration = null;
   connectorDb.error = null;
   connectorDb.hang = false;
-  bindJevConnectorScope(null);
+  resetJevScopeMemory();
   localStorage.removeItem("flow.jev-connector");
   localStorage.removeItem(jevConnectorStorageKey(scope));
 });

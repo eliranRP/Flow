@@ -13,14 +13,18 @@ import {
   bindJevConnectorScope,
   boundJevConnectorScope,
   fetchJevConnector,
+  jevConnectorLiveKey,
   jevConnectorQueryKey,
   jevQueueQueryKey,
   jevReadable,
+  jevScopeFollowsLive,
   jevScopePhase,
   loadJevReview,
   loadJevSuggestions,
+  notedJevAuthUser,
   readJevConnectorFlag,
   subscribeJevScope,
+  userRememberedJevOn,
   withJevDeadline,
   type JevConnectorScope,
   type JevPrefill,
@@ -56,38 +60,43 @@ function companyIdFrom(data: unknown): string | null {
 }
 
 /** A cached dashboard is already a scope. Otherwise the card follows the review lookup. */
-function useJevConnectorScope(): { scope: JevConnectorScope | null; pending: boolean; miss: boolean } {
+function useJevConnectorScope(): {
+  scope: JevConnectorScope | null;
+  pending: boolean;
+  followsLive: boolean;
+  sessionUserId: string | null;
+} {
   const phase = useSyncExternalStore(subscribeJevScope, jevScopePhase, jevScopePhase);
+  const followsLive = useSyncExternalStore(subscribeJevScope, jevScopeFollowsLive, jevScopeFollowsLive);
   const { session } = useAuth();
   const books = useOptionalBooks();
   const preview = useHomePreview();
   const client = useQueryClient();
-  const userId = session?.user.id ?? null;
+  const noted = notedJevAuthUser();
+  const sessionUserId = session?.user.id ?? (typeof noted === "string" ? noted : null);
   const cached = books == null ? undefined : client.getQueryData(["dashboard", preview, books.period]);
   const companyId = companyIdFrom(cached);
-  const hooked = userId != null && companyId != null ? { userId, companyId } : null;
+  const hooked = sessionUserId != null && companyId != null ? { userId: sessionUserId, companyId } : null;
   if (hooked) bindJevConnectorScope(hooked);
-  const pending = hooked == null && phase === "pending";
-  const miss = hooked == null && phase === "miss";
-  const scope = hooked ?? (pending || miss ? null : boundJevConnectorScope());
-  return { scope, pending, miss };
+  const nothingRemembered = sessionUserId != null && !userRememberedJevOn(sessionUserId);
+  const pending = hooked == null && phase === "pending" && !nothingRemembered;
+  const scope = pending ? null : (hooked ?? boundJevConnectorScope());
+  return { scope, pending, followsLive, sessionUserId };
 }
 
 /**
  * One read for every open line. A remembered on only waits. The prefill applies
  * after a connector read from this session, and a failed read is off.
  */
-const JEV_SCOPE_UNRESOLVED = ["jev-scope-unresolved"] as const;
-
 export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const readable = live && jevReadable() && transactionIds.some((id) => id !== "");
-  const { scope, pending, miss } = useJevConnectorScope();
+  const { scope, pending, followsLive, sessionUserId } = useJevConnectorScope();
   const scopePending = readable && pending;
-  const scopeMiss = readable && miss;
-  const remembered = readable && !pending && !miss && scope != null && readJevConnectorFlag(scope) === true;
+  const nothingRemembered = sessionUserId != null && !userRememberedJevOn(sessionUserId);
+  const remembered = readable && !followsLive && !pending && scope != null && readJevConnectorFlag(scope) === true;
   const connector = useQuery({
-    queryKey: scope != null ? jevConnectorQueryKey(scope) : JEV_SCOPE_UNRESOLVED,
-    enabled: readable && scope != null && !pending && !miss,
+    queryKey: !followsLive && scope != null ? jevConnectorQueryKey(scope) : jevConnectorLiveKey(sessionUserId),
+    enabled: readable && !scopePending && (scope != null || followsLive || nothingRemembered),
     retry: false,
     staleTime: JEV_CONNECTOR_STALE_MS,
     queryFn: ({ signal }) => fetchJevConnector(signal),
@@ -95,6 +104,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const confirmed = connector.isSuccess && connector.dataUpdatedAt > 0;
   const knownOn = confirmed && connector.data;
   const waiting = remembered && !confirmed && !connector.isError;
+  const awaitingLive = readable && followsLive && !connector.isSuccess && !connector.isError;
   const suggestions = useQuery({
     queryKey: jevQueueQueryKey(transactionIds),
     enabled: readable && knownOn,
@@ -107,8 +117,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
     ),
   });
   function loadingFor(transactionId: string | null): boolean {
-    if (scopePending) return true;
-    if (scopeMiss) return false;
+    if (scopePending || awaitingLive) return true;
     if (waiting) return true;
     if (connector.isError || !knownOn || suggestions.isError) return false;
     if (suggestions.isPending || transactionId == null) return suggestions.isPending;
@@ -116,7 +125,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
   function stateFor(transactionId: string | null): JevReviewState {
-    if (scopePending || scopeMiss || waiting || connector.isError || !knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) {
+    if (scopePending || awaitingLive || waiting || connector.isError || !knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) {
       return JEV_REVIEW_OFF;
     }
     return {
@@ -124,7 +133,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       prefill: transactionId == null ? null : (suggestions.data.byId[transactionId] ?? null),
     };
   }
-  return { loadingFor, stateFor, held: scopeMiss };
+  return { loadingFor, stateFor };
 }
 
 export function JevReviewCard({

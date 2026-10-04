@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
@@ -62,6 +62,9 @@ const db = vi.hoisted(() => ({
   companyId: "company-1",
   omitCompany: false,
   companyError: false,
+  holdSession: null as Promise<void> | null,
+  restoreSession: false,
+  writes: [] as Array<{ name: string; args?: Record<string, unknown> }>,
   integration: null as { enabled: boolean; mode: string } | null,
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
   review: [] as unknown[],
@@ -88,15 +91,28 @@ const supabase = {
   auth: {
     onAuthStateChange: (callback: (event: string, next: Session | null) => void) => {
       db.handlers.push(callback);
+      if (db.restoreSession) callback("INITIAL_SESSION", db.session);
       return { data: { subscription: { unsubscribe: () => undefined } } };
     },
-    getSession: () => Promise.resolve({ data: { session: db.session } }),
+    getSession: () => {
+      const result = { data: { session: db.session } };
+      return db.holdSession == null ? Promise.resolve(result) : db.holdSession.then(() => result);
+    },
     signOut: () => Promise.resolve({ error: null }),
   },
-  rpc: (name: string) => {
+  rpc: (name: string, args?: Record<string, unknown>) => {
     if (name === "list_review") {
       db.reviewReads += 1;
       return Promise.resolve({ data: db.review, error: null });
+    }
+    if (name === "approve_review_item") {
+      db.writes.push({ name, args });
+      const id = typeof args?.p_id === "string" ? args.p_id : "";
+      db.review = db.review.filter((row) => {
+        if (row == null || typeof row !== "object" || !("id" in row)) return true;
+        return row.id !== id;
+      });
+      return Promise.resolve({ data: null, error: null });
     }
     return Promise.resolve({ data: null, error: null });
   },
@@ -156,6 +172,9 @@ describe("cold review scope", () => {
     db.companyId = scope.companyId;
     db.omitCompany = false;
     db.companyError = false;
+    db.holdSession = null;
+    db.restoreSession = false;
+    db.writes = [];
     db.integration = null;
     db.suggestions = [];
     db.review = [];
@@ -356,54 +375,138 @@ describe("cold review scope", () => {
     expect(client.getQueryData(["jev-connector"])).toBeUndefined();
   });
 
-  it("gives the Jev card back within about a second when the company lookup hangs", async () => {
+  it("makes the stored card approvable after a hanging lookup once the live read says off", async () => {
     db.holdCompany = new Promise<void>(() => undefined);
+    db.integration = { enabled: false, mode: "off" };
+    db.review = [stored];
+    const started = Date.now();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 800 })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    }, { timeout: 1800 });
+    expect(Date.now() - started).toBeLessThan(1800);
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
+    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+  });
+
+  it("binds a company row that arrives after the one-second cap", async () => {
+    let releaseCompany: () => void = () => undefined;
+    db.holdCompany = new Promise<void>((resolve) => {
+      releaseCompany = resolve;
+    });
+    db.integration = { enabled: false, mode: "off" };
     db.review = [stored];
     const started = Date.now();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     renderReview(client);
     expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
-    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    const releaseAt = window.setTimeout(() => {
+      releaseCompany();
+    }, 1500);
     await waitFor(() => {
-      expect(document.querySelector("[data-jev-pending]")).toBeNull();
-    }, { timeout: 1500 });
-    expect(Date.now() - started).toBeLessThan(1500);
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    }, { timeout: 1800 });
+    await waitFor(() => {
+      expect(boundJevConnectorScope()).toEqual(scope);
+    }, { timeout: 2500 });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1400);
+    expect(Date.now() - started).toBeLessThan(2500);
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
+    window.clearTimeout(releaseAt);
+  });
+
+  it("reads the connector when getSession hangs", async () => {
+    db.holdSession = new Promise<void>(() => undefined);
+    db.integration = { enabled: false, mode: "off" };
+    db.review = [stored];
+    const started = Date.now();
+    renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+    expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 800 })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    }, { timeout: 1800 });
+    expect(Date.now() - started).toBeLessThan(1800);
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(boundJevConnectorScope()).toBeNull();
-    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
   });
 
-  it("keeps the stored card non-approvable when the company lookup fails", async () => {
+  it("sends one approve when Jev was never enabled and the company lookup fails", async () => {
     db.companyError = true;
+    db.integration = { enabled: false, mode: "off" };
     db.review = [stored];
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    renderReview(client);
-    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+    const approve = await screen.findByRole("button", { name: "אישור" });
     await waitFor(() => {
-      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+      expect(approve).toBeEnabled();
     });
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(boundJevConnectorScope()).toBeNull();
-    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
-    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+    fireEvent.click(approve);
+    fireEvent.click(approve);
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(db.writes.filter((call) => call.name === "approve_review_item")).toHaveLength(1);
+    });
   });
 
-  it("keeps the stored card non-approvable when the company lookup returns no row", async () => {
-    db.omitCompany = true;
+  it("paints the stored card on the first frame when this user remembered nothing", async () => {
+    db.restoreSession = true;
+    db.holdCompany = new Promise<void>(() => undefined);
+    db.integration = { enabled: false, mode: "off" };
     db.review = [stored];
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    renderReview(client);
-    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
-    await waitFor(() => {
-      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    const pendingFrames: string[] = [];
+    const observer = new MutationObserver(() => {
+      if (document.querySelector("[data-jev-pending]")) pendingFrames.push("pending");
     });
-    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+    expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 800 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    expect(pendingFrames).toEqual([]);
     expect(boundJevConnectorScope()).toBeNull();
-    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+    observer.disconnect();
+  });
+
+  it("shows no pending frame on the next card after אישור", async () => {
+    const second = {
+      ...stored,
+      id: "r2",
+      transaction_id: "t2",
+      supplier_name: "עגורני החוף",
+      description: "עגורני החוף",
+    };
+    db.integration = { enabled: false, mode: "off" };
+    db.review = [stored, second];
+    renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    await waitFor(() => {
+      expect(approve).toBeEnabled();
+      expect(boundJevConnectorScope()).toEqual(scope);
+    });
+    const pendingFrames: string[] = [];
+    const observer = new MutationObserver(() => {
+      if (document.querySelector("[data-jev-pending]")) pendingFrames.push("pending");
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    fireEvent.click(approve);
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    expect(pendingFrames).toEqual([]);
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    observer.disconnect();
   });
 
   it("does not rebind the old scope when sign-out lands while the company lookup is in flight", async () => {

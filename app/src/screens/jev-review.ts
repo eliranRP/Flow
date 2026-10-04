@@ -179,6 +179,8 @@ let notedAuthUser: string | null | undefined;
 export type JevScopePhase = "off" | "pending" | "ready" | "miss";
 
 let scopePhase: JevScopePhase = "off";
+/** A miss reads the connector without the remembered flag. A later company row may still bind. */
+let followsLive = false;
 let scopeGeneration = 0;
 const scopeListeners = new Set<() => void>();
 
@@ -188,6 +190,14 @@ function emitScope(): void {
 
 export function jevScopePhase(): JevScopePhase {
   return scopePhase;
+}
+
+export function jevScopeFollowsLive(): boolean {
+  return followsLive;
+}
+
+export function notedJevAuthUser(): string | null | undefined {
+  return notedAuthUser;
 }
 
 export function subscribeJevScope(listener: () => void): () => void {
@@ -206,9 +216,14 @@ export type JevScopeLookup = {
   userAtStart: string | null | undefined;
 };
 
-/** The card subscribes. The list does not wait on this. */
+/** The card subscribes. The list does not wait on this. A ready scope survives a same-user refetch. */
 export function beginJevScopeLookup(): JevScopeLookup {
   scopeGeneration += 1;
+  const sameUser = activeScope != null && (notedAuthUser === undefined || notedAuthUser === activeScope.userId);
+  if (scopePhase === "ready" && sameUser) {
+    return { generation: scopeGeneration, userAtStart: notedAuthUser };
+  }
+  followsLive = false;
   scopePhase = "pending";
   emitScope();
   return { generation: scopeGeneration, userAtStart: notedAuthUser };
@@ -225,12 +240,24 @@ export function completeJevScopeLookup(lookup: JevScopeLookup, scope: JevConnect
   const otherUser = scope != null && typeof notedAuthUser === "string" && scope.userId !== notedAuthUser;
   if (signedOut || otherUser) {
     activeScope = null;
+    followsLive = false;
     scopePhase = "off";
     emitScope();
     return false;
   }
+  if (scope == null && scopePhase === "ready" && activeScope != null && (notedAuthUser === undefined || notedAuthUser === activeScope.userId)) {
+    return true;
+  }
+  if (scope == null) {
+    if (followsLive && activeScope != null) return true;
+    activeScope = null;
+    followsLive = true;
+    scopePhase = "miss";
+    emitScope();
+    return true;
+  }
   activeScope = scope;
-  scopePhase = scope == null ? "miss" : "ready";
+  if (!followsLive) scopePhase = "ready";
   emitScope();
   return true;
 }
@@ -238,6 +265,7 @@ export function completeJevScopeLookup(lookup: JevScopeLookup, scope: JevConnect
 /** Sign-out and a user switch invalidate a lookup that is still in flight. */
 export function dropJevConnectorForAuthChange(): void {
   activeScope = null;
+  followsLive = false;
   scopeGeneration += 1;
   scopePhase = "off";
   emitScope();
@@ -247,6 +275,7 @@ export function dropJevConnectorForAuthChange(): void {
 export function resetJevScopeMemory(): void {
   activeScope = null;
   notedAuthUser = undefined;
+  followsLive = false;
   scopeGeneration += 1;
   scopePhase = "off";
   emitScope();
@@ -284,6 +313,26 @@ export function companyIdFromReviewPayload(data: unknown): string | null {
     if (id) return id;
   }
   return null;
+}
+
+/** True when any company flag for this user is on. The check is synchronous. */
+export function userRememberedJevOn(userId: string): boolean {
+  if (userId === "" || typeof localStorage === "undefined") return false;
+  const prefix = `${JEV_CONNECTOR_FLAG}:${userId}:`;
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key != null && key.startsWith(prefix) && localStorage.getItem(key) === "1") return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/** The live read when the company is not known yet. Not the unscoped connector key. */
+export function jevConnectorLiveKey(userId: string | null): readonly ["jev-connector", string, "session"] {
+  return ["jev-connector", userId != null && userId !== "" ? userId : "session", "session"];
 }
 
 export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefined {
