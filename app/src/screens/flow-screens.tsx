@@ -3,6 +3,7 @@ import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboa
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { LoanTransactionSplit } from "./loan-match";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
@@ -2457,6 +2458,15 @@ export function TransactionScreen({
           setChangeSheet(true);
         }} />
         <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+      </List>
+      <LoanTransactionSplit
+        transactionId={txn.id}
+        docDate={txn.doc_date}
+        categoryName={shownCategory}
+        direction={txn.direction}
+        active={sample == null}
+      />
+      <List>
         <ListRow
           variant="button"
           title="חשבונית ותשלום"

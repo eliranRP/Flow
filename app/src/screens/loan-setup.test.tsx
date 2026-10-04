@@ -33,6 +33,14 @@ vi.mock("../lib/supabase", () => ({
               if (db.hold) return db.hold.then(() => finish());
               return Promise.resolve(finish());
             },
+            select: () => ({
+              eq: () => Promise.resolve({ data: [], error: null }),
+            }),
+          };
+        }
+        if (table === "loan_balances") {
+          return {
+            select: () => Promise.resolve({ data: [], error: null }),
           };
         }
         if (table === "transactions") {

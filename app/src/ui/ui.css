@@ -433,6 +433,10 @@ a.ui-row,
   color: var(--color-warning);
 }
 
+.ui-loan-amount {
+  color: var(--color-text);
+}
+
 .ui-num-field {
   direction: ltr;
   text-align: right;
