@@ -288,6 +288,8 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   const smokeConfig = readFileSync(new URL("../app/playwright.smoke.config.ts", import.meta.url), "utf8");
   assert.match(smokeConfig, /retries: 1/);
   assert.match(smokeConfig, /smoke-retry-reporter/);
+  assert.match(smokeConfig, /process\.env\.SMOKE_BASE_URL/);
+  assert.match(smokeConfig, /https:\/\/flow-app-dx5\.pages\.dev/);
   const smokeSpec = readFileSync(new URL("../app/e2e/smoke-readonly.spec.ts", import.meta.url), "utf8");
   assert.equal(smokeSpec.includes('if (url.includes("/auth/v1/")) return true'), false);
   assert.match(smokeSpec, /return isAuthAllowed\(request\)/);
@@ -295,6 +297,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(smokeSpec, /\/auth\/v1\/user/);
   const smokeRunbook = readFileSync(new URL("../docs/runbooks/smoke-user.md", import.meta.url), "utf8");
   assert.match(smokeRunbook, /Never set `is_demo`/);
+  assert.match(smokeRunbook, /SMOKE_BASE_URL/);
   assert.equal(ci.includes("timeout-minutes: 45"), false);
   assert.equal(ci.includes("timeout-minutes: 40"), false);
   assert.equal(ci.includes("timeout-minutes: 10"), false);
