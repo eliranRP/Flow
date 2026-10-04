@@ -78,6 +78,18 @@ function isSumit(url: string): boolean {
   return url.includes("sumit.co.il") || url.includes("/functions/v1/sumit");
 }
 
+const edgeAllowHeaders = ["authorization", "apikey", "content-type", "x-client-info"];
+
+function isEdge(url: string): boolean {
+  return url.includes("/functions/v1/");
+}
+
+function missingEdgeHeaders(response: Response): string[] {
+  const allow = response.headers()["access-control-allow-headers"] ?? "";
+  const names = new Set(allow.split(",").map((part) => part.trim().toLowerCase()));
+  return edgeAllowHeaders.filter((name) => !names.has(name));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value != null && !Array.isArray(value);
 }
@@ -96,11 +108,13 @@ async function watch(page: Page): Promise<{
   consoleErrors: string[];
   writes: string[];
   httpErrors: string[];
+  edgeResponses: Response[];
   inflight: () => number;
 }> {
   const consoleErrors: string[] = [];
   const writes: string[] = [];
   const httpErrors: string[] = [];
+  const edgeResponses: Response[] = [];
   let open = 0;
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -110,6 +124,7 @@ async function watch(page: Page): Promise<{
   });
   page.on("response", (response) => {
     if (response.status() >= 400) httpErrors.push(`${String(response.status())} ${response.url()}`);
+    if (isEdge(response.url())) edgeResponses.push(response);
   });
   await page.route("**/*", async (route) => {
     const request = route.request();
@@ -127,11 +142,17 @@ async function watch(page: Page): Promise<{
       open -= 1;
     }
   });
-  return { consoleErrors, writes, httpErrors, inflight: () => open };
+  return { consoleErrors, writes, httpErrors, edgeResponses, inflight: () => open };
 }
 
 function waitRpc(page: Page, name: string): Promise<Response> {
   return page.waitForResponse((response) => response.request().method() === "POST" && rpcName(response.url()) === name);
+}
+
+function waitStatus(page: Page): Promise<Response> {
+  return page.waitForResponse((response) =>
+    response.request().method() === "POST" && /\/functions\/v1\/flow-mcp\/status(?:\?|$)/.test(response.url()),
+  );
 }
 
 function responseAt(responses: Response[], index: number): Response {
@@ -242,7 +263,12 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   }
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
 
+  const consoleBeforeSettings = watched.consoleErrors.length;
+  const statusCall = waitStatus(page);
   const settingsResponses = await openList(page, "/settings", ["get_dashboard", "sumit_status"], watched.inflight);
+  const status = await statusCall;
+  expect(status.status(), status.url()).toBe(200);
+  expect(missingEdgeHeaders(status), status.headers()["access-control-allow-headers"] ?? "").toEqual([]);
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);
   const settingsHome = await responseAt(settingsResponses, 0).json() as unknown;
   const sumitStatus = await responseAt(settingsResponses, 1).json() as unknown;
@@ -258,6 +284,15 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   const sumitWord = sumitStatus.connected === true ? "מחובר" : "לא מחובר";
   await expect(page.getByRole("button", { name: "SUMIT", exact: true }).getByText(sumitWord, { exact: true })).toBeVisible();
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
+  const settingsErrors = watched.consoleErrors.slice(consoleBeforeSettings);
+  expect(settingsErrors, settingsErrors.join("\n")).toEqual([]);
+  const corsFailures = watched.edgeResponses.flatMap((response) => {
+    const missing = missingEdgeHeaders(response);
+    if (missing.length === 0) return [];
+    return [`${response.request().method()} ${response.url()} missing ${missing.join(", ")}`];
+  });
+  expect(watched.edgeResponses.length).toBeGreaterThan(0);
+  expect(corsFailures, corsFailures.join("\n")).toEqual([]);
 
   expect(watched.writes, watched.writes.join("\n")).toEqual([]);
   expect(watched.consoleErrors, watched.consoleErrors.join("\n")).toEqual([]);

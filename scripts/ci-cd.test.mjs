@@ -342,6 +342,14 @@ test("the homepage retries like build.txt, list reads wait for the session, and 
   const smokeSpec = readFileSync(new URL("../app/e2e/smoke-readonly.spec.ts", import.meta.url), "utf8");
   assert.match(smokeSpec, /waitForStoredSession/);
   assert.ok(smokeSpec.indexOf("await waitForStoredSession(page)") < smokeSpec.indexOf("await Promise.all(pending)"));
+  assert.match(smokeSpec, /x-client-info/);
+  assert.match(smokeSpec, /access-control-allow-headers/);
+  assert.ok(smokeSpec.indexOf("const statusCall = waitStatus(page)") < smokeSpec.indexOf('openList(page, "/settings"'));
+  const http = readFileSync(new URL("../supabase/functions/_shared/http.ts", import.meta.url), "utf8");
+  const handler = readFileSync(new URL("../supabase/functions/flow-mcp/handler.ts", import.meta.url), "utf8");
+  assert.match(http, /export const corsAllowHeaders = "authorization, x-client-info, apikey, content-type, x-flow-cron"/);
+  assert.match(handler, /corsHeadersFor/);
+  assert.equal(handler.includes('"authorization, content-type, apikey"'), false);
 
   const liveSmoke = job("deploy");
   assert.match(liveSmoke, /passed on retry/);
