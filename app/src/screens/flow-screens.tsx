@@ -1172,6 +1172,7 @@ export function ReviewQueue({
   );
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
+  const jevHeld = jevQueue.held;
   const jev = jevQueue.stateFor(shownId);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
@@ -1355,7 +1356,7 @@ export function ReviewQueue({
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
   const splitCard = reviewIsSplit(view);
-  const approvable = !leaving && !jevLoading && (view.reason === "unallocated_shared"
+  const approvable = !leaving && !jevLoading && !jevHeld && (view.reason === "unallocated_shared"
     || (splitCard
       ? view.category_id != null
       : view.direction === "income"
@@ -1421,7 +1422,7 @@ export function ReviewQueue({
             busy={approve.isPending}
             disabled={!approvable}
             onClick={() => {
-              if (approveGuard.current || jevLoading || !approvable) return;
+              if (approveGuard.current || jevLoading || jevHeld || !approvable) return;
               if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
               if (card.reason === "unallocated_shared") {
                 if (!card.transaction_id) return;
