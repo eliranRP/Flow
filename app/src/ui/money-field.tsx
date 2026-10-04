@@ -9,6 +9,8 @@ type MoneyFieldProps = {
   error?: string;
   id?: string;
   disabled?: boolean;
+  /** Defaults to ₪. A dollar loan passes $. */
+  prefix?: string;
 };
 
 function digitsOnly(raw: string): string {
@@ -29,7 +31,15 @@ function grouped(raw: string): string {
  * The stored value is digits. Grouping is display-only, so a blur cannot
  * hand the parent a comma that the agorot parser rejects.
  */
-export function MoneyField({ label, value, onValueChange, error, id, disabled = false }: MoneyFieldProps) {
+export function MoneyField({
+  label,
+  value,
+  onValueChange,
+  error,
+  id,
+  disabled = false,
+  prefix = "₪",
+}: MoneyFieldProps) {
   const generated = useId();
   const fieldId = flowControlName("flow-amount", generated, id);
   const errorId = `${fieldId}-error`;
@@ -48,7 +58,7 @@ export function MoneyField({ label, value, onValueChange, error, id, disabled = 
         onMouseDown={holdFieldMouse}
       >
         <span className="ui-money-prefix" aria-hidden="true">
-          ₪
+          {prefix}
         </span>
         <input
           id={fieldId}
@@ -92,14 +102,16 @@ type PercentFieldProps = {
   disabled?: boolean;
   /** The last row in a split uses "done". */
   enterKeyHint?: "next" | "done";
+  /** Split shares keep one decimal. A loan rate can keep three, so 6.125 stays. */
+  decimals?: number;
 };
 
-/** One decimal. "33.3" stays "33.3"; a second digit is dropped. */
-function percentDigits(raw: string): string {
+/** "33.3" stays "33.3" at one decimal. Extra digits are dropped. */
+function percentDigits(raw: string, places: number): string {
   const cleaned = raw.replace(/[^\d.]/g, "");
   const [whole, frac] = cleaned.split(".");
   if (frac == null) return whole ?? "";
-  return `${whole ?? ""}.${frac.slice(0, 1)}`;
+  return `${whole ?? ""}.${frac.slice(0, places)}`;
 }
 
 /** A percent share. The suffix sits in the padding, so 100 never shares the digit box. */
@@ -113,6 +125,7 @@ export function PercentField({
   error,
   disabled = false,
   enterKeyHint = "next",
+  decimals = 1,
 }: PercentFieldProps) {
   const generated = useId();
   const fieldId = id ?? flowControlName("split-pct", generated);
@@ -152,7 +165,7 @@ export function PercentField({
             event.currentTarget.select();
           }}
           onChange={(event) => {
-            onValueChange(percentDigits(event.target.value));
+            onValueChange(percentDigits(event.target.value, decimals));
           }}
         />
       </div>

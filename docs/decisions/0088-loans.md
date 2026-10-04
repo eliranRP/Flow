@@ -27,4 +27,6 @@ Three bank lines for one payment. Converting the principal to shekels at import.
 
 ## Consequences
 
-L-1 is the schema, the row level security, the two categories, and the schedule function. The form and the list read these tables. Matching writes the three split rows. The P&L reads still skip an excluded category, so interest and escrow enter the totals only when those reads are updated. That update comes after this migration has shipped.
+L-1 is the schema, the row level security, the two categories, and the schedule function. The form reads these tables. Matching writes the three split rows. The P&L reads still skip an excluded category, so interest and escrow enter the totals only when those reads are updated. That update comes after this migration has shipped.
+
+The setup form computes the monthly payment as the exact annuity rounded half to even, then adds the escrow. A last payment that differs only by that rounding is labeled an adjusted final payment, with no warning. That figure stays under an advanced field so a balloon can still be entered. The currency field starts as the company's currency. `companies.display_currency` is not in the schema yet ([0087](0087-multi-currency.md)), so a company whose open lines are all USD starts in dollars, and every other company, including one with no lines, starts in shekels.

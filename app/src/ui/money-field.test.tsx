@@ -37,6 +37,12 @@ describe("MoneyField", () => {
     expect(screen.queryByText("לפני מע״מ")).not.toBeInTheDocument();
   });
 
+  it("uses a dollar prefix when one is passed", () => {
+    render(<MoneyField label="סכום" value="100" prefix="$" onValueChange={() => undefined} />);
+    expect(screen.getByText("$")).toBeInTheDocument();
+    expect(screen.queryByText("₪")).not.toBeInTheDocument();
+  });
+
   it("groups thousands as the digits are typed and still submits them", () => {
     render(<BudgetForm />);
     const field = screen.getByLabelText("תקציב");
