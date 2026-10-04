@@ -176,13 +176,19 @@ Do not run `supabase db reset` against the hosted project. Migrations are forwar
 
 If a push fails halfway, read the deploy log (the database URL is redacted). Fix the migration with a new file. Then push to `main` again. The hosted bundle is checked before the preflight.
 
-When the statements were applied and the version was not recorded, mark that version applied before the next push. `<version>` is the filename timestamp, such as `20261003210000`. Do this only after checking that the objects from that file are already in the database:
+List the recorded versions before changing one. `<version>` is the filename timestamp, such as `20261003210000`.
+
+```bash
+supabase migration list --db-url "$SUPABASE_DB_URL"
+```
+
+When the statements were applied and the version was not recorded, mark that version applied before the next push. Do this only after checking that the objects from that file are already in the database:
 
 ```bash
 supabase migration repair --status applied <version> --db-url "$SUPABASE_DB_URL"
 ```
 
-When a version was recorded and the migration was not applied, repair it as reverted. That one can also be done from the Supabase dashboard:
+When a version was recorded and the migration was not applied, mark it reverted so the next push can run the file. `reverted` only changes the recorded history. It does not undo any SQL. That mark can also be done from the Supabase dashboard:
 
 ```bash
 supabase migration repair --status reverted <version> --db-url "$SUPABASE_DB_URL"

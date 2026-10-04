@@ -284,7 +284,9 @@ export function useSheetHistory(
     const steps = closing.length;
     const idx = historyIndex();
     if (idx != null && idx >= steps) {
+      // The entry is gone. A push effect that still sees open must not write it back.
       popOnce.current = true;
+      pushed.current = false;
       void navigate(-steps);
       return true;
     }
