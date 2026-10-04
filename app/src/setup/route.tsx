@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode, usePreviewSearch } from "../preview";
 import { useDashboardQuery } from "../use-books";
@@ -36,15 +36,18 @@ function useFromCard(): boolean {
 
 export function SetupResume() {
   const preview = usePreviewMode();
+  const { pathname } = useLocation();
+  const home = pathname === "/";
   const { status, session } = useAuth();
   const userId = session?.user.id ?? null;
   const viewer = useSetupViewer();
-  const facts = useSetupFacts(!preview && status === "authed" && !viewer.viewer);
+  // Home is the only launch surface. A cold /review must not call get_dashboard or leave the card.
+  const facts = useSetupFacts(home && !preview && status === "authed" && !viewer.viewer);
   const { store } = useSetupStore(userId, facts.companyId);
   const navigate = useNavigate();
   const acted = useRef("");
   useEffect(() => {
-    if (preview || status !== "authed" || !userId || !viewer.ready || viewer.viewer || !facts.ready) return;
+    if (!home || preview || status !== "authed" || !userId || !viewer.ready || viewer.viewer || !facts.ready) return;
     const signature = `${facts.companyId ?? ""}:${store.run_started_at ?? ""}:${store.run_resumed_at ?? ""}:${store.card_dismissed_at ?? ""}`;
     if (acted.current === signature) return;
     const at = new Date().toISOString();
@@ -60,7 +63,7 @@ export function SetupResume() {
     if (decision.markSession) markSessionEntered(userId);
     if (decision.patch) writeSetupStore(userId, facts.companyId, withPatch(store, decision.patch));
     void navigate(decision.to, { replace: true });
-  }, [preview, status, userId, viewer.ready, viewer.viewer, facts, store, navigate]);
+  }, [home, preview, status, userId, viewer.ready, viewer.viewer, facts, store, navigate]);
   return null;
 }
 
