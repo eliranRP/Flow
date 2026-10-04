@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useHomePreview } from "../preview";
@@ -15,9 +16,11 @@ import {
   jevConnectorQueryKey,
   jevQueueQueryKey,
   jevReadable,
+  jevScopePhase,
   loadJevReview,
   loadJevSuggestions,
   readJevConnectorFlag,
+  subscribeJevScope,
   withJevDeadline,
   type JevConnectorScope,
   type JevPrefill,
@@ -52,8 +55,9 @@ function companyIdFrom(data: unknown): string | null {
   return typeof id === "string" && id !== "" ? id : null;
 }
 
-/** Session plus a cached dashboard, or the scope the review list bound before this card. The read does not subscribe. */
-function useJevConnectorScope(): JevConnectorScope | null {
+/** A cached dashboard is already a scope. Otherwise the card follows the review lookup. */
+function useJevConnectorScope(): { scope: JevConnectorScope | null; pending: boolean; miss: boolean } {
+  const phase = useSyncExternalStore(subscribeJevScope, jevScopePhase, jevScopePhase);
   const { session } = useAuth();
   const books = useOptionalBooks();
   const preview = useHomePreview();
@@ -63,20 +67,27 @@ function useJevConnectorScope(): JevConnectorScope | null {
   const companyId = companyIdFrom(cached);
   const hooked = userId != null && companyId != null ? { userId, companyId } : null;
   if (hooked) bindJevConnectorScope(hooked);
-  return hooked ?? boundJevConnectorScope();
+  const pending = hooked == null && phase === "pending";
+  const miss = hooked == null && phase === "miss";
+  const scope = hooked ?? (pending || miss ? null : boundJevConnectorScope());
+  return { scope, pending, miss };
 }
 
 /**
  * One read for every open line. A remembered on only waits. The prefill applies
  * after a connector read from this session, and a failed read is off.
  */
+const JEV_SCOPE_UNRESOLVED = ["jev-scope-unresolved"] as const;
+
 export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const readable = live && jevReadable() && transactionIds.some((id) => id !== "");
-  const scope = useJevConnectorScope();
-  const remembered = readable && scope != null && readJevConnectorFlag(scope) === true;
+  const { scope, pending, miss } = useJevConnectorScope();
+  const scopePending = readable && pending;
+  const scopeMiss = readable && miss;
+  const remembered = readable && !pending && !miss && scope != null && readJevConnectorFlag(scope) === true;
   const connector = useQuery({
-    queryKey: jevConnectorQueryKey(scope),
-    enabled: readable,
+    queryKey: scope != null ? jevConnectorQueryKey(scope) : JEV_SCOPE_UNRESOLVED,
+    enabled: readable && scope != null && !pending && !miss,
     retry: false,
     staleTime: JEV_CONNECTOR_STALE_MS,
     queryFn: ({ signal }) => fetchJevConnector(signal),
@@ -96,6 +107,8 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
     ),
   });
   function loadingFor(transactionId: string | null): boolean {
+    if (scopePending) return true;
+    if (scopeMiss) return false;
     if (waiting) return true;
     if (connector.isError || !knownOn || suggestions.isError) return false;
     if (suggestions.isPending || transactionId == null) return suggestions.isPending;
@@ -103,7 +116,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
   function stateFor(transactionId: string | null): JevReviewState {
-    if (waiting || connector.isError || !knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) {
+    if (scopePending || scopeMiss || waiting || connector.isError || !knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) {
       return JEV_REVIEW_OFF;
     }
     return {
@@ -111,7 +124,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
       prefill: transactionId == null ? null : (suggestions.data.byId[transactionId] ?? null),
     };
   }
-  return { loadingFor, stateFor };
+  return { loadingFor, stateFor, held: scopeMiss };
 }
 
 export function JevReviewCard({

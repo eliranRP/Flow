@@ -13,6 +13,7 @@ import {
   jevConnectorQueryKey,
   jevConnectorStorageKey,
   readJevConnectorFlag,
+  resetJevScopeMemory,
   writeJevConnectorFlag,
 } from "./jev-review";
 
@@ -60,6 +61,7 @@ const db = vi.hoisted(() => ({
   reviewReads: 0,
   companyId: "company-1",
   omitCompany: false,
+  companyError: false,
   integration: null as { enabled: boolean; mode: string } | null,
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
   review: [] as unknown[],
@@ -102,7 +104,9 @@ const supabase = {
     if (name === "companies") {
       db.companyReads += 1;
       return chain(() => {
-        const result = { data: db.omitCompany ? null : { id: db.companyId }, error: null };
+        const result = db.companyError
+          ? { data: null, error: { message: "companies down" } }
+          : { data: db.omitCompany ? null : { id: db.companyId }, error: null };
         return db.holdCompany == null ? Promise.resolve(result) : db.holdCompany.then(() => result);
       });
     }
@@ -151,17 +155,18 @@ describe("cold review scope", () => {
     db.reviewReads = 0;
     db.companyId = scope.companyId;
     db.omitCompany = false;
+    db.companyError = false;
     db.integration = null;
     db.suggestions = [];
     db.review = [];
     db.session = session;
-    bindJevConnectorScope(null);
+    resetJevScopeMemory();
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
   });
 
   afterEach(() => {
-    bindJevConnectorScope(null);
+    resetJevScopeMemory();
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
   });
@@ -185,7 +190,10 @@ describe("cold review scope", () => {
       expect(db.reviewReads).toBe(1);
       expect(db.companyReads).toBe(1);
     });
-    expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
+    expect(screen.queryByText("טוען…")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     expect(boundJevConnectorScope()).toBeNull();
     await act(async () => {
       releaseCompany();
@@ -267,7 +275,8 @@ describe("cold review scope", () => {
       expect(db.reviewReads).toBe(1);
       expect(db.companyReads).toBe(1);
     });
-    expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     expect(boundJevConnectorScope()).toBeNull();
     await act(async () => {
       releaseCompany();
@@ -329,6 +338,161 @@ describe("cold review scope", () => {
       expect(client.getQueryData(jevConnectorQueryKey(scope))).toBeUndefined();
       expect(boundJevConnectorScope()).toBeNull();
     });
+    expect(readJevConnectorFlag(scope)).toBe(true);
+  });
+
+  it("renders the list while the company lookup is still hanging", async () => {
+    db.holdCompany = new Promise<void>(() => undefined);
+    db.review = [stored];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 800 })).toBeInTheDocument();
+    expect(screen.queryByText("טוען…")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
+    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+  });
+
+  it("gives the Jev card back within about a second when the company lookup hangs", async () => {
+    db.holdCompany = new Promise<void>(() => undefined);
+    db.review = [stored];
+    const started = Date.now();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
+    expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    }, { timeout: 1500 });
+    expect(Date.now() - started).toBeLessThan(1500);
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
+  });
+
+  it("keeps the stored card non-approvable when the company lookup fails", async () => {
+    db.companyError = true;
+    db.review = [stored];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    });
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);
+    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+  });
+
+  it("keeps the stored card non-approvable when the company lookup returns no row", async () => {
+    db.omitCompany = true;
+    db.review = [stored];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeDisabled();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
+    });
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+  });
+
+  it("does not rebind the old scope when sign-out lands while the company lookup is in flight", async () => {
+    let releaseCompany: () => void = () => undefined;
+    db.holdCompany = new Promise<void>((resolve) => {
+      releaseCompany = resolve;
+    });
+    db.review = [stored];
+    db.integration = { enabled: true, mode: "shadow" };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderReview(client);
+    await waitFor(() => {
+      expect(db.handlers.length).toBeGreaterThan(0);
+    });
+    act(() => {
+      db.handlers[0]?.("INITIAL_SESSION", session);
+    });
+    expect(await screen.findByRole("heading", { name: stored.supplier_name })).toBeInTheDocument();
+    client.setQueryData(jevConnectorQueryKey(scope), true);
+    act(() => {
+      db.handlers[0]?.("SIGNED_OUT", null);
+    });
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(client.getQueryData(jevConnectorQueryKey(scope))).toBeUndefined();
+    await act(async () => {
+      releaseCompany();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(client.getQueryData(jevConnectorQueryKey(scope))).toBeUndefined();
+    expect(client.getQueryData(["jev-connector"])).toBeUndefined();
+  });
+
+  it("drops the connector cache when the signed-in user changes", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AuthProvider>
+          <div />
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => {
+      expect(db.handlers.length).toBeGreaterThan(0);
+    });
+    act(() => {
+      db.handlers[0]?.("INITIAL_SESSION", session);
+    });
+    bindJevConnectorScope(scope);
+    writeJevConnectorFlag(true, scope);
+    client.setQueryData(jevConnectorQueryKey(scope), true);
+    const next = {
+      ...session,
+      user: { ...session.user, id: "user-2" },
+    };
+    act(() => {
+      db.handlers[0]?.("SIGNED_IN", next);
+    });
+    expect(client.getQueryData(jevConnectorQueryKey(scope))).toBeUndefined();
+    expect(boundJevConnectorScope()).toBeNull();
+    expect(readJevConnectorFlag(scope)).toBe(true);
+  });
+
+  it("keeps the connector cache when the same user refreshes the token", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AuthProvider>
+          <div />
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => {
+      expect(db.handlers.length).toBeGreaterThan(0);
+    });
+    act(() => {
+      db.handlers[0]?.("INITIAL_SESSION", session);
+    });
+    bindJevConnectorScope(scope);
+    writeJevConnectorFlag(true, scope);
+    client.setQueryData(jevConnectorQueryKey(scope), true);
+    act(() => {
+      db.handlers[0]?.("TOKEN_REFRESHED", session);
+    });
+    expect(client.getQueryData(jevConnectorQueryKey(scope))).toBe(true);
+    expect(boundJevConnectorScope()).toEqual(scope);
     expect(readJevConnectorFlag(scope)).toBe(true);
   });
 

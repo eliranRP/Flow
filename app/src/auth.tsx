@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "./lib/supabase";
-import { bindJevConnectorScope, dropLegacyJevConnectorKey } from "./screens/jev-review";
+import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-review";
 
 export type AuthStatus = "loading" | "anon" | "authed" | "unconfigured";
 
@@ -23,7 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    dropLegacyJevConnectorKey();
     if (!supabase) {
       setValue({ status: "unconfigured", session: null });
       return;
@@ -34,8 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextId = session?.user.id ?? null;
       const previous = seenUser.current;
       seenUser.current = nextId;
-      if (previous != null && nextId == null) {
-        bindJevConnectorScope(null);
+      noteJevAuthUser(nextId);
+      if (previous != null && previous !== nextId) {
+        dropJevConnectorForAuthChange();
         queryClient.removeQueries({ queryKey: ["jev-connector"] });
       }
       setValue({ status: session ? "authed" : "anon", session });

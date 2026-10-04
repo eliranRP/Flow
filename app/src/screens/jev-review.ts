@@ -173,6 +173,85 @@ export function jevConnectorStorageKey(scope: JevConnectorScope): string {
 
 let activeScope: JevConnectorScope | null = null;
 
+/** `undefined` until auth has reported. Null is a reported sign-out. */
+let notedAuthUser: string | null | undefined;
+
+export type JevScopePhase = "off" | "pending" | "ready" | "miss";
+
+let scopePhase: JevScopePhase = "off";
+let scopeGeneration = 0;
+const scopeListeners = new Set<() => void>();
+
+function emitScope(): void {
+  for (const listener of scopeListeners) listener();
+}
+
+export function jevScopePhase(): JevScopePhase {
+  return scopePhase;
+}
+
+export function subscribeJevScope(listener: () => void): () => void {
+  scopeListeners.add(listener);
+  return () => {
+    scopeListeners.delete(listener);
+  };
+}
+
+export function noteJevAuthUser(userId: string | null): void {
+  notedAuthUser = userId;
+}
+
+export type JevScopeLookup = {
+  generation: number;
+  userAtStart: string | null | undefined;
+};
+
+/** The card subscribes. The list does not wait on this. */
+export function beginJevScopeLookup(): JevScopeLookup {
+  scopeGeneration += 1;
+  scopePhase = "pending";
+  emitScope();
+  return { generation: scopeGeneration, userAtStart: notedAuthUser };
+}
+
+/**
+ * Applies a finished lookup only when it is still the current one.
+ * A miss stores no scope. A stale finish does not clear a newer one.
+ */
+export function completeJevScopeLookup(lookup: JevScopeLookup, scope: JevConnectorScope | null): boolean {
+  if (lookup.generation !== scopeGeneration) return false;
+  if (lookup.userAtStart !== undefined && notedAuthUser !== lookup.userAtStart) return false;
+  const signedOut = notedAuthUser === null;
+  const otherUser = scope != null && typeof notedAuthUser === "string" && scope.userId !== notedAuthUser;
+  if (signedOut || otherUser) {
+    activeScope = null;
+    scopePhase = "off";
+    emitScope();
+    return false;
+  }
+  activeScope = scope;
+  scopePhase = scope == null ? "miss" : "ready";
+  emitScope();
+  return true;
+}
+
+/** Sign-out and a user switch invalidate a lookup that is still in flight. */
+export function dropJevConnectorForAuthChange(): void {
+  activeScope = null;
+  scopeGeneration += 1;
+  scopePhase = "off";
+  emitScope();
+}
+
+/** Test isolation. A later finish from the previous case does not land. */
+export function resetJevScopeMemory(): void {
+  activeScope = null;
+  notedAuthUser = undefined;
+  scopeGeneration += 1;
+  scopePhase = "off";
+  emitScope();
+}
+
 export function bindJevConnectorScope(scope: JevConnectorScope | null): void {
   activeScope = scope;
 }
@@ -231,7 +310,7 @@ export function writeJevConnectorFlag(on: boolean, scope: JevConnectorScope | nu
 
 /** Sign-out drops this user's flags and the old device-wide key. */
 export function clearJevConnectorFlag(userId: string | null): void {
-  bindJevConnectorScope(null);
+  dropJevConnectorForAuthChange();
   if (typeof localStorage === "undefined") return;
   try {
     const prefix = userId == null ? null : `${JEV_CONNECTOR_FLAG}:${userId}:`;
