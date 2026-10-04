@@ -285,6 +285,7 @@ jobs:
         env:
           SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_COMPANY_NAME: Flow Test
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_EMAIL:-}" ] || [ -z "${SMOKE_PASSWORD:-}" ]; then
@@ -306,11 +307,7 @@ jobs:
               echo
               echo 'Production is already live. Pages published this commit before this step, and this failure does not roll it back.'
               echo
-              echo 'What failed:'
-              echo
-              echo '```'
-              tail -n 100 "$log"
-              echo '```'
+              echo 'What failed: the read-only Playwright smoke. The step log has the Playwright output. This summary does not.'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
