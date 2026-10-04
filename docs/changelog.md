@@ -2,6 +2,8 @@
 
 ## 2026-10-04
 
+Deploy smoke. The homepage check retries 18 times with the same 10 second pause as `build.txt`, and each attempt uses its own `n`. List reads wait until the signed-in session has an access token, so `list_unpaid` does not leave before that session is attached. A pass that needed a retry still writes a warning in the job summary, and the Playwright log stays in the step log. No migration.
+
 Sheet close and migration-check follow-up. Two closes before popstate pop once. Closing clears the pushed entry, and the push effect does not write it back while the sheet is still open, so a reopen pops again. Tapping פרטי העסק before the SUMIT layer is on the entry pushes, and Back returns to Settings. A `BEGIN ATOMIC` body stays open across every statement inside it. `DROP INDEX CONCURRENTLY` is allowed outside a transaction, and `CREATE` or `DROP INDEX CONCURRENTLY` inside `begin`/`commit` is not. A commit inside a comment or a dollar-quoted string is ignored, and the reported line is the commit word. Nested dollar quotes inside a routine body stay backlog. The migration repair runbook lists versions first. A reverted mark does not undo SQL.
 
 Sheet history and migration checks. A second close after a sheet pop stays on Settings. The scrim check names the element it hit. `BEGIN ATOMIC` is not a transaction, a commit inside a DO block or a function is, and a new migration cannot create or drop an index outside the file transaction. The CI runbook records `supabase migration repair --status applied <version>` for a version that was applied and not recorded.

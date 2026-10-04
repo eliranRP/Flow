@@ -140,9 +140,25 @@ function responseAt(responses: Response[], index: number): Response {
   return response;
 }
 
+/** The stored session is present before list RPCs are accepted. */
+async function waitForStoredSession(page: Page): Promise<void> {
+  const key = storageKey(hosted.url);
+  await page.waitForFunction((storageKey) => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw == null) return false;
+      const session = JSON.parse(raw) as { access_token?: unknown };
+      return typeof session.access_token === "string" && session.access_token.length > 0;
+    } catch {
+      return false;
+    }
+  }, key);
+}
+
 async function openList(page: Page, path: string, rpcs: string[], inflight: () => number): Promise<Response[]> {
   const pending = rpcs.map((name) => waitRpc(page, name));
   await page.goto(path);
+  await waitForStoredSession(page);
   const responses = await Promise.all(pending);
   for (const response of responses) {
     expect(response.status(), response.url()).toBe(200);
