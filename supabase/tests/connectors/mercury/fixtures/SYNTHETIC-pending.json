@@ -1,0 +1,60 @@
+{
+  "transactions": [
+    {
+      "id": "5110df61-ce4b-59ba-8414-53a64e1ba0e0",
+      "feeId": null,
+      "amount": -87.32,
+      "createdAt": "2026-10-01T14:10:39.131359Z",
+      "postedAt": null,
+      "estimatedDeliveryDate": "2026-10-07T21:00:00Z",
+      "status": "pending",
+      "note": null,
+      "bankDescription": "Google Workspace_nromo",
+      "externalMemo": null,
+      "counterpartyId": "5384de53-0317-5647-a65b-d9bcbd9e9891",
+      "details": {
+        "creditCardInfo": {
+          "id": "1d57dee1-32ae-5ef7-b571-2c86fa8e4b43",
+          "email": "name@example.com",
+          "paymentMethod": "Credit Card ••0000"
+        }
+      },
+      "cardId": "1d57dee1-32ae-5ef7-b571-2c86fa8e4b43",
+      "reasonForFailure": null,
+      "failedAt": null,
+      "dashboardLink": "https://example.invalid/redacted",
+      "counterpartyName": "Google Workspace",
+      "counterpartyNickname": null,
+      "kind": "creditCardTransaction",
+      "currencyExchangeInfo": null,
+      "compliantWithReceiptPolicy": true,
+      "hasGeneratedReceipt": false,
+      "creditAccountPeriodId": "789fb51c-f82b-59f0-8439-dd59ed7afbfb",
+      "mercuryCategory": "Software",
+      "generalLedgerCodeName": null,
+      "glAllocations": [],
+      "attachments": [],
+      "relatedTransactions": [],
+      "categoryData": {
+        "id": "be2e6d9a-408a-5627-843d-28500574b899",
+        "name": "Software & Subscriptions",
+        "visibleForReimbursements": true,
+        "visibleForCardSpend": true,
+        "visibleForOther": true
+      },
+      "checkNumber": null,
+      "trackingNumber": null,
+      "requestId": null,
+      "accountId": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "merchant": {
+        "categoryCode": "4816",
+        "id": "m_7dbc3ae304375",
+        "category": "Software",
+        "amount": -8732,
+        "currency": "USD"
+      },
+      "_synthetic": "No pending line existed on 2026-10-04. Derived from a real sent creditCardTransaction."
+    }
+  ],
+  "page": {}
+}

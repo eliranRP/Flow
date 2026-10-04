@@ -131,6 +131,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e\n/);
+  assert.match(job("check"), /MERCURY_FIXTURE_DENYLIST: \$\{\{ secrets\.MERCURY_FIXTURE_DENYLIST \}\}/);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
   assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
   assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);

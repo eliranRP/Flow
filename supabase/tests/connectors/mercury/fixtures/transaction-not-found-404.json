@@ -1,0 +1,6 @@
+{
+  "status": 404,
+  "body": {
+    "_error": "{\"errors\":{\"notFound\":[\"We couldn’t find the data associated with your request. Please contact name@example.com\"]}}"
+  }
+}
