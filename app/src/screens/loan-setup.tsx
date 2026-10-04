@@ -191,6 +191,7 @@ export function LoanSetupForm({
         title="תאריך תשלום ראשון"
         value={startDate}
         allowFuture
+        shortcuts={false}
         disabled={busy}
         onApply={setStartDate}
       />

@@ -15,6 +15,11 @@ type DateSheetProps = {
   onApply: (iso: string) => void;
   /** Loan starts are often next month. The range sheet keeps future days off. */
   allowFuture?: boolean;
+  /**
+   * היום / אתמול. On by default so a normal date sheet keeps them.
+   * The loan start turns them off: the 1st of next month is already the shortcut.
+   */
+  shortcuts?: boolean;
   disabled?: boolean;
 };
 
@@ -26,6 +31,7 @@ export function DateSheet({
   value,
   onApply,
   allowFuture = false,
+  shortcuts = true,
   disabled = false,
 }: DateSheetProps) {
   const setOpen = useSheetHistory("loan-date", open, onOpenChange);
@@ -67,24 +73,26 @@ export function DateSheet({
         </Button>
       }
     >
-      <div className="flex flex-wrap gap-2">
-        <Chip
-          pressed={pending === today}
-          onClick={() => {
-            choose(today);
-          }}
-        >
-          היום
-        </Chip>
-        <Chip
-          pressed={pending === shiftDays(today, -1)}
-          onClick={() => {
-            choose(shiftDays(today, -1));
-          }}
-        >
-          אתמול
-        </Chip>
-      </div>
+      {shortcuts ? (
+        <div className="flex flex-wrap gap-2">
+          <Chip
+            pressed={pending === today}
+            onClick={() => {
+              choose(today);
+            }}
+          >
+            היום
+          </Chip>
+          <Chip
+            pressed={pending === shiftDays(today, -1)}
+            onClick={() => {
+              choose(shiftDays(today, -1));
+            }}
+          >
+            אתמול
+          </Chip>
+        </div>
+      ) : null}
       <div className="ui-band-row">
         <IconButton
           label="חודש קודם"
