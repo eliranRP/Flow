@@ -93,6 +93,30 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("$10,050,000.00")).toBeInTheDocument();
     expect(screen.getByText(/התשלום האחרון גבוה יותר/)).toBeInTheDocument();
   });
+
+  it("warns when a 600 month term ends at twice the payment", () => {
+    render(
+      <LoanSetupForm
+        companyCurrency="ILS"
+        advancedOpen
+        initial={{
+          name: "הלוואת דוגמה",
+          principal: "3606",
+          rate: "0",
+          term: "600",
+          startDate: "2026-11-01",
+          escrow: "0",
+          payment: "6",
+          currency: "ILS",
+        }}
+      />,
+    );
+    expect(screen.getByText("₪6.00")).toBeInTheDocument();
+    expect(screen.getByText("₪12.00")).toBeInTheDocument();
+    expect(screen.getByText(/התשלום האחרון כפול/)).toBeInTheDocument();
+    expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/תשלום אחרון מותאם/)).not.toBeInTheDocument();
+  });
 });
 
 describe("LoanSettingsSection", () => {
