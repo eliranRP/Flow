@@ -407,7 +407,12 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
   );
 }
 
+function ReservedMenuSlot() {
+  return <span className="ui-menu-slot" aria-hidden="true" />;
+}
+
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
+  const holdWrites = useHoldWrites();
   const [menu, setMenu] = useState(false);
   return (
     <div className="flex min-h-full flex-1 flex-col" aria-busy="true">
@@ -418,11 +423,11 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={
+        trailing={holdWrites ? <ReservedMenuSlot /> : (
           <IconButton label="עוד" onBand onClick={() => { setMenu(true); }}>
             <MoreIcon />
           </IconButton>
-        }
+        )}
       >
         <BandHero>
           <div className="ui-project-skel">
@@ -447,9 +452,11 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
       </div>
       <SectionHead title="הוצאות לפי קטגוריה" />
       <ListSkeleton />
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        <p className="t-hint">הפרויקט עדיין נטען.</p>
-      </Sheet>
+      {holdWrites ? null : (
+        <Sheet open={menu} onOpenChange={setMenu} title="עוד">
+          <p className="t-hint">הפרויקט עדיין נטען.</p>
+        </Sheet>
+      )}
     </div>
   );
 }
@@ -575,7 +582,7 @@ export function ProjectDetailScreen({
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={holdWrites ? undefined : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
+        trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>
           <FocusTitle className="t-title-2">{project.name}</FocusTitle>
@@ -593,7 +600,6 @@ export function ProjectDetailScreen({
           <BandFigures income={formatIls(income)} expense={formatIls(expenses)} />
         </BandHero>
       </TopBand>
-      <ViewerScope>
       <div className="ui-page-pad">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
@@ -616,9 +622,7 @@ export function ProjectDetailScreen({
             saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
           }}
         />
-        <ViewerNote className="t-hint ui-viewer-note" />
       </div>
-      </ViewerScope>
       {project.budget_agorot != null ? (
         <div className="ui-page-pad">
           <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
@@ -1177,7 +1181,6 @@ export function ReviewQueue({
   const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
   const blocked = useBlockedPreview();
-  const viewer = useIsViewer();
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const rows = useHeldOrder(incoming, (item) => item.id);
@@ -1393,7 +1396,7 @@ export function ReviewQueue({
             />
           ) : null}
           <span className="t-hint">
-            {viewer ? (
+            {holdWrites ? (
               <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
             ) : (
               <>
@@ -2468,7 +2471,7 @@ export function TransactionScreen({
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={holdWrites ? undefined : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
+        trailing={holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>

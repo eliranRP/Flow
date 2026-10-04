@@ -1,6 +1,6 @@
 # Control audit
 
-Every interactive control on a product screen, sheet, or shared chrome. Storybook fixtures are not product controls. A control that cannot work yet is disabled, with a not-allowed cursor and a reason. An enabled control must navigate, open something, change state, or call the API. Hide an action that cannot apply. Keep a stateful control disabled, with its label and hint readable and its state still visible. A settings row that would open a write is static.
+Every interactive control on a product screen, sheet, or shared chrome. Storybook fixtures are not product controls. A control that cannot work yet is disabled, with a not-allowed cursor and a reason. An enabled control must navigate, open something, change state, or call the API. Hide an action that cannot apply. Keep a stateful control disabled, with its label and hint readable and its state still visible. A disabled off track keeps a 3:1 edge. A settings row that would open a write is static.
 
 Preview mode does not write. A save there toasts "במצב תצוגה זה לא נשמר." and stays on the screen. That toast is the feedback, not a no-op.
 

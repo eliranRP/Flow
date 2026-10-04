@@ -1601,6 +1601,17 @@ a.ui-row,
   margin-block-start: var(--space-2);
 }
 
+.ui-viewer-note[aria-hidden="true"] {
+  visibility: hidden;
+}
+
+.ui-menu-slot {
+  display: block;
+  flex: none;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+}
+
 .ui-review-queue > .ui-viewer-note {
   margin-inline: var(--space-side);
 }
@@ -2540,10 +2551,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-switch-row input:disabled + .ui-switch {
   background: var(--color-disabled-bg);
+  box-shadow: inset 0 0 0 var(--stroke-strong) var(--color-control-border);
 }
 
 .ui-switch-row input:disabled:checked + .ui-switch {
-  background: var(--color-disabled-text);
+  background: color-mix(in srgb, var(--color-accent) 75%, var(--color-disabled-bg));
+  box-shadow: none;
 }
 
 .ui-switch-row input:disabled:checked + .ui-switch i {
