@@ -4,6 +4,7 @@ import {
   JEV_REVIEW_OFF,
   bindJevConnectorScope,
   clearJevConnectorFlag,
+  companyIdFromReviewPayload,
   fetchJevConnector,
   jevConnectorStorageKey,
   parseJevSuggestion,
@@ -198,6 +199,15 @@ describe("Jev review prefill", () => {
     const pending = withJevDeadline(undefined, () => new Promise<typeof JEV_REVIEW_OFF>(() => undefined), JEV_REVIEW_OFF);
     await vi.advanceTimersByTimeAsync(JEV_READ_MS);
     await expect(pending).resolves.toBe(JEV_REVIEW_OFF);
+  });
+
+  it("reads a company id from the review payload and ignores the old shared key", () => {
+    expect(companyIdFromReviewPayload([{ company_id: "company-1" }])).toBe("company-1");
+    expect(companyIdFromReviewPayload({ company_id: "company-1" })).toBe("company-1");
+    expect(companyIdFromReviewPayload([{ company_id: "" }, { id: "r1" }])).toBeNull();
+    localStorage.setItem("flow.jev-connector", "1");
+    expect(readJevConnectorFlag(scope)).toBeUndefined();
+    expect(localStorage.getItem("flow.jev-connector")).toBeNull();
   });
 
   it("remembers the connector flag for that user and company", () => {

@@ -27,6 +27,9 @@ import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import {
   JEV_CONNECTOR_STALE_MS,
+  bindJevConnectorScope,
+  companyIdFromReviewPayload,
+  dropLegacyJevConnectorKey,
   fetchJevConnector,
   jevConnectorQueryKey,
   jevQueueKey,
@@ -121,6 +124,11 @@ export function useFiledTodayQuery(active = true) {
   });
 }
 
+function companyIdFromRow(company: { data: { id?: unknown } | null; error: unknown }): string | null {
+  if (company.error != null || company.data == null || typeof company.data.id !== "string" || company.data.id === "") return null;
+  return company.data.id;
+}
+
 export function useReviewQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
@@ -129,13 +137,27 @@ export function useReviewQuery(active = true) {
     queryFn: async ({ client }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      const { data, error } = await supabase.rpc("list_review");
+      dropLegacyJevConnectorKey();
+      const listed = supabase.rpc("list_review");
+      const signedIn = typeof supabase.auth.getSession === "function"
+        ? supabase.auth.getSession().then(
+          ({ data }) => data.session?.user.id ?? null,
+          () => null,
+        )
+        : Promise.resolve(null);
+      const companyReady = typeof supabase.from === "function"
+        ? supabase.from("companies").select("id").limit(1).maybeSingle().then(companyIdFromRow, () => null)
+        : Promise.resolve(null);
+      const [{ data, error }, userId, sessionCompanyId] = await Promise.all([listed, signedIn, companyReady]);
       if (error) throw error;
+      const companyId = companyIdFromReviewPayload(data) ?? sessionCompanyId;
+      const bound = userId != null && userId !== "" && companyId != null ? { userId, companyId } : null;
+      if (bound) bindJevConnectorScope(bound);
       const rows = reviewRowSchema.array().parse(data);
       const ids = rows.map((row) => row.transaction_id);
       if (jevQueueKey(ids) !== "" && typeof supabase.from === "function") {
         void client.query({
-          queryKey: jevConnectorQueryKey(),
+          queryKey: jevConnectorQueryKey(bound),
           retry: false,
           staleTime: JEV_CONNECTOR_STALE_MS,
           queryFn: ({ signal }) => fetchJevConnector(signal),

@@ -52,7 +52,7 @@ function companyIdFrom(data: unknown): string | null {
   return typeof id === "string" && id !== "" ? id : null;
 }
 
-/** Session plus a cached dashboard, or a scope bound by the caller. The read does not subscribe. */
+/** Session plus a cached dashboard, or the scope the review list bound before this card. The read does not subscribe. */
 function useJevConnectorScope(): JevConnectorScope | null {
   const { session } = useAuth();
   const books = useOptionalBooks();

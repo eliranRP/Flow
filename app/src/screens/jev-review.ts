@@ -181,7 +181,34 @@ export function boundJevConnectorScope(): JevConnectorScope | null {
   return activeScope;
 }
 
+/** The pre-scope device-wide key. It is deleted and never read as the flag. */
+export function dropLegacyJevConnectorKey(): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(JEV_CONNECTOR_FLAG);
+  } catch {
+    // A private window can refuse the delete. The scoped key is the only flag.
+  }
+}
+
+function companyIdFrom(data: unknown): string | null {
+  if (data == null || typeof data !== "object" || !("company_id" in data)) return null;
+  const id = data.company_id;
+  return typeof id === "string" && id !== "" ? id : null;
+}
+
+/** `list_review` omits this today. A payload that includes it is the company. */
+export function companyIdFromReviewPayload(data: unknown): string | null {
+  if (!Array.isArray(data)) return companyIdFrom(data);
+  for (const row of data) {
+    const id = companyIdFrom(row);
+    if (id) return id;
+  }
+  return null;
+}
+
 export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefined {
+  dropLegacyJevConnectorKey();
   if (typeof localStorage === "undefined") return undefined;
   try {
     const raw = localStorage.getItem(jevConnectorStorageKey(scope));
