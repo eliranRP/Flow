@@ -6,7 +6,7 @@ import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
 
 type Common = {
-  title: string;
+  title: ReactNode;
   /** Muted line above the title. Project and category rows use it. */
   eyebrow?: string;
   hint?: ReactNode;
@@ -127,7 +127,7 @@ export function ListRow(props: ListRowProps) {
       <div
         className={cx("ui-row", toneClass, props.className)}
         role={described ? "group" : undefined}
-        aria-label={described ? props.title : undefined}
+        aria-label={described ? rowName(props) : undefined}
         aria-describedby={described}
         aria-busy={props.busy === true || undefined}
       >
@@ -145,7 +145,7 @@ export function ListRow(props: ListRowProps) {
         aria-disabled={softDisabled || undefined}
         aria-busy={props.busy === true}
         aria-expanded={props.expanded}
-        aria-label={described ? (props.label ?? props.title) : props.label}
+        aria-label={described ? rowName(props) : props.label}
         aria-describedby={described}
         onClick={() => {
           if (props.disabled === true || props.ariaDisabled === true) return;
@@ -164,7 +164,7 @@ export function ListRow(props: ListRowProps) {
         className="ui-row ui-hit ui-row-danger"
         disabled={props.disabled === true || props.busy === true}
         aria-busy={props.busy === true}
-        aria-label={described ? props.title : undefined}
+        aria-label={described ? rowName(props) : undefined}
         aria-describedby={described}
         onClick={props.onClick}
       >
@@ -186,17 +186,22 @@ export function ListRow(props: ListRowProps) {
       to={props.href}
       state={props.state}
       className={className}
-      aria-label={described ? (props.label ?? props.title) : props.label}
+      aria-label={described ? rowName(props) : props.label}
       aria-describedby={described}
     >
       {body}
     </Link>
   ) : (
-    <div className={className} role={described ? "group" : undefined} aria-label={described ? props.title : undefined} aria-describedby={described}>
+    <div className={className} role={described ? "group" : undefined} aria-label={described ? rowName(props) : undefined} aria-describedby={described}>
       {body}
     </div>
   );
   return withAction(props, row);
+}
+
+function rowName(props: { label?: string; title: ReactNode }): string | undefined {
+  if (props.label) return props.label;
+  return typeof props.title === "string" ? props.title : undefined;
 }
 
 function titleText(props: Common): ReactNode {

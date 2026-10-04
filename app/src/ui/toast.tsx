@@ -7,7 +7,8 @@ type ToastInput = {
   action?: string;
   onAction?: () => void;
   /** Sit under the page header even while a sheet is open. A card-line pick closes that sheet. */
-  place?: "page";
+  /** `tab` sits above the Home tab bar. A confirmation does not move it under the band. */
+  place?: "page" | "tab";
 };
 
 type ToastItem = ToastInput & { id: number };
@@ -91,7 +92,7 @@ export function toastMinBlock(): number {
 
 /** The open sheet, or the page header, and the spacing tokens that sit the toast under it. A page toast ignores the sheet. */
 export function toastAnchor(layer?: HTMLElement | null): { sheet: Element | null; anchor: Element | null; gap: number; inset: number } {
-  const page = layer?.dataset.place === "page";
+  const page = layer?.dataset.place === "page" || layer?.dataset.place === "tab";
   const sheet = page ? null : document.querySelector("[data-vaul-drawer][data-state='open']");
   const anchor = sheet?.querySelector(".ui-sheet-hint, .ui-sheet-head")
     ?? document.querySelector("header.ui-page, header.ui-band");
@@ -260,6 +261,16 @@ export function placeToast(layer: HTMLElement): void {
     toast.style.overflow = "";
   }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
+  if (layer.dataset.place === "tab") {
+    const gap = cssPx("--space-2");
+    const safe = safeTopPx();
+    const bar = tabBarObstacle();
+    const top = bar && height > 0
+      ? Math.max(safe, bar.top - gap - height)
+      : Math.max(safe, window.innerHeight - gap - height);
+    layer.style.top = `${String(top)}px`;
+    return;
+  }
   const { sheet, anchor, gap, inset } = toastAnchor(layer);
   const safe = safeTopPx();
   const ignoreDrawers = layer.dataset.place === "page";
@@ -391,14 +402,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       acting.current = false;
       seq.current += 1;
       clearTimer();
-      const confirmation = input.tone == null || input.tone === "ok";
+      const confirmation = (input.tone == null || input.tone === "ok") && input.place !== "tab";
       const next = confirmation ? { ...input, place: "page" as const } : input;
       remaining.current = toastMs(next);
       const current = phaseRef.current;
       revealNow.current = current === "pad" || current === "fade" || current === "in";
       if (!revealNow.current) setPhase("measure");
       if (host.current) {
-        if (next.place === "page") host.current.dataset.place = "page";
+        if (next.place === "page" || next.place === "tab") host.current.dataset.place = next.place;
         else delete host.current.dataset.place;
       }
       const id = seq.current;
@@ -472,7 +483,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
     padToken.current += 1;
     const layer = node;
-    if (toast.place === "page") layer.dataset.place = "page";
+    if (toast.place === "page" || toast.place === "tab") layer.dataset.place = toast.place;
     else delete layer.dataset.place;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let generation = 0;
