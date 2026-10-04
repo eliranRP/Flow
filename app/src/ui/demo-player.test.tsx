@@ -36,7 +36,7 @@ function stubReducedMotion(matches: boolean) {
 describe("demo clock", () => {
   it("rests on the last frame for reduced motion and for a finished play", () => {
     expect(DEMO_DURATION_MIN_MS).toBe(3000);
-    expect(DEMO_DURATION_MAX_MS).toBe(5000);
+    expect(DEMO_DURATION_MAX_MS).toBe(4600);
     expect(demoProgress(0, 4000, true)).toBe(1);
     expect(demoProgress(0, 4000, false)).toBe(0);
     expect(demoProgress(2000, 4000, false)).toBe(0.5);
@@ -60,6 +60,7 @@ describe("DemoPlayer", () => {
     vi.restoreAllMocks();
     document.documentElement.dir = "rtl";
     document.documentElement.lang = "he";
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
   });
 
   it("plays once, rests on the last frame, and replays from שוב", () => {
@@ -119,9 +120,10 @@ describe("DemoPlayer", () => {
     });
     expect(root).toHaveAttribute("data-demo-state", "settled");
     expect(progressOf(root)).toBe(1);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "הצגה חוזרת" }));
   });
 
-  it("shows the last frame immediately when motion is reduced, including after שוב", () => {
+  it("shows the last frame immediately when motion is reduced, with no שוב", () => {
     stubReducedMotion(true);
     const seen: number[] = [];
     function Probe() {
@@ -141,12 +143,70 @@ describe("DemoPlayer", () => {
     expect(progressOf(root)).toBe(1);
     expect(seen.every((value) => value === 1)).toBe(true);
     expect(screen.getByText("הדגמה: לתנועה נוספת הצעה של פרויקט וקטגוריה, מסומנת הצעה.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הצגה חוזרת" })).not.toBeInTheDocument();
     expect(frames).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "הצגה חוזרת" }));
+  it("waits until the stage is on screen, and pauses while the tab is hidden", () => {
+    vi.useFakeTimers();
+    const observers: FakeObserver[] = [];
+    class FakeObserver {
+      private readonly callback: IntersectionObserverCallback;
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback;
+        observers.push(this);
+      }
+      observe(target: Element) {
+        this.callback([{ isIntersecting: false, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+      }
+      disconnect() {}
+      unobserve() {}
+      takeRecords() {
+        return [];
+      }
+      fire(visible: boolean) {
+        const target = document.querySelector(".ui-demo");
+        if (!target) return;
+        this.callback([{ isIntersecting: visible, target } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
+      }
+    }
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    render(
+      <DemoPlayer alt="הדגמה" durationMs={4000}>
+        <span>שלום</span>
+      </DemoPlayer>,
+    );
+    const root = demoRoot();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(progressOf(root)).toBe(0);
+    expect(root).toHaveAttribute("data-demo-state", "playing");
+
+    act(() => {
+      observers[0]?.fire(true);
+      vi.advanceTimersByTime(2000);
+    });
+    const midway = progressOf(root);
+    expect(midway).toBeGreaterThan(0);
+    expect(midway).toBeLessThan(1);
+
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    const paused = progressOf(root);
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(progressOf(root)).toBe(paused);
+    expect(root).toHaveAttribute("data-demo-state", "playing");
+
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    document.dispatchEvent(new Event("visibilitychange"));
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
     expect(root).toHaveAttribute("data-demo-state", "settled");
     expect(progressOf(root)).toBe(1);
-    expect(frames).not.toHaveBeenCalled();
   });
 
   it("sets the inline sign from direction", () => {
@@ -175,7 +235,7 @@ describe("DemoPlayer", () => {
   it("moves only with transform and opacity, signed for RTL", () => {
     expect(css).toContain("translateX(calc(var(--inline-sign) * (var(--demo-progress) - 1) * var(--demo-travel, 24px)))");
     expect(css).toContain("opacity: var(--demo-progress)");
-    expect(css).toContain("clamp(220px, calc(220px + (100vw - 320px) * 100 / 70), 320px)");
+    expect(css).toContain("clamp(200px, calc(200px + (100vw - 320px) * 120 / 70), 320px)");
     expect(css).toContain("clamp(150px, calc(150px + (100vw - 320px) * 46 / 70), 196px)");
     expect(css).toContain("var(--demo-phone) / 320px");
     expect(css).not.toMatch(/@keyframes/);
