@@ -13,6 +13,8 @@ type MoneyFieldProps = {
   prefix?: string;
   /** A leading minus stays, so the form can show an error instead of dropping it. */
   keepMinus?: boolean;
+  /** Keeps the message line when there is no error, so the form does not jump. */
+  reserveMessage?: boolean;
   onBlur?: () => void;
   onFocus?: () => void;
 };
@@ -49,6 +51,7 @@ export function MoneyField({
   disabled = false,
   prefix = "₪",
   keepMinus = false,
+  reserveMessage = false,
   onBlur,
   onFocus,
 }: MoneyFieldProps) {
@@ -94,9 +97,9 @@ export function MoneyField({
           }}
         />
       </div>
-      {error ? (
-        <span id={errorId} className="ui-field-message">
-          {error}
+      {error || reserveMessage ? (
+        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
+          {error ?? ""}
         </span>
       ) : null}
     </div>
@@ -120,6 +123,9 @@ type PercentFieldProps = {
   decimals?: number;
   /** A leading minus stays, so the form can show an error instead of dropping it. */
   keepMinus?: boolean;
+  /** Keeps the message line when there is no error, so the form does not jump. */
+  reserveMessage?: boolean;
+  onBlur?: () => void;
 };
 
 /** "33.3" stays "33.3" at one decimal. Extra digits are dropped. */
@@ -145,6 +151,8 @@ export function PercentField({
   enterKeyHint = "next",
   decimals = 1,
   keepMinus = false,
+  reserveMessage = false,
+  onBlur,
 }: PercentFieldProps) {
   const generated = useId();
   const fieldId = id ?? flowControlName("split-pct", generated);
@@ -183,14 +191,15 @@ export function PercentField({
           onFocus={(event) => {
             event.currentTarget.select();
           }}
+          onBlur={onBlur}
           onChange={(event) => {
             onValueChange(percentDigits(event.target.value, decimals, keepMinus));
           }}
         />
       </div>
-      {error ? (
-        <span id={errorId} className="ui-field-message">
-          {error}
+      {error || reserveMessage ? (
+        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
+          {error ?? ""}
         </span>
       ) : null}
     </div>

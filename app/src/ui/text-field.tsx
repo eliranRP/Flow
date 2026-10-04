@@ -6,6 +6,8 @@ import { holdFieldPointer } from "./field-pointer";
 type TextFieldProps = {
   label: string;
   error?: string;
+  /** Keeps the message line when there is no error, so the form does not jump. */
+  reserveMessage?: boolean;
   /** Digits sit on the same edge as an amount. */
   numeric?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
@@ -13,6 +15,7 @@ type TextFieldProps = {
 export function TextField({
   label,
   error,
+  reserveMessage = false,
   id,
   name,
   autoComplete,
@@ -48,9 +51,9 @@ export function TextField({
           onPointerDown?.(event);
         }}
       />
-      {error ? (
-        <span id={errorId} className="ui-field-message">
-          {error}
+      {error || reserveMessage ? (
+        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
+          {error ?? ""}
         </span>
       ) : null}
     </div>

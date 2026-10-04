@@ -694,6 +694,10 @@ a.ui-row,
   line-height: var(--type-hint-line);
 }
 
+.ui-field-message-slot {
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
 .ui-money-field {
   position: relative;
   display: flex;
