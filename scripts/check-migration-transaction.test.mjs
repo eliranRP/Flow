@@ -39,7 +39,30 @@ test("a mid-file commit is rejected, and one begin plus a final commit is not", 
   ]);
   assert.deepEqual(
     explicitTransactionProblems("do $$\nbegin\n  commit;\nend;\n$$;\n", "doblock.sql"),
-    ["doblock.sql:2 has a transaction statement inside a DO or function body (commit)"],
+    ["doblock.sql:3 has a transaction statement inside a DO or function body (commit)"],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems(
+      "create function f() returns int language sql begin atomic select 1; select 2; end;\n",
+      "atomic-multi.sql",
+    ),
+    [],
+  );
+  assert.deepEqual(explicitTransactionProblems("begin atomic\nselect 1;\nselect 2;\nend;\n", "atomic-block.sql"), []);
+  assert.deepEqual(explicitTransactionProblems("select $$ commit $$;\n", "dollar.sql"), []);
+  assert.deepEqual(explicitTransactionProblems("select $tag$ commit $tag$;\n", "tag.sql"), []);
+  assert.deepEqual(
+    explicitTransactionProblems("do $$\nbegin\n  -- commit;\n  perform $$commit$$;\nend;\n$$;\n", "skipped.sql"),
+    [],
+  );
+  assert.deepEqual(explicitTransactionProblems("drop index concurrently ix;\n", "dropc.sql"), []);
+  assert.deepEqual(
+    explicitTransactionProblems("begin;\ncreate index concurrently ix on public.t (id);\ncommit;\n", "cin.sql"),
+    ["cin.sql:2 creates or drops an index concurrently inside a transaction"],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems("begin;\ndrop index concurrently ix;\ncommit;\n", "din.sql"),
+    ["din.sql:2 creates or drops an index concurrently inside a transaction"],
   );
   assert.deepEqual(
     explicitTransactionProblems("create index ix on public.t (id);\n", "idx.sql"),
