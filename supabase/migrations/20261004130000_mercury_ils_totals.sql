@@ -26,7 +26,7 @@ begin
   if coalesce(auth.role(), '') is distinct from 'service_role'
     and not exists (
       select 1 from public.companies
-      where id = p_company_id and owner_id = (select auth.uid())
+      where id = p_company_id and id = (select private.readable_company_id())
     )
   then
     raise exception 'forbidden';
