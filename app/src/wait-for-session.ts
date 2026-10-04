@@ -6,11 +6,13 @@ type SessionClient = {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_INTERVAL_MS = 50;
+/** A real getSession answers well inside this. A hung read must not hold the list past it. */
+const DEFAULT_UNANSWERED_MS = 2_000;
 
 /**
  * List reads wait until the client has an access token.
  * A test double with no getSession does not wait.
- * A getSession that does not answer within one interval does not hold the read.
+ * A getSession that does not answer within two seconds does not hold the read.
  * A session that answers without a token is polled until the deadline.
  * The clock is injectable so a missed session fails without a real delay.
  */
@@ -19,6 +21,7 @@ export async function waitForAccessToken(
   options?: {
     timeoutMs?: number;
     intervalMs?: number;
+    unansweredMs?: number;
     sleep?: (ms: number) => Promise<void>;
     now?: () => number;
   },
@@ -27,6 +30,7 @@ export async function waitForAccessToken(
   if (auth == null || typeof auth.getSession !== "function") return;
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const intervalMs = options?.intervalMs ?? DEFAULT_INTERVAL_MS;
+  const unansweredMs = options?.unansweredMs ?? DEFAULT_UNANSWERED_MS;
   const sleep = options?.sleep ?? ((ms: number) => new Promise((resolve) => {
     setTimeout(resolve, ms);
   }));
@@ -34,7 +38,7 @@ export async function waitForAccessToken(
   const deadline = now() + timeoutMs;
   let waiting = true;
   while (waiting) {
-    const value = await sessionAnswer(auth.getSession, intervalMs);
+    const value = await sessionAnswer(auth.getSession, unansweredMs);
     if (value == null) return;
     const token = value.data?.session?.access_token;
     if (typeof token === "string" && token.length > 0) return;

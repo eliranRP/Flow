@@ -58,7 +58,7 @@ describe("waitForAccessToken", () => {
     };
     await waitForAccessToken(client, {
       timeoutMs: 10_000,
-      intervalMs: 20,
+      unansweredMs: 20,
       sleep: () => Promise.reject(new Error("polled")),
     });
     expect(calls).toEqual([1]);
