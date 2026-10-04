@@ -3,13 +3,13 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { placeToast, safeTopPx, toastMinBlock, ToastProvider, useToast } from "./toast";
 
-function Probe({ tone, message = "הפריט אושר" }: { tone?: "ok" | "bad" | "info"; message?: string }) {
+function Probe({ tone, message = "הפריט אושר", place }: { tone?: "ok" | "bad" | "info"; message?: string; place?: "page" | "tab" }) {
   const toast = useToast();
   return (
     <button
       type="button"
       onClick={() => {
-        toast.show({ message, tone });
+        toast.show({ message, tone, place });
       }}
     >
       הצגה
@@ -314,6 +314,26 @@ describe("placeToast", () => {
       toJSON: () => ({}),
     };
   }
+
+  it("sits a confirmation above the tab bar when Home asks for that place", () => {
+    const bar = document.createElement("nav");
+    bar.className = "ui-tabbar";
+    const host = document.createElement("div");
+    host.dataset.place = "tab";
+    const toast = document.createElement("div");
+    toast.className = "ui-toast";
+    host.appendChild(toast);
+    document.body.append(bar, host);
+    document.documentElement.style.setProperty("--space-2", "8px");
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+    bar.getBoundingClientRect = () => box(700, 56);
+    toast.getBoundingClientRect = () => box(48, 48);
+    placeToast(host);
+    expect(host.style.top).toBe("588px");
+    bar.remove();
+    host.remove();
+    document.documentElement.style.removeProperty("--space-2");
+  });
 
   it("sits above an open sheet, and at the screen top when that does not fit", () => {
     const sheet = document.createElement("div");

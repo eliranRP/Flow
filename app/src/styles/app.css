@@ -9,6 +9,7 @@
 @import "@fontsource/rubik/latin-700.css";
 @import "../../../design/system/implementation-tokens.css";
 @import "../ui/ui.css";
+@import "../setup/setup.css";
 
 /*
   Tailwind must not redeclare the implementation tokens under the same names

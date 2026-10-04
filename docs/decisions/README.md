@@ -109,3 +109,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0086](0086-mercury.md) | 2026-10-03 | Accepted | Mercury is a pasted read-only token. GET only. Pending is tagged and excluded from totals. No VAT, no dedup |
 | [0087](0087-multi-currency.md) | 2026-10-03 | Accepted | Display currency is ₪ or $ per company. A dollar line stays USD. Conversion is at display time, from fx_rates |
 | [0088](0088-loans.md) | 2026-10-04 | Accepted | A loan is set up once. Each payment splits into interest, escrow, and principal. The currency stays on the loan |
+| [0089](0089-setup-runner.md) | 2026-10-04 | Accepted | First-run setup is five counted steps plus an uncounted company step. Done is derived. Skips live in localStorage for v1 |
