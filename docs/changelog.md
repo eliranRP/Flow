@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-04
+
+Smoke company. The live check reads the demo company Flow Test, which holds the production SUMIT connection. `SMOKE_COMPANY_NAME` overrides that name. The match is exact. Provisioning is in [the smoke-user runbook](runbooks/smoke-user.md).
+
 ## 2026-10-03
 
 Company insert. `authenticated` cannot insert `public.companies`. `create_company` stays the only path, and it still rejects a viewer. A direct insert is what the viewer test refuses. The viewer can still read the demo `audit_log`. The live smoke still names Flow Test 2 and the production host. Both stay backlog.
