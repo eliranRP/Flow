@@ -1,0 +1,166 @@
+{
+  "categories": [
+    {
+      "id": "94b75002-cd43-45b8-82de-6d8bb587c89c",
+      "name": "Revenue",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "6a631c99-7bf5-4e1c-a398-f0ab442e9907",
+      "name": "Shipping & Postage",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "51985190-8e6a-470c-9d0e-89c113f3e9fd",
+      "name": "Interest Earned",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "c7f30c94-9370-4720-96b0-e154c6dc5512",
+      "name": "COGS",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "654eeb81-2088-43fc-9142-f1f174e242b8",
+      "name": "Financing Proceeds",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "493c0eac-a5bd-4663-9ad4-0eb3edf86e98",
+      "name": "Legal & Professional Services",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "47772ad4-0a08-4015-9e0b-c2090241c99b",
+      "name": "Software & Subscriptions",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "f3ea5753-6f01-4f81-b6fd-32692483d822",
+      "name": "Rent & Utilities",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "a01810de-f0a0-4815-b1fd-530a57cd559f",
+      "name": "Bank Fees",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "0db853d6-2c95-480a-b809-cd1fb05f4180",
+      "name": "Credit & Loan Payments",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "86abb5b2-440e-49b4-bfa1-ab67aa927413",
+      "name": "Business Meals",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "ad1b8c6b-8aa9-4e36-b54d-96447e43e387",
+      "name": "Entertainment",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "2d5ac976-c7bc-4114-a1bb-32ef6898639f",
+      "name": "Office Supplies & Equipment",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "f0716b16-1daa-48c2-8f6d-da6f0f987b72",
+      "name": "Travel & Transportation",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "da519490-f42b-4bb8-85a0-4ab555ddcee8",
+      "name": "Employee Benefits",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "f9f7bee7-43a7-4818-b6d0-02bbd7bfe6f1",
+      "name": "Marketing & Advertising",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "0300c27c-c81e-4de0-9dab-263180db5e99",
+      "name": "Transfer",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "63922677-df43-4abc-bd50-660a5e378a39",
+      "name": "Insurance",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "c4e14589-7f8f-4061-9aac-b9bc693c84da",
+      "name": "Inventory & Materials",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "a95adee0-e893-4aac-86ec-49143e685bc9",
+      "name": "Payment Processing Fees",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "631689ea-c65e-4f50-876e-68840f1eb7c8",
+      "name": "Payroll",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "91c58734-c98f-4dbf-b137-eeef7279b212",
+      "name": "Taxes",
+      "visibleForReimbursements": true,
+      "visibleForCardSpend": true,
+      "visibleForOther": true
+    },
+    {
+      "id": "e9bd6ebf-7118-40fa-8ddc-03d597419112",
+      "name": "Other Costs",
+      "visibleForReimbursements": false,
+      "visibleForCardSpend": true,
+      "visibleForOther": false
+    }
+  ],
+  "page": {}
+}

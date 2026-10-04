@@ -29,7 +29,7 @@ A provider module implements `ConnectorPort`. The core calls the registry. It do
 
 | Field | Who fills it |
 | --- | --- |
-| `ownAccountIds` | Ids from this company's connected accounts, including `GET /credit`. Mercury uses this set to skip a transfer between connected accounts |
+| `ownAccountIds` | Ids from this company's connected accounts, including `GET /credit` and `GET /treasury`. Mercury uses this set to skip a transfer between connected accounts |
 | `ownCounterpartyIds` | Owner-set counterparty ids of the owner's own external accounts. Not account numbers. A transfer whose counterparty is in this set is imported, not skipped |
 | `vatRateBp` | The company's VAT rate in basis points. SUMIT's `deriveLine` uses it. Mercury ignores it |
 | `exemptSupplierNames` | Supplier names that are VAT-exempt. This is the match the ledger uses today (`suppliers.vat_exempt` by name) |
@@ -139,6 +139,7 @@ Allowlist, GET only (`MERCURY_GET_ALLOWLIST`). `assertMercuryGet(method, path)` 
 | --- | --- |
 | `/accounts` | Checking and savings. Response `{ accounts, page }`. `kind` is checking or savings. `name` is the label |
 | `/credit` | Card accounts. Type `MercuryCreditResponse` in `credit.ts`: `{ accounts: [{ id, status? }] }`. Ids only |
+| `/treasury` | Treasury accounts. Response `{ accounts, page }`. Ids only. A failed or unreadable GET rejects `validate`, so the sync does not start. An empty `accounts` array means there is no treasury account |
 | `/transactions` | The listing. Query `limit`, `order`, `start_after`. Response `page.nextPage`. Includes card lines |
 | `/transaction/{transactionId}` | One line. Also the re-check for a pending line missing from the lookback |
 
@@ -146,7 +147,7 @@ Do not list `/account/{id}/transactions`. That payload is `{ total, transactions
 
 `/accounts` and the routing objects in the generated types carry account and routing numbers. Do not store them.
 
-Own-account transfers hide in `kind: "other"`. Card autopay is a minus leg on checking and a plus leg on the card (`IO AUTOPAY` / `IO PAYMENT`). Skip when `counterpartyId` is in `ctx.ownAccountIds`, or when `kind` is `internalTransfer` or `treasuryTransfer` and the counterparty is in that set. Record the skip. A transfer whose counterparty is outside `ownAccountIds` is the `העברות` line above, including when the id is in `ownCounterpartyIds`. Any other line is imported, including income. There is no direction switch.
+Own-account transfers hide in `kind: "other"`. Card autopay is a minus leg on checking and a plus leg on the card (`IO AUTOPAY` / `IO PAYMENT`). `ownAccountIds` includes the treasury account ids from `GET /treasury`. Skip when `counterpartyId` is in `ctx.ownAccountIds`, or when `kind` is `internalTransfer` or `treasuryTransfer` and the counterparty is in that set. Record the skip. A transfer whose counterparty is outside `ownAccountIds` is the `העברות` line above, including when the id is in `ownCounterpartyIds`. Any other line is imported, including income. There is no direction switch. If `GET /treasury` fails, validation is refused and the sync does not start, so a liquidation is not imported as income and a deposit into Treasury is not imported as an expense.
 
 Mercury `doc_kind` is not left unset. An inflow is `direction: income` and `doc_kind: receipt`. An outflow is `direction: expense` and `doc_kind: expense`. A refund or reversal is `direction: expense` and `doc_kind: credit`. Bank lines are cash basis. On the cash basis, a Mercury receipt already counts as income. On the invoiced basis, `company_pnl` also counts a Mercury receipt as income. There is no check that the receipt matches a SUMIT invoice, so a Mercury receipt and the SUMIT invoice it pays can both count. That missing match is a known limitation. They count as income.
 
@@ -156,7 +157,7 @@ Other kinds seen or documented: `creditCardTransaction`, `outgoingPayment`, `che
 
 ## Redaction
 
-`provider_meta` is stored on `transactions.provider_meta jsonb not null default '{}'`. The only key is `kind` (text or null, at most 64 characters). The strict schema rejects `accountNumber`, `routingNumber`, `details`, `dashboardLink`, `note`, `externalMemo`, attachment URLs, and emails.
+`provider_meta` is stored on `transactions.provider_meta jsonb not null default '{}'`. The keys are `kind` and `providerCategory` (each text or null, at most 64 characters). A kind-only object stays `{kind}`. An empty object stays `{}`. The strict schema rejects `accountNumber`, `routingNumber`, `details`, `dashboardLink`, `note`, `externalMemo`, attachment URLs, and emails.
 
 `redactMercury` drops those keys at any depth and replaces a digit run of 4 or more in free text with `****`. The engine runs it on `description`, `counterparty.name`, and `kind` before insert. A log calls `redact` before printing a provider payload. A log line does not contain a token, ciphertext, a nonce, an account number, or a routing number.
 
