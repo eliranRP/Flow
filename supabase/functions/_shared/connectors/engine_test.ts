@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import { CONNECTOR_RECHECK_LIMIT, planConnectorSync, type ConfirmResult, type StoredLine } from "./engine.ts";
+import { treasuryVoidIds } from "./mercury/normalize.ts";
 import type {
   AccountLabel,
   CanonicalLine,
@@ -339,4 +340,110 @@ Deno.test("a rate-limited recheck keeps the line and does not fail the run", asy
   if (!plan.ok) return;
   assertEquals(plan.removedIds, []);
   assertEquals(plan.rechecked, []);
+});
+
+Deno.test("a refetched yield and its stored copy still void on a cancel", async () => {
+  const interest = {
+    id: "11111111-1111-4111-8111-111111111111",
+    accountId: "treasury",
+    type: "interestPosted",
+    amount: 12.34,
+    canonicalDay: "2026-09-30",
+  };
+  const cancel = {
+    id: "99999999-9999-4999-8999-999999999999",
+    accountId: "treasury",
+    type: "interestCanceled",
+    amount: -12.34,
+    canonicalDay: "2026-09-30",
+  };
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [interest, cancel],
+      removedIds: [],
+      nextCursor: NOW.toISOString(),
+      complete: true,
+      windowStart: "2026-09-04",
+    },
+  });
+  const storedYield = {
+    externalId: interest.id,
+    kind: "interestPosted",
+    amountCents: 1234,
+    accountId: "treasury",
+    docDate: "2026-09-30",
+  };
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [{
+      externalId: interest.id,
+      lineStatus: "posted",
+      docDate: "2026-09-30",
+      missingSince: null,
+    }],
+    now: () => NOW,
+    resolveRemovedIds: (raw) => treasuryVoidIds(raw, [storedYield]),
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(plan.removedIds.includes(interest.id), true);
+});
+
+Deno.test("a cancel that arrives in a later sync still voids the stored yield", async () => {
+  const interestId = "11111111-1111-4111-8111-111111111111";
+  const cancel = {
+    id: "99999999-9999-4999-8999-999999999998",
+    accountId: "treasury",
+    type: "interestCanceled",
+    amount: -12.34,
+    canonicalDay: "2026-09-30",
+  };
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [cancel],
+      removedIds: [],
+      nextCursor: NOW.toISOString(),
+      complete: true,
+      windowStart: "2026-09-04",
+    },
+  });
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [{
+      externalId: interestId,
+      lineStatus: "posted",
+      docDate: "2026-09-30",
+      missingSince: null,
+    }],
+    now: () => NOW,
+    resolveRemovedIds: (raw) => treasuryVoidIds(raw, [{
+      externalId: interestId,
+      kind: "interestPosted",
+      amountCents: 1234,
+      accountId: "treasury",
+      docDate: "2026-09-30",
+    }]),
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(plan.removedIds.includes(interestId), true);
+  assertEquals(plan.removedIds.filter((id) => id === interestId).length, 1);
 });

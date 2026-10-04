@@ -11,6 +11,7 @@ import { MERCURY_PAGE_CAP, MERCURY_POSTED_LOOKBACK_DAYS } from "../../../functio
 import { jerusalemDate } from "../../../functions/_shared/connectors/mercury/dates.ts";
 import {
   MercuryPageCapError,
+  MercuryRequestError,
   classifyMercuryError,
   decodeMercuryCursor,
   encodeMercuryResume,
@@ -256,7 +257,7 @@ Deno.test("an empty treasury list is a successful validation", async () => {
   assertEquals(result.accounts.length, accountsFile.accounts.length + creditFile.accounts.length);
 });
 
-Deno.test("401 from treasury refuses validation, and 403 or 404 skips treasury", async () => {
+Deno.test("401, 403, and 404 from treasury refuse validation", async () => {
   const { fetchImpl } = transport((url) => {
     if (url.pathname.endsWith("/treasury")) return jsonResponse({ error: "no" }, 401);
     if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
@@ -272,21 +273,39 @@ Deno.test("401 from treasury refuses validation, and 403 or 404 skips treasury",
   assertEquals(refused.class, "auth");
   assertEquals(refused.code, "auth");
 
-  for (const status of [403, 404]) {
-    const skipped = transport((url) => {
+  for (const status of [403, 404] as const) {
+    const refusedTreasury = transport((url) => {
       if (url.pathname.endsWith("/treasury")) return jsonResponse({ error: "no" }, status);
       if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
       if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
+      if (url.pathname.endsWith("/transactions")) {
+        return jsonResponse({
+          transactions: [{
+            id: "liquidation-1",
+            kind: "other",
+            status: "sent",
+            amount: 25000,
+            createdAt: "2026-10-01T12:00:00.000Z",
+            postedAt: "2026-10-01T12:00:00.000Z",
+            bankDescription: "Liquidation of Treasury assets",
+          }],
+          page: {},
+        });
+      }
       return jsonResponse({ accounts: [], page: {} });
     });
-    const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, {
-      fetch: skipped.fetchImpl,
+    const session = openMercury(`test-${crypto.randomUUID()}`, {
+      fetch: refusedTreasury.fetchImpl,
       now: () => NOW,
-    }));
-    assertEquals(result.ok, true);
-    if (!result.ok) return;
-    assertEquals(result.accounts.some((account) => account.label === "Mercury Treasury"), false);
-    assertEquals(result.accounts.length, accountsFile.accounts.length + creditFile.accounts.length);
+    });
+    const result = await validateMercury(session);
+    assertEquals(result.ok, false);
+    if (result.ok) return;
+    assertEquals(result.class, status === 403 ? "auth" : "rejected");
+    await assertRejects(
+      () => fetchMercurySince(session, { cursor: null, importFrom: null, lookbackDays: 30 }),
+      Error,
+    );
   }
 });
 
@@ -596,4 +615,181 @@ Deno.test("treasury yield is read from the treasury transactions endpoint", asyn
     true,
   );
   assertEquals(calls.every((call) => call.init.method === "GET"), true);
+});
+
+Deno.test("a pending page cap keeps the posted window lines", async () => {
+  let pendingPages = 0;
+  const { fetchImpl } = bankTransport((url) => {
+    if (url.searchParams.get("status") === "pending") {
+      pendingPages += 1;
+      return jsonResponse({
+        transactions: [{ id: `pending-${pendingPages}` }],
+        page: { nextPage: `pending-cursor-${pendingPages}` },
+      });
+    }
+    if (!url.searchParams.get("start_after")) {
+      return jsonResponse({ transactions: [{ id: "window-kept" }], page: {} });
+    }
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }), {
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+  });
+  assertEquals(pendingPages, MERCURY_PAGE_CAP);
+  assertEquals(result.complete, false);
+  assertEquals(result.lines.some((row) => (row as { id?: string }).id === "window-kept"), true);
+  assertEquals(result.lines.some((row) => (row as { id?: string }).id === "pending-1"), true);
+  assertEquals(decodeMercuryCursor(result.nextCursor).phase, "pending");
+});
+
+Deno.test("a resumed sync keeps a start date that is not the recomputed lookback", async () => {
+  const cursor = encodeMercuryResume({
+    at: NOW.toISOString(),
+    start: "2026-08-15",
+    page: "cursor-20",
+    phase: "window",
+  });
+  const { fetchImpl, calls } = bankTransport(() => jsonResponse({ transactions: [], page: {} }));
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }), {
+    cursor,
+    importFrom: null,
+    lookbackDays: 30,
+  });
+  const window = calls.find((call) =>
+    call.url.pathname.endsWith("/transactions") && call.url.searchParams.get("status") !== "pending"
+  );
+  assertEquals(window?.url.searchParams.get("start"), "2026-08-15");
+  assertEquals(window?.url.searchParams.get("start_after"), "cursor-20");
+  assertEquals(result.windowStart, "2026-08-15");
+});
+
+const secondTreasuryId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02";
+
+Deno.test("a treasury resume continues the second account and keeps its start date", async () => {
+  const firstTreasuryId = treasuryFile.accounts[0].id;
+  const cursor = encodeMercuryResume({
+    at: NOW.toISOString(),
+    start: "2026-08-15",
+    page: "7",
+    phase: "treasury",
+    treasuryId: secondTreasuryId,
+  });
+  const { fetchImpl, calls } = transport((url) => {
+    if (url.pathname.includes("/treasury/") && url.pathname.endsWith("/transactions")) {
+      return jsonResponse({ transactions: [{ id: "second-yield" }], cursor: null });
+    }
+    if (url.pathname.endsWith("/treasury")) {
+      return jsonResponse({
+        accounts: [...treasuryFile.accounts, { id: secondTreasuryId, status: "active" }],
+        page: {},
+      });
+    }
+    return jsonResponse({ transactions: [{ id: "bank-should-not-load" }], page: {} });
+  });
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }), {
+    cursor,
+    importFrom: null,
+    lookbackDays: 30,
+  });
+  assertEquals(result.lines.some((row) => (row as { id?: string }).id === "bank-should-not-load"), false);
+  assertEquals(result.lines.some((row) => (row as { id?: string }).id === "second-yield"), true);
+  assertEquals(result.windowStart, "2026-08-15");
+  assertEquals(
+    calls.some((call) => call.url.pathname === `/api/v1/treasury/${firstTreasuryId}/transactions`),
+    false,
+  );
+  const ledger = calls.find((call) => call.url.pathname === `/api/v1/treasury/${secondTreasuryId}/transactions`);
+  assertEquals(ledger?.url.searchParams.get("cursor"), "7");
+  assertEquals(
+    calls.some((call) => call.url.pathname.endsWith("/transactions") && !call.url.pathname.includes("/treasury/")),
+    false,
+  );
+});
+
+Deno.test("a treasury page cap keeps lines from the earlier treasury account", async () => {
+  const firstTreasuryId = treasuryFile.accounts[0].id;
+  let secondPages = 0;
+  const { fetchImpl } = transport((url) => {
+    if (url.pathname === `/api/v1/treasury/${firstTreasuryId}/transactions`) {
+      return jsonResponse({ transactions: [{ id: "first-yield" }], cursor: null });
+    }
+    if (url.pathname === `/api/v1/treasury/${secondTreasuryId}/transactions`) {
+      secondPages += 1;
+      return jsonResponse({
+        transactions: [{ id: `second-${secondPages}` }],
+        cursor: `treasury-cursor-${secondPages}`,
+      });
+    }
+    if (url.pathname.endsWith("/treasury")) {
+      return jsonResponse({
+        accounts: [...treasuryFile.accounts, { id: secondTreasuryId, status: "active" }],
+        page: {},
+      });
+    }
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }), {
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+  });
+  assertEquals(secondPages, MERCURY_PAGE_CAP);
+  assertEquals(result.complete, false);
+  assertEquals(result.lines.some((row) => (row as { id?: string }).id === "first-yield"), true);
+  assertEquals(result.lines.some((row) => (row as { id?: string }).id === "second-1"), true);
+  const cursor = decodeMercuryCursor(result.nextCursor);
+  assertEquals(cursor.phase, "treasury");
+  assertEquals(cursor.treasuryId, secondTreasuryId);
+  assertEquals(cursor.page, `treasury-cursor-${MERCURY_PAGE_CAP}`);
+});
+
+Deno.test("403 and 404 on the treasury ledger refuse the sync", async () => {
+  for (const status of [403, 404] as const) {
+    const { fetchImpl } = transport((url) => {
+      if (url.pathname.includes("/treasury/") && url.pathname.endsWith("/transactions")) {
+        return jsonResponse({ error: "no" }, status);
+      }
+      if (url.pathname.endsWith("/treasury")) return jsonResponse(treasuryFile);
+      if (url.pathname.endsWith("/transactions")) {
+        return jsonResponse({
+          transactions: [{
+            id: "liquidation-ledger",
+            kind: "other",
+            status: "sent",
+            amount: 25000,
+            createdAt: "2026-10-01T12:00:00.000Z",
+            postedAt: "2026-10-01T12:00:00.000Z",
+            bankDescription: "Liquidation of Treasury assets",
+          }],
+          page: {},
+        });
+      }
+      return jsonResponse({ transactions: [], page: {} });
+    });
+    const error = await assertRejects(
+      () => fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+        fetch: fetchImpl,
+        now: () => NOW,
+      }), { cursor: null, importFrom: null, lookbackDays: 30 }),
+      MercuryRequestError,
+    );
+    assertEquals(error instanceof MercuryRequestError, true);
+    if (!(error instanceof MercuryRequestError)) return;
+    assertEquals(error.errorClass, status === 403 ? "auth" : "rejected");
+    assertEquals(error.code, status === 403 ? "auth" : "rejected");
+  }
 });

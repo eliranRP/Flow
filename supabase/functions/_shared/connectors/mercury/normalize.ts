@@ -234,8 +234,8 @@ function explicitCancelId(raw: Record<string, unknown>): string | null {
 /**
  * Ids a treasury cancel voids. An explicit id wins. Otherwise the match is
  * the same account, the original type, and the same absolute cents. The
- * same canonical day wins over any other day. Several remaining matches
- * void nothing, so a cancel cannot wipe the wrong yield.
+ * same canonical day wins over any other day. A refetched original and the
+ * stored copy are one candidate. Several remaining ids void nothing.
  */
 export function treasuryVoidIds(
   rawLines: readonly unknown[],
@@ -277,7 +277,12 @@ export function treasuryVoidIds(
     if (signed == null || signed === 0 || !day) continue;
     const amount = Math.abs(signed);
     const accountId = bounded(stringField(raw.accountId));
-    const pool = [...stored, ...batch].filter((row) =>
+    const byId = new Map<string, TreasuryStoredLine>();
+    for (const row of batch) byId.set(row.externalId, row);
+    for (const row of stored) {
+      if (!byId.has(row.externalId)) byId.set(row.externalId, row);
+    }
+    const pool = [...byId.values()].filter((row) =>
       row.kind === originalKind &&
       row.amountCents === amount &&
       (accountId == null || row.accountId === accountId) &&
@@ -303,9 +308,11 @@ function normalizeTreasuryLedger(raw: Record<string, unknown>, ctx: NormalizeCon
     return skip("not_own_account");
   }
   if (type === "dividendReinvestmentPosted") return skip("dividend_reinvestment");
+  if (type === "revertTxn") return skip("treasury_activity");
   if (MERCURY_TREASURY_CANCEL_OF[type]) return skip("treasury_cancel");
-  const income = TREASURY_INCOME.has(type);
-  const fee = TREASURY_FEE.has(type);
+  const amendment = type === "manualAmendmentPosted";
+  const income = TREASURY_INCOME.has(type) || (amendment && typeof raw.amount === "number" && raw.amount > 0);
+  const fee = TREASURY_FEE.has(type) || (amendment && typeof raw.amount === "number" && raw.amount < 0);
   if (!income && !fee) return skip("treasury_activity");
 
   const day = stringField(raw.canonicalDay);
@@ -325,7 +332,7 @@ function normalizeTreasuryLedger(raw: Record<string, unknown>, ctx: NormalizeCon
     pnl_role: null,
     currency: "USD",
     amount_original: Math.abs(signed),
-    amount_negated: !income,
+    amount_negated: signed < 0,
     doc_date: day,
     cash_date: day,
     source_account_id: accountId,

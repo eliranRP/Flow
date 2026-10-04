@@ -4,6 +4,7 @@ import {
   allocateByWeights,
   divHalfEven,
   formatIls,
+  formatMoney,
   wholeShekels,
   netFromGrossAgorot,
   parseShekelInput,
@@ -110,6 +111,10 @@ describe("roundedProfitAgorot", () => {
   it("equals rounded income minus rounded expenses", () => {
     // 1.50 rounds to 2, 0.50 rounds to 0. The raw net 1.00 would show as ₪1.
     expect(formatIls(roundedProfitAgorot(150n, 50n))).toBe("₪2");
+    expect(formatMoney(10_000n, "USD")).toBe("$100");
+    expect(formatMoney(1_234n, "USD", { agorot: true })).toBe("$12.34");
+    expect(formatMoney(-1_234n, "USD", { agorot: true })).toBe("−$12.34");
+    expect(formatMoney(10_000n)).toBe("₪100");
     expect(wholeShekels(roundedProfitAgorot(150n, 50n))).toBe(2);
   });
 });
