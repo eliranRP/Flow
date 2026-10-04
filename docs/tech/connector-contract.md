@@ -148,7 +148,7 @@ Do not list `/account/{id}/transactions`. That payload is `{ total, transactions
 
 `/accounts` and the routing objects in the generated types carry account and routing numbers. Do not store them.
 
-Own-account transfers hide in `kind: "other"`. Card autopay is a minus leg on checking and a plus leg on the card (`IO AUTOPAY` / `IO PAYMENT`). `ownAccountIds` is every id from `GET /accounts`, `GET /credit`, and `GET /treasury`, rebuilt before every sync. It is not a subset of accounts the owner picked. Skip when `counterpartyId` is in `ctx.ownAccountIds`, or when `kind` is `internalTransfer` or `treasuryTransfer` and the counterparty is in that set. Record the skip. A transfer whose counterparty is outside `ownAccountIds` is the `העברות` line above, including when the id is in `ownCounterpartyIds`. Any other line is imported, including income. There is no direction switch. If `GET /treasury` fails, validation is refused and the sync does not start, so a liquidation is not imported as income and a deposit into Treasury is not imported as an expense. Treasury yield and dividends are income in `הכנסה אחרת`. A reversal older than the lookback is voided from a status recheck. A page cap stores the next page and the same start date and continues on the next run.
+Own-account transfers hide in `kind: "other"`. Card autopay is a minus leg on checking and a plus leg on the card (`IO AUTOPAY` / `IO PAYMENT`). `ownAccountIds` is every id from `GET /accounts`, `GET /credit`, and `GET /treasury`, rebuilt before every sync. It is not a subset of accounts the owner picked. Skip when `counterpartyId` is in `ctx.ownAccountIds`, or when `kind` is `internalTransfer` or `treasuryTransfer` and the counterparty is in that set. Record the skip. A transfer whose counterparty is outside `ownAccountIds` is the `העברות` line above, including when the id is in `ownCounterpartyIds`. Any other line is imported, including income. There is no direction switch. A 401 or a 5xx from `GET /treasury` refuses validation. A 403 or a 404 skips treasury and does not block connect, so those account ids are absent from the own-account set. Treasury interest, dividends, Mercury credits, and fee refunds are income in `הכנסה אחרת`. A treasury fee is an expense. A cancelled interest or dividend voids the original yield. A reinvested dividend is skipped when the dividend itself is imported. Sweeps, treasury deposits, and treasury withdrawals are internal, so a positive treasury deposit is not a second copy of the checking leg. A reversal older than the lookback is voided from a status recheck of at most 50 stored lines per sync, oldest `checked_at` first. A rate limit or a transient error on that recheck keeps the line. A page cap stores the lines already fetched, the next page, and the same start date, and continues on the next run.
 
 Mercury `doc_kind` is not left unset. An inflow is `direction: income` and `doc_kind: receipt`. An outflow is `direction: expense` and `doc_kind: expense`. A refund or reversal is `direction: expense` and `doc_kind: credit`. Bank lines are cash basis. On the cash basis, a Mercury receipt already counts as income. On the invoiced basis, `company_pnl` also counts a Mercury receipt as income. There is no check that the receipt matches a SUMIT invoice, so a Mercury receipt and the SUMIT invoice it pays can both count. That missing match is a known limitation. They count as income.
 
@@ -418,6 +418,7 @@ Each is `security definer`, `search_path = ''`, and checks `auth.role()` against
 | `public.set_import_from(p_provider public.connector_provider, p_from date)` | `void` | `authenticated`, `service_role` |
 | `public.note_connector_rejection(p_company uuid, p_provider public.connector_provider, p_code text)` | `jsonb` | `service_role` |
 | `public.claim_connector_refreshes(p_limit integer)` | `table (id bigint, company_id uuid, provider public.connector_provider)` | `service_role` |
+| `public.claim_connector_refreshes(p_limit integer, p_provider public.connector_provider)` | the same table, only that provider | `service_role` |
 
 `replace_connector_connection` requires `p_validated` true. Until L2a, `p_envelope_version` is `'2'` or `'3'`. `p_settings` for SUMIT is `{ "sumit_company_id": <bigint> }`. A different SUMIT company id keeps today's retirement behaviour, scoped to `provider = 'sumit'`.
 
@@ -438,7 +439,7 @@ Also service role only, same revoke and `auth.role()` check:
 | `public.stamp_connector_sync(p_company uuid, p_provider public.connector_provider)` | `void` |
 | `private.schedule_connector_jobs()` | `void` |
 
-`private.schedule_connector_jobs` is revoked from `public`, `anon`, and `authenticated`, and granted to `service_role`. It unschedules `flow-sumit-daily` and `flow-sumit-drain`, then schedules `flow-connector-daily` (`0 3 * * *`) and `flow-connector-drain` (`*/5 * * * *`). The drain reads Vault `flow_sync_url` and does not fall back to Kong. The secret value is not written into the command. The URL keeps targeting `/sumit-sync` until the alias exists.
+`private.schedule_connector_jobs` is revoked from `public`, `anon`, and `authenticated`, and granted to `service_role`. It unschedules `flow-sumit-daily` and `flow-sumit-drain`, then schedules `flow-connector-daily` (`0 3 * * *`) and `flow-connector-drain` (`*/5 * * * *`). The drain reads Vault `flow_sync_url` and does not fall back to Kong. The secret value is not written into the command. A SUMIT row is posted to that URL. A Mercury row is posted to the same URL with `/sumit-sync` replaced by `/mercury-sync`. `MERCURY_KEK` is an Edge Function env var, the same pattern as `SUMIT_KEK`. It is not a Vault secret. Vault holds `cron_secret` and `flow_sync_url` for the drain only.
 
 The daily command text, pinned, including the leading spaces:
 
@@ -459,7 +460,10 @@ The drain command text, pinned:
 ```sql
       select net.http_post(
         url := (
-          select decrypted_secret
+          select case p.provider
+            when 'mercury' then replace(decrypted_secret, '/sumit-sync', '/mercury-sync')
+            else decrypted_secret
+          end
           from vault.decrypted_secrets
           where name = 'flow_sync_url'
           limit 1
@@ -475,8 +479,8 @@ The drain command text, pinned:
         ),
         body := '{}'::jsonb
       )
-      where exists (
-        select 1
+      from (
+        select distinct r.provider
         from public.connector_refresh_requests r
         left join public.connector_connections c
           on c.company_id = r.company_id
@@ -484,7 +488,8 @@ The drain command text, pinned:
         where r.claimed_at is null
           and (c.next_attempt_at is null or c.next_attempt_at <= now())
           and c.last_error is distinct from 'auth'
-      );
+          and r.provider in ('sumit', 'mercury')
+      ) p;
 ```
 
 L1a updates `scripts/check-sumit-cron.sql`, `scripts/check-sumit-cron.sh`, and `supabase/tests/database/sumit_daily_schedule.test.sql` in that same migration. `cd-push.sh` line 26 runs the check and still exits 2 when the daily job is wrong. Exit codes stay 2 for the daily job and 3 for the drain. The phase 1 migration and `20261003160000_sumit_drain_url.sql` stay byte-identical. `scripts/check-sumit-cron.test.mjs` stops equating the new command to the phase 1 block. It keeps asserting that historical block is unchanged, and it asserts the new daily command and the new drain command are byte-identical across the L1a migration, the pgTAP, and `check-sumit-cron.sql`.
@@ -597,7 +602,7 @@ On the invoiced basis, `company_pnl` income is `invoice`, `credit`, and `invoice
 
 ### Display conversion
 
-A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and import leaves the pair null under `original` and `today`. No aggregate adds that integer to an ILS `amount_net`.
+A stored row stays in its own currency. A Mercury `amount_net` stays signed USD cents, and import leaves the pair null under `original` and `today`. No aggregate adds that integer to an ILS `amount_net`. Until display conversion is built, `company_pnl`, `get_home`, `get_project`, `overhead_share`, and `project_category_entries` sum only `coalesce(currency, 'ILS') = 'ILS'`. `company_pnl`, `get_home`, and `get_project` also return `other_currencies`, an array of `{currency, minor, count}` for the posted non-ILS lines those shekel figures left out. A pending line is not in either figure.
 
 Every total calls one helper:
 

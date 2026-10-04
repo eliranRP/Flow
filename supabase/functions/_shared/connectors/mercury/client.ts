@@ -97,7 +97,7 @@ export function classifyMercuryError(error: unknown): ClassifiedError {
     return { class: "rejected", retry_after: null, code: "sync_page_cap" };
   }
   if (error instanceof MercuryRequestError) {
-    return { class: error.errorClass, retry_after: error.retryAfter };
+    return { class: error.errorClass, retry_after: error.retryAfter, code: error.code };
   }
   if (error instanceof Error && (
     error.message === "mercury_method" ||
@@ -248,11 +248,28 @@ function requireTreasuryLabel(row: unknown): AccountLabel {
 }
 
 /**
- * Connected account ids. `/treasury` is required.
- * A failed or unreadable GET refuses validation, so a sync never starts
- * without the treasury account ids. Starting anyway would import a
- * liquidation into checking as income and a deposit into Treasury as an
- * expense. An empty `accounts` array is a successful "no treasury account".
+ * A 403 or 404 on the treasury list means this token cannot see treasury.
+ * Connect still succeeds. 401 and 5xx still refuse, so a dead token does
+ * not import a liquidation as income. An empty accounts array is a
+ * successful "no treasury account". A row with no id still refuses.
+ */
+function treasuryListSkipped(error: unknown): boolean {
+  return error instanceof MercuryRequestError && (error.status === 403 || error.status === 404);
+}
+
+async function listTreasuryAccounts(session: ConnectorSession): Promise<unknown[]> {
+  try {
+    return await listCollection(session, "/treasury", "accounts", {}, true);
+  } catch (error) {
+    if (treasuryListSkipped(error)) return [];
+    throw error;
+  }
+}
+
+/**
+ * Connected account ids. `/accounts` and `/credit` are required.
+ * `/treasury` is required unless it answers 403 or 404, in which case
+ * those account ids are simply absent from the own set.
  */
 export async function validateMercury(session: ConnectorSession): Promise<ValidateResult> {
   try {
@@ -261,7 +278,7 @@ export async function validateMercury(session: ConnectorSession): Promise<Valida
     if (!isRecord(creditBody) || !Array.isArray(creditBody.accounts)) {
       throw new MercuryRequestError("rejected", "rejected", null, null, "rejected");
     }
-    const treasury = await listCollection(session, "/treasury", "accounts", {}, true);
+    const treasury = await listTreasuryAccounts(session);
     const treasuryLabels = treasury.map((account) => requireTreasuryLabel(account));
     const labels: AccountLabel[] = [];
     const seen = new Set<string>();
@@ -477,7 +494,7 @@ async function fetchTreasuryLedger(
   resumeId: string | null,
   resumeCursor: string | undefined,
 ): Promise<{ lines: unknown[]; resume: { treasuryId: string; page: string } | null }> {
-  const accounts = await listCollection(session, "/treasury", "accounts", {}, true);
+  const accounts = await listTreasuryAccounts(session);
   const ids = accounts.map((account) => requireTreasuryLabel(account).id);
   const startAt = resumeId && ids.includes(resumeId) ? ids.indexOf(resumeId) : 0;
   const lines: unknown[] = [];
@@ -494,6 +511,7 @@ async function fetchTreasuryLedger(
           resume: { treasuryId, page: error.resumeAfter },
         };
       }
+      if (treasuryListSkipped(error)) continue;
       throw error;
     }
   }

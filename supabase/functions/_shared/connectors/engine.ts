@@ -21,7 +21,12 @@ export interface StoredLine {
   lineStatus: Extract<LineStatus, "pending" | "posted">;
   docDate: string;
   missingSince: string | null;
+  /** Oldest checked_at is rechecked first. Null has never been checked. */
+  checkedAt?: string | null;
 }
+
+/** Status rechecks per sync. The rest wait for a later run. */
+export const CONNECTOR_RECHECK_LIMIT = 50;
 
 export type ConfirmResult =
   | { action: "void" }
@@ -42,10 +47,17 @@ export interface PlanSyncInput {
   now: () => Date;
   /**
    * Status recheck for a stored line the fetch did not return.
-   * Pending lines, and posted lines older than windowStart. A 404 on a
-   * posted line is keep. Widening the fetch date is not this recheck.
+   * Pending lines, and posted lines older than windowStart, capped at
+   * CONNECTOR_RECHECK_LIMIT and oldest checkedAt first. A 404 on a
+   * posted line is keep. A rate limit or a transient error keeps the
+   * line and does not fail the run. Widening the fetch date is not this recheck.
    */
   confirmLine?: (line: StoredLine) => Promise<ConfirmResult>;
+  /**
+   * Provider-specific voids, such as a treasury cancel of a stored yield.
+   * Ids are voided with the upsert. They are not fetched again.
+   */
+  resolveRemovedIds?: (rawLines: readonly unknown[]) => readonly string[];
 }
 
 export interface PlannedSkip {
@@ -63,6 +75,7 @@ export interface PlannedSync {
   nextCursor: string | null;
   complete: boolean;
   pendingMissing: { externalId: string; missingSince: string }[];
+  rechecked: { externalId: string; checkedAt: string }[];
 }
 
 export interface PlannedFailure {
@@ -76,6 +89,16 @@ function rawId(raw: unknown): string | null {
   if (!raw || typeof raw !== "object" || !("id" in raw)) return null;
   const id = (raw as { id: unknown }).id;
   return typeof id === "string" && id.length > 0 && id.length <= 128 ? id : null;
+}
+
+function recheckOrder(left: StoredLine, right: StoredLine): number {
+  const leftAt = left.checkedAt ?? null;
+  const rightAt = right.checkedAt ?? null;
+  if (leftAt == null && rightAt != null) return -1;
+  if (leftAt != null && rightAt == null) return 1;
+  if (leftAt != null && rightAt != null && leftAt !== rightAt) return leftAt < rightAt ? -1 : 1;
+  if (left.docDate !== right.docDate) return left.docDate < right.docDate ? -1 : 1;
+  return left.externalId < right.externalId ? -1 : 1;
 }
 
 function failure(port: ConnectorPort, error: unknown): PlannedFailure {
@@ -142,19 +165,40 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
   }
 
   const removed = new Set(fetched.removedIds);
+  if (input.resolveRemovedIds) {
+    for (const id of input.resolveRemovedIds(fetched.lines)) {
+      if (id.length > 0 && id.length <= 128) removed.add(id);
+    }
+  }
   const pendingMissing: { externalId: string; missingSince: string }[] = [];
+  const rechecked: { externalId: string; checkedAt: string }[] = [];
   if (fetched.complete && input.confirmLine) {
     const windowStart = fetched.windowStart ?? null;
-    for (const stored of input.stored) {
-      if (seen.has(stored.externalId) || removed.has(stored.externalId)) continue;
+    const candidates = input.stored.filter((stored) => {
+      if (seen.has(stored.externalId) || removed.has(stored.externalId)) return false;
       const outsideWindow = windowStart != null && stored.docDate < windowStart;
-      if (stored.lineStatus !== "pending" && !outsideWindow) continue;
+      return stored.lineStatus === "pending" || outsideWindow;
+    });
+    candidates.sort(recheckOrder);
+    const checkedAt = input.now().toISOString();
+    for (const stored of candidates.slice(0, CONNECTOR_RECHECK_LIMIT)) {
       let confirmed: ConfirmResult;
       try {
         confirmed = await input.confirmLine(stored);
       } catch (error) {
+        const classified = input.port.classifyError(error);
+        if (classified.class === "rate_limited" || classified.class === "transient") {
+          if (stored.lineStatus === "pending") {
+            pendingMissing.push({
+              externalId: stored.externalId,
+              missingSince: stored.missingSince ?? checkedAt,
+            });
+          }
+          continue;
+        }
         return failure(input.port, error);
       }
+      rechecked.push({ externalId: stored.externalId, checkedAt });
       if (confirmed.action === "void") {
         removed.add(stored.externalId);
         continue;
@@ -187,5 +231,6 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     nextCursor: fetched.nextCursor,
     complete: fetched.complete,
     pendingMissing,
+    rechecked,
   };
 }
