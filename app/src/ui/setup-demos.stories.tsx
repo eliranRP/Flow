@@ -1,5 +1,5 @@
-import type { Decorator, Meta, StoryObj } from "@storybook/react";
-import { useLayoutEffect, type ReactNode } from "react";
+import type { Meta, StoryObj } from "@storybook/react";
+import { expect, waitFor, within } from "@storybook/test";
 import {
   AndroidInstallDemo,
   FirstApprovalDemo,
@@ -8,58 +8,11 @@ import {
   ProjectsDemo,
   SumitConnectDemo,
 } from "./setup-demos";
-
-function reducedMotionList(query: string): MediaQueryList {
-  return {
-    matches: true,
-    media: query,
-    onchange: null,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    dispatchEvent: () => false,
-    addListener: () => undefined,
-    removeListener: () => undefined,
-  };
-}
-
-let originalMatchMedia: typeof window.matchMedia | null = null;
-
-function installReducedMotion() {
-  if (originalMatchMedia) return;
-  originalMatchMedia = window.matchMedia.bind(window);
-  const previous = originalMatchMedia;
-  window.matchMedia = (query: string) => {
-    if (query.includes("prefers-reduced-motion")) return reducedMotionList(query);
-    return previous(query);
-  };
-}
-
-function uninstallReducedMotion() {
-  if (!originalMatchMedia) return;
-  window.matchMedia = originalMatchMedia;
-  originalMatchMedia = null;
-}
-
-function ReducedMotionFrame({ children }: { children: ReactNode }) {
-  installReducedMotion();
-  useLayoutEffect(() => {
-    return () => {
-      uninstallReducedMotion();
-    };
-  }, []);
-  return children;
-}
-
-const forceReducedMotion: Decorator = (Story) => (
-  <ReducedMotionFrame>
-    <Story />
-  </ReducedMotionFrame>
-);
+import { forceReducedMotion } from "./reduced-motion";
 
 const meta = {
   title: "Components/SetupDemos",
   component: SumitConnectDemo,
-  decorators: [forceReducedMotion],
   parameters: {
     a11y: {
       config: {
@@ -75,24 +28,62 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Sumit: Story = {};
+async function playToReplay({ canvasElement }: { canvasElement: HTMLElement }) {
+  const canvas = within(canvasElement);
+  await waitFor(() => expect(canvas.getByRole("button", { name: "שוב" })).toBeVisible(), { timeout: 7000 });
+  await expect(canvasElement.querySelector(".ui-demo")).toHaveAttribute("data-demo-state", "settled");
+}
+
+export const Sumit: Story = { decorators: [forceReducedMotion] };
+
+export const SumitPlaying: Story = { play: playToReplay };
 
 export const Jev: Story = {
+  decorators: [forceReducedMotion],
   render: () => <JevSwitchDemo />,
 };
 
+export const JevPlaying: Story = {
+  render: () => <JevSwitchDemo />,
+  play: playToReplay,
+};
+
 export const Projects: Story = {
+  decorators: [forceReducedMotion],
   render: () => <ProjectsDemo />,
 };
 
+export const ProjectsPlaying: Story = {
+  render: () => <ProjectsDemo />,
+  play: playToReplay,
+};
+
 export const Approval: Story = {
+  decorators: [forceReducedMotion],
   render: () => <FirstApprovalDemo />,
 };
 
+export const ApprovalPlaying: Story = {
+  render: () => <FirstApprovalDemo />,
+  play: playToReplay,
+};
+
 export const IosInstall: Story = {
+  decorators: [forceReducedMotion],
   render: () => <IosInstallDemo />,
 };
 
+export const IosInstallPlaying: Story = {
+  render: () => <IosInstallDemo />,
+  play: playToReplay,
+};
+
 export const AndroidInstall: Story = {
+  decorators: [forceReducedMotion],
   render: () => <AndroidInstallDemo />,
+};
+
+export const AndroidInstallPlaying: Story = {
+  render: () => <AndroidInstallDemo />,
+  play: playToReplay,
 };

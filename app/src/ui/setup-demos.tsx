@@ -1,13 +1,12 @@
-import { type CSSProperties } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { Button } from "./button";
 import { CheckRow } from "./check-row";
 import { Chip } from "./chip";
 import { DemoPlayer, useDemoPlayback } from "./demo-player";
-import { AppIcon, CheckIcon, ShareIcon, SquarePlusIcon, TagIcon } from "./icons";
+import { AppIcon, CheckIcon, ChevronIcon, ShareIcon, SparkIcon, SquarePlusIcon } from "./icons";
 import { ListRow } from "./list-row";
-import { ReviewCard } from "./review-card";
+import { ReviewCard, type ReviewSuggestion } from "./review-card";
 import { Skeleton } from "./skeleton";
-import { SuggestTag } from "./suggest-tag";
 import { TabBar } from "./tab-bar";
 import { TextField } from "./text-field";
 import { Toggle } from "./toggle";
@@ -27,8 +26,6 @@ export const PROJECTS_ALT = "הדגמה: רשימת הפרויקטים מ־SUMIT
 export const APPROVAL_ALT = "הדגמה: הקשה על אישור, הכרטיס יוצא והמונה יורד באחד.";
 export const IOS_ALT = "הדגמה: בספארי מקישים על שלוש הנקודות, ואז שיתוף והוספה למסך הבית.";
 export const ANDROID_ALT = "הדגמה: הקשה על התקנה, והסמל של Flow מופיע במסך הבית.";
-
-const EXAMPLE = "נתוני דוגמה · Example data";
 
 /** The drawings use a stand-in host. The build shows the page host. */
 export function demoHost(): string {
@@ -87,8 +84,13 @@ function styleOf(values: Record<string, number>): CSSProperties {
   return style;
 }
 
-function ExampleLine() {
-  return <p className="ui-setup-example">{EXAMPLE}</p>;
+function at(ms: number, duration: number): number {
+  return ms / duration;
+}
+
+/** Fingertip dot. The amount is 0 when the finger is gone. */
+function TapDot({ amount }: { amount: number }) {
+  return <span className="ui-setup-ring" style={styleOf({ "--setup-ring": amount })} />;
 }
 
 function HostLine() {
@@ -98,6 +100,23 @@ function HostLine() {
     </span>
   );
 }
+
+function PlugIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+      <path d="M8 7v4M16 7v4" />
+      <path d="M7 11h10v3a5 5 0 0 1-10 0z" />
+      <path d="M12 19v3" />
+    </svg>
+  );
+}
+
+const suggested: ReviewSuggestion = {
+  project: "פרויקט לדוגמה",
+  category: "קטגוריה לדוגמה",
+  projectSuggested: true,
+  categorySuggested: true,
+};
 
 export function SumitConnectDemo() {
   return (
@@ -109,55 +128,59 @@ export function SumitConnectDemo() {
 
 function SumitScene() {
   const { progress } = useDemoPlayback();
-  const frame = demoFrame(progress, [0.25, 0.55, 0.8]);
-  const fill = demoBeat(progress, 0.04, 0.22);
-  const press = demoBeat(progress, 0.25, 0.29);
-  const sheetOut = easeExit(demoBeat(progress, 0.55, 0.605));
-  const hello = demoBeat(progress, 0.6, 0.68);
-  const line1 = demoBeat(progress, 0.68, 0.71);
-  const line2 = demoBeat(progress, 0.71, 0.74);
-  const line3 = demoBeat(progress, 0.74, 0.77);
+  const frame = demoFrame(progress, [0.2, 0.4, 0.7]);
+  const fill = demoBeat(progress, 0.04, 0.18);
+  const press = demoBeat(progress, 0.2, 0.25);
+  const sheetOut = easeExit(demoBeat(progress, 0.4, 0.46));
+  const hello = demoBeat(progress, 0.48, 0.58);
+  const line1 = demoBeat(progress, 0.58, 0.64);
+  const line2 = demoBeat(progress, 0.64, 0.7);
+  const line3 = demoBeat(progress, 0.7, 0.76);
   const company = "1001".slice(0, Math.round(fill * 4));
   const secret = "demo".slice(0, Math.round(fill * 4));
+  const scrim = sheetOut < 1 ? 1 - sheetOut : 0;
   return (
     <div className="ui-setup-demo" data-demo-frame={frame}>
-      <ExampleLine />
-      <div className="ui-setup-stack">
-        <div
-          className="ui-setup-sheet"
-          data-setup-visible={sheetOut < 1 ? "true" : "false"}
-          style={styleOf({ "--setup-out": sheetOut, "--setup-opacity": 1 - sheetOut })}
-        >
-          <p className="t-title-3">
-            חיבור <bdi dir="ltr">SUMIT</bdi>
-          </p>
-          <TextField label="מספר חברה" value={company} inputMode="numeric" readOnly onChange={() => {}} />
-          <TextField label="מפתח API" type="password" value={secret} readOnly autoComplete="off" onChange={() => {}} />
-          <div className="ui-setup-hit">
-            <Button full busy={progress >= 0.3 && progress < 0.55} className={press >= 1 ? "ui-setup-pressed" : undefined}>
-              חיבור
-            </Button>
-          </div>
-        </div>
-        <div className="ui-setup-result" data-setup-visible={hello >= 1 ? "true" : "false"}>
-          <p className="ui-setup-drop t-title-3" style={styleOf({ "--setup-drop": hello })}>
+      <div className="ui-setup-scrim" style={styleOf({ "--setup-opacity": scrim })} />
+      <div className="ui-setup-result" data-setup-visible={hello >= 1 ? "true" : "false"}>
+        <div className="ui-setup-sumit-row ui-setup-drop" style={styleOf({ "--setup-drop": hello })}>
+          <PlugIcon />
+          <span>
             <bdi dir="ltr">SUMIT</bdi>
             {" מחובר"}
-          </p>
-          <SumitLine title="ספק לדוגמה בע״מ" hint="01/09" agorot={850_000n} drop={line1} />
-          <SumitLine title="ספק שני לדוגמה" hint="02/09" agorot={120_000n} drop={line2} />
-          <SumitLine title="ספק שלישי לדוגמה" hint="03/09" agorot={64_000n} drop={line3} />
-          <TabBar reviewCount={demoBeat(progress, 0.8, 0.9) >= 1 ? 12 : 0} />
+          </span>
+          <CheckIcon />
+        </div>
+        <SumitLine title="ספק לדוגמה בע״מ" hint="הוצאה · 01/09" agorot={850_000n} sign="out" drop={line1} />
+        <SumitLine title="לקוח לדוגמה" hint="הכנסה · 02/09" agorot={120_000n} sign="in" drop={line2} />
+        <SumitLine title="ספק שלישי לדוגמה" hint="הוצאה · 03/09" agorot={64_000n} sign="out" drop={line3} />
+        <TabBar reviewCount={demoBeat(progress, 0.7, 0.82) >= 1 ? 12 : 0} />
+      </div>
+      <div
+        className="ui-setup-sheet ui-setup-dock"
+        data-setup-visible={sheetOut < 1 ? "true" : "false"}
+        style={styleOf({ "--setup-out": sheetOut, "--setup-opacity": 1 - sheetOut })}
+      >
+        <span className="ui-setup-handle" />
+        <p className="t-title-3">
+          חיבור <bdi dir="ltr">SUMIT</bdi>
+        </p>
+        <TextField label="מספר חברה" value={company} inputMode="numeric" readOnly onChange={() => {}} />
+        <TextField label="מפתח API" type="password" value={secret} readOnly autoComplete="off" onChange={() => {}} />
+        <div className="ui-setup-hit">
+          <Button full busy={progress >= 0.25 && progress < 0.4} className={press >= 1 ? "ui-setup-pressed" : undefined}>
+            חיבור
+          </Button>
         </div>
       </div>
     </div>
   );
 }
 
-function SumitLine({ title, hint, agorot, drop }: { title: string; hint: string; agorot: bigint; drop: number }) {
+function SumitLine({ title, hint, agorot, sign, drop }: { title: string; hint: string; agorot: bigint; sign: "in" | "out"; drop: number }) {
   return (
     <div className="ui-setup-drop" style={styleOf({ "--setup-drop": drop })}>
-      <ListRow variant="transaction" title={title} hint={hint} agorot={agorot} sign="out" source="invoice" />
+      <ListRow variant="transaction" title={title} hint={hint} agorot={agorot} sign={sign} source="invoice" />
     </div>
   );
 }
@@ -173,30 +196,31 @@ export function JevSwitchDemo() {
 function JevScene() {
   const { progress } = useDemoPlayback();
   const frame = demoFrame(progress, [0.25, 0.5, 0.75]);
-  const tag = demoBeat(progress, 0.25, 0.42);
   const project = demoBeat(progress, 0.5, 0.66);
   const category = demoBeat(progress, 0.75, 0.9);
+  const suggestion: ReviewSuggestion = {
+    project: project > 0 ? "פרויקט לדוגמה" : undefined,
+    category: category > 0 ? "קטגוריה לדוגמה" : undefined,
+    projectSuggested: project > 0,
+    categorySuggested: category > 0,
+  };
   return (
     <div className="ui-setup-demo ui-setup-jev" data-demo-frame={frame}>
-      <ExampleLine />
+      <div className="ui-setup-head">
+        <p className="t-title-3">לאישור</p>
+      </div>
       <ReviewCard
         supplier="ספק לדוגמה בע״מ"
         sourceLine="חשבונית · 01/09/2026"
         netAgorot={850_000n}
         vatLine="לפני מע״מ"
+        suggestion={suggestion}
+        onProject={project > 0 ? () => {} : undefined}
+        onCategory={category > 0 ? () => {} : undefined}
       />
-      <div className="ui-setup-fade" data-setup-visible={tag >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": tag })}>
-        <SuggestTag />
-      </div>
-      <div className="ui-setup-pills">
-        <span className="ui-setup-fade" data-setup-visible={project >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": project })}>
-          <Chip kind="suggested">פרויקט לדוגמה</Chip>
-        </span>
-        <span className="ui-setup-fade" data-setup-visible={category >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": category })}>
-          <Chip kind="suggested">קטגוריה לדוגמה</Chip>
-        </span>
-      </div>
-      <Toggle label="תיוג חכם (Jev)" hint="ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית." icon={<TagIcon />} checked={tag >= 1} onChange={() => {}} />
+      <p className="ui-setup-fade t-label" data-setup-visible={project >= 1 || category >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": Math.max(project, category) })}>
+        <SparkIcon size={16} /> הצעה
+      </p>
     </div>
   );
 }
@@ -212,42 +236,62 @@ export function ProjectsDemo() {
 function ProjectsScene() {
   const { progress } = useDemoPlayback();
   const frame = demoFrame(progress, [0.22, 0.46, 0.72]);
-  const rowA = demoBeat(progress, 0.22, 0.34);
-  const rowB = demoBeat(progress, 0.34, 0.46);
-  const chipA = demoBeat(progress, 0.46, 0.54);
-  const chipB = demoBeat(progress, 0.54, 0.62);
-  const chipC = demoBeat(progress, 0.62, 0.7);
-  const leave = demoBeat(progress, 0.74, 0.9);
-  const skeleton = 1 - Math.max(rowA, rowB);
+  const rowA = demoBeat(progress, 0.22, 0.3);
+  const rowB = demoBeat(progress, 0.3, 0.38);
+  const rowC = demoBeat(progress, 0.38, 0.46);
+  const chipA = demoBeat(progress, 0.46, 0.52);
+  const chipB = demoBeat(progress, 0.52, 0.58);
+  const chipC = demoBeat(progress, 0.58, 0.64);
+  const chipD = demoBeat(progress, 0.64, 0.7);
+  const chipE = demoBeat(progress, 0.7, 0.76);
+  const leave = demoBeat(progress, 0.78, 0.92);
+  const skeleton = 1 - Math.max(rowA, rowB, rowC);
   return (
     <div className="ui-setup-demo" data-demo-frame={frame}>
-      <ExampleLine />
       <div className="ui-setup-skel" aria-hidden="true" style={styleOf({ "--setup-fade": skeleton })}>
         <Skeleton width="lg" />
         <Skeleton width="md" />
         <Skeleton width="lg" />
       </div>
-      <div className="ui-setup-fade" data-setup-visible={rowA >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": rowA })}>
-        <CheckRow label="פרויקט לדוגמה" checked={rowA >= 1} onChange={() => {}} />
-      </div>
-      <div className="ui-setup-fade" data-setup-visible={rowB >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": rowB })}>
-        <CheckRow label="פרויקט שני לדוגמה" checked={rowB >= 1} onChange={() => {}} />
-      </div>
+      <p className="t-label">פרויקטים</p>
+      <ProjectRow label="פרויקט לדוגמה" amount={rowA} />
+      <ProjectRow label="פרויקט שני לדוגמה" amount={rowB} />
+      <ProjectRow label="פרויקט שלישי לדוגמה" amount={rowC} />
+      <p className="t-label">קטגוריות</p>
       <div className="ui-setup-pills">
-        <span className="ui-setup-fade" data-setup-visible={chipA >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": chipA })}>
-          <Chip kind="choice">קטגוריה א׳</Chip>
-        </span>
-        <span className="ui-setup-fade" data-setup-visible={chipB >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": chipB })}>
-          <Chip kind="choice">קטגוריה ב׳</Chip>
-        </span>
-        <span className="ui-setup-chip-leave" data-setup-visible={chipC >= 1 && leave < 1 ? "true" : "false"} style={styleOf({ "--setup-leave": leave, "--setup-in": chipC })}>
-          <Chip kind="choice">קטגוריה ג׳</Chip>
-        </span>
+        <ChoiceChip label="קטגוריה א׳" amount={chipA} />
+        <ChoiceChip label="קטגוריה ב׳" amount={chipB} />
+        <ChoiceChip label="קטגוריה ג׳" amount={chipC} />
+        <ChoiceChip label="קטגוריה ד׳" amount={chipD} />
+        {leave < 1 ? <ChoiceChip label="קטגוריה ה׳" amount={chipE} leaving={leave} /> : null}
       </div>
       <p className="ui-setup-fade t-hint" data-setup-visible={leave >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": leave })}>
         מוסתרות · <bdi dir="ltr">1</bdi>
       </p>
     </div>
+  );
+}
+
+function ProjectRow({ label, amount }: { label: string; amount: number }) {
+  if (amount <= 0) return null;
+  return (
+    <div className="ui-setup-fade" data-setup-visible={amount >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": amount })}>
+      <CheckRow label={label} checked={amount >= 1} onChange={() => {}} />
+    </div>
+  );
+}
+
+function ChoiceChip({ label, amount, leaving = 0 }: { label: string; amount: number; leaving?: number }) {
+  if (amount <= 0) return null;
+  const leavingChip = leaving > 0;
+  return (
+    <span
+      className={leavingChip ? "ui-setup-chip-leave" : "ui-setup-fade"}
+      data-setup-visible={amount >= 1 && leaving < 1 ? "true" : "false"}
+      style={styleOf(leavingChip ? { "--setup-leave": leaving, "--setup-in": amount } : { "--setup-fade": amount })}
+    >
+      <Chip kind="choice">{label}</Chip>
+    </span>
   );
 }
 
@@ -261,18 +305,23 @@ export function FirstApprovalDemo() {
 
 function ApprovalScene() {
   const { progress } = useDemoPlayback();
-  const frame = demoFrame(progress, [0.22, 0.32, 0.42]);
-  const ring = frame === 1 ? demoBeat(progress, 0.22, 0.2575) : 0;
+  const frame = demoFrame(progress, [0.2, 0.4, 0.65]);
+  const ringIn = demoBeat(progress, 0.22, 0.2575);
+  const ringFade = demoBeat(progress, 0.2575, 0.32);
+  const ring = progress < 0.32 ? ringIn * (1 - ringFade) : 0;
   const press = demoBeat(progress, 0.25, 0.275);
-  const leave = easeExit(demoBeat(progress, 0.32, 0.3825));
-  const next = demoBeat(progress, 0.4, 0.58);
+  const leave = easeExit(demoBeat(progress, 0.4, 0.4625));
+  const next = demoBeat(progress, 0.5, 0.65);
   const count = leave >= 1 ? "11" : "12";
   return (
     <div className="ui-setup-demo ui-setup-approve" data-demo-frame={frame}>
-      <ExampleLine />
-      <p className="ui-setup-count t-title-3">
-        <bdi dir="ltr" data-demo-count={count}>{count}</bdi>
-      </p>
+      <div className="ui-setup-head" data-setup-visible="true">
+        <p className="t-title-3">לאישור</p>
+        <p className="t-hint">
+          <bdi dir="ltr" data-demo-count={count}>{count}</bdi>
+          {" נשארו"}
+        </p>
+      </div>
       <div className="ui-setup-stack">
         <div className="ui-setup-leave" data-setup-visible={leave < 1 ? "true" : "false"} style={styleOf({ "--setup-leave": leave })}>
           <ApprovalCard supplier="ספק לדוגמה בע״מ" agorot={850_000n} pressed={press >= 1} ring={ring} />
@@ -288,9 +337,17 @@ function ApprovalScene() {
 function ApprovalCard({ supplier, agorot, pressed = false, ring = 0 }: { supplier: string; agorot: bigint; pressed?: boolean; ring?: number }) {
   return (
     <div>
-      <ReviewCard supplier={supplier} sourceLine="חשבונית · 01/09/2026" netAgorot={agorot} vatLine="לפני מע״מ" />
+      <ReviewCard
+        supplier={supplier}
+        sourceLine="חשבונית · 01/09/2026"
+        netAgorot={agorot}
+        vatLine="לפני מע״מ"
+        suggestion={suggested}
+        onProject={() => {}}
+        onCategory={() => {}}
+      />
       <div className="ui-setup-hit">
-        <span className="ui-setup-ring" style={styleOf({ "--setup-ring": ring })} />
+        <TapDot amount={ring} />
         <Button full icon={<CheckIcon />} className={pressed ? "ui-setup-pressed" : undefined}>
           אישור
         </Button>
@@ -298,6 +355,8 @@ function ApprovalCard({ supplier, agorot, pressed = false, ring = 0 }: { supplie
     </div>
   );
 }
+
+const IOS_EDGES = [at(900, IOS_DEMO_MS), at(1900, IOS_DEMO_MS), at(3000, IOS_DEMO_MS), at(3800, IOS_DEMO_MS)];
 
 export function IosInstallDemo() {
   return (
@@ -309,44 +368,49 @@ export function IosInstallDemo() {
 
 function IosScene() {
   const { progress } = useDemoPlayback();
-  const frame = demoFrame(progress, [0.25, 0.5, 0.75]);
-  const bar = hold(progress, 0, 0.75);
-  const menu = hold(progress, 0.25, 0.5);
-  const share = hold(progress, 0.5, 0.75);
-  const add = hold(progress, 0.75, 1);
-  const ring = frame === 4 ? 1 : frame === 1 ? demoBeat(progress, 0.06, 0.14) : 0;
+  const frame = demoFrame(progress, IOS_EDGES);
+  const bar = hold(progress, 0, IOS_EDGES[0] ?? 1);
+  const menu = hold(progress, IOS_EDGES[0] ?? 0, IOS_EDGES[1] ?? 1);
+  const share = hold(progress, IOS_EDGES[1] ?? 0, IOS_EDGES[2] ?? 1);
+  const add = hold(progress, IOS_EDGES[2] ?? 0, IOS_EDGES[3] ?? 1);
+  const home = hold(progress, IOS_EDGES[3] ?? 0, 1);
+  const barRing = bar >= 1 ? demoBeat(progress, 0.04, 0.1) : 0;
+  const addRing = add >= 0.5 && add < 1 ? demoBeat(progress, IOS_EDGES[2] ?? 0, (IOS_EDGES[2] ?? 0) + 0.04) : 0;
   return (
     <div className="ui-setup-demo" data-demo-frame={frame}>
-      <div className="ui-setup-safari" dir="ltr">
-        <div className="ui-setup-safari-bar ui-setup-panel" data-setup-visible={bar >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": bar })}>
-          <HostLine />
-          <span className="ui-setup-dots">
-            <bdi dir="ltr">•••</bdi>
-          </span>
-          <span className="ui-setup-ring" style={styleOf({ "--setup-ring": frame === 1 ? ring : 0 })} />
-        </div>
-        <div className="ui-setup-menu ui-setup-panel" data-setup-visible={menu >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": menu })}>
-          <div className="ui-setup-menu-row" data-on="true">
-            <ShareIcon />
-            שיתוף
-          </div>
-        </div>
-        <div className="ui-setup-menu ui-setup-panel" data-setup-visible={share >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": share })}>
-          <div className="ui-setup-menu-row" data-on="true">
-            <SquarePlusIcon />
-            הוספה למסך הבית
-          </div>
-        </div>
-        <div className="ui-setup-add ui-setup-panel" data-setup-visible={add >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": add })}>
-          <p className="t-title-3">הוספה למסך הבית</p>
-          <HostLine />
-          <Toggle label="פתיחה כאפליקציה" checked={add >= 1} onChange={() => {}} />
-          <div className="ui-setup-hit">
-            <span className="ui-setup-ring" style={styleOf({ "--setup-ring": frame === 4 ? ring : 0 })} />
-            <Button full>הוספה</Button>
-          </div>
+      <div className="ui-setup-safari-bar ui-setup-dock ui-setup-panel" dir="ltr" data-setup-visible={bar >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": bar })}>
+        <ChevronIcon size={18} />
+        <HostLine />
+        <span className="ui-setup-hit">
+          <bdi dir="ltr">•••</bdi>
+          <TapDot amount={barRing} />
+        </span>
+      </div>
+      <MenuPanel amount={menu} rows={[["העתקת הקישור", false], ["שיתוף", true], ["הוספה למועדפים", false]]} icon={<ShareIcon />} />
+      <MenuPanel amount={share} rows={[["העתקה", false], ["הוספה למסך הבית", true], ["הדפסה", false]]} icon={<SquarePlusIcon />} />
+      <div className="ui-setup-add ui-setup-panel" data-setup-visible={add >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": add })}>
+        <AppIcon size="note" />
+        <TextField label="שם" value="Flow" readOnly onChange={() => {}} />
+        <Toggle label="פתיחה כאפליקציה" checked={add >= 1} onChange={() => {}} />
+        <div className="ui-setup-hit">
+          <TapDot amount={addRing} />
+          <Button variant="pill">הוספה</Button>
         </div>
       </div>
+      <HomeGrid amount={home} />
+    </div>
+  );
+}
+
+function MenuPanel({ amount, rows, icon }: { amount: number; rows: Array<[string, boolean]>; icon: ReactNode }) {
+  return (
+    <div className="ui-setup-menu ui-setup-panel" data-setup-visible={amount >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": amount })}>
+      {rows.map(([label, on]) => (
+        <div className="ui-setup-menu-row" data-on={on ? "true" : "false"} key={label}>
+          {on ? icon : null}
+          {label}
+        </div>
+      ))}
     </div>
   );
 }
@@ -361,37 +425,49 @@ export function AndroidInstallDemo() {
 
 function AndroidScene() {
   const { progress } = useDemoPlayback();
-  const frame = demoFrame(progress, [0.33, 0.66]);
-  const ring = frame === 1 ? demoBeat(progress, 0.06, 0.16) : 0;
-  const rise = easeExit(demoBeat(progress, 0.33, 0.423));
-  const land = demoBeat(progress, 0.66, 0.86);
-  const buttonOpacity = frame === 1 ? 1 : 1 - rise;
+  const page = at(800, ANDROID_DEMO_MS);
+  const dialogAt = at(1900, ANDROID_DEMO_MS);
+  const frame = demoFrame(progress, [page, dialogAt]);
+  const button = hold(progress, 0, page);
+  const dialog = hold(progress, page, dialogAt);
+  const home = hold(progress, dialogAt, 1);
+  const buttonRing = button >= 1 ? demoBeat(progress, 0.04, 0.12) : 0;
+  const dialogRing = dialog >= 0.5 && dialog < 1 ? demoBeat(progress, page, page + 0.06) : 0;
   return (
     <div className="ui-setup-demo" data-demo-frame={frame}>
-      <div className="ui-setup-stack">
-        <div className="ui-setup-hit ui-setup-panel" data-setup-visible={buttonOpacity >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": buttonOpacity })}>
-          <span className="ui-setup-ring" style={styleOf({ "--setup-ring": ring })} />
+      <div className="ui-setup-layer ui-setup-panel" data-setup-visible={button >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-opacity": button })}>
+        <div className="ui-setup-hit">
+          <TapDot amount={buttonRing} />
           <Button full>התקנה</Button>
         </div>
-        <div
-          className="ui-setup-dialog ui-setup-rise"
-          dir="ltr"
-          data-setup-visible={rise >= 0.5 && land < 0.5 ? "true" : "false"}
-          style={styleOf({ "--setup-rise": rise * (1 - land) })}
-        >
-          <AppIcon />
-          <HostLine />
-          <p className="t-title-3">התקנה</p>
-        </div>
-        <div className="ui-setup-home ui-setup-panel" data-setup-visible={land >= 1 ? "true" : "false"} style={styleOf({ "--setup-opacity": land })}>
-          <span className="ui-setup-tile" />
-          <span className="ui-setup-icon ui-setup-land" style={styleOf({ "--setup-land": land })}>
-            <AppIcon size="note" />
-            <HostLine />
-          </span>
-          <span className="ui-setup-tile" />
+      </div>
+      <div className="ui-setup-scrim" style={styleOf({ "--setup-opacity": dialog })} />
+      <div className="ui-setup-dialog ui-setup-dock ui-setup-rise" data-setup-visible={dialog >= 0.5 ? "true" : "false"} style={styleOf({ "--setup-rise": dialog })}>
+        <p className="t-title-3">להתקין את Flow?</p>
+        <HostLine />
+        <div className="ui-setup-actions">
+          <Button variant="secondary">ביטול</Button>
+          <div className="ui-setup-hit">
+            <TapDot amount={dialogRing} />
+            <Button full>התקנה</Button>
+          </div>
         </div>
       </div>
+      <HomeGrid amount={home} />
+    </div>
+  );
+}
+
+function HomeGrid({ amount }: { amount: number }) {
+  return (
+    <div className="ui-setup-home ui-setup-layer ui-setup-panel" data-setup-visible={amount >= 1 ? "true" : "false"} style={styleOf({ "--setup-opacity": amount })}>
+      <span className="ui-setup-tile" />
+      <span className="ui-setup-icon ui-setup-land" style={styleOf({ "--setup-land": amount })}>
+        <AppIcon size="note" />
+        <span className="t-hint">Flow</span>
+      </span>
+      <span className="ui-setup-tile" />
+      <span className="ui-setup-tile" />
     </div>
   );
 }
