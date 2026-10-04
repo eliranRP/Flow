@@ -131,7 +131,12 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e\n/);
-  assert.match(job("check"), /MERCURY_FIXTURE_DENYLIST: \$\{\{ secrets\.MERCURY_FIXTURE_DENYLIST \}\}/);
+  assert.match(
+    job("check"),
+    /name: Mercury connector tests\n {8}env:\n {10}MERCURY_FIXTURE_DENYLIST: \$\{\{ secrets\.MERCURY_FIXTURE_DENYLIST \}\}/,
+  );
+  assert.match(job("check"), /- name: Unit tests\n {8}run: pnpm test:unit\n/);
+  assert.equal((job("check").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
   assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
   assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);
