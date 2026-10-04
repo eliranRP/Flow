@@ -106,6 +106,7 @@ export function AssistantSettings({
   showHeading = true,
   announceLoading = true,
   readOnly = false,
+  viewerCopy = false,
 }: {
   sample?: AssistantSample;
   /** A preview mint shows this secret. Stories and the dev route pass it. */
@@ -120,6 +121,8 @@ export function AssistantSettings({
   announceLoading?: boolean;
   /** A viewer sees the row and cannot open connect or details. */
   readOnly?: boolean;
+  /** A confirmed viewer sees a neutral expired line. Loading stays on the short hint. */
+  viewerCopy?: boolean;
 }) {
   const toast = useToast();
   const navigate = useNavigate();
@@ -388,7 +391,14 @@ export function AssistantSettings({
     )
   ) : view.state === "expired" ? (
     readOnly ? (
-      <ListRow variant="static" title="עוזר AI" hint="צריך לחבר מחדש" icon={<AlertIcon size={24} />} tone="warning" wrapHint describeHint />
+      <ListRow
+        variant="static"
+        title="עוזר AI"
+        hint={viewerCopy ? "לא מחובר כרגע" : "לא מחובר"}
+        icon={spark}
+        wrapHint
+        describeHint
+      />
     ) : (
       <ListRow
         variant="button"

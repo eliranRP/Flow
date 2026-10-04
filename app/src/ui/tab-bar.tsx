@@ -17,7 +17,7 @@ type TabBarProps = {
   label?: string;
   reviewCount?: number;
   fabPressed?: boolean;
-  /** A viewer has no add. The slot stays, as a disabled control. */
+  /** A viewer has no add. The empty slot keeps the five-column rhythm. */
   allowAdd?: boolean;
 };
 
@@ -86,9 +86,7 @@ export function TabBar({ label = "ניווט ראשי", reviewCount = 0, fabPres
             {fab}
           </Link>
         ) : (
-          <button type="button" aria-label="הוספה" className={`${slot} ui-tab-slot-fab`} disabled>
-            {fab}
-          </button>
+          <span className={`${slot} ui-tab-slot-fab`} aria-hidden="true" />
         )}
         <Link
           to={`/review${search}`}

@@ -13,5 +13,22 @@ describe("Toggle", () => {
     if (!(row instanceof HTMLElement)) return;
     expectTarget(row);
     expect(getComputedStyle(row).cursor).toBe("not-allowed");
+    expect(getComputedStyle(row).opacity).toBe("1");
+  });
+
+  it("keeps a disabled on-track muted and readable", () => {
+    const sheet = [...document.styleSheets].find((item) => {
+      try {
+        return [...item.cssRules].some((rule) => rule instanceof CSSStyleRule && rule.selectorText.includes("ui-switch"));
+      } catch {
+        return false;
+      }
+    });
+    expect(sheet).toBeDefined();
+    const rules = [...(sheet?.cssRules ?? [])].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+    const faded = rules.find((rule) => rule.selectorText.includes("ui-switch-row") && rule.selectorText.includes(":disabled") && rule.style.opacity === "0.45");
+    expect(faded).toBeUndefined();
+    const onTrack = rules.find((rule) => rule.selectorText.includes("disabled") && rule.selectorText.includes(":checked") && rule.selectorText.includes("ui-switch"));
+    expect(onTrack?.style.background).toContain("--color-disabled-text");
   });
 });

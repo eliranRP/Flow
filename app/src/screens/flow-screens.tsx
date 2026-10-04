@@ -7,7 +7,7 @@ import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
 import { useAuth } from "../auth";
-import { useIsViewer } from "../use-is-viewer";
+import { useHoldWrites, useIsViewer, useWriteGate, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
@@ -173,11 +173,13 @@ export function OnboardingScreen() {
   const client = useQueryClient();
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const previewSearch = usePreviewSearch();
-  const returnTo = keepPreview(safeAppPath(params.get("return")) ?? "/", previewSearch);
+  const returnPath = safeAppPath(params.get("return")) ?? "/";
+  const returnTo = keepPreview(returnPath, previewSearch);
+  const writeGate = useWriteGate(returnPath);
   const save = useWrite({
     failure: "לא הצלחנו לשמור.",
     keys: ["home", "dashboard", "sumit"],
@@ -194,12 +196,14 @@ export function OnboardingScreen() {
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (viewer || blocked()) return;
+    if (holdWrites || blocked()) return;
     save.mutate();
   }
 
   const step = 1;
   const steps = 1;
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   return (
     <main className="ui-onboard">
       <div className="ui-progress-row">
@@ -228,7 +232,7 @@ export function OnboardingScreen() {
           ]}
         />
         <p className="t-hint">עוסק מורשה: מע״מ 18%.</p>
-        <Button type="submit" busy={save.isPending} disabled={viewer}>המשך</Button>
+        <Button type="submit" busy={save.isPending} disabled={holdWrites}>המשך</Button>
       </form>
     </main>
   );
@@ -239,7 +243,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery(sample == null);
   const books = useBooks();
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -256,8 +260,8 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <EmptyState
         icon={<ProjectsIcon />}
         title="עוד אין פרויקטים"
-        body="פרויקטים מגיעים מ־SUMIT, ואפשר גם לפתוח אחד כאן."
-        action={viewer ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+        body={holdWrites ? "פרויקטים מגיעים מ־SUMIT." : "פרויקטים מגיעים מ־SUMIT, ואפשר גם לפתוח אחד כאן."}
+        action={holdWrites ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
       />
       {sheet}
     </div>
@@ -268,7 +272,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <ScreenState
         title="פרויקטים"
         subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
-        action={viewer ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+        action={holdWrites ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
         loading={
@@ -366,7 +370,7 @@ function ProjectsBody({
 
 function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: string }) {
   const blocked = useBlockedPreview();
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
   const save = useWrite({
@@ -389,7 +393,7 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (viewer || blocked()) return;
+    if (holdWrites || blocked()) return;
     save.mutate();
   }
 
@@ -397,7 +401,7 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
     <form className="ui-stack" onSubmit={submit}>
       <TextField label="שם" value={name} onChange={(event) => { setName(event.target.value); }} required />
       <MoneyField label="תקציב בשקלים, או ריק" value={budget} onValueChange={setBudget} />
-      <Button type="submit" busy={save.isPending} disabled={viewer}>שמירה</Button>
+      <Button type="submit" busy={save.isPending} disabled={holdWrites}>שמירה</Button>
       <Button variant="secondary" onClick={onClose}>ביטול</Button>
     </form>
   );
@@ -541,7 +545,7 @@ export function ProjectDetailScreen({
       assertNoError(await supabase.rpc("set_after_overhead", { p_on: wantedOverhead.current, p_project_id: projectId }));
     },
   });
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   if (phase.kind === "loading") return <ProjectLoading search={search} example={example} />;
   if (phase.kind === "error") {
     return (
@@ -571,7 +575,7 @@ export function ProjectDetailScreen({
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={viewer ? undefined : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
+        trailing={holdWrites ? undefined : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>
           <FocusTitle className="t-title-2">{project.name}</FocusTitle>
@@ -589,6 +593,7 @@ export function ProjectDetailScreen({
           <BandFigures income={formatIls(income)} expense={formatIls(expenses)} />
         </BandHero>
       </TopBand>
+      <ViewerScope>
       <div className="ui-page-pad">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
@@ -597,9 +602,9 @@ export function ProjectDetailScreen({
             shareAgorot: project.overhead_share_agorot,
           })}
           checked={overheadOn}
-          disabled={viewer}
+          disabled={holdWrites}
           onChange={(checked) => {
-            if (viewer) return;
+            if (holdWrites) return;
             if (sample) {
               setOverheadOn(checked);
               return;
@@ -611,7 +616,9 @@ export function ProjectDetailScreen({
             saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
           }}
         />
+        <ViewerNote className="t-hint ui-viewer-note" />
       </div>
+      </ViewerScope>
       {project.budget_agorot != null ? (
         <div className="ui-page-pad">
           <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
@@ -661,7 +668,7 @@ export function ProjectDetailScreen({
 function LegacyEmptyProject() {
   const search = usePreviewSearch();
   const location = useLocation();
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -680,7 +687,7 @@ function LegacyEmptyProject() {
         icon={<DocumentIcon />}
         title="אין עדיין תנועות"
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
-        action={viewer ? undefined : (
+        action={holdWrites ? undefined : (
           <Button variant="pill" to={`/add${search}`} state={withSheetBackground(location)}>
             <CameraIcon />
             צילום חשבונית
@@ -1171,6 +1178,7 @@ export function ReviewQueue({
   const toast = useToast();
   const blocked = useBlockedPreview();
   const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const rows = useHeldOrder(incoming, (item) => item.id);
   const [hideAuto, setHideAuto] = useState(false);
@@ -1371,6 +1379,7 @@ export function ReviewQueue({
         ? view.category_id != null
         : view.project_id != null && view.category_id != null));
   return (
+    <ViewerScope>
     <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       {rows.length > 0 ? (
@@ -1384,9 +1393,15 @@ export function ReviewQueue({
             />
           ) : null}
           <span className="t-hint">
-            <bdi className="ui-num ui-review-count" dir="ltr">{String(index)}</bdi>
-            {" מתוך "}
-            <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+            {viewer ? (
+              <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+            ) : (
+              <>
+                <bdi className="ui-num ui-review-count" dir="ltr">{String(index)}</bdi>
+                {" מתוך "}
+                <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+              </>
+            )}
           </span>
           {changeTo == null ? (
             <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
@@ -1419,11 +1434,11 @@ export function ReviewQueue({
           direction={card.direction}
           projectButtonRef={reviewLineFocus.project}
           categoryButtonRef={reviewLineFocus.category}
-          onProject={viewer || card.direction === "income" ? undefined : openProject}
-          onCategory={viewer ? undefined : openCategory}
+          onProject={holdWrites || card.direction === "income" ? undefined : openProject}
+          onCategory={holdWrites ? undefined : openCategory}
         />
       </div>
-      {viewer ? null : (
+      {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
       <div className="ui-review-actions">
         <div className="ui-review-approve" ref={approveSlot}>
           <Button
@@ -1472,6 +1487,7 @@ export function ReviewQueue({
       </div>
       )}
     </div>
+    </ViewerScope>
   );
 }
 
@@ -1694,7 +1710,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const navigate = useNavigate();
   const toast = useToast();
   const blocked = useBlockedPreview();
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
+  const writeGate = useWriteGate("/review");
   const invalidate = useInvalidateBooks();
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
@@ -1906,7 +1923,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   });
 
   async function createProject(name: string): Promise<ChangeChoice> {
-    if (viewer) throw new Error("preview");
+    if (holdWrites) throw new Error("preview");
     return saveNewProject(name, blocked, toast, (project) => {
       setExtraProjects((list) => [...list, project]);
     }, invalidate);
@@ -1920,6 +1937,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     : linePick === "category"
       ? reviewLineFocus.category
       : undefined;
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   if (formPhase.kind !== "ready") {
     return (
       <RouteSheet title="שינוי שיוך" closeTo={closeTo} returnFocusRef={returnFocusRef}>
@@ -1961,7 +1980,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         setLeaveNote("");
       }}
       onCommitPick={async (kind, id) => {
-        if (sample || viewer) return undefined;
+        if (sample || holdWrites) return undefined;
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
@@ -2011,7 +2030,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         return Promise.resolve();
       }}
       onCommitPending={async () => {
-        if (sample || viewer) return;
+        if (sample || holdWrites) return;
         if (blocked()) throw new Error("preview");
         setHold("");
         picked.current = { projectId, categoryId, remember };
@@ -2032,6 +2051,9 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
 export function AddForm() {
   const search = usePreviewSearch();
   const goBack = useGoBack();
+  const writeGate = useWriteGate("/");
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   return (
     <RouteSheet
       title="הוספה"
@@ -2179,6 +2201,7 @@ export function TransactionScreen({
   const navigate = useNavigate();
   const toast = useToast();
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -2445,7 +2468,7 @@ export function TransactionScreen({
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={<IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
+        trailing={holdWrites ? undefined : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
@@ -2459,14 +2482,22 @@ export function TransactionScreen({
         ) : null}
       </div>
       <List>
-        <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
-          if (splitRow) {
-            openSplit();
-            return;
-          }
-          setChangeSheet(true);
-        }} />
-        <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+        {holdWrites ? (
+          <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} />
+        ) : (
+          <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
+            if (splitRow) {
+              openSplit();
+              return;
+            }
+            setChangeSheet(true);
+          }} />
+        )}
+        {holdWrites ? (
+          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} />
+        ) : (
+          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+        )}
         <ListRow
           variant="button"
           title="חשבונית ותשלום"
@@ -2484,6 +2515,7 @@ export function TransactionScreen({
           {vatStatusLabel(txn.vat_status)}
         </p>
       ) : null}
+      {holdWrites ? null : (
       <div className="ui-stack ui-page-pad">
         {onOpenSplit ? (
           <Button variant="secondary" icon={<SplitIcon />} onClick={openSplit}>פיצול בין פרויקטים</Button>
@@ -2491,6 +2523,7 @@ export function TransactionScreen({
           <Button variant="secondary" icon={<SplitIcon />} to={`/transactions/${txn.id}/split${search}`}>פיצול בין פרויקטים</Button>
         )}
       </div>
+      )}
       <ChangeAssignment
         host="overlay"
         open={changeOpen}
@@ -2659,6 +2692,7 @@ export function SplitScreen({
   backTo?: string;
 } = {}) {
   const { transactionId = "" } = useParams();
+  const writeGate = useWriteGate(`/transactions/${transactionId}`);
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const location = useLocation();
@@ -3052,6 +3086,8 @@ export function SplitScreen({
     if (event.target instanceof HTMLElement && event.target.closest("input")) return;
     event.currentTarget.querySelector("input")?.focus();
   }
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   if (phase.kind !== "ready" || active.length === 0) {
     return (
       <ScreenState
@@ -3345,6 +3381,7 @@ export function SettingsScreen({
   const navigate = useNavigate();
   const { session } = useAuth();
   const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
@@ -3453,6 +3490,7 @@ export function SettingsScreen({
       if (error) throw error;
       clearJevConnectorFlag(session?.user.id ?? null);
       queryClient.removeQueries({ queryKey: ["jev-connector"] });
+      queryClient.removeQueries({ queryKey: ["company-owner"] });
     },
   });
 
@@ -3502,7 +3540,7 @@ export function SettingsScreen({
   }, [focusSumit, status.data, status.isError, status.isLoading]);
 
   useEffect(() => {
-    if (viewer) return;
+    if (holdWrites) return;
     if (sheetApplied.current) return;
     const noCo = sample
       ? sample.noCompany === true
@@ -3547,7 +3585,7 @@ export function SettingsScreen({
     }
     if (opened === "connected") setStatusOpen(true);
     else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
-  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data, viewer]);
+  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data, holdWrites]);
 
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
@@ -3594,8 +3632,10 @@ export function SettingsScreen({
   const showInstall = !isStandalone();
   const showSignOut = preview === "off" || previewValue === "empty";
   return (
+    <ViewerScope>
     <div>
       <ScreenHeader title="הגדרות" />
+      <ViewerNote />
       {noCompany ? (
         email !== "" ? (
           <List>
@@ -3666,7 +3706,7 @@ export function SettingsScreen({
               </TextLink>
             )}
           />
-        ) : viewer ? (
+        ) : holdWrites ? (
           <ListRow
             variant="static"
             title="SUMIT"
@@ -3711,12 +3751,13 @@ export function SettingsScreen({
         blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
         sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
         showHeading={false}
-        readOnly={viewer}
+        readOnly={holdWrites}
+        viewerCopy={viewer}
       />
       <JevSettings
         noCompany={noCompany}
         blocked={blocked}
-        readOnly={viewer}
+        readOnly={holdWrites}
         sample={
           noCompany
             ? undefined
@@ -3740,17 +3781,17 @@ export function SettingsScreen({
               className="ui-stack"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (viewer || blocked()) return;
+                if (holdWrites || blocked()) return;
                 connect.mutate();
               }}
             >
               <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
               <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
-              <Button type="submit" busy={connect.isPending} disabled={viewer}>{authReconnect ? "חיבור מחדש" : "חיבור"}</Button>
+              <Button type="submit" busy={connect.isPending} disabled={holdWrites}>{authReconnect ? "חיבור מחדש" : "חיבור"}</Button>
             </form>
             {authReconnect ? (
               <List>
-                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (viewer) return; setDisconnectSheet(true); }} />
+                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
               </List>
             ) : null}
           </div>
@@ -3779,12 +3820,12 @@ export function SettingsScreen({
             busy={refresh.isPending}
             disabled={refreshHeld}
             onClick={() => {
-              if (viewer || refreshHeld) return;
+              if (holdWrites || refreshHeld) return;
               if (blocked()) return;
               refresh.mutate();
             }}
           />
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (viewer) return; setDisconnectSheet(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
         </List>
       </Sheet>
       <ConfirmSheet
@@ -3797,7 +3838,7 @@ export function SettingsScreen({
         destructive
         busy={disconnect.isPending}
         onConfirm={() => {
-          if (viewer || blocked()) return;
+          if (holdWrites || blocked()) return;
           disconnect.mutate();
         }}
       />
@@ -3812,9 +3853,9 @@ export function SettingsScreen({
               label="רווח אחרי כלליות"
               hint="חלק מהכלליות נכנס לכל פרויקט"
               checked={overheadOn}
-              disabled={viewer}
+              disabled={holdWrites}
               onChange={(checked) => {
-                if (viewer) return;
+                if (holdWrites) return;
                 if (sample) {
                   setOverheadOn(checked);
                   return;
@@ -3852,21 +3893,26 @@ export function SettingsScreen({
       ) : null}
       <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
+    </ViewerScope>
   );
 }
 
 function CategoryLine({
   category,
   muted = false,
+  plain = false,
   onMenu,
 }: {
   category: CategoryRow & { count?: number };
   muted?: boolean;
+  /** A viewer row keeps the height and drops the pointer. */
+  plain?: boolean;
   onMenu?: () => void;
 }) {
   return (
     <ListRow
       variant="item"
+      plain={plain}
       title={category.name}
       muted={muted}
       meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
@@ -3894,7 +3940,7 @@ export function CategoriesScreen({
   const preview = useHomePreview();
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
-  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const categories = useCategoriesQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null && preview === "off");
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
@@ -3994,7 +4040,8 @@ export function CategoriesScreen({
           <CategoryLine
             key={category.id}
             category={category}
-            onMenu={viewer ? undefined : () => {
+            plain={holdWrites}
+            onMenu={holdWrites ? undefined : () => {
               setMenu(category);
             }}
           />
@@ -4002,7 +4049,7 @@ export function CategoriesScreen({
       </List>
       ) : null}
       <div className="ui-cat-foot">
-        {viewer ? null : (
+        {holdWrites ? null : (
         <TextLink
           chevron={false}
           wrap
@@ -4040,7 +4087,8 @@ export function CategoriesScreen({
                   key={category.id}
                   category={category}
                   muted
-                  onMenu={viewer ? undefined : () => {
+                  plain={holdWrites}
+                  onMenu={holdWrites ? undefined : () => {
                     setMenu(category);
                   }}
                 />

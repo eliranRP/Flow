@@ -1,10 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const defaultSmokeHost = "https://flow-app-dx5.pages.dev";
+export const defaultSmokeHost = "https://flow-app-dx5.pages.dev";
 
 /** `SMOKE_BASE_URL` overrides the Pages host. Unset, the live check uses the current host. */
-function smokeBaseURL(): string {
-  const configured = process.env.SMOKE_BASE_URL?.trim() ?? "";
+export function smokeBaseURL(env: NodeJS.ProcessEnv = process.env): string {
+  const configured = env.SMOKE_BASE_URL?.trim() ?? "";
   return configured !== "" ? configured : defaultSmokeHost;
 }
 

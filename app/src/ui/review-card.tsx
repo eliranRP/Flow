@@ -130,13 +130,13 @@ export function ReviewCard({
             onClick={line.onOpen}
           />
         ) : (
-          <p className="ui-review-line" key={line.key}>
-            <span className="t-label">{line.label}</span>
-            <span>
-              {line.value}
-              {line.suggested ? <SuggestTag /> : null}
-            </span>
-          </p>
+          <ListRow
+            key={line.key}
+            variant="static"
+            eyebrow={line.label}
+            title={line.value}
+            tag={line.suggested ? <SuggestTag /> : undefined}
+          />
         ))}
         {note == null ? null : pending ? (
           <p className="t-label ui-review-note-slot" aria-hidden="true" />

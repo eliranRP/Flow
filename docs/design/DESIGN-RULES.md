@@ -181,6 +181,8 @@ Boards: [ds-4](../../design/system/ds-4-controls-light.png) controls, [ds-5](../
 
 Every control has pressed, disabled, focus, and selected or busy where it applies. Pressed is instant, 100ms. Focus is a 2px ring, `--color-focus`, offset 2px. Inside the band the ring is white. A screen-reader title (`tabindex=-1`) draws no ring. A sheet panel (`role=dialog`, `tabindex=-1`) draws no ring either. The 2px ring stays on real controls for `:focus-visible`.
 
+A viewer cannot take an action that would not apply, so that action is hidden. When the layout depends on the slot, the slot stays empty. A stateful switch stays on screen, disabled, with the label and the hint at full strength and a muted on-track that is still distinguishable. A settings row that would open a write becomes static, with no chevron.
+
 | Component | States | Rule |
 |---|---|---|
 | Button | primary, secondary (tint), ghost, destructive. Default, pressed, disabled | One primary per screen. Destructive confirm is `bad` text on `bad-tint`, never a solid red block |
