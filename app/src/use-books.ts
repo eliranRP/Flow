@@ -33,6 +33,7 @@ import {
   dropLegacyJevConnectorKey,
   fetchJevConnector,
   jevConnectorQueryKey,
+  jevScopeFollowsLive,
   jevQueueKey,
   jevQueueQueryKey,
   loadJevSuggestions,
@@ -149,7 +150,7 @@ function readCompanyId(supabase: ScopeClient): PromiseLike<string | null> {
   return supabase.from("companies").select("id").limit(1).maybeSingle().then(companyIdFromRow, () => null);
 }
 
-/** Session and company share one deadline. A hang keeps whichever part already arrived. */
+/** Session and company share one deadline. A row that arrives later may still bind. */
 async function settleReviewJevScope(
   supabase: ScopeClient,
   listed: PromiseLike<{ data: unknown; error: unknown }>,
@@ -157,15 +158,14 @@ async function settleReviewJevScope(
   client: QueryClient,
 ): Promise<void> {
   const found: { userId: string | null; companyId: string | null } = { userId: null, companyId: null };
+  const userTask = Promise.resolve(readSessionUserId(supabase)).then((id) => {
+    found.userId = id;
+  });
+  const companyTask = Promise.resolve(readCompanyId(supabase)).then((id) => {
+    found.companyId = id;
+  });
   await withJevDeadline(undefined, async () => {
-    await Promise.all([
-      readSessionUserId(supabase).then((id) => {
-        found.userId = id;
-      }),
-      readCompanyId(supabase).then((id) => {
-        found.companyId = id;
-      }),
-    ]);
+    await Promise.all([userTask, companyTask]);
     return true;
   }, false);
   let payloadCompany: string | null = null;
@@ -179,29 +179,33 @@ async function settleReviewJevScope(
   } catch {
     payloadCompany = null;
   }
-  const resolvedCompany = payloadCompany ?? found.companyId;
-  const scope = found.userId != null && resolvedCompany != null
-    ? { userId: found.userId, companyId: resolvedCompany }
-    : null;
-  if (!completeJevScopeLookup(lookup, scope) || scope == null) return;
-  if (jevQueueKey(ids) === "" || typeof supabase.from !== "function") return;
-  void client.query({
-    queryKey: jevConnectorQueryKey(scope),
-    retry: false,
-    staleTime: JEV_CONNECTOR_STALE_MS,
-    queryFn: ({ signal }) => fetchJevConnector(signal),
-  }).then((on) => {
-    if (!on) return undefined;
-    return client.query({
-      queryKey: jevQueueQueryKey(ids),
+  const publish = () => {
+    const resolvedCompany = payloadCompany ?? found.companyId;
+    const scope = found.userId != null && resolvedCompany != null
+      ? { userId: found.userId, companyId: resolvedCompany }
+      : null;
+    if (!completeJevScopeLookup(lookup, scope) || scope == null || jevScopeFollowsLive()) return;
+    if (jevQueueKey(ids) === "" || typeof supabase.from !== "function") return;
+    void client.query({
+      queryKey: jevConnectorQueryKey(scope),
       retry: false,
-      queryFn: ({ signal }) => withJevDeadline(
-        signal,
-        (linked) => loadJevSuggestions(ids, linked),
-        { connectorOn: false, byId: {} },
-      ),
-    });
-  }).catch(() => undefined);
+      staleTime: JEV_CONNECTOR_STALE_MS,
+      queryFn: ({ signal }) => fetchJevConnector(signal),
+    }).then((on) => {
+      if (!on) return undefined;
+      return client.query({
+        queryKey: jevQueueQueryKey(ids),
+        retry: false,
+        queryFn: ({ signal }) => withJevDeadline(
+          signal,
+          (linked) => loadJevSuggestions(ids, linked),
+          { connectorOn: false, byId: {} },
+        ),
+      });
+    }).catch(() => undefined);
+  };
+  publish();
+  void Promise.all([userTask, companyTask]).then(publish);
 }
 
 export function useReviewQuery(active = true) {
