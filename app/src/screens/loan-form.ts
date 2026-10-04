@@ -92,6 +92,8 @@ export type LoanPreview =
       interestMinor: bigint;
       escrowMinor: bigint;
       balloon: LoanBalloon | null;
+      /** Set when the last payment is at least twice the regular one and it is not a balloon. */
+      doubledFinalMinor: bigint | null;
       /** Set when the last payment differs from the regular one only by rounding. */
       adjustedFinalMinor: bigint | null;
       insert: Omit<LoanInsert, "company_id">;
@@ -121,6 +123,12 @@ function ratePpmOf(text: string): number | null {
   }
 }
 
+function doubledFinal(schedule: LoanSchedule, paymentMinor: bigint): bigint | null {
+  const last = schedule.rows.at(-1);
+  if (schedule.balloon != null || last == null || last.paymentMinor < paymentMinor * 2n) return null;
+  return last.paymentMinor;
+}
+
 function roundingAdjustment(
   schedule: LoanSchedule,
   paymentMinor: bigint,
@@ -130,7 +138,7 @@ function roundingAdjustment(
 ): bigint | null {
   const last = schedule.rows.at(-1);
   if (schedule.balloon != null || last == null || schedule.rows.length !== termMonths) return null;
-  if (last.paymentMinor === paymentMinor) return null;
+  if (last.paymentMinor === paymentMinor || last.paymentMinor >= paymentMinor * 2n) return null;
   const pi = paymentMinor - escrowMinor;
   if (pi < levelPi - 1n || pi > levelPi + 1n) return null;
   return last.paymentMinor;
@@ -178,6 +186,7 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
       interestMinor,
       escrowMinor,
       balloon: schedule.balloon,
+      doubledFinalMinor: doubledFinal(schedule, paymentMinor),
       adjustedFinalMinor: roundingAdjustment(schedule, paymentMinor, escrowMinor, termMonths, levelPi),
       insert: {
         name,

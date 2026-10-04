@@ -232,6 +232,21 @@ describe("buildLoanSchedule", () => {
     })).toBe(100n);
   });
 
+  it("keeps a 600 month final payment of twice the regular one off the balloon", () => {
+    const { rows, balloon } = buildLoanSchedule({
+      principalMinor: 360_600n,
+      annualRatePpm: 0,
+      termMonths: 600,
+      startDate: "2026-01-01",
+      paymentMinor: 600n,
+      escrowMinor: 0n,
+    });
+    expect(rows).toHaveLength(600);
+    expect(rows.at(-1)?.paymentMinor).toBe(1_200n);
+    expect(rows.at(-1)?.balanceMinor).toBe(0n);
+    expect(balloon).toBeNull();
+  });
+
   it("rejects a negative rate", () => {
     expect(codeOf(() => buildLoanSchedule({ ...base, annualRatePpm: -1 }))).toBe("rate");
   });
