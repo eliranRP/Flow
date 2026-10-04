@@ -203,13 +203,13 @@ isOneToOne: false
                   ]
                 },"loan_splits": {
                   Row: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"loan_id": string,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at": string
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"loan_id": string,"needs_review": boolean,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at": string
                   }
                   Insert: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"loan_id": string,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at"?: string
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"loan_id": string,"needs_review"?: boolean,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"loan_id"?: string,"part"?: Database["public"]['Enums']["loan_split_part"],"scheduled_minor"?: number,"transaction_id"?: string,"updated_at"?: string
+                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"loan_id"?: string,"needs_review"?: boolean,"part"?: Database["public"]['Enums']["loan_split_part"],"scheduled_minor"?: number,"transaction_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
