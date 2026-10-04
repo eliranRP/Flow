@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(14);
+select plan(15);
 
 do $users$
 begin
@@ -114,6 +114,14 @@ select throws_ok(
   '42501',
   null,
   'a viewer cannot create a company'
+);
+
+select throws_ok(
+  $$insert into public.companies (owner_id, name)
+    values (auth.uid(), 'עסק של צופה')$$,
+  '42501',
+  null,
+  'a viewer cannot insert a company row'
 );
 
 select is(
