@@ -210,6 +210,8 @@ export interface ProviderMeta {
    * "kind only" rule is the one the brief replaces.
    */
   providerCategory?: string | null;
+  /** ISO time of the last status recheck. Normalize does not set it. */
+  checked_at?: string | null;
 }
 
 /**
@@ -270,6 +272,8 @@ const nullableName = z.string().max(TEXT_LIMITS.name).nullable();
 export const providerMetaSchema = z.strictObject({
   kind: z.string().max(TEXT_LIMITS.kind).nullable().optional(),
   providerCategory: z.string().max(TEXT_LIMITS.hint).nullable().optional(),
+  /** ISO time of the last status recheck. The engine writes it. Normalize leaves it unset. */
+  checked_at: z.string().min(1).max(40).nullable().optional(),
 });
 
 const namedParty = z.strictObject({

@@ -9,7 +9,7 @@ The owner has a Mercury account. SUMIT does not carry those lines. [0036](0036-s
 
 ## Decision
 
-The owner pastes Mercury's Read Only token in Settings. Flow calls GET only. The token is sealed with `MERCURY_KEK`. New seals use envelope format 3, which binds the company id and the provider. The client never receives it.
+The owner pastes Mercury's Read Only token in Settings. Flow calls GET only. The token is sealed with `MERCURY_KEK`, an Edge Function environment variable, the same pattern as `SUMIT_KEK`. It is not a Vault secret. New seals use envelope format 3, which binds the company id and the provider. The client never receives it.
 
 Import every Mercury line, in and out, including income. There is no switch to hide a direction. Skip only a transfer between the company's own accounts. SUMIT lines and Mercury lines never describe the same movement, so nothing is deduped.
 

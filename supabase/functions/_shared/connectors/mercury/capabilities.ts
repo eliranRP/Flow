@@ -22,6 +22,8 @@ export const MERCURY_SKIP_REASONS = [
   "non_usd",
   "refused_amount",
   "treasury_activity",
+  "dividend_reinvestment",
+  "treasury_cancel",
 ] as const;
 export type MercurySkipReason = (typeof MERCURY_SKIP_REASONS)[number];
 

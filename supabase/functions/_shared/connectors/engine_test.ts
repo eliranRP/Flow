@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1";
-import { planConnectorSync, type ConfirmResult, type StoredLine } from "./engine.ts";
+import { CONNECTOR_RECHECK_LIMIT, planConnectorSync, type ConfirmResult, type StoredLine } from "./engine.ts";
 import type {
   AccountLabel,
   CanonicalLine,
@@ -254,4 +254,89 @@ Deno.test("a posted line outside the window is voided from a status recheck", as
     externalId: "pending-gone",
     missingSince: "2026-10-03T00:00:00.000Z",
   }]);
+  assertEquals(plan.rechecked.map((row) => row.externalId), ["old-posted", "pending-gone"]);
+});
+
+Deno.test("a sync rechecks at most 50 lines, oldest checked first", async () => {
+  const seen: string[] = [];
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [],
+      removedIds: [],
+      nextCursor: NOW.toISOString(),
+      complete: true,
+      windowStart: "2026-09-04",
+    },
+  });
+  const stored: StoredLine[] = [];
+  for (let index = 0; index < CONNECTOR_RECHECK_LIMIT + 1; index += 1) {
+    const day = String(index + 1).padStart(2, "0");
+    stored.push({
+      externalId: `old-${day}`,
+      lineStatus: "posted",
+      docDate: `2026-01-${day}`,
+      missingSince: null,
+      checkedAt: index === CONNECTOR_RECHECK_LIMIT ? null : `2026-08-${day}T00:00:00.000Z`,
+    });
+  }
+  await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored,
+    now: () => NOW,
+    confirmLine(storedLine): Promise<ConfirmResult> {
+      seen.push(storedLine.externalId);
+      return Promise.resolve({ action: "keep", missingSince: NOW.toISOString() });
+    },
+  });
+  assertEquals(seen.length, CONNECTOR_RECHECK_LIMIT);
+  assertEquals(seen[0], `old-${String(CONNECTOR_RECHECK_LIMIT + 1).padStart(2, "0")}`);
+  assertEquals(seen.includes(`old-${String(CONNECTOR_RECHECK_LIMIT).padStart(2, "0")}`), false);
+});
+
+Deno.test("a rate-limited recheck keeps the line and does not fail the run", async () => {
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [],
+      removedIds: [],
+      nextCursor: NOW.toISOString(),
+      complete: true,
+      windowStart: "2026-09-04",
+    },
+  });
+  built.port.classifyError = () => ({ class: "rate_limited", retry_after: null });
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [{
+      externalId: "old-posted",
+      lineStatus: "posted",
+      docDate: "2026-08-01",
+      missingSince: null,
+    }],
+    now: () => NOW,
+    confirmLine() {
+      return Promise.reject(new Error("rate_limited"));
+    },
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(plan.removedIds, []);
+  assertEquals(plan.rechecked, []);
 });

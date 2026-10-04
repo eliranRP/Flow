@@ -17,7 +17,7 @@ import { MERCURY_SKIP_REASONS } from "../../../functions/_shared/connectors/merc
 import { jerusalemDate } from "../../../functions/_shared/connectors/mercury/dates.ts";
 import { dollarsToCents } from "../../../functions/_shared/connectors/mercury/money.ts";
 import { classifyMercuryError, httpStatusVoids } from "../../../functions/_shared/connectors/mercury/client.ts";
-import { MercuryCardAccountError, normalizeMercury, settlementPlan } from "../../../functions/_shared/connectors/mercury/normalize.ts";
+import { MercuryCardAccountError, normalizeMercury, settlementPlan, treasuryVoidIds } from "../../../functions/_shared/connectors/mercury/normalize.ts";
 import { postedSnapshot } from "./replay_fixture.ts";
 import { redactMercury } from "../../../functions/_shared/connectors/mercury/redact.ts";
 import { openConnector } from "../../../functions/_shared/connectors/registry.ts";
@@ -272,6 +272,115 @@ Deno.test("treasury yield and dividends import as other income", () => {
   }
 });
 
+Deno.test("treasury fees, credits, cancels, and reinvestment follow the income rules", () => {
+  const treasuryId = treasuryFile.accounts[0].id;
+  const own = ctx();
+  const fee = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444444",
+    accountId: treasuryId,
+    type: "mercuryFeePosted",
+    description: "Treasury fee",
+    amount: -1.5,
+    canonicalDay: "2026-09-02",
+  }, own);
+  assertEquals(fee.ok, true);
+  if (!fee.ok) return;
+  assertEquals(fee.line.direction, "expense");
+  assertEquals(fee.line.amount_original, 150);
+  assertEquals(fee.line.amount_negated, true);
+
+  const credit = normalizeMercury({
+    id: "55555555-5555-4555-8555-555555555555",
+    accountId: treasuryId,
+    type: "mercuryCreditPosted",
+    description: "Mercury credit",
+    amount: 2,
+    canonicalDay: "2026-09-03",
+  }, own);
+  assertEquals(credit.ok, true);
+  if (!credit.ok) return;
+  assertEquals(credit.line.direction, "income");
+  assertEquals(credit.line.category_hint, "הכנסה אחרת");
+  assertEquals(credit.line.amount_original, 200);
+
+  const refund = normalizeMercury({
+    id: "66666666-6666-4666-8666-666666666666",
+    accountId: treasuryId,
+    type: "mercuryFeeRefunded",
+    description: "Fee refund",
+    amount: 1.5,
+    canonicalDay: "2026-09-04",
+  }, own);
+  assertEquals(refund.ok, true);
+  if (!refund.ok) return;
+  assertEquals(refund.line.direction, "income");
+
+  const deposit = normalizeMercury({
+    id: "77777777-7777-4777-8777-777777777777",
+    accountId: treasuryId,
+    type: "depositComplete",
+    description: "Deposit into Treasury",
+    amount: 25000,
+    canonicalDay: "2026-09-05",
+  }, own);
+  assertEquals(deposit, { ok: false, skip: "treasury_activity" });
+
+  const reinvest = normalizeMercury({
+    id: "88888888-8888-4888-8888-888888888888",
+    accountId: treasuryId,
+    type: "dividendReinvestmentPosted",
+    description: "Dividend reinvested",
+    amount: 5,
+    canonicalDay: "2026-09-15",
+  }, own);
+  assertEquals(reinvest, { ok: false, skip: "dividend_reinvestment" });
+
+  const cancel = normalizeMercury({
+    id: "99999999-9999-4999-8999-999999999999",
+    accountId: treasuryId,
+    type: "interestCanceled",
+    description: "Interest canceled",
+    amount: -12.34,
+    canonicalDay: "2026-09-30",
+    cancelsTransactionId: "11111111-1111-4111-8111-111111111111",
+  }, own);
+  assertEquals(cancel, { ok: false, skip: "treasury_cancel" });
+
+  const dividend = treasuryTxns.transactions[1];
+  const voids = treasuryVoidIds([
+    dividend,
+    {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      accountId: treasuryId,
+      type: "dividendReinvestmentPosted",
+      amount: 5,
+      canonicalDay: "2026-09-15",
+    },
+    {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      accountId: treasuryId,
+      type: "interestCanceled",
+      amount: -12.34,
+      canonicalDay: "2026-09-30",
+    },
+  ], [{
+    externalId: "11111111-1111-4111-8111-111111111111",
+    kind: "interestPosted",
+    amountCents: 1234,
+    accountId: treasuryId,
+    docDate: "2026-09-30",
+  }]);
+  assertEquals(voids, ["11111111-1111-4111-8111-111111111111"]);
+  const imported = [dividend, {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    accountId: treasuryId,
+    type: "dividendReinvestmentPosted",
+    amount: 5,
+    canonicalDay: "2026-09-15",
+  }].map((row) => normalizeMercury(row, own)).filter((row) => row.ok);
+  assertEquals(imported.length, 1);
+});
+
 Deno.test("the fourteen autopay skips are paired payments between own checking and own credit", () => {
   const { skippedRows } = replay(postedLines);
   const autopay = skippedRows.filter((row) => row.reason === "own_account_transfer");
@@ -324,7 +433,7 @@ export function fixtureDenyListRequired(env: { get(name: string): string | undef
 function wordGrams(text: string): Set<string> {
   const words = fixtureTokens(text);
   const grams = new Set<string>();
-  const widest = Math.min(5, words.length);
+  const widest = Math.min(6, words.length);
   for (let size = 1; size <= widest; size += 1) {
     for (let index = 0; index + size <= words.length; index += 1) {
       grams.add(words.slice(index, index + size).join(" "));
@@ -366,9 +475,9 @@ Deno.test("a fork of this repo skips the deny-list when the secret is absent", (
   })), true);
   assertEquals(fixtureTokens("José  García"), ["jose", "garcia"]);
   assertEquals(normalisedDenyEntry("  José   García "), "jose garcia");
-  const grams = wordGrams("one two three four five six");
-  assertEquals(grams.has("one two three four five"), true);
-  assertEquals(grams.has("one two three four five six"), false);
+  const grams = wordGrams("one two three four five six seven");
+  assertEquals(grams.has("one two three four five six"), true);
+  assertEquals(grams.has("one two three four five six seven"), false);
 });
 
 Deno.test({

@@ -639,6 +639,10 @@ isOneToOne: false
 { Args: { "p_limit": number }; Returns: {
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
+                           } |
+{ Args: { "p_limit": number,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: {
+              "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
+            }[]
                            },
 "clear_loan_split_review":
 { Args: { "p_transaction_id": string }; Returns: undefined
