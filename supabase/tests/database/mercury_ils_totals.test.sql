@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(12);
+select plan(26);
 
 do $users$
 begin
@@ -116,7 +116,7 @@ select is(
 
 select is(
   (
-    select (item ->> 'minor')::bigint
+    select (item ->> 'income_minor')::bigint
     from jsonb_array_elements(
       public.company_pnl((select id from ils_co), null, null, 'cash') -> 'other_currencies'
     ) item
@@ -269,6 +269,347 @@ select is(
   (select count(*)::integer from public.connector_refresh_requests where provider::text = 'sumit' and claimed_at is null),
   1,
   'the mercury claim leaves the sumit row unclaimed'
+);
+
+update public.review_queue q
+set status = 'approved', resolved_at = now()
+from public.transactions t
+where t.id = q.transaction_id
+  and t.company_id = (select id from ils_co)
+  and t.external_id = 'usd-pending'
+  and q.status = 'open';
+
+do $$
+begin
+  perform public.upsert_connector_lines(
+    (select id from ils_co),
+    'mercury',
+    jsonb_build_object(
+      'lines', jsonb_build_array(jsonb_build_object(
+        'source', 'mercury',
+        'external_id', 'usd-pending',
+        'direction', 'income',
+        'line_status', 'pending',
+        'doc_kind', 'receipt',
+        'currency', 'USD',
+        'amount_original', 2500,
+        'amount_negated', false,
+        'doc_date', '2026-09-03',
+        'description', 'Pending credit',
+        'vat', jsonb_build_object('amount', 0, 'status', 'source'),
+        'provider_meta', jsonb_build_object('kind', 'incomingDomesticWire')
+      )),
+      'removed_ids', '[]'::jsonb,
+      'complete', false
+    ),
+    null,
+    null
+  );
+  perform public.upsert_connector_lines(
+    (select id from ils_co),
+    'mercury',
+    jsonb_build_object(
+      'lines', jsonb_build_array(jsonb_build_object(
+        'source', 'mercury',
+        'external_id', 'usd-posts',
+        'direction', 'income',
+        'line_status', 'pending',
+        'doc_kind', 'receipt',
+        'currency', 'USD',
+        'amount_original', 800,
+        'amount_negated', false,
+        'doc_date', '2026-09-04',
+        'description', 'Posts later',
+        'vat', jsonb_build_object('amount', 0, 'status', 'source'),
+        'provider_meta', jsonb_build_object('kind', 'incomingDomesticWire')
+      )),
+      'removed_ids', '[]'::jsonb,
+      'complete', false
+    ),
+    null,
+    null
+  );
+  perform public.upsert_connector_lines(
+    (select id from ils_co),
+    'mercury',
+    jsonb_build_object(
+      'lines', jsonb_build_array(jsonb_build_object(
+        'source', 'mercury',
+        'external_id', 'usd-posts',
+        'direction', 'income',
+        'line_status', 'posted',
+        'doc_kind', 'receipt',
+        'currency', 'USD',
+        'amount_original', 800,
+        'amount_negated', false,
+        'doc_date', '2026-09-04',
+        'cash_date', '2026-09-04',
+        'description', 'Posts later',
+        'vat', jsonb_build_object('amount', 0, 'status', 'source'),
+        'provider_meta', jsonb_build_object('kind', 'incomingDomesticWire')
+      )),
+      'removed_ids', '[]'::jsonb,
+      'complete', false
+    ),
+    null,
+    null
+  );
+  perform public.upsert_connector_lines(
+    (select id from ils_co),
+    'mercury',
+    jsonb_build_object(
+      'lines', jsonb_build_array(jsonb_build_object(
+        'source', 'mercury',
+        'external_id', 'usd-void',
+        'direction', 'income',
+        'line_status', 'pending',
+        'doc_kind', 'receipt',
+        'currency', 'USD',
+        'amount_original', 400,
+        'amount_negated', false,
+        'doc_date', '2026-09-05',
+        'description', 'Voids later',
+        'vat', jsonb_build_object('amount', 0, 'status', 'source'),
+        'provider_meta', jsonb_build_object('kind', 'incomingDomesticWire')
+      )),
+      'removed_ids', '[]'::jsonb,
+      'complete', false
+    ),
+    null,
+    null
+  );
+  perform public.upsert_connector_lines(
+    (select id from ils_co),
+    'mercury',
+    jsonb_build_object(
+      'lines', '[]'::jsonb,
+      'removed_ids', jsonb_build_array('usd-void'),
+      'complete', false
+    ),
+    null,
+    null
+  );
+end
+$$;
+
+select is(
+  (
+    select count(*)::integer
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id
+    where t.company_id = (select id from ils_co)
+      and t.external_id = 'usd-pending'
+      and q.status = 'open'
+  ),
+  0,
+  'an approved pending income line is not re-queued'
+);
+
+select is(
+  (
+    select q.reason is null
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id
+    where t.company_id = (select id from ils_co)
+      and t.external_id = 'usd-posts'
+      and q.status = 'open'
+  ),
+  true,
+  'a posted line clears the pending income label'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id
+    where t.company_id = (select id from ils_co)
+      and t.external_id = 'usd-void'
+      and q.status = 'open'
+  ),
+  0,
+  'a voided line drops its open review row'
+);
+
+insert into public.projects (company_id, name)
+select id, 'אתר דולר' from ils_co;
+
+create temp table ils_project (id uuid);
+insert into ils_project (id)
+select id from public.projects where company_id = (select id from ils_co) and name = 'אתר דולר';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, category_id, user_assigned, description
+)
+select c.id, 'expense', 'expense', 'project', 'posted',
+  -4000, -4000, 0, 'unknown', 'ILS',
+  '2026-09-06', 'manual', 'ils:direct', p.id, cat.id, true, 'הוצאה בשקלים'
+from ils_co c
+join ils_project p on true
+join public.categories cat on cat.company_id = c.id and cat.kind = 'expense' and cat.name = 'חומרים';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, category_id, user_assigned, description
+)
+select c.id, 'expense', 'expense', 'project', 'posted',
+  -8000, -8000, 0, 'unknown', 'USD',
+  '2026-09-07', 'manual', 'usd:direct', p.id, cat.id, true, 'Dollar expense'
+from ils_co c
+join ils_project p on true
+join public.categories cat on cat.company_id = c.id and cat.kind = 'expense' and cat.name = 'חומרים';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, description
+)
+select c.id, 'income', 'invoice', 'posted',
+  6000, 6000, 0, 'unknown', 'ILS',
+  '2026-09-08', 'manual', 'ils:invoice', p.id, 'חשבונית בשקלים'
+from ils_co c
+join ils_project p on true;
+
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, description
+)
+select c.id, 'income', 'invoice', 'posted',
+  9000, 9000, 0, 'unknown', 'USD',
+  '2026-09-09', 'manual', 'usd:invoice', p.id, 'Dollar invoice'
+from ils_co c
+join ils_project p on true;
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, category_suggested, description
+)
+select c.id, 'expense', 'expense', 'project', 'pending',
+  -1500, -1500, 0, 'unknown', 'ILS',
+  '2026-09-10', 'manual', 'ils:waiting', p.id, true, 'ממתין בשקלים'
+from ils_co c
+join ils_project p on true;
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, category_suggested, description
+)
+select c.id, 'expense', 'expense', 'project', 'pending',
+  -2000, -2000, 0, 'unknown', 'USD',
+  '2026-09-11', 'manual', 'usd:waiting', p.id, true, 'Waiting dollar'
+from ils_co c
+join ils_project p on true;
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status,
+  amount_gross, amount_net, vat_amount, vat_status, currency,
+  doc_date, source, idempotency_key, project_id, category_id, description
+)
+select c.id, 'expense', 'expense', 'project', 'pending',
+  -700, -700, 0, 'unknown', 'USD',
+  '2026-09-12', 'manual', 'usd:queued', p.id, cat.id, 'Pending dollar'
+from ils_co c
+join ils_project p on true
+join public.categories cat on cat.company_id = c.id and cat.kind = 'expense' and cat.name = 'חומרים';
+
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select t.company_id, t.id, 'open', 'missing_category'
+from public.transactions t
+where t.company_id = (select id from ils_co)
+  and t.idempotency_key = 'usd:queued';
+
+grant all on ils_project to authenticated, service_role;
+
+select tests.authenticate_as('ils_owner');
+
+select is(
+  (public.get_home() ->> 'net_profit_agorot')::bigint,
+  1000::bigint,
+  'home profit keeps the shekel receipt and the shekel expense'
+);
+
+select is(
+  (
+    select (item ->> 'income_minor')::bigint
+    from jsonb_array_elements(public.get_home() -> 'other_currencies') item
+    where item ->> 'currency' = 'USD'
+  ),
+  10800::bigint,
+  'home returns the dollar receipts beside the shekel total'
+);
+
+select is(
+  (
+    select (item ->> 'expense_minor')::bigint
+    from jsonb_array_elements(public.get_home() -> 'other_currencies') item
+    where item ->> 'currency' = 'USD'
+  ),
+  -8000::bigint,
+  'home returns the dollar expense beside the shekel total'
+);
+
+select is(
+  (public.get_project((select id from ils_project)) ->> 'income_agorot')::bigint,
+  6000::bigint,
+  'project income keeps the shekel invoice'
+);
+
+select is(
+  (public.get_project((select id from ils_project)) ->> 'direct_agorot')::bigint,
+  4000::bigint,
+  'project expenses keep the shekel line'
+);
+
+select is(
+  (
+    select (item ->> 'income_minor')::bigint
+    from jsonb_array_elements(public.get_project((select id from ils_project)) -> 'other_currencies') item
+    where item ->> 'currency' = 'USD'
+  ),
+  9000::bigint,
+  'project returns the dollar invoice on its own'
+);
+
+select is(
+  (
+    select (item ->> 'expense_minor')::bigint
+    from jsonb_array_elements(public.get_project((select id from ils_project)) -> 'other_currencies') item
+    where item ->> 'currency' = 'USD'
+  ),
+  -8000::bigint,
+  'project returns the dollar expense on its own'
+);
+
+select is(
+  (public.get_project((select id from ils_project)) ->> 'pending_agorot')::bigint,
+  1500::bigint,
+  'a waiting dollar expense is not added to the shekel pending total'
+);
+
+select is(
+  (
+    select (item ->> 'expense_minor')::bigint
+    from jsonb_array_elements(public.get_project((select id from ils_project)) -> 'pending_other_currencies') item
+    where item ->> 'currency' = 'USD'
+  ),
+  -2700::bigint,
+  'waiting dollar expenses are returned on their own'
+);
+
+select is(
+  (
+    select (item ->> 'count')::integer
+    from jsonb_array_elements(public.get_project((select id from ils_project)) -> 'pending_other_currencies') item
+    where item ->> 'currency' = 'USD'
+  ),
+  2,
+  'the waiting dollar expense and the pending dollar expense are both counted'
 );
 
 select * from finish();

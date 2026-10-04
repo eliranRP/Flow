@@ -146,13 +146,15 @@ begin
     'other_currencies', coalesce((
       select jsonb_agg(jsonb_build_object(
         'currency', bucket.currency,
-        'minor', bucket.minor,
+        'income_minor', bucket.income_minor,
+        'expense_minor', bucket.expense_minor,
         'count', bucket.line_count
       ) order by bucket.currency)
       from (
         select
           t.currency,
-          sum(t.amount_net)::bigint as minor,
+          coalesce(sum(t.amount_net) filter (where t.direction = 'income'), 0)::bigint as income_minor,
+          coalesce(sum(t.amount_net) filter (where t.direction = 'expense'), 0)::bigint as expense_minor,
           count(*)::integer as line_count
         from public.transactions t
         where t.company_id = p_company_id
@@ -240,19 +242,17 @@ as $$
         'other_currencies', coalesce((
           select jsonb_agg(jsonb_build_object(
             'currency', bucket.currency,
-            'minor', bucket.minor,
+            'income_minor', bucket.income_minor,
+            'expense_minor', bucket.expense_minor,
             'count', bucket.line_count
           ) order by bucket.currency)
           from (
             select
               t.currency,
-              sum(
-                case
-                  when t.direction = 'income' and t.doc_kind in ('receipt', 'invoice_receipt') then t.amount_net
-                  when t.direction = 'expense' then t.amount_net
-                  else 0
-                end
-              )::bigint as minor,
+              coalesce(sum(t.amount_net) filter (
+                where t.direction = 'income' and t.doc_kind in ('receipt', 'invoice_receipt')
+              ), 0)::bigint as income_minor,
+              coalesce(sum(t.amount_net) filter (where t.direction = 'expense'), 0)::bigint as expense_minor,
               count(*) filter (
                 where (t.direction = 'income' and t.doc_kind in ('receipt', 'invoice_receipt'))
                   or t.direction = 'expense'
@@ -371,9 +371,6 @@ $$;
 revoke all on function private.overhead_share(uuid) from public, anon;
 grant execute on function private.overhead_share(uuid) to authenticated, service_role;
 
-revoke all on function private.overhead_share(uuid) from public, anon;
-grant execute on function private.overhead_share(uuid) to authenticated, service_role;
-
 create or replace function private.project_category_entries(p_project uuid)
 returns table (
   category_id uuid,
@@ -420,9 +417,6 @@ as $$
     and not t.category_suggested
     and t.category_id is not null;
 $$;
-
-revoke all on function private.project_category_entries(uuid) from public, anon;
-grant execute on function private.project_category_entries(uuid) to authenticated, service_role;
 
 revoke all on function private.project_category_entries(uuid) from public, anon;
 grant execute on function private.project_category_entries(uuid) to authenticated, service_role;
@@ -500,13 +494,22 @@ begin
     'other_currencies', coalesce((
       select jsonb_agg(jsonb_build_object(
         'currency', bucket.currency,
-        'minor', bucket.minor,
+        'income_minor', bucket.income_minor,
+        'expense_minor', bucket.expense_minor,
         'count', bucket.line_count
       ) order by bucket.currency)
       from (
-        select parts.currency, sum(parts.minor)::bigint as minor, sum(parts.line_count)::integer as line_count
+        select
+          parts.currency,
+          sum(parts.income_minor)::bigint as income_minor,
+          sum(parts.expense_minor)::bigint as expense_minor,
+          sum(parts.line_count)::integer as line_count
         from (
-          select t.currency, t.amount_net as minor, 1 as line_count
+          select
+            t.currency,
+            case when t.direction = 'income' then t.amount_net else 0 end as income_minor,
+            case when t.direction = 'expense' then t.amount_net else 0 end as expense_minor,
+            1 as line_count
           from public.transactions t
           where t.project_id = p.id
             and t.removed_at is null
@@ -517,7 +520,7 @@ begin
               or (t.direction = 'expense' and t.pnl_role = 'project')
             )
           union all
-          select t.currency, a.amount_net, 1
+          select t.currency, 0, a.amount_net, 1
           from public.allocations a
           join public.transactions t on t.id = a.transaction_id
           where a.project_id = p.id
@@ -532,9 +535,28 @@ begin
     ), '[]'::jsonb),
     'pending_count', coalesce(jsonb_array_length(waiting), 0),
     'pending_agorot', coalesce((
-      select (-sum((row->>'amount_net')::bigint))::bigint
+      select (-sum(t.amount_net))::bigint
       from jsonb_array_elements(waiting) row
+      join public.transactions t on t.id = (row->>'transaction_id')::uuid
+      where coalesce(t.currency, 'ILS') = 'ILS'
     ), 0),
+    'pending_other_currencies', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'currency', bucket.currency,
+        'expense_minor', bucket.expense_minor,
+        'count', bucket.line_count
+      ) order by bucket.currency)
+      from (
+        select
+          t.currency,
+          sum(t.amount_net)::bigint as expense_minor,
+          count(*)::integer as line_count
+        from jsonb_array_elements(waiting) row
+        join public.transactions t on t.id = (row->>'transaction_id')::uuid
+        where coalesce(t.currency, 'ILS') <> 'ILS'
+        group by t.currency
+      ) bucket
+    ), '[]'::jsonb),
     'transactions', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', t.id,
@@ -671,8 +693,29 @@ begin
           where newer.transaction_id = t.id
             and newer.created_at > q.created_at
         )
+    )
+    and not exists (
+      select 1 from public.review_queue q
+      where q.transaction_id = t.id and q.status = 'approved'
     );
   get diagnostics pending_inserted = row_count;
+
+  update public.review_queue q
+  set reason = null
+  from public.transactions t
+  where q.company_id = p_company_id
+    and q.transaction_id = t.id
+    and q.reason = 'pending_income'
+    and t.line_status = 'posted'
+    and t.removed_at is null;
+
+  delete from public.review_queue q
+  using public.transactions t
+  where q.company_id = p_company_id
+    and q.transaction_id = t.id
+    and q.status = 'open'
+    and (t.line_status = 'void' or t.removed_at is not null);
+
   return inserted + pending_inserted;
 end;
 $$;
@@ -1135,6 +1178,90 @@ $$;
 
 revoke all on function public.upsert_connector_lines(uuid, public.connector_provider, jsonb, text, text) from public, anon, authenticated;
 grant execute on function public.upsert_connector_lines(uuid, public.connector_provider, jsonb, text, text) to service_role;
+
+create or replace function public.get_transaction(p_id uuid)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', t.id,
+    'description', t.description,
+    'direction', t.direction,
+    'doc_kind', t.doc_kind,
+    'doc_date', t.doc_date,
+    'amount_gross', t.amount_gross,
+    'amount_net', t.amount_net,
+    'vat_amount', t.vat_amount,
+    'vat_status', t.vat_status,
+    'currency', t.currency,
+    'source', t.source,
+    'pnl_role', t.pnl_role,
+    'project_id', t.project_id,
+    'project_name', p.name,
+    'category_id', t.category_id,
+    'category_name', c.name,
+    'supplier_name', s.name,
+    'customer_name', cu.name,
+    'review_status', (
+      select q.status
+      from public.review_queue q
+      where q.transaction_id = t.id and q.company_id = t.company_id
+      order by case when q.status = 'open' then 0 else 1 end, q.created_at desc
+      limit 1
+    ),
+    'review_reason', (
+      select q.reason
+      from public.review_queue q
+      where q.transaction_id = t.id and q.company_id = t.company_id and q.status = 'open'
+      order by q.created_at desc
+      limit 1
+    ),
+    'paid', t.cash_date is not null,
+    'open_gross_agorot', case
+      when t.doc_kind = 'invoice' and t.external_id is not null then
+        t.amount_gross
+        + coalesce((
+          select sum(cred.amount_gross)::bigint
+          from public.transactions cred
+          where cred.company_id = t.company_id
+            and cred.removed_at is null
+            and cred.doc_kind = 'credit'
+            and cred.linked_external_id = t.external_id
+        ), 0)
+        - coalesce((
+          select sum(rec.amount_gross)::bigint
+          from public.transactions rec
+          where rec.company_id = t.company_id
+            and rec.removed_at is null
+            and rec.doc_kind = 'receipt'
+            and rec.linked_external_id = t.external_id
+        ), 0)
+      else null
+    end,
+    'allocations', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'project_id', a.project_id,
+        'project_name', ap.name,
+        'share_bp', a.share_bp,
+        'amount_net', a.amount_net
+      ) order by ap.name)
+      from public.allocations a
+      join public.projects ap on ap.id = a.project_id
+      where a.transaction_id = t.id
+    ), '[]'::jsonb)
+  )
+  from public.transactions t
+  left join public.projects p on p.id = t.project_id
+  left join public.categories c on c.id = t.category_id
+  left join public.suppliers s on s.id = t.supplier_id
+  left join public.customers cu on cu.id = t.customer_id
+  where t.id = p_id
+    and t.removed_at is null
+    and t.company_id = (select private.current_company_id());
+$$;
 
 create or replace function public.claim_connector_refreshes(p_limit integer, p_provider public.connector_provider)
 returns table (id bigint, company_id uuid, provider public.connector_provider)

@@ -302,6 +302,70 @@ Deno.test("treasury fees, credits, cancels, and reinvestment follow the income r
   assertEquals(credit.line.direction, "income");
   assertEquals(credit.line.category_hint, "הכנסה אחרת");
   assertEquals(credit.line.amount_original, 200);
+  assertEquals(credit.line.amount_negated, false);
+
+  const negativeInterest = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444445",
+    accountId: treasuryId,
+    type: "interestPosted",
+    description: "Interest reversal",
+    amount: -3.21,
+    canonicalDay: "2026-09-06",
+  }, own);
+  assertEquals(negativeInterest.ok, true);
+  if (!negativeInterest.ok) return;
+  assertEquals(negativeInterest.line.direction, "income");
+  assertEquals(negativeInterest.line.amount_original, 321);
+  assertEquals(negativeInterest.line.amount_negated, true);
+
+  const negativeDividend = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444446",
+    accountId: treasuryId,
+    type: "dividendPosted",
+    description: "Dividend reversal",
+    amount: -1,
+    canonicalDay: "2026-09-07",
+  }, own);
+  assertEquals(negativeDividend.ok, true);
+  if (!negativeDividend.ok) return;
+  assertEquals(negativeDividend.line.amount_negated, true);
+
+  const negativeCredit = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444447",
+    accountId: treasuryId,
+    type: "mercuryCreditPosted",
+    description: "Credit reversal",
+    amount: -5,
+    canonicalDay: "2026-09-08",
+  }, own);
+  assertEquals(negativeCredit.ok, true);
+  if (!negativeCredit.ok) return;
+  assertEquals(negativeCredit.line.direction, "income");
+  assertEquals(negativeCredit.line.amount_negated, true);
+
+  const amendment = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444448",
+    accountId: treasuryId,
+    type: "manualAmendmentPosted",
+    description: "Manual amendment",
+    amount: 4,
+    canonicalDay: "2026-09-09",
+  }, own);
+  assertEquals(amendment.ok, true);
+  if (!amendment.ok) return;
+  assertEquals(amendment.line.direction, "income");
+  assertEquals(amendment.line.category_hint, "הכנסה אחרת");
+  assertEquals(amendment.line.amount_negated, false);
+
+  const revert = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444449",
+    accountId: treasuryId,
+    type: "revertTxn",
+    description: "Revert",
+    amount: -4,
+    canonicalDay: "2026-09-10",
+  }, own);
+  assertEquals(revert, { ok: false, skip: "treasury_activity" });
 
   const refund = normalizeMercury({
     id: "66666666-6666-4666-8666-666666666666",
@@ -371,6 +435,16 @@ Deno.test("treasury fees, credits, cancels, and reinvestment follow the income r
     docDate: "2026-09-30",
   }]);
   assertEquals(voids, ["11111111-1111-4111-8111-111111111111"]);
+  const outsideTreasury = normalizeMercury({
+    id: "44444444-4444-4444-8444-444444444450",
+    accountId: "not-our-treasury",
+    type: "interestPosted",
+    description: "Outside yield",
+    amount: 1.25,
+    canonicalDay: "2026-09-11",
+  }, own);
+  assertEquals(outsideTreasury, { ok: false, skip: "not_own_account" });
+
   const imported = [dividend, {
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     accountId: treasuryId,

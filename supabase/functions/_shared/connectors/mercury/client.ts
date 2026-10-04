@@ -247,29 +247,14 @@ function requireTreasuryLabel(row: unknown): AccountLabel {
   return label;
 }
 
-/**
- * A 403 or 404 on the treasury list means this token cannot see treasury.
- * Connect still succeeds. 401 and 5xx still refuse, so a dead token does
- * not import a liquidation as income. An empty accounts array is a
- * successful "no treasury account". A row with no id still refuses.
- */
-function treasuryListSkipped(error: unknown): boolean {
-  return error instanceof MercuryRequestError && (error.status === 403 || error.status === 404);
-}
-
 async function listTreasuryAccounts(session: ConnectorSession): Promise<unknown[]> {
-  try {
-    return await listCollection(session, "/treasury", "accounts", {}, true);
-  } catch (error) {
-    if (treasuryListSkipped(error)) return [];
-    throw error;
-  }
+  return await listCollection(session, "/treasury", "accounts", {}, true);
 }
 
 /**
- * Connected account ids. `/accounts` and `/credit` are required.
- * `/treasury` is required unless it answers 403 or 404, in which case
- * those account ids are simply absent from the own set.
+ * Connected account ids. `/accounts`, `/credit`, and `/treasury` are required.
+ * A 403 or 404 on treasury refuses the sync. An empty accounts array is a
+ * successful "no treasury account". A row with no id still refuses.
  */
 export async function validateMercury(session: ConnectorSession): Promise<ValidateResult> {
   try {
@@ -511,7 +496,6 @@ async function fetchTreasuryLedger(
           resume: { treasuryId, page: error.resumeAfter },
         };
       }
-      if (treasuryListSkipped(error)) continue;
       throw error;
     }
   }
