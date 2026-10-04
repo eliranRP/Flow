@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(5);
+select plan(9);
 
 do $users$
 begin
@@ -106,6 +106,86 @@ select is(
   (select provider_meta from public.transactions where company_id = (select id from meta_co) and external_id = 'meta-empty'),
   '{}'::jsonb,
   'an empty meta stays empty'
+);
+
+select is(
+  (
+    public.upsert_connector_lines(
+      (select id from meta_co),
+      'sumit',
+      jsonb_build_object(
+        'lines', jsonb_build_array(
+          jsonb_build_object(
+            'source', 'sumit',
+            'external_id', 'meta-both',
+            'direction', 'expense',
+            'line_status', 'posted',
+            'doc_kind', 'expense',
+            'pnl_role', 'overhead',
+            'currency', 'ILS',
+            'amount_original', 500,
+            'amount_negated', true,
+            'doc_date', '2026-10-01',
+            'description', 'עם קטגוריה',
+            'vat', jsonb_build_object('amount', 0, 'status', 'unknown'),
+            'provider_meta', jsonb_build_object('kind', 'expense', 'providerCategory', 'Rent')
+          )
+        ),
+        'removed_ids', '[]'::jsonb,
+        'complete', false
+      ),
+      null,
+      null
+    )
+  ).updated,
+  1,
+  'a second upsert takes the update path'
+);
+
+select is(
+  (select provider_meta from public.transactions where company_id = (select id from meta_co) and external_id = 'meta-both'),
+  '{"kind":"expense","providerCategory":"Rent"}'::jsonb,
+  'the update path replaces providerCategory'
+);
+
+select is(
+  (
+    public.upsert_connector_lines(
+      (select id from meta_co),
+      'sumit',
+      jsonb_build_object(
+        'lines', jsonb_build_array(
+          jsonb_build_object(
+            'source', 'sumit',
+            'external_id', 'meta-kind',
+            'direction', 'expense',
+            'line_status', 'posted',
+            'doc_kind', 'expense',
+            'pnl_role', 'overhead',
+            'currency', 'ILS',
+            'amount_original', 500,
+            'amount_negated', true,
+            'doc_date', '2026-10-01',
+            'description', 'רק סוג',
+            'vat', jsonb_build_object('amount', 0, 'status', 'unknown'),
+            'provider_meta', '{}'::jsonb
+          )
+        ),
+        'removed_ids', '[]'::jsonb,
+        'complete', false
+      ),
+      null,
+      null
+    )
+  ).updated,
+  1,
+  'clearing meta on update takes the update path'
+);
+
+select is(
+  (select provider_meta from public.transactions where company_id = (select id from meta_co) and external_id = 'meta-kind'),
+  '{}'::jsonb,
+  'the update path stores an empty provider_meta'
 );
 
 select * from finish();

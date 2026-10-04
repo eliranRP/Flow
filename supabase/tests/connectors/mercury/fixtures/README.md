@@ -10,6 +10,7 @@ Every UUID (ids, accountId, counterpartyId, cardId, category ids, and page curso
 |---|---|---|
 | accounts.json | GET /accounts | 9 accounts (8 checking, 1 savings) |
 | credit.json | GET /credit | 1 card account (not in /accounts) |
+| treasury.json | GET /treasury | 1 treasury account (not in /accounts). Its id is the counterparty on the liquidation deposits |
 | categories.json | GET /categories | 23 custom categories |
 | transactions-desc-page1.json | GET /transactions?limit=50&order=desc | 50 lines, 2026-09-04..10-02, `page.nextPage` |
 | transactions-desc-page2.json | same + start_after=<page1 nextPage> | 50 lines, 2026-08-12..09-04, `page.previousPage` + `nextPage`, no overlap |

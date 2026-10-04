@@ -2,6 +2,7 @@ import page1 from "./fixtures/transactions-desc-page1.json" with { type: "json" 
 import page2 from "./fixtures/transactions-desc-page2.json" with { type: "json" };
 import accountsFile from "./fixtures/accounts.json" with { type: "json" };
 import creditFile from "./fixtures/credit.json" with { type: "json" };
+import treasuryFile from "./fixtures/treasury.json" with { type: "json" };
 import { normalizeMercury } from "../../../functions/_shared/connectors/mercury/normalize.ts";
 import type { CanonicalLine, NormalizeContext } from "../../../functions/_shared/connectors/types.ts";
 
@@ -12,6 +13,7 @@ export function fixtureContext(extra: Partial<NormalizeContext> = {}): Normalize
     ownAccountIds: [
       ...accountsFile.accounts.map((account) => account.id),
       ...creditFile.accounts.map((account) => account.id),
+      ...treasuryFile.accounts.map((account) => account.id),
     ],
     ownCounterpartyIds: [],
     vatRateBp: 1800,

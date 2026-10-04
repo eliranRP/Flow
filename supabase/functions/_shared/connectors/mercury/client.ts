@@ -194,6 +194,7 @@ async function listCollection(
   path: string,
   collectionKey: string,
   query: Record<string, string | undefined>,
+  requireArray = false,
 ): Promise<unknown[]> {
   const rows: unknown[] = [];
   const seen = new Set<string>();
@@ -207,6 +208,9 @@ async function listCollection(
     });
     if (!isRecord(body)) throw new MercuryRequestError("rejected", "rejected", null, null, "rejected");
     const list = body[collectionKey];
+    if (requireArray && !Array.isArray(list)) {
+      throw new MercuryRequestError("rejected", "rejected", null, null, "rejected");
+    }
     const items = Array.isArray(list) ? list : [];
     rows.push(...items);
     const pageInfo = isRecord(body.page) ? body.page : {};
@@ -227,6 +231,13 @@ function accountLabel(row: unknown, fallback: string): AccountLabel | null {
   return { id, label: String(redactMercury(name)).slice(0, 300) };
 }
 
+/**
+ * Connected account ids. `/treasury` is required.
+ * A failed or unreadable GET refuses validation, so a sync never starts
+ * without the treasury account ids. Starting anyway would import a
+ * liquidation into checking as income and a deposit into Treasury as an
+ * expense. An empty `accounts` array is a successful "no treasury account".
+ */
 export async function validateMercury(session: ConnectorSession): Promise<ValidateResult> {
   try {
     const accounts = await listCollection(session, "/accounts", "accounts", {});
@@ -234,11 +245,17 @@ export async function validateMercury(session: ConnectorSession): Promise<Valida
     if (!isRecord(creditBody) || !Array.isArray(creditBody.accounts)) {
       throw new MercuryRequestError("rejected", "rejected", null, null, "rejected");
     }
+    const treasury = await listCollection(session, "/treasury", "accounts", {}, true);
     const labels: AccountLabel[] = [];
     const seen = new Set<string>();
     for (const row of [...accounts, ...creditBody.accounts.map((account) => {
       if (isRecord(account) && typeof account.name !== "string") {
         return { ...account, name: "Mercury Credit" };
+      }
+      return account;
+    }), ...treasury.map((account) => {
+      if (isRecord(account) && typeof account.name !== "string") {
+        return { ...account, name: "Mercury Treasury" };
       }
       return account;
     })]) {

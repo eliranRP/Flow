@@ -1,9 +1,9 @@
 {
-  "imported_count": 73,
+  "imported_count": 70,
   "pending_count": 0,
   "skipped": {
     "own_account_transfer": 14,
-    "treasury_transfer": 3,
+    "treasury_transfer": 6,
     "void_status": 6,
     "internal_transfer": 4
   },
@@ -37,6 +37,10 @@
       "reason": "internal_transfer"
     },
     {
+      "external_id": "4d1aea49-3978-5ec8-9039-695b53762de7",
+      "reason": "treasury_transfer"
+    },
+    {
       "external_id": "4d879581-c8ba-5e31-bf9f-7999678c5427",
       "reason": "internal_transfer"
     },
@@ -63,6 +67,10 @@
     {
       "external_id": "92d536b6-4242-5b84-91cb-30f41eacf522",
       "reason": "void_status"
+    },
+    {
+      "external_id": "ab9fc5b2-c586-512a-8c49-94380361a685",
+      "reason": "treasury_transfer"
     },
     {
       "external_id": "b48827fa-8432-55cf-b232-8fe709fccad9",
@@ -95,6 +103,10 @@
     {
       "external_id": "c6ae74ed-d7da-5e34-a95f-2d6db7d2e8c9",
       "reason": "void_status"
+    },
+    {
+      "external_id": "c75564b8-a30b-51eb-9667-6f53ab648310",
+      "reason": "treasury_transfer"
     },
     {
       "external_id": "de28d2ff-cac0-51c6-b897-210e1510801c",
@@ -791,33 +803,6 @@
       "provider_meta": {
         "kind": "creditCardTransaction",
         "providerCategory": "Lodging"
-      }
-    },
-    {
-      "external_id": "4d1aea49-3978-5ec8-9039-695b53762de7",
-      "direction": "income",
-      "line_status": "posted",
-      "doc_kind": "receipt",
-      "currency": "USD",
-      "amount_original": 1500000,
-      "amount_negated": false,
-      "doc_date": "2026-09-01",
-      "cash_date": "2026-09-01",
-      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
-      "counterparty": {
-        "name": "Treasury",
-        "external_id": "47a50cf8-f13d-5762-ae9a-9266a6502ccd",
-        "kind": "customer"
-      },
-      "description": "Liquidation of Treasury assets",
-      "vat": {
-        "amount": 0,
-        "status": "source"
-      },
-      "category_hint": null,
-      "provider_meta": {
-        "kind": "treasuryTransfer",
-        "providerCategory": null
       }
     },
     {
@@ -1523,33 +1508,6 @@
       }
     },
     {
-      "external_id": "ab9fc5b2-c586-512a-8c49-94380361a685",
-      "direction": "income",
-      "line_status": "posted",
-      "doc_kind": "receipt",
-      "currency": "USD",
-      "amount_original": 1000000,
-      "amount_negated": false,
-      "doc_date": "2026-09-05",
-      "cash_date": "2026-09-08",
-      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
-      "counterparty": {
-        "name": "Treasury",
-        "external_id": "47a50cf8-f13d-5762-ae9a-9266a6502ccd",
-        "kind": "customer"
-      },
-      "description": "Liquidation of Treasury assets",
-      "vat": {
-        "amount": 0,
-        "status": "source"
-      },
-      "category_hint": null,
-      "provider_meta": {
-        "kind": "treasuryTransfer",
-        "providerCategory": null
-      }
-    },
-    {
       "external_id": "af8919bb-ff50-534c-8322-581509dcd44c",
       "direction": "expense",
       "line_status": "posted",
@@ -1708,33 +1666,6 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
-      }
-    },
-    {
-      "external_id": "c75564b8-a30b-51eb-9667-6f53ab648310",
-      "direction": "income",
-      "line_status": "posted",
-      "doc_kind": "receipt",
-      "currency": "USD",
-      "amount_original": 2500000,
-      "amount_negated": false,
-      "doc_date": "2026-10-01",
-      "cash_date": "2026-10-01",
-      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
-      "counterparty": {
-        "name": "Treasury",
-        "external_id": "47a50cf8-f13d-5762-ae9a-9266a6502ccd",
-        "kind": "customer"
-      },
-      "description": "Liquidation of Treasury assets",
-      "vat": {
-        "amount": 0,
-        "status": "source"
-      },
-      "category_hint": null,
-      "provider_meta": {
-        "kind": "treasuryTransfer",
         "providerCategory": null
       }
     },
