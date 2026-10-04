@@ -9,6 +9,7 @@ import syntheticPending from "./fixtures/SYNTHETIC-pending.json" with { type: "j
 import syntheticSent from "./fixtures/SYNTHETIC-pending-then-sent.json" with { type: "json" };
 import accountsFile from "./fixtures/accounts.json" with { type: "json" };
 import creditFile from "./fixtures/credit.json" with { type: "json" };
+import treasuryFile from "./fixtures/treasury.json" with { type: "json" };
 import categoriesFile from "./fixtures/categories.json" with { type: "json" };
 import snapshot from "./fixtures/canonical-snapshot.json" with { type: "json" };
 import { MERCURY_SKIP_REASONS } from "../../../functions/_shared/connectors/mercury/capabilities.ts";
@@ -45,6 +46,7 @@ function ownAccountIds(): string[] {
   return [
     ...accountsFile.accounts.map((account) => account.id),
     ...creditFile.accounts.map((account) => account.id),
+    ...treasuryFile.accounts.map((account) => account.id),
   ];
 }
 
@@ -112,10 +114,10 @@ Deno.test("dollars become cents from the decimal string", () => {
 Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and the refund", () => {
   const { imported, skipped } = replay(postedLines);
   assertEquals(postedLines.length, 100);
-  assertEquals(imported.length, 73);
+  assertEquals(imported.length, 70);
   assertEquals(imported.filter((line) => line.line_status === "pending").length, 0);
   assertEquals(skipped, {
-    treasury_transfer: 3,
+    treasury_transfer: 6,
     internal_transfer: 4,
     own_account_transfer: 14,
     void_status: 6,
@@ -141,10 +143,10 @@ Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and
   assertEquals(imported.some((line) => line.counterparty.name === "RentPortal" && line.direction === "income"), true);
   assertEquals(imported.some((line) => line.counterparty.name === "Metro Housing Authority"), true);
   assertEquals(imported.some((line) => line.counterparty.name === "Mercury Credit"), false);
-  assertEquals(imported.some((line) => line.counterparty.name === "Treasury" && line.direction === "income"), true);
+  assertEquals(imported.some((line) => line.counterparty.name === "Treasury"), false);
 
   const differing = imported.filter((line) => line.doc_date !== line.cash_date);
-  assertEquals(differing.length, 23);
+  assertEquals(differing.length, 22);
   for (const line of imported) {
     assertEquals(parseCanonicalLine(line), line);
     assertEquals(line.currency, "USD");
@@ -192,28 +194,37 @@ Deno.test("treasury and internal skips follow the counterparty, not the kind alo
   assertEquals(treasury.length, 6);
   assertEquals(internal.length, 4);
   const { imported, skipped } = replay(postedLines);
-  const liquidation = imported.filter((line) => line.counterparty.name === "Treasury");
-  assertEquals(liquidation.length, 3);
-  assertEquals(liquidation.every((line) => line.direction === "income" && line.category_hint === null), true);
-  assertEquals(skipped.treasury_transfer, 3);
+  assertEquals(imported.filter((line) => line.counterparty.name === "Treasury").length, 0);
+  assertEquals(skipped.treasury_transfer, 6);
   assertEquals(skipped.internal_transfer, 4);
+  assertEquals(treasury.every((row) => ownAccountIds().includes(String(row.counterpartyId))), true);
   assertEquals(internal.every((row) => ownAccountIds().includes(String(row.counterpartyId))), true);
 
   const base = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
   assertEquals(Boolean(base), true);
   if (!base) return;
   const own = ownAccountIds()[0];
-  const kept = normalizeMercury({
-    ...base,
-    kind: "treasuryTransfer",
-    amount: 100,
-    counterpartyId: "not-an-own-account",
-    counterpartyName: "Treasury",
-  }, ctx());
-  assertEquals(kept.ok, true);
-  if (!kept.ok) return;
-  assertEquals(kept.line.category_hint, null);
-  assertEquals(kept.line.direction, "income");
+  const treasuryId = treasuryFile.accounts[0].id;
+  assertEquals(
+    normalizeMercury({
+      ...base,
+      kind: "treasuryTransfer",
+      amount: 25000,
+      counterpartyId: treasuryId,
+      counterpartyName: "Treasury",
+    }, ctx()),
+    { ok: false, skip: "treasury_transfer" },
+  );
+  assertEquals(
+    normalizeMercury({
+      ...base,
+      kind: "treasuryTransfer",
+      amount: -10000,
+      counterpartyId: treasuryId,
+      counterpartyName: "Treasury",
+    }, ctx()),
+    { ok: false, skip: "treasury_transfer" },
+  );
   assertEquals(
     normalizeMercury({ ...base, kind: "internalTransfer", counterpartyId: own }, ctx()),
     { ok: false, skip: "internal_transfer" },
@@ -250,31 +261,40 @@ Deno.test("the fourteen autopay skips are paired payments between own checking a
   }
 });
 
-function normaliseName(value: string): string {
-  return value.toLowerCase().trim().replace(/\s+/g, " ");
+/** Same tokens as a fixture gram: lowercase, NFKD, diacritics stripped, split on non-letters and digits. */
+export function fixtureTokens(text: string): string[] {
+  const stripped = text.normalize("NFKD").replace(/\p{M}+/gu, "");
+  return stripped.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 0);
+}
+
+export function normalisedDenyEntry(line: string): string | null {
+  const words = fixtureTokens(line);
+  if (words.length === 0) return null;
+  return words.join(" ");
 }
 
 function denyNamesFromEnv(raw: string | undefined): Set<string> {
   const names = new Set<string>();
   if (!raw) return names;
   for (const line of raw.split(/\r?\n/)) {
-    const name = normaliseName(line);
+    const name = normalisedDenyEntry(line);
     if (name) names.add(name);
   }
   return names;
 }
 
-// Fork pull requests run in eliranRP/Flow but GitHub does not pass Actions secrets.
-function denyListRequiredInThisRun(): boolean {
-  if (Deno.env.get("GITHUB_ACTIONS") !== "true") return false;
-  if ((Deno.env.get("GITHUB_REPOSITORY") ?? "").toLowerCase() !== "eliranrp/flow") return false;
-  return Deno.env.get("GITHUB_EVENT_HEAD_REPO_FORK") !== "true";
+/** Fork pull requests run in eliranRP/Flow but GitHub does not pass Actions secrets. */
+export function fixtureDenyListRequired(env: { get(name: string): string | undefined }): boolean {
+  if (env.get("GITHUB_ACTIONS") !== "true") return false;
+  if ((env.get("GITHUB_REPOSITORY") ?? "").toLowerCase() !== "eliranrp/flow") return false;
+  return env.get("GITHUB_EVENT_HEAD_REPO_FORK") !== "true";
 }
 
 function wordGrams(text: string): Set<string> {
-  const words = text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 0);
+  const words = fixtureTokens(text);
   const grams = new Set<string>();
-  for (let size = 1; size <= 3; size += 1) {
+  const widest = Math.min(5, words.length);
+  for (let size = 1; size <= widest; size += 1) {
     for (let index = 0; index + size <= words.length; index += 1) {
       grams.add(words.slice(index, index + size).join(" "));
     }
@@ -283,14 +303,41 @@ function wordGrams(text: string): Set<string> {
 }
 
 const fixtureDenyNames = denyNamesFromEnv(Deno.env.get("MERCURY_FIXTURE_DENYLIST"));
-const fixtureDenyListRequired = denyListRequiredInThisRun();
-if (fixtureDenyNames.size === 0 && !fixtureDenyListRequired) {
+const denyListIsRequired = fixtureDenyListRequired(Deno.env);
+if (fixtureDenyNames.size === 0 && !denyListIsRequired) {
   console.log("skipping fixture deny-list: MERCURY_FIXTURE_DENYLIST is not set");
 }
 
+Deno.test("a fork of this repo skips the deny-list when the secret is absent", () => {
+  const env = (values: Record<string, string | undefined>) => ({
+    get(name: string) {
+      return values[name];
+    },
+  });
+  assertEquals(fixtureDenyListRequired(env({})), false);
+  assertEquals(fixtureDenyListRequired(env({
+    GITHUB_ACTIONS: "true",
+    GITHUB_REPOSITORY: "someone/Flow",
+  })), false);
+  assertEquals(fixtureDenyListRequired(env({
+    GITHUB_ACTIONS: "true",
+    GITHUB_REPOSITORY: "eliranRP/Flow",
+    GITHUB_EVENT_HEAD_REPO_FORK: "true",
+  })), false);
+  assertEquals(fixtureDenyListRequired(env({
+    GITHUB_ACTIONS: "true",
+    GITHUB_REPOSITORY: "eliranRP/Flow",
+  })), true);
+  assertEquals(fixtureTokens("José  García"), ["jose", "garcia"]);
+  assertEquals(normalisedDenyEntry("  José   García "), "jose garcia");
+  const grams = wordGrams("one two three four five six");
+  assertEquals(grams.has("one two three four five"), true);
+  assertEquals(grams.has("one two three four five six"), false);
+});
+
 Deno.test({
   name: "fixtures contain none of the denied personal names",
-  ignore: fixtureDenyNames.size === 0 && !fixtureDenyListRequired,
+  ignore: fixtureDenyNames.size === 0 && !denyListIsRequired,
   fn() {
     if (fixtureDenyNames.size === 0) {
       throw new Error("MERCURY_FIXTURE_DENYLIST is required in CI on eliranRP/Flow");

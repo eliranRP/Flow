@@ -155,7 +155,7 @@ export interface LinkedDocument {
 
 /** What normalize may read besides the raw payload. No network and no clock. */
 export interface NormalizeContext {
-  /** Ids from the company's connected accounts, including card accounts. */
+  /** Ids from the company's connected accounts, including card and treasury accounts. */
   ownAccountIds: readonly string[];
   /**
    * Owner-set counterparty ids that are the owner's own external accounts.

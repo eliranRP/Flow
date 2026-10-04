@@ -3,6 +3,7 @@ import page1 from "./fixtures/transactions-desc-page1.json" with { type: "json" 
 import page2 from "./fixtures/transactions-desc-page2.json" with { type: "json" };
 import accountsFile from "./fixtures/accounts.json" with { type: "json" };
 import creditFile from "./fixtures/credit.json" with { type: "json" };
+import treasuryFile from "./fixtures/treasury.json" with { type: "json" };
 import syntheticPending from "./fixtures/SYNTHETIC-pending.json" with { type: "json" };
 import { assertMercuryGet } from "../../../functions/_shared/connectors/mercury/guard.ts";
 import { MERCURY_PAGE_CAP, MERCURY_POSTED_LOOKBACK_DAYS } from "../../../functions/_shared/connectors/mercury/capabilities.ts";
@@ -163,10 +164,11 @@ Deno.test("an empty secret fails closed and does not call Mercury", async () => 
   assertEquals(called, false);
 });
 
-Deno.test("validate reads accounts and credit and returns ids and labels only", async () => {
+Deno.test("validate reads accounts, credit, and treasury and returns ids and labels only", async () => {
   const token = `test-${crypto.randomUUID()}`;
   const { fetchImpl, calls } = transport((url) => {
     if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+    if (url.pathname.endsWith("/treasury")) return jsonResponse(treasuryFile);
     if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
     return jsonResponse({ transactions: [], page: {} });
   });
@@ -174,7 +176,10 @@ Deno.test("validate reads accounts and credit and returns ids and labels only", 
   const result = await validateMercury(session);
   assertEquals(result.ok, true);
   if (!result.ok) return;
-  assertEquals(result.accounts.length, accountsFile.accounts.length + creditFile.accounts.length);
+  assertEquals(
+    result.accounts.length,
+    accountsFile.accounts.length + creditFile.accounts.length + treasuryFile.accounts.length,
+  );
   const text = JSON.stringify(result.accounts);
   assertEquals(text.includes(token), false);
   assertEquals(text.includes("availableBalance"), false);
@@ -183,7 +188,40 @@ Deno.test("validate reads accounts and credit and returns ids and labels only", 
   assertEquals(text.includes("****"), true);
   const credit = result.accounts.find((account) => account.id === creditFile.accounts[0].id);
   assertEquals(credit?.label, "Mercury Credit");
+  const treasury = result.accounts.find((account) => account.id === treasuryFile.accounts[0].id);
+  assertEquals(treasury?.label, "Mercury Treasury");
   assertEquals(calls.every((call) => call.init.method === "GET"), true);
+  assertEquals(calls.some((call) => call.url.pathname.endsWith("/treasury")), true);
+});
+
+Deno.test("an unreachable treasury account refuses validation", async () => {
+  const down = transport((url) => {
+    if (url.pathname.endsWith("/treasury")) return jsonResponse({ error: "unavailable" }, 503);
+    if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+    if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
+    return jsonResponse({ accounts: [], page: {} });
+  });
+  const refused = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: down.fetchImpl,
+    now: () => NOW,
+  }));
+  assertEquals(refused.ok, false);
+  if (refused.ok) return;
+  assertEquals(refused.class, "transient");
+
+  const malformed = transport((url) => {
+    if (url.pathname.endsWith("/treasury")) return jsonResponse({ page: {} });
+    if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+    if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
+    return jsonResponse({ accounts: [], page: {} });
+  });
+  assertEquals(
+    await validateMercury(openMercury(`test-${crypto.randomUUID()}`, {
+      fetch: malformed.fetchImpl,
+      now: () => NOW,
+    })),
+    { ok: false, class: "rejected", retry_after: null },
+  );
 });
 
 Deno.test("the page cap is sync_page_cap and is not retried as a transient error", async () => {

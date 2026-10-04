@@ -70,7 +70,8 @@ function bounded(value: string | null): string | null {
  * Skip order:
  * 1. A treasuryTransfer or internalTransfer is skipped only when its
  *    counterparty id is one of the connected Mercury account ids, the same
- *    gate as card autopay. The kind alone does not skip the line.
+ *    gate as card autopay. That set includes treasury account ids from
+ *    GET /treasury. The kind alone does not skip the line.
  * 2. Any other counterparty id in ownAccountIds is an own-account transfer.
  * 3. Card spend whose accountId is outside a non-empty ownAccountIds throws
  *    mercury_card_account_missing. It is not a silent not_own_account skip.
