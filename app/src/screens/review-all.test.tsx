@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import { MemoryRouter, Outlet, Route, RouterProvider, Routes, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
+import { refreshLedger } from "../books-focus";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
 import { ChangeForm, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
@@ -826,5 +827,63 @@ describe("review queue list", () => {
     expect(await screen.findByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
     await router.navigate(-1);
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
+  });
+
+  it("keeps the dashboard after review is mounted, a reader joins, and the ledger refreshes", async () => {
+    let releaseApprove: () => void = () => undefined;
+    const approveGate = new Promise<void>((resolve) => {
+      releaseApprove = resolve;
+    });
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
+      if (name === "list_categories") return Promise.resolve({ data: categories, error: null });
+      if (name === "approve_review_item") return approveGate.then(() => ({ data: null, error: null }));
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [{
+        element: <><ReviewScreen /><Outlet /></>,
+        children: [
+          { path: "/review", element: null },
+          { path: "/review/change", element: <ChangeForm /> },
+        ],
+      }],
+      { initialEntries: ["/review"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <AuthProvider>
+            <BooksProvider>
+              <RouterProvider router={router} />
+            </BooksProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
+    await router.navigate("/review/change?item=r1");
+    expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
+    await waitFor(() => {
+      const settled = client.getQueryCache().findAll({ queryKey: ["dashboard"] });
+      expect(settled.some((query) => query.state.data != null && query.state.fetchStatus === "idle")).toBe(true);
+    });
+    const before = rpc.calls.filter((call) => call.name === "get_dashboard").length;
+    expect(before).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "אישור", hidden: true }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "אישור", hidden: true })).toHaveAttribute("aria-busy", "true");
+    });
+    await act(async () => {
+      refreshLedger(client);
+      await client.invalidateQueries({ queryKey: ["dashboard"] });
+    });
+    expect(rpc.calls.filter((call) => call.name === "get_dashboard").length).toBeGreaterThan(before);
+    const cached = client.getQueryCache().findAll({ queryKey: ["dashboard"] });
+    expect(cached.some((query) => query.state.data != null)).toBe(true);
+    releaseApprove();
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
   });
 });

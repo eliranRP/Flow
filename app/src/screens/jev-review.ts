@@ -46,16 +46,11 @@ function userOwns(userAssigned: boolean | undefined, fieldAssigned: boolean | un
   return userAssigned === true || fieldAssigned === true;
 }
 
-/** Both flags are on the row and neither says the user set the field. */
-function flagsSayUnset(userAssigned: boolean | undefined, fieldAssigned: boolean | undefined): boolean {
-  return userAssigned === false && fieldAssigned === false;
-}
-
 function projectOpen(row: JevRow): boolean {
   if (skipsProject(row)) return false;
   if (userOwns(row.user_assigned, row.project_assigned)) return false;
   if (row.project_id == null) return true;
-  if (flagsSayUnset(row.user_assigned, row.project_assigned)) return true;
+  // A stored supplier rule stays. Only an existing suggestion is replaced.
   return row.project_suggested === true;
 }
 
@@ -63,8 +58,7 @@ function categoryOpen(row: JevRow): boolean {
   if (userOwns(row.user_assigned, row.category_assigned)) return false;
   // An empty category is unset. list_review still returns category_suggested false.
   if (row.category_id == null) return true;
-  if (flagsSayUnset(row.user_assigned, row.category_assigned)) return true;
-  // No assignment columns: a stored non-suggestion stays. An omitted flag stays open.
+  // A stored supplier rule stays, even when both assignment flags are false.
   return row.category_suggested !== false;
 }
 
@@ -158,10 +152,72 @@ export function jevQueueQueryKey(transactionIds: readonly string[]) {
   return ["jev-review-queue", jevQueueKey(transactionIds)] as const;
 }
 
-/** Separate from the suggestion read, so a company with Jev off never waits on the card. */
-export const jevConnectorQueryKey = ["jev-connector"] as const;
+/** Separate from the suggestion read, and scoped so the next user does not reuse this one's on. */
+export function jevConnectorQueryKey(scope: JevConnectorScope | null = boundJevConnectorScope()) {
+  return scope == null
+    ? (["jev-connector"] as const)
+    : (["jev-connector", scope.userId, scope.companyId] as const);
+}
 
 export const JEV_CONNECTOR_STALE_MS = 5 * 60 * 1000;
+
+/** Survives a reload, so the next launch still knows whether to wait on the card. */
+const JEV_CONNECTOR_FLAG = "flow.jev-connector";
+
+export type JevConnectorScope = { userId: string; companyId: string };
+
+/** One flag per signed-in user and company. The old device-wide key is not read. */
+export function jevConnectorStorageKey(scope: JevConnectorScope): string {
+  return `${JEV_CONNECTOR_FLAG}:${scope.userId}:${scope.companyId}`;
+}
+
+let activeScope: JevConnectorScope | null = null;
+
+export function bindJevConnectorScope(scope: JevConnectorScope | null): void {
+  activeScope = scope;
+}
+
+export function boundJevConnectorScope(): JevConnectorScope | null {
+  return activeScope;
+}
+
+export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefined {
+  if (typeof localStorage === "undefined") return undefined;
+  try {
+    const raw = localStorage.getItem(jevConnectorStorageKey(scope));
+    if (raw === "1") return true;
+    if (raw === "0") return false;
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
+export function writeJevConnectorFlag(on: boolean, scope: JevConnectorScope | null = activeScope): void {
+  if (scope == null || typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(jevConnectorStorageKey(scope), on ? "1" : "0");
+  } catch {
+    // A private window can refuse the write. The in-memory query still updates.
+  }
+}
+
+/** Sign-out drops this user's flags and the old device-wide key. */
+export function clearJevConnectorFlag(userId: string | null): void {
+  bindJevConnectorScope(null);
+  if (typeof localStorage === "undefined") return;
+  try {
+    const prefix = userId == null ? null : `${JEV_CONNECTOR_FLAG}:${userId}:`;
+    const keys: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key === JEV_CONNECTOR_FLAG || (prefix != null && key != null && key.startsWith(prefix))) keys.push(key);
+    }
+    for (const key of keys) localStorage.removeItem(key);
+  } catch {
+    // A private window can refuse the clear. The in-memory scope is already dropped.
+  }
+}
 
 /** A hung read gives the card back. Longer than this, the card keeps today's values. */
 export const JEV_READ_MS = 1000;
@@ -237,6 +293,18 @@ export async function loadJevConnector(signal?: AbortSignal): Promise<boolean> {
   return jevConnectorOn(integration.data);
 }
 
+/**
+ * The one-second read. A completed read stores the flag. A timeout returns off
+ * and leaves the stored flag alone, so it cannot overwrite an on that settings just wrote.
+ */
+export async function fetchJevConnector(signal?: AbortSignal): Promise<boolean> {
+  return withJevDeadline(signal, async (linked) => {
+    const on = await loadJevConnector(linked);
+    writeJevConnectorFlag(on);
+    return on;
+  }, false);
+}
+
 export async function loadJevSuggestions(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {
   const supabase = getSupabase();
   const ids = [...new Set(transactionIds.filter((id) => id !== ""))];
@@ -250,9 +318,11 @@ export async function loadJevSuggestions(transactionIds: readonly string[], sign
   for (const row of suggestions.data) {
     if (!newest.has(row.transaction_id)) newest.set(row.transaction_id, row);
   }
-  const projects = await signalled(supabase.from("projects").select("id,name,status"), signal);
+  const [projects, categories] = await Promise.all([
+    signalled(supabase.from("projects").select("id,name,status"), signal),
+    signalled(supabase.from("categories").select("id,name,hidden"), signal),
+  ]);
   if (projects.error) throw new Error(projects.error.message);
-  const categories = await signalled(supabase.from("categories").select("id,name,hidden"), signal);
   if (categories.error) throw new Error(categories.error.message);
   const projectNames = nameMap(projects.data, "project");
   const categoryNames = nameMap(categories.data, "category");
