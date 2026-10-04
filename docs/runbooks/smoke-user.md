@@ -1,6 +1,6 @@
 # Smoke user
 
-The live check after Pages signs in as one email-and-password user and only reads. That user is a viewer of the demo company **Flow Test 2**. It is not a member of any real company, and it cannot write. `authenticated` has no insert on `public.companies`. Onboarding calls `create_company`, which rejects a viewer. The write controls stay on screen. The server rejects the write. Hiding those controls is backlog.
+The live check after Pages signs in as one email-and-password user and only reads. That user is a viewer of the demo company **Flow Test**. It is not a member of any real company, and it cannot write. `authenticated` has no insert on `public.companies`. Onboarding calls `create_company`, which rejects a viewer. The write controls stay on screen. The server rejects the write. Hiding those controls is backlog.
 
 There is no viewer role on `companies`. `private.current_company_id()` is still the owner. Write policies and write RPCs use that. `public.company_viewers` adds one user to one company, and a trigger rejects the row unless `companies.is_demo` is true. Select policies use `private.readable_company_id()`, so the list RPCs below can run. A table read follows that same company. Detail RPCs do not.
 
@@ -63,13 +63,13 @@ declare
 begin
   select count(*) into n
   from public.companies
-  where name = 'Flow Test 2' and is_demo;
+  where name = 'Flow Test' and is_demo;
   if n <> 1 then
-    raise exception 'Flow Test 2 must be exactly one demo company';
+    raise exception 'Flow Test must be exactly one demo company';
   end if;
   select id into cid
   from public.companies
-  where name = 'Flow Test 2' and is_demo;
+  where name = 'Flow Test' and is_demo;
   select id into uid
   from auth.users
   where email = 'smoke@example.com';
@@ -81,7 +81,7 @@ begin
 end $$;
 ```
 
-That block raises when Flow Test 2 is missing, is not `is_demo`, or matches more than one company. Check that one row exists before you leave the editor:
+That block raises when Flow Test is missing, is not `is_demo`, or matches more than one company. The name comparison is exact, so a company named Flow Test 2 does not count. Check that one row exists before you leave the editor:
 
 ```sql
 select c.name, c.is_demo
@@ -91,7 +91,7 @@ join auth.users u on u.id = v.user_id
 where u.email = 'smoke@example.com';
 ```
 
-The name is `Flow Test 2` and `is_demo` is true. Any other result means stop. Do not point this user at a real company. The trigger rejects that insert.
+The name is `Flow Test` and `is_demo` is true. Any other result means stop. Do not point this user at a real company. The trigger rejects that insert. The viewer can read the real SUMIT data on Flow Test. Eliran accepted that on 2026-10-04.
 
 ## GitHub secrets
 
