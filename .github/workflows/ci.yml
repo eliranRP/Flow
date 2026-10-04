@@ -289,12 +289,32 @@ jobs:
           set -euo pipefail
           if [ -z "${SMOKE_EMAIL:-}" ] || [ -z "${SMOKE_PASSWORD:-}" ]; then
             echo "SMOKE_EMAIL or SMOKE_PASSWORD is unset. Skipping the read-only smoke."
+            printf '%s\n' \
+              '### Warning: read-only smoke skipped' \
+              '' \
+              'SMOKE_EMAIL or SMOKE_PASSWORD is unset on the production environment. The live Playwright smoke did not run. This does not fail the deploy.' \
+              >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "::add-mask::$SMOKE_PASSWORD"
           pnpm --filter @flow/app exec playwright install-deps chromium
           pnpm --filter @flow/app exec playwright install chromium
-          pnpm --filter @flow/app test:e2e:smoke
+          log="$(mktemp)"
+          if ! pnpm --filter @flow/app test:e2e:smoke >"$log" 2>&1; then
+            cat "$log"
+            {
+              echo '### Read-only smoke failed'
+              echo
+              echo 'Production is already live. Pages published this commit before this step, and this failure does not roll it back.'
+              echo
+              echo 'What failed:'
+              echo
+              echo '```'
+              tail -n 100 "$log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          cat "$log"
 
       - name: Remove the staged function secrets file
         if: always()

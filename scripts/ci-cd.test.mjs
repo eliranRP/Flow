@@ -267,9 +267,15 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(job("deploy"), /timeout-minutes: 30\n/);
   const liveSmoke = job("deploy");
   assert.ok(liveSmoke.indexOf("bash scripts/cd-smoke.sh") < liveSmoke.indexOf("Read-only smoke of the live app"));
-  assert.match(liveSmoke, /::add-mask::\$SMOKE_PASSWORD/);
+  assert.equal(liveSmoke.includes("::add-mask::$SMOKE_PASSWORD"), false);
   assert.match(liveSmoke, /SMOKE_EMAIL or SMOKE_PASSWORD is unset/);
+  assert.match(liveSmoke, /Warning: read-only smoke skipped/);
+  assert.match(liveSmoke, /GITHUB_STEP_SUMMARY/);
+  assert.match(liveSmoke, /does not fail the deploy/);
   assert.match(liveSmoke, /exit 0/);
+  assert.match(liveSmoke, /Production is already live/);
+  assert.match(liveSmoke, /What failed:/);
+  assert.match(liveSmoke, /exit 1/);
   assert.equal(ci.includes("timeout-minutes: 45"), false);
   assert.equal(ci.includes("timeout-minutes: 40"), false);
   assert.equal(ci.includes("timeout-minutes: 10"), false);

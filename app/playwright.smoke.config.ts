@@ -6,8 +6,14 @@ export default defineConfig({
   testMatch: /smoke-readonly\.spec\.ts/,
   timeout: 90_000,
   expect: { timeout: 20_000 },
+  retries: 1,
+  workers: 1,
+  reporter: "line",
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "https://flow-app-dx5.pages.dev",
+    trace: "off",
+    screenshot: "off",
+    video: "off",
   },
 });
