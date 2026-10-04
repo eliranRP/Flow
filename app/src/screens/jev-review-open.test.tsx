@@ -425,20 +425,17 @@ describe("cold review scope", () => {
     window.clearTimeout(releaseAt);
   });
 
-  it("reads the connector when getSession hangs", async () => {
+  it("does not list review while getSession has not answered", async () => {
     db.holdSession = new Promise<void>(() => undefined);
     db.integration = { enabled: false, mode: "off" };
     db.review = [stored];
-    const started = Date.now();
     renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
-    expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 3_500 })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
-    }, { timeout: 2_500 });
-    expect(Date.now() - started).toBeLessThan(5_000);
-    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
-    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(boundJevConnectorScope()).toBeNull();
+      expect(screen.getByText("טוען…")).toBeInTheDocument();
+    });
+    expect(db.reviewReads).toBe(0);
+    expect(screen.queryByRole("heading", { name: stored.supplier_name })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
   });
 
   it("sends one approve when Jev was never enabled and the company lookup fails", async () => {

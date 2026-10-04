@@ -46,24 +46,6 @@ describe("waitForAccessToken", () => {
     expect(now).toBe(100);
   });
 
-  it("does not hold the read when getSession does not answer", async () => {
-    const calls: number[] = [];
-    const client = {
-      auth: {
-        getSession: () => {
-          calls.push(calls.length + 1);
-          return new Promise<{ data: { session: { access_token?: string } | null } }>(() => undefined);
-        },
-      },
-    };
-    await waitForAccessToken(client, {
-      timeoutMs: 10_000,
-      unansweredMs: 20,
-      sleep: () => Promise.reject(new Error("polled")),
-    });
-    expect(calls).toEqual([1]);
-  });
-
   it("throws when the session never attaches, without leaving the caller signed in", async () => {
     const { calls, client } = reader([null]);
     let now = 0;
