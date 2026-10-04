@@ -71,12 +71,12 @@ function jsonAmount(value: unknown): number {
   return 0;
 }
 
-function watch(page: Page): {
+async function watch(page: Page): Promise<{
   consoleErrors: string[];
   writes: string[];
   httpErrors: string[];
   inflight: () => number;
-} {
+}> {
   const consoleErrors: string[] = [];
   const writes: string[] = [];
   const httpErrors: string[] = [];
@@ -87,20 +87,24 @@ function watch(page: Page): {
   page.on("pageerror", (error) => {
     consoleErrors.push(error.message);
   });
-  page.on("request", (request) => {
-    open += 1;
-    const url = request.url();
-    if (isSumit(url)) writes.push(`SUMIT ${request.method()} ${url}`);
-    else if (!isRead(request)) writes.push(`${request.method()} ${url}`);
-  });
-  page.on("requestfinished", () => {
-    open -= 1;
-  });
-  page.on("requestfailed", () => {
-    open -= 1;
-  });
   page.on("response", (response) => {
     if (response.status() >= 400) httpErrors.push(`${String(response.status())} ${response.url()}`);
+  });
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    const url = request.url();
+    if (isSumit(url) || !isRead(request)) {
+      writes.push(isSumit(url) ? `SUMIT ${request.method()} ${url}` : `${request.method()} ${url}`);
+      await route.abort("blockedbyclient");
+      return;
+    }
+    open += 1;
+    try {
+      await route.continue();
+      await request.response();
+    } finally {
+      open -= 1;
+    }
   });
   return { consoleErrors, writes, httpErrors, inflight: () => open };
 }
@@ -135,7 +139,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   if (signed.error) throw new Error("smoke sign-in failed");
   const session = signed.data.session;
 
-  const watched = watch(page);
+  const watched = await watch(page);
   await page.addInitScript(
     ({ key, value }) => {
       localStorage.setItem(key, value);

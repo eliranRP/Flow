@@ -1,6 +1,6 @@
 # Smoke user
 
-The live check after Pages signs in as one email-and-password user and only reads. That user is a viewer of the demo company **Flow Test 2**. It is not a member of any real company, and it cannot write. The write controls stay on screen. The server rejects the write. Hiding those controls is backlog.
+The live check after Pages signs in as one email-and-password user and only reads. That user is a viewer of the demo company **Flow Test 2**. It is not a member of any real company, and it cannot write. `authenticated` has no insert on `public.companies`. Onboarding calls `create_company`, which rejects a viewer. The write controls stay on screen. The server rejects the write. Hiding those controls is backlog.
 
 There is no viewer role on `companies`. `private.current_company_id()` is still the owner. Write policies and write RPCs use that. `public.company_viewers` adds one user to one company, and a trigger rejects the row unless `companies.is_demo` is true. Select policies use `private.readable_company_id()`, so the list RPCs below can run. A table read follows that same company. Detail RPCs do not.
 
@@ -16,17 +16,18 @@ A viewer gets these reads:
 | `sumit_status` | Whether the demo SUMIT connection is up, and its company number. No secret. |
 | `company_integrations` | The Jev row: enabled, mode, and threshold. This is a select, not an RPC. |
 
-These stay on `private.current_company_id()` and return nothing for a viewer. The smoke does not call them:
+These stay on `private.current_company_id()` and return empty for a viewer. The smoke does not call them and does not assert their rows:
 
 - `get_project`
 - `list_project_category` and `private.project_category_entries`
 - `project_waiting`
 - `private.overhead_share`
 - `get_transaction`
-- `list_auto_assigned_today` and `private.filed_today_rows`
 - `list_categories`
+- `list_auto_assigned_today` and `private.filed_today_rows`
+- `search_transactions`
 
-The product has no `/reports` route. The check opens only `/`, `/projects`, `/review`, and `/settings`. It does not open a project, a transaction, or a category. Home calls `get_dashboard` and `list_unpaid`. Projects calls `get_dashboard`. Review calls `list_review`. Settings calls `get_dashboard` and `sumit_status`, selects `company_integrations`, and POSTs `flow-mcp/status`. Each of those has to return 200 before the next screen. The home lines are נכנס and יצא when the demo has income, expenses, or a project. A demo with none of those still passes on the empty heading. The check does not require a project row.
+The product has no `/reports` route. The check opens only `/`, `/projects`, `/review`, and `/settings`. It does not open a project, a transaction, or a category. Home calls `get_dashboard` and `list_unpaid`. Projects calls `get_dashboard`. Review calls `list_review`. Settings calls `get_dashboard` and `sumit_status`, selects `company_integrations`, and POSTs `flow-mcp/status`. That status call is allowed. Any other request is aborted before it leaves the browser. Each listed RPC has to return 200 before the next screen. The home lines are נכנס and יצא when the demo has income, expenses, or a project. A demo with none of those still passes on the empty heading. The check does not require a project row, and it does not assert filed-today, category, project-detail, or search rows.
 
 ## Provision once
 
