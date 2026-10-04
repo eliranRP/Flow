@@ -29,6 +29,12 @@ describe("Toggle", () => {
     const faded = rules.find((rule) => rule.selectorText.includes("ui-switch-row") && rule.selectorText.includes(":disabled") && rule.style.opacity === "0.45");
     expect(faded).toBeUndefined();
     const onTrack = rules.find((rule) => rule.selectorText.includes("disabled") && rule.selectorText.includes(":checked") && rule.selectorText.includes("ui-switch"));
-    expect(onTrack?.style.background).toContain("--color-disabled-text");
+    expect(onTrack?.style.background).toContain("--color-accent");
+    expect(onTrack?.style.background).not.toContain("--color-control-off");
+    expect(onTrack?.style.background).not.toContain("--color-disabled-text");
+    expect(onTrack?.style.boxShadow).toBe("none");
+    const offTrack = rules.find((rule) => rule.selectorText.includes("input:disabled + .ui-switch"));
+    expect(offTrack?.style.background).toContain("--color-disabled-bg");
+    expect(offTrack?.style.boxShadow).toContain("--color-control-border");
   });
 });

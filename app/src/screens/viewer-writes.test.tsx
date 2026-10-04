@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as supabaseModule from "../lib/supabase";
 import type { Dashboard, ReviewRow } from "@flow/shared";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
@@ -55,6 +56,7 @@ function renderScreen(node: ReactNode, path = "/") {
 describe("viewer write controls", () => {
   it("keeps approve on the queue for an owner", () => {
     renderScreen(<ReviewQueue rows={[reviewRow]} search="" sample />);
+    expect(screen.getByText(/מתוך/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "שינוי" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "דלג" })).toBeInTheDocument();
@@ -167,6 +169,10 @@ describe("viewer gates", () => {
       expect(screen.queryByRole("button", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "פיצול בין פרויקטים" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+      const slot = document.querySelector(".ui-menu-slot");
+      expect(slot).toBeInstanceOf(HTMLElement);
+      expect(slot).toHaveAttribute("aria-hidden", "true");
     }],
     ["V18", "add leaves the screen", () => {
       viewer(
@@ -321,6 +327,7 @@ describe("viewer gates", () => {
       );
       expect(screen.getByRole("heading", { name: "שיפוץ" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
+      expect(document.querySelector(".ui-menu-slot")).toBeInstanceOf(HTMLElement);
     }],
     ["V32", "the project overhead switch is disabled", () => {
       viewer(
@@ -330,9 +337,46 @@ describe("viewer gates", () => {
         "/projects/p1",
       );
       expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeDisabled();
+      expect(screen.queryByText(VIEWER_NOTE)).not.toBeInTheDocument();
+    }],
+    ["V33", "the project skeleton keeps an empty menu slot", () => {
+      const pending = vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
+        rpc: () => new Promise(() => undefined),
+      } as never);
+      try {
+        viewer(
+          <Routes>
+            <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+          </Routes>,
+          "/projects/p1",
+        );
+        expect(screen.getAllByText("טוען…").length).toBeGreaterThan(0);
+        expect(screen.queryByRole("button", { name: "עוד" })).not.toBeInTheDocument();
+        expect(document.querySelector(".ui-menu-slot")).toBeInstanceOf(HTMLElement);
+      } finally {
+        pending.mockRestore();
+      }
     }],
   ] as const)("%s %s", (_id, _title, run) => {
     run();
+  });
+
+  it("shows עוד on the project skeleton once the role is owner", () => {
+    const pending = vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
+      rpc: () => new Promise(() => undefined),
+    } as never);
+    try {
+      renderScreen(
+        <Routes>
+          <Route path="/projects/:projectId" element={<ProjectDetailScreen />} />
+        </Routes>,
+        "/projects/p1",
+      );
+      expect(screen.getByRole("button", { name: "עוד" })).toBeInTheDocument();
+      expect(document.querySelector(".ui-menu-slot")).toBeNull();
+    } finally {
+      pending.mockRestore();
+    }
   });
 
   it("keeps the pointer on an owner category row", () => {

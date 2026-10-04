@@ -1,10 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "./auth";
-import { useCompanyRole, useIsViewer, ViewerPreview } from "./use-is-viewer";
+import { useCompanyRole, useIsViewer, useWriteGate, VIEWER_NOTE, ViewerNote, ViewerPreview, ViewerScope } from "./use-is-viewer";
 
 const viewerId = "11111111-1111-4111-8111-111111111111";
 const ownerId = "22222222-2222-4222-8222-222222222222";
@@ -12,6 +13,7 @@ const ownerId = "22222222-2222-4222-8222-222222222222";
 const state = vi.hoisted((): {
   userId: string | null;
   ownerId: string | null;
+  companyId: string;
   error: { message: string } | null;
   calls: number;
   gate: Promise<void> | null;
@@ -19,6 +21,7 @@ const state = vi.hoisted((): {
 } => ({
   userId: "11111111-1111-4111-8111-111111111111",
   ownerId: "22222222-2222-4222-8222-222222222222",
+  companyId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   error: null,
   calls: 0,
   gate: null,
@@ -63,7 +66,7 @@ const supabase = vi.hoisted(() => ({
           return { data: null, error: { message: "denied" } };
         }
         return {
-          data: state.ownerId == null ? null : { owner_id: state.ownerId },
+          data: state.ownerId == null ? null : { id: state.companyId, owner_id: state.ownerId },
           error: state.error,
         };
       },
@@ -105,10 +108,19 @@ function ownerKeys(client: QueryClient): ReadonlyArray<readonly unknown[]> {
   return client.getQueryCache().getAll().map((query) => query.queryKey).filter((key) => key[0] === "company-owner");
 }
 
+function cachedRole(userId: string): { companyId: string; role: string } | undefined {
+  const raw = localStorage.getItem("flow-company-role");
+  if (raw == null) return undefined;
+  const parsed = JSON.parse(raw) as Record<string, { companyId: string; role: string }>;
+  return parsed[userId];
+}
+
 describe("useIsViewer", () => {
   beforeEach(() => {
+    localStorage.clear();
     state.userId = viewerId;
     state.ownerId = ownerId;
+    state.companyId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
     state.error = null;
     state.calls = 0;
     state.gate = null;
@@ -146,16 +158,132 @@ describe("useIsViewer", () => {
     });
   });
 
-  it("holds writes when the owner read fails", async () => {
+  it("holds writes when the owner read fails and nothing is cached", async () => {
     state.error = { message: "denied" };
-    renderProbe();
-    expect(await screen.findByText("loading")).toBeInTheDocument();
+    function Failed() {
+      const role = useCompanyRole();
+      const gate = useWriteGate("/review");
+      const gated = gate === "show" ? "open" : gate === "wait" ? "wait" : "redirect";
+      return (
+        <ViewerScope>
+          <p>{role}</p>
+          <p>{gated}</p>
+          {role === "owner" ? <button type="button">הוספה</button> : null}
+          <ViewerNote />
+        </ViewerScope>
+      );
+    }
+    renderProbe(
+      <MemoryRouter>
+        <Failed />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("unknown")).toBeInTheDocument();
     await waitFor(() => {
       expect(state.calls).toBe(1);
     });
-    expect(screen.getByText("loading")).toBeInTheDocument();
-    expect(screen.queryByText("viewer")).not.toBeInTheDocument();
+    expect(screen.getByText("unknown")).toBeInTheDocument();
+    expect(screen.getByText("redirect")).toBeInTheDocument();
+    expect(screen.queryByText("owner")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+    expect(screen.queryByText("open")).not.toBeInTheDocument();
+    expect(screen.getByText(VIEWER_NOTE)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
+    state.error = null;
+    state.ownerId = viewerId;
+    fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
+    expect(await screen.findByText("owner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הוספה" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+  });
+
+  it("uses the last role saved for this user and company", async () => {
+    localStorage.setItem("flow-company-role", JSON.stringify({
+      [viewerId]: { companyId: state.companyId, role: "owner" },
+      [ownerId]: { companyId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", role: "viewer" },
+    }));
+    state.error = { message: "denied" };
+    renderProbe();
+    expect(await screen.findByText("owner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הוספה" })).toBeInTheDocument();
+    expect(screen.queryByText("unknown")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a cached viewer from the write controls", async () => {
+    localStorage.setItem("flow-company-role", JSON.stringify({
+      [viewerId]: { companyId: state.companyId, role: "viewer" },
+    }));
+    state.error = { message: "denied" };
+    renderProbe();
+    expect(await screen.findByText("viewer")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+    expect(screen.queryByText("unknown")).not.toBeInTheDocument();
+  });
+
+  it("ignores a role saved for someone else", async () => {
+    localStorage.setItem("flow-company-role", JSON.stringify({
+      [ownerId]: { companyId: state.companyId, role: "owner" },
+    }));
+    state.error = { message: "denied" };
+    renderProbe();
+    expect(await screen.findByText("unknown")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+  });
+
+  it("saves the role for this user and company after a successful read", async () => {
+    state.ownerId = viewerId;
+    renderProbe();
+    expect(await screen.findByText("owner")).toBeInTheDocument();
+    expect(cachedRole(viewerId)).toEqual({ companyId: state.companyId, role: "owner" });
+  });
+
+  it("retries a failed read when the window focuses or reconnects", async () => {
+    state.error = { message: "denied" };
+    renderProbe();
+    expect(await screen.findByText("unknown")).toBeInTheDocument();
+    expect(state.calls).toBe(1);
+    state.error = null;
+    state.ownerId = viewerId;
+    fireEvent(window, new Event("focus"));
+    expect(await screen.findByText("owner")).toBeInTheDocument();
+    expect(state.calls).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("button", { name: "הוספה" })).toBeInTheDocument();
+  });
+
+  it("retries a failed read when the browser reconnects", async () => {
+    state.error = { message: "denied" };
+    renderProbe();
+    expect(await screen.findByText("unknown")).toBeInTheDocument();
+    const calls = state.calls;
+    state.error = null;
+    state.ownerId = ownerId;
+    fireEvent(window, new Event("online"));
+    expect(await screen.findByText("viewer")).toBeInTheDocument();
+    expect(state.calls).toBeGreaterThan(calls);
+    expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+  });
+
+  it("reserves the quiet line while the role is loading", async () => {
+    let release: () => void = () => undefined;
+    state.gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    renderProbe(
+      <ViewerScope>
+        <Probe />
+        <ViewerNote />
+      </ViewerScope>,
+    );
+    expect(await screen.findByText("loading")).toBeInTheDocument();
+    const reserved = document.querySelector(".ui-viewer-note");
+    expect(reserved).toBeInstanceOf(HTMLElement);
+    expect(reserved).toHaveAttribute("aria-hidden", "true");
+    expect(reserved?.textContent).toBe(VIEWER_NOTE);
+    release();
+    expect(await screen.findByText("viewer")).toBeInTheDocument();
+    const note = screen.getByText(VIEWER_NOTE);
+    expect(note).not.toHaveAttribute("aria-hidden");
   });
 
   it("pins a viewer without a session or a companies read", () => {

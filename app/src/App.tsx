@@ -13,7 +13,7 @@ import { readSheetBackground } from "./sheet-background";
 import { LedgerFocusRefresh } from "./books-focus";
 import { ListHoldRoot } from "./list-hold";
 import { BooksProvider } from "./use-books";
-import { useHoldWrites, useIsViewer } from "./use-is-viewer";
+import { useCompanyRole, useHoldWrites, useIsViewer } from "./use-is-viewer";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
@@ -701,12 +701,14 @@ function DevTransaction() {
 }
 
 function Shell() {
+  const role = useCompanyRole();
   const viewer = useIsViewer();
   const holdWrites = useHoldWrites();
   const preview = usePreviewMode();
   // Preview keeps +, unless this session is already a viewer. A role that is
-  // still loading hides + so a viewer never taps it.
-  const allowAdd = !viewer && (preview || !holdWrites);
+  // still loading hides + so a viewer never taps it. An unknown role never
+  // shows a write control.
+  const allowAdd = role !== "unknown" && !viewer && (preview || !holdWrites);
   return (
     <div className="flex min-h-dvh flex-col">
       <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">
