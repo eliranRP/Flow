@@ -1,7 +1,6 @@
 import {
   buildLoanSchedule,
   contractualPaymentMinor,
-  divHalfEven,
   LOAN_TERM_MONTHS_MAX,
   LoanScheduleError,
   parseDecimalHalfEven,
@@ -113,7 +112,10 @@ export type LoanFieldErrors = Partial<Record<LoanField, string>>;
 export type LoanFinalLine = {
   tone: "plain" | "caution";
   lead: string;
-  /** One decimal, only when the final principal-and-interest is above twice. */
+  /**
+   * Above twice: the ratio floored to one decimal, and never below 2.1.
+   * A trailing zero is dropped, so 3.0 is "3".
+   */
   times?: string;
   amountMinor: bigint;
 };
@@ -230,6 +232,18 @@ function amountState(text: string): AmountState {
   }
 }
 
+/**
+ * Floor the ratio to tenths. Half-even would turn 2.95 into 3 and 2.02 into 2.
+ * Anything above twice and below 2.1 stays 2.1, so the line never reads פי 2.
+ */
+function timesAboveTwice(finalPi: bigint, pi: bigint): string {
+  let tenths = (finalPi * 10n) / pi;
+  if (tenths < 21n) tenths = 21n;
+  const whole = tenths / 10n;
+  const frac = tenths % 10n;
+  return frac === 0n ? whole.toString() : `${whole.toString()}.${frac.toString()}`;
+}
+
 /** One line for the final payment. A 2× warning replaces the adjusted line. */
 export function loanFinalLine(preview: Extract<LoanPreview, { status: "ready" }>): LoanFinalLine | null {
   if (preview.balloon) {
@@ -242,11 +256,12 @@ export function loanFinalLine(preview: Extract<LoanPreview, { status: "ready" }>
       return { tone: "caution", lead: "התשלום האחרון כפול", amountMinor: preview.largeFinalMinor };
     }
     if (finalPi > pi * 2n) {
-      const tenths = divHalfEven(finalPi * 10n, pi);
-      const whole = tenths / 10n;
-      const frac = tenths % 10n;
-      const times = frac === 0n ? whole.toString() : `${whole.toString()}.${frac.toString()}`;
-      return { tone: "caution", lead: "התשלום האחרון גבוה פי", times, amountMinor: preview.largeFinalMinor };
+      return {
+        tone: "caution",
+        lead: "התשלום האחרון גבוה פי",
+        times: timesAboveTwice(finalPi, pi),
+        amountMinor: preview.largeFinalMinor,
+      };
     }
   }
   if (preview.finalAdjustment) {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useId, useMemo, useRef, useState, type Ref, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type Ref, type SubmitEvent } from "react";
 import { BankIcon, CalendarIcon, ChevronDownIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { SectionHead } from "../ui/layout";
@@ -56,6 +56,7 @@ export function LoanSetupForm({
   busy = false,
   onSave,
   onDraft,
+  keepDraft,
   saveButtonRef,
 }: {
   companyCurrency: LoanCurrency;
@@ -64,6 +65,8 @@ export function LoanSetupForm({
   busy?: boolean;
   onSave?: (row: Omit<LoanInsert, "company_id">) => void;
   onDraft?: (draft: LoanSetupInitial) => void;
+  /** False after the sheet closes, so a late effect cannot write the draft back. */
+  keepDraft?: { current: boolean };
   saveButtonRef?: Ref<HTMLButtonElement>;
 }) {
   const panelId = useId();
@@ -99,9 +102,12 @@ export function LoanSetupForm({
   const finalLine = shown == null ? null : loanFinalLine(shown);
   const computedPayment = shown == null ? "" : minorToInput(shown.paymentMinor);
   const shownPayment = payment != null ? payment : computedPayment;
+  const onDraftRef = useRef(onDraft);
+  onDraftRef.current = onDraft;
 
   useEffect(() => {
-    onDraft?.({
+    if (keepDraft != null && !keepDraft.current) return;
+    onDraftRef.current?.({
       name,
       principal,
       rate,
@@ -111,7 +117,7 @@ export function LoanSetupForm({
       currency,
       payment: payment ?? undefined,
     });
-  }, [name, principal, rate, term, startDate, escrow, currency, payment, onDraft]);
+  }, [name, principal, rate, term, startDate, escrow, currency, payment, keepDraft]);
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -273,12 +279,21 @@ export function LoanSettingsSection({
   companyCurrency?: LoanCurrency;
   blocked?: () => boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const setSheet = useSheetHistory("loan-new", open, setOpen);
+  const [open, setOpenState] = useState(false);
   const rowRef = useRef<HTMLButtonElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
   const posted = useRef(false);
   const draftRef = useRef<LoanSetupInitial | null>(null);
+  const keepDraft = useRef(false);
+  const clearDraft = useCallback(() => {
+    keepDraft.current = false;
+    draftRef.current = null;
+  }, []);
+  const setOpen = useCallback((next: boolean) => {
+    if (!next) clearDraft();
+    setOpenState(next);
+  }, [clearDraft]);
+  const setSheet = useSheetHistory("loan-new", open, setOpen);
   const query = useQuery({
     queryKey: ["loan-currency", companyId],
     enabled: companyCurrency == null && companyId != null,
@@ -296,7 +311,7 @@ export function LoanSettingsSection({
     success: "ההלוואה נשמרה",
     keys: [],
     onSuccess: () => {
-      draftRef.current = null;
+      clearDraft();
       setSheet(false);
     },
     run: async (row) => {
@@ -307,7 +322,8 @@ export function LoanSettingsSection({
   });
 
   function setLoanSheet(next: boolean) {
-    if (!next) draftRef.current = null;
+    if (next) keepDraft.current = true;
+    else clearDraft();
     setSheet(next);
   }
 
@@ -333,6 +349,7 @@ export function LoanSettingsSection({
             initial={draftRef.current ?? undefined}
             busy={save.isPending}
             saveButtonRef={saveButton}
+            keepDraft={keepDraft}
             onDraft={(next) => { draftRef.current = next; }}
             onSave={(row) => {
               if (blocked?.()) return;

@@ -35,8 +35,18 @@ function pick(iso: string, direction: "חודש קודם" | "חודש הבא") {
 }
 
 describe("DateSheet", () => {
-  it("keeps היום and אתמול unless a screen turns the shortcuts off", () => {
-    renderSheet();
+  it("shows היום and אתמול when a screen leaves the shortcuts prop off", () => {
+    render(
+      <MemoryRouter>
+        <DateSheet
+          open
+          onOpenChange={() => undefined}
+          title="תאריך"
+          value={israelToday()}
+          onApply={() => undefined}
+        />
+      </MemoryRouter>,
+    );
     expect(screen.getByRole("button", { name: "היום" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אתמול" })).toBeInTheDocument();
   });
