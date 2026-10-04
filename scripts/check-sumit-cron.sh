@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read cron.job after migrations are applied. Does not create or remove a job.
-# Vault cron_secret decides whether flow-sumit-drain should exist.
+# Vault cron_secret decides whether flow-connector-drain should exist.
 # Vault flow_sync_url is the drain URL. It is required when the drain should exist.
 # Neither value is printed.
 set -euo pipefail
@@ -46,11 +46,11 @@ case "$status" in
     exit 0
     ;;
   bad-daily)
-    echo "check-sumit-cron: flow-sumit-daily is missing or its schedule or command is wrong." >&2
+    echo "check-sumit-cron: flow-connector-daily is missing or its schedule or command is wrong." >&2
     exit 2
     ;;
   bad-drain)
-    echo "check-sumit-cron: flow-sumit-drain is missing, its schedule or command is wrong, or Vault flow_sync_url is missing." >&2
+    echo "check-sumit-cron: flow-connector-drain is missing, its schedule or command is wrong, or Vault flow_sync_url is missing." >&2
     exit 3
     ;;
   *)
