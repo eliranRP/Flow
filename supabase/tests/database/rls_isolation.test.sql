@@ -97,15 +97,15 @@ grant all on flow_a to authenticated, anon;
 
 select is(
   (select count(*)::int from public.categories c join flow_a a on a.company_id = c.company_id),
-  12,
-  'a new company seeds 9 expense categories and 3 income categories'
+  14,
+  'a new company seeds 11 expense categories and 3 income categories'
 );
 
 select tests.authenticate_as('owner_a');
 
 select is((select count(*)::int from public.companies), 1, 'owner can read their company');
 select is((select count(*)::int from public.projects), 1, 'owner can read their project');
-select is((select count(*)::int from public.categories), 12, 'owner can read categories');
+select is((select count(*)::int from public.categories), 14, 'owner can read categories');
 select is((select count(*)::int from public.transactions), 1, 'owner can read transactions');
 select is(
   (select connected from public.sumit_connection_status),
