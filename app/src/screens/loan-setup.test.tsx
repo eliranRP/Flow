@@ -109,8 +109,9 @@ async function expectReopenedBlank(inserts: number) {
   expect(screen.getByLabelText("סכום מקורי")).toHaveValue("");
   expect(screen.getByLabelText("ריבית שנתית")).toHaveValue("");
   const save = screen.getByRole("button", { name: "שמירה" });
-  expect(save).toBeDisabled();
+  expect(save).toBeEnabled();
   fireEvent.click(save);
+  expect(screen.getByText("חסר מלווה.")).toBeInTheDocument();
   await act(async () => {
     await new Promise((resolve) => { setTimeout(resolve, 40); });
   });
@@ -253,8 +254,9 @@ describe("LoanSetupForm", () => {
     expect(screen.queryByText("התקופה היא בין חודש אחד ל־600.")).not.toBeInTheDocument();
     fireEvent.change(term, { target: { value: "1000" } });
     expect(term).toHaveValue("1000");
+    expect(screen.queryByText("התקופה היא בין חודש אחד ל־600.")).not.toBeInTheDocument();
+    fireEvent.blur(term);
     expect(screen.getByText("התקופה היא בין חודש אחד ל־600.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
   });
 
   it("keeps the last preview while a field is incomplete", () => {
@@ -288,6 +290,9 @@ describe("LoanSetupForm", () => {
         }}
       />,
     );
+    expect(screen.queryByText("חסר מלווה.")).not.toBeInTheDocument();
+    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     const lender = screen.getByLabelText("מלווה");
     expect(document.getElementById(lender.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חסר מלווה.");
     expect(screen.getByText("חסר מלווה.")).toBeInTheDocument();
@@ -298,7 +303,6 @@ describe("LoanSetupForm", () => {
     expect(screen.getByLabelText("סכום מקורי").closest(".ui-field")).toHaveClass("ui-field-error");
     expect(screen.getByLabelText("תקופה בחודשים").closest(".ui-field")).toHaveClass("ui-field-error");
     expect(screen.getByLabelText("מסים וביטוח לחודש").closest(".ui-field")).toHaveClass("ui-field-error");
-    expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "-12" } });
     expect(screen.getByLabelText("סכום מקורי")).toHaveValue("-12");
@@ -308,6 +312,30 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("הריבית שלילית.")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("סכום מקורי"), { target: { value: "90071992547410" } });
     expect(screen.getByText("הסכום גדול מדי.")).toBeInTheDocument();
+  });
+
+  it("shows a field error on blur, and keeps the message line while typing", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" />);
+    const lender = screen.getByLabelText("מלווה");
+    const slot = lender.closest(".ui-field")?.querySelector(".ui-field-message-slot");
+    expect(slot).not.toBeNull();
+    expect(slot).toHaveTextContent("");
+    expect(screen.queryByText("חסר מלווה.")).not.toBeInTheDocument();
+    fireEvent.blur(lender);
+    expect(slot).toHaveTextContent("חסר מלווה.");
+
+    const principal = screen.getByLabelText("סכום מקורי");
+    fireEvent.change(principal, { target: { value: "0" } });
+    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+    fireEvent.change(principal, { target: { value: "0.5" } });
+    expect(principal).toHaveValue("0.5");
+    expect(screen.queryByText("חסר סכום.")).not.toBeInTheDocument();
+
+    const term = screen.getByLabelText("תקופה בחודשים");
+    fireEvent.change(term, { target: { value: "" } });
+    expect(screen.queryByText("חסרה תקופה.")).not.toBeInTheDocument();
+    fireEvent.blur(term);
+    expect(screen.getByText("חסרה תקופה.")).toBeInTheDocument();
   });
 
   it("keeps the computed payment under עוד and shows interest", () => {

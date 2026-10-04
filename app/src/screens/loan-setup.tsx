@@ -25,6 +25,7 @@ import {
   readCompanyLoanCurrency,
   type LoanCurrency,
   type LoanDraft,
+  type LoanField,
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
@@ -81,6 +82,8 @@ export function LoanSetupForm({
   const [payment, setPayment] = useState<string | null>(initial?.payment ?? null);
   const [advanced, setAdvanced] = useState(advancedOpen || initial?.payment != null);
   const [dateOpen, setDateOpen] = useState(false);
+  const [touched, setTouched] = useState<Partial<Record<LoanField, boolean>>>({});
+  const [checked, setChecked] = useState(false);
   const lastReady = useRef<ReadyPreview | null>(null);
   const draft = useMemo<LoanDraft>(() => ({
     name,
@@ -98,7 +101,15 @@ export function LoanSetupForm({
   const errors = useMemo(() => loanFieldErrors(draft, preview), [draft, preview]);
   const mark = LOAN_CURRENCY_MARK[currency];
   const ready = preview.status === "ready";
-  const canSave = ready && Object.keys(errors).length === 0;
+  const invalid = Object.keys(errors).length > 0;
+  const canSave = ready && !invalid;
+  function shownError(field: LoanField): string | undefined {
+    if (!checked && touched[field] !== true) return undefined;
+    return errors[field];
+  }
+  function touch(field: LoanField) {
+    setTouched((current) => (current[field] === true ? current : { ...current, [field]: true }));
+  }
   const finalLine = shown == null ? null : loanFinalLine(shown);
   const computedPayment = shown == null ? "" : minorToInput(shown.paymentMinor);
   const shownPayment = payment != null ? payment : computedPayment;
@@ -121,7 +132,8 @@ export function LoanSetupForm({
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (preview.status !== "ready" || Object.keys(errors).length > 0 || busy) return;
+    setChecked(true);
+    if (!canSave || busy) return;
     onSave?.(preview.insert);
   }
 
@@ -138,7 +150,9 @@ export function LoanSetupForm({
         value={name}
         maxLength={80}
         disabled={busy}
-        error={errors.name}
+        reserveMessage
+        error={shownError("name")}
+        onBlur={() => { touch("name"); }}
         onChange={(event) => { setName(event.target.value); }}
       />
       <MoneyField
@@ -147,7 +161,9 @@ export function LoanSetupForm({
         prefix={mark}
         disabled={busy}
         keepMinus
-        error={errors.principal}
+        reserveMessage
+        error={shownError("principal")}
+        onBlur={() => { touch("principal"); }}
         onValueChange={setPrincipal}
       />
       <SegmentedControl
@@ -164,7 +180,9 @@ export function LoanSetupForm({
         decimals={4}
         disabled={busy}
         keepMinus
-        error={errors.rate}
+        reserveMessage
+        error={shownError("rate")}
+        onBlur={() => { touch("rate"); }}
         onValueChange={setRate}
       />
       <TextField
@@ -174,7 +192,9 @@ export function LoanSetupForm({
         inputMode="numeric"
         numeric
         disabled={busy}
-        error={errors.term}
+        reserveMessage
+        error={shownError("term")}
+        onBlur={() => { touch("term"); }}
         onChange={(event) => { onTerm(event.target.value); }}
       />
       <div className="ui-field">
@@ -207,7 +227,9 @@ export function LoanSetupForm({
         prefix={mark}
         disabled={busy}
         keepMinus
-        error={errors.escrow}
+        reserveMessage
+        error={shownError("escrow")}
+        onBlur={() => { touch("escrow"); }}
         onValueChange={setEscrow}
       />
       <TextLink
@@ -228,9 +250,11 @@ export function LoanSetupForm({
             prefix={mark}
             disabled={busy}
             keepMinus
-            error={errors.payment}
+            reserveMessage
+            error={shownError("payment")}
             onValueChange={(next) => { setPayment(next); }}
             onBlur={() => {
+              touch("payment");
               setPayment((current) => (current == null || current.trim() === "" ? null : current));
             }}
           />
@@ -261,10 +285,12 @@ export function LoanSetupForm({
           ) : null}
         </div>
       ) : null}
-      {!advanced && errors.payment ? (
-        <p className="ui-field-message" role="alert">{errors.payment}</p>
+      {!advanced ? (
+        <p className="ui-field-message ui-field-message-slot" role={shownError("payment") ? "alert" : undefined}>
+          {shownError("payment") ?? ""}
+        </p>
       ) : null}
-      <Button type="submit" buttonRef={saveButtonRef} busy={busy} disabled={!canSave}>שמירה</Button>
+      <Button type="submit" buttonRef={saveButtonRef} busy={busy} disabled={!ready && !invalid}>שמירה</Button>
     </form>
   );
 }
