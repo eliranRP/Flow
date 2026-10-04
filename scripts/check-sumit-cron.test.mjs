@@ -6,12 +6,12 @@ import { join } from "node:path";
 import test from "node:test";
 
 const script = new URL("./check-sumit-cron.sh", import.meta.url);
-const sqlFiles = [
-  new URL("../supabase/migrations/20260928140000_phase1_slice.sql", import.meta.url),
-  new URL("../supabase/migrations/20261003140000_sumit_daily_schedule.sql", import.meta.url),
-  new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url),
-  new URL("./check-sumit-cron.sql", import.meta.url),
-];
+const phase1 = new URL("../supabase/migrations/20260928140000_phase1_slice.sql", import.meta.url);
+const dailySchedule = new URL("../supabase/migrations/20261003140000_sumit_daily_schedule.sql", import.meta.url);
+const drainUrl = new URL("../supabase/migrations/20261003160000_sumit_drain_url.sql", import.meta.url);
+const engine = new URL("../supabase/migrations/20261003210000_connector_engine.sql", import.meta.url);
+const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
+const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 
 function dollarBlocks(sql) {
   const marker = "$cron$";
@@ -33,36 +33,50 @@ function dollarCron(sql) {
   return dollarBlocks(sql)[0];
 }
 
-test("the daily command matches the phase 1 insert", () => {
-  const [original, ...copies] = sqlFiles.map((url) => readFileSync(url, "utf8"));
+test("the phase 1 daily command stays the historical insert", () => {
+  const original = readFileSync(phase1, "utf8");
+  const copy = readFileSync(dailySchedule, "utf8");
   const command = dollarCron(original);
   assert.match(command, /insert into public\.sumit_refresh_requests/);
-  for (const copy of copies) assert.equal(dollarCron(copy), command);
-  const check = readFileSync(new URL("./check-sumit-cron.sql", import.meta.url), "utf8");
-  assert.match(check, /'0 3 \* \* \*'/);
-  assert.match(check, /'\*\/5 \* \* \* \*'/);
+  assert.equal(dollarCron(copy), command);
   const shell = readFileSync(script, "utf8");
   assert.equal(/\bcron\.schedule\b/.test(shell), false);
   assert.equal(/\bcron\.unschedule\b/.test(shell), false);
   assert.match(shell, /SET TRANSACTION READ ONLY/);
-  assert.match(shell, /cron_secret decides whether flow-sumit-drain should exist/);
+  assert.match(shell, /cron_secret decides whether flow-connector-drain should exist/);
   assert.match(shell, /flow_sync_url is the drain URL/);
 });
 
-test("the drain command reads Vault and has no Kong fallback or literal header", () => {
-  const migration = readFileSync(
-    new URL("../supabase/migrations/20261003160000_sumit_drain_url.sql", import.meta.url),
-    "utf8",
-  );
-  const check = readFileSync(new URL("./check-sumit-cron.sql", import.meta.url), "utf8");
-  const command = dollarBlocks(migration)[0];
-  assert.equal(dollarBlocks(check)[1], command);
+test("the connector daily and drain commands match across the migration, pgTAP, and check", () => {
+  const migration = readFileSync(engine, "utf8");
+  const tap = readFileSync(pgtap, "utf8");
+  const check = readFileSync(checkSql, "utf8");
+  const daily = dollarBlocks(migration)[0];
+  const drain = dollarBlocks(migration)[1];
+  assert.match(daily, /insert into public\.connector_refresh_requests/);
+  assert.equal(dollarCron(tap), daily);
+  assert.equal(dollarBlocks(check)[0], daily);
+  assert.equal(dollarBlocks(check)[1], drain);
+  assert.match(check, /'0 3 \* \* \*'/);
+  assert.match(check, /'\*\/5 \* \* \* \*'/);
+  assert.match(check, /flow-connector-daily/);
+  assert.match(check, /flow-connector-drain/);
+  assert.match(drain, /where name = 'flow_sync_url'/);
+  assert.match(drain, /where name = 'cron_secret'/);
+  assert.match(drain, /last_error is distinct from 'auth'/);
+  assert.equal(drain.includes("http://kong:8000"), false);
+  assert.equal(/x-flow-cron',\s*'/.test(drain), false);
+  assert.match(check, /not has_url/);
+});
+
+test("the historical drain command is unchanged and has no Kong fallback", () => {
+  const command = dollarBlocks(readFileSync(drainUrl, "utf8"))[0];
+  assert.match(command, /from public\.sumit_refresh_requests r/);
+  assert.match(command, /last_error is distinct from 'sumit_auth'/);
   assert.match(command, /where name = 'flow_sync_url'/);
   assert.match(command, /where name = 'cron_secret'/);
   assert.equal(command.includes("http://kong:8000"), false);
   assert.equal(/x-flow-cron',\s*'/.test(command), false);
-  assert.match(check, /name = 'flow_sync_url'/);
-  assert.match(check, /not has_url/);
 });
 
 function runCheck({ url = "postgresql://postgres@127.0.0.1:54322/postgres", cron = "t", status = "ok", fail = "" }) {
