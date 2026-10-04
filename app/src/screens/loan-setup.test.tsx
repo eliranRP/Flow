@@ -181,6 +181,8 @@ describe("LoanSetupForm", () => {
     expect(document.querySelector("input[type='date']")).toBeNull();
     fireEvent.click(field);
     expect(screen.getByRole("heading", { name: "תאריך תשלום ראשון" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "היום" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אתמול" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "חודש הבא" })).toBeEnabled();
     const future = shiftDays(israelToday(), 40);
     const futureName = dayLabel(future);
@@ -192,6 +194,23 @@ describe("LoanSetupForm", () => {
     fireEvent.click(day);
     fireEvent.click(screen.getByRole("button", { name: "בחירה" }));
     expect(screen.getByRole("button", { name: "תאריך תשלום ראשון" })).toHaveTextContent(formatDisplay(future));
+  });
+
+  it("keeps a past day on the first-payment date with no today or yesterday shortcut", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" />);
+    fireEvent.click(screen.getByRole("button", { name: "תאריך תשלום ראשון" }));
+    expect(screen.queryByRole("button", { name: "היום" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אתמול" })).not.toBeInTheDocument();
+    const past = shiftDays(israelToday(), -1);
+    const pastName = dayLabel(past);
+    for (let step = 0; step < 4 && screen.queryByRole("button", { name: pastName }) == null; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "חודש קודם" }));
+    }
+    const day = screen.getByRole("button", { name: pastName });
+    expect(day).toBeEnabled();
+    fireEvent.click(day);
+    fireEvent.click(screen.getByRole("button", { name: "בחירה" }));
+    expect(screen.getByRole("button", { name: "תאריך תשלום ראשון" })).toHaveTextContent(formatDisplay(past));
   });
 
   it("keeps four rate decimals so 11.2042 is the saved rate", () => {
