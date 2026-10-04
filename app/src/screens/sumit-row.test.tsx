@@ -1098,6 +1098,7 @@ describe("SUMIT status row", () => {
     });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
     await waitFor(() => {
+      expect(backs.router.state.navigation.state).toBe("idle");
       expect(backs.router.state.location.pathname).toBe("/settings");
       expect(backs.router.state.location.key).toBe(backs.original);
     });
