@@ -16,6 +16,7 @@ const db = vi.hoisted(() => ({
   integrationReads: 0,
   writes: [] as Array<{ name: string; args?: Record<string, unknown> }>,
   rows: [] as ReviewRow[],
+  closed: new Set<string>(),
 }));
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
@@ -64,14 +65,16 @@ vi.mock("../lib/supabase", () => ({
     rpc: (name: string, args?: Record<string, unknown>) => {
       db.writes.push({ name, args });
       if (name === "approve_review_item" && args?.p_check_shown === true) {
-        const row = db.rows.find((item) => item.id === args.p_id);
+        const id = typeof args.p_id === "string" ? args.p_id : "";
+        const row = db.rows.find((item) => item.id === id);
+        if (!row) return Promise.resolve({ data: { ok: false, error: { code: "not_found" } }, error: null });
+        if (db.closed.has(id)) return Promise.resolve({ data: { ok: false, error: { code: "already_closed" } }, error: null });
         const shownProject = args.p_shown_project_id ?? null;
         const shownCategory = args.p_shown_category_id ?? null;
-        const storedProject = row?.project_id ?? null;
-        const storedCategory = row?.category_id ?? null;
-        if (storedProject !== shownProject || storedCategory !== shownCategory) {
+        if ((row.project_id ?? null) !== shownProject || (row.category_id ?? null) !== shownCategory) {
           return Promise.resolve({ data: { ok: false, error: { code: "stale" } }, error: null });
         }
+        db.closed.add(id);
       }
       return Promise.resolve({ data: null, error: null });
     },
@@ -136,6 +139,8 @@ describe("Jev review one tap", () => {
     db.integrationReads = 0;
     db.writes = [];
     db.rows = [];
+    db.closed = new Set();
+    localStorage.removeItem("flow.jev-connector");
   });
 
   it("approves the prefilled project and category in one tap", async () => {
@@ -334,6 +339,109 @@ describe("Jev review one tap", () => {
     expect(db.writes.find((call) => call.name === "approve_review_item")?.args).toMatchObject({
       p_project_id: "p-stored",
       p_category_id: "c-stored",
+    });
+  });
+
+  it("keeps אישור disabled while a complete stored guess is still loading, then sends the Jev ids", async () => {
+    let release: () => void = () => undefined;
+    db.holdSuggestions = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{
+      id: "s1",
+      transaction_id: "t1",
+      answers: {
+        project: { choice: "p1", confidence: 0.91 },
+        category: { choice: "c1", confidence: 0.88 },
+      },
+    }];
+    const guess: ReviewRow = {
+      ...open,
+      project_id: "p-old",
+      project_name: "פרויקט ישן",
+      project_suggested: true,
+      category_id: "c-old",
+      category_name: "קטגוריה ישנה",
+      category_suggested: true,
+    };
+    renderQueue([guess]);
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    });
+    expect(document.querySelector(".ui-review-note")).not.toBeNull();
+    const approve = screen.getByRole("button", { name: "אישור" });
+    expect(approve).toBeDisabled();
+    approve.removeAttribute("disabled");
+    fireEvent.click(approve);
+    expect(db.writes).toEqual([]);
+    release();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await waitFor(() => {
+      expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
+    });
+    expect(db.writes.find((call) => call.name === "approve_review_item")?.args).toEqual({
+      p_id: "r1",
+      p_project_id: "p1",
+      p_category_id: "c1",
+      p_remember: false,
+      p_check_shown: true,
+      p_shown_project_id: "p-old",
+      p_shown_category_id: "c-old",
+    });
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+  });
+
+  it("sends one approve when אישור is clicked three times", async () => {
+    db.integration = { enabled: true, mode: "off" };
+    renderQueue([stored]);
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    fireEvent.click(approve);
+    fireEvent.click(approve);
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(db.writes.filter((call) => call.name === "approve_review_item")).toHaveLength(1);
+    });
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+  });
+
+  it("treats a second approve of the same row as already closed", async () => {
+    db.integration = { enabled: true, mode: "off" };
+    renderQueue([stored]);
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    fireEvent.click(approve);
+    expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+    fireEvent.click(approve);
+    expect(await screen.findByText("הפריט כבר טופל.")).toBeInTheDocument();
+  });
+
+  it("refuses an approve whose id is no longer the stored row", async () => {
+    db.integration = { enabled: true, mode: "off" };
+    renderQueue([stored]);
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    db.rows = [];
+    fireEvent.click(approve);
+    expect(await screen.findByText("לא הצלחנו לאשר.")).toBeInTheDocument();
+    expect(screen.queryByText("הפריט אושר")).not.toBeInTheDocument();
+  });
+
+  it("waits on the first paint when the last launch left Jev on", async () => {
+    localStorage.setItem("flow.jev-connector", "1");
+    let release: () => void = () => undefined;
+    db.holdSuggestions = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    db.integration = { enabled: true, mode: "shadow" };
+    renderQueue([stored]);
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
+    });
+    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    release();
+    await waitFor(() => {
+      expect(document.querySelector("[data-jev-pending]")).toBeNull();
     });
   });
 

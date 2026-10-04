@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { parseJevSuggestion, withJev, type JevPrefill, type JevReviewState } from "./jev-review";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  JEV_READ_MS,
+  JEV_REVIEW_OFF,
+  parseJevSuggestion,
+  readJevConnectorFlag,
+  withJev,
+  withJevDeadline,
+  writeJevConnectorFlag,
+  type JevPrefill,
+  type JevReviewState,
+} from "./jev-review";
 
 const prefill: JevPrefill = {
   suggestionId: "s1",
@@ -75,8 +85,8 @@ describe("Jev review prefill", () => {
     expect(withJev(owned, on)).toBe(owned);
   });
 
-  it("fills a stored category when the assignment flags say the user has not set it", () => {
-    const unset = {
+  it("leaves a supplier rule when both assignment flags are false", () => {
+    const rule = {
       ...empty,
       project_id: "p9",
       project_name: "הרצל",
@@ -88,10 +98,25 @@ describe("Jev review prefill", () => {
       category_suggested: false,
       category_assigned: false,
     };
-    expect(withJev(unset, on)).toMatchObject({
+    expect(withJev(rule, on)).toBe(rule);
+  });
+
+  it("replaces an existing suggested project", () => {
+    const guess = {
+      ...empty,
+      project_id: "p-old",
+      project_name: "פרויקט ישן",
+      project_suggested: true,
+      category_id: "c-old",
+      category_name: "קטגוריה ישנה",
+      category_suggested: true,
+    };
+    expect(withJev(guess, on)).toMatchObject({
       project_id: "p1",
+      project_name: "וילה רעננה",
       project_suggested: true,
       category_id: "c1",
+      category_name: "חומרים",
       category_suggested: true,
     });
   });
@@ -122,4 +147,24 @@ describe("Jev review prefill", () => {
     });
     expect(parseJevSuggestion({ project: { choice: "p1", confidence: 2 } }, "s1", "t1", projects, categories)).toBeNull();
   });
+
+  it("returns the off fallback when the read misses the deadline", async () => {
+    vi.useFakeTimers();
+    const pending = withJevDeadline(undefined, () => new Promise<typeof JEV_REVIEW_OFF>(() => undefined), JEV_REVIEW_OFF);
+    await vi.advanceTimersByTimeAsync(JEV_READ_MS);
+    await expect(pending).resolves.toBe(JEV_REVIEW_OFF);
+  });
+
+  it("remembers the connector flag for the next launch", () => {
+    expect(readJevConnectorFlag()).toBeUndefined();
+    writeJevConnectorFlag(true);
+    expect(readJevConnectorFlag()).toBe(true);
+    writeJevConnectorFlag(false);
+    expect(readJevConnectorFlag()).toBe(false);
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  localStorage.removeItem("flow.jev-connector");
 });
