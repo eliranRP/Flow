@@ -1,0 +1,2024 @@
+{
+  "imported_count": 70,
+  "pending_count": 0,
+  "skipped": {
+    "own_account_transfer": 14,
+    "treasury_transfer": 6,
+    "void_status": 6,
+    "internal_transfer": 4
+  },
+  "skipped_rows": [
+    {
+      "external_id": "00a87b37-dcb2-5359-812e-9e397bb06258",
+      "reason": "void_status"
+    },
+    {
+      "external_id": "019106c2-64ff-551b-94b3-047b46e0cade",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "0d795609-d185-55bf-bcc0-4a978d0560bc",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "16ad93e2-6c61-5df7-97a5-9d8330511ca1",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "17a78c5b-22c0-53eb-925d-ba34b87722fd",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "460cc39f-1c51-5e54-838c-efadd6ba8ef1",
+      "reason": "void_status"
+    },
+    {
+      "external_id": "4c4bf2de-c064-5001-ae66-0460522c7a1b",
+      "reason": "internal_transfer"
+    },
+    {
+      "external_id": "4d1aea49-3978-5ec8-9039-695b53762de7",
+      "reason": "treasury_transfer"
+    },
+    {
+      "external_id": "4d879581-c8ba-5e31-bf9f-7999678c5427",
+      "reason": "internal_transfer"
+    },
+    {
+      "external_id": "4e8bef01-2b69-5f06-9aff-8071c47b195f",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "70e0a6a6-0202-5924-8f11-479c7803e2c9",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "8133d105-22df-5691-aa4e-e8d80cbc49ff",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "8fd83f8f-cc2a-5320-a94a-f92abf7e3564",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "90bc8291-b067-5969-9c84-cd418e19176b",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "92d536b6-4242-5b84-91cb-30f41eacf522",
+      "reason": "void_status"
+    },
+    {
+      "external_id": "ab9fc5b2-c586-512a-8c49-94380361a685",
+      "reason": "treasury_transfer"
+    },
+    {
+      "external_id": "b48827fa-8432-55cf-b232-8fe709fccad9",
+      "reason": "internal_transfer"
+    },
+    {
+      "external_id": "b9ce7ecb-0bc7-5fd8-b10c-8302b9427849",
+      "reason": "treasury_transfer"
+    },
+    {
+      "external_id": "bb4993fe-c7a1-5c64-a350-994651ac613c",
+      "reason": "void_status"
+    },
+    {
+      "external_id": "bc5c05bc-7a5d-5af6-96ad-bd6c07a64e86",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "bdd54494-a6ab-5cb0-b6e1-b1c344735d9f",
+      "reason": "void_status"
+    },
+    {
+      "external_id": "bfb754fc-b854-54d4-b7ea-78ddc016bb86",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "c0458d1e-5dc6-5f14-a3d9-c48951503109",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "c6ae74ed-d7da-5e34-a95f-2d6db7d2e8c9",
+      "reason": "void_status"
+    },
+    {
+      "external_id": "c75564b8-a30b-51eb-9667-6f53ab648310",
+      "reason": "treasury_transfer"
+    },
+    {
+      "external_id": "de28d2ff-cac0-51c6-b897-210e1510801c",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "df95a8c3-0a3a-59bc-8422-c121170df862",
+      "reason": "internal_transfer"
+    },
+    {
+      "external_id": "e2e9b4d2-1f76-574d-9df5-b1ab7712466d",
+      "reason": "own_account_transfer"
+    },
+    {
+      "external_id": "f3d8caeb-6b4f-5bf8-abe1-aead8ef8d11a",
+      "reason": "treasury_transfer"
+    },
+    {
+      "external_id": "f7d32b88-6d8a-5130-8f23-17118e24d4ee",
+      "reason": "treasury_transfer"
+    }
+  ],
+  "lines": [
+    {
+      "external_id": "0375fb34-5f20-59d7-93d4-75a184417292",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 80000,
+      "amount_negated": true,
+      "doc_date": "2026-08-29",
+      "cash_date": "2026-08-31",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Bap star remodeling llc",
+        "external_id": "1db99739-2fb2-5acc-a290-7d6163f809c2",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "039855c7-9c86-5a3c-80cd-ce5d7300fb9a",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 317000,
+      "amount_negated": true,
+      "doc_date": "2026-08-12",
+      "cash_date": "2026-08-12",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person C",
+        "external_id": "1400e081-c9ef-5973-bcb2-2cbe15c40aa2",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "04a570aa-5e64-5e4d-b674-e8e9d7aad51b",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 960000,
+      "amount_negated": false,
+      "doc_date": "2026-10-02",
+      "cash_date": "2026-10-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person B",
+        "external_id": "535a1ef4-9cdb-5a9d-ac2c-8c0112b139c4",
+        "kind": "customer"
+      },
+      "description": "Person B",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "incomingInternationalWire",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "0620beef-adf0-58f1-a5a8-372d1dea8b89",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 210081,
+      "amount_negated": true,
+      "doc_date": "2026-09-02",
+      "cash_date": "2026-09-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "NEWREZ-SHELLPOIN",
+        "external_id": "e655e289-3e59-52d4-8118-158d67a062a4",
+        "kind": "supplier"
+      },
+      "description": "NEWREZ-SHELLPOIN; ACH PMT; Person A",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "תשלומי הלוואה",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "06b96175-fe36-5859-9333-6a5c3553e3d5",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 13678,
+      "amount_negated": true,
+      "doc_date": "2026-09-19",
+      "cash_date": "2026-09-20",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Atmos Energy",
+        "external_id": "dac716a3-7d5f-56a8-ba84-1e21d8be3bfd",
+        "kind": "supplier"
+      },
+      "description": "ATMOS ENERGY",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "09c781f0-497a-57a4-9528-a42eee128575",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 5986,
+      "amount_negated": true,
+      "doc_date": "2026-09-04",
+      "cash_date": "2026-09-05",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "American Water",
+        "external_id": "20056fd3-791b-54af-b6c7-9d11cd83427f",
+        "kind": "supplier"
+      },
+      "description": "AMERICAN WATER WORKS C",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "0a27b934-71c4-58b3-bb70-3345f4729018",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 85081,
+      "amount_negated": true,
+      "doc_date": "2026-09-01",
+      "cash_date": "2026-09-01",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person C",
+        "external_id": "1400e081-c9ef-5973-bcb2-2cbe15c40aa2",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "14decd3e-cbb2-5ad0-8e11-897462556ef4",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 164525,
+      "amount_negated": true,
+      "doc_date": "2026-09-04",
+      "cash_date": "2026-09-05",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Airbnb",
+        "external_id": "295c1665-b280-5548-baed-15f48bb97ca3",
+        "kind": "supplier"
+      },
+      "description": "AIRBNB * HM5BBXRRQK",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Lodging"
+      }
+    },
+    {
+      "external_id": "172664da-4fa3-5175-a4fc-9e930e78e2b6",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 20000,
+      "amount_negated": true,
+      "doc_date": "2026-08-18",
+      "cash_date": "2026-08-19",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "City Of Princeton",
+        "external_id": "a6c82c73-e58a-5051-b6d3-d86588495484",
+        "kind": "supplier"
+      },
+      "description": "CITY OF PRINCETON",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "1ea29994-5d78-52eb-99c7-dcd9892c0f1c",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 18036,
+      "amount_negated": true,
+      "doc_date": "2026-09-01",
+      "cash_date": "2026-09-02",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Google Workspace",
+        "external_id": "5384de53-0317-5647-a65b-d9bcbd9e9891",
+        "kind": "supplier"
+      },
+      "description": "Google Workspace_nromo",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Software"
+      }
+    },
+    {
+      "external_id": "1fe67f0f-e5dd-5f73-bad5-9a1e01a2103b",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 250000,
+      "amount_negated": false,
+      "doc_date": "2026-10-02",
+      "cash_date": "2026-10-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Housing Authority of the City of Pittsburgh",
+        "external_id": "4128b788-552b-5770-96cf-0111b7ac6e74",
+        "kind": "customer"
+      },
+      "description": "HACP PGH S8 HAP; VENDOR PMT; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "20554f7d-5b8a-5091-8337-0180eae409d0",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 17176,
+      "amount_negated": true,
+      "doc_date": "2026-09-04",
+      "cash_date": "2026-09-04",
+      "source_account_id": "d01ad4c7-eb59-50a3-b78b-688b06b07c32",
+      "counterparty": {
+        "name": "Duquesne Light",
+        "external_id": "c2e6ce83-5bf6-5051-a1c5-8ae98ad79523",
+        "kind": "supplier"
+      },
+      "description": "Duquesne Light; PAYMENT; NRO Momentum",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "21155cdc-3836-5e99-b97a-69a0ecc83ff9",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 400000,
+      "amount_negated": false,
+      "doc_date": "2026-09-03",
+      "cash_date": "2026-09-03",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "79bf20a6-c01a-542c-b107-00c3c74f4bd3",
+        "kind": "customer"
+      },
+      "description": "RENTREDI.COM; TRANSFER; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "2178c7f0-4e74-52c6-8ef8-696f98dbf07e",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 3369,
+      "amount_negated": false,
+      "doc_date": "2026-09-18",
+      "cash_date": "2026-09-19",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Select Title, LLC",
+        "external_id": "3209c139-a769-5bc2-94d4-30c048fb368c",
+        "kind": "customer"
+      },
+      "description": "Check Deposit From Select Title, LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "checkDeposit",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "218797c4-8230-5650-841a-b4266c1ea372",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 18800,
+      "amount_negated": true,
+      "doc_date": "2026-09-15",
+      "cash_date": "2026-09-16",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "FirstEnergy",
+        "external_id": "2c45ce21-15b7-56c0-b838-bee31e376241",
+        "kind": "supplier"
+      },
+      "description": "FirstEnergy Service Co",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "238d3c6a-228a-5626-9942-35fd0c2f0de6",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 16049000,
+      "amount_negated": false,
+      "doc_date": "2026-08-27",
+      "cash_date": "2026-08-27",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person B",
+        "external_id": "535a1ef4-9cdb-5a9d-ac2c-8c0112b139c4",
+        "kind": "customer"
+      },
+      "description": "Person B",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "incomingInternationalWire",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "24c9b56e-95df-5278-83a0-caa35bc1add6",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 13901,
+      "amount_negated": true,
+      "doc_date": "2026-08-20",
+      "cash_date": "2026-08-21",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "f2687e37-a2ee-5f78-8cb3-a294f4b9b47b",
+        "kind": "supplier"
+      },
+      "description": "RENTREDI.COM",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "ProfessionalServices"
+      }
+    },
+    {
+      "external_id": "27e80d21-d5f0-53b3-8e3f-9a508237d30b",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 4000,
+      "amount_negated": true,
+      "doc_date": "2026-09-24",
+      "cash_date": "2026-09-24",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person E",
+        "external_id": "26c3ebe5-beb9-5400-83de-18d5872c65da",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "284bde3f-0d9b-5388-baad-2483c973bce8",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 47500,
+      "amount_negated": true,
+      "doc_date": "2026-08-18",
+      "cash_date": "2026-08-18",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Thoro Home Inspections",
+        "external_id": "17813155-a3eb-53e6-a4d2-366fc8ea04e8",
+        "kind": "supplier"
+      },
+      "description": "www.thorohome.co; www.thoroh; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "28f265a5-58b0-5c3d-a2ea-8d033993f2b3",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 749,
+      "amount_negated": false,
+      "doc_date": "2026-08-31",
+      "cash_date": "2026-08-31",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "29580cb8-33ba-5397-8f46-49eb3de3fff5",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "credit",
+      "currency": "USD",
+      "amount_original": 954,
+      "amount_negated": false,
+      "doc_date": "2026-08-27",
+      "cash_date": "2026-08-27",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Amazon",
+        "external_id": "6bf69ac1-cf97-5e35-b0c9-f2a3f08ce5f7",
+        "kind": "supplier"
+      },
+      "description": "AMAZON MARK* 562O36N92",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardCredit",
+        "providerCategory": "Retail"
+      }
+    },
+    {
+      "external_id": "2d2defd5-b829-548c-af85-f4cbf5a7cd1d",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 557,
+      "amount_negated": true,
+      "doc_date": "2026-09-28",
+      "cash_date": "2026-09-29",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "FirstEnergy",
+        "external_id": "2c45ce21-15b7-56c0-b838-bee31e376241",
+        "kind": "supplier"
+      },
+      "description": "FirstEnergy Service Co",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "2f431edc-e02a-53a4-aa9b-f454a17b55d2",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 4100,
+      "amount_negated": true,
+      "doc_date": "2026-08-12",
+      "cash_date": "2026-08-12",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "LOI properties LLC",
+        "external_id": "f290a7a0-051f-5065-b346-88f2b166b72d",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "34541859-770f-5412-af3b-a4281021131f",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 3150,
+      "amount_negated": false,
+      "doc_date": "2026-08-18",
+      "cash_date": "2026-08-18",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "3ebe6104-a587-512e-8299-2d94377aa616",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 11286,
+      "amount_negated": true,
+      "doc_date": "2026-09-03",
+      "cash_date": "2026-09-03",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Airbnb",
+        "external_id": "295c1665-b280-5548-baed-15f48bb97ca3",
+        "kind": "supplier"
+      },
+      "description": "AIRBNB * HM8EQTN3MD",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Lodging"
+      }
+    },
+    {
+      "external_id": "509c1b6c-202c-5b42-b953-b53f82cb9130",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 125000,
+      "amount_negated": true,
+      "doc_date": "2026-09-22",
+      "cash_date": "2026-09-22",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "ESQ Woodworks & Construction, LLC",
+        "external_id": "def3487f-a99b-565c-b6b1-4163ee69f29b",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "5110df61-ce4b-59ba-8414-53a64e1ba0e0",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 8732,
+      "amount_negated": true,
+      "doc_date": "2026-10-01",
+      "cash_date": "2026-10-02",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Google Workspace",
+        "external_id": "5384de53-0317-5647-a65b-d9bcbd9e9891",
+        "kind": "supplier"
+      },
+      "description": "Google Workspace_nromo",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Software"
+      }
+    },
+    {
+      "external_id": "514c4243-bade-5106-8117-46c79ea1d767",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 14475,
+      "amount_negated": true,
+      "doc_date": "2026-10-01",
+      "cash_date": "2026-10-02",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "City Of Princeton",
+        "external_id": "a6c82c73-e58a-5051-b6d3-d86588495484",
+        "kind": "supplier"
+      },
+      "description": "CITY OF PRINCETON",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "5715322b-2c87-5535-8d20-34725cf73e8b",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 6545,
+      "amount_negated": true,
+      "doc_date": "2026-09-22",
+      "cash_date": "2026-09-23",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Pittsburgh Water & Sewer Authority",
+        "external_id": "3c20c4d1-2645-53f9-8704-c26c88c7585f",
+        "kind": "supplier"
+      },
+      "description": "PITTSBURGH WATER WEB",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "60f17201-e8e3-5a9a-b555-d78e5ad0075e",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 201333,
+      "amount_negated": false,
+      "doc_date": "2026-09-10",
+      "cash_date": "2026-09-10",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "79bf20a6-c01a-542c-b107-00c3c74f4bd3",
+        "kind": "customer"
+      },
+      "description": "RENTREDI.COM; TRANSFER; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "64fcdf84-5fd8-5ffb-8a23-7cdb02ca12c6",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 693600,
+      "amount_negated": false,
+      "doc_date": "2026-10-01",
+      "cash_date": "2026-10-01",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person F",
+        "external_id": "45ac7353-c795-59b8-916e-f2502942a544",
+        "kind": "customer"
+      },
+      "description": "Person F",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "incomingDomesticWire",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "654ebe6b-58b9-58c1-9e12-b8f45fb30c8e",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 13400,
+      "amount_negated": false,
+      "doc_date": "2026-09-17",
+      "cash_date": "2026-09-17",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "79bf20a6-c01a-542c-b107-00c3c74f4bd3",
+        "kind": "customer"
+      },
+      "description": "RENTREDI.COM; TRANSFER; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "69acdfd6-4871-5eb6-aa3c-5c31eec1947f",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 400,
+      "amount_negated": true,
+      "doc_date": "2026-08-17",
+      "cash_date": "2026-08-17",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "CodeBox",
+        "external_id": "11c15a6a-d9ec-5a36-9c2f-14d0ca0e1bfc",
+        "kind": "supplier"
+      },
+      "description": "CODEBOX, INC.",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "debitCardTransaction",
+        "providerCategory": "Retail"
+      }
+    },
+    {
+      "external_id": "6a9c2301-ce0b-5ed9-bbd5-1e5273dc1cd4",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 68,
+      "amount_negated": false,
+      "doc_date": "2026-09-02",
+      "cash_date": "2026-09-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "7102e8b5-8631-5766-baec-6cfd26c8f44a",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 2251,
+      "amount_negated": false,
+      "doc_date": "2026-09-24",
+      "cash_date": "2026-09-24",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "8065533b-2f94-5d8c-b005-b83c7b5acdfa",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 8500,
+      "amount_negated": true,
+      "doc_date": "2026-09-11",
+      "cash_date": "2026-09-12",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Notarize",
+        "external_id": "64a0f82f-1631-5604-bb08-cfa8d2fbc832",
+        "kind": "supplier"
+      },
+      "description": "NOTARIZE DBA PROOF.COM",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "ProfessionalServices"
+      }
+    },
+    {
+      "external_id": "85ecda87-608b-52e6-9543-4f1f407e5706",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 236632,
+      "amount_negated": false,
+      "doc_date": "2026-09-01",
+      "cash_date": "2026-09-01",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Steadily",
+        "external_id": "1cf17ad2-1cce-5c1f-9ee3-bd14944367f1",
+        "kind": "customer"
+      },
+      "description": "STEADILY INSURAN; PAYMENT; Person A",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "8c33f78b-f679-508d-8c2f-2ee542642cb6",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 262100,
+      "amount_negated": false,
+      "doc_date": "2026-09-21",
+      "cash_date": "2026-09-22",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Liberty Mutual",
+        "external_id": "6020c11f-1140-58df-b31d-6fa98cda063f",
+        "kind": "customer"
+      },
+      "description": "Check Deposit From Liberty Mutual",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "checkDeposit",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "8f353fe2-2527-5e13-9fdf-ee0936927f85",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 25000,
+      "amount_negated": true,
+      "doc_date": "2026-10-01",
+      "cash_date": "2026-10-01",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person C",
+        "external_id": "1400e081-c9ef-5973-bcb2-2cbe15c40aa2",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "901ba3bb-6a44-56ac-98a2-14d08bafddc5",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 125000,
+      "amount_negated": true,
+      "doc_date": "2026-09-29",
+      "cash_date": "2026-09-29",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "ESQ Woodworks & Construction, LLC",
+        "external_id": "def3487f-a99b-565c-b6b1-4163ee69f29b",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "94854b91-cdb2-5d79-8c67-8ba81ffcc500",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 283871,
+      "amount_negated": false,
+      "doc_date": "2026-08-12",
+      "cash_date": "2026-08-12",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "79bf20a6-c01a-542c-b107-00c3c74f4bd3",
+        "kind": "customer"
+      },
+      "description": "RENTREDI.COM; TRANSFER; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "956922b6-8d17-5ced-9323-abf99d392471",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 181546,
+      "amount_negated": true,
+      "doc_date": "2026-09-05",
+      "cash_date": "2026-09-05",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "NEWREZ-SHELLPOIN",
+        "external_id": "e655e289-3e59-52d4-8118-158d67a062a4",
+        "kind": "supplier"
+      },
+      "description": "NEWREZ-SHELLPOIN; ACH PMT; Person A",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "תשלומי הלוואה",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "967af0c9-1366-5a98-8030-d27a9aa4b852",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 238,
+      "amount_negated": false,
+      "doc_date": "2026-10-02",
+      "cash_date": "2026-10-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "97b2211a-aef7-5280-ace7-e6e1977c688a",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 5384,
+      "amount_negated": true,
+      "doc_date": "2026-08-29",
+      "cash_date": "2026-08-30",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Peoples Gas Bill",
+        "external_id": "e4340115-058c-574c-8326-429265259785",
+        "kind": "supplier"
+      },
+      "description": "SPI*PEOPLES GAS BILL",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "9886729f-67f1-5036-932f-90dbb5b30b6e",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 197946,
+      "amount_negated": true,
+      "doc_date": "2026-09-09",
+      "cash_date": "2026-09-09",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Lakeview Loan Servicing",
+        "external_id": "1a66f9c0-5fd7-572c-8c4d-5a4e8c882cc9",
+        "kind": "supplier"
+      },
+      "description": "LAKEVIEW LN SRV; MTG PYMT; Person G",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "תשלומי הלוואה",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "a1e2e103-a18c-5095-9f7d-d6137a680d43",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 972,
+      "amount_negated": true,
+      "doc_date": "2026-08-23",
+      "cash_date": "2026-08-24",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Amazon",
+        "external_id": "6bf69ac1-cf97-5e35-b0c9-f2a3f08ce5f7",
+        "kind": "supplier"
+      },
+      "description": "AMAZON MARKETPLACE",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Retail"
+      }
+    },
+    {
+      "external_id": "a6e3a6b2-fbdb-53f0-9352-06a2d82e8bfd",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 4135,
+      "amount_negated": false,
+      "doc_date": "2026-08-27",
+      "cash_date": "2026-08-27",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "a6e9a0af-8b7f-5836-9224-38c1001e27c4",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 5972,
+      "amount_negated": true,
+      "doc_date": "2026-08-21",
+      "cash_date": "2026-08-21",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "FOX CHAPEL AUTHO",
+        "external_id": "d7b11b58-2db6-5978-91fd-1c4bd12084e2",
+        "kind": "supplier"
+      },
+      "description": "FOX CHAPEL AUTHO; DIRECT DB; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "a796e74e-f969-557c-b8e2-75e59cbbd780",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 250000,
+      "amount_negated": false,
+      "doc_date": "2026-09-02",
+      "cash_date": "2026-09-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Housing Authority of the City of Pittsburgh",
+        "external_id": "4128b788-552b-5770-96cf-0111b7ac6e74",
+        "kind": "customer"
+      },
+      "description": "HACP PGH S8 HAP; VENDOR PMT; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "a79768a8-475e-556f-b118-11576bb8221a",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 2040,
+      "amount_negated": false,
+      "doc_date": "2026-09-28",
+      "cash_date": "2026-09-28",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Mercury IO Cashback",
+        "external_id": "07b5342a-de2d-5516-ab20-1a1b1af7b956",
+        "kind": "customer"
+      },
+      "description": "Mercury IO Cashback",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "הכנסה אחרת",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "a9378e43-dd89-596d-9190-685c0bd7f5bd",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 44232,
+      "amount_negated": true,
+      "doc_date": "2026-08-31",
+      "cash_date": "2026-08-31",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Airbnb",
+        "external_id": "295c1665-b280-5548-baed-15f48bb97ca3",
+        "kind": "supplier"
+      },
+      "description": "AIRBNB * HM8EQTN3MD",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Lodging"
+      }
+    },
+    {
+      "external_id": "af8919bb-ff50-534c-8322-581509dcd44c",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 250000,
+      "amount_negated": true,
+      "doc_date": "2026-09-08",
+      "cash_date": "2026-09-08",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "ESQ Woodworks & Construction, LLC",
+        "external_id": "def3487f-a99b-565c-b6b1-4163ee69f29b",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "b1d2e64a-d16d-5688-a22e-19cf50520924",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 16251,
+      "amount_negated": true,
+      "doc_date": "2026-09-08",
+      "cash_date": "2026-09-09",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Pittsburgh Water & Sewer Authority",
+        "external_id": "3c20c4d1-2645-53f9-8704-c26c88c7585f",
+        "kind": "supplier"
+      },
+      "description": "PITTSBURGH WATER WEB",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "b2dbc0f4-e112-5e1c-b9f7-9eb2ff25e9ce",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 250609,
+      "amount_negated": true,
+      "doc_date": "2026-09-05",
+      "cash_date": "2026-09-05",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Servease",
+        "external_id": "9b3ee9d9-b787-5608-9c25-c656c7402f3e",
+        "kind": "supplier"
+      },
+      "description": "SERVEASE; LOAN PMT.; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "תשלומי הלוואה",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "b7479cf0-445d-5c6f-a288-83c91d743a47",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 3773,
+      "amount_negated": true,
+      "doc_date": "2026-09-01",
+      "cash_date": "2026-09-01",
+      "source_account_id": "c5dc7802-e36f-562b-a99d-65df5478a2cf",
+      "counterparty": {
+        "name": "Duquesne Light",
+        "external_id": "c2e6ce83-5bf6-5051-a1c5-8ae98ad79523",
+        "kind": "supplier"
+      },
+      "description": "Duquesne Light; PAYMENT; Person A",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "b7c75ef3-6951-5a24-bc10-bbb7e785f778",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 55000,
+      "amount_negated": true,
+      "doc_date": "2026-09-16",
+      "cash_date": "2026-09-16",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person D",
+        "external_id": "38c24b77-d94d-5975-97a4-2b1ffdca0e28",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "be2caf77-7b14-5a95-a119-ac640c62ce00",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 2866316,
+      "amount_negated": true,
+      "doc_date": "2026-10-02",
+      "cash_date": "2026-10-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "A1 garage door",
+        "external_id": "5ba36dfc-3940-5b61-aa0d-eb18d48853c6",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "cfcea1ce-fb44-5101-86a0-91f4ae66b416",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 36500,
+      "amount_negated": true,
+      "doc_date": "2026-08-18",
+      "cash_date": "2026-08-19",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Grayson-Collin Electric Cooperative",
+        "external_id": "1aa7e63a-637f-59c9-9454-4c24d703d990",
+        "kind": "supplier"
+      },
+      "description": "GRAYSON-COLLIN ELECTRI",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "d4fcb619-96ab-5cfc-8e12-e1e1519443d9",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 6600,
+      "amount_negated": false,
+      "doc_date": "2026-08-21",
+      "cash_date": "2026-08-22",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "STATE FARM FIRE AND CASUALTY COMPANY",
+        "external_id": "4788aacf-fafb-59a9-9715-cd7e1f46decf",
+        "kind": "customer"
+      },
+      "description": "Check Deposit From STATE FARM FIRE AND CASUALTY COMPANY",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "checkDeposit",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "d511ff6c-7bbb-546f-95cb-baff68915d48",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 430094,
+      "amount_negated": true,
+      "doc_date": "2026-09-05",
+      "cash_date": "2026-09-05",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Servease",
+        "external_id": "9b3ee9d9-b787-5608-9c25-c656c7402f3e",
+        "kind": "supplier"
+      },
+      "description": "SERVEASE; LOAN PMT.; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "תשלומי הלוואה",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "da124f50-aa20-5ac5-9fe1-d0d48e680798",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 9806,
+      "amount_negated": true,
+      "doc_date": "2026-09-28",
+      "cash_date": "2026-09-29",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Grayson-Collin Electric Cooperative",
+        "external_id": "1aa7e63a-637f-59c9-9454-4c24d703d990",
+        "kind": "supplier"
+      },
+      "description": "GRAYSON-COLLIN ELECTRI",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "daa5ff07-6659-51ef-b08c-87db12ddb246",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 25000,
+      "amount_negated": true,
+      "doc_date": "2026-09-01",
+      "cash_date": "2026-09-01",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "Person C",
+        "external_id": "1400e081-c9ef-5973-bcb2-2cbe15c40aa2",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "dfa6c70e-3c55-5260-a390-dd338f7199c3",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 210081,
+      "amount_negated": true,
+      "doc_date": "2026-10-02",
+      "cash_date": "2026-10-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "NEWREZ-SHELLPOIN",
+        "external_id": "e655e289-3e59-52d4-8118-158d67a062a4",
+        "kind": "supplier"
+      },
+      "description": "NEWREZ-SHELLPOIN; ACH PMT; Person A",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": "תשלומי הלוואה",
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "e26a34b7-891e-5045-90f4-4a98bd3bca23",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 5903,
+      "amount_negated": true,
+      "doc_date": "2026-08-24",
+      "cash_date": "2026-08-24",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Pittsburgh Water & Sewer Authority",
+        "external_id": "3c20c4d1-2645-53f9-8704-c26c88c7585f",
+        "kind": "supplier"
+      },
+      "description": "PITTSBURGH WATER WEB",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "Utilities"
+      }
+    },
+    {
+      "external_id": "e41bd7d5-ee96-5010-ba95-a6fbc1d69165",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 16859340,
+      "amount_negated": true,
+      "doc_date": "2026-09-02",
+      "cash_date": "2026-09-02",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "BANKERS SETTLEMENT & ABSTRACT, INC",
+        "external_id": "16002321-6448-5bd8-9fc1-4a14a2441472",
+        "kind": "supplier"
+      },
+      "description": "Send Money transaction initiated on Mercury",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "outgoingPayment",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "e6d1de4a-8bc7-5b28-a7ce-8bb0a3eef2b0",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 500,
+      "amount_negated": true,
+      "doc_date": "2026-08-20",
+      "cash_date": "2026-08-21",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "f2687e37-a2ee-5f78-8cb3-a294f4b9b47b",
+        "kind": "supplier"
+      },
+      "description": "RENTREDI.COM",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "ProfessionalServices"
+      }
+    },
+    {
+      "external_id": "e73bf5ed-2eec-5578-b4d7-c3f157e9e059",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 12487,
+      "amount_negated": true,
+      "doc_date": "2026-08-25",
+      "cash_date": "2026-08-25",
+      "source_account_id": "c5dc7802-e36f-562b-a99d-65df5478a2cf",
+      "counterparty": {
+        "name": "Duquesne Light",
+        "external_id": "c2e6ce83-5bf6-5051-a1c5-8ae98ad79523",
+        "kind": "supplier"
+      },
+      "description": "Duquesne Light; PAYMENT; Person A",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "ec62d059-5d28-551a-88a9-07ba5d685a9c",
+      "direction": "income",
+      "line_status": "posted",
+      "doc_kind": "receipt",
+      "currency": "USD",
+      "amount_original": 9166,
+      "amount_negated": false,
+      "doc_date": "2026-08-14",
+      "cash_date": "2026-08-14",
+      "source_account_id": "637dcc47-9695-5ecc-af3c-672d1b2700ff",
+      "counterparty": {
+        "name": "RentRedi",
+        "external_id": "79bf20a6-c01a-542c-b107-00c3c74f4bd3",
+        "kind": "customer"
+      },
+      "description": "RENTREDI.COM; TRANSFER; NRO MOMENTUM LLC",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "other",
+        "providerCategory": null
+      }
+    },
+    {
+      "external_id": "f42998e3-4220-5a5e-8b61-625326515a02",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 2649,
+      "amount_negated": true,
+      "doc_date": "2026-09-05",
+      "cash_date": "2026-09-05",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Anytime Mailbox",
+        "external_id": "fb996373-50f9-523f-bc1c-d0437bea7d79",
+        "kind": "supplier"
+      },
+      "description": "ANYTIME MAILBOX",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "ProfessionalServices"
+      }
+    },
+    {
+      "external_id": "f8904f2e-001f-5336-bd35-26292a849094",
+      "direction": "expense",
+      "line_status": "posted",
+      "doc_kind": "expense",
+      "currency": "USD",
+      "amount_original": 25280,
+      "amount_negated": true,
+      "doc_date": "2026-09-12",
+      "cash_date": "2026-09-12",
+      "source_account_id": "ef89e6a4-832b-575b-9a6a-2f6726f864a2",
+      "counterparty": {
+        "name": "Lustre Living Clea",
+        "external_id": "944f9dbf-c733-58e4-acf0-6526214e8c30",
+        "kind": "supplier"
+      },
+      "description": "SQ *LUSTRE LIVING CLEA",
+      "vat": {
+        "amount": 0,
+        "status": "source"
+      },
+      "category_hint": null,
+      "provider_meta": {
+        "kind": "creditCardTransaction",
+        "providerCategory": "ProfessionalServices"
+      }
+    }
+  ]
+}
