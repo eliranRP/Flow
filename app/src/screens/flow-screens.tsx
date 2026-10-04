@@ -81,6 +81,8 @@ async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<str
   return response.data;
 }
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
+import { useJevQueue, useJevReview } from "./jev-review-card";
+import { withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
@@ -1164,6 +1166,13 @@ export function ReviewQueue({
   const rows = useHeldOrder(incoming, (item) => item.id);
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
+  const jevQueue = useJevQueue(
+    rows.map((item) => item.transaction_id),
+    !sample && preview === "off" && previewWrite == null,
+  );
+  const shownId = (shown ?? rows[0])?.transaction_id ?? null;
+  const jevLoading = jevQueue.loadingFor(shownId);
+  const jev = jevQueue.stateFor(shownId);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
   const approvedId = useRef<string | null>(null);
@@ -1230,26 +1239,35 @@ export function ReviewQueue({
         if (target) markHandled(target.id);
         return;
       }
-      if (!target?.category_id) throw new Error("missing");
+      if (!target) throw new Error("missing");
+      const filled = withJev(target, jev);
+      if (!filled.category_id) throw new Error("missing");
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      if (reviewIsSplit(target) && target.reason !== "unallocated_shared") {
-        assertNoError(await supabase.rpc("approve_split_review", { p_id: target.id }));
-        markHandled(target.id);
+      if (reviewIsSplit(filled) && filled.reason !== "unallocated_shared") {
+        if (filled.category_id !== target.category_id && target.transaction_id) {
+          assertNoError(await supabase.rpc("set_transaction_category", {
+            p_id: target.transaction_id,
+            p_category_id: filled.category_id,
+            p_resolve: false,
+          }));
+        }
+        assertNoError(await supabase.rpc("approve_split_review", { p_id: filled.id }));
+        markHandled(filled.id);
         return;
       }
-      if (target.direction !== "income" && target.project_id == null) throw new Error("missing");
-      const projectId = target.direction === "income"
+      if (filled.direction !== "income" && !filled.project_id) throw new Error("missing");
+      const projectId = filled.direction === "income"
         ? (null as unknown as string)
-        : target.project_id ?? "";
+        : filled.project_id ?? "";
       const result = await supabase.rpc("approve_review_item", {
-        p_id: target.id,
+        p_id: filled.id,
         p_project_id: projectId,
-        p_category_id: target.category_id,
+        p_category_id: filled.category_id,
         p_remember: false,
         p_check_shown: true,
         ...(target.project_id == null ? {} : { p_shown_project_id: target.project_id }),
-        p_shown_category_id: target.category_id,
+        ...(target.category_id == null ? {} : { p_shown_category_id: target.category_id }),
       });
       assertNoError(result);
       const outcome = readApproveOutcome(result.data);
@@ -1330,17 +1348,18 @@ export function ReviewQueue({
     void navigate(assignmentPath(changeTo, search, current.id, "category", fromList, true));
   }
   const auto = card.auto_approved_today ?? 0;
-  const suggestion = reviewSuggestion(card);
+  const view = withJev(card, jev);
+  const suggestion = reviewSuggestion(view);
   const place = visitPlace(visit.current, openIds);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
-  const splitCard = reviewIsSplit(card);
-  const approvable = !leaving && (card.reason === "unallocated_shared"
+  const splitCard = reviewIsSplit(view);
+  const approvable = !leaving && !jevLoading && (view.reason === "unallocated_shared"
     || (splitCard
-      ? card.category_id != null
-      : card.direction === "income"
-        ? card.category_id != null
-        : card.project_id != null && card.category_id != null));
+      ? view.category_id != null
+      : view.direction === "income"
+        ? view.category_id != null
+        : view.project_id != null && view.category_id != null));
   return (
     <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
@@ -1385,6 +1404,7 @@ export function ReviewQueue({
           netAgorot={card.amount_net}
           vatLine={reviewVatLine(card.vat_agorot)}
           suggestion={suggestion}
+          pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
           projectButtonRef={reviewLineFocus.project}
@@ -1400,7 +1420,7 @@ export function ReviewQueue({
             busy={approve.isPending}
             disabled={!approvable}
             onClick={() => {
-              if (!approvable) return;
+              if (jevLoading || !approvable) return;
               if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
               if (card.reason === "unallocated_shared") {
                 if (!card.transaction_id) return;
@@ -1668,6 +1688,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     if (live) setKept(live);
   }, [live]);
   const row = live ?? (kept?.id === item ? kept : null);
+  const jev = useJevReview(
+    sample || preview !== "off" ? null : (row?.transaction_id ?? null),
+    sample == null && preview === "off",
+  );
   const [projectId, setProjectId] = useState(sample?.projectId ?? sample?.suggestionId ?? "");
   const [categoryId, setCategoryId] = useState(sample?.categoryId ?? sample?.suggestionCategoryId ?? "");
   const [remember, setRemember] = useState(true);
@@ -1701,13 +1725,15 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   }, [leaveNote, remember, savedRemember]);
   useEffect(() => {
     if (sample || !row || seeded.current) return;
+    if (jev.loading) return;
     seeded.current = true;
-    const nextProject = row.project_id ?? "";
-    const nextCategory = row.category_id ?? "";
+    const filled = withJev(row, jev);
+    const nextProject = filled.project_id ?? "";
+    const nextCategory = filled.category_id ?? "";
     baseline.current = { projectId: nextProject, categoryId: nextCategory, remember: true };
     setProjectId(nextProject);
     setCategoryId(nextCategory);
-  }, [sample, row]);
+  }, [sample, row, jev]);
   useEffect(() => {
     if (!sample?.saveError || toasted.current) return;
     toasted.current = true;
@@ -1718,10 +1744,11 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       onAction: () => undefined,
     });
   }, [sample?.saveError, toast]);
+  const filledRow = row ? withJev(row, jev) : row;
   const suggestionProjectId = sample
     ? (sample.project_suggested === false ? "" : (sample.suggestionId ?? ""))
-    : (row?.project_suggested === true ? (row.project_id ?? "") : "");
-  const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? row?.category_id ?? "";
+    : (filledRow?.project_suggested === true ? (filledRow.project_id ?? "") : "");
+  const suggestionCategoryId = sample?.suggestionCategoryId ?? sample?.categoryId ?? filledRow?.category_id ?? "";
   const projectOptions = withChoice(
     [...(sample?.projects ?? (dashboard.data?.projects ?? []).map((project) => ({
       id: project.id,
@@ -1899,7 +1926,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       {...(income || splitReview ? {} : { remember, onRemember: setRemember })}
-      categorySuggested={sample ? sample.categorySuggested !== false : row?.category_suggested !== false}
+      categorySuggested={sample ? sample.categorySuggested !== false : filledRow?.category_suggested !== false}
       hold={hold || leaveNote}
       pending={!income && !splitReview && remember !== savedRemember && !wroteReview.current && !closedReview.current}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}

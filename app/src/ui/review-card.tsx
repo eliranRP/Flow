@@ -2,6 +2,7 @@ import type { Ref } from "react";
 import { formatAmount } from "./big-number";
 import { DocumentIcon } from "./icons";
 import { ListRow } from "./list-row";
+import { Skeleton } from "./skeleton";
 import { SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
@@ -30,6 +31,8 @@ type ReviewCardProps = {
   onCategory?: () => void;
   projectButtonRef?: Ref<HTMLButtonElement>;
   categoryButtonRef?: Ref<HTMLButtonElement>;
+  /** Suggested fields hold their row height until the queue's Jev read settles. */
+  pending?: boolean;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -45,6 +48,7 @@ export function ReviewCard({
   onCategory,
   projectButtonRef,
   categoryButtonRef,
+  pending = false,
 }: ReviewCardProps) {
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
   const shared = reason === "unallocated_shared";
@@ -87,7 +91,7 @@ export function ReviewCard({
             ? "אין הצעה, הקישו לבחירה"
             : null;
   return (
-    <article className="ui-review">
+    <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
         <span className="ui-review-tile" aria-hidden="true">
           <DocumentIcon size={24} />
@@ -104,7 +108,16 @@ export function ReviewCard({
       </p>
       <p className="t-hint">{vatLine}</p>
       <div className="ui-review-ai">
-        {lines.map((line) => line.onOpen ? (
+        {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
+          <div className="ui-row ui-hit" aria-hidden="true" key={line.key}>
+            <span className="ui-row-main">
+              <span className="ui-row-text">
+                <span className="ui-row-hint">{line.label}</span>
+                <span className="ui-row-title"><Skeleton width="md" /></span>
+              </span>
+            </span>
+          </div>
+        ) : line.onOpen ? (
           <ListRow
             key={line.key}
             variant="button"
