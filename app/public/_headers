@@ -16,6 +16,10 @@
   Content-Type: text/html; charset=utf-8
 /onboarding
   Content-Type: text/html; charset=utf-8
+/setup
+  Content-Type: text/html; charset=utf-8
+/setup/*
+  Content-Type: text/html; charset=utf-8
 /install
   Content-Type: text/html; charset=utf-8
 /add
