@@ -28,6 +28,31 @@ test("a mid-file commit is rejected, and one begin plus a final commit is not", 
   );
   assert.deepEqual(explicitTransactionProblems("-- commit;\nselect 1;\n", "note.sql"), []);
   assert.deepEqual(explicitTransactionProblems("select 'commit;';\n", "str.sql"), []);
+  assert.deepEqual(
+    explicitTransactionProblems("create function f() returns int language sql begin atomic select 1; end;\n", "atomic.sql"),
+    [],
+  );
+  assert.deepEqual(explicitTransactionProblems("select E'\\'; commit;';\n", "esc.sql"), []);
+  assert.deepEqual(explicitTransactionProblems("begin atomic select 1;\n", "atomic-stmt.sql"), []);
+  assert.deepEqual(explicitTransactionProblems("end;\n", "end.sql"), [
+    "end.sql:1 starts a transaction statement (end) but the file is not one begin and one final commit",
+  ]);
+  assert.deepEqual(
+    explicitTransactionProblems("do $$\nbegin\n  commit;\nend;\n$$;\n", "doblock.sql"),
+    ["doblock.sql:2 has a transaction statement inside a DO or function body (commit)"],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems("create index ix on public.t (id);\n", "idx.sql"),
+    ["idx.sql:1 creates or drops an index outside a file transaction"],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems("begin;\ncreate index ix on public.t (id);\ncommit;\n", "wrapped.sql"),
+    [],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems("create index concurrently ix on public.t (id);\n", "conc.sql"),
+    [],
+  );
 });
 
 test("the migration directory is one transaction or none", () => {

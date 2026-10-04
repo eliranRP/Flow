@@ -1085,6 +1085,7 @@ describe("SUMIT status row", () => {
       await waitFor(() => {
         expect(router.state.location.pathname).toBe("/settings");
         expect(router.state.location.search).not.toContain("sheet=");
+        expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
       });
       // The company now exists, so the Jev read finishes before Back is used.
       await screen.findByRole("switch", { name: "תיוג חכם (Jev)", hidden: true });
@@ -1109,10 +1110,7 @@ describe("SUMIT status row", () => {
 
     const closed = await openReturnedSheet();
     window.history.replaceState({ idx: 2 }, "");
-    await act(async () => {
-      fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
-      await Promise.resolve();
-    });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(closed.router.state.location.key).toBe(closed.original); });
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });

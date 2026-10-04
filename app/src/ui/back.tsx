@@ -158,6 +158,11 @@ export function ScrollMemory() {
 
 let pushingLayer = false;
 
+/** Tests start from a sheet push that is not still marked in flight. */
+export function resetSheetHistoryLock(): void {
+  pushingLayer = false;
+}
+
 /** Raw open setters, so a close can dismiss this sheet and every layer above it. */
 const sheetClosers = new Map<string, (open: boolean) => void>();
 
@@ -183,6 +188,7 @@ export function useSheetHistory(
   onOpenChangeRef.current = onOpenChange;
   const layer = layerName(location.state);
   const pushed = useRef(false);
+  const popOnce = useRef(false);
   const allowRef = useRef(allowClose);
   allowRef.current = allowClose;
 
@@ -196,8 +202,12 @@ export function useSheetHistory(
   useEffect(() => {
     if (!open) {
       pushed.current = false;
+      popOnce.current = false;
       return;
     }
+    // Close already popped this entry. React state is still open until popstate
+    // runs, and a new push here puts Settings back above Home.
+    if (popOnce.current) return;
     if (pushed.current || layer === name || pushingLayer) {
       if (layer === name) pushed.current = true;
       // The closed sibling sheet runs first and must not drop a shared flag.
@@ -226,9 +236,12 @@ export function useSheetHistory(
       if (!openRef.current) return;
       // A pop of the sheet above this one leaves this name in the stack.
       if (sheetStack(event.state).includes(name)) return;
+      // The history pop already happened. A later close must not pop again.
+      popOnce.current = true;
       void (async () => {
         const allowed = allowRef.current ? await allowRef.current() : true;
         if (!allowed) {
+          popOnce.current = false;
           pushed.current = true;
           void navigate(`${location.pathname}${location.search}${location.hash}`, {
             state: layerState(window.history.state, name),
@@ -247,7 +260,14 @@ export function useSheetHistory(
 
   return useCallback((next: boolean): boolean => {
     if (next) {
+      popOnce.current = false;
       onOpenChange(true);
+      return true;
+    }
+    // Vaul echoes onOpenChange(false) after the pop that already closed this sheet.
+    // A second navigate(-1) leaves Settings and lands on Home.
+    if (popOnce.current) {
+      onOpenChange(false);
       return true;
     }
     const current = locationRef.current;
@@ -264,6 +284,7 @@ export function useSheetHistory(
     const steps = closing.length;
     const idx = historyIndex();
     if (idx != null && idx >= steps) {
+      popOnce.current = true;
       void navigate(-steps);
       return true;
     }
