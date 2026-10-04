@@ -8,7 +8,7 @@ export default defineConfig({
   expect: { timeout: 20_000 },
   retries: 1,
   workers: 1,
-  reporter: "line",
+  reporter: [["line"], ["./e2e/smoke-retry-reporter.ts"]],
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "https://flow-app-dx5.pages.dev",
