@@ -11,20 +11,29 @@ type MoneyFieldProps = {
   disabled?: boolean;
   /** Defaults to ₪. A dollar loan passes $. */
   prefix?: string;
+  /** A leading minus stays, so the form can show an error instead of dropping it. */
+  keepMinus?: boolean;
+  onBlur?: () => void;
+  onFocus?: () => void;
 };
 
-function digitsOnly(raw: string): string {
+function digitsOnly(raw: string, keepMinus: boolean): string {
+  const negative = keepMinus && raw.trim().startsWith("-");
   const cleaned = raw.replace(/[^\d.]/g, "");
   const [whole, frac] = cleaned.split(".");
-  if (frac == null) return whole ?? "";
-  return `${whole ?? ""}.${frac.slice(0, 2)}`;
+  const body = frac == null ? (whole ?? "") : `${whole ?? ""}.${frac.slice(0, 2)}`;
+  if (!negative) return body;
+  return body === "" ? "-" : `-${body}`;
 }
 
 function grouped(raw: string): string {
-  if (raw === "") return "";
-  const [whole, frac] = raw.split(".");
+  if (raw === "" || raw === "-") return raw;
+  const negative = raw.startsWith("-");
+  const body = negative ? raw.slice(1) : raw;
+  const [whole, frac] = body.split(".");
   const withCommas = (whole ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return frac == null ? withCommas : `${withCommas}.${frac}`;
+  const shown = frac == null ? withCommas : `${withCommas}.${frac}`;
+  return negative ? `-${shown}` : shown;
 }
 
 /**
@@ -39,6 +48,9 @@ export function MoneyField({
   id,
   disabled = false,
   prefix = "₪",
+  keepMinus = false,
+  onBlur,
+  onFocus,
 }: MoneyFieldProps) {
   const generated = useId();
   const fieldId = flowControlName("flow-amount", generated, id);
@@ -75,8 +87,10 @@ export function MoneyField({
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           onPointerDown={holdFieldPointer}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onChange={(event) => {
-            onValueChange(digitsOnly(event.target.value));
+            onValueChange(digitsOnly(event.target.value, keepMinus));
           }}
         />
       </div>
@@ -102,16 +116,20 @@ type PercentFieldProps = {
   disabled?: boolean;
   /** The last row in a split uses "done". */
   enterKeyHint?: "next" | "done";
-  /** Split shares keep one decimal. A loan rate can keep three, so 6.125 stays. */
+  /** Split shares keep one decimal. A loan rate can keep four, so 11.2042 stays. */
   decimals?: number;
+  /** A leading minus stays, so the form can show an error instead of dropping it. */
+  keepMinus?: boolean;
 };
 
 /** "33.3" stays "33.3" at one decimal. Extra digits are dropped. */
-function percentDigits(raw: string, places: number): string {
+function percentDigits(raw: string, places: number, keepMinus: boolean): string {
+  const negative = keepMinus && raw.trim().startsWith("-");
   const cleaned = raw.replace(/[^\d.]/g, "");
   const [whole, frac] = cleaned.split(".");
-  if (frac == null) return whole ?? "";
-  return `${whole ?? ""}.${frac.slice(0, places)}`;
+  const body = frac == null ? (whole ?? "") : `${whole ?? ""}.${frac.slice(0, places)}`;
+  if (!negative) return body;
+  return body === "" ? "-" : `-${body}`;
 }
 
 /** A percent share. The suffix sits in the padding, so 100 never shares the digit box. */
@@ -126,6 +144,7 @@ export function PercentField({
   disabled = false,
   enterKeyHint = "next",
   decimals = 1,
+  keepMinus = false,
 }: PercentFieldProps) {
   const generated = useId();
   const fieldId = id ?? flowControlName("split-pct", generated);
@@ -165,7 +184,7 @@ export function PercentField({
             event.currentTarget.select();
           }}
           onChange={(event) => {
-            onValueChange(percentDigits(event.target.value, decimals));
+            onValueChange(percentDigits(event.target.value, decimals, keepMinus));
           }}
         />
       </div>

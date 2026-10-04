@@ -6,6 +6,8 @@ import { holdFieldPointer } from "./field-pointer";
 type TextFieldProps = {
   label: string;
   error?: string;
+  /** Digits sit on the same edge as an amount. */
+  numeric?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
 
 export function TextField({
@@ -17,6 +19,7 @@ export function TextField({
   autoCorrect,
   autoCapitalize,
   spellCheck,
+  numeric = false,
   onPointerDown,
   ...rest
 }: TextFieldProps) {
@@ -32,7 +35,7 @@ export function TextField({
       <input
         id={fieldId}
         name={fieldName}
-        className="ui-field-control"
+        className={numeric ? "ui-field-control ui-num-field" : "ui-field-control"}
         autoComplete={autoComplete ?? "off"}
         autoCorrect={autoCorrect ?? "off"}
         autoCapitalize={autoCapitalize ?? "none"}
