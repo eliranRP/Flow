@@ -155,20 +155,39 @@ test("a tap under the only closing sheet does not open a sheet or follow a link"
   await expect(page.locator("[role='dialog'][data-state='open']")).toHaveCount(0);
 });
 
-test("a second ✕ 60ms later does not activate the row underneath", async ({ page }) => {
+test("a second ✕ while the sheet is closing does not activate the row underneath", async ({ page }) => {
   await page.goto("/e2e/settings?preview=1&connected=1");
   const settings = page.url();
   await page.getByRole("button", { name: "SUMIT" }).click();
   const sumit = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await expect(sumit).toBeVisible();
-  const close = await sumit.getByRole("button", { name: "סגירה" }).boundingBox();
-  if (close == null) throw new Error("close control has no box");
-  const x = close.x + close.width / 2;
-  const y = close.y + close.height / 2;
+  const close = sumit.getByRole("button", { name: "סגירה" });
+  let previous = "";
+  let matches = 0;
+  await expect.poll(async () => {
+    const box = await close.boundingBox();
+    const key = box == null
+      ? ""
+      : `${String(Math.round(box.x))}:${String(Math.round(box.y))}:${String(Math.round(box.width))}:${String(Math.round(box.height))}`;
+    if (key !== "" && key === previous) matches += 1;
+    else if (key === "") matches = 0;
+    else matches = 1;
+    previous = key;
+    return matches;
+  }).toBeGreaterThanOrEqual(2);
+  const settled = await close.boundingBox();
+  if (settled == null) throw new Error("close control has no box");
+  const x = settled.x + settled.width / 2;
+  const y = settled.y + settled.height / 2;
   await page.mouse.click(x, y);
-  await page.waitForTimeout(60);
+  await expect(sumit).toHaveAttribute("data-state", "closed");
+  await expect.poll(() => page.evaluate(({ x, y }) => {
+    const overlay = document.querySelector("[data-vaul-overlay]");
+    if (overlay == null) return "gone";
+    const hit = document.elementFromPoint(x, y);
+    return hit?.closest("[data-vaul-overlay]") != null ? "scrim" : "other";
+  }, { x, y }), { timeout: 200, intervals: [0, 16, 32, 48] }).toBe("scrim");
   await page.mouse.click(x, y);
-  await page.waitForTimeout(300);
   await expect(page).toHaveURL(settings);
   await expect(page.locator("[role='dialog'][data-state='open']")).toHaveCount(0);
 });
