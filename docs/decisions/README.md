@@ -34,7 +34,7 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0005](0005-mobile-first.md) | 2026-09-26 | Accepted | Mobile first |
 | [0006](0006-confirm-not-type.md) | 2026-09-26 | Accepted | Confirm, don't type; corrections become supplier rules |
 | [0007](0007-bank-statement-is-primary-input.md) | 2026-09-26 | Accepted | Cash basis: a payment counts and an unpaid invoice stays out of P&L. [0065](0065-review-round5.md) drops the file import |
-| [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used. [0086](0086-mercury.md) adds תשלומי הלוואה and העברות (expense and income), excluded from P&L |
+| [0008](0008-flat-categories-hide-or-merge.md) | 2026-09-26 | Accepted | Seven default categories, flat list, hide or merge when used. [0086](0086-mercury.md) adds תשלומי הלוואה and העברות (expense and income), excluded from P&L. [0088](0088-loans.md) adds ריבית משכנתא and מסים וביטוח, in the P&L |
 | [0009](0009-scalable-pickers.md) | 2026-09-26 | Accepted | Pickers and Home stay usable with many projects |
 | [0010](0010-docs-are-the-source-of-truth.md) | 2026-09-26 | Accepted | These docs, including decision records, are the source of truth |
 | [0011](0011-auto-approve-high-confidence.md) | 2026-09-26 | Accepted | Auto-approve high-confidence items; they skip the review queue |
@@ -108,3 +108,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0085](0085-connector-engine.md) | 2026-10-03 | Accepted | One connector engine. SUMIT moves onto it. `sumit_*` tables are dropped in that stack. The contract names the port |
 | [0086](0086-mercury.md) | 2026-10-03 | Accepted | Mercury is a pasted read-only token. GET only. Pending is tagged and excluded from totals. No VAT, no dedup |
 | [0087](0087-multi-currency.md) | 2026-10-03 | Accepted | Display currency is ₪ or $ per company. A dollar line stays USD. Conversion is at display time, from fx_rates |
+| [0088](0088-loans.md) | 2026-10-04 | Accepted | A loan is set up once. Each payment splits into interest, escrow, and principal. The currency stays on the loan |
