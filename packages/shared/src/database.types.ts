@@ -567,7 +567,7 @@ isOneToOne: false
                   ]
                 },"loan_balances": {
                   Row: {
-                    "balance_minor": number | null,"company_id": string | null,"currency": string | null,"loan_id": string | null
+                    "balance_minor": number | null,"company_id": string | null,"currency": string | null,"flagged_parts": number | null,"loan_id": string | null
                   }
                   Relationships: [
                     {
@@ -639,6 +639,9 @@ isOneToOne: false
 { Args: { "p_limit": number }; Returns: {
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
+                           },
+"clear_loan_split_review":
+{ Args: { "p_transaction_id": string }; Returns: undefined
                            },
 "collapse_split":
 { Args: { "p_id": string,"p_project_id": string }; Returns: string
