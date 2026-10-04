@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "./button";
+import { RefreshIcon } from "./icons";
 import "./demo-player.css";
 
 /** Setup demos play for 3.0–4.6 seconds. The player accepts other lengths for tests. */
@@ -292,7 +293,7 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
         </div>
       </div>
       {replayVisible ? (
-        <Button variant="pill" className="ui-demo-replay" onClick={replay}>
+        <Button variant="pill" className="ui-demo-replay" icon={<RefreshIcon size={14} />} onClick={replay}>
           שוב
         </Button>
       ) : null}
