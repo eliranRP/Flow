@@ -67,6 +67,7 @@ export {
 } from "./loan-schedule.ts";
 export type {
   LoanBalloon,
+  LoanFinalAdjustment,
   LoanSchedule,
   LoanScheduleErrorCode,
   LoanScheduleRow,
