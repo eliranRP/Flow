@@ -4,6 +4,8 @@
 
 Smoke company. The live check reads the demo company Flow Test, which holds the production SUMIT connection. `SMOKE_COMPANY_NAME` overrides that name. The match is exact. Provisioning is in [the smoke-user runbook](runbooks/smoke-user.md).
 
+Jev review follow-up. A supplier rule stays when both assignment flags are false. אישור ignores extra clicks while a write is in flight. A Jev read that misses its second becomes off and does not store that off. Turning Jev on replaces a cached off flag. The flag is per user and company, cleared on sign-out, and after a reload it only holds the card until this session's read answers. A failed read is off. A suggestion already in hand does not render until that read says Jev is on. Project and category names load together. While the card waits, a note that will remain reserves its line with no pill and no words, and a card that settles without a note reserves nothing. No migration. Decision [0084](decisions/0084-jev-auto-prefill.md).
+
 ## 2026-10-03
 
 Company insert. `authenticated` cannot insert `public.companies`. `create_company` stays the only path, and it still rejects a viewer. A direct insert is what the viewer test refuses. The viewer can still read the demo `audit_log`. The live smoke still names Flow Test 2 and the production host. Both stay backlog.
