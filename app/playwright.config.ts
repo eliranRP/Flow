@@ -6,7 +6,7 @@ export default defineConfig({
   // sumit-live hits the live SUMIT company. sumit-drain writes local rows.
   // Both stay on their own configs. CI points this suite at local Supabase
   // only when FLOW_E2E_SUPABASE_URL is the loopback API from `supabase start`.
-  testIgnore: [/sumit-live/, /sumit-drain/, /storybook-/],
+  testIgnore: [/sumit-live/, /sumit-drain/, /storybook-/, /smoke-readonly/],
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:43123",

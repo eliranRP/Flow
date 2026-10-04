@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(83);
+select plan(84);
 
 do $users$
 begin
@@ -255,7 +255,10 @@ select throws_ok(
   'second user cannot append to the audit log'
 );
 
-insert into public.companies (name) values ('בטא');
+select lives_ok(
+  $$select public.create_company('בטא', true)$$,
+  'an owner creates a company through create_company'
+);
 
 select throws_ok(
   $$insert into public.companies (name, owner_id)
