@@ -32,10 +32,10 @@
 .ui-demo-phone {
   position: absolute;
   inset-inline: 0;
-  inset-block-end: calc(var(--radius-band) * -1);
+  inset-block-start: 20px;
   margin-inline: auto;
   inline-size: var(--demo-phone);
-  block-size: calc(100% - var(--space-6));
+  block-size: calc(100% + 40px);
   overflow: hidden;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-band);
@@ -67,9 +67,10 @@
   z-index: 1;
   inset-inline-end: var(--space-3);
   inset-block-end: var(--space-3);
-  padding-inline: var(--space-3);
+  padding-inline: 14px;
   background: var(--color-surface);
   color: var(--color-accent-text);
+  font-weight: 500;
 }
 
 .ui-demo[data-demo-state="playing"] .ui-demo-replay {
