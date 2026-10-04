@@ -94,7 +94,7 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText(/התשלום האחרון גבוה יותר/)).toBeInTheDocument();
   });
 
-  it("labels a 600 month final payment of exactly twice the regular one", () => {
+  it("warns when a 600 month term ends at twice the principal and interest", () => {
     render(
       <LoanSetupForm
         companyCurrency="ILS"
@@ -112,9 +112,9 @@ describe("LoanSetupForm", () => {
       />,
     );
     expect(screen.getByText("₪6.00")).toBeInTheDocument();
-    expect(screen.getByText("₪12.00")).toBeInTheDocument();
+    expect(screen.getAllByText("₪12.00")).toHaveLength(2);
     expect(screen.getByText(/תשלום אחרון מותאם/)).toBeInTheDocument();
-    expect(screen.queryByText(/יותר מכפול/)).not.toBeInTheDocument();
+    expect(screen.getByText(/התשלום האחרון כפול/)).toBeInTheDocument();
     expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
   });
 
@@ -135,7 +135,7 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText("₪866.94")).toBeInTheDocument();
     expect(screen.getAllByText("₪2,541.65")).toHaveLength(2);
     expect(screen.getByText(/תשלום אחרון מותאם/)).toBeInTheDocument();
-    expect(screen.getByText(/התשלום האחרון יותר מכפול/)).toBeInTheDocument();
+    expect(screen.getByText(/התשלום האחרון כפול/)).toBeInTheDocument();
     expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
   });
 
@@ -155,7 +155,7 @@ describe("LoanSetupForm", () => {
       />,
     );
     expect(screen.getByText("₪3.00")).toBeInTheDocument();
-    expect(screen.queryByText(/יותר מכפול/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/כפול/)).not.toBeInTheDocument();
     expect(screen.queryByText(/תשלום אחרון מותאם/)).not.toBeInTheDocument();
   });
 });
