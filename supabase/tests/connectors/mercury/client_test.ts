@@ -4,6 +4,7 @@ import page2 from "./fixtures/transactions-desc-page2.json" with { type: "json" 
 import accountsFile from "./fixtures/accounts.json" with { type: "json" };
 import creditFile from "./fixtures/credit.json" with { type: "json" };
 import treasuryFile from "./fixtures/treasury.json" with { type: "json" };
+import treasuryTxns from "./fixtures/SYNTHETIC-treasury-transactions.json" with { type: "json" };
 import syntheticPending from "./fixtures/SYNTHETIC-pending.json" with { type: "json" };
 import { assertMercuryGet } from "../../../functions/_shared/connectors/mercury/guard.ts";
 import { MERCURY_PAGE_CAP, MERCURY_POSTED_LOOKBACK_DAYS } from "../../../functions/_shared/connectors/mercury/capabilities.ts";
@@ -11,6 +12,8 @@ import { jerusalemDate } from "../../../functions/_shared/connectors/mercury/dat
 import {
   MercuryPageCapError,
   classifyMercuryError,
+  decodeMercuryCursor,
+  encodeMercuryResume,
   fetchMercurySince,
   getMercuryTransaction,
   mercuryFailureCode,
@@ -19,6 +22,7 @@ import {
   pendingAbsenceVoids,
   recheckMissingPending,
   retryAfterToIso,
+  timestampFromCursor,
   validateMercury,
 } from "../../../functions/_shared/connectors/mercury/client.ts";
 import { normalizeMercury } from "../../../functions/_shared/connectors/mercury/normalize.ts";
@@ -34,6 +38,17 @@ function jsonResponse(body: unknown, status = 200, headers: HeadersInit = {}): R
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json", ...headers },
+  });
+}
+
+/** Bank-listing tests do not stub the treasury ledger. An empty ledger is a successful account list. */
+function bankTransport(handler: (url: URL, init: RequestInit) => Response | Promise<Response>) {
+  return transport((url, init) => {
+    if (url.pathname.includes("/treasury/") && url.pathname.endsWith("/transactions")) {
+      return jsonResponse({ transactions: [], cursor: null });
+    }
+    if (url.pathname.endsWith("/treasury")) return jsonResponse({ accounts: [], page: {} });
+    return handler(url, init);
   });
 }
 
@@ -74,7 +89,7 @@ Deno.test("the posted lookback is 30 days and clamps to import_from", () => {
 
 Deno.test("paging follows nextPage with no overlap and stops when it is absent", async () => {
   const token = `test-${crypto.randomUUID()}`;
-  const { fetchImpl, calls } = transport((url) => {
+  const { fetchImpl, calls } = bankTransport((url) => {
     if (url.searchParams.get("status") === "pending") {
       return jsonResponse({ transactions: [], page: {} });
     }
@@ -111,7 +126,7 @@ Deno.test("paging follows nextPage with no overlap and stops when it is absent",
 });
 
 Deno.test("a later sync sends start from the cursor minus the lookback", async () => {
-  const { fetchImpl, calls } = transport(() => jsonResponse({ transactions: [], page: {} }));
+  const { fetchImpl, calls } = bankTransport(() => jsonResponse({ transactions: [], page: {} }));
   const session = openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW });
   await fetchMercurySince(session, {
     cursor: "2026-10-04T08:00:00.000Z",
@@ -224,10 +239,73 @@ Deno.test("an unreachable treasury account refuses validation", async () => {
   );
 });
 
-Deno.test("the page cap is sync_page_cap and is not retried as a transient error", async () => {
+Deno.test("an empty treasury list is a successful validation", async () => {
+  const { fetchImpl } = transport((url) => {
+    if (url.pathname.endsWith("/treasury")) return jsonResponse({ accounts: [], page: {} });
+    if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+    if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
+    return jsonResponse({ accounts: [], page: {} });
+  });
+  const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }));
+  assertEquals(result.ok, true);
+  if (!result.ok) return;
+  assertEquals(result.accounts.some((account) => account.label === "Mercury Treasury"), false);
+  assertEquals(result.accounts.length, accountsFile.accounts.length + creditFile.accounts.length);
+});
+
+Deno.test("401, 403, and 404 from treasury refuse validation", async () => {
+  for (const status of [401, 403, 404]) {
+    const { fetchImpl } = transport((url) => {
+      if (url.pathname.endsWith("/treasury")) return jsonResponse({ error: "no" }, status);
+      if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+      if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
+      return jsonResponse({ accounts: [], page: {} });
+    });
+    const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, {
+      fetch: fetchImpl,
+      now: () => NOW,
+    }));
+    assertEquals(result.ok, false);
+    if (result.ok) return;
+    assertEquals(result.class, status === 404 ? "rejected" : "auth");
+  }
+});
+
+Deno.test("a treasury row with no id refuses validation", async () => {
+  const logged: unknown[] = [];
+  const previous = console.error;
+  console.error = (...args: unknown[]) => {
+    logged.push(args);
+  };
+  try {
+    for (const accounts of [[{}], [{ status: "active", name: "secret-token:should-not-log" }]]) {
+      const { fetchImpl } = transport((url) => {
+        if (url.pathname.endsWith("/treasury")) return jsonResponse({ accounts, page: {} });
+        if (url.pathname.endsWith("/credit")) return jsonResponse(creditFile);
+        if (url.pathname.endsWith("/accounts")) return jsonResponse(accountsFile);
+        return jsonResponse({ accounts: [], page: {} });
+      });
+      const result = await validateMercury(openMercury(`test-${crypto.randomUUID()}`, {
+        fetch: fetchImpl,
+        now: () => NOW,
+      }));
+      assertEquals(result, { ok: false, class: "rejected", retry_after: null });
+    }
+  } finally {
+    console.error = previous;
+  }
+  assertEquals(logged.length, 2);
+  assertEquals(JSON.stringify(logged).includes("secret-token:should-not-log"), false);
+  assertEquals(JSON.stringify(logged).includes("mercury_treasury_account_id"), true);
+});
+
+Deno.test("the page cap returns the fetched lines and a resume cursor", async () => {
   const token = `test-${crypto.randomUUID()}`;
   let pages = 0;
-  const { fetchImpl } = transport(() => {
+  const { fetchImpl } = bankTransport(() => {
     pages += 1;
     return jsonResponse({
       transactions: [{ id: `id-${pages}` }],
@@ -235,16 +313,19 @@ Deno.test("the page cap is sync_page_cap and is not retried as a transient error
     });
   });
   const session = openMercury(token, { fetch: fetchImpl, now: () => NOW });
-  const error = await assertRejects(() => fetchMercurySince(session, {
+  const result = await fetchMercurySince(session, {
     cursor: null,
     importFrom: null,
     lookbackDays: 30,
-  }));
-  assertEquals(error instanceof MercuryPageCapError, true);
-  assertEquals(mercuryFailureCode(error), "sync_page_cap");
-  assertEquals(classifyMercuryError(error), { class: "rejected", retry_after: null });
+  });
   assertEquals(pages, MERCURY_PAGE_CAP);
-  assertEquals(String(error).includes(token), false);
+  assertEquals(result.complete, false);
+  assertEquals(result.lines.length, MERCURY_PAGE_CAP);
+  const cursor = decodeMercuryCursor(result.nextCursor);
+  assertEquals(cursor.phase, "window");
+  assertEquals(cursor.page, `cursor-${MERCURY_PAGE_CAP}`);
+  assertEquals(cursor.at, NOW.toISOString());
+  assertEquals(result.nextCursor?.includes(token), false);
 });
 
 Deno.test("a missing pending line voids on 404 only after the wait, and a posted GET updates", async () => {
@@ -321,7 +402,7 @@ Deno.test("import_from drops a line whose Jerusalem date is earlier", async () =
     id: "inside-import-from",
     createdAt: "2026-10-02T18:30:00.000Z",
   };
-  const { fetchImpl } = transport((url) => {
+  const { fetchImpl } = bankTransport((url) => {
     if (url.searchParams.get("status") === "pending") return jsonResponse({ transactions: [], page: {} });
     if (!url.searchParams.get("start_after")) return jsonResponse({ transactions: [early, late], page: {} });
     return jsonResponse({ transactions: [], page: {} });
@@ -340,7 +421,7 @@ Deno.test("import_from drops a line whose Jerusalem date is earlier", async () =
 
 Deno.test("a repeated nextPage stops instead of paging forever", async () => {
   let pages = 0;
-  const { fetchImpl } = transport((url) => {
+  const { fetchImpl } = bankTransport((url) => {
     if (url.searchParams.get("status") === "pending") return jsonResponse({ transactions: [], page: {} });
     pages += 1;
     return jsonResponse({
@@ -355,10 +436,12 @@ Deno.test("a repeated nextPage stops instead of paging forever", async () => {
     lookbackDays: 30,
   }));
   assertEquals(error instanceof MercuryPageCapError, true);
+  if (!(error instanceof MercuryPageCapError)) return;
+  assertEquals(error.resumeAfter, null);
   assertEquals(pages, 2);
 });
 
-Deno.test("the lookback does not include a reversal older than 30 days, and the page cap has no resume cursor", () => {
+Deno.test("the lookback does not include a reversal older than 30 days, and a resume cursor keeps the same start", () => {
   const start = mercuryStartDate({
     lastSyncAt: "2026-10-04T08:00:00.000Z",
     importFrom: null,
@@ -366,8 +449,74 @@ Deno.test("the lookback does not include a reversal older than 30 days, and the 
   });
   assertEquals(start, "2026-09-04");
   assertEquals(jerusalemDate("2026-08-01T12:00:00.000Z") < (start ?? ""), true);
-  const cap = new MercuryPageCapError();
-  assertEquals(cap.code, "sync_page_cap");
-  assertEquals("resumeAfter" in cap, false);
-  assertEquals(classifyMercuryError(cap), { class: "rejected", retry_after: null });
+  const loop = new MercuryPageCapError([{ id: "kept" }], null);
+  assertEquals(loop.code, "sync_page_cap");
+  assertEquals(loop.resumeAfter, null);
+  assertEquals(classifyMercuryError(loop), { class: "rejected", retry_after: null, code: "sync_page_cap" });
+  const resumed = encodeMercuryResume({
+    at: "2026-10-04T08:00:00.000Z",
+    start,
+    page: "cursor-20",
+    phase: "window",
+  });
+  assertEquals(decodeMercuryCursor(resumed), {
+    at: "2026-10-04T08:00:00.000Z",
+    start,
+    page: "cursor-20",
+    phase: "window",
+    treasuryId: null,
+  });
+  assertEquals(timestampFromCursor(resumed), null);
+});
+
+Deno.test("a resumed sync repeats the same start and continues after the page", async () => {
+  const cursor = encodeMercuryResume({
+    at: NOW.toISOString(),
+    start: "2026-09-04",
+    page: "cursor-20",
+    phase: "window",
+  });
+  const { fetchImpl, calls } = bankTransport(() => jsonResponse({ transactions: [], page: {} }));
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }), {
+    cursor,
+    importFrom: null,
+    lookbackDays: 30,
+  });
+  const window = calls.find((call) =>
+    call.url.pathname.endsWith("/transactions") && call.url.searchParams.get("status") !== "pending"
+  );
+  assertEquals(window?.url.searchParams.get("start"), "2026-09-04");
+  assertEquals(window?.url.searchParams.get("start_after"), "cursor-20");
+  assertEquals(result.complete, true);
+  assertEquals(result.windowStart, "2026-09-04");
+});
+
+Deno.test("treasury yield is read from the treasury transactions endpoint", async () => {
+  const { fetchImpl, calls } = transport((url) => {
+    if (url.pathname.includes("/treasury/") && url.pathname.endsWith("/transactions")) {
+      return jsonResponse(treasuryTxns);
+    }
+    if (url.pathname.endsWith("/treasury")) return jsonResponse(treasuryFile);
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, {
+    fetch: fetchImpl,
+    now: () => NOW,
+  }), {
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+  });
+  const ids = result.lines.map((row) => (row as { id: string }).id);
+  assertEquals(ids.includes(treasuryTxns.transactions[0].id), true);
+  assertEquals(ids.includes(treasuryTxns.transactions[1].id), true);
+  assertEquals(ids.includes(treasuryTxns.transactions[2].id), true);
+  assertEquals(
+    calls.some((call) => call.url.pathname === `/api/v1/treasury/${treasuryFile.accounts[0].id}/transactions`),
+    true,
+  );
+  assertEquals(calls.every((call) => call.init.method === "GET"), true);
 });
