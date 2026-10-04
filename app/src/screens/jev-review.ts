@@ -152,8 +152,12 @@ export function jevQueueQueryKey(transactionIds: readonly string[]) {
   return ["jev-review-queue", jevQueueKey(transactionIds)] as const;
 }
 
-/** Separate from the suggestion read, so a company with Jev off never waits on the card. */
-export const jevConnectorQueryKey = ["jev-connector"] as const;
+/** Separate from the suggestion read, and scoped so the next user does not reuse this one's on. */
+export function jevConnectorQueryKey(scope: JevConnectorScope | null = boundJevConnectorScope()) {
+  return scope == null
+    ? (["jev-connector"] as const)
+    : (["jev-connector", scope.userId, scope.companyId] as const);
+}
 
 export const JEV_CONNECTOR_STALE_MS = 5 * 60 * 1000;
 

@@ -195,13 +195,14 @@ describe("Jev settings card", () => {
   it("replaces a cached Jev off flag when the connector is turned on", async () => {
     db.row = { enabled: false, mode: "off", threshold: 0.9 };
     const { client } = renderLive(<JevSettings />, (query) => {
-      query.setQueryData(jevConnectorQueryKey, false);
+      query.setQueryData(jevConnectorQueryKey(), false);
     });
-    expect(client.getQueryData(jevConnectorQueryKey)).toBe(false);
+    expect(client.getQueryData(jevConnectorQueryKey())).toBe(false);
     fireEvent.click(await readySwitch());
     await waitFor(() => {
-      expect(client.getQueryData(jevConnectorQueryKey)).toBe(true);
+      expect(client.getQueryData(jevConnectorQueryKey())).toBe(true);
     });
+    expect(client.getQueryData(jevConnectorQueryKey({ userId: "user-2", companyId: scope.companyId }))).toBeUndefined();
     expect(localStorage.getItem(jevConnectorStorageKey(scope))).toBe("1");
   });
 
