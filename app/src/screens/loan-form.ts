@@ -5,6 +5,7 @@ import {
   LoanScheduleError,
   parseDecimalHalfEven,
   type LoanBalloon,
+  type LoanFinalAdjustment,
   type LoanSchedule,
 } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
@@ -92,10 +93,13 @@ export type LoanPreview =
       interestMinor: bigint;
       escrowMinor: bigint;
       balloon: LoanBalloon | null;
-      /** Set when the last payment is at least twice the regular one and it is not a balloon. */
-      doubledFinalMinor: bigint | null;
-      /** Set when the last payment differs from the regular one only by rounding. */
-      adjustedFinalMinor: bigint | null;
+      /** The schedule's adjusted final payment. Null on an early payoff. */
+      finalAdjustment: LoanFinalAdjustment | null;
+      /**
+       * Set when the final principal-and-interest is more than twice the regular
+       * one, and the loan is not a balloon. Escrow is left out of both sides.
+       */
+      largeFinalMinor: bigint | null;
       insert: Omit<LoanInsert, "company_id">;
     };
 
@@ -123,24 +127,13 @@ function ratePpmOf(text: string): number | null {
   }
 }
 
-function doubledFinal(schedule: LoanSchedule, paymentMinor: bigint): bigint | null {
+function largeFinal(schedule: LoanSchedule, paymentMinor: bigint, escrowMinor: bigint): bigint | null {
+  if (schedule.balloon != null) return null;
   const last = schedule.rows.at(-1);
-  if (schedule.balloon != null || last == null || last.paymentMinor < paymentMinor * 2n) return null;
-  return last.paymentMinor;
-}
-
-function roundingAdjustment(
-  schedule: LoanSchedule,
-  paymentMinor: bigint,
-  escrowMinor: bigint,
-  termMonths: number,
-  levelPi: bigint,
-): bigint | null {
-  const last = schedule.rows.at(-1);
-  if (schedule.balloon != null || last == null || schedule.rows.length !== termMonths) return null;
-  if (last.paymentMinor === paymentMinor || last.paymentMinor >= paymentMinor * 2n) return null;
+  if (last == null) return null;
   const pi = paymentMinor - escrowMinor;
-  if (pi < levelPi - 1n || pi > levelPi + 1n) return null;
+  const finalPi = last.paymentMinor - last.escrowMinor;
+  if (finalPi <= pi * 2n) return null;
   return last.paymentMinor;
 }
 
@@ -186,8 +179,8 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
       interestMinor,
       escrowMinor,
       balloon: schedule.balloon,
-      doubledFinalMinor: doubledFinal(schedule, paymentMinor),
-      adjustedFinalMinor: roundingAdjustment(schedule, paymentMinor, escrowMinor, termMonths, levelPi),
+      finalAdjustment: schedule.finalAdjustment,
+      largeFinalMinor: largeFinal(schedule, paymentMinor, escrowMinor),
       insert: {
         name,
         principal_minor: Number(principalMinor),

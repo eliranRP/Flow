@@ -94,7 +94,7 @@ describe("LoanSetupForm", () => {
     expect(screen.getByText(/התשלום האחרון גבוה יותר/)).toBeInTheDocument();
   });
 
-  it("warns when a 600 month term ends at twice the payment", () => {
+  it("labels a 600 month final payment of exactly twice the regular one", () => {
     render(
       <LoanSetupForm
         companyCurrency="ILS"
@@ -113,8 +113,49 @@ describe("LoanSetupForm", () => {
     );
     expect(screen.getByText("₪6.00")).toBeInTheDocument();
     expect(screen.getByText("₪12.00")).toBeInTheDocument();
-    expect(screen.getByText(/התשלום האחרון כפול/)).toBeInTheDocument();
+    expect(screen.getByText(/תשלום אחרון מותאם/)).toBeInTheDocument();
+    expect(screen.queryByText(/יותר מכפול/)).not.toBeInTheDocument();
     expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
+  });
+
+  it("warns when a rounding-only final payment is more than twice the principal and interest", () => {
+    render(
+      <LoanSetupForm
+        companyCurrency="ILS"
+        initial={{
+          name: "הלוואת דוגמה",
+          principal: "34910.09",
+          rate: "29.8",
+          term: "480",
+          startDate: "2026-11-01",
+          escrow: "0",
+        }}
+      />,
+    );
+    expect(screen.getByText("₪866.94")).toBeInTheDocument();
+    expect(screen.getAllByText("₪2,541.65")).toHaveLength(2);
+    expect(screen.getByText(/תשלום אחרון מותאם/)).toBeInTheDocument();
+    expect(screen.getByText(/התשלום האחרון יותר מכפול/)).toBeInTheDocument();
+    expect(screen.queryByText(/גבוה יותר/)).not.toBeInTheDocument();
+  });
+
+  it("does not warn when escrow makes the payment large and the principal stays level", () => {
+    render(
+      <LoanSetupForm
+        companyCurrency="ILS"
+        initial={{
+          name: "הלוואת דוגמה",
+          principal: "3",
+          rate: "0",
+          term: "3",
+          startDate: "2026-11-01",
+          escrow: "2",
+          payment: "3",
+        }}
+      />,
+    );
+    expect(screen.getByText("₪3.00")).toBeInTheDocument();
+    expect(screen.queryByText(/יותר מכפול/)).not.toBeInTheDocument();
     expect(screen.queryByText(/תשלום אחרון מותאם/)).not.toBeInTheDocument();
   });
 });

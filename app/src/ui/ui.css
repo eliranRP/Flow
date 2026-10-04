@@ -429,6 +429,10 @@ a.ui-row,
   text-wrap: pretty;
 }
 
+.ui-loan-caution {
+  color: var(--color-warning);
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;

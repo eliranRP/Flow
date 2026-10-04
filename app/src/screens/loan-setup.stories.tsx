@@ -52,6 +52,23 @@ export const BalloonDark: Story = { args: balloon, ...dark390 };
 export const Balloon320: Story = { args: balloon, ...light320 };
 export const BalloonDark320: Story = { args: balloon, ...dark320 };
 
+const largeFinal = {
+  companyCurrency: "ILS" as const,
+  initial: {
+    name: "הלוואת דוגמה",
+    principal: "34910.09",
+    rate: "29.8",
+    term: "480",
+    startDate: "2026-11-01",
+    escrow: "0",
+  },
+};
+
+export const LargeFinal: Story = { args: largeFinal, ...light390 };
+export const LargeFinalDark: Story = { args: largeFinal, ...dark390 };
+export const LargeFinal320: Story = { args: largeFinal, ...light320 };
+export const LargeFinalDark320: Story = { args: largeFinal, ...dark320 };
+
 export const Dollars: Story = {
   args: { companyCurrency: "USD", initial: { startDate: "2026-11-01" } },
   ...light390,

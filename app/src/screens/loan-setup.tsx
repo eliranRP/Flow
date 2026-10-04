@@ -175,15 +175,16 @@ export function LoanSetupForm({
               התשלום האחרון גבוה יותר,{" "}
               <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.balloon.amountMinor, currency)}</bdi>
             </p>
-          ) : preview.doubledFinalMinor != null ? (
-            <p>
-              התשלום האחרון כפול,{" "}
-              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.doubledFinalMinor, currency)}</bdi>
-            </p>
-          ) : preview.adjustedFinalMinor != null ? (
+          ) : preview.finalAdjustment != null ? (
             <p>
               תשלום אחרון מותאם,{" "}
-              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.adjustedFinalMinor, currency)}</bdi>
+              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.finalAdjustment.amountMinor, currency)}</bdi>
+            </p>
+          ) : null}
+          {preview.largeFinalMinor != null ? (
+            <p className="t-hint ui-loan-caution">
+              התשלום האחרון יותר מכפול,{" "}
+              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.largeFinalMinor, currency)}</bdi>
             </p>
           ) : null}
         </div>
