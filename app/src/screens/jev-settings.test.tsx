@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { jevConnectorQueryKey } from "./jev-review";
+import { bindJevConnectorScope, jevConnectorQueryKey, jevConnectorStorageKey, type JevConnectorScope } from "./jev-review";
+
+const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 import {
   JEV_DEFAULT,
   JevSettings,
@@ -92,7 +94,9 @@ describe("Jev settings card", () => {
     db.readHold = null;
     db.failRefresh = false;
     db.writes = [];
+    bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
+    localStorage.removeItem(jevConnectorStorageKey(scope));
   });
 
   it("rounds a threshold to two decimals and accepts a comma", () => {
@@ -198,7 +202,7 @@ describe("Jev settings card", () => {
     await waitFor(() => {
       expect(client.getQueryData(jevConnectorQueryKey)).toBe(true);
     });
-    expect(localStorage.getItem("flow.jev-connector")).toBe("1");
+    expect(localStorage.getItem(jevConnectorStorageKey(scope))).toBe("1");
   });
 
   it("keeps the stored mode when turning off", async () => {

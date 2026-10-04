@@ -1,11 +1,16 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
+import { useAuth } from "../auth";
+import { useHomePreview } from "../preview";
 import { Button } from "../ui/button";
 import { CheckIcon } from "../ui/icons";
 import { ReviewCard } from "../ui/review-card";
+import { useOptionalBooks } from "../use-books";
 import {
   JEV_CONNECTOR_STALE_MS,
   JEV_REVIEW_OFF,
+  bindJevConnectorScope,
+  boundJevConnectorScope,
   fetchJevConnector,
   jevConnectorQueryKey,
   jevQueueQueryKey,
@@ -14,6 +19,7 @@ import {
   loadJevSuggestions,
   readJevConnectorFlag,
   withJevDeadline,
+  type JevConnectorScope,
   type JevPrefill,
   type JevQueueData,
   type JevReviewState,
@@ -40,19 +46,47 @@ export function useJevReview(transactionId: string | null, live: boolean): JevRe
   return { ...query.data, loading };
 }
 
-/** One read for every open line. Pending only after the connector is already known on. */
+function companyIdFrom(data: unknown): string | null {
+  if (data == null || typeof data !== "object" || !("company_id" in data)) return null;
+  const id = data.company_id;
+  return typeof id === "string" && id !== "" ? id : null;
+}
+
+/** Session plus the cached dashboard, or a scope bound by the caller. */
+function useJevConnectorScope(): JevConnectorScope | null {
+  const { session } = useAuth();
+  const books = useOptionalBooks();
+  const preview = useHomePreview();
+  const dashboard = useQuery({
+    queryKey: books == null ? ["jev-connector-scope"] : ["dashboard", preview, books.period],
+    enabled: false,
+    queryFn: () => Promise.resolve(null),
+  });
+  const userId = session?.user.id ?? null;
+  const companyId = books == null ? null : companyIdFrom(dashboard.data);
+  const hooked = userId != null && companyId != null ? { userId, companyId } : null;
+  if (hooked) bindJevConnectorScope(hooked);
+  return hooked ?? boundJevConnectorScope();
+}
+
+/**
+ * One read for every open line. A remembered on only waits. The prefill applies
+ * after a connector read from this session, and a failed read is off.
+ */
 export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const readable = live && jevReadable() && transactionIds.some((id) => id !== "");
-  const remembered = readable ? readJevConnectorFlag() : undefined;
+  const scope = useJevConnectorScope();
+  const remembered = readable && scope != null && readJevConnectorFlag(scope) === true;
   const connector = useQuery({
     queryKey: jevConnectorQueryKey,
     enabled: readable,
     retry: false,
     staleTime: JEV_CONNECTOR_STALE_MS,
-    ...(remembered == null ? {} : { initialData: remembered, initialDataUpdatedAt: 0 }),
     queryFn: ({ signal }) => fetchJevConnector(signal),
   });
-  const knownOn = connector.data === true;
+  const confirmed = connector.isSuccess && connector.dataUpdatedAt > 0;
+  const knownOn = confirmed && connector.data;
+  const waiting = remembered && !confirmed && !connector.isError;
   const suggestions = useQuery({
     queryKey: jevQueueQueryKey(transactionIds),
     enabled: readable && knownOn,
@@ -65,12 +99,16 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
     ),
   });
   function loadingFor(transactionId: string | null): boolean {
-    if (!knownOn || suggestions.isError) return false;
+    if (waiting) return true;
+    if (connector.isError || !knownOn || suggestions.isError) return false;
     if (suggestions.isPending || transactionId == null) return suggestions.isPending;
-    return suggestions.isFetching && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
+    return suggestions.isFetching
+      && !Object.prototype.hasOwnProperty.call(suggestions.data.byId, transactionId);
   }
   function stateFor(transactionId: string | null): JevReviewState {
-    if (!knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) return JEV_REVIEW_OFF;
+    if (waiting || connector.isError || !knownOn || suggestions.isError || suggestions.data == null || loadingFor(transactionId)) {
+      return JEV_REVIEW_OFF;
+    }
     return {
       connectorOn: suggestions.data.connectorOn,
       prefill: transactionId == null ? null : (suggestions.data.byId[transactionId] ?? null),
@@ -119,8 +157,64 @@ const LONG_PROJECT = "וילה רעננה — שיפוץ מלא של הקומה 
 const LONG_CATEGORY = "חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי והסביבה הקרובה";
 const LONG_SUPPLIER = "ספק חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי";
 
+const LAYOUT_CASES = [
+  {
+    id: "filled",
+    suggestion: {
+      project: "וילה רעננה",
+      projectSuggested: true,
+      category: "חומרים",
+      categorySuggested: true,
+    },
+  },
+  {
+    id: "note",
+    suggestion: { project: "פרויקט שמור" },
+  },
+  {
+    id: "sumit",
+    suggestion: { project: "פרויקט שמור", category: "קטגוריה שמורה" },
+  },
+] as const;
+
+function LayoutCard({
+  suggestion,
+  pending,
+}: {
+  suggestion: { project?: string; projectSuggested?: boolean; category?: string; categorySuggested?: boolean };
+  pending: boolean;
+}) {
+  return (
+    <ReviewCard
+      supplier="חומרי בניין השרון בע״מ"
+      sourceLine="הוצאה · 12/04/2026"
+      netAgorot={-2_200_000n}
+      vatLine="לפני מע״מ · מע״מ ₪3,960"
+      suggestion={suggestion}
+      pending={pending}
+      onProject={() => undefined}
+      onCategory={() => undefined}
+    />
+  );
+}
+
+/** Waiting and settled pairs for the three note layouts. */
+export function JevReviewLayout() {
+  return (
+    <div>
+      {LAYOUT_CASES.map((item) => (
+        <div key={item.id} data-layout={item.id}>
+          <div data-phase="waiting"><LayoutCard suggestion={item.suggestion} pending /></div>
+          <div data-phase="settled"><LayoutCard suggestion={item.suggestion} pending={false} /></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function JevReviewE2e() {
   const [params] = useSearchParams();
+  if (params.get("layout") === "1") return <JevReviewLayout />;
   const on = params.get("on") === "1";
   const long = params.get("long") === "1";
   const project = JEV_REVIEW_SAMPLE.project ?? { id: "p-villa", name: "וילה רעננה" };

@@ -63,6 +63,11 @@ export function useBooks(): BooksContextValue {
   return value;
 }
 
+/** Review queue tests render without a provider. A missing one is no company scope. */
+export function useOptionalBooks(): BooksContextValue | null {
+  return useContext(BooksContext);
+}
+
 function rpcArgs(period: PeriodChoice): { p_basis: "invoiced"; p_from?: string; p_to?: string } {
   return {
     p_basis: "invoiced",

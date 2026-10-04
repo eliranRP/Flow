@@ -160,10 +160,27 @@ export const JEV_CONNECTOR_STALE_MS = 5 * 60 * 1000;
 /** Survives a reload, so the next launch still knows whether to wait on the card. */
 const JEV_CONNECTOR_FLAG = "flow.jev-connector";
 
-export function readJevConnectorFlag(): boolean | undefined {
+export type JevConnectorScope = { userId: string; companyId: string };
+
+/** One flag per signed-in user and company. The old device-wide key is not read. */
+export function jevConnectorStorageKey(scope: JevConnectorScope): string {
+  return `${JEV_CONNECTOR_FLAG}:${scope.userId}:${scope.companyId}`;
+}
+
+let activeScope: JevConnectorScope | null = null;
+
+export function bindJevConnectorScope(scope: JevConnectorScope | null): void {
+  activeScope = scope;
+}
+
+export function boundJevConnectorScope(): JevConnectorScope | null {
+  return activeScope;
+}
+
+export function readJevConnectorFlag(scope: JevConnectorScope): boolean | undefined {
   if (typeof localStorage === "undefined") return undefined;
   try {
-    const raw = localStorage.getItem(JEV_CONNECTOR_FLAG);
+    const raw = localStorage.getItem(jevConnectorStorageKey(scope));
     if (raw === "1") return true;
     if (raw === "0") return false;
   } catch {
@@ -172,12 +189,29 @@ export function readJevConnectorFlag(): boolean | undefined {
   return undefined;
 }
 
-export function writeJevConnectorFlag(on: boolean): void {
-  if (typeof localStorage === "undefined") return;
+export function writeJevConnectorFlag(on: boolean, scope: JevConnectorScope | null = activeScope): void {
+  if (scope == null || typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(JEV_CONNECTOR_FLAG, on ? "1" : "0");
+    localStorage.setItem(jevConnectorStorageKey(scope), on ? "1" : "0");
   } catch {
     // A private window can refuse the write. The in-memory query still updates.
+  }
+}
+
+/** Sign-out drops this user's flags and the old device-wide key. */
+export function clearJevConnectorFlag(userId: string | null): void {
+  bindJevConnectorScope(null);
+  if (typeof localStorage === "undefined") return;
+  try {
+    const prefix = userId == null ? null : `${JEV_CONNECTOR_FLAG}:${userId}:`;
+    const keys: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key === JEV_CONNECTOR_FLAG || (prefix != null && key != null && key.startsWith(prefix))) keys.push(key);
+    }
+    for (const key of keys) localStorage.removeItem(key);
+  } catch {
+    // A private window can refuse the clear. The in-memory scope is already dropped.
   }
 }
 
@@ -255,11 +289,16 @@ export async function loadJevConnector(signal?: AbortSignal): Promise<boolean> {
   return jevConnectorOn(integration.data);
 }
 
-/** The one-second read, then the flag the next launch will trust. */
+/**
+ * The one-second read. A completed read stores the flag. A timeout returns off
+ * and leaves the stored flag alone, so it cannot overwrite an on that settings just wrote.
+ */
 export async function fetchJevConnector(signal?: AbortSignal): Promise<boolean> {
-  const on = await withJevDeadline(signal, loadJevConnector, false);
-  writeJevConnectorFlag(on);
-  return on;
+  return withJevDeadline(signal, async (linked) => {
+    const on = await loadJevConnector(linked);
+    writeJevConnectorFlag(on);
+    return on;
+  }, false);
 }
 
 export async function loadJevSuggestions(transactionIds: readonly string[], signal?: AbortSignal): Promise<JevQueueData> {

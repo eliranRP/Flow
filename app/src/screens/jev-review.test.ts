@@ -2,14 +2,59 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   JEV_READ_MS,
   JEV_REVIEW_OFF,
+  bindJevConnectorScope,
+  clearJevConnectorFlag,
+  fetchJevConnector,
+  jevConnectorStorageKey,
   parseJevSuggestion,
   readJevConnectorFlag,
   withJev,
   withJevDeadline,
   writeJevConnectorFlag,
+  type JevConnectorScope,
   type JevPrefill,
   type JevReviewState,
 } from "./jev-review";
+
+const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
+
+const connectorDb = vi.hoisted(() => ({
+  integration: null as { enabled: boolean; mode: string } | null,
+  error: null as { message: string } | null,
+  hang: false,
+}));
+
+vi.mock("../lib/supabase", () => ({
+  getSupabase: () => ({
+    from: () => {
+      let linked: AbortSignal | undefined;
+      const builder = {
+        select: () => builder,
+        eq: () => builder,
+        abortSignal: (next: AbortSignal) => {
+          linked = next;
+          return builder;
+        },
+        maybeSingle: () => {
+          if (connectorDb.hang) {
+            return new Promise((_resolve, reject) => {
+              const fail = () => {
+                reject(new DOMException("The operation was aborted.", "AbortError"));
+              };
+              if (linked?.aborted) fail();
+              else linked?.addEventListener("abort", fail, { once: true });
+            });
+          }
+          return Promise.resolve({
+            data: connectorDb.error ? null : connectorDb.integration,
+            error: connectorDb.error,
+          });
+        },
+      };
+      return builder;
+    },
+  }),
+}));
 
 const prefill: JevPrefill = {
   suggestionId: "s1",
@@ -155,16 +200,45 @@ describe("Jev review prefill", () => {
     await expect(pending).resolves.toBe(JEV_REVIEW_OFF);
   });
 
-  it("remembers the connector flag for the next launch", () => {
-    expect(readJevConnectorFlag()).toBeUndefined();
-    writeJevConnectorFlag(true);
-    expect(readJevConnectorFlag()).toBe(true);
-    writeJevConnectorFlag(false);
-    expect(readJevConnectorFlag()).toBe(false);
+  it("remembers the connector flag for that user and company", () => {
+    expect(readJevConnectorFlag(scope)).toBeUndefined();
+    writeJevConnectorFlag(true, scope);
+    expect(readJevConnectorFlag(scope)).toBe(true);
+    expect(localStorage.getItem("flow.jev-connector")).toBeNull();
+    expect(readJevConnectorFlag({ userId: "user-1", companyId: "other" })).toBeUndefined();
+    writeJevConnectorFlag(false, scope);
+    expect(readJevConnectorFlag(scope)).toBe(false);
+    localStorage.setItem("flow.jev-connector", "1");
+    clearJevConnectorFlag(scope.userId);
+    expect(readJevConnectorFlag(scope)).toBeUndefined();
+    expect(localStorage.getItem("flow.jev-connector")).toBeNull();
+  });
+
+  it("stores the flag when the connector read completes", async () => {
+    bindJevConnectorScope(scope);
+    connectorDb.integration = { enabled: true, mode: "shadow" };
+    await expect(fetchJevConnector()).resolves.toBe(true);
+    expect(localStorage.getItem(jevConnectorStorageKey(scope))).toBe("1");
+  });
+
+  it("leaves a stored on in place when the connector read misses the deadline", async () => {
+    vi.useFakeTimers();
+    bindJevConnectorScope(scope);
+    writeJevConnectorFlag(true, scope);
+    connectorDb.hang = true;
+    const pending = fetchJevConnector();
+    await vi.advanceTimersByTimeAsync(JEV_READ_MS);
+    await expect(pending).resolves.toBe(false);
+    expect(readJevConnectorFlag(scope)).toBe(true);
   });
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  connectorDb.integration = null;
+  connectorDb.error = null;
+  connectorDb.hang = false;
+  bindJevConnectorScope(null);
   localStorage.removeItem("flow.jev-connector");
+  localStorage.removeItem(jevConnectorStorageKey(scope));
 });
