@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEMO_DURATION_MAX_MS, DEMO_DURATION_MIN_MS } from "./demo-player";
 import {
@@ -91,14 +92,19 @@ describe("setup demos", () => {
       expect(screen.queryByRole("button", { name: "הצגה חוזרת" })).not.toBeInTheDocument();
       view.unmount();
     }
-    check(<SumitConnectDemo />, () => {
-      expect(screen.getByText(SUMIT_ALT)).toBeInTheDocument();
-      expect(frame()).toBe("4");
-      expect(visibleText()).toContain("ספק לדוגמה בע״מ");
-      expect(visibleText()).toContain("מחובר");
-      expect(visibleText()).toContain("8,500");
-      expect(visibleText()).toContain("12");
-    });
+    check(
+      <MemoryRouter initialEntries={["/review"]}>
+        <SumitConnectDemo />
+      </MemoryRouter>,
+      () => {
+        expect(screen.getByText(SUMIT_ALT)).toBeInTheDocument();
+        expect(frame()).toBe("4");
+        expect(visibleText()).toContain("ספק לדוגמה בע״מ");
+        expect(visibleText()).toContain("מחובר");
+        expect(visibleText()).toContain("8,500");
+        expect(visibleText()).toContain("12");
+      },
+    );
     check(<JevSwitchDemo />, () => {
       expect(screen.getByText(JEV_ALT)).toBeInTheDocument();
       expect(frame()).toBe("4");
@@ -139,7 +145,11 @@ describe("setup demos", () => {
 
   it("plays the SUMIT sheet into לאישור, then offers שוב", () => {
     vi.useFakeTimers();
-    render(<SumitConnectDemo />);
+    render(
+      <MemoryRouter initialEntries={["/review"]}>
+        <SumitConnectDemo />
+      </MemoryRouter>,
+    );
     expect(frame()).toBe("1");
     expect(visibleText()).toContain("מספר חברה");
     expect(visibleText()).not.toContain("ספק לדוגמה בע״מ");

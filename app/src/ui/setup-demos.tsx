@@ -1,5 +1,4 @@
 import { type CSSProperties } from "react";
-import { MemoryRouter } from "react-router-dom";
 import { Button } from "./button";
 import { CheckRow } from "./check-row";
 import { Chip } from "./chip";
@@ -148,9 +147,7 @@ function SumitScene() {
           <SumitLine title="ספק לדוגמה בע״מ" hint="01/09" agorot={850_000n} drop={line1} />
           <SumitLine title="ספק שני לדוגמה" hint="02/09" agorot={120_000n} drop={line2} />
           <SumitLine title="ספק שלישי לדוגמה" hint="03/09" agorot={64_000n} drop={line3} />
-          <MemoryRouter initialEntries={["/review"]}>
-            <TabBar reviewCount={demoBeat(progress, 0.8, 0.9) >= 1 ? 12 : 0} />
-          </MemoryRouter>
+          <TabBar reviewCount={demoBeat(progress, 0.8, 0.9) >= 1 ? 12 : 0} />
         </div>
       </div>
     </div>
