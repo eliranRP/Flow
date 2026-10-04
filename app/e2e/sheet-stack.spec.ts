@@ -183,10 +183,20 @@ test("a second ✕ while the sheet is closing does not activate the row undernea
   await expect(sumit).toHaveAttribute("data-state", "closed");
   await expect.poll(() => page.evaluate(({ x, y }) => {
     const overlay = document.querySelector("[data-vaul-overlay]");
-    if (overlay == null) return "gone";
+    if (overlay == null) return "gone: no scrim";
     const hit = document.elementFromPoint(x, y);
-    return hit?.closest("[data-vaul-overlay]") != null ? "scrim" : "other";
-  }, { x, y }), { timeout: 200, intervals: [0, 16, 32, 48] }).toBe("scrim");
+    if (hit?.closest("[data-vaul-overlay]") != null) return "scrim";
+    const el = hit instanceof Element ? hit : null;
+    const tag = el?.tagName.toLowerCase() ?? "none";
+    const role = el?.getAttribute("role") ?? "";
+    const label = el?.getAttribute("aria-label") ?? "";
+    const text = (el?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
+    return `other: ${tag}${role.length > 0 ? ` role=${role}` : ""}${label.length > 0 ? ` label=${label}` : ""}${text.length > 0 ? ` text=${text}` : ""}`;
+  }, { x, y }), {
+    timeout: 200,
+    intervals: [0, 16, 32, 48],
+    message: "The second tap should hit the scrim of the closing sheet, not the row underneath.",
+  }).toBe("scrim");
   await page.mouse.click(x, y);
   await expect(page).toHaveURL(settings);
   await expect(page.locator("[role='dialog'][data-state='open']")).toHaveCount(0);
