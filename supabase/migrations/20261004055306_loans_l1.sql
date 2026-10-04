@@ -50,6 +50,34 @@ create trigger loans_touch
   before update on public.loans
   for each row execute function private.touch_updated_at();
 
+-- A currency change after a split would leave the parts in the old currency.
+create or replace function private.loans_lock_currency()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.currency is distinct from old.currency
+     and exists (
+       select 1
+       from public.loan_splits s
+       where s.company_id = old.company_id
+         and s.loan_id = old.id
+     )
+  then
+    raise exception 'loan_currency_locked' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function private.loans_lock_currency() from public, anon, authenticated;
+
+create trigger loans_lock_currency
+  before update on public.loans
+  for each row execute function private.loans_lock_currency();
+
 create table public.loan_splits (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.companies (id) on delete cascade,
@@ -59,6 +87,7 @@ create table public.loan_splits (
   amount_minor bigint not null,
   scheduled_minor bigint not null,
   category_id uuid not null,
+  needs_review boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (transaction_id, part),
@@ -84,6 +113,9 @@ comment on column public.loan_splits.amount_minor is
 comment on column public.loan_splits.scheduled_minor is
   'The schedule''s amount for this part, kept so a correction can be compared with one tap.';
 
+comment on column public.loan_splits.needs_review is
+  'Set when a connector re-sync changes the line amount or currency. L-3 clears it with the one-tap correction. While every part of the line is set, the sum and the currency are not enforced.';
+
 create index loan_splits_company_loan_idx on public.loan_splits (company_id, loan_id);
 create index loan_splits_company_txn_idx on public.loan_splits (company_id, transaction_id);
 create index loan_splits_category_idx on public.loan_splits (category_id);
@@ -93,32 +125,42 @@ create trigger loan_splits_touch
   for each row execute function private.touch_updated_at();
 
 -- Deferred so the three parts can be written in one transaction.
-create or replace function private.loan_splits_match()
-returns trigger
+create or replace function private.loan_splits_check(txn uuid)
+returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  txn uuid;
   parts integer;
   loan_count integer;
   actual bigint;
   expected bigint;
+  stale boolean;
 begin
-  txn := coalesce(new.transaction_id, old.transaction_id);
-
-  select count(*)::integer, count(distinct s.loan_id)::integer, coalesce(sum(s.amount_minor), 0)
-  into parts, loan_count, actual
+  select count(*)::integer,
+         count(distinct s.loan_id)::integer,
+         coalesce(sum(s.amount_minor), 0),
+         bool_and(s.needs_review)
+  into parts, loan_count, actual, stale
   from public.loan_splits s
   where s.transaction_id = txn;
 
   if parts = 0 then
-    return null;
+    return;
   end if;
 
   if parts <> 3 or loan_count <> 1 then
     raise exception 'loan_split_incomplete' using errcode = '23514';
+  end if;
+
+  if exists (
+    select 1
+    from public.transactions t
+    where t.id = txn
+      and t.direction = 'income'::public.txn_direction
+  ) then
+    raise exception 'loan_split_income' using errcode = '23514';
   end if;
 
   if exists (
@@ -147,6 +189,11 @@ begin
     raise exception 'loan_split_category' using errcode = '23514';
   end if;
 
+  -- A re-sync sets the flag on every part. The sum and the currency wait.
+  if coalesce(stale, false) then
+    return;
+  end if;
+
   if exists (
     select 1
     from public.loan_splits s
@@ -170,7 +217,24 @@ begin
   if actual is distinct from expected then
     raise exception 'loan_split_sum' using errcode = '23514';
   end if;
+end;
+$$;
 
+revoke all on function private.loan_splits_check(uuid) from public, anon, authenticated;
+
+create or replace function private.loan_splits_match()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' and old.transaction_id is distinct from new.transaction_id then
+    perform private.loan_splits_check(old.transaction_id);
+    perform private.loan_splits_check(new.transaction_id);
+  else
+    perform private.loan_splits_check(coalesce(new.transaction_id, old.transaction_id));
+  end if;
   return null;
 end;
 $$;
@@ -183,24 +247,62 @@ create constraint trigger loan_splits_match
   for each row
   execute function private.loan_splits_match();
 
+-- The connector upsert rewrites amount_original and currency in place.
+-- Mark the parts stale instead of failing that write.
+create or replace function private.loan_splits_mark_stale()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.amount_original is distinct from old.amount_original
+     or new.currency is distinct from old.currency
+  then
+    update public.loan_splits
+       set needs_review = true
+     where company_id = new.company_id
+       and transaction_id = new.id
+       and needs_review is distinct from true;
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function private.loan_splits_mark_stale() from public, anon, authenticated;
+
+create trigger transactions_loan_splits_stale
+  after update of amount_original, currency on public.transactions
+  for each row
+  execute function private.loan_splits_mark_stale();
+
 create view public.loan_balances
 with (security_invoker = true) as
 select
   l.company_id,
   l.id as loan_id,
   l.currency,
-  l.principal_minor - coalesce(
-    sum(s.amount_minor) filter (where s.part = 'principal'::public.loan_split_part),
-    0
+  (
+    l.principal_minor - coalesce(
+      sum(s.amount_minor) filter (
+        where s.part = 'principal'::public.loan_split_part
+          and t.line_status = 'posted'::public.line_status
+          and t.removed_at is null
+      ),
+      0
+    )
   )::bigint as balance_minor
 from public.loans l
 left join public.loan_splits s
   on s.company_id = l.company_id
  and s.loan_id = l.id
+left join public.transactions t
+  on t.company_id = s.company_id
+ and t.id = s.transaction_id
 group by l.company_id, l.id, l.currency, l.principal_minor;
 
 comment on view public.loan_balances is
-  'Principal left on the loan, in the loan currency. Posted principal parts reduce it. Decision 0088.';
+  'Principal left on the loan, in the loan currency. Only principal on a posted line that is still on the books reduces it. Decision 0088.';
 
 alter table public.loans enable row level security;
 alter table public.loan_splits enable row level security;
@@ -244,7 +346,10 @@ revoke all on public.loan_splits from public, anon, authenticated;
 revoke all on public.loan_balances from public, anon, authenticated;
 
 grant select, insert, update, delete on public.loans to authenticated, service_role;
-grant select, insert, update, delete on public.loan_splits to authenticated, service_role;
+grant select, insert, delete on public.loan_splits to authenticated;
+grant update (amount_minor, scheduled_minor, category_id, needs_review)
+  on public.loan_splits to authenticated;
+grant select, insert, update, delete on public.loan_splits to service_role;
 grant select on public.loan_balances to authenticated, service_role;
 
 create or replace function private.seed_default_categories()

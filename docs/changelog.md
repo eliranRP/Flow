@@ -2,7 +2,7 @@
 
 ## 2026-10-04
 
-Loans, schema. A loan keeps its currency, its principal, rate, term, first payment date, payment, and escrow. `loan_splits` is interest (`ריבית משכנתא`), escrow (`מסים וביטוח`), and principal (`תשלומי הלוואה`, still off the P&L) on one bank line. A demo viewer can read. Only the owner writes. The schedule is `buildLoanSchedule`. Decision [0088](decisions/0088-loans.md).
+Loans, schema. A loan keeps its currency, its principal, rate, term, first payment date, payment, and escrow. `loan_splits` is interest (`ריבית משכנתא`), escrow (`מסים וביטוח`), and principal (`תשלומי הלוואה`, still off the P&L) on one bank line. A demo viewer can read. Only the owner writes, and only a split's amount, category, and review flag. A re-sync that changes the line amount or currency marks the split `needs_review` instead of failing. The balance counts posted principal that is still on the books. A final payment more than 1 percent above the contractual one is a balloon, including a payment that only covers the interest. The schedule is `buildLoanSchedule`. Decision [0088](decisions/0088-loans.md).
 
 Smoke company. The live check reads the demo company Flow Test, which holds the production SUMIT connection. `SMOKE_COMPANY_NAME` overrides that name. The match is exact. Provisioning is in [the smoke-user runbook](runbooks/smoke-user.md).
 
