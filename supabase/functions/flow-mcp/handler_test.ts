@@ -1,3 +1,4 @@
+import { corsAllowHeaders } from "../_shared/http.ts";
 import { handle, hmacSecret } from "./handler.ts";
 import { criterion4 } from "../../../scripts/mcp-signing-spike.mjs";
 import { decodeJwtPart, signUserJwt, type SigningKey } from "./sign.ts";
@@ -209,6 +210,24 @@ Deno.test("a batch is rejected and ping returns an empty result", async () => {
   }), deps(calls, ok));
   const body = await ping.json();
   assertEquals(body.result, {}, "ping");
+});
+
+Deno.test("status preflight allows the shared request headers", async () => {
+  const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp/status", {
+    method: "OPTIONS",
+    headers: {
+      origin: "https://flow-app-dx5.pages.dev",
+      "access-control-request-method": "POST",
+      "access-control-request-headers": "authorization, apikey, content-type, x-client-info",
+    },
+  }), deps([], {}));
+  assertEquals(response.status, 204, "preflight");
+  assertEquals(response.headers.get("access-control-allow-origin"), "https://flow-app-dx5.pages.dev", "echoed origin");
+  assertEquals(response.headers.get("access-control-allow-headers"), corsAllowHeaders, "shared list");
+  const allowed = new Set((response.headers.get("access-control-allow-headers") ?? "").split(",").map((part) => part.trim()));
+  for (const name of ["authorization", "apikey", "content-type", "x-client-info"]) {
+    assert(allowed.has(name), name);
+  }
 });
 
 Deno.test("mint preflight allows only an app origin", async () => {
