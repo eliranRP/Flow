@@ -133,15 +133,14 @@ describe("setup route history", () => {
     expect(router.state.location.pathname).toBe("/setup/2");
   });
 
-  it("pushes SUMIT connect and returns to step 1", async () => {
+  it("opens SUMIT on step 1 and stays there when the sheet closes", async () => {
     const router = renderRoute("/setup/1");
     fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
+    expect(await screen.findByRole("dialog", { name: "חיבור SUMIT" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/setup/1");
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/settings");
-    });
-    expect(router.state.location.search).toBe("?sheet=sumit&return=%2Fsetup%2F1");
-    await act(async () => {
-      await router.navigate(-1);
+      expect(screen.queryByRole("dialog", { name: "חיבור SUMIT" })).not.toBeInTheDocument();
     });
     expect(router.state.location.pathname).toBe("/setup/1");
   });

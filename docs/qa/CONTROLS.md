@@ -23,6 +23,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Shared | Toast body | Tap or swipe dismisses it. A tap inside the action's hit area does not. A tap on a toast over an open sheet never closes that sheet. The toast sits just above that sheet, at least `--space-2` below the safe area. When the gap is too small it keeps its full height `--space-2` below the safe area. It may cover the grabber and the empty top of the sheet. It never covers a header control, in any frame. The height is measured once before the toast is visible. The sheet pads nothing unless a control would be covered, and then the content moves once, for 200ms, and the toast fades in after that move. A later change of the sheet's own layout places the toast and the pad in the same frame. The pad returns in one 200ms move after the toast leaves. The text is never clipped. A plain confirmation stays 4s. Hover, focus, and a press pause the timer. | never | no | toast gone, sheet stays | none | pass |
 | Shared | Toast action | Runs the labelled action (ביטול, ניסיון חוזר, or לחלוקה). The label stays text-sized. The hit area is at least 44×44, and a tap there runs the action and leaves the sheet open. An action stays 5s. | never | the retry | the action's result, sheet stays | the same error toast again, sheet stays | pass |
 | Shared | Error state, ניסיון חוזר | Refetches the failed query. On a preview error, returns to the empty preview. | never | no | the screen loads, or the empty preview | the error state stays | pass |
+| Shared | הדגמה, שוב | Shown only after the demo ends, in the stage's end corner. A 36px pill with a 44px hit area. The accessible name is הצגה חוזרת. Replays from the first frame, and focus returns to it. The demo plays once and rests on the last frame. The phone is hidden from assistive tech. Reduced motion shows that frame and does not render שוב. The play pauses while the tab is hidden or the stage is off screen, and a resize does not restart it. Horizontal motion uses `--inline-sign` (−1 in RTL) and only `transform` and `opacity`. | never | no | the demo returns to the first frame, then rests on the last and שוב returns. With reduced motion it stays on the last frame and שוב is absent | none | unit |
 | Sign-in | המשך עם Google | Starts Google sign-in. | no Supabase client | pending label while the redirect starts | route `/` or `/onboarding` | notice on `/sign-in` | pass |
 | Sign-in | צריך עזרה בכניסה? | Opens help. Shown only after a failed sign-in. | never | no | route `/help` | none | pass |
 | Sign-in | תנאי שימוש | Opens the terms screen. | never | no | route `/terms` | none | pass |
@@ -40,6 +41,12 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Setup, step 2 | תיוג חכם (Jev) | Sets the switch. The save waits for המשך. | never | no | the switch moves | none | unit |
 | Setup, step 2 | המשך | Saves Jev on or off and moves on. | never | שומר inside the button | the next step, or Home from the card | toast "לא הצלחנו לשמור." | unit |
 | Setup, step 3 | נראה טוב | Confirms the lists and moves on. | never | no | the next step, or Home from the card | none | unit |
+| Setup, step 1 | חיבור SUMIT | Opens the connect sheet. A failed connect toasts above the sheet and keeps the company number and the key. | never | חיבור inside the sheet | the next step, toast "SUMIT מחובר. המפתח נשאר בשרת." | toast above the sheet, values kept, then "SUMIT עוד לא מחובר." | unit |
+| Setup, step 1 | ניסיון חוזר | Reopens the sheet with the company number and the key still filled. | never | no | the sheet opens | none | unit |
+| Setup, step 4 | כרטיס דוגמה | Opens `/review?setup=1`. An empty queue shows one sample card. | never | no | the sample card | none | unit |
+| Review, setup sample | אישור | Writes nothing to the books. Stores `sample_review_at`, shows הכל מאושר, and toasts המשך to step 5. | until the company id is known | no | toast "אישור ראשון. אפשר להמשיך בהגדרה." and route `/setup/5` | none | unit |
+| Setup, step 5 | סיום | Marks the iOS steps seen, or the install, and leaves the run. | never | no | Home, or the next step from inside the run | none | unit |
+| Setup, step 5 | התקנה | Shown only after `beforeinstallprompt`. Runs the saved prompt. | until the prompt exists | no | the browser sheet, then the run ends | none | unit |
 | Home card | הסתרה | Hides the card and toasts above the tab bar. | never | no | toast "ההגדרה זמינה בהגדרות." | none | unit |
 | Home card | ביטול | Brings the card back. | never | no | the card returns | none | unit |
 | Home card | a remaining step | Opens that step alone. | never | no | route `/setup/N?from=card` | none | unit |
@@ -173,7 +180,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Notifications | Back | Returns to settings. | never | no | route `/settings` | none | pass |
 | Install | ✕ and לא עכשיו and הבנתי | Dismiss, back to settings. | never | no | route `/settings` | none | pass |
 | Install | התקנה | Runs the browser install prompt. Android prompt only. | never | no | the browser sheet | none | pass |
-| Install | העתקת קישור | Copies the page URL. Other-browser iPhone only. | never | no | toast "הקישור הועתק" | toast "לא הצלחנו להעתיק את הקישור." | pass |
+| Install | iPhone steps | Three iOS 26 rows, shared with setup step 5, on iPhone, iPad, and another iPhone browser. הבנתי dismisses. The Safari-only sentences are gone. | never | no | route `/settings` | none | e2e |
 
 ## Reviewer preview
 

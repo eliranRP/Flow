@@ -3,9 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
 import { getSupabase } from "../lib/supabase";
 import { JEV_DEFAULT, saveJevIntegration } from "../screens/jev-settings";
+import { hebrewSumitError } from "../sumit-copy";
 import { Button } from "../ui/button";
+import { ANDROID_INSTALL_STEPS, IOS_INSTALL_STEPS } from "../ui/install-copy";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
+import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
 import { detectInstallMode, hasInstallPrompt, isStandalone, runInstallPrompt, type InstallMode } from "../ui/install-prompt";
@@ -14,8 +17,6 @@ import { useCategoriesQuery, useDashboardQuery } from "../use-books";
 import { CountTitle, NameHint } from "./card";
 import {
   DEFAULT_CATEGORY_NAMES,
-  DEMO_ALT,
-  DEMO_ALT_ANDROID,
   JEV_HINT,
   NO_PROJECTS_HINT,
   SAVE_ERROR,
@@ -31,6 +32,7 @@ import {
   setupHost,
 } from "./copy";
 import { SetupStep } from "./shell";
+import { connectSumit } from "./sumit-connect";
 import { markCompanyCreated } from "./storage";
 
 function displayName(metadata: unknown): string {
@@ -115,27 +117,69 @@ export function SumitFailureNote() {
 }
 
 export function StepSumit({
-  failed,
-  onConnect,
+  onConnected,
   onBack,
   onSkip,
 }: {
-  failed: boolean;
-  onConnect: () => void;
+  onConnected: () => void;
   onBack?: () => void;
   onSkip: () => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [companyNumber, setCompanyNumber] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const connect = useWrite({
+    failure: (error) => hebrewSumitError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.",
+    success: "SUMIT מחובר. המפתח נשאר בשרת.",
+    keys: ["sumit", "dashboard"],
+    onSuccess: () => {
+      setOpen(false);
+      onConnected();
+    },
+    run: async () => {
+      await connectSumit(companyNumber, apiKey);
+    },
+  });
+  const failed = connect.isError;
   return (
     <SetupStep
       step={1}
       title={STEP_TITLE[1] ?? ""}
       line="ההכנסות וההוצאות נכנסות לבד."
-      demoAlt={DEMO_ALT[1]}
+      demo="sumit"
       onBack={onBack}
       onSkip={onSkip}
-      primary={<Button type="button" full onClick={onConnect}>{failed ? "ניסיון חוזר" : "חיבור SUMIT"}</Button>}
+      primary={
+        <Button type="button" full onClick={() => { setOpen(true); }}>
+          {failed ? "ניסיון חוזר" : "חיבור SUMIT"}
+        </Button>
+      }
     >
-      {failed ? <SumitFailureNote /> : null}
+      {failed && !open ? <SumitFailureNote /> : null}
+      <Sheet open={open} onOpenChange={setOpen} title="חיבור SUMIT">
+        <form
+          className="ui-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            connect.mutate();
+          }}
+        >
+          <TextField
+            label="מספר חברה"
+            value={companyNumber}
+            inputMode="numeric"
+            onChange={(event) => { setCompanyNumber(event.target.value); }}
+          />
+          <TextField
+            label="מפתח API"
+            type="password"
+            value={apiKey}
+            autoComplete="off"
+            onChange={(event) => { setApiKey(event.target.value); }}
+          />
+          <Button type="submit" busy={connect.isPending}>חיבור</Button>
+        </form>
+      </Sheet>
     </SetupStep>
   );
 }
@@ -163,7 +207,7 @@ export function StepJev({
       step={2}
       title={STEP_TITLE[2] ?? ""}
       line="Flow יציע פרויקט וקטגוריה לכל תנועה."
-      demoAlt={DEMO_ALT[2]}
+      demo="jev"
       onBack={onBack}
       onSkip={onSkip}
       primary={<Button type="button" full busy={save.isPending} onClick={() => { save.mutate(); }}>המשך</Button>}
@@ -202,7 +246,7 @@ export function StepLists({
       step={3}
       title={STEP_TITLE[3] ?? ""}
       line={projects.length > 0 ? "הגיעו מ־SUMIT. אפשר לשנות אחר כך." : "עוד אין פרויקטים. אפשר להוסיף אחר כך."}
-      demoAlt={DEMO_ALT[3]}
+      demo="projects"
       onBack={onBack}
       onSkip={onSkip}
       primary={<Button type="button" full onClick={onConfirm}>נראה טוב</Button>}
@@ -255,7 +299,7 @@ export function StepReview({
           <bdi className="ui-num" dir="ltr">{String(count)}</bdi> תנועות מחכות. אישור הוא הקשה אחת.
         </>
       )}
-      demoAlt={DEMO_ALT[4]}
+      demo="approval"
       onBack={onBack}
       onSkip={onSkip}
       primary={<Button type="button" full onClick={onOpen}>{empty ? "כרטיס דוגמה" : "לאישור"}</Button>}
@@ -265,20 +309,10 @@ export function StepReview({
 
 function installRows(mode: InstallMode): ReactNode {
   if (mode === "android-prompt") return null;
-  if (mode === "android-steps") {
-    return (
-      <ol className="ui-setup-steps">
-        <li>מקישים על <bdi dir="ltr">⋮</bdi> בתפריט של הדפדפן</li>
-        <li>בוחרים ״הוספה למסך הבית״</li>
-        <li>מאשרים ״הוספה״</li>
-      </ol>
-    );
-  }
+  const steps = mode === "android-steps" ? ANDROID_INSTALL_STEPS : IOS_INSTALL_STEPS;
   return (
     <ol className="ui-setup-steps">
-      <li>מקישים <bdi dir="ltr">•••</bdi> בספארי</li>
-      <li>שיתוף ואז הוספה למסך הבית</li>
-      <li>מקישים הוספה</li>
+      {steps.map((step) => <li key={step.id}>{step.text}</li>)}
     </ol>
   );
 }
@@ -319,7 +353,7 @@ export function StepInstall({
       step={5}
       title={STEP_TITLE[5] ?? ""}
       line="Flow נפתח ממסך הבית, במסך מלא."
-      demoAlt={iphone ? DEMO_ALT[5] : DEMO_ALT_ANDROID}
+      demo={iphone ? "ios" : "android"}
       onBack={onBack}
       onSkip={onSkip}
       primary={

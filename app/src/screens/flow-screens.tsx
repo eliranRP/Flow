@@ -86,6 +86,7 @@ import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
+import { SetupSampleReview } from "../setup/sample-review";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
@@ -1032,6 +1033,16 @@ export function ReviewScreen() {
   }
   const rows = source;
   const fromList = listFocusId(params) != null;
+  if (!listing && params.get("setup") === "1" && (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0))) {
+    const fromCard = params.get("from") === "card";
+    return (
+      <SetupSampleReview
+        backTo={fromCard ? "/setup/4?from=card" : "/setup/4"}
+        continueTo={fromCard ? "/" : "/setup/5"}
+        empty={<ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} />}
+      />
+    );
+  }
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
     return <ReviewEmpty search={search} backTo={listing || fromList ? `/review${search}` : undefined} />;
   }

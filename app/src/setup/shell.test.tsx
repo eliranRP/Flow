@@ -24,7 +24,7 @@ describe("setup step chrome", () => {
         step={2}
         title="תיוג חכם"
         line="Flow יציע פרויקט וקטגוריה לכל תנועה."
-        demoAlt="הדגמה: לתנועה נוספת הצעה של פרויקט וקטגוריה, מסומנת הצעה."
+        demo="jev"
         onBack={() => undefined}
         onSkip={skip}
         primary={<Button type="button">המשך</Button>}
@@ -33,13 +33,18 @@ describe("setup step chrome", () => {
     expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuemax", "5");
     expect(screen.getByText(/מתוך/)).toBeInTheDocument();
-    expect(document.querySelector("[data-demo-slot]")).toHaveAttribute("aria-hidden", "true");
+    expect(document.querySelector("[data-demo-slot]")).toBeInTheDocument();
+    expect(document.querySelector(".ui-demo-phone")).toHaveAttribute("aria-hidden", "true");
     const meter = document.querySelector(".ui-setup-meter .ui-bar-thin");
     const setup = document.querySelector(".ui-setup");
     expect(meter).not.toBeNull();
     expect(setup).not.toBeNull();
     if (meter) expect(getComputedStyle(meter).blockSize).toBe("var(--space-1)");
     if (setup) expect(getComputedStyle(setup).paddingBlockStart).toBe("var(--safe-top)");
+    const primary = screen.getByRole("button", { name: "המשך" });
+    const stage = document.querySelector(".ui-demo");
+    expect(stage).not.toBeNull();
+    if (stage) expect(primary.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "דלג" }));
     expect(skip).toHaveBeenCalledOnce();
   });

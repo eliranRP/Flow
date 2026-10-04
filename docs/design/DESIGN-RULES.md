@@ -389,16 +389,18 @@ Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mocku
 
 ### 09 Onboarding
 
-- Strip (not a screen): [09-onboarding-light.png](../../design/screens/09-onboarding-light.png), [09-onboarding-dark.png](../../design/screens/09-onboarding-dark.png).
+First-run setup replaces this strip. The files stay. 09, 09c, and 09e are superseded and are not build tasks. 09b is merged into step 0 (פרטי העסק, uncounted) and then retired. 09d is merged into step 3 and then retired. 09a is unchanged. דלג sits in the top bar, not as a ghost under the primary. The counter is "שלב N מתוך 5". [0089](../decisions/0089-setup-runner.md).
+
+- Strip (not a screen), superseded: [09-onboarding-light.png](../../design/screens/09-onboarding-light.png), [09-onboarding-dark.png](../../design/screens/09-onboarding-dark.png).
 - 09a sign-in: [09a-onboarding-light.png](../../design/screens/09a-onboarding-light.png), [09a-onboarding-dark.png](../../design/screens/09a-onboarding-dark.png). No top bar, no progress. Wordmark, one value line, "כניסה או הרשמה", Google button, privacy line. [0033](../decisions/0033-google-sign-in.md), guide §7.24.
   - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry. No help link.
   - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
-  - Success: a new account goes to 09b. A returning account goes to Home.
-- 09b company: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). Back from step 2. Progress "שלב X מתוך 4".
-- 09c bank report: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
-- 09d projects: [09d-onboarding-light.png](../../design/screens/09d-onboarding-light.png).
-- 09e install and notifications: [09e-onboarding-light.png](../../design/screens/09e-onboarding-light.png). [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md).
-- Each of 09b–09e has a `-dark.png`. Cancel on a step is back. One primary per step. A ghost "דלג לעכשיו" may sit under it. Guide §3.4.
+  - Success: a new account goes to step 0. A returning account goes to Home.
+- 09b company, merged into step 0 and retired: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). The live step has no counter and no דלג.
+- 09c bank report, superseded: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
+- 09d projects, merged into step 3 and retired: [09d-onboarding-light.png](../../design/screens/09d-onboarding-light.png).
+- 09e install and notifications, superseded: [09e-onboarding-light.png](../../design/screens/09e-onboarding-light.png). [0015](../decisions/0015-installable-mobile-web-app.md), [0018](../decisions/0018-two-notifications.md). Install is step 5. Notifications are not a step.
+- Each of 09b–09e has a `-dark.png`. One primary per step. Guide §3.4.
 
 ### 10 Transaction detail
 
@@ -462,9 +464,11 @@ Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The mocku
 
 ### 17 Install prompt
 
-- Android: [17a-install-android-light.png](../../design/screens/17a-install-android-light.png), [17a-install-android-dark.png](../../design/screens/17a-install-android-dark.png). "התקנה" / "לא עכשיו".
-- iPhone: [17b-install-iphone-light.png](../../design/screens/17b-install-iphone-light.png), [17b-install-iphone-dark.png](../../design/screens/17b-install-iphone-dark.png). Three numbered Safari steps, then "הבנתי".
-- Entry: after the first successful report, and only if the app is not installed. Also the onboarding install step. [0029](../decisions/0029-pwa-install-prompt.md), [0015](../decisions/0015-installable-mobile-web-app.md).
+17a stays the later Android offer: the benefit rows, התקנה, and לא עכשיו. That `beforeinstallprompt` path is also step 5, where התקנה appears only after the event. Without it, step 5 shows the three ⋮ rows. 17b stays the later iPhone offer and shares `install-screen.tsx` with step 5. Both use the iOS 26 rows: מקישים ••• בספארי, שיתוף ואז הוספה למסך הבית, מקישים הוספה. "ההתקנה באייפון עובדת רק מספארי." and "פותחים את הקישור הזה בספארי" are retired. Step 5's primary is סיום. The later offer keeps הבנתי. The Hebrew labels (•••, שיתוף, הוספה למסך הבית, Open as Web App drawn as פתיחה כאפליקציה, הוספה, and Compact, Bottom, and Top tab layouts) need a check on a real device before release. The host is `location.host`, and in production `https://flow-app-dx5.pages.dev`.
+
+- Android: [17a-install-android-light.png](../../design/screens/17a-install-android-light.png), [17a-install-android-dark.png](../../design/screens/17a-install-android-dark.png). "התקנה" / "לא עכשיו" on the later offer.
+- iPhone: [17b-install-iphone-light.png](../../design/screens/17b-install-iphone-light.png), [17b-install-iphone-dark.png](../../design/screens/17b-install-iphone-dark.png). The iOS 26 rows, then "הבנתי" on the later offer.
+- Entry: after the first successful report, and only if the app is not installed. Also setup step 5. [0029](../decisions/0029-pwa-install-prompt.md), [0015](../decisions/0015-installable-mobile-web-app.md).
 - Dismiss: "לא עכשיו" or "הבנתי". Do not show it again inside the installed app.
 
 ### 20–23 Confirmation sheets
