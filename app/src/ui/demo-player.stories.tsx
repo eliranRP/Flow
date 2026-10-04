@@ -1,55 +1,9 @@
-import type { Decorator, Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
-import { useLayoutEffect, type ReactNode } from "react";
 import { DemoPlayer } from "./demo-player";
+import { forceReducedMotion } from "./reduced-motion";
 import { longHebrew } from "./story-support";
-
-function reducedMotionList(query: string): MediaQueryList {
-  return {
-    matches: true,
-    media: query,
-    onchange: null,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    dispatchEvent: () => false,
-    addListener: () => undefined,
-    removeListener: () => undefined,
-  };
-}
-
-let originalMatchMedia: typeof window.matchMedia | null = null;
-
-function installReducedMotion() {
-  if (originalMatchMedia) return;
-  originalMatchMedia = window.matchMedia.bind(window);
-  const previous = originalMatchMedia;
-  window.matchMedia = (query: string) => {
-    if (query.includes("prefers-reduced-motion")) return reducedMotionList(query);
-    return previous(query);
-  };
-}
-
-function uninstallReducedMotion() {
-  if (!originalMatchMedia) return;
-  window.matchMedia = originalMatchMedia;
-  originalMatchMedia = null;
-}
-
-function ReducedMotionFrame({ children }: { children: ReactNode }) {
-  installReducedMotion();
-  useLayoutEffect(() => {
-    return () => {
-      uninstallReducedMotion();
-    };
-  }, []);
-  return children;
-}
-
-const forceReducedMotion: Decorator = (Story) => (
-  <ReducedMotionFrame>
-    <Story />
-  </ReducedMotionFrame>
-);
+import "./demo-player.stories.css";
 
 function SampleScene({ title }: { title: string }) {
   return (
@@ -74,8 +28,6 @@ const meta = {
         rules: [
           { id: "heading-order", enabled: false },
           { id: "page-has-heading-one", enabled: false },
-          // COPY: the visible word is שוב and the accessible name is הצגה חוזרת.
-          { id: "label-content-name-mismatch", enabled: false },
         ],
       },
     },
@@ -99,11 +51,12 @@ export const Playing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const root = canvasElement.querySelector(".ui-demo");
-    await waitFor(() => expect(canvas.getByRole("button", { name: "הצגה חוזרת" })).toBeVisible(), { timeout: 3000 });
+    await waitFor(() => expect(canvas.getByRole("button", { name: "שוב" })).toBeVisible(), { timeout: 3000 });
     await expect(root).toHaveAttribute("data-demo-state", "settled");
-    await userEvent.click(canvas.getByRole("button", { name: "הצגה חוזרת" }));
+    await userEvent.click(canvas.getByRole("button", { name: "שוב" }));
     await expect(root).toHaveAttribute("data-demo-state", "playing");
-    await expect(canvas.queryByRole("button", { name: "הצגה חוזרת" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "שוב" })).toBeNull();
+    await expect(canvasElement.querySelector(".ui-demo-replay")).toHaveFocus();
     await waitFor(() => expect(root).toHaveAttribute("data-demo-state", "settled"), { timeout: 3000 });
   },
 };
