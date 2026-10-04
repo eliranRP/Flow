@@ -261,9 +261,15 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check", "e2e", "deploy"]) {
+  for (const name of ["lint", "check", "e2e"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
   }
+  assert.match(job("deploy"), /timeout-minutes: 30\n/);
+  const liveSmoke = job("deploy");
+  assert.ok(liveSmoke.indexOf("bash scripts/cd-smoke.sh") < liveSmoke.indexOf("Read-only smoke of the live app"));
+  assert.match(liveSmoke, /::add-mask::\$SMOKE_PASSWORD/);
+  assert.match(liveSmoke, /SMOKE_EMAIL or SMOKE_PASSWORD is unset/);
+  assert.match(liveSmoke, /exit 0/);
   assert.equal(ci.includes("timeout-minutes: 45"), false);
   assert.equal(ci.includes("timeout-minutes: 40"), false);
   assert.equal(ci.includes("timeout-minutes: 10"), false);
