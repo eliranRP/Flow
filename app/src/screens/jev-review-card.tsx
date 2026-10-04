@@ -104,7 +104,7 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   const confirmed = connector.isSuccess && connector.dataUpdatedAt > 0;
   const knownOn = confirmed && connector.data;
   const waiting = remembered && !confirmed && !connector.isError;
-  const awaitingLive = readable && followsLive && !connector.isSuccess && !connector.isError;
+  const awaitingLive = readable && followsLive && !nothingRemembered && !connector.isSuccess && !connector.isError;
   const suggestions = useQuery({
     queryKey: jevQueueQueryKey(transactionIds),
     enabled: readable && knownOn,

@@ -12,6 +12,7 @@ import {
   boundJevConnectorScope,
   jevConnectorQueryKey,
   jevConnectorStorageKey,
+  jevScopeFollowsLive,
   readJevConnectorFlag,
   resetJevScopeMemory,
   writeJevConnectorFlag,
@@ -454,6 +455,25 @@ describe("cold review scope", () => {
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     fireEvent.click(approve);
     fireEvent.click(approve);
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(db.writes.filter((call) => call.name === "approve_review_item")).toHaveLength(1);
+    });
+  });
+
+  it("approves a tap while an empty company lookup is still waiting on an off connector", async () => {
+    db.restoreSession = true;
+    db.omitCompany = true;
+    db.holdIntegration = new Promise<void>(() => undefined);
+    db.integration = { enabled: false, mode: "off" };
+    db.review = [stored];
+    renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+    await waitFor(() => {
+      expect(jevScopeFollowsLive()).toBe(true);
+    });
+    const approve = screen.getByRole("button", { name: "אישור" });
+    expect(approve).toBeEnabled();
+    expect(document.querySelector("[data-jev-pending]")).toBeNull();
     fireEvent.click(approve);
     await waitFor(() => {
       expect(db.writes.filter((call) => call.name === "approve_review_item")).toHaveLength(1);
