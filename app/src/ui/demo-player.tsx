@@ -1,4 +1,15 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { Button } from "./button";
 import "./demo-player.css";
 
@@ -14,12 +25,58 @@ export type DemoPlayback = {
   reducedMotion: boolean;
 };
 
-const DemoPlaybackContext = createContext<DemoPlayback | null>(null);
+type ShellSnapshot = {
+  settled: boolean;
+  reducedMotion: boolean;
+};
+
+type PlaybackStore = {
+  get: () => DemoPlayback;
+  getShell: () => ShellSnapshot;
+  set: (next: DemoPlayback) => void;
+  subscribe: (listener: () => void) => () => void;
+  subscribeShell: (listener: () => void) => () => void;
+};
+
+const DemoStoreContext = createContext<PlaybackStore | null>(null);
+
+function createPlaybackStore(initial: DemoPlayback): PlaybackStore {
+  let snap = initial;
+  let shell: ShellSnapshot = { settled: initial.settled, reducedMotion: initial.reducedMotion };
+  const listeners = new Set<() => void>();
+  const shellListeners = new Set<() => void>();
+  return {
+    get: () => snap,
+    getShell: () => shell,
+    set(next) {
+      if (next.progress === snap.progress && next.settled === snap.settled && next.reducedMotion === snap.reducedMotion) return;
+      const shellSame = next.settled === shell.settled && next.reducedMotion === shell.reducedMotion;
+      snap = next;
+      for (const listener of listeners) listener();
+      if (!shellSame) {
+        shell = { settled: next.settled, reducedMotion: next.reducedMotion };
+        for (const listener of shellListeners) listener();
+      }
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    subscribeShell(listener) {
+      shellListeners.add(listener);
+      return () => {
+        shellListeners.delete(listener);
+      };
+    },
+  };
+}
 
 export function useDemoPlayback(): DemoPlayback {
-  const value = useContext(DemoPlaybackContext);
-  if (!value) throw new Error("useDemoPlayback must be used inside DemoPlayer");
-  return value;
+  const store = useContext(DemoStoreContext);
+  if (!store) throw new Error("useDemoPlayback must be used inside DemoPlayer");
+  return useSyncExternalStore(store.subscribe, store.get, store.get);
 }
 
 /** 1 in LTR, −1 in RTL. Forward motion is `translateX(calc(var(--inline-sign) * N))`. */
@@ -39,12 +96,6 @@ export function demoProgress(elapsedMs: number, durationMs: number, reducedMotio
   return elapsedMs / durationMs;
 }
 
-/** Physical translateX, in px, for travel toward rest. 0 at the last frame. */
-export function demoTranslateX(progress: number, travelPx: number, inlineSign: number): number {
-  if (progress >= 1) return 0;
-  return inlineSign * (progress - 1) * travelPx;
-}
-
 function readReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
@@ -52,7 +103,7 @@ function readReducedMotion(): boolean {
 export type DemoPlayerProps = {
   /** Visually hidden sentence. The phone is hidden from assistive tech. */
   alt: string;
-  /** Play length in milliseconds. The setup demos use 3000–5000. */
+  /** Play length in milliseconds. The setup demos use 3000–4600. */
   durationMs: number;
   children: ReactNode;
 };
@@ -60,42 +111,69 @@ export type DemoPlayerProps = {
 /**
  * Tint stage with a phone outline rising from the bottom.
  * Plays once, rests on the last frame, then shows שוב in the end corner.
- * Sets `--inline-sign` (−1 under RTL) and `--demo-progress` (0 to 1).
+ * Sets `--inline-sign` (−1 under RTL) once, and writes `--demo-progress` (0 to 1) on the stage.
  * `prefers-reduced-motion` shows the last frame and does not render שוב.
  * Pauses while the tab is hidden or the stage is off screen, and does not restart on resize.
  * The phone is scaled from a 320px screen (0.6125 at a 390 viewport).
  */
 export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
-  const [reduced, setReduced] = useState(readReducedMotion);
+  const storeRef = useRef<PlaybackStore | null>(null);
+  if (!storeRef.current) {
+    const reducedMotion = readReducedMotion();
+    storeRef.current = createPlaybackStore({
+      progress: reducedMotion ? 1 : 0,
+      settled: reducedMotion,
+      reducedMotion,
+    });
+  }
+  const store = storeRef.current;
+  const shell = useSyncExternalStore(store.subscribeShell, store.getShell, store.getShell);
   const [runId, setRunId] = useState(0);
-  const [progress, setProgress] = useState(() => (readReducedMotion() ? 1 : 0));
-  const [settled, setSettled] = useState(readReducedMotion);
   const [sign, setSign] = useState(() => inlineSignForDirection(document.documentElement.dir || "rtl"));
+  const [showReplay, setShowReplay] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const restoreFocus = useRef(false);
-  const wasSettled = useRef(settled);
+  const phoneRef = useRef<HTMLDivElement>(null);
+  const replayFocus = useRef(false);
+  const reduced = shell.reducedMotion;
+  const settled = shell.settled;
+
+  const publish = useCallback((progress: number, nextSettled: boolean, reducedMotion: boolean) => {
+    rootRef.current?.style.setProperty("--demo-progress", String(progress));
+    store.set({ progress, settled: nextSettled, reducedMotion });
+  }, [store]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const onChange = () => {
-      setReduced(media.matches);
+      const matches = media.matches;
+      const current = store.get();
+      publish(matches ? 1 : current.progress, matches ? true : current.settled, matches);
     };
     media.addEventListener("change", onChange);
-    setReduced(media.matches);
+    onChange();
     return () => {
       media.removeEventListener("change", onChange);
     };
-  }, []);
+  }, [publish, store]);
 
   useLayoutEffect(() => {
     const el = rootRef.current;
     if (!el) return;
+    const next = inlineSignForDirection(getComputedStyle(el).direction);
+    setSign((current) => (current === next ? current : next));
+  }, []);
+
+  useLayoutEffect(() => {
+    const phone = phoneRef.current;
+    const root = rootRef.current;
+    if (!phone || !root || typeof ResizeObserver !== "function") return;
     const apply = () => {
-      setSign(inlineSignForDirection(getComputedStyle(el).direction));
+      const width = phone.getBoundingClientRect().width;
+      if (width > 0) root.style.setProperty("--demo-scale", String(width / 320));
     };
     apply();
-    const observer = new MutationObserver(apply);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["dir"] });
+    const observer = new ResizeObserver(apply);
+    observer.observe(phone);
     return () => {
       observer.disconnect();
     };
@@ -103,12 +181,10 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
 
   useEffect(() => {
     if (reduced || !Number.isFinite(durationMs) || durationMs <= 0) {
-      setProgress(1);
-      setSettled(true);
+      publish(1, true, reduced);
       return;
     }
-    setSettled(false);
-    setProgress(0);
+    publish(0, false, false);
     const root = rootRef.current;
     let started: number | null = null;
     let lastElapsed = -1;
@@ -138,11 +214,8 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
       if (elapsed < 0) elapsed = 0;
       lastElapsed = elapsed;
       const next = demoProgress(elapsed, durationMs, false);
-      setProgress(next);
-      if (next >= 1) {
-        setSettled(true);
-        return;
-      }
+      publish(next, next >= 1, false);
+      if (next >= 1) return;
       frame = requestAnimationFrame(tick);
       running = true;
     };
@@ -184,41 +257,42 @@ export function DemoPlayer({ alt, durationMs, children }: DemoPlayerProps) {
       document.removeEventListener("visibilitychange", onVis);
       observer?.disconnect();
     };
-  }, [reduced, durationMs, runId]);
+  }, [publish, reduced, durationMs, runId, store]);
+
+  useEffect(() => {
+    if (settled && !reduced) setShowReplay(true);
+  }, [settled, reduced]);
 
   useLayoutEffect(() => {
-    const returned = settled && !wasSettled.current;
-    wasSettled.current = settled;
-    if (!returned || reduced || !restoreFocus.current) return;
+    if (!replayFocus.current || reduced || !showReplay) return;
     const button = rootRef.current?.querySelector(".ui-demo-replay");
     if (button instanceof HTMLButtonElement) button.focus();
-    restoreFocus.current = false;
-  }, [settled, reduced]);
+  }, [runId, settled, reduced, showReplay]);
 
   function replay() {
     if (reduced) return;
-    restoreFocus.current = true;
+    replayFocus.current = true;
     setRunId((id) => id + 1);
   }
 
-  const playback: DemoPlayback = { progress, settled, reducedMotion: reduced };
   const demoStyle = {
     "--inline-sign": String(sign),
-    "--demo-progress": String(progress),
+    "--demo-progress": String(store.get().progress),
   } as CSSProperties;
+  const replayVisible = showReplay && !reduced;
 
   return (
     <div ref={rootRef} className="ui-demo" data-demo-state={settled ? "settled" : "playing"} data-reduced-motion={reduced ? "true" : "false"} style={demoStyle}>
-      <p className="ui-demo-label">{alt}</p>
-      <div className="ui-demo-phone" aria-hidden="true" inert>
+      <p className="ui-toast-live">{alt}</p>
+      <div ref={phoneRef} className="ui-demo-phone" aria-hidden="true" inert>
         <div className="ui-demo-fit">
           <div className="ui-demo-screen">
-            <DemoPlaybackContext.Provider value={playback}>{children}</DemoPlaybackContext.Provider>
+            <DemoStoreContext.Provider value={store}>{children}</DemoStoreContext.Provider>
           </div>
         </div>
       </div>
-      {settled && !reduced ? (
-        <Button variant="pill" className="ui-demo-replay" aria-label="הצגה חוזרת" onClick={replay}>
+      {replayVisible ? (
+        <Button variant="pill" className="ui-demo-replay" onClick={replay}>
           שוב
         </Button>
       ) : null}
