@@ -688,9 +688,9 @@ These sums gain `not exists (select 1 from public.categories c where c.id = t.ca
 
 A Mercury credit whose description is `IO Cashback` gets `category_hint` `הכנסה אחרת` (other income). That category is already seeded and is not excluded from P&L. VAT stays 0. The adapter sets the hint. L2b. This is income. A card refund is not this rule.
 
-## Future decision record (not numbered, not accepted)
+## Loans
 
-**Loans and amortization.** This is the feature after the connector stack. It is not part of L0–L3. A loan is set up once: lender match, balance, rate, start, term, and escrow, through a form or MCP. Flow builds the schedule and splits each matched payment into interest (P&L expense `ריבית משכנתא`), escrow (taxes and insurance), and principal (off-P&L, and the principal reduces the balance), with a correction each month. Until that exists, the whole payment sits in `תשלומי הלוואה`. The canonical line stays one bank line with one `external_id` and one `amount_original`. A later three-way split attaches three category amounts to that same line. It does not create three provider lines, and it does not change the allocations' project shares. This stack does not build the schedule, the form, or the split.
+Accepted in [0088](../decisions/0088-loans.md). The connector stack does not build the schedule, the form, or the split. A loan is set up once: lender match, balance, rate, start, term, and escrow, through a form or MCP. Flow builds the schedule and splits each matched payment into interest (P&L expense `ריבית משכנתא`), escrow (taxes and insurance, P&L expense `מסים וביטוח`), and principal (off-P&L `תשלומי הלוואה`, and the principal reduces the balance), with a correction each month. Until a payment is split, the whole line sits in `תשלומי הלוואה`. The canonical line stays one bank line with one `external_id` and one `amount_original`. The three-way split attaches three category amounts to that same line. It does not create three provider lines, and it does not change the allocations' project shares.
 
 ## FX and reprice
 

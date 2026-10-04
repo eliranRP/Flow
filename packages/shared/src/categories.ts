@@ -14,3 +14,8 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
 ] as const;
 
 export const DEFAULT_INCOME_CATEGORIES = ["תקבול מלקוח", "הכנסה אחרת"] as const;
+
+/** Loan split categories. Decision 0088. Principal stays off the P&L. */
+export const LOAN_INTEREST_CATEGORY = "ריבית משכנתא";
+export const LOAN_ESCROW_CATEGORY = "מסים וביטוח";
+export const LOAN_PRINCIPAL_CATEGORY = "תשלומי הלוואה";
