@@ -5,6 +5,7 @@ export {
   divHalfEven,
   formatIls,
   netFromGrossAgorot,
+  parseDecimalHalfEven,
   parseShekelInput,
   rateFractionToBp,
   roundedProfitAgorot,
