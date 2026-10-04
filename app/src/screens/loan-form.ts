@@ -1,6 +1,7 @@
 import {
   buildLoanSchedule,
   contractualPaymentMinor,
+  divHalfEven,
   LOAN_TERM_MONTHS_MAX,
   LoanScheduleError,
   parseDecimalHalfEven,
@@ -10,7 +11,6 @@ import {
 } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
 import { getSupabase } from "../lib/supabase";
-import { assertNoError } from "../use-write";
 
 export type LoanCurrency = "ILS" | "USD";
 
@@ -49,8 +49,10 @@ export function formatLoanMoney(minor: bigint, currency: LoanCurrency): string {
   const abs = negative ? -minor : minor;
   const sign = negative ? "−" : "";
   const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  const frac = (abs % 100n).toString().padStart(2, "0");
-  return `${sign}${LOAN_CURRENCY_MARK[currency]}${whole}.${frac}`;
+  const frac = abs % 100n;
+  const mark = LOAN_CURRENCY_MARK[currency];
+  if (frac === 0n) return `${sign}${mark}${whole}`;
+  return `${sign}${mark}${whole}.${frac.toString().padStart(2, "0")}`;
 }
 
 export function minorToInput(minor: bigint): string {
@@ -98,10 +100,23 @@ export type LoanPreview =
       /**
        * Set when the final principal-and-interest is at least twice the regular
        * one, and the loan is not a balloon. Escrow is left out of both sides.
+       * The sheet shows this instead of the adjusted line, with the amount once.
        */
       largeFinalMinor: bigint | null;
       insert: Omit<LoanInsert, "company_id">;
     };
+
+export type LoanField = "name" | "principal" | "rate" | "term" | "escrow" | "payment";
+
+export type LoanFieldErrors = Partial<Record<LoanField, string>>;
+
+export type LoanFinalLine = {
+  tone: "plain" | "caution";
+  lead: string;
+  /** One decimal, only when the final principal-and-interest is above twice. */
+  times?: string;
+  amountMinor: bigint;
+};
 
 function minorOf(text: string): bigint | null {
   const trimmed = text.trim();
@@ -198,6 +213,82 @@ export function loanPreview(draft: LoanDraft): LoanPreview {
   }
 }
 
+type AmountState = "empty" | "minus" | "zero" | "large" | bigint;
+
+function amountState(text: string): AmountState {
+  const trimmed = text.trim();
+  if (trimmed === "" || trimmed.endsWith(".")) return trimmed.startsWith("-") ? "minus" : "empty";
+  if (trimmed.startsWith("-")) return "minus";
+  try {
+    const minor = parseDecimalHalfEven(trimmed.replace(/[\s,]/g, ""), 2);
+    if (minor < 0n) return "minus";
+    if (minor === 0n) return "zero";
+    if (minor > SAFE_MINOR) return "large";
+    return minor;
+  } catch {
+    return "empty";
+  }
+}
+
+/** One line for the final payment. A 2× warning replaces the adjusted line. */
+export function loanFinalLine(preview: Extract<LoanPreview, { status: "ready" }>): LoanFinalLine | null {
+  if (preview.balloon) {
+    return { tone: "plain", lead: "התשלום האחרון גבוה יותר", amountMinor: preview.balloon.amountMinor };
+  }
+  const pi = preview.paymentMinor - preview.escrowMinor;
+  if (preview.largeFinalMinor != null && pi > 0n) {
+    const finalPi = preview.largeFinalMinor - preview.escrowMinor;
+    if (finalPi === pi * 2n) {
+      return { tone: "caution", lead: "התשלום האחרון כפול", amountMinor: preview.largeFinalMinor };
+    }
+    if (finalPi > pi * 2n) {
+      const tenths = divHalfEven(finalPi * 10n, pi);
+      const times = `${(tenths / 10n).toString()}.${(tenths % 10n).toString()}`;
+      return { tone: "caution", lead: "התשלום האחרון גבוה פי", times, amountMinor: preview.largeFinalMinor };
+    }
+  }
+  if (preview.finalAdjustment) {
+    return { tone: "plain", lead: "תשלום אחרון מותאם", amountMinor: preview.finalAdjustment.amountMinor };
+  }
+  return null;
+}
+
+/** Every blocking field at once. An incomplete rate or amount is not an error. */
+export function loanFieldErrors(draft: LoanDraft, preview: LoanPreview): LoanFieldErrors {
+  const errors: LoanFieldErrors = {};
+  if (draft.name.trim() === "") errors.name = "חסר מלווה.";
+
+  const principal = amountState(draft.principal);
+  if (principal === "minus") errors.principal = "הסכום שלילי.";
+  else if (principal === "zero") errors.principal = "חסר סכום.";
+  else if (principal === "large") errors.principal = "הסכום גדול מדי.";
+
+  const rate = draft.rate.trim();
+  if (rate.startsWith("-")) errors.rate = "הריבית שלילית.";
+  else if (rate !== "" && !rate.endsWith(".") && ratePpmOf(rate) == null) errors.rate = "הריבית היא עד 100%.";
+
+  if (draft.term.trim() === "") errors.term = "חסרה תקופה.";
+  else if (draft.term.startsWith("-") || termOf(draft.term) == null) errors.term = "התקופה היא בין חודש אחד ל־600.";
+
+  const escrowText = draft.escrow.trim() === "" ? "0" : draft.escrow;
+  const escrow = amountState(escrowText);
+  if (escrow === "minus") errors.escrow = "הסכום שלילי.";
+  else if (escrow === "large") errors.escrow = "הסכום גדול מדי.";
+
+  const payment = draft.payment == null || draft.payment === "" ? "empty" : amountState(draft.payment);
+  if (payment === "minus") errors.payment = "הסכום שלילי.";
+  else if (payment === "large") errors.payment = "הסכום גדול מדי.";
+
+  const escrowCoversPayment = typeof escrow === "bigint" && typeof payment === "bigint" && escrow >= payment;
+  if (errors.escrow == null && (escrowCoversPayment || (preview.status === "error" && preview.code === "escrow"))) {
+    errors.escrow = "המסים והביטוח גבוהים מהתשלום.";
+  }
+  if (errors.payment == null && preview.status === "error" && preview.code === "payment_below_interest") {
+    errors.payment = "התשלום לא מכסה את הריבית.";
+  }
+  return errors;
+}
+
 export function loanErrorText(code: string): string {
   if (code === "payment_below_interest") return "התשלום לא מכסה את הריבית.";
   if (code === "rate") return "הריבית היא עד 100%.";
@@ -209,25 +300,12 @@ export function loanErrorText(code: string): string {
 /**
  * Open lines only. One non-USD line keeps shekels.
  * A failure stays shekels: the books are shekels until display currency exists.
+ * TODO(display_currency): read companies.display_currency instead of inferring it from open lines.
  */
 export async function readCompanyLoanCurrency(): Promise<LoanCurrency> {
   const supabase = getSupabase();
   if (!supabase) return "ILS";
-  const other = await supabase
-    .from("transactions")
-    .select("id")
-    .is("removed_at", null)
-    .neq("currency", "USD")
-    .limit(1);
-  assertNoError(other);
-  if ((other.data ?? []).length > 0) return "ILS";
-  const usd = await supabase
-    .from("transactions")
-    .select("id")
-    .is("removed_at", null)
-    .eq("currency", "USD")
-    .limit(1);
-  assertNoError(usd);
-  if ((usd.data ?? []).length > 0) return "USD";
-  return "ILS";
+  const lines = await supabase.from("transactions").select("currency").is("removed_at", null);
+  if (lines.error) return "ILS";
+  return companyLoanCurrency(lines.data.map((row) => row.currency));
 }

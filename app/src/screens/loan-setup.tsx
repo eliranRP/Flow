@@ -1,35 +1,39 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useMemo, useRef, useState, type SubmitEvent } from "react";
-import { BankIcon, ChevronDownIcon } from "../ui/icons";
+import { useEffect, useId, useMemo, useRef, useState, type Ref, type SubmitEvent } from "react";
+import { BankIcon, CalendarIcon, ChevronDownIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { SectionHead } from "../ui/layout";
 import { MoneyField, PercentField } from "../ui/money-field";
-import { SelectField } from "../ui/select-field";
+import { SegmentedControl } from "../ui/segmented-control";
+import { DateSheet } from "../ui/date-sheet";
 import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
+import { formatDisplay } from "../ui/date-math";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
 import {
   LOAN_CURRENCY_MARK,
   firstOfNextMonth,
   formatLoanMoney,
-  loanErrorText,
+  loanFieldErrors,
+  loanFinalLine,
   loanPreview,
   minorToInput,
   readCompanyLoanCurrency,
   type LoanCurrency,
   type LoanDraft,
   type LoanInsert,
+  type LoanPreview,
 } from "./loan-form";
 
 export type { LoanCurrency } from "./loan-form";
 
 const CURRENCIES: Array<{ value: LoanCurrency; label: string }> = [
-  { value: "ILS", label: "שקל (₪)" },
-  { value: "USD", label: "דולר ($)" },
+  { value: "ILS", label: "₪" },
+  { value: "USD", label: "$" },
 ];
 
 export type LoanSetupInitial = {
@@ -43,20 +47,27 @@ export type LoanSetupInitial = {
   payment?: string;
 };
 
+type ReadyPreview = Extract<LoanPreview, { status: "ready" }>;
+
 export function LoanSetupForm({
   companyCurrency,
   initial,
   advancedOpen = false,
   busy = false,
   onSave,
+  onDraft,
+  saveButtonRef,
 }: {
   companyCurrency: LoanCurrency;
   initial?: LoanSetupInitial;
   advancedOpen?: boolean;
   busy?: boolean;
   onSave?: (row: Omit<LoanInsert, "company_id">) => void;
+  onDraft?: (draft: LoanSetupInitial) => void;
+  saveButtonRef?: Ref<HTMLButtonElement>;
 }) {
   const panelId = useId();
+  const dateLabelId = useId();
   const [name, setName] = useState(initial?.name ?? "");
   const [principal, setPrincipal] = useState(initial?.principal ?? "");
   const [rate, setRate] = useState(initial?.rate ?? "");
@@ -66,6 +77,8 @@ export function LoanSetupForm({
   const [currency, setCurrency] = useState<LoanCurrency>(initial?.currency ?? companyCurrency);
   const [payment, setPayment] = useState<string | null>(initial?.payment ?? null);
   const [advanced, setAdvanced] = useState(advancedOpen || initial?.payment != null);
+  const [dateOpen, setDateOpen] = useState(false);
+  const lastReady = useRef<ReadyPreview | null>(null);
   const draft = useMemo<LoanDraft>(() => ({
     name,
     principal,
@@ -77,21 +90,39 @@ export function LoanSetupForm({
     payment,
   }), [name, principal, rate, term, startDate, escrow, currency, payment]);
   const preview = useMemo(() => loanPreview(draft), [draft]);
+  if (preview.status === "ready") lastReady.current = preview;
+  const shown = preview.status === "ready" ? preview : lastReady.current;
+  const errors = useMemo(() => loanFieldErrors(draft, preview), [draft, preview]);
   const mark = LOAN_CURRENCY_MARK[currency];
   const ready = preview.status === "ready";
-  const nameOk = name.trim().length >= 1 && name.trim().length <= 80;
-  const canSave = ready && nameOk && !busy;
-  const errorCode = preview.status === "error" ? preview.code : null;
-  const paymentError = errorCode === "payment_below_interest" ? loanErrorText(errorCode) : undefined;
-  const termError = errorCode === "term" ? loanErrorText(errorCode) : undefined;
-  const rateError = errorCode === "rate" ? loanErrorText(errorCode) : undefined;
-  const dateError = errorCode === "start_date" ? loanErrorText(errorCode) : undefined;
-  const shownPayment = payment ?? (ready ? minorToInput(preview.paymentMinor) : "");
+  const canSave = ready && Object.keys(errors).length === 0;
+  const finalLine = shown == null ? null : loanFinalLine(shown);
+  const computedPayment = shown == null ? "" : minorToInput(shown.paymentMinor);
+  const shownPayment = payment != null ? payment : computedPayment;
+
+  useEffect(() => {
+    onDraft?.({
+      name,
+      principal,
+      rate,
+      term,
+      startDate,
+      escrow,
+      currency,
+      payment: payment ?? undefined,
+    });
+  }, [name, principal, rate, term, startDate, escrow, currency, payment, onDraft]);
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (preview.status !== "ready" || !nameOk || busy) return;
+    if (preview.status !== "ready" || Object.keys(errors).length > 0 || busy) return;
     onSave?.(preview.insert);
+  }
+
+  function onTerm(raw: string) {
+    const negative = raw.trim().startsWith("-");
+    const digits = raw.replace(/\D/g, "").slice(0, 4);
+    setTerm(negative ? (digits === "" ? "-" : `-${digits}`) : digits);
   }
 
   return (
@@ -100,14 +131,34 @@ export function LoanSetupForm({
         label="מלווה"
         value={name}
         maxLength={80}
+        disabled={busy}
+        error={errors.name}
         onChange={(event) => { setName(event.target.value); }}
       />
-      <MoneyField label="סכום מקורי" value={principal} prefix={mark} onValueChange={setPrincipal} />
+      <MoneyField
+        label="סכום מקורי"
+        value={principal}
+        prefix={mark}
+        disabled={busy}
+        keepMinus
+        error={errors.principal}
+        onValueChange={setPrincipal}
+      />
+      <SegmentedControl
+        label="מטבע"
+        showLabel={false}
+        value={currency}
+        options={CURRENCIES}
+        disabled={busy}
+        onChange={setCurrency}
+      />
       <PercentField
         label="ריבית שנתית"
         value={rate}
-        decimals={3}
-        error={rateError}
+        decimals={4}
+        disabled={busy}
+        keepMinus
+        error={errors.rate}
         onValueChange={setRate}
       />
       <TextField
@@ -115,35 +166,48 @@ export function LoanSetupForm({
         value={term}
         dir="ltr"
         inputMode="numeric"
-        error={termError}
-        onChange={(event) => {
-          setTerm(event.target.value.replace(/\D/g, "").slice(0, 3));
-        }}
+        numeric
+        disabled={busy}
+        error={errors.term}
+        onChange={(event) => { onTerm(event.target.value); }}
       />
-      <TextField
-        label="תאריך תשלום ראשון"
-        type="date"
-        dir="ltr"
+      <div className="ui-field">
+        <span id={dateLabelId} className="ui-field-label">תאריך תשלום ראשון</span>
+        <button
+          type="button"
+          className="ui-field-control ui-date-field"
+          aria-labelledby={dateLabelId}
+          aria-haspopup="dialog"
+          disabled={busy}
+          onClick={() => { setDateOpen(true); }}
+        >
+          <bdi className="ui-num" dir="ltr">{formatDisplay(startDate)}</bdi>
+          <CalendarIcon size={20} />
+        </button>
+      </div>
+      <DateSheet
+        open={dateOpen}
+        onOpenChange={setDateOpen}
+        title="תאריך תשלום ראשון"
         value={startDate}
-        error={dateError}
-        onChange={(event) => { setStartDate(event.target.value); }}
+        allowFuture
+        disabled={busy}
+        onApply={setStartDate}
       />
       <MoneyField
         label="מסים וביטוח לחודש"
         value={escrow}
         prefix={mark}
+        disabled={busy}
+        keepMinus
+        error={errors.escrow}
         onValueChange={setEscrow}
-      />
-      <SelectField
-        label="מטבע"
-        value={currency}
-        options={CURRENCIES}
-        onChange={(event) => { setCurrency(event.target.value as LoanCurrency); }}
       />
       <TextLink
         chevron={false}
         expanded={advanced}
         controls={panelId}
+        disabled={busy}
         trailing={<ChevronDownIcon size={16} />}
         onClick={() => { setAdvanced((open) => !open); }}
       >
@@ -155,43 +219,45 @@ export function LoanSetupForm({
             label="תשלום חודשי"
             value={shownPayment}
             prefix={mark}
-            error={paymentError}
-            onValueChange={(next) => { setPayment(next === "" ? null : next); }}
+            disabled={busy}
+            keepMinus
+            error={errors.payment}
+            onValueChange={(next) => { setPayment(next); }}
+            onBlur={() => {
+              setPayment((current) => (current == null || current.trim() === "" ? null : current));
+            }}
           />
         </div>
       ) : null}
-      {ready ? (
+      {shown ? (
         <div aria-live="polite">
           <p>
             תשלום חודשי{" "}
-            <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.paymentMinor, currency)}</bdi>
+            <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.paymentMinor, currency)}</bdi>
           </p>
           <p>
             ריבית כוללת{" "}
-            <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.interestMinor, currency)}</bdi>
+            <bdi className="ui-num" dir="ltr">{formatLoanMoney(shown.interestMinor, currency)}</bdi>
           </p>
-          {preview.balloon ? (
-            <p>
-              התשלום האחרון גבוה יותר,{" "}
-              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.balloon.amountMinor, currency)}</bdi>
-            </p>
-          ) : preview.finalAdjustment != null ? (
-            <p>
-              תשלום אחרון מותאם,{" "}
-              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.finalAdjustment.amountMinor, currency)}</bdi>
-            </p>
-          ) : null}
-          {preview.largeFinalMinor != null ? (
-            <p className="t-hint ui-loan-caution">
-              התשלום האחרון כפול,{" "}
-              <bdi className="ui-num" dir="ltr">{formatLoanMoney(preview.largeFinalMinor, currency)}</bdi>
+          {finalLine ? (
+            <p className={finalLine.tone === "caution" ? "t-hint ui-loan-caution" : undefined}>
+              {finalLine.lead}
+              {finalLine.times ? (
+                <>
+                  {" "}
+                  <bdi className="ui-num" dir="ltr">{finalLine.times}</bdi>
+                </>
+              ) : null}
+              {", "}
+              <bdi className="ui-num" dir="ltr">{formatLoanMoney(finalLine.amountMinor, currency)}</bdi>
             </p>
           ) : null}
         </div>
-      ) : errorCode === "payment_below_interest" && !advanced ? (
-        <p className="ui-field-message" role="alert">{loanErrorText(errorCode)}</p>
       ) : null}
-      <Button type="submit" busy={busy} disabled={!canSave}>שמירה</Button>
+      {!advanced && errors.payment ? (
+        <p className="ui-field-message" role="alert">{errors.payment}</p>
+      ) : null}
+      <Button type="submit" buttonRef={saveButtonRef} busy={busy} disabled={!canSave}>שמירה</Button>
     </form>
   );
 }
@@ -209,6 +275,9 @@ export function LoanSettingsSection({
   const [open, setOpen] = useState(false);
   const setSheet = useSheetHistory("loan-new", open, setOpen);
   const rowRef = useRef<HTMLButtonElement>(null);
+  const saveButton = useRef<HTMLButtonElement>(null);
+  const posted = useRef(false);
+  const draftRef = useRef<LoanSetupInitial | null>(null);
   const query = useQuery({
     queryKey: ["loan-currency", companyId],
     enabled: companyCurrency == null && companyId != null,
@@ -225,13 +294,21 @@ export function LoanSettingsSection({
     },
     success: "ההלוואה נשמרה",
     keys: [],
-    onSuccess: () => { setSheet(false); },
+    onSuccess: () => {
+      draftRef.current = null;
+      setSheet(false);
+    },
     run: async (row) => {
       const supabase = getSupabase();
       if (!supabase || companyId == null) throw new Error("supabase");
       assertNoError(await supabase.from("loans").insert({ ...row, company_id: companyId }));
     },
   });
+
+  function setLoanSheet(next: boolean) {
+    if (!next) draftRef.current = null;
+    setSheet(next);
+  }
 
   return (
     <>
@@ -243,20 +320,27 @@ export function LoanSettingsSection({
           icon={<BankIcon />}
           chevron
           buttonRef={rowRef}
-          onClick={() => { setSheet(true); }}
+          onClick={() => { setLoanSheet(true); }}
         />
       </List>
-      <Sheet open={open} onOpenChange={setSheet} title="הלוואה" returnFocusRef={rowRef}>
+      <Sheet open={open} onOpenChange={setLoanSheet} title="הלוואה" returnFocusRef={rowRef}>
         {currency == null ? (
           <p role="status">טוען…</p>
         ) : (
           <LoanSetupForm
-            key={currency}
             companyCurrency={currency}
+            initial={draftRef.current ?? undefined}
             busy={save.isPending}
+            saveButtonRef={saveButton}
+            onDraft={(next) => { draftRef.current = next; }}
             onSave={(row) => {
               if (blocked?.()) return;
-              save.mutate(row);
+              if (posted.current || save.isPending) return;
+              posted.current = true;
+              save.mutate(row, {
+                onError: () => { saveButton.current?.focus(); },
+                onSettled: () => { posted.current = false; },
+              });
             }}
           />
         )}

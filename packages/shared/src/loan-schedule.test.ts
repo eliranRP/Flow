@@ -258,6 +258,42 @@ describe("buildLoanSchedule", () => {
     })).toBe(4n);
   });
 
+  it("rounds a half down to the even minor unit", () => {
+    expect(contractualPaymentMinor({
+      principalMinor: 5n,
+      annualRatePpm: 0,
+      termMonths: 2,
+    })).toBe(2n);
+  });
+
+  it("leaves an early payoff inside the rounding band off the adjusted final", () => {
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
+      principalMinor: 8n,
+      annualRatePpm: 0,
+      termMonths: 4,
+      startDate: "2026-01-01",
+      paymentMinor: 3n,
+      escrowMinor: 0n,
+    });
+    expect(rows.map((row) => row.paymentMinor)).toEqual([3n, 3n, 2n]);
+    expect(balloon).toBeNull();
+    expect(finalAdjustment).toBeNull();
+  });
+
+  it("leaves a full term outside the one cent band off the adjusted final", () => {
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
+      principalMinor: 100n,
+      annualRatePpm: 0,
+      termMonths: 4,
+      startDate: "2026-01-01",
+      paymentMinor: 30n,
+      escrowMinor: 0n,
+    });
+    expect(rows.map((row) => row.paymentMinor)).toEqual([30n, 30n, 30n, 10n]);
+    expect(balloon).toBeNull();
+    expect(finalAdjustment).toBeNull();
+  });
+
   it("keeps a 600 month final payment of twice the regular one off the balloon", () => {
     const { rows, balloon, finalAdjustment } = buildLoanSchedule({
       principalMinor: 360_600n,
