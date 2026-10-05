@@ -68,7 +68,7 @@ export function SetupStep({
       ) : null}
       <div className="ui-setup-copy">
         <FocusTitle className="t-title-1">{title}</FocusTitle>
-        <p className="ui-setup-line t-body">{line}</p>
+        <p className="ui-setup-line t-label">{line}</p>
       </div>
       {demoAlt ? <DemoSlot alt={demoAlt} /> : null}
       {children ? <div className="ui-setup-body">{children}</div> : null}

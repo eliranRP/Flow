@@ -2,13 +2,12 @@ import { useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } 
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
 import { getSupabase } from "../lib/supabase";
-import { saveJevIntegration } from "../screens/jev-settings";
+import { JEV_DEFAULT, saveJevIntegration } from "../screens/jev-settings";
 import { Button } from "../ui/button";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
 import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
-import { TagIcon } from "../ui/icons";
 import { detectInstallMode, hasInstallPrompt, isStandalone, runInstallPrompt, type InstallMode } from "../ui/install-prompt";
 import { assertNoError, useWrite } from "../use-write";
 import { useCategoriesQuery, useDashboardQuery } from "../use-books";
@@ -26,6 +25,7 @@ import {
   VAT_HINT,
   categoryTitle,
   nameHint,
+  visibleCategoryNames,
   projectTitle,
   reviewLine,
   setupHost,
@@ -152,10 +152,10 @@ export function StepJev({
   const [on, setOn] = useState(true);
   const save = useWrite({
     failure: SAVE_ERROR,
-    keys: ["setup-jev"],
+    keys: ["setup-jev", "jev-integration"],
     onSuccess: onSaved,
     run: async () => {
-      await saveJevIntegration({ enabled: on, mode: on ? "shadow" : "off", threshold: 0.9 });
+      await saveJevIntegration({ enabled: on, mode: on ? JEV_DEFAULT.mode : "off", threshold: JEV_DEFAULT.threshold });
     },
   });
   return (
@@ -168,25 +168,24 @@ export function StepJev({
       onSkip={onSkip}
       primary={<Button type="button" full busy={save.isPending} onClick={() => { save.mutate(); }}>המשך</Button>}
     >
-      <Toggle
-        icon={<TagIcon size={24} />}
-        label="תיוג חכם (Jev)"
-        hint={JEV_HINT}
-        checked={on}
-        busy={save.isPending}
-        onChange={setOn}
-      />
+      <div className="ui-setup-jev">
+        <Toggle
+          label={"תיוג חכם \u2066(Jev)\u2069"}
+          hint={JEV_HINT}
+          checked={on}
+          busy={save.isPending}
+          onChange={setOn}
+        />
+      </div>
     </SetupStep>
   );
 }
 
 export function StepLists({
-  sumitConnected,
   onBack,
   onSkip,
   onConfirm,
 }: {
-  sumitConnected: boolean;
   onBack?: () => void;
   onSkip: () => void;
   onConfirm: () => void;
@@ -194,21 +193,21 @@ export function StepLists({
   const dashboard = useDashboardQuery();
   const categories = useCategoriesQuery();
   const projects = (dashboard.data?.projects ?? []).map((project) => project.name).filter((name) => name !== "");
-  const loaded = categories.data?.map((row) => row.name).filter((name) => name !== "") ?? [];
-  const names = !categories.isLoading && loaded.length === 0 ? [...DEFAULT_CATEGORY_NAMES] : loaded;
+  const loaded = visibleCategoryNames(categories.data ?? []);
+  const names = !categories.isLoading && (categories.data?.length ?? 0) === 0 ? [...DEFAULT_CATEGORY_NAMES] : loaded;
   const projectHint = nameHint(projects, 2);
   const categoryHint = nameHint(names, 3);
   return (
     <SetupStep
       step={3}
       title={STEP_TITLE[3] ?? ""}
-      line={sumitConnected ? "הגיעו מ־SUMIT. אפשר לשנות אחר כך." : "עוד אין פרויקטים. אפשר להוסיף אחר כך."}
+      line={projects.length > 0 ? "הגיעו מ־SUMIT. אפשר לשנות אחר כך." : "עוד אין פרויקטים. אפשר להוסיף אחר כך."}
       demoAlt={DEMO_ALT[3]}
       onBack={onBack}
       onSkip={onSkip}
       primary={<Button type="button" full onClick={onConfirm}>נראה טוב</Button>}
     >
-      <List>
+      <List className="ui-setup-panel">
         <ListRow
           variant="item"
           href="/projects"
@@ -294,20 +293,22 @@ export function StepInstall({
   onFinish: (kind: "ios" | "install") => void;
 }) {
   const [mode, setMode] = useState<InstallMode>(() => detectInstallMode());
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
   useEffect(() => {
     function onPrompt() {
       if (hasInstallPrompt()) setMode(detectInstallMode());
     }
-    window.addEventListener("beforeinstallprompt", onPrompt);
     function onInstalled() {
-      onFinish("install");
+      onFinishRef.current("install");
     }
+    window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("appinstalled", onInstalled);
     };
-  }, [onFinish]);
+  }, []);
   const iphone = mode === "iphone" || mode === "iphone-other" || mode === "ipad";
   const prompt = mode === "android-prompt";
   const standalone = isStandalone();
@@ -336,7 +337,9 @@ export function StepInstall({
           >
             התקנה
           </Button>
-        ) : null
+        ) : (
+          <Button type="button" full onClick={() => { onFinish("install"); }}>סיום</Button>
+        )
       }
     >
       <p className="sr-only">הכתובת בספארי היא <bdi dir="ltr">{host}</bdi>.</p>

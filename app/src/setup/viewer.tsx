@@ -4,25 +4,27 @@ import { getSupabase } from "../lib/supabase";
 import { usePreviewMode } from "../preview";
 
 /**
- * Same rule as the viewer read: a missing row or a failed owner read is not a viewer.
- * The query key is shared so the two reads stay one cache entry.
+ * Fail closed until the shared role gate exists.
+ * TODO: switch to #42's useCompanyRole / useWriteGate once #42 merges.
+ * An error or a missing row counts as a viewer, so setup does not write.
  */
 export function useSetupViewer(): { ready: boolean; viewer: boolean } {
   const preview = usePreviewMode();
   const { status, session } = useAuth();
   const userId = session?.user.id;
   const query = useQuery({
-    queryKey: ["company-owner"],
+    queryKey: ["company-owner", userId],
     enabled: status === "authed" && !preview && userId != null,
     queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase || typeof supabase.from !== "function") return false;
+      if (!supabase || typeof supabase.from !== "function") throw new Error("owner");
       const { data, error } = await supabase.from("companies").select("owner_id").maybeSingle();
-      if (error || data == null || typeof data.owner_id !== "string") return false;
+      if (error || data == null || typeof data.owner_id !== "string") throw new Error("owner");
       return data.owner_id !== userId;
     },
   });
-  if (status !== "authed" || preview) return { ready: true, viewer: false };
-  if (query.isLoading) return { ready: false, viewer: false };
-  return { ready: true, viewer: query.data === true };
+  if (status !== "authed" || preview || userId == null) return { ready: true, viewer: false };
+  if (query.isError) return { ready: true, viewer: true };
+  if (!query.isSuccess) return { ready: false, viewer: false };
+  return { ready: true, viewer: query.data };
 }

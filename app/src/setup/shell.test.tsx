@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "../ui/button";
 import { SetupCard } from "./card";
+import "./setup.css";
 import { SetupStep } from "./shell";
 import { SumitFailureNote } from "./steps";
 
@@ -33,6 +34,12 @@ describe("setup step chrome", () => {
     expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuemax", "5");
     expect(screen.getByText(/מתוך/)).toBeInTheDocument();
     expect(document.querySelector("[data-demo-slot]")).toHaveAttribute("aria-hidden", "true");
+    const meter = document.querySelector(".ui-setup-meter .ui-bar-thin");
+    const setup = document.querySelector(".ui-setup");
+    expect(meter).not.toBeNull();
+    expect(setup).not.toBeNull();
+    if (meter) expect(getComputedStyle(meter).blockSize).toBe("var(--space-1)");
+    if (setup) expect(getComputedStyle(setup).paddingBlockStart).toBe("var(--safe-top)");
     fireEvent.click(screen.getByRole("button", { name: "דלג" }));
     expect(skip).toHaveBeenCalledOnce();
   });

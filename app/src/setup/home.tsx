@@ -67,6 +67,9 @@ function SetupHomeReady({
             update((current) => withPatch(current, { card_dismissed_at: null }));
           },
         });
+        window.setTimeout(() => {
+          document.querySelector<HTMLButtonElement>(".ui-toast-action")?.focus();
+        }, 0);
       }}
     />
   );

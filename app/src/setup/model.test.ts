@@ -48,11 +48,11 @@ describe("setup step model", () => {
     expect(firstResumable(store, state)).toBe(3);
   });
 
-  it("hides the skipped SUMIT row only while Home is empty", () => {
-    const store = skipPatch(started(), 1, at);
+  it("hides the SUMIT row whenever Home is empty", () => {
     const state = facts();
-    expect(cardRows(store, state, true)).toEqual([2, 3, 4, 5]);
-    expect(cardRows(store, state, false)).toEqual([1, 2, 3, 4, 5]);
+    expect(cardRows(started(), state, true)).toEqual([2, 3, 4, 5]);
+    expect(cardRows(started(), state, false)).toEqual([1, 2, 3, 4, 5]);
+    expect(cardRows(skipPatch(started(), 1, at), state, true)).not.toContain(1);
   });
 
   it("opens step 0 until a company exists, and does not start a finished account", () => {

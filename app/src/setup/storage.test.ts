@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptySetupStore, parseSetupStore, readSetupStore, setupStorageKey, writeSetupStore } from "./storage";
 
 afterEach(() => {
@@ -19,7 +19,24 @@ describe("setup storage", () => {
     localStorage.setItem(setupStorageKey("user-a", "company-a"), "{");
     expect(readSetupStore("user-a", "company-a")).toEqual(emptySetupStore());
     expect(parseSetupStore("null")).toEqual(emptySetupStore());
+    expect(parseSetupStore("[]")).toEqual(emptySetupStore());
+    expect(parseSetupStore(JSON.stringify({ run_started_at: 4, skipped: { "9": "2026-10-04T00:00:00.000Z", "2": "" } }))).toEqual(emptySetupStore());
     writeSetupStore(null, "company-a", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
     expect(localStorage.length).toBe(1);
+  });
+
+  it("treats a storage throw as an empty read and a no-op write", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(readSetupStore("user-a", "company-a")).toEqual(emptySetupStore());
+    getItem.mockRestore();
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(() => {
+      writeSetupStore("user-a", "company-a", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    }).not.toThrow();
+    setItem.mockRestore();
   });
 });

@@ -262,7 +262,8 @@ export function placeToast(layer: HTMLElement): void {
   }
   const height = toast instanceof HTMLElement ? toast.getBoundingClientRect().height : 0;
   if (layer.dataset.place === "tab") {
-    const gap = cssPx("--space-2");
+    const gap = cssPx("--space-4");
+    layer.style.paddingInline = "var(--space-4)";
     const safe = safeTopPx();
     const bar = tabBarObstacle();
     const top = bar && height > 0
@@ -271,6 +272,7 @@ export function placeToast(layer: HTMLElement): void {
     layer.style.top = `${String(top)}px`;
     return;
   }
+  layer.style.paddingInline = "";
   const { sheet, anchor, gap, inset } = toastAnchor(layer);
   const safe = safeTopPx();
   const ignoreDrawers = layer.dataset.place === "page";
