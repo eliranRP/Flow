@@ -18,6 +18,19 @@ vi.mock("./lib/supabase", () => ({
         return { data: { subscription: { unsubscribe: () => undefined } } };
       },
     },
+    from: () => {
+      const result = { data: { owner_id: "11111111-1111-1111-1111-111111111111" }, error: null };
+      const next = {
+        select: () => next,
+        eq: () => next,
+        in: () => next,
+        limit: () => next,
+        maybeSingle: () => Promise.resolve(result),
+        then: (onFulfilled: (value: typeof result) => unknown, onRejected?: (reason: unknown) => unknown) =>
+          Promise.resolve(result).then(onFulfilled, onRejected),
+      };
+      return next;
+    },
     rpc: (name: string) => {
       if (name === "get_dashboard") {
         return Promise.resolve({
