@@ -8,7 +8,6 @@ import "./demo-player.stories.css";
 function SampleScene({ title }: { title: string }) {
   return (
     <div className="ui-demo-scene">
-      <p className="ui-demo-example t-hint">נתוני דוגמה · Example data</p>
       <div className="ui-demo-card ui-demo-slide">
         <p className="t-title-3">{title}</p>
         <p className="t-body">
