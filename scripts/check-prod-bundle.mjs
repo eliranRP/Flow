@@ -48,6 +48,28 @@ const modulePatterns = [
   /[/\\]assistant-sample\./,
 ];
 
+/** The setup stage and its player ship. A fixture file named demo* stays blocked. */
+function isSetupProductModule(id) {
+  return /[/\\]setup[/\\]demo-slot\.tsx$/.test(id) || /[/\\]ui[/\\]demo-player\.tsx$/.test(id);
+}
+
+/** @param {string} id */
+function isBlockedModule(id) {
+  if (isSetupProductModule(id)) return false;
+  return modulePatterns.some((pattern) => pattern.test(id));
+}
+
+/**
+ * The setup sample card and the setup drawings use the example tag.
+ * A story, a reviewer screen, or a fixture in the same graph still fails.
+ * @param {string[]} modules
+ */
+function setupExampleCopyShips(modules) {
+  const ships = modules.some((id) => /[/\\]setup[/\\]sample-review\.tsx$/.test(id) || /[/\\]ui[/\\]setup-demos\.tsx$/.test(id));
+  if (!ships) return false;
+  return !modules.some((id) => isBlockedModule(id));
+}
+
 /**
  * @param {{ modules: string[], files: { name: string, body: string }[] }} input
  * @returns {string[]}
@@ -70,9 +92,7 @@ const sourceMarkers = [
 export function violations(input) {
   const found = [];
   for (const id of input.modules) {
-    if (modulePatterns.some((pattern) => pattern.test(id))) {
-      found.push(`module graph includes ${id}`);
-    }
+    if (isBlockedModule(id)) found.push(`module graph includes ${id}`);
   }
   for (const file of input.files) {
     if (
@@ -89,7 +109,9 @@ export function violations(input) {
     for (const needle of jevBundleNeedles) {
       if (file.body.includes(needle)) found.push(`${file.name} contains ${needle}`);
     }
-    if (file.body.includes("Example data")) found.push(`${file.name} contains Example data`);
+    if (file.body.includes("Example data") && !setupExampleCopyShips(input.modules)) {
+      found.push(`${file.name} contains Example data`);
+    }
     if (file.body.includes("/e2e/")) found.push(`${file.name} contains /e2e/`);
     for (const marker of ["sampleSaveMode", "sampleRun", "reviewerBooks", "reviewerQueue", "reviewer-preview", "reviewer-sample"]) {
       if (file.body.includes(marker)) found.push(`${file.name} contains ${marker}`);
