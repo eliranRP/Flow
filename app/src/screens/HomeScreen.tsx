@@ -102,7 +102,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
           title="עוד אין נתונים"
           body="הרווח יופיע כאן אחרי ש־SUMIT מחובר."
           action={
-            <Button variant="pill" to={`/settings${search}`}>
+            <Button variant="pill" to={previewing ? `/settings${search}` : "/setup/1?from=card"}>
               חיבור SUMIT
             </Button>
           }

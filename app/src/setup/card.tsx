@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
 import { List, ListRow } from "../ui/list-row";
+import { ProgressBar } from "../ui/progress-bar";
 import { TextLink } from "../ui/text-link";
 import { SETUP_TOTAL, STEP_TITLE } from "./copy";
 import type { CountedStep } from "./model";
+
+function OpenRing() {
+  return <span className="ui-setup-ring" aria-hidden="true" />;
+}
 
 export function SetupCard({
   done,
@@ -21,17 +26,27 @@ export function SetupCard({
         </h2>
         <TextLink tone="quiet" chevron={false} onClick={onDismiss}>הסתרה</TextLink>
       </div>
+      <div className="ui-setup-card-meter">
+        <ProgressBar variant="thin" value={done} max={SETUP_TOTAL} label="התקדמות ההגדרה" />
+      </div>
       <List>
         {steps.map((step) => (
           <ListRow
             key={step}
             variant="item"
             href={`/setup/${String(step)}?from=card`}
+            icon={<OpenRing />}
             title={STEP_TITLE[step] ?? ""}
             chevron
           />
         ))}
-        <ListRow variant="item" href="/settings?sheet=assistant" title="מתקדם · עוזר AI" chevron />
+        <ListRow
+          variant="item"
+          href="/settings?sheet=assistant"
+          title={<span className="ui-setup-card-advanced">מתקדם · עוזר AI</span>}
+          label="מתקדם · עוזר AI"
+          chevron
+        />
       </List>
     </section>
   );

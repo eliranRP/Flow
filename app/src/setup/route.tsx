@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { usePreviewMode, usePreviewSearch } from "../preview";
+import { useGoBack } from "../ui/back";
 import { useDashboardQuery } from "../use-books";
 import { useSetupFacts } from "./facts";
 import {
@@ -62,7 +63,7 @@ export function SetupResume() {
     }
     if (decision.markSession) markSessionEntered(userId);
     if (decision.patch) writeSetupStore(userId, facts.companyId, withPatch(store, decision.patch));
-    void navigate(decision.to, { replace: true });
+    void navigate(decision.to);
   }, [home, preview, status, userId, viewer.ready, viewer.viewer, facts, store, navigate]);
   return null;
 }
@@ -102,7 +103,6 @@ export function SetupStepScreen() {
       step={step}
       userId={userId}
       companyId={facts.companyId}
-      sumitConnected={facts.sumitConnected}
       reviewCount={0}
     />
   );
@@ -112,16 +112,15 @@ function SetupStepBody({
   step,
   userId,
   companyId,
-  sumitConnected,
   reviewCount,
 }: {
   step: SetupStepId;
   userId: string | null;
   companyId: string | null;
-  sumitConnected: boolean;
   reviewCount: number;
 }) {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const fromCard = useFromCard();
   const created = companyCreatedThisRun(userId);
   const dashboard = useDashboardQuery();
@@ -129,7 +128,7 @@ function SetupStepBody({
   const backTo = backPath(step, fromCard, created);
 
   function go(path: string) {
-    void navigate(path, { replace: true });
+    void navigate(path);
   }
 
   function skip() {
@@ -137,11 +136,13 @@ function SetupStepBody({
     const at = new Date().toISOString();
     const current = readSetupStore(userId, companyId);
     writeSetupStore(userId, companyId, skipPatch(current, step, at));
-    go(continuePath(step, fromCard));
+    const next = continuePath(step, fromCard);
+    if (fromCard) goBack(next);
+    else go(next);
   }
 
   function back() {
-    if (backTo) go(backTo);
+    if (backTo) goBack(backTo);
   }
 
   if (step === 0) {
@@ -166,7 +167,8 @@ function SetupStepBody({
         onBack={backTo ? back : undefined}
         onSkip={skip}
         onConnect={() => {
-          go("/settings?sheet=sumit");
+          const back = fromCard ? "/setup/1?from=card" : "/setup/1";
+          go(`/settings?sheet=sumit&return=${encodeURIComponent(back)}`);
         }}
       />
     );
@@ -185,7 +187,6 @@ function SetupStepBody({
   if (step === 3) {
     return (
       <StepLists
-        sumitConnected={sumitConnected}
         onBack={backTo ? back : undefined}
         onSkip={skip}
         onConfirm={() => {

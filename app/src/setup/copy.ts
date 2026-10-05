@@ -5,6 +5,24 @@ export const SETUP_TOTAL = 5;
 /** Production host. Drawings use `location.host`, never a stand-in domain. */
 export const SETUP_PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
 
+/**
+ * Loan and transfer seeds. list_categories does not return excluded_from_pnl,
+ * and two of these rows are not excluded, so the setup count matches them by name.
+ */
+const SYSTEM_CATEGORY_NAMES = new Set([
+  "תשלומי הלוואה",
+  "העברות",
+  "ריבית משכנתא",
+  "מסים וביטוח",
+]);
+
+/** Visible categories a new company should see. Hidden and system rows stay out. */
+export function visibleCategoryNames(rows: readonly { name: string; hidden?: boolean }[]): string[] {
+  return rows
+    .filter((row) => row.hidden !== true && row.name !== "" && !SYSTEM_CATEGORY_NAMES.has(row.name))
+    .map((row) => row.name);
+}
+
 export const DEFAULT_CATEGORY_NAMES = [
   "חומרים",
   "קבלני משנה",

@@ -324,15 +324,16 @@ describe("placeToast", () => {
     toast.className = "ui-toast";
     host.appendChild(toast);
     document.body.append(bar, host);
-    document.documentElement.style.setProperty("--space-2", "8px");
+    document.documentElement.style.setProperty("--space-4", "16px");
     Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
     bar.getBoundingClientRect = () => box(700, 56);
     toast.getBoundingClientRect = () => box(48, 48);
     placeToast(host);
-    expect(host.style.top).toBe("588px");
+    expect(host.style.top).toBe("580px");
+    expect(host.style.paddingInline).toBe("var(--space-4)");
     bar.remove();
     host.remove();
-    document.documentElement.style.removeProperty("--space-2");
+    document.documentElement.style.removeProperty("--space-4");
   });
 
   it("sits above an open sheet, and at the screen top when that does not fit", () => {

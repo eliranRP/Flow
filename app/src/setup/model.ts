@@ -67,12 +67,10 @@ export function remainingSteps(store: SetupStore, facts: SetupFacts): CountedSte
   return COUNTED_STEPS.filter((step) => !isDone(step, store, facts));
 }
 
-/** es-01 already offers חיבור SUMIT. The card drops that row only while SUMIT was skipped. */
+/** es-01 already offers חיבור SUMIT, so the card drops that row whenever Home is empty. */
 export function cardRows(store: SetupStore, facts: SetupFacts, emptyHome: boolean): CountedStep[] {
   const rows = remainingSteps(store, facts);
-  if (emptyHome && isSkipped(store, 1) && !isDone(1, store, facts)) {
-    return rows.filter((step) => step !== 1);
-  }
+  if (emptyHome) return rows.filter((step) => step !== 1);
   return rows;
 }
 

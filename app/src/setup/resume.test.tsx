@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { SetupResume } from "./route";
+import { emptySetupStore, markSessionEntered, readSetupStore, writeSetupStore } from "./storage";
 
 const userId = "user-1";
 
@@ -98,7 +99,7 @@ function Where() {
 
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
+  return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <AuthProvider>
@@ -135,5 +136,30 @@ describe("setup resume", () => {
       expect(screen.getByText("/setup/1")).toBeInTheDocument();
     });
     expect(calls.rpc).toContain("get_dashboard");
+  });
+
+  it("resumes a started run once, and neither the stamp nor the session alone opens it again", async () => {
+    writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    const first = renderAt("/");
+    await waitFor(() => {
+      expect(screen.getByText("/setup/1")).toBeInTheDocument();
+    });
+    const stamped = readSetupStore(userId, "company-1");
+    expect(stamped.run_resumed_at).not.toBeNull();
+    first.unmount();
+    sessionStorage.clear();
+    const second = renderAt("/");
+    await waitFor(() => {
+      expect(screen.getByText("/")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
+    second.unmount();
+    markSessionEntered(userId);
+    writeSetupStore(userId, "company-1", { ...stamped, run_resumed_at: null });
+    renderAt("/");
+    await waitFor(() => {
+      expect(screen.getByText("/")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
   });
 });
