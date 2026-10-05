@@ -4,6 +4,7 @@ export {
   allocateByWeights,
   divHalfEven,
   formatIls,
+  formatMoney,
   netFromGrossAgorot,
   parseShekelInput,
   rateFractionToBp,
