@@ -21,6 +21,9 @@ export const MERCURY_SKIP_REASONS = [
   "not_a_line",
   "non_usd",
   "refused_amount",
+  "treasury_activity",
+  "dividend_reinvestment",
+  "treasury_cancel",
 ] as const;
 export type MercurySkipReason = (typeof MERCURY_SKIP_REASONS)[number];
 
@@ -45,7 +48,8 @@ export const MERCURY_PENDING_VOID_DAYS = 10;
 export const MERCURY_PAGE_LIMIT = 100;
 
 /**
- * Pages in one run. Twenty pages is 2,000 lines. A 30-day window that
- * exceeds this stops with sync_page_cap instead of importing a partial book.
+ * Pages in one run. Twenty pages is 2,000 lines. A window that exceeds
+ * this returns the lines already fetched and a resume cursor. A repeated
+ * nextPage is a loop: that run stops and does not resume.
  */
 export const MERCURY_PAGE_CAP = 20;
