@@ -1125,14 +1125,20 @@ export type ReviewPreviewWrite = {
   onUndo: (id: string) => void;
 };
 
+function reviewFlagKey(value: boolean | undefined): string {
+  if (value === true) return "1";
+  if (value === false) return "0";
+  return "";
+}
+
 function reviewMotionKey(row: ReviewRow | null): string {
   if (row == null) return "";
   return [
     row.id,
     row.category_id ?? "",
     row.category_name ?? "",
-    row.category_suggested === true ? "1" : "0",
-    row.project_suggested === true ? "1" : "0",
+    reviewFlagKey(row.category_suggested),
+    reviewFlagKey(row.project_suggested),
     row.project_name ?? "",
     String(row.share_count ?? ""),
     String(row.auto_approved_today ?? ""),
