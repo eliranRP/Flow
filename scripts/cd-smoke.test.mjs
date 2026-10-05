@@ -53,6 +53,14 @@ case "\$url" in
     ;;
   *)
     if [[ "\$mode" == "home" ]]; then body="<html>no stamp</html>"; fi
+    if [[ "\$mode" == "home-late" ]]; then
+      count=${JSON.stringify(join(dir, "home-n"))}
+      n=0
+      if [[ -f "\$count" ]]; then n=\$(cat "\$count"); fi
+      n=\$((n + 1))
+      printf '%s' "\$n" > "\$count"
+      if [[ "\$n" -lt 2 ]]; then body="<html>no stamp</html>"; fi
+    fi
     ;;
 esac
 if [[ -n "\$out" ]]; then printf '%s' "\$body" > "\$out"; fi
@@ -63,7 +71,7 @@ printf '%s' "\$code"
   chmodSync(join(dir, "curl"), 0o755);
   const result = spawnSync("bash", [script.pathname, sha], {
     encoding: "utf8",
-    env: { ...process.env, PATH: `${dir}:${process.env.PATH}` },
+    env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, SMOKE_RETRY_PAUSE: "0" },
   });
   const args = readFileSync(log, "utf8");
   rmSync(dir, { recursive: true, force: true });
@@ -86,6 +94,16 @@ test("smoke exits match the Pages outcomes", () => {
   const home = runSmoke("home");
   assert.equal(home.status, 1);
   assert.match(home.stdout, /homepage did not include build/);
+  assert.match(home.args, new RegExp(`pages\\.dev/\\?n=${sha}-18`));
+  assert.equal(home.args.includes("/settings"), false);
+
+  const late = runSmoke("home-late");
+  assert.equal(late.status, 0, late.stderr + late.stdout);
+  assert.match(late.stdout, /homepage is not/);
+  assert.match(late.args, new RegExp(`pages\\.dev/\\?n=${sha}-1`));
+  assert.match(late.args, new RegExp(`pages\\.dev/\\?n=${sha}-2`));
+  assert.equal(late.args.includes(`/?n=${sha}-3`), false);
+  assert.match(late.args, /\/settings\?preview=1/);
 
   const curlHome = runSmoke("curl-home");
   assert.equal(curlHome.status, 1);

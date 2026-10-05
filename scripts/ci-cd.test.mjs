@@ -318,6 +318,65 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
 });
 
+test("the homepage retries like build.txt, list reads wait for the session, and a retry-pass stays out of the summary", () => {
+  const smokeScript = readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8");
+  assert.match(smokeScript, /attempts=18/);
+  assert.match(smokeScript, /SMOKE_RETRY_PAUSE:-10/);
+  assert.equal((smokeScript.match(/seq 1 "\$attempts"/g) ?? []).length, 2);
+  assert.match(smokeScript, /homepage is not \$\{sha\} yet/);
+  const homeLoop = smokeScript.slice(
+    smokeScript.indexOf("home_matched=0"),
+    smokeScript.indexOf('"$home_matched" != 1'),
+  );
+  assert.match(homeLoop, /seq 1 "\$attempts"/);
+  assert.match(homeLoop, /sleep "\$pause"/);
+  assert.equal(homeLoop.includes("/settings"), false);
+
+  const books = readFileSync(new URL("../app/src/use-books.ts", import.meta.url), "utf8");
+  const waits = books.split("await waitForAccessToken(supabase);").length - 1;
+  const rpcs = books.split(".rpc(").length - 1;
+  assert.equal(waits, rpcs);
+  assert.ok(waits >= 10);
+  assert.match(books, /await waitForAccessToken\(supabase\);\n\s+dropLegacyJevConnectorKey\(\);\n\s+const listed = supabase\.rpc\("list_review"\)/);
+
+  const smokeSpec = readFileSync(new URL("../app/e2e/smoke-readonly.spec.ts", import.meta.url), "utf8");
+  assert.match(smokeSpec, /waitForStoredSession/);
+  assert.ok(smokeSpec.indexOf("await waitForStoredSession(page)") < smokeSpec.indexOf("await Promise.all(pending)"));
+  assert.match(smokeSpec, /x-client-info/);
+  assert.match(smokeSpec, /access-control-allow-headers/);
+  assert.ok(smokeSpec.indexOf("const statusCall = waitStatus(page)") < smokeSpec.indexOf('openList(page, "/settings"'));
+  const http = readFileSync(new URL("../supabase/functions/_shared/http.ts", import.meta.url), "utf8");
+  const handler = readFileSync(new URL("../supabase/functions/flow-mcp/handler.ts", import.meta.url), "utf8");
+  assert.match(http, /export const corsAllowHeaders = "authorization, x-client-info, apikey, content-type, x-flow-cron"/);
+  assert.match(handler, /corsHeadersFor/);
+  assert.equal(handler.includes('"authorization, content-type, apikey"'), false);
+
+  const liveSmoke = job("deploy");
+  assert.match(liveSmoke, /passed on retry/);
+  assert.match(liveSmoke, /The Playwright output is in the step log, not in this summary/);
+  const failedAt = liveSmoke.indexOf("### Read-only smoke failed");
+  const failedEnd = liveSmoke.indexOf("exit 1", failedAt);
+  const failedSummary = liveSmoke.slice(failedAt, failedEnd);
+  assert.equal(failedSummary.includes("$log"), false);
+  assert.equal(failedSummary.includes("cat "), false);
+  const retryAt = liveSmoke.indexOf("passed on retry");
+  const retryBlock = liveSmoke.slice(retryAt, liveSmoke.indexOf("cat \"$log\"", retryAt));
+  assert.equal(retryBlock.includes("cat \"$log\""), false);
+
+  const warning = execFileSync(process.execPath, [
+    "--experimental-strip-types",
+    "--input-type=module",
+    "-e",
+    `const mod = await import(${JSON.stringify(new URL("../app/e2e/smoke-retry-reporter.ts", import.meta.url).href)});
+     process.stdout.write(mod.retryWarning(["home › loads"]));`,
+  ], { encoding: "utf8" });
+  assert.match(warning, /### Warning: read-only smoke passed on retry/);
+  assert.match(warning, /home › loads/);
+  assert.match(warning, /not in this summary/);
+  assert.equal(warning.includes("Error:"), false);
+  assert.equal(warning.includes("list_unpaid"), false);
+});
+
 test("a wrong pin in one job fails, and install-deps stays unconditional", () => {
   const lintPnpm = replaceInJob(
     ci,
