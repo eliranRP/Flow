@@ -11,6 +11,12 @@ fi
 origin="https://flow-app-dx5.pages.dev"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 bust="n=${sha}"
+# build.txt and the homepage share this pause. Tests set SMOKE_RETRY_PAUSE=0.
+pause="${SMOKE_RETRY_PAUSE:-10}"
+if ! [[ "$pause" =~ ^[0-9]+$ ]]; then
+  pause=10
+fi
+attempts=18
 
 home_body="$(mktemp)"
 home_headers="$(mktemp)"
@@ -36,7 +42,7 @@ fetch() {
 }
 
 matched=0
-for attempt in $(seq 1 18); do
+for attempt in $(seq 1 "$attempts"); do
   err="$(mktemp)"
   if ! body="$(curl -fsS --proto '=https' --max-time 20 "${origin}/build.txt?${bust}-${attempt}" 2>"$err")"; then
     echo "Smoke failed. Could not fetch build.txt (attempt ${attempt}): $(tr '\n' ' ' <"$err")"
@@ -49,7 +55,7 @@ for attempt in $(seq 1 18); do
     break
   fi
   echo "Smoke: build.txt is not ${sha} yet (attempt ${attempt})."
-  sleep 10
+  sleep "$pause"
 done
 
 if [[ "$matched" != 1 ]]; then
@@ -57,9 +63,35 @@ if [[ "$matched" != 1 ]]; then
   exit 1
 fi
 
-fetch "${origin}/?${bust}" "$home_body" "$home_headers"
-home_code="$FETCH_CODE"
-if [[ "$home_code" != "200" ]] || ! grep -Fq "name=\"flow-build\" content=\"${sha}\"" "$home_body"; then
+# Does not exit. A curl failure sets FETCH_OK=0 so the homepage loop can retry.
+try_fetch() {
+  local url="$1"
+  local body="$2"
+  local headers="$3"
+  local err
+  err="$(mktemp)"
+  FETCH_OK=0
+  FETCH_CODE=""
+  if FETCH_CODE="$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --proto '=https' --max-time 20 "$url" 2>"$err")"; then
+    FETCH_OK=1
+  else
+    echo "Smoke failed. Could not fetch ${url}: $(tr '\n' ' ' <"$err")"
+  fi
+  rm -f "$err"
+}
+
+home_matched=0
+for attempt in $(seq 1 "$attempts"); do
+  try_fetch "${origin}/?${bust}-${attempt}" "$home_body" "$home_headers"
+  if [[ "$FETCH_OK" == 1 && "$FETCH_CODE" == "200" ]] && grep -Fq "name=\"flow-build\" content=\"${sha}\"" "$home_body"; then
+    home_matched=1
+    break
+  fi
+  echo "Smoke: homepage is not ${sha} yet (attempt ${attempt})."
+  sleep "$pause"
+done
+
+if [[ "$home_matched" != 1 ]]; then
   echo "Smoke failed. The homepage did not include build ${sha}."
   exit 1
 fi
