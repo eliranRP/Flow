@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode } from "react";
+import { formatAmount } from "./big-number";
 import { Button } from "./button";
 import { CheckRow } from "./check-row";
 import { Chip } from "./chip";
@@ -6,9 +7,7 @@ import { DemoPlayer, useDemoPlayback } from "./demo-player";
 import { DemoPointer, easeStandard, POINTER_REACT_MS, type DemoPointerVariant, type PointerTimeline } from "./demo-pointer";
 import { AppIcon, CheckIcon, ChevronIcon, ShareIcon, SparkIcon, SquarePlusIcon } from "./icons";
 import { ListRow } from "./list-row";
-import { ReviewCard, type ReviewSuggestion } from "./review-card";
 import { Skeleton } from "./skeleton";
-import { TabBar } from "./tab-bar";
 import { TextField } from "./text-field";
 import { Toggle } from "./toggle";
 import "./setup-demos.css";
@@ -162,12 +161,7 @@ function PlugIcon() {
   );
 }
 
-const suggested: ReviewSuggestion = {
-  project: "פרויקט לדוגמה",
-  category: "קטגוריה לדוגמה",
-  projectSuggested: true,
-  categorySuggested: true,
-};
+const HOME_BEFORE = ["slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
 
 type SceneProps = { pointer: DemoPointerVariant };
 
@@ -197,17 +191,32 @@ function SumitScene({ pointer }: SceneProps) {
       <div className="ui-setup-scrim" style={styleOf({ "--setup-opacity": scrim })} />
       <div className="ui-setup-result" data-setup-visible={hello >= 1 ? "true" : "false"}>
         <div className="ui-setup-sumit-row ui-setup-drop" style={styleOf({ "--setup-drop": hello })}>
-          <PlugIcon />
-          <span>
-            <bdi dir="ltr">SUMIT</bdi>
-            {" מחובר"}
+          <span className="ui-setup-lead" aria-hidden="true">
+            <PlugIcon />
           </span>
-          <CheckIcon />
+          <span className="ui-setup-sumit-copy">
+            <span className="t-title-3">
+              <bdi dir="ltr">SUMIT</bdi>
+            </span>
+            <span className="t-hint">מחובר</span>
+          </span>
+          <span className="ui-setup-stat">
+            <CheckIcon size={16} />
+          </span>
         </div>
-        <SumitLine title="ספק לדוגמה בע״מ" hint="הוצאה · 01/09" agorot={850_000n} sign="out" drop={line1} />
-        <SumitLine title="לקוח לדוגמה" hint="הכנסה · 02/09" agorot={120_000n} sign="in" drop={line2} />
-        <SumitLine title="ספק שלישי לדוגמה" hint="הוצאה · 03/09" agorot={64_000n} sign="out" drop={line3} />
-        <TabBar reviewCount={hello >= 1 ? 12 : 0} />
+        <SumitLine title="חומרי בניין השרון" hint="הוצאה · 21/09" agorot={850_000n} sign="out" drop={line1} />
+        <SumitLine title="אבי חשמל" hint="הוצאה · 20/09" agorot={234_000n} sign="out" drop={line2} />
+        <SumitLine title="וילה רעננה" hint="הכנסה · 19/09" agorot={4_500_000n} sign="in" drop={line3} />
+        <div className="ui-setup-tabs ui-setup-drop" style={styleOf({ "--setup-drop": hello })}>
+          <span className="ui-setup-tab">בית</span>
+          <span className="ui-setup-tab" data-on="true">
+            לאישור
+            <span className="ui-setup-badge">
+              <bdi dir="ltr">12</bdi>
+            </span>
+          </span>
+          <span className="ui-setup-tab">הגדרות</span>
+        </div>
       </div>
       <div
         className="ui-setup-sheet ui-setup-dock"
@@ -257,12 +266,6 @@ function JevScene({ pointer }: SceneProps) {
   const spark = played(elapsed, sparkAt, 200);
   const project = played(elapsed, pillsAt, 200);
   const category = played(elapsed, pillsAt + 150, 200);
-  const suggestion: ReviewSuggestion = {
-    project: project > 0 ? "פרויקט לדוגמה" : undefined,
-    category: category > 0 ? "קטגוריה לדוגמה" : undefined,
-    projectSuggested: project > 0,
-    categorySuggested: category > 0,
-  };
   return (
     <div className="ui-setup-demo ui-setup-jev" data-demo-frame={frame}>
       <div className="ui-setup-switch">
@@ -272,18 +275,17 @@ function JevScene({ pointer }: SceneProps) {
       <div className="ui-setup-head">
         <p className="t-title-3">לאישור</p>
       </div>
-      <ReviewCard
-        supplier="ספק לדוגמה בע״מ"
-        sourceLine="חשבונית · 01/09/2026"
-        netAgorot={850_000n}
-        vatLine="לפני מע״מ"
-        suggestion={suggestion}
-        onProject={project > 0 ? () => {} : undefined}
-        onCategory={category > 0 ? () => {} : undefined}
+      <DemoFact
+        supplier="חומרי בניין השרון בע״מ"
+        date="21/09/2026"
+        agorot={850_000n}
+        vat="₪1,530"
+        spark={spark}
+        project={project > 0 ? "וילה רעננה" : undefined}
+        projectAmount={project}
+        category={category > 0 ? "חומרים" : undefined}
+        categoryAmount={category}
       />
-      <p className="ui-setup-fade t-label" data-setup-visible={spark >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": spark })}>
-        <SparkIcon size={16} /> הצעה
-      </p>
       <DemoPointer elapsedMs={elapsed} timeline={JEV_POINTER} variant={pointer} />
     </div>
   );
@@ -318,15 +320,15 @@ function ProjectsScene({ pointer }: SceneProps) {
         <Skeleton width="lg" />
       </div>
       <p className="t-label">פרויקטים</p>
-      <ProjectRow label="פרויקט לדוגמה" amount={rowA} />
-      <ProjectRow label="פרויקט שני לדוגמה" amount={rowB} />
-      <ProjectRow label="פרויקט שלישי לדוגמה" amount={rowC} />
+      <ProjectRow label="וילה רעננה" amount={rowA} checked={rowA >= 1} />
+      <ProjectRow label="בניין מגורים חולון" amount={rowB} checked={rowB >= 1} />
+      <ProjectRow label="מגדל משרדים פ״ת" amount={rowC} checked={chips >= 1} />
       <p className="t-label">קטגוריות</p>
       <div className="ui-setup-pills">
-        <ChoiceChip label="קטגוריה א׳" amount={chips} />
-        <ChoiceChip label="קטגוריה ב׳" amount={chips} />
-        <ChoiceChip label="קטגוריה ג׳" amount={chips} />
-        <ChoiceChip label="קטגוריה ד׳" amount={chips} />
+        <ChoiceChip label="חומרים" amount={chips} />
+        <ChoiceChip label="קבלני משנה" amount={chips} />
+        <ChoiceChip label="שכר" amount={chips} />
+        <ChoiceChip label="רכב" amount={chips} />
         {leave < 1 ? <ChoiceChip label="פרסום" amount={chips} leaving={leave} tap="chip" /> : null}
       </div>
       <p className="ui-setup-fade t-hint" data-setup-visible={leave >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": leave })}>
@@ -337,11 +339,11 @@ function ProjectsScene({ pointer }: SceneProps) {
   );
 }
 
-function ProjectRow({ label, amount }: { label: string; amount: number }) {
+function ProjectRow({ label, amount, checked }: { label: string; amount: number; checked: boolean }) {
   if (amount <= 0) return null;
   return (
     <div className="ui-setup-fade" data-setup-visible={amount >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": amount })}>
-      <CheckRow label={label} checked={amount >= 1} onChange={() => {}} />
+      <CheckRow label={label} checked={checked} onChange={() => {}} />
     </div>
   );
 }
@@ -391,10 +393,10 @@ function ApprovalScene({ pointer }: SceneProps) {
       </div>
       <div className="ui-setup-stack">
         <div className="ui-setup-leave" data-setup-visible={leave < 1 ? "true" : "false"} style={styleOf({ "--setup-leave": leave })}>
-          <ApprovalCard supplier="ספק לדוגמה בע״מ" agorot={850_000n} tap="approve" />
+          <ApprovalCard supplier="חומרי בניין השרון בע״מ" agorot={850_000n} vat="₪1,530" project="וילה רעננה" category="חומרים" tap="approve" />
         </div>
         <div className="ui-setup-fade" data-setup-visible={next >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": next })}>
-          <ApprovalCard supplier="ספק נוסף לדוגמה" agorot={120_000n} />
+          <ApprovalCard supplier="אבי חשמל" agorot={234_000n} vat="₪421" project="וילה רעננה" category="קבלני משנה" />
         </div>
       </div>
       <DemoPointer elapsedMs={elapsed} timeline={APPROVAL_POINTER} variant={pointer} />
@@ -402,23 +404,72 @@ function ApprovalScene({ pointer }: SceneProps) {
   );
 }
 
-function ApprovalCard({ supplier, agorot, tap }: { supplier: string; agorot: bigint; tap?: string }) {
+function ApprovalCard({ supplier, agorot, vat, project, category, tap }: { supplier: string; agorot: bigint; vat: string; project: string; category: string; tap?: string }) {
   return (
-    <div>
-      <ReviewCard
-        supplier={supplier}
-        sourceLine="חשבונית · 01/09/2026"
-        netAgorot={agorot}
-        vatLine="לפני מע״מ"
-        suggestion={suggested}
-        onProject={() => {}}
-        onCategory={() => {}}
-      />
+    <div className="ui-setup-card">
+      <DemoFact supplier={supplier} date="21/09/2026" agorot={agorot} vat={vat} spark={1} project={project} projectAmount={1} category={category} categoryAmount={1} />
       <div className="ui-setup-hit">
         <Button full icon={<CheckIcon />} data-tap={tap}>
           אישור
         </Button>
       </div>
+    </div>
+  );
+}
+
+function DemoFact({
+  supplier,
+  date,
+  agorot,
+  vat,
+  spark,
+  project,
+  projectAmount,
+  category,
+  categoryAmount,
+}: {
+  supplier: string;
+  date: string;
+  agorot: bigint;
+  vat: string;
+  spark: number;
+  project?: string;
+  projectAmount: number;
+  category?: string;
+  categoryAmount: number;
+}) {
+  return (
+    <div className="ui-setup-fact">
+      <p className="t-title-3">{supplier}</p>
+      <p className="t-hint">
+        הוצאה · <bdi dir="ltr">{date}</bdi>
+      </p>
+      <p className="t-display">
+        <bdi dir="ltr">{formatAmount(agorot, "detail")}</bdi>
+      </p>
+      <p className="t-hint">
+        לפני מע״מ · מע״מ <bdi dir="ltr">{vat}</bdi>
+      </p>
+      <p className="ui-setup-offer ui-setup-fade" data-setup-visible={spark >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": spark })}>
+        <SparkIcon size={16} /> הצעה
+      </p>
+      <OfferLine label="פרויקט" name={project} amount={projectAmount} />
+      <OfferLine label="קטגוריה" name={category} amount={categoryAmount} />
+    </div>
+  );
+}
+
+function OfferLine({ label, name, amount }: { label: string; name?: string; amount: number }) {
+  return (
+    <div className="ui-setup-offer-line">
+      <span className="t-label">{label}</span>
+      {name != null && amount > 0 ? (
+        <span className="ui-setup-pill ui-setup-fade" data-setup-visible={amount >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": amount })}>
+          {name}
+        </span>
+      ) : (
+        <span className="t-hint">—</span>
+      )}
     </div>
   );
 }
@@ -531,13 +582,16 @@ function AndroidScene({ pointer }: SceneProps) {
 
 function HomeGrid({ amount, open }: { amount: number; open: boolean }) {
   return (
-    <div className="ui-setup-home ui-setup-layer ui-setup-panel" data-setup-visible={open ? "true" : "false"} style={styleOf({ "--setup-opacity": amount })}>
-      <span className="ui-setup-tile" />
+    <div className="ui-setup-home ui-setup-layer ui-setup-panel" dir="ltr" data-setup-visible={open ? "true" : "false"} style={styleOf({ "--setup-opacity": amount })}>
+      {HOME_BEFORE.map((slot) => (
+        <span className="ui-setup-tile" key={slot} />
+      ))}
       <span className="ui-setup-icon ui-setup-land" style={styleOf({ "--setup-land": amount })}>
         <AppIcon size="note" />
-        <span className="t-hint">Flow</span>
+        <span className="ui-setup-cap" dir="rtl">
+          Flow
+        </span>
       </span>
-      <span className="ui-setup-tile" />
       <span className="ui-setup-tile" />
     </div>
   );

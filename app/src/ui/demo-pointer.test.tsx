@@ -154,8 +154,8 @@ describe("pointer on the storyboards", () => {
         JEV_DEMO_MS,
         () => {
           const text = document.querySelector(".ui-setup-demo")?.textContent ?? "";
-          expect(text).toContain("פרויקט לדוגמה");
-          expect(text).toContain("קטגוריה לדוגמה");
+          expect(text).toContain("וילה רעננה");
+          expect(text).toContain("חומרים");
         },
       ],
       [
