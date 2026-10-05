@@ -9,19 +9,11 @@
   padding: var(--space-4);
 }
 
-.ui-demo-example,
 .ui-demo-card p {
   margin: 0;
   min-inline-size: 0;
   overflow-wrap: anywhere;
   white-space: normal;
-}
-
-.ui-demo-example {
-  color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
 }
 
 .ui-demo-card {
