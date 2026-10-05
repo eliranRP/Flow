@@ -20,7 +20,10 @@ drain_expected as (
   select $cron$
       select net.http_post(
         url := (
-          select decrypted_secret
+          select case p.provider
+            when 'mercury' then replace(decrypted_secret, '/sumit-sync', '/mercury-sync')
+            else decrypted_secret
+          end
           from vault.decrypted_secrets
           where name = 'flow_sync_url'
           limit 1
@@ -36,8 +39,8 @@ drain_expected as (
         ),
         body := '{}'::jsonb
       )
-      where exists (
-        select 1
+      from (
+        select distinct r.provider
         from public.connector_refresh_requests r
         left join public.connector_connections c
           on c.company_id = r.company_id
@@ -45,7 +48,8 @@ drain_expected as (
         where r.claimed_at is null
           and (c.next_attempt_at is null or c.next_attempt_at <= now())
           and c.last_error is distinct from 'auth'
-      );
+          and r.provider in ('sumit', 'mercury')
+      ) p;
     $cron$ as command
 ),
 flags as (

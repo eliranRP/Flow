@@ -12,8 +12,29 @@ export const MERCURY_LOAN_CATEGORY = "תשלומי הלוואה";
 /** Counterparty names, after the same normalisation, that are cashback income. */
 export const MERCURY_CASHBACK_COUNTERPARTIES = ["MERCURY IO CASHBACK"] as const;
 
-/** Seeded income category. It stays in P&L. VAT stays 0. */
+/** Seeded income category. It stays in P&L. VAT stays 0. Cashback and treasury yield use it. */
 export const MERCURY_CASHBACK_CATEGORY = "הכנסה אחרת";
+
+/** Treasury ledger types that are cash yield. They import as income. */
+export const MERCURY_TREASURY_YIELD_TYPES = ["interestPosted", "dividendPosted"] as const;
+
+/** Treasury income that is not a yield: a Mercury credit, or a refunded treasury fee. */
+export const MERCURY_TREASURY_OTHER_INCOME_TYPES = ["mercuryFeeRefunded", "mercuryCreditPosted"] as const;
+
+/** A treasury fee is an expense. The sign on the wire does not decide that. */
+export const MERCURY_TREASURY_FEE_TYPES = ["mercuryFeePosted"] as const;
+
+/**
+ * A cancel voids the original line. It is not a second income or expense.
+ * interestCanceled voids interestPosted. dividendCanceled voids dividendPosted.
+ * A fee cancel or a failed fee voids mercuryFeePosted.
+ */
+export const MERCURY_TREASURY_CANCEL_OF: Readonly<Record<string, string>> = {
+  interestCanceled: "interestPosted",
+  dividendCanceled: "dividendPosted",
+  mercuryFeeCanceled: "mercuryFeePosted",
+  mercuryFeeFailed: "mercuryFeePosted",
+};
 
 /**
  * Transfer to an own account that is not in the connected set.
@@ -65,6 +86,10 @@ export function isExpenseCreditKind(kind: string): boolean {
 
 export function isCardAccountKind(kind: string): boolean {
   return (MERCURY_CARD_ACCOUNT_KINDS as readonly string[]).includes(kind);
+}
+
+export function isTreasuryYieldType(type: string): boolean {
+  return (MERCURY_TREASURY_YIELD_TYPES as readonly string[]).includes(type);
 }
 
 /** Trim, collapse whitespace, and compare case-insensitively. */
