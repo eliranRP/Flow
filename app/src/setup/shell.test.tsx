@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { SetupCard } from "./card";
 import "./setup.css";
 import { SetupStep } from "./shell";
-import { SumitFailureNote } from "./steps";
+import { StepInstall, SumitFailureNote } from "./steps";
 
 describe("setup step chrome", () => {
   it("has no skip and no counter on step 0", () => {
@@ -62,5 +62,14 @@ describe("setup step chrome", () => {
     render(<SumitFailureNote />);
     expect(screen.getByText("SUMIT עוד לא מחובר.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "הסתרה" })).toBeInTheDocument();
+  });
+
+  it("numbers the step 5 rows and divides them", () => {
+    render(<StepInstall onSkip={() => undefined} onFinish={() => undefined} />);
+    const items = document.querySelectorAll(".ui-setup-steps li");
+    expect(items).toHaveLength(3);
+    expect(items[0]?.querySelector(".ui-setup-stepn")).toHaveTextContent("1");
+    expect(items[1]?.querySelector(".ui-setup-stepn")).toHaveTextContent("2");
+    expect(items[2]?.querySelector(".ui-setup-stepn")).toHaveTextContent("3");
   });
 });
