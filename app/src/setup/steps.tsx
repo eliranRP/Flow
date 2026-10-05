@@ -312,7 +312,12 @@ function installRows(mode: InstallMode): ReactNode {
   const steps = mode === "android-steps" ? ANDROID_INSTALL_STEPS : IOS_INSTALL_STEPS;
   return (
     <ol className="ui-setup-steps">
-      {steps.map((step) => <li key={step.id}>{step.text}</li>)}
+      {steps.map((step, index) => (
+        <li key={step.id}>
+          <span className="ui-setup-stepn" aria-hidden="true">{String(index + 1)}</span>
+          <span>{step.text}</span>
+        </li>
+      ))}
     </ol>
   );
 }
