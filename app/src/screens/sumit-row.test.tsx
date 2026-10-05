@@ -94,6 +94,61 @@ function hintOf(row: HTMLElement): string {
   return document.getElementById(row.getAttribute("aria-describedby") ?? "")?.textContent ?? "";
 }
 
+type HistoryVisit = { key: string; search: string; layer: string };
+
+function noteVisit(seen: HistoryVisit[], visit: HistoryVisit) {
+  const last = seen[seen.length - 1];
+  if (last != null && last.key === visit.key && last.search === visit.search && last.layer === visit.layer) return;
+  seen.push(visit);
+}
+
+/** Keeps historyIndex() stable while the cold sheet decides to push. */
+function holdHistoryIndex(idx: number): () => void {
+  const replace = window.history.replaceState.bind(window.history);
+  const push = window.history.pushState.bind(window.history);
+  const stamp = (state: unknown): unknown => {
+    if (typeof state === "object" && state !== null) return { ...state, idx };
+    return { idx };
+  };
+  let released = false;
+  window.history.replaceState = ((state: unknown, title: string, url?: string | URL | null) => {
+    replace(stamp(state), title, url ?? undefined);
+  }) as History["replaceState"];
+  window.history.pushState = ((state: unknown, title: string, url?: string | URL | null) => {
+    push(stamp(state), title, url ?? undefined);
+  }) as History["pushState"];
+  replace(stamp(window.history.state), "");
+  return () => {
+    if (released) return;
+    released = true;
+    window.history.replaceState = replace;
+    window.history.pushState = push;
+  };
+}
+
+function setHistoryIndex(idx: number) {
+  const state: unknown = window.history.state;
+  const next = typeof state === "object" && state !== null ? { ...state, idx } : { idx };
+  window.history.replaceState(next, "");
+}
+
+async function flushTurn() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+function SheetVisit({ onVisit }: { onVisit: (visit: HistoryVisit) => void }) {
+  const location = useLocation();
+  onVisit({
+    key: location.key,
+    search: location.search,
+    layer: sheetStack(location.state).join(","),
+  });
+  return null;
+}
+
 describe("SUMIT status row", () => {
   afterEach(() => {
     window.history.replaceState(null, "");
@@ -501,10 +556,11 @@ describe("SUMIT status row", () => {
       if (name === "sumit_status") return Promise.resolve({ data: sumit({}), error: null });
       return Promise.resolve({ data: null, error: null });
     };
-    window.history.replaceState({ idx: 0 }, "");
+    const seen: HistoryVisit[] = [];
+    const releaseIndex = holdHistoryIndex(0);
     const router = createMemoryRouter(
       [
-        { path: "/settings", element: <SettingsScreen /> },
+        { path: "/settings", element: <><SheetVisit onVisit={(visit) => { noteVisit(seen, visit); }} /><SettingsScreen /></> },
         { path: "/", element: <h1>בית</h1> },
       ],
       { initialEntries: ["/settings?sheet=sumit"] },
@@ -521,38 +577,50 @@ describe("SUMIT status row", () => {
     try {
       const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
       await waitFor(() => {
+        const layer = [...seen].reverse().find((entry) => entry.layer === "sumit-connect");
+        const settings = [...seen].reverse().find((entry) => entry.search === "" && entry.layer === "" && entry.key !== layer?.key);
+        expect(layer?.key).toBeTruthy();
+        expect(settings?.key).toBeTruthy();
+        expect(layer?.key).not.toBe(settings?.key);
+      });
+      const open = [...seen].reverse().find((entry) => entry.layer === "sumit-connect");
+      const settings = [...seen].reverse().find((entry) => entry.search === "" && entry.layer === "" && entry.key !== open?.key);
+      if (open == null || settings == null) throw new Error("missing sheet entry");
+      releaseIndex();
+      setHistoryIndex(1);
+      fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
+      await flushTurn();
+      await waitFor(() => {
+        expect(router.state.location.key).toBe(settings.key);
+        expect(router.state.location.pathname).toBe("/settings");
         expect(router.state.location.search).toBe("");
-        expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
       });
-      const openKey = router.state.location.key;
-      window.history.replaceState({ idx: 1 }, "");
-      await act(async () => {
-        fireEvent.click(within(sheet).getByRole("button", { name: "סגירה" }));
-        await Promise.resolve();
-      });
-      await waitFor(() => { expect(router.state.location.key).not.toBe(openKey); }, { timeout: 5_000 });
       act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
-      await waitFor(() => { expect(router.state.location.pathname).toBe("/settings"); });
-      const closedKey = router.state.location.key;
+      expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
 
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
-        await Promise.resolve();
-      });
+      setHistoryIndex(0);
+      fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+      await flushTurn();
       await screen.findByRole("dialog", { name: "חיבור SUMIT" });
-      await waitFor(() => { expect(router.state.location.key).not.toBe(closedKey); }, { timeout: 5_000 });
+      await waitFor(() => {
+        expect(router.state.location.key).not.toBe(settings.key);
+        expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
+      });
       const again = router.state.location.key;
+      setHistoryIndex(1);
       await act(async () => { await router.navigate(-1); });
       await waitFor(() => {
         expect(router.state.location.pathname).toBe("/settings");
         expect(router.state.location.search).toBe("");
         expect(router.state.location.key).not.toBe(again);
+        expect(router.state.location.key).toBe(settings.key);
       });
       act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
       await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
       expect(screen.queryByRole("heading", { name: "בית" })).not.toBeInTheDocument();
     } finally {
+      releaseIndex();
       window.history.replaceState(null, "");
     }
   });

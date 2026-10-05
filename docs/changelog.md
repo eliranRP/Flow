@@ -2,6 +2,8 @@
 
 ## 2026-10-04
 
+Unit tests. The cold SUMIT sheet stays at history index 0 until the layer is its own entry, then a close pops back to Settings. אישור waits until the button is idle, and the review card swaps once per next item instead of restarting that swap on every list render. No migration.
+
 Settings CORS. `flow-mcp` allows the same request headers as the other functions, including `x-client-info`, so a signed-in Settings page can read `flow-mcp/status`. The live check fails when that screen logs a console error, or when an edge response omits `authorization`, `apikey`, `content-type`, or `x-client-info`. No migration.
 
 Deploy smoke. The homepage check retries 18 times with the same 10 second pause as `build.txt`, and each attempt uses its own `n`. List reads wait until the signed-in session has an access token, so `list_unpaid` does not leave before that session is attached. A slow `getSession` is awaited, and the list stays loading until it answers. A pass that needed a retry still writes a warning in the job summary, and the Playwright log stays in the step log. No migration.
