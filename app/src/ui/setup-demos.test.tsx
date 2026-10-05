@@ -77,6 +77,10 @@ describe("demo timeline", () => {
     expect(easeExit(0.5)).toBeGreaterThan(0);
     expect(easeExit(0.5)).toBeLessThan(1);
     expect(css).toContain("translateX(calc(var(--inline-sign) * var(--setup-leave, 0) * 40%))");
+    expect(css).toContain(".ui-setup-stack > .ui-setup-leave");
+    expect(css).toContain(".ui-setup-stack > .ui-setup-fade");
+    expect(css).toMatch(/\.ui-setup-stack \{[^}]*position: relative/);
+    expect(css).toMatch(/\.ui-setup-stack > \.ui-setup-leave,\s*\.ui-setup-stack > \.ui-setup-fade \{[^}]*position: absolute/);
     expect(css).toContain("animation: none");
     expect(css).not.toMatch(/@keyframes/);
     expect(css).not.toMatch(/\btransition\s*:/);
@@ -123,13 +127,22 @@ describe("setup demos", () => {
       () => {
         expect(screen.getByText(SUMIT_ALT)).toBeInTheDocument();
         expect(frame()).toBe("4");
-        expect(visibleText()).toContain("ספק לדוגמה בע״מ");
+        expect(visibleText()).toContain("חומרי בניין השרון");
+        expect(visibleText()).toContain("אבי חשמל");
+        expect(visibleText()).toContain("וילה רעננה");
         expect(visibleText()).toContain("מחובר");
         expect(visibleText()).toContain("8,500");
+        expect(visibleText()).toContain("2,340");
+        expect(visibleText()).toContain("45,000");
+        expect(visibleText()).toContain("21/09");
         expect(visibleText()).toContain("12");
-        expect(visibleText()).toContain("מחובר");
+        expect(visibleText()).toContain("בית");
+        expect(visibleText()).toContain("הגדרות");
         expect(visibleText()).toContain("הוצאה ·");
         expect(visibleText()).toContain("הכנסה ·");
+        expect(document.querySelector(".ui-setup-lead")).toBeInTheDocument();
+        expect(document.querySelector(".ui-setup-stat")).toBeInTheDocument();
+        expect(document.querySelector(".ui-tabbar")).not.toBeInTheDocument();
       },
     );
     check(<JevSwitchDemo />, () => {
@@ -137,9 +150,15 @@ describe("setup demos", () => {
       expect(frame()).toBe("4");
       expect(demoText()).toContain("לאישור");
       expect(demoText()).toContain("הצעה");
-      expect(demoText()).toContain("פרויקט לדוגמה");
-      expect(demoText()).toContain("קטגוריה לדוגמה");
+      expect(demoText()).toContain("חומרי בניין השרון בע״מ");
+      expect(demoText()).toContain("וילה רעננה");
+      expect(demoText()).toContain("חומרים");
+      expect(demoText()).toContain("21/09/2026");
+      expect(demoText()).toContain("8,500");
+      expect(demoText()).toContain("1,530");
       expect(demoText()).toContain("תיוג חכם");
+      expect(document.querySelector(".ui-setup-jev .ui-row-chevron")).not.toBeInTheDocument();
+      expect(document.querySelector(".ui-setup-pill")).toBeInTheDocument();
     });
     check(<ProjectsDemo />, () => {
       expect(screen.getByText(PROJECTS_ALT)).toBeInTheDocument();
@@ -147,8 +166,8 @@ describe("setup demos", () => {
       expect(visibleText()).toContain("מוסתרות");
       expect(demoText()).toContain("פרויקטים");
       expect(demoText()).toContain("קטגוריות");
-      expect(demoText()).toContain("פרויקט שלישי לדוגמה");
-      expect(demoText()).toContain("קטגוריה ד׳");
+      expect(demoText()).toContain("מגדל משרדים פ״ת");
+      expect(demoText()).toContain("רכב");
       expect(demoText()).not.toContain("פרסום");
     });
     check(<FirstApprovalDemo />, () => {
@@ -158,13 +177,18 @@ describe("setup demos", () => {
       expect(visibleText()).toContain("נשארו");
       expect(visibleText()).toContain("לאישור");
       expect(visibleText()).toContain("הצעה");
-      expect(visibleText()).toContain("ספק נוסף לדוגמה");
-      expect(visibleText()).not.toContain("ספק לדוגמה בע״מ");
+      expect(visibleText()).toContain("אבי חשמל");
+      expect(visibleText()).toContain("2,340");
+      expect(visibleText()).toContain("קבלני משנה");
+      expect(visibleText()).not.toContain("חומרי בניין השרון בע״מ");
     });
     check(<IosInstallDemo />, () => {
       expect(screen.getByText(IOS_ALT)).toBeInTheDocument();
       expect(frame()).toBe("5");
       expect(visibleText()).toContain("Flow");
+      expect(document.querySelectorAll(".ui-setup-home > *")).toHaveLength(8);
+      expect(document.querySelector(".ui-setup-home")?.children[6]?.textContent).toContain("Flow");
+      expect(document.querySelector(".ui-setup-home")).toHaveAttribute("dir", "ltr");
       expect(visibleText()).not.toContain("שיתוף");
       expect(visibleText()).not.toContain(demoHost());
     });
@@ -172,6 +196,9 @@ describe("setup demos", () => {
       expect(screen.getByText(ANDROID_ALT)).toBeInTheDocument();
       expect(frame()).toBe("3");
       expect(visibleText()).toContain("Flow");
+      expect(document.querySelectorAll(".ui-setup-home > *")).toHaveLength(8);
+      expect(document.querySelector(".ui-setup-home")?.children[6]?.textContent).toContain("Flow");
+      expect(document.querySelector(".ui-setup-home")).toHaveAttribute("dir", "ltr");
       expect(visibleText()).not.toContain("התקנה");
       expect(visibleText()).not.toContain(demoHost());
       expect(document.body.textContent).not.toMatch(/@/);
@@ -187,12 +214,12 @@ describe("setup demos", () => {
     );
     expect(frame()).toBe("1");
     expect(visibleText()).toContain("מספר חברה");
-    expect(visibleText()).not.toContain("ספק לדוגמה בע״מ");
+    expect(visibleText()).not.toContain("חומרי בניין השרון");
     act(() => {
       vi.advanceTimersByTime(SUMIT_DEMO_MS + 200);
     });
     expect(frame()).toBe("4");
-    expect(visibleText()).toContain("ספק לדוגמה בע״מ");
+    expect(visibleText()).toContain("חומרי בניין השרון");
     expect(screen.getByRole("button", { name: "שוב" })).toHaveTextContent("שוב");
   });
 
@@ -200,50 +227,50 @@ describe("setup demos", () => {
     vi.useFakeTimers();
     render(<FirstApprovalDemo />);
     expect(document.querySelector("[data-demo-count]")?.textContent).toBe("12");
-    expect(visibleText()).toContain("ספק לדוגמה בע״מ");
+    expect(visibleText()).toContain("חומרי בניין השרון בע״מ");
     act(() => {
       vi.advanceTimersByTime(APPROVAL_DEMO_MS + 200);
     });
     expect(document.querySelector("[data-demo-count]")?.textContent).toBe("11");
-    expect(visibleText()).toContain("ספק נוסף לדוגמה");
-    expect(visibleText()).not.toContain("ספק לדוגמה בע״מ");
+    expect(visibleText()).toContain("אבי חשמל");
+    expect(visibleText()).not.toContain("חומרי בניין השרון בע״מ");
   });
 
   it("keeps the Jev pills off frame 1 and fills the card rows later", () => {
     vi.useFakeTimers();
     render(<JevSwitchDemo />);
     expect(frame()).toBe("1");
-    expect(demoText()).not.toContain("פרויקט לדוגמה");
-    expect(demoText()).not.toContain("קטגוריה לדוגמה");
+    expect(demoText()).not.toContain("וילה רעננה");
+    expect(demoText()).not.toContain("חומרים");
     act(() => {
       vi.advanceTimersByTime(1900);
     });
     expect(frame()).toBe("3");
     expect(demoText()).toContain("הצעה");
-    expect(demoText()).not.toContain("פרויקט לדוגמה");
+    expect(demoText()).not.toContain("וילה רעננה");
     act(() => {
       vi.advanceTimersByTime(JEV_DEMO_MS);
     });
     expect(frame()).toBe("4");
-    expect(demoText()).toContain("פרויקט לדוגמה");
-    expect(demoText()).toContain("קטגוריה לדוגמה");
+    expect(demoText()).toContain("וילה רעננה");
+    expect(demoText()).toContain("חומרים");
   });
 
   it("walks projects from an empty list to four remaining chips", () => {
     vi.useFakeTimers();
     render(<ProjectsDemo />);
     expect(frame()).toBe("1");
-    expect(demoText()).not.toContain("פרויקט לדוגמה");
+    expect(demoText()).not.toContain("וילה רעננה");
     act(() => {
       vi.advanceTimersByTime(500);
     });
     expect(frame()).toBe("2");
-    expect(demoText()).toContain("פרויקט לדוגמה");
-    expect(demoText()).not.toContain("קטגוריה א׳");
+    expect(demoText()).toContain("וילה רעננה");
+    expect(demoText()).not.toContain("חומרים");
     act(() => {
       vi.advanceTimersByTime(800);
     });
-    expect(demoText()).toContain("קטגוריה א׳");
+    expect(demoText()).toContain("חומרים");
     expect(demoText()).toContain("פרסום");
     expect(visibleText()).not.toContain("מוסתרות");
     act(() => {
