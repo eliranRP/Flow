@@ -2,6 +2,7 @@
 // Decision 0080. Reads and the three single-expense writes. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
 
+import { corsHeadersFor } from "../_shared/http.ts";
 import { callTool, isWriteTool, READ_TOOL_NAMES, toolsFor } from "./tools.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 
@@ -62,9 +63,7 @@ function emptyResponse(req: Request, status: number, extra?: HeadersInit): Respo
 
 function cors(origin: string): HeadersInit {
   return {
-    "access-control-allow-origin": origin,
-    "access-control-allow-headers": "authorization, content-type, apikey",
-    "access-control-allow-methods": "POST, OPTIONS",
+    ...corsHeadersFor(origin),
     vary: "Origin",
   };
 }

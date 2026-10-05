@@ -23,6 +23,7 @@ import {
 import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
+import { waitForAccessToken } from "./wait-for-session";
 import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview } from "./preview";
 import {
@@ -90,6 +91,7 @@ export function useDashboardQuery(active = true) {
     queryFn: async (): Promise<Dashboard> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_dashboard", rpcArgs(period));
       if (error) throw error;
       return dashboardSchema.parse(data);
@@ -105,6 +107,7 @@ export function useUnpaidQuery(active = true) {
     queryFn: async (): Promise<UnpaidRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_unpaid");
       if (error) throw error;
       return unpaidRowSchema.array().parse(data);
@@ -120,6 +123,7 @@ export function useFiledTodayQuery(active = true) {
     queryFn: async (): Promise<FiledTodayRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_auto_assigned_today");
       if (error) throw error;
       return filedTodaySchema.array().parse(data);
@@ -216,6 +220,7 @@ export function useReviewQuery(active = true) {
     queryFn: async ({ client }): Promise<ReviewRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       dropLegacyJevConnectorKey();
       const listed = supabase.rpc("list_review");
       if (typeof supabase.from === "function") {
@@ -237,6 +242,7 @@ export function useCategoriesQuery(active = true) {
     queryFn: async (): Promise<CategoryRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_categories");
       if (error) throw error;
       return categoryRowSchema.array().parse(data);
@@ -252,6 +258,7 @@ export function useSumitStatusQuery(active = true) {
     queryFn: async (): Promise<SumitStatus> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("sumit_status");
       if (error) throw error;
       return sumitStatusSchema.parse(data);
@@ -267,6 +274,7 @@ export function useProjectQuery(projectId: string) {
     queryFn: async (): Promise<ProjectDetail> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_project", { p_id: projectId });
       if (error) throw error;
       return projectDetailSchema.parse(data);
@@ -285,6 +293,7 @@ export function useProjectCategoryQuery(projectId: string, categoryId: string) {
     queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("list_project_category", {
         p_project: projectId,
         p_category: categoryId,
@@ -306,6 +315,7 @@ export function useProjectWaitingQuery(projectId: string) {
     queryFn: async (): Promise<ProjectWaitingRow[]> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("project_waiting", { p_project: projectId });
       if (error) throw error;
       return projectWaitingSchema.parse(data);
@@ -321,6 +331,7 @@ export function useTransactionQuery(transactionId: string) {
     queryFn: async (): Promise<TransactionDetail> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
       const { data, error } = await supabase.rpc("get_transaction", { p_id: transactionId });
       if (error) throw error;
       return transactionDetailSchema.parse(data);
