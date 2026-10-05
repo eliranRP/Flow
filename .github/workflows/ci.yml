@@ -320,6 +320,15 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+          if grep -q '(retries)' "$log" || grep -q ' flaky' "$log"; then
+            if ! grep -q 'passed on retry' "${GITHUB_STEP_SUMMARY:-/dev/null}"; then
+              printf '%s\n' \
+                '### Warning: read-only smoke passed on retry' \
+                '' \
+                'The first attempt failed and a retry passed. Production is already live. The Playwright output is in the step log, not in this summary.' \
+                >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
           cat "$log"
 
       - name: Remove the staged function secrets file

@@ -166,7 +166,7 @@ describe("App", () => {
   });
 
   it("replaces a direct install visit so Back does not return to it", async () => {
-    window.history.replaceState({}, "", "/start");
+    window.history.replaceState({}, "", "/help");
     window.history.pushState({}, "", "/install?preview=1");
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(

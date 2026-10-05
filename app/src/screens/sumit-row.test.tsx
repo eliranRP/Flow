@@ -6,6 +6,7 @@ import { createMemoryRouter, MemoryRouter, Route, RouterProvider, Routes, useLoc
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
+import { sheetStack } from "../ui/back";
 import { ToastProvider } from "../ui/toast";
 import { israelSyncPhrase } from "../sumit-copy";
 import { OnboardingScreen, SettingsScreen } from "./flow-screens";
@@ -972,6 +973,59 @@ describe("SUMIT status row", () => {
     }
   });
 
+  it("pushes onboarding when פרטי העסק is tapped before the SUMIT layer is on the entry", async () => {
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: { ...dashboard, company_id: null, name: "" },
+          error: null,
+        });
+      }
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
+      if (name === "sumit_status") return Promise.resolve({ data: sumit({}), error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const router = createMemoryRouter(
+      [
+        { path: "/settings", element: <SettingsScreen /> },
+        { path: "/onboarding", element: <OnboardingScreen /> },
+        { path: "/", element: <h1>בית</h1> },
+      ],
+      { initialEntries: ["/", "/settings"], initialIndex: 1 },
+    );
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ToastProvider>
+          <BooksProvider>
+            <RouterProvider router={router} />
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const settingsKey = router.state.location.key;
+    fireEvent.click(await screen.findByRole("button", { name: "SUMIT" }));
+    await waitFor(() => {
+      expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
+    });
+    // The dialog stays open on the settings entry, with no sumit-connect layer.
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect(sheetStack(router.state.location.state)).toEqual([]);
+    expect(router.state.location.key).toBe(settingsKey);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("link", { name: "פרטי העסק" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/onboarding");
+    });
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/settings");
+      expect(router.state.location.key).toBe(settingsKey);
+    });
+  });
+
   it("replaces the sheet entry on the way to onboarding and returns with replace", async () => {
     let created = false;
     rpc.impl = (name) => {
@@ -1085,6 +1139,7 @@ describe("SUMIT status row", () => {
       await waitFor(() => {
         expect(router.state.location.pathname).toBe("/settings");
         expect(router.state.location.search).not.toContain("sheet=");
+        expect(router.state.location.state).toMatchObject({ flowLayer: "sumit-connect" });
       });
       // The company now exists, so the Jev read finishes before Back is used.
       await screen.findByRole("switch", { name: "תיוג חכם (Jev)", hidden: true });
@@ -1109,10 +1164,7 @@ describe("SUMIT status row", () => {
 
     const closed = await openReturnedSheet();
     window.history.replaceState({ idx: 2 }, "");
-    await act(async () => {
-      fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
-      await Promise.resolve();
-    });
+    fireEvent.click(within(screen.getByRole("dialog", { name: "חיבור SUMIT" })).getByRole("button", { name: "סגירה" }));
     await waitFor(() => { expect(closed.router.state.location.key).toBe(closed.original); });
     act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
     await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });

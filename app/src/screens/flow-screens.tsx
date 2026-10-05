@@ -93,7 +93,7 @@ import { StatusPill } from "../ui/chip";
 import { formatDayMonth, formatDisplay, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { HoldLine } from "../ui/hold-line";
-import { BackButton, historyIndex, popSheetLayers, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
+import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
 import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
@@ -3328,6 +3328,7 @@ export function SettingsScreen({
 } = {}) {
   const preview = useHomePreview();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const previewValue = params.get("preview");
   const search = usePreviewSearch();
@@ -3706,7 +3707,7 @@ export function SettingsScreen({
         {noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search)} replace>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
           </div>
         ) : (
           <div className="ui-stack">
