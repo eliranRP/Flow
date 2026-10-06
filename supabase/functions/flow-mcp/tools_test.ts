@@ -176,12 +176,14 @@ Deno.test("write tools are listed only for a write scope", () => {
   assertEquals(toolsFor(["read"]).map((tool) => tool.name).includes("assign_expense"), false);
   assertEquals(toolsFor(["write"]).map((tool) => tool.name), [
     "assign_expense",
+    "assign_expenses",
     "set_expense_category",
     "create_project",
     "create_category",
     "sync_bank",
     "hide_category",
     "undo",
+    "undo_batch",
   ]);
   for (const tool of toolsFor(["write"])) {
     assertEquals(tool.annotations, { readOnlyHint: false, destructiveHint: true, idempotentHint: true });
@@ -194,12 +196,14 @@ Deno.test("write tools are listed only for a write scope", () => {
     "search_expenses",
     "get_totals",
     "assign_expense",
+    "assign_expenses",
     "set_expense_category",
     "create_project",
     "create_category",
     "sync_bank",
     "hide_category",
     "undo",
+    "undo_batch",
   ]);
   assertEquals(toolsFor([]), []);
 });
@@ -550,4 +554,97 @@ Deno.test("sync_bank proceed, replay, errors, and skipped", async () => {
   });
   assertEquals(noInvoke.isError, true);
   if (!noInvoke.structuredContent.ok) assertEquals(noInvoke.structuredContent.error.code, "unavailable");
+});
+
+const BATCH_KEY = "33333333-3333-4000-8000-000000000003";
+
+Deno.test("assign_expenses sends exact p_items and validates batch input", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: BATCH_KEY,
+        ok_count: 1,
+        error_count: 0,
+        results: [{ transaction_id: TXN, ok: true, undo_kind: "reassign" }],
+      },
+    },
+  }));
+  const batch = await callTool("assign_expenses", {
+    idempotency_key: "batch-1",
+    items: [{
+      transaction_id: TXN,
+      project_id: PROJECT,
+      category_id: CATEGORY,
+    }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_assign_expenses",
+    body: {
+      p_idempotency_key: "batch-1",
+      p_items: [{
+        transaction_id: TXN,
+        project_id: PROJECT,
+        category_id: CATEGORY,
+      }],
+    },
+  });
+  if (batch.structuredContent.ok) {
+    assertEquals((batch.structuredContent.data as { batch_key: string }).batch_key, BATCH_KEY);
+  }
+  const undo = await callTool("undo_batch", {
+    idempotency_key: "undo-batch-1",
+    batch_key: BATCH_KEY,
+  }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_undo_batch",
+    body: { p_idempotency_key: "undo-batch-1", p_batch_key: BATCH_KEY },
+  });
+  const { calls: deniedCalls, rpc: deniedRpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const readDenied = await callTool("assign_expenses", {
+    idempotency_key: "batch-1",
+    items: [{ transaction_id: TXN, category_id: CATEGORY }],
+  }, ["read"], deniedRpc);
+  assertEquals(readDenied.isError, true);
+  if (!readDenied.structuredContent.ok) assertEquals(readDenied.structuredContent.error.code, "forbidden");
+  assertEquals(deniedCalls.length, 0);
+  const tooMany = Array.from({ length: 201 }, (_, index) => ({
+    transaction_id: `11111111-1111-4000-8000-${String(index).padStart(12, "0")}`,
+    category_id: CATEGORY,
+  }));
+  const cases = [
+    callTool("assign_expenses", { idempotency_key: "k", items: [] }, ["write"], rpc),
+    callTool("assign_expenses", { idempotency_key: "k", items: tooMany }, ["write"], rpc),
+    callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [
+        { transaction_id: TXN, category_id: CATEGORY },
+        { transaction_id: TXN, category_id: CATEGORY },
+      ],
+    }, ["write"], rpc),
+    callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN }],
+    }, ["write"], rpc),
+    callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, project_id: PROJECT }],
+    }, ["write"], rpc),
+    callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, category_id: CATEGORY, company_id: "forged" }],
+    }, ["write"], rpc),
+    callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, category_id: CATEGORY, extra: true }],
+    }, ["write"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
 });

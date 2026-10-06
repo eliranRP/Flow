@@ -1,4 +1,4 @@
-// Cycle 2 reads, cycle 3a single-expense writes, and cycle 4 project/category/sync. Decision 0080.
+// Cycle 2 reads, cycle 3a single-expense writes, cycle 4 project/category/sync, cycle 6 batch. Decision 0080.
 // Identity is not an argument. The handler signs from the credential row.
 // Zod checks write arguments. A failure is the fixed validation message.
 
@@ -16,12 +16,14 @@ export const READ_TOOL_NAMES = [
 
 export const WRITE_TOOL_NAMES = [
   "assign_expense",
+  "assign_expenses",
   "set_expense_category",
   "create_project",
   "create_category",
   "sync_bank",
   "hide_category",
   "undo",
+  "undo_batch",
 ] as const;
 
 const IDENTITY = new Set(["user_id", "p_user", "company_id", "sub", "mcp_tid"]);
@@ -36,12 +38,14 @@ const ALLOWED: Record<string, Set<string>> = {
   search_expenses: new Set(["scope", "query", "limit", "offset"]),
   get_totals: new Set(["from", "to", "basis"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
+  assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   create_project: new Set(["idempotency_key", "name", "status"]),
   create_category: new Set(["idempotency_key", "name", "kind"]),
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
+  undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -80,6 +84,36 @@ const syncBankSchema = z.object({
 const hideCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
+}).strict();
+const batchItemSchema = z.object({
+  transaction_id: UUID_TEXT,
+  project_id: UUID_TEXT.optional(),
+  category_id: UUID_TEXT.optional(),
+  remember: z.boolean().optional(),
+}).strict().superRefine((item, ctx) => {
+  if (item.project_id == null && item.category_id == null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+  if (item.project_id != null && item.category_id == null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+});
+const assignExpensesSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  items: z.array(batchItemSchema).min(1).max(200),
+}).strict().superRefine((body, ctx) => {
+  const seen = new Set<string>();
+  for (const item of body.items) {
+    if (seen.has(item.transaction_id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      return;
+    }
+    seen.add(item.transaction_id);
+  }
+});
+const undoBatchSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  batch_key: UUID_TEXT,
 }).strict();
 
 export type ToolRpc = (name: string, body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>;
@@ -273,6 +307,23 @@ function writeTools() {
       category_id: { type: "string" },
       remember: { type: "boolean" },
     }, true),
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed.", {
+      idempotency_key: { type: "string" },
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            transaction_id: { type: "string" },
+            project_id: { type: "string" },
+            category_id: { type: "string" },
+            remember: { type: "boolean" },
+          },
+          required: ["transaction_id"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("set_expense_category", "Set one expense category. Shares stay. An open review is closed.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
@@ -299,6 +350,10 @@ function writeTools() {
       idempotency_key: { type: "string" },
       kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden"] },
       id: { type: "string" },
+    }, true),
+    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
+      idempotency_key: { type: "string" },
+      batch_key: { type: "string" },
     }, true),
   ];
 }
@@ -427,6 +482,22 @@ async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "assign_expenses") {
+    const parsed = assignExpensesSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_assign_expenses";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items,
+    };
+  } else if (name === "undo_batch") {
+    const parsed = undoBatchSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_undo_batch";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_batch_key: parsed.data.batch_key,
     };
   } else {
     const parsed = undoSchema.safeParse(args);
