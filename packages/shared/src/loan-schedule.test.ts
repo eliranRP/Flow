@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { divHalfEven } from "./money.ts";
 import {
   buildLoanSchedule,
   contractualPaymentMinor,
@@ -105,7 +106,7 @@ describe("buildLoanSchedule", () => {
   });
 
   it("stops once an early payment clears the balance", () => {
-    const { rows, balloon } = buildLoanSchedule({
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
       ...base,
       termMonths: 360,
       paymentMinor: 20_000_000n,
@@ -114,10 +115,11 @@ describe("buildLoanSchedule", () => {
     expect(rows[0]?.principalMinor).toBe(base.principalMinor);
     expect(rows[0]?.balanceMinor).toBe(0n);
     expect(balloon).toBeNull();
+    expect(finalAdjustment).toBeNull();
   });
 
   it("holds the 360 month vector for 100,000.00 at 6 percent", () => {
-    const { rows, balloon } = buildLoanSchedule(base);
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule(base);
     expect(rows).toHaveLength(360);
     expect(rows[0]?.paymentMinor).toBe(59_955n);
     expect(rows.at(-1)?.paymentMinor).toBe(60_000n);
@@ -125,6 +127,7 @@ describe("buildLoanSchedule", () => {
     expect(rows.reduce((sum, row) => sum + row.interestMinor, 0n)).toBe(11_583_845n);
     expect(rows.reduce((sum, row) => sum + row.principalMinor, 0n)).toBe(base.principalMinor);
     expect(balloon).toBeNull();
+    expect(finalAdjustment).toEqual({ amountMinor: 60_000n });
 
     let previous = base.principalMinor;
     for (const row of rows) {
@@ -142,18 +145,33 @@ describe("buildLoanSchedule", () => {
     expect(balloon).toBeNull();
   });
 
-  it("does not treat 254.71 on 26,319.35 at 11.2 percent as a balloon", () => {
-    const { rows, balloon } = buildLoanSchedule({
+  it("stays quiet at 254.71 and flags 254.70 on 26,319.35 at 112,042 ppm", () => {
+    const quiet = buildLoanSchedule({
       principalMinor: 2_631_935n,
-      annualRatePpm: 112_000,
+      annualRatePpm: 112_042,
       termMonths: 360,
       startDate: "2026-01-01",
       paymentMinor: 25_471n,
       escrowMinor: 0n,
     });
-    expect(rows).toHaveLength(360);
-    expect(rows.at(-1)?.balanceMinor).toBe(0n);
-    expect(balloon).toBeNull();
+    expect(quiet.rows).toHaveLength(360);
+    expect(quiet.rows.at(-1)?.balanceMinor).toBe(0n);
+    expect(quiet.balloon).toBeNull();
+    expect(quiet.finalAdjustment).toEqual({ amountMinor: 26_905n });
+
+    const flagged = buildLoanSchedule({
+      principalMinor: 2_631_935n,
+      annualRatePpm: 112_042,
+      termMonths: 360,
+      startDate: "2026-01-01",
+      paymentMinor: 25_470n,
+      escrowMinor: 0n,
+    });
+    expect(flagged.balloon).toEqual({
+      amountMinor: 29_858n,
+      ratioToPayment: Number(29_858n) / Number(25_470n),
+    });
+    expect(flagged.finalAdjustment).toBeNull();
   });
 
   it("still flags 550.00, which is more than one cent below the annuity", () => {
@@ -232,6 +250,90 @@ describe("buildLoanSchedule", () => {
     })).toBe(100n);
   });
 
+  it("rounds a half up to the even minor unit instead of down", () => {
+    expect(contractualPaymentMinor({
+      principalMinor: 7n,
+      annualRatePpm: 0,
+      termMonths: 2,
+    })).toBe(4n);
+  });
+
+  it("rounds a half down to the even minor unit", () => {
+    expect(contractualPaymentMinor({
+      principalMinor: 5n,
+      annualRatePpm: 0,
+      termMonths: 2,
+    })).toBe(2n);
+  });
+
+  it("leaves an early payoff inside the rounding band off the adjusted final", () => {
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
+      principalMinor: 8n,
+      annualRatePpm: 0,
+      termMonths: 4,
+      startDate: "2026-01-01",
+      paymentMinor: 3n,
+      escrowMinor: 0n,
+    });
+    expect(rows.map((row) => row.paymentMinor)).toEqual([3n, 3n, 2n]);
+    expect(balloon).toBeNull();
+    expect(finalAdjustment).toBeNull();
+  });
+
+  it("leaves a full term outside the one cent band off the adjusted final", () => {
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
+      principalMinor: 100n,
+      annualRatePpm: 0,
+      termMonths: 4,
+      startDate: "2026-01-01",
+      paymentMinor: 30n,
+      escrowMinor: 0n,
+    });
+    expect(rows.map((row) => row.paymentMinor)).toEqual([30n, 30n, 30n, 10n]);
+    expect(balloon).toBeNull();
+    expect(finalAdjustment).toBeNull();
+  });
+
+  it("keeps a 600 month final payment of twice the regular one off the balloon", () => {
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
+      principalMinor: 360_600n,
+      annualRatePpm: 0,
+      termMonths: 600,
+      startDate: "2026-01-01",
+      paymentMinor: 600n,
+      escrowMinor: 0n,
+    });
+    expect(rows).toHaveLength(600);
+    expect(rows.at(-1)?.paymentMinor).toBe(1_200n);
+    expect(rows.at(-1)?.balanceMinor).toBe(0n);
+    expect(balloon).toBeNull();
+    expect(finalAdjustment).toEqual({ amountMinor: 1_200n });
+  });
+
+  it("keeps a rounding-only final payment that is more than twice the principal and interest", () => {
+    const paymentMinor = contractualPaymentMinor({
+      principalMinor: 3_491_009n,
+      annualRatePpm: 298_000,
+      termMonths: 480,
+    });
+    const { rows, balloon, finalAdjustment } = buildLoanSchedule({
+      principalMinor: 3_491_009n,
+      annualRatePpm: 298_000,
+      termMonths: 480,
+      startDate: "2026-01-01",
+      paymentMinor,
+      escrowMinor: 0n,
+    });
+    expect(paymentMinor).toBe(86_694n);
+    expect(rows).toHaveLength(480);
+    expect(rows.at(-1)?.paymentMinor).toBe(254_165n);
+    expect(rows.at(-1)?.balanceMinor).toBe(0n);
+    expect(balloon).toBeNull();
+    expect(finalAdjustment).toEqual({ amountMinor: 254_165n });
+    const pi = paymentMinor;
+    expect((rows.at(-1)?.paymentMinor ?? 0n) > pi * 2n).toBe(true);
+  });
+
   it("rejects a negative rate", () => {
     expect(codeOf(() => buildLoanSchedule({ ...base, annualRatePpm: -1 }))).toBe("rate");
   });
@@ -244,7 +346,7 @@ describe("buildLoanSchedule", () => {
       { ...base, paymentMinor: 20_000_000n },
       {
         principalMinor: 2_631_935n,
-        annualRatePpm: 112_000,
+        annualRatePpm: 112_042,
         termMonths: 360,
         startDate: "2026-01-01",
         paymentMinor: 25_471n,
@@ -280,6 +382,19 @@ describe("buildLoanSchedule", () => {
       const principal = rows.reduce((sum, row) => sum + row.principalMinor, 0n);
       expect(principal).toBe(terms.principalMinor);
       expect(rows.at(-1)?.balanceMinor).toBe(0n);
+      let previous = terms.principalMinor;
+      for (const [index, row] of rows.entries()) {
+        expect(row.period).toBe(index + 1);
+        expect(row.interestMinor).toBe(divHalfEven(previous * BigInt(terms.annualRatePpm), 12_000_000n));
+        expect(row.escrowMinor).toBe(terms.escrowMinor);
+        expect(row.principalMinor).toBeGreaterThanOrEqual(0n);
+        expect(row.paymentMinor).toBe(row.interestMinor + row.escrowMinor + row.principalMinor);
+        expect(row.balanceMinor).toBe(previous - row.principalMinor);
+        expect(row.balanceMinor).toBeGreaterThanOrEqual(0n);
+        const last = index === rows.length - 1;
+        if (!last) expect(row.paymentMinor).toBe(terms.paymentMinor);
+        previous = row.balanceMinor;
+      }
     }
   });
 

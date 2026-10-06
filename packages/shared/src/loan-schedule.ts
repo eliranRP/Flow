@@ -64,9 +64,19 @@ export type LoanBalloon = {
   readonly ratioToPayment: number;
 };
 
+/**
+ * Set when the loan runs the full term and the final payment differs from the
+ * regular one only because of rounding. An early payoff is not this.
+ */
+export type LoanFinalAdjustment = {
+  /** The final payment, in the loan's minor units. */
+  readonly amountMinor: bigint;
+};
+
 export type LoanSchedule = {
   readonly rows: readonly LoanScheduleRow[];
   readonly balloon: LoanBalloon | null;
+  readonly finalAdjustment: LoanFinalAdjustment | null;
 };
 
 type DateParts = { year: number; month: number; day: number };
@@ -165,6 +175,20 @@ function balloonOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): LoanBall
   };
 }
 
+function finalAdjustmentOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): LoanFinalAdjustment | null {
+  if (piBelowAnnuity(terms) || rows.length !== terms.termMonths) return null;
+  const last = rows.at(-1);
+  if (last == null || last.paymentMinor === terms.paymentMinor) return null;
+  const pi = terms.paymentMinor - terms.escrowMinor;
+  const level = contractualPaymentMinor({
+    principalMinor: terms.principalMinor,
+    annualRatePpm: terms.annualRatePpm,
+    termMonths: terms.termMonths,
+  });
+  if (pi < level - ONE_CENT || pi > level + ONE_CENT) return null;
+  return { amountMinor: last.paymentMinor };
+}
+
 /**
  * Monthly schedule in the loan's minor units.
  * Interest is the remaining balance times the nominal annual rate divided by 12,
@@ -172,6 +196,8 @@ function balloonOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): LoanBall
  * rest of the balance. A payment that clears the balance early ends the schedule.
  * `balloon` is set only when principal-and-interest is more than one cent below
  * the exact, unrounded annuity. Escrow is excluded from that comparison.
+ * `finalAdjustment` is the final payment when a full term ends on a different
+ * amount only because of that rounding. An early payoff leaves it null.
  */
 export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
   assertTerms(terms);
@@ -201,7 +227,11 @@ export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
     });
   }
 
-  return { rows, balloon: balloonOf(rows, terms) };
+  return {
+    rows,
+    balloon: balloonOf(rows, terms),
+    finalAdjustment: finalAdjustmentOf(rows, terms),
+  };
 }
 
 function assertAnnuityInput(input: {

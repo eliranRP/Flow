@@ -84,6 +84,7 @@ import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
+import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -3316,6 +3317,8 @@ type SettingsSample = {
   sumit?: "loading" | "error";
   assistant?: AssistantSample;
   jev?: JevCardState;
+  /** Preview only. Live settings read the company's lines. */
+  loanCurrency?: LoanCurrency;
 };
 
 type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
@@ -3828,6 +3831,11 @@ export function SettingsScreen({
               }}
             />
           </div>
+          <LoanSettingsSection
+            companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
+            companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
+            blocked={blocked}
+          />
         </>
       )}
       {showInstall || showSignOut ? (
