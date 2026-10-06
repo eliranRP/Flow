@@ -434,7 +434,7 @@ a.ui-row,
 }
 
 .ui-loan-skel .ui-row {
-  min-height: calc(var(--touch-min) + 11px);
+  min-height: calc(var(--touch-min) + 28px);
 }
 
 .ui-loan-amount {
@@ -3290,6 +3290,16 @@ div.ui-check-row {
   align-items: center;
   gap: var(--space-2);
   overflow: hidden;
+}
+
+.ui-pick-name:has(> .ui-radio-desc) {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.ui-pick-name > .ui-radio-desc {
+  flex-basis: 100%;
+  overflow-wrap: normal;
 }
 
 .ui-pick-label {
