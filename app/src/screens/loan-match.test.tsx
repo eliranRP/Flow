@@ -58,7 +58,9 @@ describe("LoanSplitPanel", () => {
     expect(screen.getByText("ריבית")).toBeInTheDocument();
     expect(screen.getByText("מסים וביטוח")).toBeInTheDocument();
     expect(screen.getByText("קרן")).toBeInTheDocument();
-    expect(screen.getByText("₪5.00")).toBeInTheDocument();
+    expect(screen.getByText("₪5")).toBeInTheDocument();
+    expect(screen.getByText("₪2")).toBeInTheDocument();
+    expect(screen.getByText("₪3")).toBeInTheDocument();
     expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
     expect(onCorrect).toHaveBeenCalled();
@@ -93,7 +95,7 @@ describe("LoanBalanceList", () => {
       />,
     );
     expect(screen.getByText("הלוואת דוגמה")).toBeInTheDocument();
-    expect(screen.getByText("₪117,000.00")).toBeInTheDocument();
+    expect(screen.getByText("₪117,000")).toBeInTheDocument();
     expect(screen.getByText("ממתין לבדיקה")).toBeInTheDocument();
   });
 });
