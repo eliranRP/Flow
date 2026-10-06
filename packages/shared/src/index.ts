@@ -6,6 +6,7 @@ export {
   formatIls,
   formatMoney,
   netFromGrossAgorot,
+  parseDecimalHalfEven,
   parseShekelInput,
   rateFractionToBp,
   roundedProfitAgorot,
@@ -67,6 +68,7 @@ export {
 } from "./loan-schedule.ts";
 export type {
   LoanBalloon,
+  LoanFinalAdjustment,
   LoanSchedule,
   LoanScheduleErrorCode,
   LoanScheduleRow,

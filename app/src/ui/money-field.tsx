@@ -9,27 +9,52 @@ type MoneyFieldProps = {
   error?: string;
   id?: string;
   disabled?: boolean;
+  /** Defaults to ₪. A dollar loan passes $. */
+  prefix?: string;
+  /** A leading minus stays, so the form can show an error instead of dropping it. */
+  keepMinus?: boolean;
+  /** Keeps the message line when there is no error, so the form does not jump. */
+  reserveMessage?: boolean;
+  onBlur?: () => void;
+  onFocus?: () => void;
 };
 
-function digitsOnly(raw: string): string {
+function digitsOnly(raw: string, keepMinus: boolean): string {
+  const negative = keepMinus && raw.trim().startsWith("-");
   const cleaned = raw.replace(/[^\d.]/g, "");
   const [whole, frac] = cleaned.split(".");
-  if (frac == null) return whole ?? "";
-  return `${whole ?? ""}.${frac.slice(0, 2)}`;
+  const body = frac == null ? (whole ?? "") : `${whole ?? ""}.${frac.slice(0, 2)}`;
+  if (!negative) return body;
+  return body === "" ? "-" : `-${body}`;
 }
 
 function grouped(raw: string): string {
-  if (raw === "") return "";
-  const [whole, frac] = raw.split(".");
+  if (raw === "" || raw === "-") return raw;
+  const negative = raw.startsWith("-");
+  const body = negative ? raw.slice(1) : raw;
+  const [whole, frac] = body.split(".");
   const withCommas = (whole ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return frac == null ? withCommas : `${withCommas}.${frac}`;
+  const shown = frac == null ? withCommas : `${withCommas}.${frac}`;
+  return negative ? `-${shown}` : shown;
 }
 
 /**
  * The stored value is digits. Grouping is display-only, so a blur cannot
  * hand the parent a comma that the agorot parser rejects.
  */
-export function MoneyField({ label, value, onValueChange, error, id, disabled = false }: MoneyFieldProps) {
+export function MoneyField({
+  label,
+  value,
+  onValueChange,
+  error,
+  id,
+  disabled = false,
+  prefix = "₪",
+  keepMinus = false,
+  reserveMessage = false,
+  onBlur,
+  onFocus,
+}: MoneyFieldProps) {
   const generated = useId();
   const fieldId = flowControlName("flow-amount", generated, id);
   const errorId = `${fieldId}-error`;
@@ -48,7 +73,7 @@ export function MoneyField({ label, value, onValueChange, error, id, disabled = 
         onMouseDown={holdFieldMouse}
       >
         <span className="ui-money-prefix" aria-hidden="true">
-          ₪
+          {prefix}
         </span>
         <input
           id={fieldId}
@@ -65,14 +90,16 @@ export function MoneyField({ label, value, onValueChange, error, id, disabled = 
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           onPointerDown={holdFieldPointer}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onChange={(event) => {
-            onValueChange(digitsOnly(event.target.value));
+            onValueChange(digitsOnly(event.target.value, keepMinus));
           }}
         />
       </div>
-      {error ? (
-        <span id={errorId} className="ui-field-message">
-          {error}
+      {error || reserveMessage ? (
+        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
+          {error ?? ""}
         </span>
       ) : null}
     </div>
@@ -92,14 +119,23 @@ type PercentFieldProps = {
   disabled?: boolean;
   /** The last row in a split uses "done". */
   enterKeyHint?: "next" | "done";
+  /** Split shares keep one decimal. A loan rate can keep four, so 11.2042 stays. */
+  decimals?: number;
+  /** A leading minus stays, so the form can show an error instead of dropping it. */
+  keepMinus?: boolean;
+  /** Keeps the message line when there is no error, so the form does not jump. */
+  reserveMessage?: boolean;
+  onBlur?: () => void;
 };
 
-/** One decimal. "33.3" stays "33.3"; a second digit is dropped. */
-function percentDigits(raw: string): string {
+/** "33.3" stays "33.3" at one decimal. Extra digits are dropped. */
+function percentDigits(raw: string, places: number, keepMinus: boolean): string {
+  const negative = keepMinus && raw.trim().startsWith("-");
   const cleaned = raw.replace(/[^\d.]/g, "");
   const [whole, frac] = cleaned.split(".");
-  if (frac == null) return whole ?? "";
-  return `${whole ?? ""}.${frac.slice(0, 1)}`;
+  const body = frac == null ? (whole ?? "") : `${whole ?? ""}.${frac.slice(0, places)}`;
+  if (!negative) return body;
+  return body === "" ? "-" : `-${body}`;
 }
 
 /** A percent share. The suffix sits in the padding, so 100 never shares the digit box. */
@@ -113,6 +149,10 @@ export function PercentField({
   error,
   disabled = false,
   enterKeyHint = "next",
+  decimals = 1,
+  keepMinus = false,
+  reserveMessage = false,
+  onBlur,
 }: PercentFieldProps) {
   const generated = useId();
   const fieldId = id ?? flowControlName("split-pct", generated);
@@ -151,14 +191,15 @@ export function PercentField({
           onFocus={(event) => {
             event.currentTarget.select();
           }}
+          onBlur={onBlur}
           onChange={(event) => {
-            onValueChange(percentDigits(event.target.value));
+            onValueChange(percentDigits(event.target.value, decimals, keepMinus));
           }}
         />
       </div>
-      {error ? (
-        <span id={errorId} className="ui-field-message">
-          {error}
+      {error || reserveMessage ? (
+        <span id={errorId} className={reserveMessage ? "ui-field-message ui-field-message-slot" : "ui-field-message"}>
+          {error ?? ""}
         </span>
       ) : null}
     </div>
