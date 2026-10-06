@@ -65,7 +65,28 @@ describe("Sheet", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(400); });
     expect(closed).toBe(1);
   });
+
+  it("sizes the tall sheet with the visual viewport variable", () => {
+    expect(tallSheetHeightRule()).toContain("var(--vvh");
+  });
 });
+
+function tallSheetHeightRule(): string {
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of rules) {
+      if (!(rule instanceof CSSStyleRule)) continue;
+      if (rule.selectorText !== "[data-vaul-drawer].ui-sheet-panel.ui-sheet-tall") continue;
+      return rule.style.getPropertyValue("height");
+    }
+  }
+  return "";
+}
 
 function sheetFocusRule(): string {
   for (const sheet of document.styleSheets) {
