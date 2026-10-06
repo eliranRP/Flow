@@ -115,6 +115,7 @@ export function JevSettingsCard({
   onToggle,
   onThreshold,
   onRetry,
+  readOnly = false,
 }: {
   state: JevCardState;
   busy?: boolean;
@@ -127,6 +128,8 @@ export function JevSettingsCard({
   onToggle?: (enabled: boolean) => void;
   onThreshold?: (value: number) => void;
   onRetry?: () => void;
+  /** A viewer sees the switch and cannot change it. */
+  readOnly?: boolean;
 }) {
   const panelId = useId();
   const shownOn = jevSwitchOn(state);
@@ -173,9 +176,10 @@ export function JevSettingsCard({
       icon={<TagIcon size={24} />}
       checked={shownOn}
       busy={busy}
+      disabled={readOnly}
       inputRef={switchRef}
       onChange={(checked) => {
-        if (busy) return;
+        if (busy || readOnly) return;
         onToggle?.(checked);
       }}
     />
@@ -208,14 +212,14 @@ export function JevSettingsCard({
                   inputMode="decimal"
                   dir="ltr"
                   value={draft}
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   error={draftError ? "בין 0.50 ל-1.00" : undefined}
                   onChange={(event) => {
                     setDraft(event.target.value);
                     setDraftError(false);
                   }}
                   onBlur={() => {
-                    if (busy) return;
+                    if (busy || readOnly) return;
                     const parsed = parseJevThreshold(draft);
                     if (parsed == null) {
                       setDraftError(true);
@@ -247,33 +251,36 @@ export function JevSettings({
   noCompany = false,
   blocked,
   showThreshold = false,
+  readOnly = false,
 }: {
   sample?: JevCardState;
   noCompany?: boolean;
   blocked?: () => boolean;
   showThreshold?: boolean;
+  readOnly?: boolean;
 }) {
   if (noCompany) return null;
-  if (sample) return <JevSettingsSample sample={sample} showThreshold={showThreshold} />;
-  return <JevSettingsLive blocked={blocked} showThreshold={showThreshold} />;
+  if (sample) return <JevSettingsSample sample={sample} showThreshold={showThreshold} readOnly={readOnly} />;
+  return <JevSettingsLive blocked={blocked} showThreshold={showThreshold} readOnly={readOnly} />;
 }
 
-function JevSettingsSample({ sample, showThreshold }: { sample: JevCardState; showThreshold: boolean }) {
+function JevSettingsSample({ sample, showThreshold, readOnly }: { sample: JevCardState; showThreshold: boolean; readOnly: boolean }) {
   const [state, setState] = useState(sample);
   return (
     <JevSettingsCard
       state={state}
       showThreshold={showThreshold}
-      onToggle={(enabled) => {
+      readOnly={readOnly}
+      onToggle={readOnly ? undefined : (enabled) => {
         setState((current) => ({ ...current, ...turnedOn(current, enabled), status: current.status }));
       }}
-      onThreshold={(threshold) => { setState((current) => ({ ...current, threshold })); }}
+      onThreshold={readOnly ? undefined : (threshold) => { setState((current) => ({ ...current, threshold })); }}
       onRetry={() => undefined}
     />
   );
 }
 
-function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; showThreshold: boolean }) {
+function JevSettingsLive({ blocked, showThreshold, readOnly }: { blocked?: () => boolean; showThreshold: boolean; readOnly: boolean }) {
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["jev-integration"],
@@ -333,6 +340,7 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
   }
 
   function commit(next: StoredJev) {
+    if (readOnly) return;
     if (blocked?.()) return;
     if (save.isPending) return;
     save.mutate(next);
@@ -343,14 +351,15 @@ function JevSettingsLive({ blocked, showThreshold }: { blocked?: () => boolean; 
       state={view}
       busy={save.isPending}
       showThreshold={showThreshold}
+      readOnly={readOnly}
       retryBusy={retryingView}
       retryRef={retryRef}
       switchRef={switchRef}
-      onToggle={(enabled) => {
+      onToggle={readOnly ? undefined : (enabled) => {
         if (!stored || save.isPending) return;
         commit(turnedOn(stored, enabled));
       }}
-      onThreshold={(threshold) => {
+      onThreshold={readOnly ? undefined : (threshold) => {
         if (!stored || save.isPending) return;
         commit({ ...stored, threshold: roundJevThreshold(threshold) });
       }}

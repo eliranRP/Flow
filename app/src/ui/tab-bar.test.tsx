@@ -35,6 +35,19 @@ describe("TabBar", () => {
     expectTarget(screen.getByRole("link", { name: "הוספה" }));
   });
 
+  it("hides add for a viewer and keeps the slot", () => {
+    render(
+      <MemoryRouter>
+        <TabBar allowAdd={false} />
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
+    expect(screen.queryByRole("button", { name: "הוספה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "הוספה" })).not.toBeInTheDocument();
+    expect(nav.querySelectorAll(".ui-tab-slot")).toHaveLength(5);
+    expect(nav.querySelector(".ui-fab")).toBeNull();
+  });
+
   it("uses the singular awaiting label for one item", () => {
     render(
       <MemoryRouter>
