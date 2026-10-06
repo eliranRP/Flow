@@ -147,6 +147,8 @@ export function LoanSetupForm({
 
   function onFormEnter(event: KeyboardEvent<HTMLFormElement>) {
     if (event.key !== "Enter") return;
+    // Enter that commits an IME composition (Gboard, Hebrew predictive text) is not "next".
+    if (event.nativeEvent.isComposing) return;
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
     const fields = [...event.currentTarget.querySelectorAll<HTMLInputElement>("input:not([disabled])")];
