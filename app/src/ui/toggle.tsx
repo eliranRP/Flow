@@ -1,4 +1,5 @@
 import { useId, type ReactNode, type Ref } from "react";
+import { useViewerNoteId } from "../use-is-viewer";
 import { cx } from "./cx";
 
 type ToggleProps = {
@@ -18,7 +19,9 @@ type ToggleProps = {
 /** A 44px row. The switch is off, on, or disabled with not-allowed. */
 export function Toggle({ label, hint, checked, disabled = false, busy = false, icon, inputRef, onChange }: ToggleProps) {
   const hintId = useId();
-  const described = hint != null ? hintId : undefined;
+  const noteId = useViewerNoteId();
+  const describedIds = [hint != null ? hintId : null, disabled && noteId != null ? noteId : null].filter((id): id is string => id != null);
+  const described = describedIds.length > 0 ? describedIds.join(" ") : undefined;
   const row = icon != null;
   return (
     <label className={cx(row ? "ui-row ui-switch-row" : "ui-switch-row")}>
