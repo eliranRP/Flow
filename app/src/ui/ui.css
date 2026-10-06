@@ -429,6 +429,35 @@ a.ui-row,
   text-wrap: pretty;
 }
 
+.ui-loan-caution {
+  color: var(--color-warning);
+}
+
+.ui-num-field {
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  text-align: start;
+}
+
+.ui-date-field .ui-num {
+  flex: 1;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field:disabled {
+  cursor: not-allowed;
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -663,6 +692,10 @@ a.ui-row,
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
+}
+
+.ui-field-message-slot {
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
 }
 
 .ui-money-field {
