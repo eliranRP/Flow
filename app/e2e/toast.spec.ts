@@ -35,6 +35,7 @@ type ToastFrame = {
   top: number | null;
   bottom: number | null;
   tall: boolean;
+  picker: boolean;
   covers: boolean;
   gapOk: boolean;
 };
@@ -116,6 +117,7 @@ async function armSampler(page: Page, safe: number, ms: number): Promise<void> {
         top,
         bottom,
         tall: sheet instanceof Element && sheet.classList.contains("ui-sheet-tall"),
+        picker: sheet instanceof Element && sheet.querySelector(".ui-change-picker") != null,
         covers,
         gapOk,
       });
@@ -174,37 +176,9 @@ function assertVisiblePosition(samples: ToastFrame[]): void {
   expect(samples.every((sample) => sample.gapOk)).toBe(true);
 }
 
-function assertPadGeometry(settled: SettledToast, padNeeded: boolean): void {
-  if (padNeeded) {
-    expect(settled.pad).toBeGreaterThan(GAP + 1);
-    expect(Math.abs(settled.closeTop - (settled.toastBottom + GAP))).toBeLessThanOrEqual(1);
-    return;
-  }
-  expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
-}
-
 function assertAboveSheet(settled: SettledToast): void {
   expect(Math.abs(settled.toastBottom - (settled.sheetTop - GAP))).toBeLessThanOrEqual(1);
   expect(Math.abs(settled.pad - GAP)).toBeLessThanOrEqual(1);
-}
-
-function padMove(samples: ToastFrame[]): { start: number; final: number; moveStart: number; settledAt: number; reversals: number; peak: number } {
-  const final = samples[samples.length - 1]?.pad ?? 0;
-  const start = samples[0]?.pad ?? 0;
-  let reversals = 0;
-  let peak = start;
-  let moveStart = -1;
-  let settledAt = -1;
-  const fadeAt = samples.find((sample) => sample.opacity > 0.02)?.t ?? -1;
-  for (let index = 1; index < samples.length; index += 1) {
-    const previous = samples[index - 1]?.pad ?? 0;
-    const pad = samples[index]?.pad ?? 0;
-    if (pad > peak) peak = pad;
-    if (pad < previous - 1) reversals += 1;
-    if (moveStart < 0 && pad > start + 0.5) moveStart = samples[index]?.t ?? 0;
-  }
-  if (moveStart >= 0 && fadeAt >= moveStart) settledAt = fadeAt;
-  return { start, final, moveStart, settledAt, reversals, peak };
 }
 
 async function openCategory(page: Page, safe: number): Promise<void> {
@@ -221,7 +195,6 @@ const viewports = [
 for (const viewport of viewports) {
   for (const safe of [0, 20, 47] as const) {
     const label = `${String(viewport.width)}×${String(viewport.height)} safe ${String(safe)}`;
-    const padNeeded = safe === 47;
 
     test(`first show immediately after open at ${label}`, async ({ page }) => {
       await page.setViewportSize(viewport);
@@ -232,18 +205,9 @@ for (const viewport of viewports) {
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
-      assertPadGeometry(settled, padNeeded);
-      if (!padNeeded) return;
-      const move = padMove(samples);
-      expect(move.final).toBeGreaterThan(move.start + 1);
-      expect(move.reversals).toBe(0);
-      expect(move.peak).toBeLessThanOrEqual(move.final + 1);
-      const duration = move.settledAt - Math.max(move.moveStart, 0);
-      expect(duration).toBeGreaterThanOrEqual(150);
-      expect(duration).toBeLessThanOrEqual(250);
-      expect(samples.some((sample) => sample.pad > move.start + 1 && sample.pad < move.final - 1)).toBe(true);
-      const before = samples.filter((sample) => sample.t < move.settledAt - 16);
-      expect(before.every((sample) => sample.opacity <= 0.02)).toBe(true);
+      // The category picker is a fit sheet (change-sheet.tsx), so the toast sits above it with no pad.
+      assertAboveSheet(settled);
+      expect(samples.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
     });
 
     test(`first show after the sheet settles at ${label}`, async ({ page }) => {
@@ -256,7 +220,7 @@ for (const viewport of viewports) {
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
-      assertPadGeometry(settled, padNeeded);
+      assertAboveSheet(settled);
     });
 
     test(`retry keeps the settled geometry at ${label}`, async ({ page }) => {
@@ -274,7 +238,7 @@ for (const viewport of viewports) {
       const samples = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(samples);
-      assertPadGeometry(settled, padNeeded);
+      assertAboveSheet(settled);
       const floor = Math.min(samples[0]?.pad ?? settled.pad, settled.pad);
       for (const sample of samples) {
         expect(sample.pad).toBeGreaterThanOrEqual(floor - 1);
@@ -311,7 +275,6 @@ for (const viewport of viewports) {
 for (const viewport of viewports) {
   for (const safe of [0, 20, 47] as const) {
     const label = `${String(viewport.width)}×${String(viewport.height)} safe ${String(safe)}`;
-    const padNeeded = safe === 47;
 
     test(`reduced motion settles without a pad blip at ${label}`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -324,21 +287,16 @@ for (const viewport of viewports) {
       const first = await readFrames(page);
       const settled = await readSettled(page);
       assertVisiblePosition(first);
-      assertPadGeometry(settled, padNeeded);
+      assertAboveSheet(settled);
       const partial = first.filter((sample) => sample.opacity > 0.02 && sample.opacity < 0.9);
       expect(partial).toHaveLength(0);
-      if (padNeeded) {
-        const move = padMove(first);
-        expect(move.settledAt - Math.max(move.moveStart, 0)).toBeLessThan(50);
-      } else {
-        expect(first.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
-      }
+      expect(first.every((sample) => Math.abs(sample.pad - GAP) <= 1)).toBe(true);
       await armSampler(page, safe, 600);
       await page.getByRole("button", { name: "חזרה" }).click();
       await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toBeVisible();
       const back = await readFrames(page);
       const above = await readSettled(page);
-      const short = back.filter((sample) => !sample.tall);
+      const short = back.filter((sample) => !sample.tall && !sample.picker);
       expect(short.length).toBeGreaterThan(0);
       assertVisiblePosition(short);
       assertAboveSheet(above);

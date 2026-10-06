@@ -186,14 +186,19 @@ describe("review list paths", () => {
 describe("review queue list", () => {
   it("puts הצג הכול on the counter line, after the bar and above the filed banner", async () => {
     rpc.impl = (name) => {
-      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_review") {
+        return Promise.resolve({
+          data: [{ ...reviewRow("r1", "מחסן הנמל", "p1"), auto_approved_today: 2 }],
+          error: null,
+        });
+      }
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
     const link = await screen.findByRole("link", { name: "הצג הכול" });
     expect(link).toHaveAttribute("href", "/review/all");
     const meter = screen.getByRole("meter", { name: "התקדמות התור" });
-    const banner = screen.getByText(/שויכו היום/);
+    const banner = screen.getByText(/שויכו אוטומטית היום/);
     const card = screen.getByRole("heading", { name: "מחסן הנמל" });
     expect(meter.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(link.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -308,8 +313,8 @@ describe("review queue list", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "פרויקט: לא נבחר" }));
+    expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "בחירת פרויקט" }, { timeout: 2500 }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
     await waitFor(() => {
@@ -323,7 +328,7 @@ describe("review queue list", () => {
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: הרצל" })).toBeInTheDocument();
-    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בחירת קטגוריה" })).toBeEnabled();
     expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
   });
 
@@ -360,7 +365,7 @@ describe("review queue list", () => {
     });
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים" })).toBeInTheDocument();
-    expect(screen.getByText("חסר פרויקט, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
   });
 
@@ -411,7 +416,7 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
     expect(screen.getByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: "חזרה" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
@@ -440,7 +445,7 @@ describe("review queue list", () => {
     };
     renderAt("/review");
     expect(await screen.findByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" })).toBeInTheDocument();
-    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" }));
     expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "collapse_split")).toBe(false);
@@ -800,7 +805,7 @@ describe("review queue list", () => {
     );
     fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" }));
     const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "חזרה" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "סגירה" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toHaveFocus();
     });
