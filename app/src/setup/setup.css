@@ -47,7 +47,6 @@
 
 .ui-setup-stage-host {
   margin-block-start: var(--space-5);
-  padding-inline: var(--space-card-inset);
 }
 
 .ui-setup-stage {
