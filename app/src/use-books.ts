@@ -267,6 +267,8 @@ export function useSumitStatusQuery(active = true) {
     },
     // syncing is the server claim of a running refresh. Poll until it clears.
     refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    // Another tab may have started a run: re-read the claim when this tab is shown again.
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -307,6 +309,8 @@ export function useMercuryStatusQuery(active = true) {
     },
     // syncing is the server claim of a running refresh. Poll until it clears.
     refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    // Another tab may have started a run: re-read the claim when this tab is shown again.
+    refetchOnWindowFocus: true,
   });
 }
 
