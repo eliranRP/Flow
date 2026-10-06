@@ -111,4 +111,19 @@ describe("TabBar", () => {
     fireEvent.click(screen.getByRole("button", { name: "הוספה" }));
     expect(await screen.findByRole("heading", { name: "בית" })).toBeInTheDocument();
   });
+
+  it("hides the tab bar while the keyboard is open", () => {
+    render(
+      <MemoryRouter>
+        <TabBar />
+      </MemoryRouter>,
+    );
+    const bar = document.querySelector(".ui-tabbar");
+    expect(bar).toBeInstanceOf(HTMLElement);
+    if (!(bar instanceof HTMLElement)) return;
+    expect(getComputedStyle(bar).display).not.toBe("none");
+    document.documentElement.dataset.kb = "open";
+    expect(getComputedStyle(bar).display).toBe("none");
+    delete document.documentElement.dataset.kb;
+  });
 });

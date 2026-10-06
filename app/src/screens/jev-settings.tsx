@@ -211,6 +211,7 @@ export function JevSettingsCard({
                   label="סף"
                   inputMode="decimal"
                   dir="ltr"
+                  numeric
                   value={draft}
                   disabled={busy || readOnly}
                   error={draftError ? "בין 0.50 ל-1.00" : undefined}
