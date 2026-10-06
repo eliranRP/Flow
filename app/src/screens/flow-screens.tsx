@@ -1,6 +1,6 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
-import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoanTransactionSplit } from "./loan-match";
 import { absAgorot } from "../agorot";
@@ -30,6 +30,7 @@ import {
 import { withSheetBackground } from "../sheet-background";
 import { safeAppPath } from "../safe-return";
 import { useRefreshingNow } from "../israel-clock";
+import { hebrewMercuryError } from "../mercury-copy";
 import { hebrewSumitError, israelSyncPhrase, retryClockParts } from "../sumit-copy";
 import { isStandalone } from "../ui/install-prompt";
 import {
@@ -42,6 +43,7 @@ import {
   useProjectQuery,
   useProjectWaitingQuery,
   useReviewQuery,
+  useMercuryStatusQuery,
   useSumitStatusQuery,
   useTransactionQuery,
   useUnpaidQuery,
@@ -53,7 +55,9 @@ import { useHeldOrder } from "../list-hold";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { invokeEdge } from "../edge";
+import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
+import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
@@ -75,7 +79,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
@@ -3383,6 +3387,10 @@ type SettingsSample = {
   noCompany?: boolean;
   /** Story fixture. Live status comes from the query. */
   sumit?: "loading" | "error";
+  mercury?: "loading" | "error";
+  mercuryConnected?: boolean;
+  mercuryLastError?: string | null;
+  mercuryLastSyncAt?: string | null;
   assistant?: AssistantSample;
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */
@@ -3436,6 +3444,7 @@ export function SettingsScreen({
   const holdWrites = useHoldWrites();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
+  const mercuryStatus = useMercuryStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
@@ -3445,24 +3454,44 @@ export function SettingsScreen({
   }
   const [companyId, setCompanyId] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [mercuryApiKey, setMercuryApiKey] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [mercuryConnectOpen, setMercuryConnectOpen] = useState(false);
+  const [mercuryStatusOpen, setMercuryStatusOpen] = useState(false);
+  const [mercuryDisconnectOpen, setMercuryDisconnectOpen] = useState(false);
   const adoptSheet = useRef(false);
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
   const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
+  // Every close path (✕, Escape, Back, success) drops the pasted token.
+  const setMercuryConnectOpenClearing = useCallback((open: boolean) => {
+    if (!open) setMercuryApiKey("");
+    setMercuryConnectOpen(open);
+  }, []);
+  const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
+  const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
+  const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
+  const [focusMercury, setFocusMercury] = useState(false);
   const [sumitRetrying, setSumitRetrying] = useState(false);
+  const [mercuryRetrying, setMercuryRetrying] = useState(false);
   const [sumitHint, setSumitHint] = useState("לא הצלחנו לטעון");
+  const [mercuryHint, setMercuryHint] = useState("לא הצלחנו לטעון");
   const [sumitOffline, setSumitOffline] = useState(0);
+  const [mercuryOffline, setMercuryOffline] = useState(0);
   const [sumitNonce, setSumitNonce] = useState(0);
+  const [mercuryNonce, setMercuryNonce] = useState(0);
   const wantedOverhead = useRef(false);
   const sumitRowRef = useRef<HTMLButtonElement>(null);
   const sumitRetryRef = useRef<HTMLButtonElement>(null);
   const sumitDisconnectRef = useRef<HTMLButtonElement>(null);
+  const mercuryRowRef = useRef<HTMLButtonElement>(null);
+  const mercuryRetryRef = useRef<HTMLButtonElement>(null);
+  const mercuryDisconnectRef = useRef<HTMLButtonElement>(null);
   const sheetApplied = useRef(false);
   const wantSheet = useRef(false);
   const retrySource = sample ? sample.nextAttemptAt : status.data?.next_attempt_at;
@@ -3496,6 +3525,13 @@ export function SettingsScreen({
       setConnectSheet(false);
     },
   });
+  const mercuryConnect = useMercuryConnect({
+    apiKey: mercuryApiKey,
+    setApiKey: setMercuryApiKey,
+    onSuccess: () => {
+      setMercuryConnectSheet(false);
+    },
+  });
   const refresh = useWrite({
     failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
     success: "הרענון הסתיים.",
@@ -3522,6 +3558,34 @@ export function SettingsScreen({
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("disconnect_sumit"));
+    },
+  });
+  const mercuryRefresh = useWrite({
+    failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
+    success: "הרענון הסתיים.",
+    keys: ["mercury", "dashboard", "unpaid", "review", "project"],
+    run: async () => {
+      const data = await invokeEdge("mercury-sync", { force: true });
+      if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
+        throw new Error("sync_skipped");
+      }
+    },
+  });
+  const mercuryDisconnect = useWrite({
+    failure: "לא הצלחנו לנתק.",
+    success: "החיבור נותק. הספרים נשארו.",
+    keys: ["mercury"],
+    onSuccess: () => {
+      setMercuryDisconnectOpen(false);
+      setMercuryStatusOpen(false);
+      setMercuryConnectOpen(false);
+      popSheetLayers(navigate, 2);
+      setFocusMercury(true);
+    },
+    run: async () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("disconnect_connector", { p_provider: "mercury" }));
     },
   });
   const signOut = useWrite({
@@ -3553,6 +3617,20 @@ export function SettingsScreen({
     return () => { window.clearTimeout(id); };
   }, [sumitNonce]);
 
+  useEffect(() => {
+    if (mercuryNonce === 0) return;
+    setMercuryHint("");
+    const id = window.setTimeout(() => {
+      setMercuryHint("לא הצלחנו לטעון");
+      const retry = mercuryRetryRef.current;
+      const active = document.activeElement;
+      if (retry == null || active === retry) return;
+      if (active instanceof HTMLElement && active !== document.body && active !== document.documentElement) return;
+      retry.focus();
+    }, 30);
+    return () => { window.clearTimeout(id); };
+  }, [mercuryNonce]);
+
   const sumitNoCompany = sample
     ? sample.noCompany === true
     : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
@@ -3570,8 +3648,25 @@ export function SettingsScreen({
     && !(sample == null && !sumitNoCompany && status.isLoading && !sumitRetrying);
   useFocusRowAfterRetry(sumitShowsRetry, sumitRetryRef, sumitRowRef, sumitRowReady, sumitNonce);
 
+  const mercuryPaused = sample == null && preview === "off" && !sumitNoCompany && mercuryStatus.fetchStatus === "paused" && mercuryStatus.data == null;
+  const mercuryShowsRetry = sample?.mercury === "error" || (
+    sample == null
+    && !sumitNoCompany
+    && (mercuryRetrying || mercuryPaused || (mercuryStatus.isError && mercuryStatus.data == null))
+  );
+  const mercuryRowReady = phase.kind !== "loading"
+    && phase.kind !== "error"
+    && sample?.mercury !== "loading"
+    && sample?.mercury !== "error"
+    && !mercuryShowsRetry
+    && !(sample == null && !sumitNoCompany && mercuryStatus.isLoading && !mercuryRetrying);
+  useFocusRowAfterRetry(mercuryShowsRetry, mercuryRetryRef, mercuryRowRef, mercuryRowReady, mercuryNonce);
+
   useEffect(() => onlineManager.subscribe((online) => {
-    if (online) setSumitOffline(0);
+    if (online) {
+      setSumitOffline(0);
+      setMercuryOffline(0);
+    }
   }), []);
 
   useEffect(() => {
@@ -3583,6 +3678,16 @@ export function SettingsScreen({
     }, 0);
     return () => { window.clearTimeout(id); };
   }, [focusSumit, status.data, status.isError, status.isLoading]);
+
+  useEffect(() => {
+    if (!focusMercury) return;
+    if (mercuryRowRef.current == null) return;
+    const id = window.setTimeout(() => {
+      mercuryRowRef.current?.focus();
+      setFocusMercury(false);
+    }, 0);
+    return () => { window.clearTimeout(id); };
+  }, [focusMercury, mercuryStatus.data, mercuryStatus.isError, mercuryStatus.isLoading]);
 
   useEffect(() => {
     if (holdWrites) return;
@@ -3664,6 +3769,23 @@ export function SettingsScreen({
     connected,
   });
   const syncPhrase = israelSyncPhrase(sample ? sample.lastSyncAt : status.data?.last_sync_at, clockNow);
+  const mercuryConnected = noCompany ? false : sample ? sample.mercuryConnected === true : mercuryStatus.data?.connected === true;
+  const mercuryRawError = sample ? sample.mercuryLastError : mercuryStatus.data?.last_error;
+  const mercuryLastError = hebrewMercuryError(mercuryRawError);
+  const mercuryAuthReconnect = mercuryRawError === "auth";
+  const mercuryRetrySource = sample ? undefined : mercuryStatus.data?.next_attempt_at;
+  const mercuryRetry = mercuryAuthReconnect ? null : retryClockParts(mercuryRetrySource, clockNow);
+  const mercuryRefreshHeld = mercuryRetry != null;
+  const mercuryStatusPaused = sample == null && preview === "off" && !noCompany && mercuryStatus.fetchStatus === "paused" && mercuryStatus.data == null;
+  const mercuryKind = sumitKind({
+    forced: sample?.mercury ?? null,
+    noCompany,
+    statusLoading: sample == null && !noCompany && mercuryStatus.isLoading && !mercuryRetrying,
+    statusFailed: sample == null && (mercuryRetrying || mercuryStatusPaused || (mercuryStatus.isError && mercuryStatus.data == null)),
+    authReconnect: mercuryAuthReconnect,
+    connected: mercuryConnected,
+  });
+  const mercurySyncPhrase = israelSyncPhrase(sample ? sample.mercuryLastSyncAt : mercuryStatus.data?.last_sync_at, clockNow);
   const retryHint = retry == null ? undefined : (
     <>
       {retry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
@@ -3671,6 +3793,13 @@ export function SettingsScreen({
     </>
   );
   const refreshHint = retryHint;
+  const mercuryRetryHint = mercuryRetry == null ? undefined : (
+    <>
+      {mercuryRetry.tomorrow ? "אפשר לנסות שוב מחר ב-" : "אפשר לנסות שוב ב-"}
+      <bdi className="ui-num" dir="ltr">{mercuryRetry.clock}</bdi>
+    </>
+  );
+  const mercuryRefreshHint = mercuryRetryHint;
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const namedBusiness = (businessName ?? "").trim();
   const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
@@ -3700,7 +3829,7 @@ export function SettingsScreen({
         </List>
       ) : null}
       <SectionHead title="חיבורים" />
-      {kind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}
+      {kind === "loading" || mercuryKind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}
       <List>
         {kind === "loading" ? (
           <ListRow variant="static" title="SUMIT" icon={<DocumentIcon size={24} />} hint={<Skeleton width="sm" />} skelHint busy />
@@ -3776,6 +3905,83 @@ export function SettingsScreen({
             onClick={() => {
               if (kind === "connected") setStatusSheet(true);
               else setConnectSheet(true);
+            }}
+          />
+        )}
+        {mercuryKind === "loading" ? (
+          <ListRow variant="static" title="Mercury" icon={<BankIcon size={24} />} hint={<Skeleton width="sm" />} skelHint busy />
+        ) : mercuryKind === "error" ? (
+          <ListRow
+            variant="static"
+            title="Mercury"
+            icon={<AlertIcon size={24} />}
+            tone="muted"
+            describeHint
+            hintStatus
+            hint={(
+              <>
+                {mercuryHint}
+                {mercuryOffline > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
+              </>
+            )}
+            action={(
+              <TextLink
+                size="label"
+                chevron={false}
+                label="ניסיון חוזר: Mercury"
+                busy={mercuryRetrying}
+                buttonRef={mercuryRetryRef}
+                onClick={() => {
+                  if (sample != null || mercuryRetrying) return;
+                  if (!onlineManager.isOnline()) {
+                    setMercuryOffline((nonce) => nonce + 1);
+                    return;
+                  }
+                  setMercuryRetrying(true);
+                  void mercuryStatus.refetch().then((result) => {
+                    const stayed = document.activeElement === mercuryRetryRef.current;
+                    setMercuryRetrying(false);
+                    if (result.fetchStatus === "paused" || !onlineManager.isOnline()) {
+                      setMercuryOffline((nonce) => nonce + 1);
+                      return;
+                    }
+                    if (result.isError || result.data == null) {
+                      setMercuryNonce((nonce) => nonce + 1);
+                      return;
+                    }
+                    if (stayed) setFocusMercury(true);
+                  });
+                }}
+              >
+                ניסיון חוזר
+              </TextLink>
+            )}
+          />
+        ) : holdWrites ? (
+          <ListRow
+            variant="static"
+            title="Mercury"
+            hint={mercuryKind === "reconnect" ? "צריך לחבר מחדש" : mercuryKind === "connected" ? "מחובר" : "לא מחובר"}
+            icon={mercuryKind === "reconnect" ? <AlertIcon size={24} /> : <BankIcon size={24} />}
+            tone={mercuryKind === "reconnect" ? "warning" : undefined}
+            describeHint
+            wrapHint
+          />
+        ) : (
+          <ListRow
+            variant="button"
+            title="Mercury"
+            hint={mercuryKind === "reconnect" ? "צריך לחבר מחדש" : mercuryKind === "connected" ? "מחובר" : "לא מחובר"}
+            icon={mercuryKind === "reconnect" ? <AlertIcon size={24} /> : <BankIcon size={24} />}
+            tone={mercuryKind === "reconnect" ? "warning" : undefined}
+            chevron
+            describeHint
+            wrapHint
+            className="ui-row-ring"
+            buttonRef={mercuryRowRef}
+            onClick={() => {
+              if (mercuryKind === "connected") setMercuryStatusSheet(true);
+              else setMercuryConnectSheet(true);
             }}
           />
         )}
@@ -3886,6 +4092,77 @@ export function SettingsScreen({
         onConfirm={() => {
           if (holdWrites || blocked()) return;
           disconnect.mutate();
+        }}
+      />
+      <MercuryConnectSheet
+        open={mercuryConnectOpen}
+        onOpenChange={setMercuryConnectSheet}
+        title={mercuryAuthReconnect && !noCompany ? "צריך לחבר מחדש את Mercury" : "חיבור Mercury"}
+        returnFocusRef={mercuryRowRef}
+        noCompanyBody={noCompany ? (
+          <div className="ui-stack">
+            <p>כדי לחבר את Mercury צריך עסק.</p>
+            <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("mercury-connect")}>פרטי העסק</TextLink>
+          </div>
+        ) : undefined}
+        authReconnect={mercuryAuthReconnect}
+        apiKey={mercuryApiKey}
+        setApiKey={setMercuryApiKey}
+        submitLabel={mercuryAuthReconnect ? "חיבור מחדש" : "חיבור"}
+        busy={mercuryConnect.isPending}
+        disabled={holdWrites}
+        onSubmit={() => {
+          if (holdWrites || blocked()) return;
+          mercuryConnect.mutate();
+        }}
+        onDisconnect={mercuryAuthReconnect ? () => {
+          if (holdWrites) return;
+          setMercuryDisconnectSheet(true);
+        } : undefined}
+        disconnectRef={mercuryDisconnectRef}
+      />
+      <Sheet open={mercuryStatusOpen} onOpenChange={setMercuryStatusSheet} title="Mercury" returnFocusRef={mercuryRowRef}>
+        <div className="ui-stack">
+          <p>
+            מחובר
+            {mercurySyncPhrase != null ? <span className="ui-nowrap">{` · ${mercurySyncPhrase}`}</span> : null}
+          </p>
+          {mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" ? <p>הרענון נכשל</p> : null}
+          {!mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" && mercuryLastError ? <p>{mercuryLastError}</p> : null}
+        </div>
+        <List>
+          <ListRow
+            variant="button"
+            title="רענון עכשיו"
+            hint={mercuryRefreshHint}
+            icon={<RefreshIcon />}
+            chevron
+            clearHint={mercuryRetry != null}
+            describeHint={mercuryRefreshHint != null}
+            wrapHint
+            busy={mercuryRefresh.isPending}
+            disabled={mercuryRefreshHeld}
+            onClick={() => {
+              if (holdWrites || mercuryRefreshHeld || mercuryRefresh.isPending) return;
+              if (blocked()) return;
+              mercuryRefresh.mutate();
+            }}
+          />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={mercuryDisconnectRef} onClick={() => { if (holdWrites) return; setMercuryDisconnectSheet(true); }} />
+        </List>
+      </Sheet>
+      <ConfirmSheet
+        open={mercuryDisconnectOpen}
+        onOpenChange={setMercuryDisconnectSheet}
+        returnFocusRef={mercuryDisconnectRef}
+        title="לנתק את Mercury?"
+        consequence="המפתח נמחק. הספרים שכבר ירדו נשארים."
+        confirmLabel="ניתוק"
+        destructive
+        busy={mercuryDisconnect.isPending}
+        onConfirm={() => {
+          if (holdWrites || blocked()) return;
+          mercuryDisconnect.mutate();
         }}
       />
       {noCompany ? null : (

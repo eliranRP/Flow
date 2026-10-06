@@ -122,6 +122,10 @@ export function formatMoney(minor: bigint, currency = "ILS", options?: { agorot?
   return `${sign}${prefix}${digits}`;
 }
 
+export function formatUsd(minor: bigint, options?: { agorot?: boolean }): string {
+  return formatMoney(minor, "USD", options);
+}
+
 export function formatIls(agorot: bigint, options?: { agorot?: boolean }): string {
   const negative = agorot < 0n;
   const abs = negative ? -agorot : agorot;

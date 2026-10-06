@@ -5,6 +5,7 @@ import {
   divHalfEven,
   formatIls,
   formatMoney,
+  formatUsd,
   wholeShekels,
   netFromGrossAgorot,
   parseShekelInput,
@@ -104,6 +105,15 @@ describe("parseShekelInput", () => {
     expect(parseShekelInput("12,000")).toBe(1_200_000n);
     expect(parseShekelInput("1,000.50")).toBe(100_050n);
     expect(shekelsToAgorot("12,000")).toBe(1_200_000n);
+  });
+});
+
+describe("formatUsd", () => {
+  it("formats whole dollars, agorot, zero, and the minus sign", () => {
+    expect(formatUsd(10_000n)).toBe("$100");
+    expect(formatUsd(0n)).toBe("$0");
+    expect(formatUsd(1_234n, { agorot: true })).toBe("$12.34");
+    expect(formatUsd(-1_234n, { agorot: true })).toBe("−$12.34");
   });
 });
 

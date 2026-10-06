@@ -22,7 +22,10 @@ export async function edgeErrorCode(error: unknown): Promise<string> {
   return "connect_failed";
 }
 
-export async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<string, unknown>): Promise<unknown> {
+export async function invokeEdge(
+  name: "sumit-connect" | "sumit-sync" | "mercury-connect" | "mercury-sync",
+  body: Record<string, unknown>,
+): Promise<unknown> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   const response = await supabase.functions.invoke<unknown>(name, { body });
