@@ -7,6 +7,7 @@ import {
   filedTodaySchema,
   reviewRowSchema,
   sumitStatusSchema,
+  mercuryStatusSchema,
   transactionDetailSchema,
   unpaidRowSchema,
   type CategoryRow,
@@ -17,6 +18,7 @@ import {
   type ProjectWaitingRow,
   type ReviewRow,
   type SumitStatus,
+  type MercuryStatus,
   type TransactionDetail,
   type UnpaidRow,
 } from "@flow/shared";
@@ -262,6 +264,43 @@ export function useSumitStatusQuery(active = true) {
       const { data, error } = await supabase.rpc("sumit_status");
       if (error) throw error;
       return sumitStatusSchema.parse(data);
+    },
+  });
+}
+
+const mercuryDisconnected: MercuryStatus = {
+  company_id: null,
+  provider: "mercury",
+  connected: false,
+  last_sync_at: null,
+  last_error: null,
+  next_attempt_at: null,
+  import_from: null,
+  account_labels: null,
+  skip_count: null,
+};
+
+export function useMercuryStatusQuery(active = true) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["mercury", preview],
+    enabled: active && preview === "off",
+    queryFn: async (): Promise<MercuryStatus> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase
+        .from("connector_connection_status")
+        .select("company_id, provider, connected, last_sync_at, last_error, next_attempt_at, import_from, account_labels, skip_count")
+        .eq("provider", "mercury")
+        .maybeSingle();
+      if (error) throw error;
+      if (data == null) return mercuryDisconnected;
+      const parsed = mercuryStatusSchema.parse({
+        ...data,
+        connected: data.connected === true,
+      });
+      return parsed;
     },
   });
 }

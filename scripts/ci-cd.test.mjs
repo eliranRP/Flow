@@ -360,7 +360,8 @@ test("the homepage retries like build.txt, list reads wait for the session, and 
   const books = readFileSync(new URL("../app/src/use-books.ts", import.meta.url), "utf8");
   const waits = books.split("await waitForAccessToken(supabase);").length - 1;
   const rpcs = books.split(".rpc(").length - 1;
-  assert.equal(waits, rpcs);
+  const guardedFrom = (books.match(/await waitForAccessToken\(supabase\);\s+const \{ data, error \} = await supabase\s+\.from\(/g) ?? []).length;
+  assert.equal(waits, rpcs + guardedFrom);
   assert.ok(waits >= 10);
   assert.match(books, /await waitForAccessToken\(supabase\);\n\s+dropLegacyJevConnectorKey\(\);\n\s+const listed = supabase\.rpc\("list_review"\)/);
 
