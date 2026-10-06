@@ -16,6 +16,7 @@ import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
+import { useHoldWrites } from "../use-is-viewer";
 import { formatLoanMoney, type LoanCurrency } from "./loan-form";
 
 const PART_LABEL: Record<LoanSplitPart, string> = {
@@ -78,6 +79,7 @@ export function LoanSplitPanel({
   needsReview,
   currencyMismatch,
   busy,
+  readOnly = false,
   onMatch,
   onCorrect,
 }: {
@@ -88,13 +90,15 @@ export function LoanSplitPanel({
   needsReview: boolean;
   currencyMismatch: boolean;
   busy: boolean;
+  /** A viewer can read the split and cannot match or correct it. */
+  readOnly?: boolean;
   onMatch: (loanId: string) => void;
   onCorrect: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const setSheet = useSheetHistory("loan-match", open, setOpen);
   const rowRef = useRef<HTMLButtonElement>(null);
-  if (parts == null && !offerMatch) return null;
+  if (parts == null && (!offerMatch || readOnly)) return null;
   const ordered = parts == null ? [] : (["interest", "escrow", "principal"] as const).flatMap((part) => {
     const row = parts.find((item) => item.part === part);
     return row ? [row] : [];
@@ -116,7 +120,7 @@ export function LoanSplitPanel({
             icon={<BankIcon />}
             chevron
             buttonRef={rowRef}
-            onClick={() => { setSheet(true); }}
+            onClick={() => { if (!readOnly) setSheet(true); }}
           />
         )}
       </List>
@@ -125,11 +129,12 @@ export function LoanSplitPanel({
           <p className="t-hint ui-loan-caution">החלוקה ממתינה לבדיקה.</p>
           {currencyMismatch ? (
             <p className="t-hint">המטבע של השורה לא מתאים להלוואה.</p>
-          ) : (
+          ) : readOnly ? null : (
             <Button type="button" variant="secondary" busy={busy} onClick={onCorrect}>עדכון החלוקה</Button>
           )}
         </div>
       ) : null}
+      {readOnly ? null : (
       <Sheet open={open} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={rowRef}>
         {loans.length === 0 ? (
           <p className="t-hint">אין עדיין הלוואה.</p>
@@ -150,6 +155,7 @@ export function LoanSplitPanel({
           </List>
         )}
       </Sheet>
+      )}
     </>
   );
 }
@@ -188,13 +194,18 @@ export function LoanTransactionSplit({
   categoryName,
   direction,
   active,
+  readOnly = false,
 }: {
   transactionId: string;
   docDate: string;
   categoryName: string;
   direction: string;
   active: boolean;
+  /** From the transaction screen. A viewer, and a role that is still loading, pass true. */
+  readOnly?: boolean;
 }) {
+  const holdWrites = useHoldWrites();
+  const writesHeld = readOnly || holdWrites;
   const offerMatch = direction !== "income" && categoryName === LOAN_PRINCIPAL_CATEGORY;
   const query = useQuery({
     queryKey: ["loan-split", transactionId],
@@ -207,6 +218,7 @@ export function LoanTransactionSplit({
     success: "התשלום שויך להלוואה",
     keys: ["loan-split", "loans", "txn"],
     run: async (loanId) => {
+      if (writesHeld) throw new Error("preview");
       const loaded = query.data;
       if (!loaded) throw new Error("supabase");
       const loan = loaded.loans.find((item) => item.id === loanId);
@@ -219,6 +231,7 @@ export function LoanTransactionSplit({
     success: "החלוקה עודכנה",
     keys: ["loan-split", "loans", "txn"],
     run: async () => {
+      if (writesHeld) throw new Error("preview");
       const loaded = query.data;
       if (!loaded || loaded.splits.length !== 3) throw new Error("supabase");
       await correctSplit(transactionId, loaded);
@@ -239,8 +252,9 @@ export function LoanTransactionSplit({
       needsReview={parts?.some((part) => part.needsReview) ?? false}
       currencyMismatch={loan != null && loan.currency !== currency}
       busy={match.isPending || correct.isPending}
-      onMatch={(loanId) => { match.mutate(loanId); }}
-      onCorrect={() => { correct.mutate(); }}
+      readOnly={writesHeld}
+      onMatch={(loanId) => { if (!writesHeld) match.mutate(loanId); }}
+      onCorrect={() => { if (!writesHeld) correct.mutate(); }}
     />
   );
 }

@@ -35,6 +35,7 @@ import {
 } from "../period";
 import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
+import { useHoldWrites } from "../use-is-viewer";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
 
 function changePercent(current: bigint, previous: bigint | null): number | null {
@@ -50,6 +51,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const { status } = useAuth();
+  const holdWrites = useHoldWrites();
   const previewing = preview !== "off";
   const books = useBooks();
   const dashboard = useDashboardQuery();
@@ -100,11 +102,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
           icon={<ChartIcon />}
           title="עוד אין נתונים"
           body="הרווח יופיע כאן אחרי ש־SUMIT מחובר."
-          action={
+          action={holdWrites ? undefined : (
             <Button variant="pill" to={`/settings${search}`}>
               חיבור SUMIT
             </Button>
-          }
+          )}
         />
       </div>
     );

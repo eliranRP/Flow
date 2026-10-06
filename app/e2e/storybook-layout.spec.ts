@@ -421,7 +421,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
     { id: "components-listrow--project", selector: ".ui-row", hover: true },
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
-    { id: "components-reviewcard--suggestion", selector: ".ui-review-line", hover: true },
+    { id: "components-reviewcard--suggestion", selector: ".ui-review-ai .ui-row", hover: true },
     { id: "screens-routes--settings-connected", selector: "a.ui-row", name: "קטגוריות", hover: true },
   ];
   const failures: string[] = [];

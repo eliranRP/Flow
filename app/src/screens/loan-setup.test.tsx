@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contractualPaymentMinor } from "@flow/shared";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
+import { ViewerPreview } from "../use-is-viewer";
 import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "./loan-form";
 import { LoanSettingsSection, LoanSetupForm } from "./loan-setup";
 
@@ -514,6 +515,17 @@ describe("LoanSetupForm", () => {
 });
 
 describe("LoanSettingsSection", () => {
+  it("hides a new loan from a viewer", () => {
+    renderSection(
+      <ViewerPreview>
+        <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
+      </ViewerPreview>,
+    );
+    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
+  });
+
   it("opens the sheet on the company currency", () => {
     renderSection(<LoanSettingsSection companyId={null} companyCurrency="USD" />);
     openLoan();
