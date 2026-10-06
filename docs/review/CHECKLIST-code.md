@@ -2,6 +2,7 @@
 
 Use this with [PITFALLS.md](PITFALLS.md) at the start of a cycle, and again before handoff.
 
+- [ ] MCP-first ([0095](../decisions/0095-mcp-first.md)): every new feature or user action has a `flow-mcp` tool in this PR (writes: idempotency key, write rate limit, `undo`), listed in `docs/mcp/TOOLS.md`, plus an API where it can have one. Missing MCP support is Blocking.
 - [ ] Tests were written first. Each new test failed once with the fix reverted.
 - [ ] Every tool, argument value, and branch has a test. Write-only scope is refused. Cross-company access is refused. Shared mocks reset in `afterEach`.
 - [ ] An unavailable feature is not listed. `flow-mcp` errors are JSON-RPC results with `isError`.

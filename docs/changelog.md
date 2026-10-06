@@ -2,6 +2,8 @@
 
 ## 2026-10-06
 
+MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).
+
 USD totals in SQL and MCP. Migration `20261006230000_usd_totals.sql` adds `by_currency` to `company_pnl` and passes it through `get_totals` and `list_projects`. Decision [0094](decisions/0094-usd-totals.md).
 
 MCP cycle 6 batch. `assign_expenses` and `undo_batch` file up to 200 review rows in one write hit, with partial success and batch undo. Migration `20261006220000_mcp_batch.sql`. Decision [0093](decisions/0093-mcp-batch.md).
