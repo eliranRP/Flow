@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(21);
+select plan(26);
 
 do $users$
 begin
@@ -142,6 +142,10 @@ where t.label = 'queued';
 select tests.authenticate_as('mcp6_other');
 select lives_ok($$select public.create_company('Other Co', true)$$, 'other creates a company');
 insert into mcp6 (label, id) select 'other_company', id from public.companies where name = 'Other Co';
+select lives_ok($$select public.upsert_project(null, 'Gamma Site', null, 'active')$$, 'other opens Gamma');
+insert into mcp6 (label, id) select 'gamma', id from public.projects where name = 'Gamma Site';
+
+reset role;
 
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
@@ -157,8 +161,6 @@ where c.label = 'other_company';
 
 insert into mcp6 (label, id)
 select 'foreign', id from public.transactions where idempotency_key = 'mcp6:foreign';
-
-reset role;
 
 select lives_ok(
   format(
@@ -191,6 +193,36 @@ from mcp6 c where c.label = 'company';
 insert into mcp6 (label, id)
 select 'viewer_write', id from private.mcp_credentials where token_hash = 'hash-mcp6-viewer';
 
+create temp table mcp6_body (label text primary key, body jsonb);
+grant all on mcp6_body to authenticated, service_role;
+insert into mcp6_body (label, body)
+select 'mixed', jsonb_build_array(
+    jsonb_build_object(
+      'transaction_id', (select id::text from mcp6 where label = 'plain'),
+      'project_id', (select id::text from mcp6 where label = 'beta'),
+      'category_id', (select id::text from mcp6 where label = 'haul')
+    ),
+    jsonb_build_object(
+      'transaction_id', (select id::text from mcp6 where label = 'queued'),
+      'project_id', (select id::text from mcp6 where label = 'beta'),
+      'category_id', (select id::text from mcp6 where label = 'haul')
+    ),
+    jsonb_build_object(
+      'transaction_id', (select id::text from mcp6 where label = 'category'),
+      'category_id', (select id::text from mcp6 where label = 'haul')
+    ),
+    jsonb_build_object(
+      'transaction_id', 'aaaaaaaa-aaaa-4000-8000-000000000099',
+      'project_id', (select id::text from mcp6 where label = 'beta'),
+      'category_id', (select id::text from mcp6 where label = 'haul')
+    ),
+    jsonb_build_object(
+      'transaction_id', (select id::text from mcp6 where label = 'foreign'),
+      'project_id', (select id::text from mcp6 where label = 'beta'),
+      'category_id', (select id::text from mcp6 where label = 'haul')
+    )
+  );
+
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
@@ -203,32 +235,7 @@ insert into mcp6 (label, id)
 select 'batch_key', (
   public.mcp_assign_expenses(
     'batch-mixed',
-    jsonb_build_array(
-      jsonb_build_object(
-        'transaction_id', (select id::text from mcp6 where label = 'plain'),
-        'project_id', (select id::text from mcp6 where label = 'beta'),
-        'category_id', (select id::text from mcp6 where label = 'haul')
-      ),
-      jsonb_build_object(
-        'transaction_id', (select id::text from mcp6 where label = 'queued'),
-        'project_id', (select id::text from mcp6 where label = 'beta'),
-        'category_id', (select id::text from mcp6 where label = 'haul')
-      ),
-      jsonb_build_object(
-        'transaction_id', (select id::text from mcp6 where label = 'category'),
-        'category_id', (select id::text from mcp6 where label = 'haul')
-      ),
-      jsonb_build_object(
-        'transaction_id', 'aaaaaaaa-aaaa-4000-8000-000000000099',
-        'project_id', (select id::text from mcp6 where label = 'beta'),
-        'category_id', (select id::text from mcp6 where label = 'haul')
-      ),
-      jsonb_build_object(
-        'transaction_id', (select id::text from mcp6 where label = 'foreign'),
-        'project_id', (select id::text from mcp6 where label = 'beta'),
-        'category_id', (select id::text from mcp6 where label = 'haul')
-      )
-    )
+    (select body from mcp6_body where label = 'mixed')
   )->'data'->>'batch_key'
 )::uuid;
 
@@ -236,32 +243,7 @@ select is(
   (
     public.mcp_assign_expenses(
       'batch-mixed',
-      jsonb_build_array(
-        jsonb_build_object(
-          'transaction_id', (select id::text from mcp6 where label = 'plain'),
-          'project_id', (select id::text from mcp6 where label = 'beta'),
-          'category_id', (select id::text from mcp6 where label = 'haul')
-        ),
-        jsonb_build_object(
-          'transaction_id', (select id::text from mcp6 where label = 'queued'),
-          'project_id', (select id::text from mcp6 where label = 'beta'),
-          'category_id', (select id::text from mcp6 where label = 'haul')
-        ),
-        jsonb_build_object(
-          'transaction_id', (select id::text from mcp6 where label = 'category'),
-          'category_id', (select id::text from mcp6 where label = 'haul')
-        ),
-        jsonb_build_object(
-          'transaction_id', 'aaaaaaaa-aaaa-4000-8000-000000000099',
-          'project_id', (select id::text from mcp6 where label = 'beta'),
-          'category_id', (select id::text from mcp6 where label = 'haul')
-        ),
-        jsonb_build_object(
-          'transaction_id', (select id::text from mcp6 where label = 'foreign'),
-          'project_id', (select id::text from mcp6 where label = 'beta'),
-          'category_id', (select id::text from mcp6 where label = 'haul')
-        )
-      )
+      (select body from mcp6_body where label = 'mixed')
     )->'data'->>'ok_count'
   ),
   '3',
@@ -285,15 +267,21 @@ select is(
 );
 
 select is(
-  public.mcp_assign_expenses('batch-mixed', jsonb_build_array(
-    jsonb_build_object(
-      'transaction_id', (select id::text from mcp6 where label = 'plain'),
-      'project_id', (select id::text from mcp6 where label = 'beta'),
-      'category_id', (select id::text from mcp6 where label = 'haul')
-    )
-  ))->'data'->>'batch_key',
+  public.mcp_assign_expenses('batch-mixed', (select body from mcp6_body where label = 'mixed'))->'data'->>'batch_key',
   (select id::text from mcp6 where label = 'batch_key'),
   'replay returns the same batch_key'
+);
+
+select is(
+  (
+    select jsonb_agg(elem->>'code' order by ord)
+    from jsonb_array_elements(
+      public.mcp_assign_expenses('batch-mixed', (select body from mcp6_body where label = 'mixed'))->'data'->'results'
+    ) with ordinality as r(elem, ord)
+    where ord > 3
+  ),
+  '["refused", "refused"]'::jsonb,
+  'unknown id and other-company transaction are refused per row'
 );
 
 select is(
@@ -308,7 +296,31 @@ select is(
   'same key with a different body is conflict'
 );
 
+select is(
+  public.mcp_assign_expenses('batch-foreign-project', jsonb_build_array(
+    jsonb_build_object(
+      'transaction_id', (select id::text from mcp6 where label = 'category'),
+      'project_id', (select id::text from mcp6 where label = 'gamma'),
+      'category_id', (select id::text from mcp6 where label = 'haul')
+    )
+  ))->'data'->'results'->0->>'code',
+  'refused',
+  'an owner row with another company project is refused'
+);
+
+select is(
+  (select project_id from public.transactions where id = (select id from mcp6 where label = 'category')),
+  (select id from mcp6 where label = 'alpha'),
+  'the refused row keeps its project'
+);
+
 do $$ begin perform pg_temp.as_mcp('other_write', 'mcp6_other'); end $$;
+
+select is(
+  public.mcp_assign_expenses('batch-other', (select body from mcp6_body where label = 'mixed'))->'data'->>'ok_count',
+  '0',
+  'other company token cannot assign owner rows or use owner projects'
+);
 
 select is(
   (
@@ -385,9 +397,13 @@ select 'batch_conflict', (
   )->'data'->>'batch_key'
 )::uuid;
 
+reset role;
+
 update public.transactions
 set project_id = (select id from mcp6 where label = 'alpha')
 where id = (select id from mcp6 where label = 'plain');
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
   (
@@ -422,7 +438,7 @@ select is(
 do $$ begin perform pg_temp.as_mcp('read'); end $$;
 
 select is(
-  public.mcp_assign_expenses('batch-read', '[]'::jsonb)->'error'->>'code',
+  public.mcp_assign_expenses('batch-read', (select body from mcp6_body where label = 'mixed'))->'error'->>'code',
   'forbidden',
   'read token cannot assign_expenses'
 );
@@ -430,12 +446,12 @@ select is(
 do $$ begin perform pg_temp.as_mcp('viewer_write', 'mcp6_viewer'); end $$;
 
 select is(
-  public.mcp_assign_expenses('batch-viewer', '[]'::jsonb)->'error'->>'code',
+  public.mcp_assign_expenses('batch-viewer', (select body from mcp6_body where label = 'mixed'))->'error'->>'code',
   'forbidden',
   'viewer write row is still forbidden'
 );
 
-do $$ begin perform pg_temp.as_mcp('write'); end $$;
+reset role;
 
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
@@ -457,6 +473,8 @@ insert into public.allocations (company_id, transaction_id, project_id, share_bp
 select t.company_id, t.id, t.project_id, 10000, t.amount_net
 from public.transactions t
 where t.idempotency_key like 'mcp6:bulk-%';
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
   (

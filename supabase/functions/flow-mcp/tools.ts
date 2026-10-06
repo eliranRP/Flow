@@ -1,9 +1,18 @@
-// Cycle 2 reads, cycle 3a single-expense writes, cycle 4 project/category/sync, cycle 6 batch. Decision 0080.
+// Cycle 2 reads, cycle 3a single-expense writes, cycle 4 project/category/sync, cycle 5 loans, cycle 6 batch. Decision 0080.
 // Identity is not an argument. The handler signs from the credential row.
 // Zod checks write arguments. A failure is the fixed validation message.
 
 import { z } from "zod";
 import { MERCURY_SYNC_FUNCTION } from "../_shared/connectors/mercury/capabilities.ts";
+import {
+  buildLoanSchedule,
+  contractualPaymentMinor,
+  LoanScheduleError,
+  LOAN_TERM_MONTHS_MAX,
+  type LoanScheduleRow,
+} from "../../../packages/shared/src/loan-schedule.ts";
+import { allocateLoanSplit, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
+import { parseDecimalHalfEven } from "../../../packages/shared/src/money.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -12,6 +21,8 @@ export const READ_TOOL_NAMES = [
   "get_expense",
   "search_expenses",
   "get_totals",
+  "list_loans",
+  "get_loan_schedule",
 ] as const;
 
 export const WRITE_TOOL_NAMES = [
@@ -22,6 +33,9 @@ export const WRITE_TOOL_NAMES = [
   "create_category",
   "sync_bank",
   "hide_category",
+  "add_loan",
+  "update_loan",
+  "attach_loan_payment",
   "undo",
   "undo_batch",
 ] as const;
@@ -37,6 +51,8 @@ const ALLOWED: Record<string, Set<string>> = {
   get_expense: new Set(["transaction_id"]),
   search_expenses: new Set(["scope", "query", "limit", "offset"]),
   get_totals: new Set(["from", "to", "basis"]),
+  list_loans: new Set([]),
+  get_loan_schedule: new Set(["loan_id", "from", "limit"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
@@ -44,6 +60,12 @@ const ALLOWED: Record<string, Set<string>> = {
   create_category: new Set(["idempotency_key", "name", "kind"]),
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
+  add_loan: new Set([
+    "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
+    "start_date", "payment", "escrow", "currency",
+  ]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow"]),
+  attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -51,6 +73,8 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UUID_TEXT = z.string().regex(UUID);
 const IDEMPOTENCY_KEY = z.string().min(1).max(128);
+// A batch key leaves room for ":" and a three-digit ordinal on each row key.
+const BATCH_KEY = z.string().min(1).max(124);
 const assignSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
@@ -65,8 +89,37 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "loan", "loan_update", "loan_split"]),
   id: UUID_TEXT,
+}).strict();
+const LOAN_NAME = z.string().trim().min(1).max(80);
+const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
+const addLoanSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: LOAN_NAME,
+  principal: z.union([z.number(), z.string()]),
+  annual_rate_percent: z.union([z.number(), z.string()]),
+  term_months: z.number().int().min(1).max(LOAN_TERM_MONTHS_MAX),
+  start_date: z.string().regex(DATE),
+  payment: z.union([z.number(), z.string()]).optional(),
+  escrow: z.union([z.number(), z.string()]).optional(),
+  currency: LOAN_CURRENCY.optional(),
+}).strict();
+const updateLoanSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  loan_id: UUID_TEXT,
+  name: LOAN_NAME.optional(),
+  principal: z.union([z.number(), z.string()]).optional(),
+  annual_rate_percent: z.union([z.number(), z.string()]).optional(),
+  term_months: z.number().int().min(1).max(LOAN_TERM_MONTHS_MAX).optional(),
+  start_date: z.string().regex(DATE).optional(),
+  payment: z.union([z.number(), z.string()]).optional(),
+  escrow: z.union([z.number(), z.string()]).optional(),
+}).strict();
+const attachLoanSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  loan_id: UUID_TEXT,
 }).strict();
 const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -99,7 +152,7 @@ const batchItemSchema = z.object({
   }
 });
 const assignExpensesSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
+  idempotency_key: BATCH_KEY,
   items: z.array(batchItemSchema).min(1).max(200),
 }).strict().superRefine((body, ctx) => {
   const seen = new Set<string>();
@@ -112,7 +165,7 @@ const assignExpensesSchema = z.object({
   }
 });
 const undoBatchSchema = z.object({
-  idempotency_key: IDEMPOTENCY_KEY,
+  idempotency_key: BATCH_KEY,
   batch_key: UUID_TEXT,
 }).strict();
 
@@ -171,6 +224,115 @@ function textOf(value: unknown): string | null | ToolResult {
   if (typeof value !== "string") return fail("validation", "validation");
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
+}
+
+const SAFE_MINOR = BigInt(Number.MAX_SAFE_INTEGER);
+
+function decimalText(value: number | string): string {
+  return typeof value === "string" ? value : Object.is(value, -0) ? "0" : value.toString();
+}
+
+function minorFromMajor(value: unknown): bigint | ToolResult {
+  if (typeof value !== "number" && typeof value !== "string") return fail("validation", "validation");
+  try {
+    const minor = parseDecimalHalfEven(decimalText(value).trim().replace(/[\s,]/g, ""), 2);
+    if (minor <= 0n || minor > SAFE_MINOR) return fail("validation", "validation");
+    return minor;
+  } catch {
+    return fail("validation", "validation");
+  }
+}
+
+function minorFromMajorNonNegative(value: unknown, fallback = 0n): bigint | ToolResult {
+  if (value == null) return fallback;
+  if (typeof value !== "number" && typeof value !== "string") return fail("validation", "validation");
+  try {
+    const minor = parseDecimalHalfEven(decimalText(value).trim().replace(/[\s,]/g, ""), 2);
+    if (minor < 0n || minor > SAFE_MINOR) return fail("validation", "validation");
+    return minor;
+  } catch {
+    return fail("validation", "validation");
+  }
+}
+
+function ppmFromPercent(value: unknown): number | ToolResult {
+  if (typeof value !== "number" && typeof value !== "string") return fail("validation", "validation");
+  const text = decimalText(value).trim();
+  if (text.endsWith(".")) return fail("validation", "validation");
+  try {
+    const ppm = parseDecimalHalfEven(text, 4);
+    if (ppm < 0n || ppm > 1_000_000n) return fail("validation", "validation");
+    return Number(ppm);
+  } catch {
+    return fail("validation", "validation");
+  }
+}
+
+function scheduleLimitOf(value: unknown, fallback: number): number | ToolResult {
+  if (value == null) return fallback;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > LOAN_TERM_MONTHS_MAX) {
+    return fail("validation", "validation");
+  }
+  return value;
+}
+
+function majorString(minor: bigint): string {
+  const whole = minor / 100n;
+  const frac = minor % 100n;
+  if (frac === 0n) return whole.toString();
+  return `${whole.toString()}.${frac.toString().padStart(2, "0")}`;
+}
+
+function scheduleRowOut(row: LoanScheduleRow) {
+  return {
+    date: row.dueDate,
+    payment: majorString(row.paymentMinor),
+    interest: majorString(row.interestMinor),
+    escrow: majorString(row.escrowMinor),
+    principal: majorString(row.principalMinor),
+    balance: majorString(row.balanceMinor),
+    payment_minor: Number(row.paymentMinor),
+    interest_minor: Number(row.interestMinor),
+    escrow_minor: Number(row.escrowMinor),
+    principal_minor: Number(row.principalMinor),
+    balance_minor: Number(row.balanceMinor),
+  };
+}
+
+type LoanRow = {
+  id: string;
+  name: string;
+  currency: string;
+  principal_minor: number;
+  annual_rate_ppm: number;
+  term_months: number;
+  start_date: string;
+  payment_minor: number;
+  escrow_minor: number;
+  balance_minor: number;
+};
+
+function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
+  return {
+    principalMinor: BigInt(loan.principal_minor),
+    annualRatePpm: loan.annual_rate_ppm,
+    termMonths: loan.term_months,
+    startDate: loan.start_date,
+    paymentMinor,
+    escrowMinor,
+  };
+}
+
+async function loadLoans(rpc: ToolRpc): Promise<ToolResult | LoanRow[]> {
+  const result = await rpc("mcp_list_loans", {});
+  if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+  return result.json as LoanRow[];
+}
+
+async function defaultLoanCurrency(rpc: ToolRpc): Promise<string | ToolResult> {
+  const result = await rpc("mcp_company_loan_currency", {});
+  if (result.status >= 400 || typeof result.json !== "string") return fail("refused", READ_REFUSED);
+  return result.json;
 }
 
 type Review = Record<string, unknown>;
@@ -295,6 +457,12 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
+    toolSpec("list_loans", "Loans in the company with current principal balance.", {}),
+    toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
+      loan_id: { type: "string" },
+      from: { type: "integer" },
+      limit: { type: "integer" },
+    }),
   ];
 }
 
@@ -346,9 +514,36 @@ function writeTools() {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
     }, true),
+    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
+      idempotency_key: { type: "string" },
+      name: { type: "string" },
+      principal: { type: "string" },
+      annual_rate_percent: { type: "number" },
+      term_months: { type: "integer" },
+      start_date: { type: "string" },
+      payment: { type: "string" },
+      escrow: { type: "string" },
+      currency: { type: "string" },
+    }, true),
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change.", {
+      idempotency_key: { type: "string" },
+      loan_id: { type: "string" },
+      name: { type: "string" },
+      principal: { type: "string" },
+      annual_rate_percent: { type: "number" },
+      term_months: { type: "integer" },
+      start_date: { type: "string" },
+      payment: { type: "string" },
+      escrow: { type: "string" },
+    }, true),
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      loan_id: { type: "string" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "loan", "loan_update", "loan_split"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -422,6 +617,177 @@ async function syncBank(
   return fail("refused", "The bank sync failed.");
 }
 
+async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const parsed = addLoanSchema.safeParse(args);
+  if (!parsed.success) return fail("validation", "validation");
+  const principalMinor = minorFromMajor(parsed.data.principal);
+  if (typeof principalMinor !== "bigint") return principalMinor;
+  const ratePpm = ppmFromPercent(parsed.data.annual_rate_percent);
+  if (typeof ratePpm !== "number") return ratePpm;
+  const escrowMinor = minorFromMajorNonNegative(parsed.data.escrow, 0n);
+  if (typeof escrowMinor !== "bigint") return escrowMinor;
+  let paymentMinor: bigint | ToolResult;
+  if (parsed.data.payment == null) {
+    try {
+      paymentMinor = contractualPaymentMinor({
+        principalMinor,
+        annualRatePpm: ratePpm,
+        termMonths: parsed.data.term_months,
+      }) + escrowMinor;
+    } catch (error) {
+      if (error instanceof LoanScheduleError) return fail("validation", error.code);
+      return fail("validation", "validation");
+    }
+  } else {
+    paymentMinor = minorFromMajor(parsed.data.payment);
+    if (typeof paymentMinor !== "bigint") return paymentMinor;
+  }
+  let currency = parsed.data.currency;
+  if (currency == null) {
+    const defaulted = await defaultLoanCurrency(rpc);
+    if (typeof defaulted !== "string") return defaulted;
+    currency = defaulted;
+  }
+  try {
+    buildLoanSchedule({
+      principalMinor,
+      annualRatePpm: ratePpm,
+      termMonths: parsed.data.term_months,
+      startDate: parsed.data.start_date,
+      paymentMinor,
+      escrowMinor,
+    });
+  } catch (error) {
+    if (error instanceof LoanScheduleError) return fail("validation", error.code);
+    return fail("validation", "validation");
+  }
+  const schedule = buildLoanSchedule({
+    principalMinor,
+    annualRatePpm: ratePpm,
+    termMonths: parsed.data.term_months,
+    startDate: parsed.data.start_date,
+    paymentMinor,
+    escrowMinor,
+  });
+  const result = await rpc("mcp_add_loan", {
+    p_idempotency_key: parsed.data.idempotency_key,
+    p_name: parsed.data.name,
+    p_principal_minor: Number(principalMinor),
+    p_annual_rate_ppm: ratePpm,
+    p_term_months: parsed.data.term_months,
+    p_start_date: parsed.data.start_date,
+    p_payment_minor: Number(paymentMinor),
+    p_escrow_minor: Number(escrowMinor),
+    p_currency: currency,
+  });
+  if (result.status >= 400) return fail("refused", WRITE_REFUSED);
+  const wrapped = envelopeOf(result.json);
+  if (wrapped.isError) return wrapped;
+  const data = (wrapped.structuredContent as { ok: true; data: Record<string, unknown> }).data;
+  return ok({
+    ...data,
+    payment: majorString(paymentMinor),
+    payment_minor: Number(paymentMinor),
+    schedule_preview: schedule.rows.slice(0, 3).map(scheduleRowOut),
+  });
+}
+
+async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const parsed = updateLoanSchema.safeParse(args);
+  if (!parsed.success) return fail("validation", "validation");
+  const patch: Record<string, unknown> = {};
+  if (parsed.data.name != null) patch.name = parsed.data.name;
+  if (parsed.data.principal != null) {
+    const minor = minorFromMajor(parsed.data.principal);
+    if (typeof minor !== "bigint") return minor;
+    patch.principal_minor = Number(minor);
+  }
+  if (parsed.data.annual_rate_percent != null) {
+    const ppm = ppmFromPercent(parsed.data.annual_rate_percent);
+    if (typeof ppm !== "number") return ppm;
+    patch.annual_rate_ppm = ppm;
+  }
+  if (parsed.data.term_months != null) patch.term_months = parsed.data.term_months;
+  if (parsed.data.start_date != null) patch.start_date = parsed.data.start_date;
+  if (parsed.data.payment != null) {
+    const minor = minorFromMajor(parsed.data.payment);
+    if (typeof minor !== "bigint") return minor;
+    patch.payment_minor = Number(minor);
+  }
+  if (parsed.data.escrow != null) {
+    const minor = minorFromMajorNonNegative(parsed.data.escrow);
+    if (typeof minor !== "bigint") return minor;
+    patch.escrow_minor = Number(minor);
+  }
+  if (Object.keys(patch).length === 0) return fail("validation", "validation");
+  const result = await rpc("mcp_update_loan", {
+    p_idempotency_key: parsed.data.idempotency_key,
+    p_loan_id: parsed.data.loan_id,
+    p_patch: patch,
+  });
+  if (result.status >= 400) return fail("refused", WRITE_REFUSED);
+  return envelopeOf(result.json);
+}
+
+async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
+  const parsed = attachLoanSchema.safeParse(args);
+  if (!parsed.success) return fail("validation", "validation");
+  const txnResult = await rpc("get_transaction", { p_id: parsed.data.transaction_id });
+  if (txnResult.status >= 400) return fail("refused", READ_REFUSED);
+  if (txnResult.json == null || typeof txnResult.json !== "object" || Array.isArray(txnResult.json)) {
+    return fail("not_found", "not found");
+  }
+  const txn = txnResult.json as Record<string, unknown>;
+  const docDate = typeof txn.doc_date === "string" ? txn.doc_date : null;
+  const lineMinorRaw = txn.amount_original;
+  const currency = typeof txn.currency === "string" ? txn.currency : null;
+  if (docDate == null || typeof lineMinorRaw !== "number" || currency == null) {
+    return fail("refused", WRITE_REFUSED);
+  }
+  const lineMinor = BigInt(lineMinorRaw);
+  const loans = await loadLoans(rpc);
+  if (!Array.isArray(loans)) return loans;
+  const loan = loans.find((row) => row.id === parsed.data.loan_id);
+  if (loan == null) return fail("refused", "loan not found");
+  if (loan.currency !== currency) return fail("refused", "loan currency mismatch");
+  if (BigInt(loan.balance_minor) <= 0n) return fail("refused", "loan balance exceeded");
+  const schedule = buildLoanSchedule(loanTermsOf(loan, BigInt(loan.payment_minor), BigInt(loan.escrow_minor)));
+  const row = scheduleRowForDate(schedule.rows, docDate);
+  if (row == null) return fail("refused", "no schedule row for this date");
+  const parts = allocateLoanSplit({
+    lineMinor,
+    interestMinor: row.interestMinor,
+    escrowMinor: row.escrowMinor,
+    principalMinor: row.principalMinor,
+  });
+  const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
+  if (principalPart > BigInt(loan.balance_minor)) return fail("refused", "loan balance exceeded");
+  const payload = parts.map((part) => ({
+    part: part.part,
+    amount_minor: Number(part.amountMinor),
+    scheduled_minor: Number(part.scheduledMinor),
+  }));
+  const result = await rpc("mcp_attach_loan_payment", {
+    p_idempotency_key: parsed.data.idempotency_key,
+    p_transaction_id: parsed.data.transaction_id,
+    p_loan_id: parsed.data.loan_id,
+    p_parts: payload,
+  });
+  if (result.status >= 400) return fail("refused", WRITE_REFUSED);
+  const wrapped = envelopeOf(result.json);
+  if (wrapped.isError) return wrapped;
+  return ok({
+    ...(wrapped.structuredContent as { ok: true; data: Record<string, unknown> }).data,
+    parts: payload.map((part) => ({
+      part: part.part,
+      amount: majorString(BigInt(part.amount_minor)),
+      scheduled: majorString(BigInt(part.scheduled_minor)),
+      amount_minor: part.amount_minor,
+      scheduled_minor: part.scheduled_minor,
+    })),
+  });
+}
+
 async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],
   input: unknown,
@@ -483,6 +849,12 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
     };
+  } else if (name === "add_loan") {
+    return addLoanWrite(args, rpc);
+  } else if (name === "update_loan") {
+    return updateLoanWrite(args, rpc);
+  } else if (name === "attach_loan_payment") {
+    return attachLoanWrite(args, rpc);
   } else if (name === "assign_expenses") {
     const parsed = assignExpensesSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -614,6 +986,32 @@ export async function callTool(
       offset,
     }));
   }
+
+  if (name === "list_loans") {
+    const loans = await loadLoans(rpc);
+    if (!Array.isArray(loans)) return loans;
+    return ok({ loans });
+  }
+
+  if (name === "get_loan_schedule") {
+    const loanId = args.loan_id;
+    if (typeof loanId !== "string" || !UUID.test(loanId)) return fail("validation", "validation");
+    const fromIndex = args.from == null ? 0 : args.from;
+    if (typeof fromIndex !== "number" || !Number.isInteger(fromIndex) || fromIndex < 0) {
+      return fail("validation", "validation");
+    }
+    const limit = scheduleLimitOf(args.limit, 12);
+    if (typeof limit !== "number") return limit;
+    const loans = await loadLoans(rpc);
+    if (!Array.isArray(loans)) return loans;
+    const loan = loans.find((row) => row.id === loanId);
+    if (loan == null) return fail("not_found", "not found");
+    const schedule = buildLoanSchedule(loanTermsOf(loan, BigInt(loan.payment_minor), BigInt(loan.escrow_minor)));
+    const rows = schedule.rows.slice(fromIndex, fromIndex + limit).map(scheduleRowOut);
+    return ok({ loan_id: loanId, from: fromIndex, limit, total: schedule.rows.length, rows });
+  }
+
+  if (name !== "get_expense") return fail("validation", "validation");
 
   const transactionId = args.transaction_id;
   if (typeof transactionId !== "string" || !UUID.test(transactionId)) return fail("validation", "validation");

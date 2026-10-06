@@ -1,5 +1,5 @@
 // flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status.
-// Decision 0080. Reads, single-expense writes, cycle 4 writes, and cycle 6 batch. verify_jwt is false.
+// Decision 0080. Reads through cycle 5, single-expense writes, cycle 4–5 writes, and cycle 6 batch. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
 
 import { corsHeadersFor } from "../_shared/http.ts";

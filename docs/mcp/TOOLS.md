@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `undo` | false | true | true |
+| `assign_expense`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
 
 ## Which id
 
@@ -23,6 +23,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "project"` | `id` | the project id `create_project` returned |
 | `undo` `kind: "category"` | `id` | the category id `create_category` returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
+| `undo` `kind: "loan"` | `id` | the loan id `add_loan` returned |
+| `undo` `kind: "loan_update"` | `id` | the loan id |
+| `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -171,9 +174,64 @@ Output `data`: `{ "added", "duplicates", "removed", "newest_date" }`. `added` is
 
 `not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`. A sync that was skipped because another run claimed the connector or ran inside the quiet window is `unavailable` / `retry` and is not stored.
 
+## Loans · cycle 5
+
+Read tools use `mcp_list_loans` and shared schedule math. Writes use the same writer gate as cycle 4. Amounts in tool arguments are major units (decimal strings or numbers); responses include `_minor` integer fields. `annual_rate_percent` is the nominal rate (6.875 means 6.875%).
+
+### list_loans
+
+Input `{}`. Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`.
+
+### get_loan_schedule
+
+Input `{ "loan_id", "from": 0, "limit": 12 }`. `limit` defaults to 12 and cannot exceed 600. Output `data`: `{ "loan_id", "from", "limit", "total", "rows" }` where each row has `date`, `payment`, `interest`, `escrow`, `principal`, `balance` (major strings) and matching `*_minor` fields.
+
+### add_loan
+
+```json
+{
+  "idempotency_key": "loan-1",
+  "name": "Example Bank",
+  "principal": "120000.00",
+  "annual_rate_percent": 6.875,
+  "term_months": 360,
+  "start_date": "2026-01-01",
+  "escrow": "100.00",
+  "currency": "USD"
+}
+```
+
+Optional `payment` and `escrow` (default 0). Omitted `currency` uses `mcp_company_loan_currency()` (USD only when every open line is USD; otherwise ILS). Output includes computed `payment`, `schedule_preview` (first three rows), `id`, and `undo_kind`: `"loan"`. Invalid terms return `validation` with a `LoanScheduleError` code (`principal`, `rate`, `term`, `payment`, `escrow`, `start_date`, `payment_below_interest`).
+
+### update_loan
+
+Patch fields: `name`, `principal`, `annual_rate_percent`, `term_months`, `start_date`, `payment`, `escrow`. `currency` is rejected. Output `{ "id", "undo_kind": "loan_update" }`.
+
+### attach_loan_payment
+
+```json
+{
+  "idempotency_key": "split-1",
+  "transaction_id": "<ledger id>",
+  "loan_id": "<loan id>"
+}
+```
+
+The handler loads the line, picks the schedule row for `doc_date`, and splits like the app. Output includes `parts[]` and `undo_kind`: `"loan_split"`. Undo `kind: "loan_split"` takes the **transaction** id.
+
+### undo (loan kinds)
+
+| `kind` | `id` |
+| --- | --- |
+| `loan` | loan id from `add_loan` |
+| `loan_update` | loan id |
+| `loan_split` | transaction id |
+
+Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, and `invalid loan terms`.
+
 ## Batch · cycle 6
 
-`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows.
+`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters.
 
 ```json
 {

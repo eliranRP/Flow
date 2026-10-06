@@ -714,11 +714,20 @@ isOneToOne: false
 "map_budget_section":
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
+"mcp_add_loan":
+{ Args: { "p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_start_date": string,"p_term_months": number }; Returns: Json
+                           },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_assign_expenses":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
+                           },
+"mcp_attach_loan_payment":
+{ Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_company_loan_currency":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "mcp_create_category":
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
@@ -731,6 +740,9 @@ isOneToOne: false
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_list_loans":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
@@ -746,6 +758,9 @@ isOneToOne: false
                            },
 "mcp_undo_batch":
 { Args: { "p_batch_key": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_update_loan":
+{ Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
