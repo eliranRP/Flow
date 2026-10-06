@@ -122,14 +122,19 @@ function showsPlace(text: string) {
   })).toBeInTheDocument();
 }
 
-/** The next card can paint while אישור is still busy with the previous write. */
-async function clickIdleApprove() {
+/** אישור ignores a click while the previous write is still busy. */
+async function approveWhenIdle(nextHeading: string) {
   await waitFor(() => {
     const button = screen.getByRole("button", { name: "אישור" });
     expect(button).toBeEnabled();
     expect(button).not.toHaveAttribute("aria-busy");
   });
   fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(await screen.findByRole("heading", { name: nextHeading })).toBeInTheDocument();
 }
 
 function renderAt(path: string) {
@@ -496,8 +501,7 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /עגורני החוף/ }));
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
-    expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
+    await approveWhenIdle("ברזל הדרום");
     expect(screen.queryByRole("heading", { name: "מחסן הנמל" })).not.toBeInTheDocument();
   });
 
@@ -521,14 +525,11 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: /ברזל הדרום/ }));
     expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
     showsPlace("3 מתוך 5");
-    await clickIdleApprove();
-    expect(await screen.findByRole("heading", { name: "צבע הדרום" })).toBeInTheDocument();
+    await approveWhenIdle("צבע הדרום");
     showsPlace("3 מתוך 4");
-    await clickIdleApprove();
-    expect(await screen.findByRole("heading", { name: "חשמל הצפון" })).toBeInTheDocument();
+    await approveWhenIdle("חשמל הצפון");
     showsPlace("3 מתוך 3");
-    await clickIdleApprove();
-    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    await approveWhenIdle("מחסן הנמל");
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
     showsPlace("1 מתוך 2");
   });

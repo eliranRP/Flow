@@ -86,6 +86,7 @@ describe("setup step model", () => {
     });
     expect(decideEntry(skipped, open, true, at)).toEqual({ kind: "stay" });
     expect(resumeStamp({ ...skipped, run_resumed_at: at }, open, false, at)).toBeNull();
+    expect(decideEntry({ ...started(), run_resumed_at: at }, open, false, at)).toEqual({ kind: "stay" });
   });
 
   it("sends card and finish actions home, and step 1 back only after this run created the company", () => {

@@ -96,11 +96,6 @@
   border-block-end: 0;
 }
 
-.ui-setup-panel .ui-row-hint,
-.ui-setup-jev .t-hint {
-  white-space: nowrap;
-}
-
 .ui-setup-cta {
   position: fixed;
   z-index: 15;

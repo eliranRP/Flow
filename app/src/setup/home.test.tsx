@@ -162,5 +162,8 @@ describe("setup home card", () => {
     await waitFor(() => {
       expect(readSetupStore(userId, companyId).completed_toast_at).toBe(stamped);
     });
+    await waitFor(() => {
+      expect(screen.queryByText("ההגדרה הושלמה.")).not.toBeInTheDocument();
+    });
   });
 });
