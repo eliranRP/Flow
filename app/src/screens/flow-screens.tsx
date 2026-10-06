@@ -4072,7 +4072,7 @@ export function SettingsScreen({
             busy={refresh.isPending}
             disabled={refreshHeld}
             onClick={() => {
-              if (holdWrites || refreshHeld) return;
+              if (holdWrites || refreshHeld || refresh.isPending) return;
               if (blocked()) return;
               refresh.mutate();
             }}
