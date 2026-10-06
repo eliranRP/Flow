@@ -115,6 +115,18 @@ export const sumitStatusSchema = z.object({
   next_attempt_at: z.string().nullable().optional(),
 });
 
+export const mercuryStatusSchema = z.object({
+  company_id: z.string().nullable(),
+  provider: z.enum(["sumit", "mercury"]).nullable(),
+  connected: z.boolean(),
+  last_sync_at: z.string().nullable(),
+  last_error: z.string().nullable(),
+  next_attempt_at: z.string().nullable(),
+  import_from: z.string().nullable(),
+  account_labels: z.unknown().nullable(),
+  skip_count: z.number().nullable(),
+});
+
 export const projectDetailSchema = z
   .object({
     id: z.string(),
@@ -243,6 +255,7 @@ export type ReviewRow = z.infer<typeof reviewRowSchema>;
 export type FiledTodayRow = z.infer<typeof filedTodaySchema>;
 export type CategoryRow = z.infer<typeof categoryRowSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
+export type MercuryStatus = z.infer<typeof mercuryStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
 export type ProjectCategoryPage = z.infer<typeof projectCategorySchema>;
 export type ProjectWaitingRow = z.infer<typeof projectWaitingRowSchema>;
