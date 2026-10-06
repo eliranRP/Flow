@@ -562,6 +562,15 @@ a.ui-row,
 [data-vaul-drawer].ui-sheet-panel.ui-sheet-tall {
   height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
   max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
+  padding-bottom: 0;
+}
+
+.ui-sheet-tall .ui-sheet-surface {
+  padding-bottom: 0;
+}
+
+.ui-sheet-tall .ui-sheet-body {
+  max-height: none;
 }
 
 .ui-sheet-fit .ui-sheet-surface {
@@ -1557,11 +1566,11 @@ a.ui-row,
 .ui-review {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: var(--space-2) var(--space-card-inset) 0;
-  padding: var(--space-2);
+  padding: var(--space-4);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -1643,7 +1652,24 @@ a.ui-row,
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: var(--space-2) var(--space-side) 0;
+  margin: var(--space-4) var(--space-card-inset) 0;
+}
+
+/* Short phones (320×693): keep the primary action above the tab bar. */
+@media (max-height: 720px) {
+  .ui-review {
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+
+  .ui-review-actions {
+    margin-block-start: var(--space-2);
+  }
+
+  /* With the filed-today banner, the subtitle is what pushes אישור under the tab bar. */
+  .ui-review-queue:has(> .ui-banner) > .ui-page > p {
+    display: none;
+  }
 }
 
 .ui-viewer-note {
@@ -3371,6 +3397,20 @@ div.ui-check-row {
   align-items: flex-start;
   margin-top: var(--space-4);
   border-top: 1px solid var(--color-line);
+}
+
+.ui-sheet-fit .ui-change-swap {
+  padding-block-end: var(--safe-bottom);
+}
+
+.ui-change-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-change-picker [role="radiogroup"] > .ui-radio-row:last-child {
+  border-bottom: 0;
 }
 
 .ui-change-links .ui-text-link {

@@ -9,7 +9,9 @@ test("a Jev suggestion prefills the review card, and off leaves it unchanged", a
 
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/e2e/jev-review?on=0");
-  await expect(page.getByText("אין הצעה, הקישו לבחירה")).toBeVisible();
+  // 0091: no hint line; the empty row reads "לא נבחר". This harness keeps its own disabled אישור.
+  await expect(page.getByText("אין הצעה, הקישו לבחירה")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "פרויקט: לא נבחר" })).toBeVisible();
   await expect(page.locator(".ui-suggest-tag")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
 });
@@ -28,10 +30,10 @@ test("a waiting card keeps the settled height for a fill, a note, and a complete
   await expect(page.locator(".ui-review-note")).toHaveCount(0);
   await expect(page.locator("[data-phase=waiting]").getByText("אין הצעה, הקישו לבחירה")).toHaveCount(0);
   await expect(page.locator("[data-phase=waiting]").getByText("חסר קטגוריה, הקישו לבחירה")).toHaveCount(0);
-  await expect(page.locator("[data-layout=note] [data-phase=waiting] .ui-review-note-slot")).toBeVisible();
-  await expect(page.locator("[data-layout=filled] [data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
-  await expect(page.locator("[data-layout=sumit] [data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
-  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByText("חסר קטגוריה, הקישו לבחירה")).toBeVisible();
+  // 0091: only a shared cost has a note, so no layout here reserves a note slot.
+  await expect(page.locator("[data-phase=waiting] .ui-review-note-slot")).toHaveCount(0);
+  await expect(page.locator("[data-phase=settled]").getByText("חסר קטגוריה, הקישו לבחירה")).toHaveCount(0);
+  await expect(page.locator("[data-layout=note] [data-phase=settled]").getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
 });
 
 test("a long suggestion keeps הצעה inside the row at 320", async ({ page }) => {
