@@ -131,6 +131,7 @@ function renderAt(path: string) {
 }
 
 afterEach(() => {
+  localStorage.clear();
   rpc.calls.length = 0;
   rpc.impl = () => Promise.resolve({ data: null, error: null });
   gate.owner = session.user.id;
@@ -182,9 +183,8 @@ describe("review setup handoff", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1");
-    await waitFor(() => {
-      expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
-    });
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    await expect(screen.findByText("נתוני דוגמה · Example data", {}, { timeout: 500 })).rejects.toThrow();
   });
 
   it("toasts setup handoff after the first real approval", async () => {
@@ -203,6 +203,24 @@ describe("review setup handoff", () => {
     fireEvent.click(screen.getByRole("button", { name: "המשך" }));
     await waitFor(() => {
       expect(screen.getByText("step 5")).toBeInTheDocument();
+    });
+  });
+
+  it("hands the first real approval back to Home when opened from the card", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל")], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderAt("/review?setup=1&from=card");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    await waitFor(() => {
+      expect(approve).toBeEnabled();
+    });
+    fireEvent.click(approve);
+    expect(await screen.findByText(SAMPLE_TOAST)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
+    await waitFor(() => {
+      expect(screen.getByText("home")).toBeInTheDocument();
     });
   });
 });
