@@ -1,8 +1,9 @@
-// Cycle 2 reads and cycle 3a single-expense writes. Decision 0080.
+// Cycle 2 reads, cycle 3a single-expense writes, and cycle 4 project/category/sync. Decision 0080.
 // Identity is not an argument. The handler signs from the credential row.
 // Zod checks write arguments. A failure is the fixed validation message.
 
 import { z } from "zod";
+import { MERCURY_SYNC_FUNCTION } from "../_shared/connectors/mercury/capabilities.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
@@ -16,6 +17,10 @@ export const READ_TOOL_NAMES = [
 export const WRITE_TOOL_NAMES = [
   "assign_expense",
   "set_expense_category",
+  "create_project",
+  "create_category",
+  "sync_bank",
+  "hide_category",
   "undo",
 ] as const;
 
@@ -32,6 +37,10 @@ const ALLOWED: Record<string, Set<string>> = {
   get_totals: new Set(["from", "to", "basis"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
+  create_project: new Set(["idempotency_key", "name", "status"]),
+  create_category: new Set(["idempotency_key", "name", "kind"]),
+  sync_bank: new Set(["idempotency_key"]),
+  hide_category: new Set(["idempotency_key", "category_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -52,11 +61,29 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden"]),
   id: UUID_TEXT,
+}).strict();
+const createProjectSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().min(2).max(120),
+  status: z.enum(["active", "finished"]).optional(),
+}).strict();
+const createCategorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().min(2).max(120),
+  kind: z.enum(["expense", "income"]),
+}).strict();
+const syncBankSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+}).strict();
+const hideCategorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
 }).strict();
 
 export type ToolRpc = (name: string, body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>;
+export type ToolInvoke = (fn: string, body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>;
 
 type ToolResult = {
   isError: boolean;
@@ -251,9 +278,26 @@ function writeTools() {
       transaction_id: { type: "string" },
       category_id: { type: "string" },
     }, true),
+    toolSpec("create_project", "Create a project in the owner's company.", {
+      idempotency_key: { type: "string" },
+      name: { type: "string" },
+      status: { type: "string", enum: ["active", "finished"] },
+    }, true),
+    toolSpec("create_category", "Create a category in the owner's company.", {
+      idempotency_key: { type: "string" },
+      name: { type: "string" },
+      kind: { type: "string", enum: ["expense", "income"] },
+    }, true),
+    toolSpec("sync_bank", "Pull the latest Mercury bank lines for this company.", {
+      idempotency_key: { type: "string" },
+    }, true),
+    toolSpec("hide_category", "Hide a category. Undo restores the prior hidden flag.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden"] },
       id: { type: "string" },
     }, true),
   ];
@@ -278,15 +322,66 @@ function envelopeOf(json: unknown): ToolResult {
   return fail("refused", WRITE_REFUSED);
 }
 
+async function syncBank(
+  key: string,
+  rpc: ToolRpc,
+  invoke?: ToolInvoke,
+): Promise<ToolResult> {
+  const begin = await rpc("mcp_sync_bank_begin", { p_idempotency_key: key });
+  if (begin.status >= 400) return fail("refused", WRITE_REFUSED);
+  const begun = envelopeOf(begin.json);
+  if (begun.isError) return begun;
+  const state = (begun.structuredContent as { ok: true; data: Record<string, unknown> }).data;
+  if (state.state !== "proceed") {
+    return ok(state);
+  }
+  if (!invoke) return fail("unavailable", "unavailable");
+  const pulled = await invoke(MERCURY_SYNC_FUNCTION, { force: true });
+  if (pulled.status === 429) return fail("unavailable", "retry");
+  if (pulled.status === 401) return fail("unavailable", "unavailable");
+  const payload = pulled.json != null && typeof pulled.json === "object" && !Array.isArray(pulled.json)
+    ? pulled.json as Record<string, unknown>
+    : null;
+  if (payload?.error === "Mercury is not connected") {
+    return fail("not_found", "bank is not connected");
+  }
+  if (payload?.error === "auth") {
+    return fail("refused", "bank key was rejected; reconnect in Settings");
+  }
+  if (pulled.status === 200 && payload != null) {
+    if (payload.skipped === true) return fail("unavailable", "retry");
+    if (payload.ok === true) {
+      const data = {
+        added: typeof payload.inserted === "number" ? payload.inserted : 0,
+        duplicates: typeof payload.updated === "number" ? payload.updated : 0,
+        removed: typeof payload.removed === "number" ? payload.removed : 0,
+        newest_date: typeof payload.newest_date === "string" ? payload.newest_date : null,
+      };
+      await rpc("mcp_sync_bank_finish", {
+        p_idempotency_key: key,
+        p_response: { ok: true, data },
+      });
+      return ok(data);
+    }
+  }
+  return fail("refused", "The bank sync failed.");
+}
+
 async function callWrite(
   name: typeof WRITE_TOOL_NAMES[number],
   input: unknown,
   rpc: ToolRpc,
+  invoke?: ToolInvoke,
 ): Promise<ToolResult> {
   const args = argsOf(input, ALLOWED[name] ?? new Set());
   if (isFail(args)) return args;
   let rpcName = "mcp_undo";
   let body: Record<string, unknown> = {};
+  if (name === "sync_bank") {
+    const parsed = syncBankSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    return syncBank(parsed.data.idempotency_key, rpc, invoke);
+  }
   if (name === "assign_expense") {
     const parsed = assignSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -307,6 +402,32 @@ async function callWrite(
       p_transaction_id: parsed.data.transaction_id,
       p_category_id: parsed.data.category_id,
     };
+  } else if (name === "create_project") {
+    const parsed = createProjectSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_create_project";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_name: parsed.data.name,
+      ...(parsed.data.status == null ? {} : { p_status: parsed.data.status }),
+    };
+  } else if (name === "create_category") {
+    const parsed = createCategorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_create_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_name: parsed.data.name,
+      p_kind: parsed.data.kind,
+    };
+  } else if (name === "hide_category") {
+    const parsed = hideCategorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_hide_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+    };
   } else {
     const parsed = undoSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -321,13 +442,19 @@ async function callWrite(
   return envelopeOf(result.json);
 }
 
-export async function callTool(name: string, input: unknown, scope: string[], rpc: ToolRpc): Promise<ToolResult> {
+export async function callTool(
+  name: string,
+  input: unknown,
+  scope: string[],
+  rpc: ToolRpc,
+  invoke?: ToolInvoke,
+): Promise<ToolResult> {
   const write = (WRITE_TOOL_NAMES as readonly string[]).includes(name);
   const read = (READ_TOOL_NAMES as readonly string[]).includes(name);
   if (!write && !read) return fail("validation", "validation");
   if (write && !scope.includes("write")) return fail("forbidden", "forbidden");
   if (read && !scope.includes("read")) return fail("forbidden", "forbidden");
-  if (write) return callWrite(name as typeof WRITE_TOOL_NAMES[number], input, rpc);
+  if (write) return callWrite(name as typeof WRITE_TOOL_NAMES[number], input, rpc, invoke);
   const args = argsOf(input, ALLOWED[name] ?? new Set());
   if (isFail(args)) return args;
 
