@@ -18,9 +18,6 @@ const MERCURY_ERRORS: Record<string, string> = {
   method: "החיבור נכשל.",
 };
 
-export const MERCURY_CONNECT_HINT =
-  "ב‑Mercury:\u200F All Settings\u200F ← \u200FTokens\u200F ← \u200FCreate an API Token.\u200F בוחרים Read Only, מעתיקים את המפתח כולו ומדביקים כאן.";
-
 /** Hebrew for a known Mercury code. An unknown code becomes the generic sentence. */
 export function hebrewMercuryError(code: string | null | undefined): string | null {
   if (!code) return null;
