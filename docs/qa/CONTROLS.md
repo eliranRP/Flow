@@ -34,6 +34,18 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Onboarding | עוסק מורשה / עוסק פטור | Selects the VAT kind. | never | no | the segment is selected | none | pass |
 | Onboarding | המשך | Creates the company. `return` may only be `/settings` or `/settings?sheet=sumit`. Anything else, including a normalised `//host`, goes Home. | never | שומר inside the button | route `/`, or the allowlisted return | toast "לא הצלחנו לשמור." | pass |
 | Home, empty | חיבור SUMIT | Opens settings. | never | no | route `/settings` | none | pass |
+| Setup | חזרה | Goes one step back inside the run. From the Home card, returns Home. Step 1 shows it only after this run created the company. Step 0 has none. | never | no | the previous setup step, or Home | none | unit |
+| Setup | דלג | Stores a skip and moves on. It does not save the step. Hidden on step 0. | never | no | the next step, or Home when opened from the card | none | unit |
+| Setup, step 0 | המשך | Creates the company and opens step 1. | never | שומר inside the button | route `/setup/1` | toast "לא הצלחנו לשמור." | unit |
+| Setup, step 0 | עוסק מורשה / עוסק פטור | Selects the VAT kind. מורשה is the default. The hint matches the segment. | never | no | the segment is selected | none | unit |
+| Setup, step 2 | תיוג חכם (Jev) | Sets the switch. The save waits for המשך. | never | no | the switch moves | none | unit |
+| Setup, step 2 | המשך | Saves Jev on or off and moves on. | never | שומר inside the button | the next step, or Home from the card | toast "לא הצלחנו לשמור." | unit |
+| Setup, step 3 | נראה טוב | Confirms the lists and moves on. | never | no | the next step, or Home from the card | none | unit |
+| Home card | הסתרה | Hides the card and toasts above the tab bar. | never | no | toast "ההגדרה זמינה בהגדרות." | none | unit |
+| Home card | ביטול | Brings the card back. | never | no | the card returns | none | unit |
+| Home card | a remaining step | Opens that step alone. | never | no | route `/setup/N?from=card` | none | unit |
+| Home card | מתקדם · עוזר AI | Opens Settings with the assistant sheet. Not counted. | never | no | route `/settings?sheet=assistant` | none | unit |
+| Settings | הגדרה ראשונה | Opens the next remaining step. Hidden before the run starts and when all 5 are done. | never | no | route `/setup/N?from=card` | none | unit |
 | Home | period pill | Opens the period sheet. | never | no | sheet with the four periods | none | pass |
 | Home | period row | Sets that period and closes the sheet. | never | no | pill label matches the choice | none | pass |
 | Home | טווח מותאם | Opens the range sheet. | never | no | sheet title טווח מותאם | none | pass |

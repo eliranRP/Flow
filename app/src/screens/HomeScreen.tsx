@@ -37,6 +37,7 @@ import { previewHidesBand, useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
 import { useHoldWrites } from "../use-is-viewer";
 import { useBooks, useDashboardQuery, useUnpaidQuery } from "../use-books";
+import { SetupHomeSlot } from "../setup/home";
 
 function changePercent(current: bigint, previous: bigint | null): number | null {
   if (previous == null || previous === 0n) return null;
@@ -103,11 +104,12 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
           title="עוד אין נתונים"
           body="הרווח יופיע כאן אחרי ש־SUMIT מחובר."
           action={holdWrites ? undefined : (
-            <Button variant="pill" to={`/settings${search}`}>
+            <Button variant="pill" to={previewing ? `/settings${search}` : "/setup/1?from=card"}>
               חיבור SUMIT
             </Button>
           )}
         />
+        <SetupHomeSlot emptyHome />
       </div>
     );
   }
@@ -126,6 +128,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
       }}
       period={books.period}
       onPeriod={books.setPeriod}
+      checklist={<SetupHomeSlot emptyHome={false} />}
     />
   );
 }
@@ -147,6 +150,7 @@ export function HomeBooks({
   example,
   refreshing = false,
   notice,
+  checklist,
 }: {
   data: Dashboard;
   previewing: boolean;
@@ -163,6 +167,7 @@ export function HomeBooks({
   refreshing?: boolean;
   /** ld-09. A note under the band, above the pending card. */
   notice?: ReactNode;
+  checklist?: ReactNode;
 }) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
@@ -227,6 +232,8 @@ export function HomeBooks({
           <ChangePill percent={percent} comparison={comparison} />
         </p>
       ) : null}
+
+      {checklist}
 
       {unpaidPhase === "error" ? (
         <div className="ui-page-pad">

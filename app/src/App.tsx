@@ -46,6 +46,7 @@ import {
 } from "./screens/flow-screens";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
+import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
 
 export function App() {
   useEffect(() => {
@@ -86,6 +87,7 @@ function AppRoutes() {
   const background = readSheetBackground(location.state);
   return (
     <>
+      <SetupLanding />
       <Routes location={background ?? location}>
           <Route path="/sign-in" element={<SignInScreen />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
@@ -137,6 +139,8 @@ function AppRoutes() {
           <Route element={<RequireAuth />}>
             <Route element={<FullScreen />}>
               <Route path="onboarding" element={<OnboardingScreen />} />
+              <Route path="setup" element={<SetupIndex />} />
+              <Route path="setup/:step" element={<SetupStepScreen />} />
               <Route path="transactions/:transactionId" element={<TransactionRoute />} />
               <Route path="transactions/:transactionId/split" element={<SplitScreen />} />
               <Route path="install" element={<InstallRoute />} />
@@ -711,6 +715,7 @@ function Shell() {
   const allowAdd = role !== "unknown" && !viewer && (preview || !holdWrites);
   return (
     <div className="flex min-h-dvh flex-col">
+      <SetupResume />
       <div className="below-tabbar flex min-h-0 min-w-0 flex-1 flex-col">
         <Outlet />
       </div>
@@ -761,7 +766,7 @@ function AuthCallback() {
         }
         const summary = homeSummarySchema.parse(home.data);
         setMessage(summary.company_id ? "נכנסתם. עוברים לבית." : "נכנסתם. ממשיכים לפרטי העסק.");
-        void navigate(summary.company_id ? "/" : "/onboarding", { replace: true });
+        void navigate(summary.company_id ? "/" : "/setup/0", { replace: true });
       })
       .catch((error: unknown) => {
         console.error("Auth callback failed", error);

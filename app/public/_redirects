@@ -17,6 +17,8 @@
 /help/ /help 301
 /onboarding /app-shell 200
 /onboarding/ /onboarding 301
+/setup /app-shell 200
+/setup/ /setup 301
 /install /app-shell 200
 /install/ /install 301
 /add /app-shell 200
@@ -47,3 +49,5 @@
 /transactions/:transactionId/split/ /transactions/:transactionId/split 301
 /transactions/:transactionId /app-shell 200
 /transactions/:transactionId/ /transactions/:transactionId 301
+/setup/:step /app-shell 200
+/setup/:step/ /setup/:step 301
