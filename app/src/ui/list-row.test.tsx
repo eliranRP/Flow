@@ -100,6 +100,17 @@ describe("ListRow", () => {
     expect(button.querySelector(".ui-row-chevron")).toBeNull();
   });
 
+  it("ignores taps on a busy button row", () => {
+    const onClick = vi.fn();
+    render(
+      <MemoryRouter>
+        <ListRow variant="button" title="מרענן…" busy onClick={onClick} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "מרענן…" }));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it("hides the chevron on a disabled row and keeps a clear hint at full opacity", () => {
     render(
       <MemoryRouter>

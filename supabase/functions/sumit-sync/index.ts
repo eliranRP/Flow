@@ -12,6 +12,7 @@ declare const Deno: {
 const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
 const PAGE_CAP = 20;
+const CLAIM_MS = 15 * 60 * 1000;
 const te = new TextEncoder();
 
 class SyncHold extends Error {
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
           .select("id");
         if (claim.error || claim.data == null || claim.data.length === 0) continue;
         try {
-          results.push(await syncCompany(admin, row.company_id, decodeKek(kekSecret), false));
+          results.push(await syncCompany(admin, row.company_id, decodeKek(kekSecret), false, false));
         } catch (error) {
           await admin.from("sumit_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
           const message = error instanceof Error ? error.message : "sync failed";
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
     if (company.error || !company.data) return json({ error: "no company" }, 400);
     const body = (await req.json().catch(() => ({}))) as { force?: boolean };
-    const result = await syncCompany(admin, company.data.id, decodeKek(kekSecret), body.force === true);
+    const result = await syncCompany(admin, company.data.id, decodeKek(kekSecret), body.force === true, true);
     return json(result);
   } catch (error) {
     if (error instanceof SyncHold) {
@@ -102,6 +103,7 @@ async function syncCompany(
   companyId: string,
   kek: Uint8Array,
   force: boolean,
+  claim: boolean,
 ): Promise<{ ok: boolean; documents: number; skipped?: boolean; sumit_reads: number }> {
   const connection = await admin
     .from("sumit_connections")
@@ -117,7 +119,41 @@ async function syncCompany(
   const last = row.last_sync_at ? Date.parse(row.last_sync_at as string) : 0;
   const minGap = force ? 60_000 : 6 * 60 * 60 * 1000;
   if (last && Date.now() - last < minGap) return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
+  // The manual path claims the connection like mercury-sync does. Settings reads the
+  // claim as `syncing`, so the busy row survives a reload, and a second tap is skipped.
+  if (claim) {
+    const cutoff = new Date(Date.now() - CLAIM_MS).toISOString();
+    const claimed = await admin
+      .from("connector_connections")
+      .update({ sync_claimed_at: new Date().toISOString() })
+      .eq("company_id", companyId)
+      .eq("provider", "sumit")
+      .or(`sync_claimed_at.is.null,sync_claimed_at.lt.${cutoff}`)
+      .select("company_id");
+    if (claimed.error) throw new Error("sync_failed");
+    if (claimed.data == null || claimed.data.length === 0) {
+      return { ok: true, documents: 0, skipped: true, sumit_reads: 0 };
+    }
+  }
+  try {
+    return await runSync(admin, companyId, kek, row);
+  } finally {
+    if (claim) {
+      await admin
+        .from("connector_connections")
+        .update({ sync_claimed_at: null })
+        .eq("company_id", companyId)
+        .eq("provider", "sumit");
+    }
+  }
+}
 
+async function runSync(
+  admin: SupabaseClient,
+  companyId: string,
+  kek: Uint8Array,
+  row: Record<string, unknown>,
+): Promise<{ ok: boolean; documents: number; sumit_reads: number }> {
   const envelope: Envelope = {
     keyCiphertext: String(row.key_ciphertext),
     keyNonce: String(row.key_nonce),
