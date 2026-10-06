@@ -548,13 +548,13 @@ isOneToOne: false
           Views: {
             "connector_connection_status": {
                   Row: {
-                    "account_labels": Json | null,"company_id": string | null,"connected": boolean | null,"import_from": string | null,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"] | null,"skip_count": number | null
+                    "account_labels": Json | null,"company_id": string | null,"connected": boolean | null,"import_from": string | null,"last_error": string | null,"last_sync_at": string | null,"next_attempt_at": string | null,"provider": Database["public"]['Enums']["connector_provider"] | null,"skip_count": number | null,"syncing": boolean | null
                   }
                   Insert: {
-                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never
+                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never,"syncing"?: never
                          }
                         Update: {
-                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never
+                           "account_labels"?: Json | null,"company_id"?: string | null,"connected"?: never,"import_from"?: string | null,"last_error"?: string | null,"last_sync_at"?: string | null,"next_attempt_at"?: string | null,"provider"?: Database["public"]['Enums']["connector_provider"] | null,"skip_count"?: never,"syncing"?: never
                          }
                         Relationships: [
                     {

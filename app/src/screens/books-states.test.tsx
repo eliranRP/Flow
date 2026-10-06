@@ -849,7 +849,7 @@ describe("rejected writes", () => {
     });
   });
 
-  it("reassigns an income review with a null project on the second pick", async () => {
+  it("reassigns an income review with the picked project on the second pick", async () => {
     let open = true;
     let projectArg: unknown = "missing";
     rpc.impl = (name, args) => {
@@ -882,7 +882,24 @@ describe("rejected writes", () => {
           error: null,
         });
       }
-      if (name === "get_dashboard") return Promise.resolve({ data: emptyDashboard, error: null });
+      if (name === "get_dashboard") {
+        return Promise.resolve({
+          data: {
+            ...emptyDashboard,
+            projects: [{
+              id: "p1",
+              name: "אתר א",
+              status: "active",
+              income_agorot: 0,
+              direct_agorot: 0,
+              shared_agorot: 0,
+              profit_before_shared_agorot: 0,
+              profit_agorot: 0,
+            }],
+          },
+          error: null,
+        });
+      }
       if (name === "resolve_review") {
         open = false;
         return Promise.resolve({ data: null, error: null });
@@ -894,7 +911,13 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review/change?item=r1");
-    fireEvent.click(await screen.findByRole("button", { name: /קטגוריה:/ }));
+    expect(await screen.findByRole("dialog", { name: "שינוי שיוך" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }, { timeout: 2500 }));
+    fireEvent.click(await screen.findByRole("radio", { name: "אתר א" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /פרויקט: אתר א/ })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "תקבול מלקוח" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /קטגוריה: תקבול מלקוח/ })).toBeInTheDocument();
@@ -902,7 +925,7 @@ describe("rejected writes", () => {
     fireEvent.click(screen.getByRole("button", { name: /קטגוריה:/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הכנסה אחרת" }));
     await waitFor(() => {
-      expect(projectArg).toBeNull();
+      expect(projectArg).toBe("p1");
     });
   });
 
@@ -935,7 +958,7 @@ describe("rejected writes", () => {
     );
     expect(screen.getByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     rerender(
       <QueryClientProvider client={client}>
@@ -1097,8 +1120,8 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 })).toBeEnabled();
   });
 
   it("disables approve when the card has no suggestion", async () => {
@@ -1127,10 +1150,9 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
-    const approve = screen.getByRole("button", { name: "אישור" });
-    expect(approve).toBeDisabled();
-    expect(getComputedStyle(approve).cursor).toBe("not-allowed");
+    expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
+    const approve = await screen.findByRole("button", { name: "בחירת פרויקט" }, { timeout: 2500 });
+    expect(approve).toBeEnabled();
     fireEvent.click(approve);
     expect(screen.queryByText(/אי אפשר לאשר/)).not.toBeInTheDocument();
   });
