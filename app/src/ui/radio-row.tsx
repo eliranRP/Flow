@@ -53,6 +53,7 @@ export function RadioRow({
     <span className="ui-pick-name">
       <span className="ui-pick-label">{label}</span>
       {tag ? <SuggestTag /> : null}
+      {sub ? <span className="ui-radio-desc" id={descId}>{sub}</span> : null}
     </span>
   ) : (
     <span className="ui-row-text">
