@@ -2,6 +2,8 @@
 
 ## 2026-10-06
 
+sync_bank auth fix. `mercury-sync` resolves the owner company through `_shared/owner.ts`: GoTrue `getUser()` first, then, for the session-less JWT that `flow-mcp` signs, the RLS-readable company whose `owner_id` matches the token `sub` (PostgREST verifies the token). Viewers still get `no company`. No migration.
+
 MCP cycle 4. `flow-mcp` adds `create_project`, `create_category`, `sync_bank`, and optional `hide_category`, with undo for project, category, and hide. Migration `20261006120000_mcp_cycle4.sql`. `mercury-sync` returns insert/update/remove counts and `newest_date`. Decision [0090](decisions/0090-mcp-cycle4.md).
 
 Mercury connect UI. Settings adds a Mercury row, connect and status sheets, `useMercuryStatusQuery`, shared `ConnectSheet`, and `formatUsd`. CONTROLS and Storybook states updated. No migration.
