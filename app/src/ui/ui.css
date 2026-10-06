@@ -540,6 +540,9 @@ a.ui-row,
 }
 
 [data-vaul-drawer].ui-sheet-panel {
+  /* Vaul writes an inline height while the keyboard is up and later restores the height
+     it first measured, which --vvh had already shrunk. Content height, capped here, wins. */
+  height: auto !important;
   max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
   /* The toast pad grows padding above the header. Scroll anchoring would
      scroll that padding away and leave ✕ under the toast. */
@@ -1915,6 +1918,9 @@ html[data-kb="open"] .ui-sheet-panel {
 }
 
 html[data-kb="open"] .ui-sheet-body {
+  /* The panel's --vvh cap already limits the body; the 11rem allowance would waste the
+     little height left above the keyboard. */
+  max-height: none;
   padding-block-end: var(--space-3);
 }
 
