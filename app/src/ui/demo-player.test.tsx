@@ -5,12 +5,19 @@ import {
   DEMO_DURATION_MIN_MS,
   DemoPlayer,
   demoProgress,
-  demoTranslateX,
   inlineSignForDirection,
   useDemoPlayback,
 } from "./demo-player";
 import css from "./demo-player.css?raw";
+import storyCss from "./demo-player.stories.css?raw";
+import playerSource from "./demo-player.tsx?raw";
 import { expectRtl, expectTarget, expectThemePaint } from "./test-support";
+
+/** Physical translateX, in px, for travel toward rest. 0 at the last frame. */
+function demoTranslateX(progress: number, travelPx: number, inlineSign: number): number {
+  if (progress >= 1) return 0;
+  return inlineSign * (progress - 1) * travelPx;
+}
 
 function demoRoot(): HTMLElement {
   const el = document.querySelector(".ui-demo");
@@ -82,15 +89,15 @@ describe("DemoPlayer", () => {
     expect(root).toHaveAttribute("data-demo-state", "playing");
     expect(progressOf(root)).toBe(0);
     expect(seen[0]).toBe(0);
-    expect(screen.queryByRole("button", { name: "הצגה חוזרת" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שוב" })).not.toBeInTheDocument();
     expect(phone).toHaveAttribute("aria-hidden", "true");
-    expect(document.querySelector(".ui-demo-label")?.closest(".ui-demo-phone")).toBeNull();
+    expect(document.querySelector(".ui-toast-live")?.closest(".ui-demo-phone")).toBeNull();
 
     act(() => {
       vi.advanceTimersByTime(2000);
     });
     expect(root).toHaveAttribute("data-demo-state", "playing");
-    expect(screen.queryByRole("button", { name: "הצגה חוזרת" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שוב" })).not.toBeInTheDocument();
     const midway = progressOf(root);
     expect(midway).toBeGreaterThan(0);
     expect(midway).toBeLessThan(1);
@@ -100,7 +107,7 @@ describe("DemoPlayer", () => {
     });
     expect(root).toHaveAttribute("data-demo-state", "settled");
     expect(progressOf(root)).toBe(1);
-    const replay = screen.getByRole("button", { name: "הצגה חוזרת" });
+    const replay = screen.getByRole("button", { name: "שוב" });
     expect(replay).toHaveTextContent("שוב");
     expectTarget(replay);
 
@@ -110,17 +117,18 @@ describe("DemoPlayer", () => {
     expect(root).toHaveAttribute("data-demo-state", "settled");
     expect(progressOf(root)).toBe(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "הצגה חוזרת" }));
+    fireEvent.click(screen.getByRole("button", { name: "שוב" }));
     expect(root).toHaveAttribute("data-demo-state", "playing");
     expect(progressOf(root)).toBe(0);
-    expect(screen.queryByRole("button", { name: "הצגה חוזרת" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שוב" })).not.toBeInTheDocument();
+    expect(document.activeElement).toHaveClass("ui-demo-replay");
 
     act(() => {
       vi.advanceTimersByTime(4200);
     });
     expect(root).toHaveAttribute("data-demo-state", "settled");
     expect(progressOf(root)).toBe(1);
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "הצגה חוזרת" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "שוב" }));
   });
 
   it("shows the last frame immediately when motion is reduced, with no שוב", () => {
@@ -143,7 +151,7 @@ describe("DemoPlayer", () => {
     expect(progressOf(root)).toBe(1);
     expect(seen.every((value) => value === 1)).toBe(true);
     expect(screen.getByText("הדגמה: לתנועה נוספת הצעה של פרויקט וקטגוריה, מסומנת הצעה.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "הצגה חוזרת" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שוב" })).not.toBeInTheDocument();
     expect(frames).not.toHaveBeenCalled();
   });
 
@@ -233,21 +241,79 @@ describe("DemoPlayer", () => {
   });
 
   it("moves only with transform and opacity, signed for RTL", () => {
-    expect(css).toContain("translateX(calc(var(--inline-sign) * (var(--demo-progress) - 1) * var(--demo-travel, 24px)))");
-    expect(css).toContain("opacity: var(--demo-progress)");
+    const supportAt = css.indexOf("@supports");
+    const beforeSupport = supportAt === -1 ? css : css.slice(0, supportAt);
+    expect(beforeSupport).toContain("--demo-scale: 0.6125");
+    expect(beforeSupport).not.toContain("var(--demo-phone) / 320px");
+    expect(css.slice(supportAt)).toContain("var(--demo-phone) / 320px");
+    expect(css).toContain("inset-block-start: 20px");
+    expect(css).toContain("block-size: calc(100% + 40px)");
+    expect(css).toContain("padding-block-end: calc(60px / var(--demo-scale))");
+    expect(css).not.toContain("inset-block-end: calc(var(--radius-band) * -1)");
+    expect(css).toContain("padding-inline: 14px");
+    expect(css).toContain("font-weight: 500");
     expect(css).toContain("clamp(200px, calc(200px + (100vw - 320px) * 120 / 70), 320px)");
     expect(css).toContain("clamp(150px, calc(150px + (100vw - 320px) * 46 / 70), 196px)");
-    expect(css).toContain("var(--demo-phone) / 320px");
+    expect(css).not.toContain(".ui-demo-slide");
+    expect(css).not.toContain(".ui-demo-label");
     expect(css).not.toMatch(/@keyframes/);
     expect(css).not.toMatch(/\banimation\s*:/);
     expect(css).not.toMatch(/\btransition\s*:/);
-    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
-    expect(css).toContain("transform: none");
+    expect(playerSource).not.toContain("demoTranslateX");
+    expect(storyCss).toContain("translateX(calc(var(--inline-sign) * (var(--demo-progress) - 1) * var(--demo-travel, 24px)))");
+    expect(storyCss).toContain("opacity: var(--demo-progress)");
+    expect(storyCss).toMatch(/prefers-reduced-motion:\s*reduce/);
+    expect(storyCss).toContain("transform: none");
     const stage = document.createElement("div");
     stage.className = "ui-demo";
     document.body.append(stage);
     expectThemePaint(stage, "backgroundColor");
     stage.remove();
+  });
+
+  it("writes a unitless scale from the phone width", () => {
+    vi.useFakeTimers();
+    const observed: { fire: (width: number) => void }[] = [];
+    class FakeResize {
+      private readonly callback: ResizeObserverCallback;
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+        observed.push(this);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      fire(width: number) {
+        const target = document.querySelector(".ui-demo-phone");
+        if (!target) return;
+        vi.spyOn(target, "getBoundingClientRect").mockReturnValue({
+          width,
+          height: 100,
+          top: 0,
+          left: 0,
+          bottom: 100,
+          right: width,
+          x: 0,
+          y: 0,
+          toJSON() {
+            return {};
+          },
+        });
+        this.callback([{ target } as ResizeObserverEntry], this);
+      }
+    }
+    vi.stubGlobal("ResizeObserver", FakeResize);
+    render(
+      <DemoPlayer alt="הדגמה" durationMs={4000}>
+        <span>שלום</span>
+      </DemoPlayer>,
+    );
+    const watcher = observed[0];
+    if (!watcher) throw new Error("missing resize observer");
+    act(() => {
+      watcher.fire(150);
+    });
+    expect(demoRoot().style.getPropertyValue("--demo-scale")).toBe(String(150 / 320));
   });
 
   it("refuses the playback hook outside the player", () => {

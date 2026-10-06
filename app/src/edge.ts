@@ -1,16 +1,15 @@
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import { getSupabase } from "../lib/supabase";
+import { getSupabase } from "./lib/supabase";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isJsonReader(value: unknown): value is { json: () => Promise<unknown> } {
+export function isJsonReader(value: unknown): value is { json: () => Promise<unknown> } {
   return isRecord(value) && typeof value.json === "function";
 }
 
-/** Same code extraction as the Settings connect. A plain error stays connect_failed. */
-async function edgeErrorCode(error: unknown): Promise<string> {
+export async function edgeErrorCode(error: unknown): Promise<string> {
   if (!(error instanceof FunctionsHttpError)) return "connect_failed";
   const context: unknown = Reflect.get(error, "context");
   if (!isJsonReader(context)) return "connect_failed";
@@ -23,12 +22,10 @@ async function edgeErrorCode(error: unknown): Promise<string> {
   return "connect_failed";
 }
 
-/** Connects SUMIT. The caller keeps the company number and the key across a failure. */
-export async function connectSumit(companyNumber: string, apiKey: string): Promise<void> {
+export async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<string, unknown>): Promise<unknown> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
-  const response = await supabase.functions.invoke<unknown>("sumit-connect", {
-    body: { companyId: Number(companyNumber), apiKey },
-  });
+  const response = await supabase.functions.invoke<unknown>(name, { body });
   if (response.error) throw new Error(await edgeErrorCode(response.error));
+  return response.data;
 }

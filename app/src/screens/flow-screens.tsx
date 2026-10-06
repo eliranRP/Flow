@@ -1,6 +1,5 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
-import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { absAgorot } from "../agorot";
@@ -52,35 +51,10 @@ import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle 
 import { useHeldOrder } from "../list-hold";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isJsonReader(value: unknown): value is { json: () => Promise<unknown> } {
-  return isRecord(value) && typeof value.json === "function";
-}
-
-async function edgeErrorCode(error: unknown): Promise<string> {
-  if (!(error instanceof FunctionsHttpError)) return "connect_failed";
-  const context: unknown = Reflect.get(error, "context");
-  if (!isJsonReader(context)) return "connect_failed";
-  try {
-    const payload: unknown = await context.json();
-    if (isRecord(payload) && typeof payload.error === "string") return payload.error;
-  } catch {
-    return "connect_failed";
-  }
-  return "connect_failed";
-}
-
-async function invokeEdge(name: "sumit-connect" | "sumit-sync", body: Record<string, unknown>): Promise<unknown> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error("supabase");
-  const response = await supabase.functions.invoke<unknown>(name, { body });
-  if (response.error) throw new Error(await edgeErrorCode(response.error));
-  return response.data;
-}
+import { invokeEdge } from "../edge";
+import { useSumitConnect } from "../use-sumit-connect";
+import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
+import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
@@ -952,6 +926,7 @@ export function ReviewScreen() {
   const location = useLocation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const holdWrites = useHoldWrites();
   const listing = location.pathname === "/review/all";
   const projectFilter = params.get("project");
   const review = useReviewQuery();
@@ -1033,7 +1008,7 @@ export function ReviewScreen() {
   }
   const rows = source;
   const fromList = listFocusId(params) != null;
-  if (!listing && params.get("setup") === "1" && (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0))) {
+  if (!listing && !holdWrites && params.get("setup") === "1" && (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0))) {
     const fromCard = params.get("from") === "card";
     return (
       <SetupSampleReview
@@ -1051,6 +1026,8 @@ export function ReviewScreen() {
   }
   if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
   const ordered = rowsForFocus(rows);
+  const setupRun = params.get("setup") === "1";
+  const setupFromCard = params.get("from") === "card";
   return (
     <ReviewQueue
       rows={ordered}
@@ -1058,6 +1035,7 @@ export function ReviewScreen() {
       previewWrite={e2eWrite}
       listPlace={listPlace(rows, ordered, fromList)}
       backTo={fromList ? reviewListPath(search) : undefined}
+      setupHandoff={setupRun ? { fromCard: setupFromCard } : undefined}
     />
   );
 }
@@ -1157,6 +1135,26 @@ export type ReviewPreviewWrite = {
   onUndo: (id: string) => void;
 };
 
+function reviewFlagKey(value: boolean | undefined): string {
+  if (value === true) return "1";
+  if (value === false) return "0";
+  return "";
+}
+
+function reviewMotionKey(row: ReviewRow | null): string {
+  if (row == null) return "";
+  return [
+    row.id,
+    row.category_id ?? "",
+    row.category_name ?? "",
+    reviewFlagKey(row.category_suggested),
+    reviewFlagKey(row.project_suggested),
+    row.project_name ?? "",
+    String(row.share_count ?? ""),
+    String(row.auto_approved_today ?? ""),
+  ].join("\u0000");
+}
+
 export function ReviewQueue({
   rows: incoming,
   search,
@@ -1169,10 +1167,12 @@ export function ReviewQueue({
   homeLabel,
   onShared,
   listPlace,
+  setupHandoff,
 }: {
   rows: ReviewRow[];
   search: string;
   sample?: boolean;
+  setupHandoff?: { fromCard: boolean };
   /** Injected by the dev and reviewer previews. The hosted queue does not set it. */
   previewWrite?: ReviewPreviewWrite;
   /** Preview sends שינוי to its own save screen. */
@@ -1212,6 +1212,7 @@ export function ReviewQueue({
   const approvedId = useRef<string | null>(null);
   const approveSlot = useRef<HTMLDivElement>(null);
   const approveGuard = useRef(false);
+  const setupHandoffShown = useRef(false);
   const [, bumpVisit] = useState(0);
   const openIds = rows.map((item) => item.id);
   const present = notePresence(visit.current, openIds);
@@ -1222,8 +1223,14 @@ export function ReviewQueue({
   }
   const row = rows[0];
   const leaving = motion === "out";
+  const nextCard = rows[0] ?? null;
+  const nextCardRef = useRef(nextCard);
+  nextCardRef.current = nextCard;
+  // The head's identity is the swap. A fresh array for the same item must not
+  // cancel the card that is already on its way in.
+  const motionKey = reviewMotionKey(nextCard);
   useEffect(() => {
-    const next = rows[0] ?? null;
+    const next = nextCardRef.current;
     if (next?.id === shown?.id) {
       if (
         next != null
@@ -1248,13 +1255,14 @@ export function ReviewQueue({
     setMotion("out");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => {
-      setShown(next);
-      setMotion(next ? "in" : "still");
+      const landed = nextCardRef.current;
+      setShown(landed);
+      setMotion(landed ? "in" : "still");
     }, reduce ? 0 : 200);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [rows, shown]);
+  }, [motionKey, shown]);
   const approve = useWrite({
     failure: (error) => {
       if (previewWrite) return changeSaveFailure(error);
@@ -1327,6 +1335,18 @@ export function ReviewQueue({
           action: "ביטול",
           onAction: () => {
             previewWrite.onUndo(id);
+          },
+        });
+        return;
+      }
+      if (setupHandoff != null && !setupHandoffShown.current) {
+        setupHandoffShown.current = true;
+        toast.show({
+          message: SAMPLE_TOAST,
+          action: "המשך",
+          place: "page",
+          onAction: () => {
+            void navigate(setupHandoff.fromCard ? "/" : "/setup/5");
           },
         });
         return;
@@ -3457,20 +3477,12 @@ export function SettingsScreen({
       assertNoError(await supabase.rpc("set_after_overhead", { p_on: wantedOverhead.current }));
     },
   });
-  const connect = useWrite({
-    failure: (error) => {
-      if (error.message === "sumit_auth") return "החיבור נכשל. בדקו את המזהה ואת המפתח.";
-      return hebrewSumitError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.";
-    },
-    success: "SUMIT מחובר. המפתח נשאר בשרת.",
-    keys: ["sumit", "dashboard"],
+  const connect = useSumitConnect({
+    companyId,
+    apiKey,
+    setApiKey,
     onSuccess: () => {
-      setApiKey("");
       setConnectSheet(false);
-    },
-    run: async () => {
-      await invokeEdge("sumit-connect", { companyId: Number(companyId), apiKey });
-      setApiKey("");
     },
   });
   const refresh = useWrite({
@@ -3791,35 +3803,35 @@ export function SettingsScreen({
                 : undefined
         }
       />
-      <Sheet open={connectOpen} onOpenChange={setConnectSheet} title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"} returnFocusRef={sumitRowRef}>
-        {noCompany ? (
+      <SumitConnectSheet
+        open={connectOpen}
+        onOpenChange={setConnectSheet}
+        title={authReconnect && !noCompany ? "SUMIT" : "חיבור SUMIT"}
+        returnFocusRef={sumitRowRef}
+        noCompanyBody={noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
             <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
           </div>
-        ) : (
-          <div className="ui-stack">
-            {authReconnect ? <p>המזהה או המפתח לא התקבלו</p> : null}
-            <form
-              className="ui-stack"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (holdWrites || blocked()) return;
-                connect.mutate();
-              }}
-            >
-              <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
-              <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
-              <Button type="submit" busy={connect.isPending} disabled={holdWrites}>{authReconnect ? "חיבור מחדש" : "חיבור"}</Button>
-            </form>
-            {authReconnect ? (
-              <List>
-                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
-              </List>
-            ) : null}
-          </div>
-        )}
-      </Sheet>
+        ) : undefined}
+        authReconnect={authReconnect}
+        companyId={companyId}
+        setCompanyId={setCompanyId}
+        apiKey={apiKey}
+        setApiKey={setApiKey}
+        submitLabel={authReconnect ? "חיבור מחדש" : "חיבור"}
+        busy={connect.isPending}
+        disabled={holdWrites}
+        onSubmit={() => {
+          if (holdWrites || blocked()) return;
+          connect.mutate();
+        }}
+        onDisconnect={authReconnect ? () => {
+          if (holdWrites) return;
+          setDisconnectSheet(true);
+        } : undefined}
+        disconnectRef={sumitDisconnectRef}
+      />
       <Sheet open={statusOpen} onOpenChange={setStatusSheet} title="SUMIT" returnFocusRef={sumitRowRef}>
         <div className="ui-stack">
           <p>

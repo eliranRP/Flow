@@ -19,7 +19,7 @@ export const SmartTag: Story = {
     step: 2,
     title: "תיוג חכם",
     line: "Flow יציע פרויקט וקטגוריה לכל תנועה.",
-    demo: "jev",
+    demoAlt: "הדגמה: לתנועה נוספת הצעה של פרויקט וקטגוריה, מסומנת הצעה.",
   },
   render: (args) => (
     <SetupStep

@@ -77,4 +77,22 @@ describe("setup SUMIT connect", () => {
     expect(invoke).toHaveBeenCalledOnce();
     restore();
   });
+
+  it("calls onConnected once after a successful connect", async () => {
+    const restore = reducedMotion();
+    invoke.mockResolvedValue({ data: {}, error: null });
+    const onSkip = vi.fn();
+    const onConnected = vi.fn();
+    render(<Harness onSkip={onSkip} onConnected={onConnected} />);
+    fireEvent.click(screen.getByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => {
+      expect(onConnected).toHaveBeenCalledOnce();
+    });
+    expect(invoke).toHaveBeenCalledOnce();
+    restore();
+  });
 });
