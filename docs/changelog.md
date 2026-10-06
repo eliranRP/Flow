@@ -4,6 +4,8 @@
 
 Refresh syncing state. The busy רענון עכשיו row on SUMIT and Mercury comes from the server, so "מרענן…" and the spinner survive a hard reload, a new tab, and reopening the app. `connector_connection_status` and `sumit_status()` add `syncing`, true while `sync_claimed_at` is within 15 minutes. `note_connector_failure` clears the claim. `sumit-sync` claims the connection on a manual refresh like `mercury-sync` does, a second tap is skipped, and both functions release their claim when the run ends. Settings polls the status every 3 seconds while it is syncing, and when a run this tab did not start finishes it reloads the books and toasts "הרענון הסתיים.". A busy button row ignores taps. Migration `20261006180000_connector_syncing.sql`.
 
+MCP cycle 4. `flow-mcp` adds `create_project`, `create_category`, `sync_bank`, and optional `hide_category`, with undo for project, category, and hide. Migration `20261006120000_mcp_cycle4.sql`. `mercury-sync` returns insert/update/remove counts and `newest_date`. Decision [0090](decisions/0090-mcp-cycle4.md).
+
 Mercury connect UI. Settings adds a Mercury row, connect and status sheets, `useMercuryStatusQuery`, shared `ConnectSheet`, and `formatUsd`. CONTROLS and Storybook states updated. No migration.
 
 Loans L-3 review fixes. Loan match keeps the sheet open with a busy picker radio, waits for a successful read before שיוך, guards over-balance and paid-off loans, maps 23505 and correction errors, focuses חלוקת התשלום after success, and shows retry rows when a read fails. Settings loan balances use the same loading and error pattern. CONTROLS updated. No migration.
