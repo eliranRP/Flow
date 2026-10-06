@@ -45,7 +45,7 @@ type Common = {
 export type ListRowProps =
   | (Common & { variant: "project"; agorot: bigint; loss?: boolean; currency?: string })
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string })
-  | (Common & { variant: "item" })
+  | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
@@ -180,7 +180,11 @@ export function ListRow(props: ListRowProps) {
     );
   }
 
-  const className = props.variant === "project" ? "ui-row ui-row-project ui-hit" : "ui-row ui-hit";
+  const className = props.variant === "project"
+    ? "ui-row ui-row-project ui-hit"
+    : props.variant === "item" && props.plain === true
+      ? "ui-row"
+      : "ui-row ui-hit";
   const row = props.href ? (
     <Link
       to={props.href}

@@ -287,9 +287,31 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(liveSmoke, /SMOKE_COMPANY_NAME: Flow Test/);
   assert.equal(liveSmoke.includes("tail "), false);
   assert.match(liveSmoke, /exit 1/);
-  const smokeConfig = readFileSync(new URL("../app/playwright.smoke.config.ts", import.meta.url), "utf8");
-  assert.match(smokeConfig, /retries: 1/);
-  assert.match(smokeConfig, /smoke-retry-reporter/);
+  const smokeConfig = JSON.parse(execFileSync(process.execPath, [
+    "--experimental-strip-types",
+    "--input-type=module",
+    "-e",
+    `const mod = await import(${JSON.stringify(new URL("../app/playwright.smoke.config.ts", import.meta.url).href)});
+     const config = mod.default;
+     const reporter = config.reporter ?? [];
+     process.stdout.write(JSON.stringify({
+       retries: config.retries,
+       baseURL: config.use?.baseURL ?? null,
+       reporter: reporter.map((entry) => Array.isArray(entry) ? entry[0] : entry),
+       defaultHost: mod.defaultSmokeHost,
+       override: mod.smokeBaseURL({ SMOKE_BASE_URL: " http://127.0.0.1:43123 " }),
+       blank: mod.smokeBaseURL({ SMOKE_BASE_URL: "   " }),
+     }));`,
+  ], {
+    encoding: "utf8",
+    env: { ...process.env, SMOKE_BASE_URL: "" },
+  }));
+  assert.equal(smokeConfig.retries, 1);
+  assert.equal(smokeConfig.baseURL, "https://flow-app-dx5.pages.dev");
+  assert.equal(smokeConfig.defaultHost, "https://flow-app-dx5.pages.dev");
+  assert.equal(smokeConfig.override, "http://127.0.0.1:43123");
+  assert.equal(smokeConfig.blank, "https://flow-app-dx5.pages.dev");
+  assert.ok(smokeConfig.reporter.some((entry) => String(entry).endsWith("smoke-retry-reporter.ts")));
   const smokeSpec = readFileSync(new URL("../app/e2e/smoke-readonly.spec.ts", import.meta.url), "utf8");
   assert.equal(smokeSpec.includes('if (url.includes("/auth/v1/")) return true'), false);
   assert.match(smokeSpec, /return isAuthAllowed\(request\)/);
@@ -297,6 +319,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(smokeSpec, /\/auth\/v1\/user/);
   const smokeRunbook = readFileSync(new URL("../docs/runbooks/smoke-user.md", import.meta.url), "utf8");
   assert.match(smokeRunbook, /Never set `is_demo`/);
+  assert.match(smokeRunbook, /SMOKE_BASE_URL/);
   assert.equal(ci.includes("timeout-minutes: 45"), false);
   assert.equal(ci.includes("timeout-minutes: 40"), false);
   assert.equal(ci.includes("timeout-minutes: 10"), false);
