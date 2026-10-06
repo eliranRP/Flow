@@ -87,6 +87,7 @@ import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
+import { useSetupSettingsEntry } from "../setup/settings-row";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -3434,6 +3435,7 @@ export function SettingsScreen({
   const dashboard = useDashboardQuery(sample == null);
   const signedInUserId = session?.user.id;
   const signedInCompanyId = dashboard.data?.company_id;
+  const setupEntry = useSetupSettingsEntry(signedInUserId ?? null, signedInCompanyId ?? null);
   if (signedInUserId && signedInCompanyId) {
     bindJevConnectorScope({ userId: signedInUserId, companyId: signedInCompanyId });
   }
@@ -3798,6 +3800,7 @@ export function SettingsScreen({
         blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
         sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
         showHeading={false}
+        initialOpen={params.get("sheet") === "assistant"}
         readOnly={holdWrites}
         viewerCopy={viewer}
       />
@@ -3915,17 +3918,29 @@ export function SettingsScreen({
               }}
             />
           </div>
-          <LoanSettingsSection
-            companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
-            companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
-            blocked={blocked}
-          />
+          {holdWrites ? null : (
+            <LoanSettingsSection
+              companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
+              companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
+              blocked={blocked}
+            />
+          )}
         </>
       )}
-      {showInstall || showSignOut ? (
+      {showInstall || showSignOut || (setupEntry != null && !holdWrites) ? (
         <>
           <SectionHead title="עוד" />
           <List>
+            {setupEntry && !holdWrites ? (
+              <ListRow
+                variant="item"
+                href={setupEntry.href}
+                title="הגדרה ראשונה"
+                hint={<><bdi className="ui-num" dir="ltr">{String(setupEntry.done)}</bdi> מתוך <bdi className="ui-num" dir="ltr">5</bdi></>}
+                describeHint
+                chevron
+              />
+            ) : null}
             {showInstall ? (
               <ListRow variant="item" href={`/install${search}`} title="התקנה למסך הבית" hint="נפתח כמו אפליקציה" icon={<DownloadIcon />} chevron />
             ) : null}

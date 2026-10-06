@@ -204,6 +204,32 @@ test("a hosted build rejects an empty Supabase URL or anon key", () => {
   assert.deepEqual(rejectEmptyHostedSupabase({ VITE_SUPABASE_URL: "https://example.supabase.co" }, false), []);
 });
 
+test("ships the setup stage and the sample tag, and still blocks a fixture demo", () => {
+  const setup = violations({
+    modules: [
+      "/repo/app/src/setup/demo-slot.tsx",
+      "/repo/app/src/ui/demo-player.tsx",
+      "/repo/app/src/setup/sample-review.tsx",
+      "/repo/app/src/ui/setup-demos.tsx",
+    ],
+    files: [{ name: "app/dist/assets/index.js", body: "נתוני דוגמה · Example data" }],
+  });
+  assert.deepEqual(setup, []);
+  const fixture = violations({
+    modules: ["/repo/app/src/demo/model.ts", "/repo/app/src/ui/demo-player.stories.tsx"],
+    files: [{ name: "app/dist/assets/index.js", body: "Example data" }],
+  });
+  assert.ok(fixture.some((line) => line.includes("/demo/")));
+  assert.ok(fixture.some((line) => line.includes("stories")));
+  assert.ok(fixture.some((line) => line.includes("Example data")));
+  const leaked = violations({
+    modules: ["/repo/app/src/setup/sample-review.tsx", "/repo/app/src/reviewer-preview.tsx"],
+    files: [{ name: "app/dist/assets/index.js", body: "Example data" }],
+  });
+  assert.ok(leaked.some((line) => line.includes("reviewer-preview")));
+  assert.ok(leaked.some((line) => line.includes("Example data")));
+});
+
 test("accepts the production modules and a bundle without the golden totals", () => {
   const found = violations({
     modules: ["/repo/app/src/main.tsx", "/repo/packages/shared/src/money.ts", "/repo/app/src/screens/HomeScreen.tsx"],

@@ -18,6 +18,19 @@ vi.mock("./lib/supabase", () => ({
         return { data: { subscription: { unsubscribe: () => undefined } } };
       },
     },
+    from: () => {
+      const result = { data: { owner_id: "11111111-1111-1111-1111-111111111111" }, error: null };
+      const next = {
+        select: () => next,
+        eq: () => next,
+        in: () => next,
+        limit: () => next,
+        maybeSingle: () => Promise.resolve(result),
+        then: (onFulfilled: (value: typeof result) => unknown, onRejected?: (reason: unknown) => unknown) =>
+          Promise.resolve(result).then(onFulfilled, onRejected),
+      };
+      return next;
+    },
     rpc: (name: string) => {
       if (name === "get_dashboard") {
         return Promise.resolve({
@@ -121,7 +134,7 @@ describe("auth guard when Supabase is configured", () => {
     act(() => {
       emit("INITIAL_SESSION", session);
     });
-    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פרטי העסק" })).toBeInTheDocument();
     expect(screen.queryByText("שלום, דנה")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     act(() => {
