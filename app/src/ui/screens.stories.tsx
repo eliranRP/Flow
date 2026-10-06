@@ -55,10 +55,11 @@ const sampleDashboard: Dashboard = {
   prev_net_agorot: 22_000_000n,
   active_projects: 3,
   review_count: 7,
+  by_currency: [],
   projects: [
-    { id: "a", name: "בניין מגורים חולון", status: "active", income_agorot: 30_000_000n, direct_agorot: 22_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 8_000_000n, profit_agorot: 8_000_000n },
-    { id: "b", name: "וילה רעננה", status: "active", income_agorot: 18_000_000n, direct_agorot: 13_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 5_000_000n, profit_agorot: 5_000_000n },
-    { id: "c", name: "מגדל משרדים פ״ת", status: "active", income_agorot: 25_000_000n, direct_agorot: 21_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 4_000_000n, profit_agorot: 4_000_000n },
+    { id: "a", name: "בניין מגורים חולון", status: "active", income_agorot: 30_000_000n, direct_agorot: 22_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 8_000_000n, profit_agorot: 8_000_000n, by_currency: [] },
+    { id: "b", name: "וילה רעננה", status: "active", income_agorot: 18_000_000n, direct_agorot: 13_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 5_000_000n, profit_agorot: 5_000_000n, by_currency: [] },
+    { id: "c", name: "מגדל משרדים פ״ת", status: "active", income_agorot: 25_000_000n, direct_agorot: 21_000_000n, shared_agorot: 0n, profit_before_shared_agorot: 4_000_000n, profit_agorot: 4_000_000n, by_currency: [] },
   ],
 };
 
@@ -132,6 +133,7 @@ function listedProject(id: string, name: string, status: "active" | "finished" =
     shared_agorot: 0n,
     profit_before_shared_agorot: 2_000_000n,
     profit_agorot: 2_000_000n,
+    by_currency: [],
   };
 }
 
@@ -1818,6 +1820,168 @@ export const FabPressed: Story = {
       <div className="flex min-h-dvh flex-1 flex-col justify-end">
         <TabBar fabPressed />
       </div>
+    </StoryRoute>
+  ),
+};
+
+const usdOnlyDashboard: Dashboard = {
+  ...sampleDashboard,
+  income_agorot: 0n,
+  expense_agorot: 0n,
+  net_profit_agorot: 0n,
+  by_currency: [{
+    currency: "USD",
+    income_minor: 500_000n,
+    direct_minor: 200_000n,
+    shared_minor: 0n,
+    overhead_minor: 0n,
+    expense_minor: 200_000n,
+    net_profit_minor: 300_000n,
+    count: 3,
+  }],
+  projects: [{
+    id: "usd1",
+    name: "Cedar Lot",
+    status: "active",
+    income_agorot: 0n,
+    direct_agorot: 0n,
+    shared_agorot: 0n,
+    profit_before_shared_agorot: 0n,
+    profit_agorot: 0n,
+    by_currency: [{
+      currency: "USD",
+      income_minor: 500_000n,
+      direct_minor: 200_000n,
+      shared_minor: 0n,
+      profit_minor: 300_000n,
+    }],
+  }],
+};
+
+const mixedCurrencyDashboard: Dashboard = {
+  ...sampleDashboard,
+  by_currency: [
+    { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 40_000n, net_profit_minor: 60_000n, count: 2 },
+    { currency: "USD", income_minor: 200_000n, direct_minor: 50_000n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 50_000n, net_profit_minor: 150_000n, count: 2 },
+  ],
+};
+
+export const HomeUsdOnly: Story = {
+  render: () => (
+    <StoryRoute entry="/" tabs>
+      <HomeBooks
+        data={usdOnlyDashboard}
+        previewing={false}
+        search=""
+        unpaidGross={0n}
+        unpaidCount={0}
+        period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
+        onPeriod={() => undefined}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const HomeMixedCurrency: Story = {
+  render: () => (
+    <StoryRoute entry="/" tabs>
+      <HomeBooks
+        data={mixedCurrencyDashboard}
+        previewing={false}
+        search=""
+        unpaidGross={0n}
+        unpaidCount={0}
+        period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
+        onPeriod={() => undefined}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectUsdOnly: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/usd1" tabs>
+      <ExampleBar />
+      <ProjectDetailScreen
+        sample={{
+          id: "usd1",
+          name: "Cedar Lot",
+          status: "active",
+          state_label: "פעיל",
+          budget_agorot: null,
+          income_agorot: 0n,
+          direct_agorot: 0n,
+          shared_agorot: 0n,
+          profit_agorot: 0n,
+          by_currency: [{ currency: "USD", income_minor: 500_000n, direct_minor: 200_000n, shared_minor: 0n, profit_minor: 300_000n }],
+          categories_by_currency: [{ currency: "USD", id: "u1", name: "Utilities", amount_minor: 200_000n }],
+          categories: [],
+          pending_count: 0,
+          transactions: [],
+        }}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ProjectMixedCurrency: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/mix1" tabs>
+      <ExampleBar />
+      <ProjectDetailScreen
+        sample={{
+          id: "mix1",
+          name: "Harbor Sample",
+          status: "active",
+          state_label: "פעיל",
+          budget_agorot: null,
+          income_agorot: 100_000n,
+          direct_agorot: 40_000n,
+          shared_agorot: 0n,
+          profit_agorot: 60_000n,
+          by_currency: [
+            { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, profit_minor: 60_000n },
+            { currency: "USD", income_minor: 200_000n, direct_minor: 50_000n, shared_minor: 0n, profit_minor: 150_000n },
+          ],
+          categories_by_currency: [
+            { currency: "ILS", id: "i1", name: "Materials", amount_minor: 40_000n },
+            { currency: "USD", id: "u1", name: "Freight", amount_minor: 50_000n },
+          ],
+          categories: [],
+          pending_count: 0,
+          transactions: [],
+        }}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const TransactionUsdExpense: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t-usd" tabs>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-usd",
+          description: "Sample vendor",
+          direction: "expense",
+          doc_date: "2026-09-10",
+          amount_gross: -125_000n,
+          amount_net: -125_000n,
+          vat_amount: 0n,
+          currency: "USD",
+          vat_status: "source",
+          source: "mercury",
+          project_name: "Cedar Lot",
+          category_name: "Utilities",
+          supplier_name: "Sample vendor",
+          customer_name: null,
+        }}
+      />
     </StoryRoute>
   ),
 };

@@ -115,4 +115,5 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0092](0092-mcp-loans.md) | 2026-10-06 | Accepted | MCP cycle 5: loan list, schedule, add, update, attach payment, and undo |
 | [0093](0093-mcp-batch.md) | 2026-10-06 | Accepted | MCP cycle 6: assign_expenses and undo_batch; one tools/call per write rate hit, partial success, batch undo |
 | [0094](0094-usd-totals.md) | 2026-10-06 | Accepted | `company_pnl` and MCP totals expose `by_currency` per line currency; ILS agorot fields unchanged |
+| [0096](0096-currency-display.md) | 2026-10-07 | Accepted | Per-currency display in the app; one formatter; expenses always signed |
 | [0095](0095-mcp-first.md) | 2026-10-06 | Accepted | MCP-first: every new feature or user action ships with a flow-mcp tool (and an API where possible) in the same PR |

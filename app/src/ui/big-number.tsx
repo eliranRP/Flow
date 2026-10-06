@@ -1,4 +1,4 @@
-import { formatMoney } from "@flow/shared";
+import { formatAmountText } from "@flow/shared";
 import { useLayoutEffect, useRef, useState } from "react";
 
 export type AmountPresentation = "summary" | "detail";
@@ -7,8 +7,18 @@ export type AmountPresentation = "summary" | "detail";
  * Summaries are whole shekels. Detail shows agorot only when they are not zero.
  * Callers pass net agorot. The figure is before VAT. Decisions 0041 and 0043.
  */
-export function formatAmount(agorot: bigint, presentation: AmountPresentation = "summary", currency = "ILS"): string {
-  return formatMoney(agorot, currency, { agorot: presentation === "detail" });
+export function formatAmount(
+  agorot: bigint,
+  presentation: AmountPresentation = "summary",
+  currency = "ILS",
+  direction?: "income" | "expense",
+  plus?: boolean,
+): string {
+  return formatAmountText(agorot, currency, {
+    detail: presentation === "detail",
+    direction,
+    plus,
+  });
 }
 
 type BigNumberProps = {
@@ -18,6 +28,8 @@ type BigNumberProps = {
   size?: "hero" | "display" | "list";
   /** Loss colour is only used together with the minus that formatAmount already draws. */
   loss?: boolean;
+  direction?: "income" | "expense";
+  plus?: boolean;
 };
 
 const sizeClass = {
@@ -37,10 +49,18 @@ export function heroTypeClass(size: "hero" | "display" | "list" | undefined, ste
   return heroStepClass(size, stepDown ? 1 : 0);
 }
 
-export function BigNumber({ agorot, presentation = "summary", currency = "ILS", size, loss = false }: BigNumberProps) {
+export function BigNumber({
+  agorot,
+  presentation = "summary",
+  currency = "ILS",
+  size,
+  loss = false,
+  direction,
+  plus,
+}: BigNumberProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
-  const text = formatAmount(agorot, presentation, currency);
+  const text = formatAmount(agorot, presentation, currency, direction, plus);
   useLayoutEffect(() => {
     if (size !== "hero") return;
     const node = ref.current;
@@ -123,6 +143,6 @@ export function BigNumber({ agorot, presentation = "summary", currency = "ILS", 
 }
 
 /** List and inline amounts. Same rules as BigNumber at the summary size. */
-export function Money({ agorot }: { agorot: bigint }) {
-  return <BigNumber agorot={agorot} />;
+export function Money({ agorot, currency = "ILS" }: { agorot: bigint; currency?: string }) {
+  return <BigNumber agorot={agorot} currency={currency} />;
 }

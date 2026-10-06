@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-07
+
+Per-currency display in the app. Home, projects, and project detail read `by_currency` from the dashboard and `get_project`, use shared `formatAmountText`, and show expenses with a leading minus inside `<bdi>`. Non-ILS transaction detail hides VAT and "חשבונית ותשלום". Migration `20261007000000_project_currency.sql`. Decision [0096](decisions/0096-currency-display.md).
+
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).

@@ -927,7 +927,7 @@ describe("review amounts keep their currency", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.getByText("+$100")).toBeInTheDocument();
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });
