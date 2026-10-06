@@ -356,7 +356,15 @@ begin
     if not found then
       response := private.mcp_error('not_found', 'not found');
     elsif p_kind = 'project' then
-      if exists (
+      -- Lock the project first. FK checks on writers that point at it take
+      -- FOR KEY SHARE, so they wait for this lock or make it wait; the checks
+      -- below then see every committed reference before the delete.
+      perform 1 from public.projects p
+      where p.id = p_id and p.company_id = cid
+      for update;
+      if not found then
+        response := private.mcp_error('not_found', 'not found');
+      elsif exists (
         select 1 from public.transactions t
         where t.company_id = cid and t.project_id = p_id and t.removed_at is null
       ) or exists (
@@ -384,7 +392,12 @@ begin
         );
       end if;
     elsif p_kind = 'category' then
-      if exists (
+      perform 1 from public.categories c
+      where c.id = p_id and c.company_id = cid
+      for update;
+      if not found then
+        response := private.mcp_error('not_found', 'not found');
+      elsif exists (
         select 1 from public.transactions t
         where t.company_id = cid and t.category_id = p_id and t.removed_at is null
       ) or exists (

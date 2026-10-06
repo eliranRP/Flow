@@ -504,6 +504,15 @@ Deno.test("sync_bank proceed, replay, errors, and skipped", async () => {
   assertEquals(rate.isError, true);
   if (!rate.structuredContent.ok) assertEquals(rate.structuredContent.error.message, "retry");
 
+  const gone = await callTool("sync_bank", { idempotency_key: "sync-4b" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 500, json: { error: "Mercury is not connected" } }));
+  assertEquals(gone.isError, true);
+  if (!gone.structuredContent.ok) assertEquals(gone.structuredContent.error.code, "not_found");
+
   const auth = await callTool("sync_bank", { idempotency_key: "sync-5" }, ["write"], (name) => {
     if (name === "mcp_sync_bank_begin") {
       return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });

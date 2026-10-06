@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(51);
+select plan(53);
 
 do $users$
 begin
@@ -423,6 +423,28 @@ select is(
   (select hidden from public.categories where id = (select id from mcp4 where label = 'hidden_cat')),
   true,
   'undo restores the prior hidden flag, not false'
+);
+
+-- Undo locks the row it deletes; a row already gone elsewhere is not reported as undone.
+do $gone$
+begin
+  perform set_config('mcp4.gone_project', public.mcp_create_project('proj-gone', 'Gone Site', 'active')->'data'->>'id', true);
+  perform set_config('mcp4.gone_category', public.mcp_create_category('cat-gone', 'Gone Cat', 'expense')->'data'->>'id', true);
+end;
+$gone$;
+reset role;
+delete from public.projects where id = current_setting('mcp4.gone_project')::uuid;
+delete from public.categories where id = current_setting('mcp4.gone_category')::uuid;
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('undo-gone-p', 'project', current_setting('mcp4.gone_project')::uuid)->'error'->>'code',
+  'not_found',
+  'undo of a project deleted elsewhere is not_found'
+);
+select is(
+  public.mcp_undo('undo-gone-c', 'category', current_setting('mcp4.gone_category')::uuid)->'error'->>'code',
+  'not_found',
+  'undo of a category deleted elsewhere is not_found'
 );
 
 select pg_temp.as_mcp('other_write', 'mcp4_other');

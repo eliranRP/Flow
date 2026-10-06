@@ -945,9 +945,19 @@ Deno.test("sync_bank POSTs mercury-sync with the signed JWT and publishable apik
   const mercury = calls.find((call) => call.url.endsWith("/functions/v1/mercury-sync"));
   if (!mercury) throw new Error("mercury-sync not called");
   assertEquals(mercury.apikey, "publishable-key", "publishable apikey");
-  assert(mercury.authorization.startsWith("Bearer "), "signed jwt");
+  const begin = calls.find((call) => call.url.endsWith("/mcp_sync_bank_begin"));
+  if (!begin) throw new Error("mcp_sync_bank_begin not called");
+  assertEquals(mercury.authorization.split(".").length, 3, "signed jwt");
+  assertEquals(mercury.authorization, begin.authorization, "same signed jwt as the RPCs");
+  assertEquals(mercury.authorization.includes("publishable-key"), false, "never the publishable key");
   assertEquals(mercury.authorization.includes("secret-key"), false, "never the service secret");
   assertEquals(mercury.body, { force: true }, "force pull");
+  const finish = calls.find((call) => call.url.endsWith("/mcp_sync_bank_finish"));
+  if (!finish) throw new Error("mcp_sync_bank_finish not called");
+  assertEquals(finish.body, {
+    p_idempotency_key: "sync-handler",
+    p_response: { ok: true, data: { added: 1, duplicates: 0, removed: 0, newest_date: "2026-09-10" } },
+  }, "finish stores the mapped counts");
 });
 
 Deno.test("an over-cap body is refused before the rate limit", async () => {
