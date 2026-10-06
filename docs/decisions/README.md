@@ -114,3 +114,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0091](0091-income-in-review.md) | 2026-10-06 | Accepted | Posted connector income without a project enters review. Approval needs a project unless the category is off-P&L. USD review cards omit VAT copy |
 | [0092](0092-mcp-loans.md) | 2026-10-06 | Accepted | MCP cycle 5: loan list, schedule, add, update, attach payment, and undo |
 | [0093](0093-mcp-batch.md) | 2026-10-06 | Accepted | MCP cycle 6: assign_expenses and undo_batch; one tools/call per write rate hit, partial success, batch undo |
+| [0094](0094-usd-totals.md) | 2026-10-06 | Accepted | `company_pnl` and MCP totals expose `by_currency` per line currency; ILS agorot fields unchanged |
