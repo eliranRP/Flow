@@ -490,9 +490,11 @@ function ProjectCategories({
   search: string;
   categoryTo?: string;
 }) {
-  const pending = project.pending_count ?? 0;
-  const waiting = pending > 0;
   const pendingOther = project.pending_other_currencies ?? [];
+  // pending_count counts every waiting line; the non-ILS ones get their own rows below.
+  const pendingOtherCount = pendingOther.reduce((sum, bucket) => sum + bucket.count, 0);
+  const pending = Math.max(0, (project.pending_count ?? 0) - pendingOtherCount);
+  const waiting = pending > 0;
   const categoryRows = project.categories_by_currency ?? project.categories.map((category) => ({
     currency: "ILS" as const,
     id: category.id,
@@ -541,6 +543,8 @@ function ProjectCategories({
           variant="project"
           title={pendingApprovalTitle(pending)}
           agorot={absAgorot(project.pending_agorot ?? 0n)}
+          currency="ILS"
+          amountDirection="expense"
           loss={false}
           chevron
           href={`/review${withParam(search, "project", project.id)}`}

@@ -103,16 +103,21 @@ function currencyPrefix(currency: string): string {
 
 function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean): string {
   const prefix = currencyPrefix(currency);
-  const isIls = currency === "" || currency === "ILS";
   if (detail && abs % 100n !== 0n) {
     const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     const fraction = (abs % 100n).toString().padStart(2, "0");
     return `${prefix}${whole}.${fraction}`;
   }
   const major = wholeShekels(abs);
-  if (major === 0) return isIls ? "₪0" : `${prefix}0`;
+  if (major === 0) return `${prefix}0`;
   const digits = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return `${prefix}${digits}`;
+}
+
+/** True when the figure renders as ₪0 / $0, so it never carries a sign (no −₪0, no +$0). */
+function shownAsZero(abs: bigint, detail: boolean): boolean {
+  if (detail && abs % 100n !== 0n) return false;
+  return wholeShekels(abs) === 0;
 }
 
 export type FormatAmountOptions = {
@@ -124,40 +129,17 @@ export type FormatAmountOptions = {
 /**
  * One formatter for signed and directional amounts.
  * Summaries are whole units unless `detail` keeps non-zero cents/agorot.
+ * A figure that renders as zero never carries a sign.
  */
 export function formatAmountText(minor: bigint, currency = "ILS", options?: FormatAmountOptions): string {
   const detail = options?.detail === true;
   const direction = options?.direction;
-  if (direction === "expense") {
-    const abs = minor < 0n ? -minor : minor;
-    const body = formatUnsignedMinor(abs, currency, detail);
-    if (abs === 0n) return body;
-    return `−${body}`;
-  }
-  if (direction === "income") {
-    const abs = minor < 0n ? -minor : minor;
-    const body = formatUnsignedMinor(abs, currency, detail);
-    if (options?.plus === true && abs !== 0n) return `+${body}`;
-    return body;
-  }
-  const negative = minor < 0n;
-  const abs = negative ? -minor : minor;
-  const sign = negative ? "−" : "";
-  if (currency === "" || currency === "ILS") {
-    if (detail && abs % 100n !== 0n) {
-      const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      const agora = (abs % 100n).toString().padStart(2, "0");
-      return `${sign}₪${whole}.${agora}`;
-    }
-    const shekels = wholeShekels(abs);
-    if (shekels === 0) return "₪0";
-    const digits = shekels.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return `${sign}₪${digits}`;
-  }
+  const abs = minor < 0n ? -minor : minor;
   const body = formatUnsignedMinor(abs, currency, detail);
-  if (!negative) return body;
-  if (abs === 0n) return body;
-  return `−${body}`;
+  if (shownAsZero(abs, detail)) return body;
+  if (direction === "expense") return `−${body}`;
+  if (direction === "income") return options?.plus === true ? `+${body}` : body;
+  return minor < 0n ? `−${body}` : body;
 }
 
 /**
