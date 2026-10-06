@@ -54,9 +54,10 @@ async function bannerTitleClipped(page: Page): Promise<boolean> {
 
 test("banner wording fits at 320 and 390 in both themes", async ({ page }) => {
   const cases = [
-    ["/reviewer/review?banner=assistant", "4 תנועות שויכו היום"],
-    ["/reviewer/review?banner=one", "תנועה אחת שויכה היום בלי להמתין בתור"],
-    ["/reviewer/review?banner=one-assistant", "תנועה אחת שויכה היום"],
+    // 0091: one wording for every source, "שויכו/שויכה אוטומטית היום", with no "בלי להמתין".
+    ["/reviewer/review?banner=assistant", "4 תנועות שויכו אוטומטית היום"],
+    ["/reviewer/review?banner=one", "תנועה אחת שויכה אוטומטית היום"],
+    ["/reviewer/review?banner=one-assistant", "תנועה אחת שויכה אוטומטית היום"],
   ] as const;
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });

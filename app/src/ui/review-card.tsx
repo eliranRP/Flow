@@ -20,11 +20,10 @@ type ReviewCardProps = {
   sourceLine: string;
   netAgorot: bigint;
   currency?: string;
-  vatLine: string;
+  vatLine?: string | null;
   suggestion?: ReviewSuggestion;
   /** Queue reason. An unallocated shared cost is not a missing project. */
   reason?: string | null;
-  /** Income has no project row. */
   direction?: "income" | "expense";
   /** Opens the project picker, or the split when this line is a split. */
   onProject?: () => void;
@@ -45,7 +44,7 @@ export function ReviewCard({
   vatLine,
   suggestion,
   reason,
-  direction = "expense",
+  direction: _direction = "expense",
   onProject,
   onCategory,
   projectButtonRef,
@@ -63,7 +62,7 @@ export function ReviewCard({
     suggested: boolean;
     onOpen?: () => void;
   }> = [];
-  if (direction !== "income" && (projectValue || onProject)) {
+  if (projectValue || onProject) {
     lines.push({
       key: "project",
       label: "פרויקט",
@@ -81,17 +80,7 @@ export function ReviewCard({
       onOpen: onCategory,
     });
   }
-  const note = shared
-    ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה"
-    : direction === "income"
-      ? (categoryValue == null ? "אין הצעה, הקישו לבחירה" : null)
-      : categoryValue != null && projectValue == null
-        ? "חסר פרויקט, הקישו לבחירה"
-        : projectValue != null && categoryValue == null
-          ? "חסר קטגוריה, הקישו לבחירה"
-          : projectValue == null && categoryValue == null
-            ? "אין הצעה, הקישו לבחירה"
-            : null;
+  const note = shared ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה" : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
@@ -108,7 +97,7 @@ export function ReviewCard({
       <p className="t-display">
         <bdi dir="ltr">{formatAmount(shown, "detail", currency)}</bdi>
       </p>
-      <p className="t-hint">{vatLine}</p>
+      {vatLine ? <p className="t-hint">{vatLine}</p> : null}
       <div className="ui-review-ai">
         {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
           <div className="ui-row ui-hit" aria-hidden="true" key={line.key}>
@@ -125,6 +114,7 @@ export function ReviewCard({
             variant="button"
             eyebrow={line.label}
             title={line.value}
+            muted={line.value === "לא נבחר"}
             label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : ""}`}
             tag={line.suggested ? <SuggestTag /> : undefined}
             chevron

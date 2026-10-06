@@ -185,150 +185,162 @@ async function syncCompany(
     if (claim.error) throw new Error("rejected");
     if (claim.data == null || claim.data.length === 0) return { ok: true, lines: 0, skipped: true };
   }
-  let noted = false;
-  const noteOnce = async (code: string) => {
-    noted = true;
-    await noteFailure(admin, companyId, code);
-  };
-
-  const envelope: Envelope = {
-    keyCiphertext: bytesPrefix(row.key_ciphertext),
-    keyNonce: bytesPrefix(row.key_nonce),
-    dekCiphertext: bytesPrefix(row.dek_ciphertext),
-    dekNonce: bytesPrefix(row.dek_nonce),
-    kekVersion: String(row.kek_version),
-    ...(row.envelope_version == null ? {} : { envelopeVersion: String(row.envelope_version) }),
-  };
-  const settings = isRecord(row.settings) ? row.settings : {};
-  const ownCounterpartyIds = stringList(settings.own_counterparty_ids);
-  const missing = pendingMap(settings.pending_missing);
-  let apiKey = "";
+  // Release the claim this run took on every exit, including throws that skip
+  // note_connector_failure, so Settings does not show syncing until the 15-minute cutoff.
   try {
-    apiKey = await openApiKey(envelope, kek, companyId, "mercury");
-    const session = mercuryAdapter.open(apiKey);
-    const now = new Date();
-    const windowStart = addCalendarDays(jerusalemDate(now.toISOString()), -MERCURY_POSTED_LOOKBACK_DAYS);
-    const loaded = await loadStored(admin, companyId, missing, windowStart);
-    const plan = await planConnectorSync({
-      port: mercuryAdapter,
-      session,
-      cursor: typeof row.sync_cursor === "string" ? row.sync_cursor : null,
-      importFrom: typeof row.import_from === "string" ? row.import_from : null,
-      lookbackDays: MERCURY_POSTED_LOOKBACK_DAYS,
-      ownCounterpartyIds,
-      vatRateBp: 0,
-      exemptSupplierNames: [],
-      exemptSupplierIds: [],
-      stored: loaded.stored,
-      now: () => now,
-      confirmLine: (line) => confirmStored(session, line, now),
-      resolveRemovedIds: (rawLines) => treasuryVoidIds(rawLines, loaded.treasury),
-    });
-    if (!plan.ok) {
-      await noteOnce(plan.code);
-      throw new Error(plan.code);
-    }
-    const saved = await admin.rpc("upsert_connector_lines", {
-      p_company: companyId,
-      p_provider: "mercury",
-      p_lines: {
-        lines: plan.lines,
-        removed_ids: plan.removedIds,
-        complete: plan.complete,
-      },
-      p_next_cursor: plan.nextCursor,
-      p_expected_prev_cursor: row.sync_cursor,
-    });
-    if (saved.error) {
-      if ((saved.error.message ?? "").includes("sync_cursor_conflict")) {
-        await admin
-          .from("connector_connections")
-          .update({ last_error: "sync_cursor_conflict" })
-          .eq("company_id", companyId)
-          .eq("provider", "mercury");
-        throw new Error("sync_cursor_conflict");
-      }
-      await noteOnce("rejected");
-      throw new Error("rejected");
-    }
-    if (plan.complete) {
-      await admin.from("connector_skips").delete().eq("company_id", companyId).eq("provider", "mercury");
-    }
-    if (plan.skips.length > 0) {
-      const inserted = await admin.from("connector_skips").insert(plan.skips.map((skip) => ({
-        company_id: companyId,
-        provider: "mercury",
-        external_id: skip.externalId,
-        reason: skip.reason,
-      })));
-      if (inserted.error) {
-        await noteOnce("rejected");
-        throw new Error("rejected");
-      }
-    }
-    const pendingMissing: Record<string, string> = {};
-    for (const item of plan.pendingMissing) pendingMissing[item.externalId] = item.missingSince;
-    const labeled = await admin
-      .from("connector_connections")
-      .update({
-        account_labels: plan.accounts,
-        settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
-      })
-      .eq("company_id", companyId)
-      .eq("provider", "mercury");
-    if (labeled.error) {
-      await noteOnce("rejected");
-      throw new Error("rejected");
-    }
-    if (plan.rechecked.length > 0) await stampChecked(admin, companyId, plan.rechecked);
-    if (plan.complete) {
-      const stamped = await admin.rpc("stamp_connector_sync", { p_company: companyId, p_provider: "mercury" });
-      if (stamped.error) {
-        await noteOnce("rejected");
-        throw new Error("rejected");
-      }
-    }
-    const counts = saved.data as { inserted?: number; updated?: number; removed?: number } | null;
-    let newestDate: string | null = null;
-    try {
-      const newest = await admin
-        .from("transactions")
-        .select("doc_date")
-        .eq("company_id", companyId)
-        .eq("source", "mercury")
-        .is("removed_at", null)
-        .order("doc_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!newest.error && newest.data?.doc_date) {
-        newestDate = String(newest.data.doc_date);
-      }
-    } catch {
-      newestDate = null;
-    }
-    return {
-      ok: true,
-      lines: plan.lines.length,
-      inserted: counts?.inserted ?? 0,
-      updated: counts?.updated ?? 0,
-      removed: counts?.removed ?? 0,
-      newest_date: newestDate,
+    let noted = false;
+    const noteOnce = async (code: string) => {
+      noted = true;
+      await noteFailure(admin, companyId, code);
     };
-  } catch (error) {
-    logFailure("mercury sync failed", error, apiKey);
-    const message = error instanceof Error ? error.message : "";
-    const specific = error instanceof MercuryRequestError ? error.code : message;
-    const kept = specific === "sync_cursor_conflict" || specific === "auth" || specific === "rejected" ||
-      specific === "rate_limited" || specific === "transient" || specific === "sync_page_cap";
-    if (kept) {
-      if (!noted && error instanceof MercuryRequestError && error.message !== specific) {
-        await noteFailure(admin, companyId, specific);
+
+    const envelope: Envelope = {
+      keyCiphertext: bytesPrefix(row.key_ciphertext),
+      keyNonce: bytesPrefix(row.key_nonce),
+      dekCiphertext: bytesPrefix(row.dek_ciphertext),
+      dekNonce: bytesPrefix(row.dek_nonce),
+      kekVersion: String(row.kek_version),
+      ...(row.envelope_version == null ? {} : { envelopeVersion: String(row.envelope_version) }),
+    };
+    const settings = isRecord(row.settings) ? row.settings : {};
+    const ownCounterpartyIds = stringList(settings.own_counterparty_ids);
+    const missing = pendingMap(settings.pending_missing);
+    let apiKey = "";
+    try {
+      apiKey = await openApiKey(envelope, kek, companyId, "mercury");
+      const session = mercuryAdapter.open(apiKey);
+      const now = new Date();
+      const windowStart = addCalendarDays(jerusalemDate(now.toISOString()), -MERCURY_POSTED_LOOKBACK_DAYS);
+      const loaded = await loadStored(admin, companyId, missing, windowStart);
+      const plan = await planConnectorSync({
+        port: mercuryAdapter,
+        session,
+        cursor: typeof row.sync_cursor === "string" ? row.sync_cursor : null,
+        importFrom: typeof row.import_from === "string" ? row.import_from : null,
+        lookbackDays: MERCURY_POSTED_LOOKBACK_DAYS,
+        ownCounterpartyIds,
+        vatRateBp: 0,
+        exemptSupplierNames: [],
+        exemptSupplierIds: [],
+        stored: loaded.stored,
+        now: () => now,
+        confirmLine: (line) => confirmStored(session, line, now),
+        resolveRemovedIds: (rawLines) => treasuryVoidIds(rawLines, loaded.treasury),
+      });
+      if (!plan.ok) {
+        await noteOnce(plan.code);
+        throw new Error(plan.code);
       }
-      throw new Error(specific);
+      const saved = await admin.rpc("upsert_connector_lines", {
+        p_company: companyId,
+        p_provider: "mercury",
+        p_lines: {
+          lines: plan.lines,
+          removed_ids: plan.removedIds,
+          complete: plan.complete,
+        },
+        p_next_cursor: plan.nextCursor,
+        p_expected_prev_cursor: row.sync_cursor,
+      });
+      if (saved.error) {
+        if ((saved.error.message ?? "").includes("sync_cursor_conflict")) {
+          await admin
+            .from("connector_connections")
+            .update({ last_error: "sync_cursor_conflict" })
+            .eq("company_id", companyId)
+            .eq("provider", "mercury");
+          throw new Error("sync_cursor_conflict");
+        }
+        await noteOnce("rejected");
+        throw new Error("rejected");
+      }
+      if (plan.complete) {
+        await admin.from("connector_skips").delete().eq("company_id", companyId).eq("provider", "mercury");
+      }
+      if (plan.skips.length > 0) {
+        const inserted = await admin.from("connector_skips").insert(plan.skips.map((skip) => ({
+          company_id: companyId,
+          provider: "mercury",
+          external_id: skip.externalId,
+          reason: skip.reason,
+        })));
+        if (inserted.error) {
+          await noteOnce("rejected");
+          throw new Error("rejected");
+        }
+      }
+      const pendingMissing: Record<string, string> = {};
+      for (const item of plan.pendingMissing) pendingMissing[item.externalId] = item.missingSince;
+      const labeled = await admin
+        .from("connector_connections")
+        .update({
+          account_labels: plan.accounts,
+          settings: { ...settings, own_counterparty_ids: ownCounterpartyIds, pending_missing: pendingMissing },
+        })
+        .eq("company_id", companyId)
+        .eq("provider", "mercury");
+      if (labeled.error) {
+        await noteOnce("rejected");
+        throw new Error("rejected");
+      }
+      if (plan.rechecked.length > 0) await stampChecked(admin, companyId, plan.rechecked);
+      if (plan.complete) {
+        const stamped = await admin.rpc("stamp_connector_sync", { p_company: companyId, p_provider: "mercury" });
+        if (stamped.error) {
+          await noteOnce("rejected");
+          throw new Error("rejected");
+        }
+      }
+      const counts = saved.data as { inserted?: number; updated?: number; removed?: number } | null;
+      let newestDate: string | null = null;
+      try {
+        const newest = await admin
+          .from("transactions")
+          .select("doc_date")
+          .eq("company_id", companyId)
+          .eq("source", "mercury")
+          .is("removed_at", null)
+          .order("doc_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!newest.error && newest.data?.doc_date) {
+          newestDate = String(newest.data.doc_date);
+        }
+      } catch {
+        newestDate = null;
+      }
+      return {
+        ok: true,
+        lines: plan.lines.length,
+        inserted: counts?.inserted ?? 0,
+        updated: counts?.updated ?? 0,
+        removed: counts?.removed ?? 0,
+        newest_date: newestDate,
+      };
+    } catch (error) {
+      logFailure("mercury sync failed", error, apiKey);
+      const message = error instanceof Error ? error.message : "";
+      const specific = error instanceof MercuryRequestError ? error.code : message;
+      const kept = specific === "sync_cursor_conflict" || specific === "auth" || specific === "rejected" ||
+        specific === "rate_limited" || specific === "transient" || specific === "sync_page_cap";
+      if (kept) {
+        if (!noted && error instanceof MercuryRequestError && error.message !== specific) {
+          await noteFailure(admin, companyId, specific);
+        }
+        throw new Error(specific);
+      }
+      if (noted) throw error instanceof Error ? error : new Error("sync failed");
+      await noteFailure(admin, companyId, "transient");
+      throw new Error("transient");
     }
-    if (noted) throw error instanceof Error ? error : new Error("sync failed");
-    await noteFailure(admin, companyId, "transient");
-    throw new Error("transient");
+  } finally {
+    if (!alreadyClaimed) {
+      await admin
+        .from("connector_connections")
+        .update({ sync_claimed_at: null })
+        .eq("company_id", companyId)
+        .eq("provider", "mercury");
+    }
   }
 }
 

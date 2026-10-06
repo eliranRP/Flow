@@ -15,7 +15,7 @@ async function cursorOf(locator: Locator) {
 test("צפייה opens today's list, a row opens the transaction, and back returns", async ({ page }) => {
   await page.goto("/e2e/review-banner");
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
-  await page.getByRole("link", { name: "צפייה" }).click();
+  await page.getByRole("link", { name: "לרשימה" }).click();
   await expect(page).toHaveURL(/\/review\/filed\?preview=1&sample=1$/);
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("link", { name: /מנופי המרכז/ }).click();
@@ -25,13 +25,13 @@ test("צפייה opens today's list, a row opens the transaction, and back retur
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await page.getByRole("button", { name: "חזרה" }).click();
   await expect(page.getByRole("heading", { name: "לאישור" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "צפייה" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "לרשימה" })).toBeVisible();
 });
 
 test("the banner close hides it for this visit", async ({ page }) => {
   await page.goto("/e2e/review-banner");
   await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("link", { name: "צפייה" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "לרשימה" })).toHaveCount(0);
 });
 
 test("review approve, change, and skip give feedback", async ({ page }) => {
