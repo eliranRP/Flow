@@ -7,7 +7,7 @@ import { AuthProvider } from "../auth";
 import { refreshLedger } from "../books-focus";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { ChangeForm, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
+import { ChangeForm, ReviewAllList, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args?: unknown }>,
@@ -120,6 +120,21 @@ function showsPlace(text: string) {
   expect(screen.getByText((_content, element) => {
     return element?.tagName === "SPAN" && element.classList.contains("t-hint") && element.textContent === text;
   })).toBeInTheDocument();
+}
+
+/** אישור ignores a click while the previous write is still busy. */
+async function approveWhenIdle(nextHeading: string) {
+  await waitFor(() => {
+    const button = screen.getByRole("button", { name: "אישור" });
+    expect(button).toBeEnabled();
+    expect(button).not.toHaveAttribute("aria-busy");
+  });
+  fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  expect(await screen.findByRole("heading", { name: nextHeading })).toBeInTheDocument();
 }
 
 function renderAt(path: string) {
@@ -486,8 +501,7 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
     fireEvent.click(await screen.findByRole("link", { name: /עגורני החוף/ }));
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
-    expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
+    await approveWhenIdle("ברזל הדרום");
     expect(screen.queryByRole("heading", { name: "מחסן הנמל" })).not.toBeInTheDocument();
   });
 
@@ -511,14 +525,11 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: /ברזל הדרום/ }));
     expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
     showsPlace("3 מתוך 5");
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
-    expect(await screen.findByRole("heading", { name: "צבע הדרום" })).toBeInTheDocument();
+    await approveWhenIdle("צבע הדרום");
     showsPlace("3 מתוך 4");
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
-    expect(await screen.findByRole("heading", { name: "חשמל הצפון" })).toBeInTheDocument();
+    await approveWhenIdle("חשמל הצפון");
     showsPlace("3 מתוך 3");
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
-    expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
+    await approveWhenIdle("מחסן הנמל");
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
     showsPlace("1 מתוך 2");
   });
@@ -885,5 +896,33 @@ describe("review queue list", () => {
     expect(cached.some((query) => query.state.data != null)).toBe(true);
     releaseApprove();
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+  });
+});
+
+describe("review amounts keep their currency", () => {
+  it("shows a dollar review row as dollars", () => {
+    render(
+      <MemoryRouter>
+        <ReviewAllList
+          rows={[{
+            id: "r-usd",
+            transaction_id: "t-usd",
+            description: "Pending credit",
+            doc_date: "2026-09-03",
+            amount_net: 10000n,
+            currency: "USD",
+            direction: "income",
+            reason: "pending_income",
+            project_id: null,
+            category_id: null,
+            supplier_name: null,
+          }]}
+          search=""
+          backTo="/review"
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });

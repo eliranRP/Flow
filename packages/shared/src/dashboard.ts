@@ -63,6 +63,7 @@ export const reviewRowSchema = z.object({
   description: z.string(),
   doc_date: z.string(),
   amount_net: agorotSchema,
+  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
   direction: z.enum(["income", "expense"]),
   reason: z.string().nullable(),
   /** Set by list_review so a split is not treated as a single project. */
@@ -141,6 +142,12 @@ export const projectDetailSchema = z
     /** Project expenses whose category is still a suggestion. Omitted on older payloads. */
     pending_count: z.number().int().nonnegative().optional(),
     pending_agorot: agorotSchema.optional(),
+    /** Waiting expenses that are not ILS. They are not inside pending_agorot. */
+    pending_other_currencies: z.array(z.object({
+      currency: z.string(),
+      expense_minor: agorotSchema,
+      count: z.number().int().nonnegative(),
+    })).optional(),
     transactions: z.array(
       z.object({
         id: z.string(),
@@ -165,6 +172,7 @@ export const transactionDetailSchema = z
     amount_gross: agorotSchema,
     amount_net: agorotSchema,
     vat_amount: agorotSchema,
+    currency: z.string().regex(/^[A-Z]{3}$/).optional(),
     vat_status: z.string(),
     doc_kind: z.string().optional(),
     source: z.string(),

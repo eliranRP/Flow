@@ -8,11 +8,13 @@ type MonthGridProps = {
   today: string;
   value?: string | null;
   range?: { from: string; to: string } | null;
+  /** A loan start can fall after today. The range sheet leaves this off. */
+  allowFuture?: boolean;
   onPick: (iso: string) => void;
 };
 
 /** One month. RangeSheet tints a span. A single chosen day uses the same grid. */
-export function MonthGrid({ label, year, month, today, value, range, onPick }: MonthGridProps) {
+export function MonthGrid({ label, year, month, today, value, range, allowFuture = false, onPick }: MonthGridProps) {
   const cells = monthCells(year, month);
   const monthKey = String(month + 1).padStart(2, "0");
   return (
@@ -28,7 +30,7 @@ export function MonthGrid({ label, year, month, today, value, range, onPick }: M
         <div key={week.join("-")} className="ui-cal-row">
           {week.map((iso) => {
             if (iso.slice(5, 7) !== monthKey) return <span key={iso} className="ui-day" />;
-            const future = iso > today;
+            const future = !allowFuture && iso > today;
             const inRange = range != null && iso >= range.from && iso <= range.to;
             const edge = value === iso || (range != null && (iso === range.from || iso === range.to));
             return (

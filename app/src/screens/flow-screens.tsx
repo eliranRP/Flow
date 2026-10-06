@@ -1,5 +1,5 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -7,6 +7,7 @@ import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
 import { useAuth } from "../auth";
+import { useHoldWrites, useIsViewer, useWriteGate, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
@@ -84,6 +85,7 @@ import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
+import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -172,10 +174,13 @@ export function OnboardingScreen() {
   const client = useQueryClient();
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
   const [name, setName] = useState("");
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const previewSearch = usePreviewSearch();
-  const returnTo = keepPreview(safeAppPath(params.get("return")) ?? "/", previewSearch);
+  const returnPath = safeAppPath(params.get("return")) ?? "/";
+  const returnTo = keepPreview(returnPath, previewSearch);
+  const writeGate = useWriteGate(returnPath);
   const save = useWrite({
     failure: "לא הצלחנו לשמור.",
     keys: ["home", "dashboard", "sumit"],
@@ -192,12 +197,14 @@ export function OnboardingScreen() {
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (blocked()) return;
+    if (holdWrites || blocked()) return;
     save.mutate();
   }
 
   const step = 1;
   const steps = 1;
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   return (
     <main className="ui-onboard">
       <div className="ui-progress-row">
@@ -226,7 +233,7 @@ export function OnboardingScreen() {
           ]}
         />
         <p className="t-hint">עוסק מורשה: מע״מ 18%.</p>
-        <Button type="submit" busy={save.isPending}>המשך</Button>
+        <Button type="submit" busy={save.isPending} disabled={holdWrites}>המשך</Button>
       </form>
     </main>
   );
@@ -237,6 +244,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery(sample == null);
   const books = useBooks();
+  const holdWrites = useHoldWrites();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -253,8 +261,8 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <EmptyState
         icon={<ProjectsIcon />}
         title="עוד אין פרויקטים"
-        body="פרויקטים מגיעים מ־SUMIT, ואפשר גם לפתוח אחד כאן."
-        action={<Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+        body={holdWrites ? "פרויקטים מגיעים מ־SUMIT." : "פרויקטים מגיעים מ־SUMIT, ואפשר גם לפתוח אחד כאן."}
+        action={holdWrites ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
       />
       {sheet}
     </div>
@@ -265,7 +273,7 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
       <ScreenState
         title="פרויקטים"
         subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
-        action={<Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
+        action={holdWrites ? undefined : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
         phase={phase}
         onRetry={() => { void dashboard.refetch(); }}
         loading={
@@ -363,6 +371,7 @@ function ProjectsBody({
 
 function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: string }) {
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
   const save = useWrite({
@@ -385,7 +394,7 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (blocked()) return;
+    if (holdWrites || blocked()) return;
     save.mutate();
   }
 
@@ -393,13 +402,18 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
     <form className="ui-stack" onSubmit={submit}>
       <TextField label="שם" value={name} onChange={(event) => { setName(event.target.value); }} required />
       <MoneyField label="תקציב בשקלים, או ריק" value={budget} onValueChange={setBudget} />
-      <Button type="submit" busy={save.isPending}>שמירה</Button>
+      <Button type="submit" busy={save.isPending} disabled={holdWrites}>שמירה</Button>
       <Button variant="secondary" onClick={onClose}>ביטול</Button>
     </form>
   );
 }
 
+function ReservedMenuSlot() {
+  return <span className="ui-menu-slot" aria-hidden="true" />;
+}
+
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
+  const holdWrites = useHoldWrites();
   const [menu, setMenu] = useState(false);
   return (
     <div className="flex min-h-full flex-1 flex-col" aria-busy="true">
@@ -410,11 +424,11 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={
+        trailing={holdWrites ? <ReservedMenuSlot /> : (
           <IconButton label="עוד" onBand onClick={() => { setMenu(true); }}>
             <MoreIcon />
           </IconButton>
-        }
+        )}
       >
         <BandHero>
           <div className="ui-project-skel">
@@ -439,9 +453,11 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
       </div>
       <SectionHead title="הוצאות לפי קטגוריה" />
       <ListSkeleton />
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        <p className="t-hint">הפרויקט עדיין נטען.</p>
-      </Sheet>
+      {holdWrites ? null : (
+        <Sheet open={menu} onOpenChange={setMenu} title="עוד">
+          <p className="t-hint">הפרויקט עדיין נטען.</p>
+        </Sheet>
+      )}
     </div>
   );
 }
@@ -537,6 +553,7 @@ export function ProjectDetailScreen({
       assertNoError(await supabase.rpc("set_after_overhead", { p_on: wantedOverhead.current, p_project_id: projectId }));
     },
   });
+  const holdWrites = useHoldWrites();
   if (phase.kind === "loading") return <ProjectLoading search={search} example={example} />;
   if (phase.kind === "error") {
     return (
@@ -566,7 +583,7 @@ export function ProjectDetailScreen({
         leading={
           <BackButton fallback={`/projects${search}`} onBand />
         }
-        trailing={<ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
+        trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>
           <FocusTitle className="t-title-2">{project.name}</FocusTitle>
@@ -592,7 +609,9 @@ export function ProjectDetailScreen({
             shareAgorot: project.overhead_share_agorot,
           })}
           checked={overheadOn}
+          disabled={holdWrites}
           onChange={(checked) => {
+            if (holdWrites) return;
             if (sample) {
               setOverheadOn(checked);
               return;
@@ -654,6 +673,7 @@ export function ProjectDetailScreen({
 function LegacyEmptyProject() {
   const search = usePreviewSearch();
   const location = useLocation();
+  const holdWrites = useHoldWrites();
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -672,12 +692,12 @@ function LegacyEmptyProject() {
         icon={<DocumentIcon />}
         title="אין עדיין תנועות"
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
-        action={
+        action={holdWrites ? undefined : (
           <Button variant="pill" to={`/add${search}`} state={withSheetBackground(location)}>
             <CameraIcon />
             צילום חשבונית
           </Button>
-        }
+        )}
       />
     </div>
   );
@@ -1071,6 +1091,7 @@ export function ReviewAllList({
             title={row.supplier_name ?? row.description}
             hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
             agorot={row.amount_net}
+            currency={row.currency}
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
             href={reviewFocusPath(search, row.id)}
@@ -1124,6 +1145,26 @@ export type ReviewPreviewWrite = {
   onUndo: (id: string) => void;
 };
 
+function reviewFlagKey(value: boolean | undefined): string {
+  if (value === true) return "1";
+  if (value === false) return "0";
+  return "";
+}
+
+function reviewMotionKey(row: ReviewRow | null): string {
+  if (row == null) return "";
+  return [
+    row.id,
+    row.category_id ?? "",
+    row.category_name ?? "",
+    reviewFlagKey(row.category_suggested),
+    reviewFlagKey(row.project_suggested),
+    row.project_name ?? "",
+    String(row.share_count ?? ""),
+    String(row.auto_approved_today ?? ""),
+  ].join("\u0000");
+}
+
 export function ReviewQueue({
   rows: incoming,
   search,
@@ -1162,6 +1203,7 @@ export function ReviewQueue({
   const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const rows = useHeldOrder(incoming, (item) => item.id);
   const [hideAuto, setHideAuto] = useState(false);
@@ -1188,8 +1230,14 @@ export function ReviewQueue({
   }
   const row = rows[0];
   const leaving = motion === "out";
+  const nextCard = rows[0] ?? null;
+  const nextCardRef = useRef(nextCard);
+  nextCardRef.current = nextCard;
+  // The head's identity is the swap. A fresh array for the same item must not
+  // cancel the card that is already on its way in.
+  const motionKey = reviewMotionKey(nextCard);
   useEffect(() => {
-    const next = rows[0] ?? null;
+    const next = nextCardRef.current;
     if (next?.id === shown?.id) {
       if (
         next != null
@@ -1214,13 +1262,14 @@ export function ReviewQueue({
     setMotion("out");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => {
-      setShown(next);
-      setMotion(next ? "in" : "still");
+      const landed = nextCardRef.current;
+      setShown(landed);
+      setMotion(landed ? "in" : "still");
     }, reduce ? 0 : 200);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [rows, shown]);
+  }, [motionKey, shown]);
   const approve = useWrite({
     failure: (error) => {
       if (previewWrite) return changeSaveFailure(error);
@@ -1362,6 +1411,7 @@ export function ReviewQueue({
         ? view.category_id != null
         : view.project_id != null && view.category_id != null));
   return (
+    <ViewerScope>
     <div className="ui-review-queue">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
       {rows.length > 0 ? (
@@ -1375,9 +1425,15 @@ export function ReviewQueue({
             />
           ) : null}
           <span className="t-hint">
-            <bdi className="ui-num ui-review-count" dir="ltr">{String(index)}</bdi>
-            {" מתוך "}
-            <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+            {holdWrites ? (
+              <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+            ) : (
+              <>
+                <bdi className="ui-num ui-review-count" dir="ltr">{String(index)}</bdi>
+                {" מתוך "}
+                <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
+              </>
+            )}
           </span>
           {changeTo == null ? (
             <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
@@ -1403,17 +1459,19 @@ export function ReviewQueue({
           supplier={card.supplier_name ?? card.description}
           sourceLine={`${docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
           netAgorot={card.amount_net}
-          vatLine={reviewVatLine(card.vat_agorot)}
+          currency={card.currency}
+          vatLine={reviewVatLine(card.vat_agorot, card.currency)}
           suggestion={suggestion}
           pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
           projectButtonRef={reviewLineFocus.project}
           categoryButtonRef={reviewLineFocus.category}
-          onProject={card.direction === "income" ? undefined : openProject}
-          onCategory={openCategory}
+          onProject={holdWrites || card.direction === "income" ? undefined : openProject}
+          onCategory={holdWrites ? undefined : openCategory}
         />
       </div>
+      {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
       <div className="ui-review-actions">
         <div className="ui-review-approve" ref={approveSlot}>
           <Button
@@ -1460,7 +1518,9 @@ export function ReviewQueue({
           </Button>
         </div>
       </div>
+      )}
     </div>
+    </ViewerScope>
   );
 }
 
@@ -1470,11 +1530,11 @@ function invoiceDate(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function reviewVatLine(vat: bigint | undefined): string {
+function reviewVatLine(vat: bigint | undefined, currency?: string): string {
   if (vat == null) return "לפני מע״מ";
   if (vat === 0n) return "פטור ממע״מ";
   const shown = vat < 0n ? -vat : vat;
-  return `לפני מע״מ · מע״מ ${formatIls(shown)}`;
+  return `לפני מע״מ · מע״מ ${formatMoney(shown, currency)}`;
 }
 
 function docKindLabel(kind: string | undefined): string {
@@ -1683,6 +1743,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const navigate = useNavigate();
   const toast = useToast();
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
+  const writeGate = useWriteGate("/review");
   const invalidate = useInvalidateBooks();
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
@@ -1894,6 +1956,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   });
 
   async function createProject(name: string): Promise<ChangeChoice> {
+    if (holdWrites) throw new Error("preview");
     return saveNewProject(name, blocked, toast, (project) => {
       setExtraProjects((list) => [...list, project]);
     }, invalidate);
@@ -1907,6 +1970,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     : linePick === "category"
       ? reviewLineFocus.category
       : undefined;
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   if (formPhase.kind !== "ready") {
     return (
       <RouteSheet title="שינוי שיוך" closeTo={closeTo} returnFocusRef={returnFocusRef}>
@@ -1921,7 +1986,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       closeTo={closeTo}
       returnFocusRef={returnFocusRef}
       supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
-      amount={sample?.amount ?? (row ? formatIls(absAgorot(row.amount_net)) : "")}
+      amount={sample?.amount ?? (row ? formatMoney(absAgorot(row.amount_net), row.currency) : "")}
       direction={income ? "income" : "expense"}
       projects={projectOptions}
       categories={categoryOptions}
@@ -1948,7 +2013,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         setLeaveNote("");
       }}
       onCommitPick={async (kind, id) => {
-        if (sample) return undefined;
+        if (sample || holdWrites) return undefined;
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
@@ -1998,7 +2063,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         return Promise.resolve();
       }}
       onCommitPending={async () => {
-        if (sample) return;
+        if (sample || holdWrites) return;
         if (blocked()) throw new Error("preview");
         setHold("");
         picked.current = { projectId, categoryId, remember };
@@ -2019,6 +2084,9 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
 export function AddForm() {
   const search = usePreviewSearch();
   const goBack = useGoBack();
+  const writeGate = useWriteGate("/");
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   return (
     <RouteSheet
       title="הוספה"
@@ -2166,6 +2234,7 @@ export function TransactionScreen({
   const navigate = useNavigate();
   const toast = useToast();
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -2432,11 +2501,11 @@ export function TransactionScreen({
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={<IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
+        trailing={holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
-        <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" /></p>
+        <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" currency={txn.currency} /></p>
         <p className="t-hint">לפני מע״מ · <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi></p>
         {reviewLabel || paymentLabel ? (
           <div className="ui-status-row">
@@ -2446,14 +2515,22 @@ export function TransactionScreen({
         ) : null}
       </div>
       <List>
-        <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
-          if (splitRow) {
-            openSplit();
-            return;
-          }
-          setChangeSheet(true);
-        }} />
-        <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+        {holdWrites ? (
+          <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} />
+        ) : (
+          <ListRow variant="button" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
+            if (splitRow) {
+              openSplit();
+              return;
+            }
+            setChangeSheet(true);
+          }} />
+        )}
+        {holdWrites ? (
+          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} />
+        ) : (
+          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+        )}
         <ListRow
           variant="button"
           title="חשבונית ותשלום"
@@ -2466,11 +2543,12 @@ export function TransactionScreen({
       </List>
       {docOpen ? (
         <p className="ui-page-pad t-hint">
-          מע״מ <bdi dir="ltr">{formatIls(txn.vat_amount, { agorot: true })}</bdi>
+          מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
           {" · "}
           {vatStatusLabel(txn.vat_status)}
         </p>
       ) : null}
+      {holdWrites ? null : (
       <div className="ui-stack ui-page-pad">
         {onOpenSplit ? (
           <Button variant="secondary" icon={<SplitIcon />} onClick={openSplit}>פיצול בין פרויקטים</Button>
@@ -2478,12 +2556,13 @@ export function TransactionScreen({
           <Button variant="secondary" icon={<SplitIcon />} to={`/transactions/${txn.id}/split${search}`}>פיצול בין פרויקטים</Button>
         )}
       </div>
+      )}
       <ChangeAssignment
         host="overlay"
         open={changeOpen}
         onOpenChange={setChangeSheet}
         supplier={party}
-        amount={formatIls(absAgorot(txn.amount_net))}
+        amount={formatMoney(absAgorot(txn.amount_net), txn.currency)}
         direction={txn.direction === "income" ? "income" : "expense"}
         projects={changeProjects}
         categories={changeCategories}
@@ -2646,6 +2725,7 @@ export function SplitScreen({
   backTo?: string;
 } = {}) {
   const { transactionId = "" } = useParams();
+  const writeGate = useWriteGate(`/transactions/${transactionId}`);
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const location = useLocation();
@@ -3039,6 +3119,8 @@ export function SplitScreen({
     if (event.target instanceof HTMLElement && event.target.closest("input")) return;
     event.currentTarget.querySelector("input")?.focus();
   }
+  if (writeGate === "wait") return null;
+  if (writeGate !== "show") return writeGate;
   if (phase.kind !== "ready" || active.length === 0) {
     return (
       <ScreenState
@@ -3101,7 +3183,7 @@ export function SplitScreen({
         trailing={example}
       />
       <div className="ui-split-amount">
-        <p className="t-title-1"><BigNumber agorot={amount} presentation="detail" /></p>
+        <p className="t-title-1"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
         {meta ? <p className="ui-split-meta t-label">{meta}</p> : null}
       </div>
       <h2 className="ui-split-question t-title-3">איך לחלק?</h2>
@@ -3287,6 +3369,8 @@ type SettingsSample = {
   sumit?: "loading" | "error";
   assistant?: AssistantSample;
   jev?: JevCardState;
+  /** Preview only. Live settings read the company's lines. */
+  loanCurrency?: LoanCurrency;
 };
 
 type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
@@ -3332,6 +3416,8 @@ export function SettingsScreen({
   const search = usePreviewSearch();
   const navigate = useNavigate();
   const { session } = useAuth();
+  const viewer = useIsViewer();
+  const holdWrites = useHoldWrites();
   const blocked = useBlockedPreview();
   const status = useSumitStatusQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null);
@@ -3440,6 +3526,7 @@ export function SettingsScreen({
       if (error) throw error;
       clearJevConnectorFlag(session?.user.id ?? null);
       queryClient.removeQueries({ queryKey: ["jev-connector"] });
+      queryClient.removeQueries({ queryKey: ["company-owner"] });
     },
   });
 
@@ -3489,6 +3576,7 @@ export function SettingsScreen({
   }, [focusSumit, status.data, status.isError, status.isLoading]);
 
   useEffect(() => {
+    if (holdWrites) return;
     if (sheetApplied.current) return;
     const noCo = sample
       ? sample.noCompany === true
@@ -3533,7 +3621,7 @@ export function SettingsScreen({
     }
     if (opened === "connected") setStatusOpen(true);
     else if (opened === "reconnect" || opened === "disconnected") setConnectOpen(true);
-  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data]);
+  }, [params, setParams, phase.kind, sample, preview, previewValue, dashboard.data, dashboard.isFetching, status.isLoading, status.isError, status.fetchStatus, status.data, holdWrites]);
 
   if (phase.kind === "loading" || phase.kind === "error") {
     return (
@@ -3580,8 +3668,10 @@ export function SettingsScreen({
   const showInstall = !isStandalone();
   const showSignOut = preview === "off" || previewValue === "empty";
   return (
+    <ViewerScope>
     <div>
       <ScreenHeader title="הגדרות" />
+      <ViewerNote />
       {noCompany ? (
         email !== "" ? (
           <List>
@@ -3652,6 +3742,16 @@ export function SettingsScreen({
               </TextLink>
             )}
           />
+        ) : holdWrites ? (
+          <ListRow
+            variant="static"
+            title="SUMIT"
+            hint={kind === "reconnect" ? "צריך לחבר מחדש" : kind === "connected" ? "מחובר" : "לא מחובר"}
+            icon={kind === "reconnect" ? <AlertIcon size={24} /> : <DocumentIcon size={24} />}
+            tone={kind === "reconnect" ? "warning" : undefined}
+            describeHint
+            wrapHint
+          />
         ) : (
           <ListRow
             variant="button"
@@ -3687,10 +3787,13 @@ export function SettingsScreen({
         blocked={import.meta.env.DEV && params.get("e2e") === "stack" ? undefined : blocked}
         sampleSecret={import.meta.env.DEV && params.get("e2e") === "stack" ? sampleSecret : undefined}
         showHeading={false}
+        readOnly={holdWrites}
+        viewerCopy={viewer}
       />
       <JevSettings
         noCompany={noCompany}
         blocked={blocked}
+        readOnly={holdWrites}
         sample={
           noCompany
             ? undefined
@@ -3714,17 +3817,17 @@ export function SettingsScreen({
               className="ui-stack"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (blocked()) return;
+                if (holdWrites || blocked()) return;
                 connect.mutate();
               }}
             >
               <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
               <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
-              <Button type="submit" busy={connect.isPending}>{authReconnect ? "חיבור מחדש" : "חיבור"}</Button>
+              <Button type="submit" busy={connect.isPending} disabled={holdWrites}>{authReconnect ? "חיבור מחדש" : "חיבור"}</Button>
             </form>
             {authReconnect ? (
               <List>
-                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { setDisconnectSheet(true); }} />
+                <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
               </List>
             ) : null}
           </div>
@@ -3753,12 +3856,12 @@ export function SettingsScreen({
             busy={refresh.isPending}
             disabled={refreshHeld}
             onClick={() => {
-              if (refreshHeld) return;
+              if (holdWrites || refreshHeld) return;
               if (blocked()) return;
               refresh.mutate();
             }}
           />
-          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { setDisconnectSheet(true); }} />
+          <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
         </List>
       </Sheet>
       <ConfirmSheet
@@ -3771,7 +3874,7 @@ export function SettingsScreen({
         destructive
         busy={disconnect.isPending}
         onConfirm={() => {
-          if (blocked()) return;
+          if (holdWrites || blocked()) return;
           disconnect.mutate();
         }}
       />
@@ -3786,7 +3889,9 @@ export function SettingsScreen({
               label="רווח אחרי כלליות"
               hint="חלק מהכלליות נכנס לכל פרויקט"
               checked={overheadOn}
+              disabled={holdWrites}
               onChange={(checked) => {
+                if (holdWrites) return;
                 if (sample) {
                   setOverheadOn(checked);
                   return;
@@ -3799,6 +3904,11 @@ export function SettingsScreen({
               }}
             />
           </div>
+          <LoanSettingsSection
+            companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
+            companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
+            blocked={blocked}
+          />
         </>
       )}
       {showInstall || showSignOut ? (
@@ -3824,32 +3934,37 @@ export function SettingsScreen({
       ) : null}
       <p className="ui-poc t-hint"><bdi dir="ltr">Flow 0.1</bdi></p>
     </div>
+    </ViewerScope>
   );
 }
 
 function CategoryLine({
   category,
   muted = false,
+  plain = false,
   onMenu,
 }: {
   category: CategoryRow & { count?: number };
   muted?: boolean;
-  onMenu: () => void;
+  /** A viewer row keeps the height and drops the pointer. */
+  plain?: boolean;
+  onMenu?: () => void;
 }) {
   return (
     <ListRow
       variant="item"
+      plain={plain}
       title={category.name}
       muted={muted}
       meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
-      action={
+      action={onMenu == null ? undefined : (
         <IconButton
           label={`עוד, ${category.name}`}
           onClick={onMenu}
         >
           <MoreIcon />
         </IconButton>
-      }
+      )}
     />
   );
 }
@@ -3866,6 +3981,7 @@ export function CategoriesScreen({
   const preview = useHomePreview();
   const [params] = useSearchParams();
   const blocked = useBlockedPreview();
+  const holdWrites = useHoldWrites();
   const categories = useCategoriesQuery(sample == null);
   const dashboard = useDashboardQuery(sample == null && preview === "off");
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, categories);
@@ -3965,7 +4081,8 @@ export function CategoriesScreen({
           <CategoryLine
             key={category.id}
             category={category}
-            onMenu={() => {
+            plain={holdWrites}
+            onMenu={holdWrites ? undefined : () => {
               setMenu(category);
             }}
           />
@@ -3973,6 +4090,7 @@ export function CategoriesScreen({
       </List>
       ) : null}
       <div className="ui-cat-foot">
+        {holdWrites ? null : (
         <TextLink
           chevron={false}
           wrap
@@ -3983,6 +4101,7 @@ export function CategoriesScreen({
         >
           קטגוריה חדשה
         </TextLink>
+        )}
         {hiddenRows.length > 0 ? (
           <TextLink
             tone="quiet"
@@ -4009,7 +4128,8 @@ export function CategoriesScreen({
                   key={category.id}
                   category={category}
                   muted
-                  onMenu={() => {
+                  plain={holdWrites}
+                  onMenu={holdWrites ? undefined : () => {
                     setMenu(category);
                   }}
                 />

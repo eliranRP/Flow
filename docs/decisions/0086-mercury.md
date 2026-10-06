@@ -9,7 +9,7 @@ The owner has a Mercury account. SUMIT does not carry those lines. [0036](0036-s
 
 ## Decision
 
-The owner pastes Mercury's Read Only token in Settings. Flow calls GET only. The token is sealed with `MERCURY_KEK`. New seals use envelope format 3, which binds the company id and the provider. The client never receives it.
+The owner pastes Mercury's Read Only token in Settings. Flow calls GET only. The token is sealed with `MERCURY_KEK`, an Edge Function environment variable, the same pattern as `SUMIT_KEK`. It is not a Vault secret. New seals use envelope format 3, which binds the company id and the provider. The client never receives it.
 
 Import every Mercury line, in and out, including income. There is no switch to hide a direction. Skip only a transfer between the company's own accounts. SUMIT lines and Mercury lines never describe the same movement, so nothing is deduped.
 
@@ -17,7 +17,7 @@ A Mercury line has no VAT. The VAT amount is 0 and the status is `source`.
 
 A pending line appears in לאישור (the review queue) with the tag ממתין (pending). It is in no P&L and no total until it is posted. A failed, cancelled, reversed, or blocked line leaves the books.
 
-A payment whose counterparty is NEWREZ, Lakeview, or Servease is hinted to the seeded expense `תשלומי הלוואה` (loan payments). That category is excluded from P&L and still shows as cash in לאישור. A transfer to an own account that is not connected is hinted to `העברות` (transfers). The expense row and the income row are both seeded and both excluded from P&L, and the hint matches the line's direction. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). A card refund stays an expense in the original category. The flag and the sums are in the [connector contract](../tech/connector-contract.md).
+A payment whose counterparty is NEWREZ, Lakeview, or Servease is hinted to the seeded expense `תשלומי הלוואה` (loan payments). That category is excluded from P&L and still shows as cash in לאישור. A transfer to an own account that is not connected is hinted to `העברות` (transfers). The expense row and the income row are both seeded and both excluded from P&L, and the hint matches the line's direction. An `IO Cashback` credit is hinted to `הכנסה אחרת` (other income). Treasury interest and dividends from `GET /treasury/{id}/transactions` use that same income category. The own-account set is every org account, rebuilt before every sync. A card refund stays an expense in the original category. The flag and the sums are in the [connector contract](../tech/connector-contract.md).
 
 Account numbers, routing numbers, emails, and attachment URLs are not stored. The card account id used for the own-account check comes from `GET /credit` and is kept only as an id in the skip set, not as a stored account number.
 
