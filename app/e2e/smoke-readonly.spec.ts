@@ -222,6 +222,9 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   } else {
     await expect(page.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeVisible();
   }
+  await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);
+  if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור SUMIT" })).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
 
   const projectResponses = await openList(page, "/projects", ["get_dashboard"], watched.inflight);
@@ -240,6 +243,8 @@ test("home, projects, review, and settings load from list reads", async ({ page 
     expect(firstName.length).toBeGreaterThan(0);
     await expect(page.getByText(firstName, { exact: true }).first()).toBeVisible();
   }
+  await expect(page.getByRole("button", { name: "פרויקט חדש" })).toHaveCount(0);
+  await expect(page.getByText("ואפשר גם לפתוח אחד כאן")).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
 
   const reviewResponses = await openList(page, "/review", ["list_review"], watched.inflight);
@@ -261,6 +266,9 @@ test("home, projects, review, and settings load from list reads", async ({ page 
     expect(label.length).toBeGreaterThan(0);
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   }
+  await expect(page.getByRole("button", { name: "אישור" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "שינוי" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "דלג" })).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
 
   const consoleBeforeSettings = watched.consoleErrors.length;
@@ -282,7 +290,10 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   await expect(page.getByText(companyName, { exact: true })).toBeVisible();
   await expect(page.getByText("תיוג חכם (Jev)", { exact: true })).toBeVisible();
   const sumitWord = sumitStatus.connected === true ? "מחובר" : "לא מחובר";
-  await expect(page.getByRole("button", { name: "SUMIT", exact: true }).getByText(sumitWord, { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "SUMIT", exact: true })).toHaveCount(0);
+  const sumitRow = page.locator(".ui-row", { hasText: "SUMIT" }).first();
+  await expect(sumitRow.getByText(sumitWord, { exact: true })).toBeVisible();
+  await expect(page.getByText("צפייה בלבד · שינויים נעשים על ידי בעל העסק")).toBeVisible();
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
   const settingsErrors = watched.consoleErrors.slice(consoleBeforeSettings);
   expect(settingsErrors, settingsErrors.join("\n")).toEqual([]);

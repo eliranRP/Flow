@@ -1,30 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "../auth";
-import { getSupabase } from "../lib/supabase";
 import { usePreviewMode } from "../preview";
+import { useCompanyRole } from "../use-is-viewer";
 
 /**
- * Fail closed until the shared role gate exists.
- * TODO: switch to #42's useCompanyRole / useWriteGate once #42 merges.
- * An error or a missing row counts as a viewer, so setup does not write.
+ * Setup follows the shared company role. A viewer, or a failed read with no
+ * saved role, does not enter the run. A missing company is an owner, so step 0
+ * can create one.
  */
 export function useSetupViewer(): { ready: boolean; viewer: boolean } {
   const preview = usePreviewMode();
-  const { status, session } = useAuth();
-  const userId = session?.user.id;
-  const query = useQuery({
-    queryKey: ["company-owner", userId],
-    enabled: status === "authed" && !preview && userId != null,
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase || typeof supabase.from !== "function") throw new Error("owner");
-      const { data, error } = await supabase.from("companies").select("owner_id").maybeSingle();
-      if (error || data == null || typeof data.owner_id !== "string") throw new Error("owner");
-      return data.owner_id !== userId;
-    },
-  });
-  if (status !== "authed" || preview || userId == null) return { ready: true, viewer: false };
-  if (query.isError) return { ready: true, viewer: true };
-  if (!query.isSuccess) return { ready: false, viewer: false };
-  return { ready: true, viewer: query.data };
+  const role = useCompanyRole();
+  if (preview) return { ready: true, viewer: false };
+  if (role === "loading") return { ready: false, viewer: false };
+  if (role === "viewer" || role === "unknown") return { ready: true, viewer: true };
+  return { ready: true, viewer: false };
 }
