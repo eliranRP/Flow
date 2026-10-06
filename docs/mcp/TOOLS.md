@@ -229,6 +229,37 @@ The handler loads the line, picks the schedule row for `doc_date`, and splits li
 
 Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, and `invalid loan terms`.
 
+## Batch · cycle 6
+
+`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters.
+
+```json
+{
+  "idempotency_key": "batch-1",
+  "items": [
+    {
+      "transaction_id": "22222222-2222-4000-8000-000000000020",
+      "project_id": "8c1a0b2e-1111-4000-8000-000000000001",
+      "category_id": "c0ffee00-1111-4000-8000-0000000000a1"
+    },
+    {
+      "transaction_id": "22222222-2222-4000-8000-000000000021",
+      "category_id": "c0ffee00-1111-4000-8000-0000000000a1"
+    }
+  ]
+}
+```
+
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is either `{ "transaction_id", "ok": true, "undo_kind" }` or `{ "transaction_id", "ok": false, "code" }`.
+
+### undo_batch
+
+```json
+{ "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
+```
+
+Undoes every successful row from that batch through `mcp_undo`, newest first. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+
 ## Not in tools/list
 
 `rename_project`, `finish_project`, `split_expense`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
