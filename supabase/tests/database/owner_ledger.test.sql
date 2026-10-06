@@ -112,8 +112,8 @@ select tests.authenticate_as('ledger_a');
 
 select is(
   (select count(*)::int from public.review_queue where status = 'open'),
-  1,
-  'only the unallocated expense is queued; income is categorised and stays out'
+  3,
+  'the unallocated expense and both income lines without a project are queued'
 );
 
 select lives_ok(

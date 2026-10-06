@@ -127,8 +127,8 @@ select is(
   (select count(*)::int from public.review_queue q
     join public.transactions t on t.id = q.transaction_id
     where t.idempotency_key = 'r4:income'),
-  0,
-  'an income document is not queued'
+  1,
+  'posted income without a project is queued'
 );
 
 select is(
@@ -368,12 +368,6 @@ select throws_ok(
   'an expense cannot be filed under an income category'
 );
 
-reset role;
-insert into public.review_queue (company_id, transaction_id, status, reason)
-select t.company_id, t.id, 'open', 'missing_category'
-from public.transactions t
-where t.idempotency_key = 'r4:income';
-
 select tests.authenticate_as('r4_a');
 select throws_ok(
   format(
@@ -388,7 +382,7 @@ select throws_ok(
   'income cannot be filed under an expense category'
 );
 
-select lives_ok(
+select throws_ok(
   format(
     'select public.resolve_review(%L::uuid, ''approved'', null, %L::uuid, false)',
     (select q.id from public.review_queue q
@@ -396,7 +390,9 @@ select lives_ok(
       where t.idempotency_key = 'r4:income' and q.status = 'open'),
     (select id from r4 where label = 'income_cat')
   ),
-  'income can be approved with an income category and no project'
+  'P0001',
+  'project and category are required',
+  'income with a P&L category cannot be approved without a project'
 );
 
 select is(
