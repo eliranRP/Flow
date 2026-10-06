@@ -182,6 +182,7 @@ describe("project overhead hero", () => {
   it("clicking the switch saves and shows the profit after the income share", async () => {
     let on = false;
     const calls: unknown[] = [];
+    const projectArgs: unknown[] = [];
     rpc.impl = (name, args) => {
       if (name === "set_after_overhead") {
         calls.push(args);
@@ -189,6 +190,7 @@ describe("project overhead hero", () => {
         return Promise.resolve({ data: null, error: null });
       }
       if (name === "get_project") {
+        projectArgs.push(args);
         return Promise.resolve({ data: { ...serverProject, after_overhead: on }, error: null });
       }
       return Promise.resolve({ data: null, error: null });
@@ -213,6 +215,8 @@ describe("project overhead hero", () => {
       expect(screen.getByText("₪60,000")).toBeInTheDocument();
     });
     expect(calls).toEqual([{ p_on: true, p_project_id: "a" }]);
+    // The project screen asks for the same books basis as Home (decision 0060).
+    expect(projectArgs).toContainEqual({ p_id: "a", p_basis: "invoiced" });
     expect(screen.getByRole("switch", { name: "אחרי חלק בהוצאות כלליות" })).toBeChecked();
   });
 

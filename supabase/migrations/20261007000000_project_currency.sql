@@ -49,7 +49,11 @@ $$;
 revoke all on function private.project_category_entries_by_currency(uuid) from public, anon;
 grant execute on function private.project_category_entries_by_currency(uuid) to authenticated, service_role;
 
-create or replace function public.get_project(p_id uuid)
+-- Project income follows the books basis exactly like public.company_pnl: the same
+-- normalisation (anything but 'invoiced' is cash, null included) and the same doc kinds
+-- (cash: receipt + invoice_receipt; invoiced: invoice + credit + invoice_receipt, credits
+-- carry their own sign). get_project has no period, so no date field is involved.
+create or replace function public.get_project(p_id uuid, p_basis text)
 returns jsonb
 language plpgsql
 stable
@@ -58,6 +62,7 @@ set search_path = ''
 as $$
 declare
   cid uuid;
+  basis text;
   result jsonb;
   profit bigint;
   available boolean;
@@ -70,6 +75,7 @@ begin
   if cid is null then
     return null;
   end if;
+  basis := case when p_basis = 'invoiced' then 'invoiced' else 'cash' end;
 
   waiting := public.project_waiting(p_id);
 
@@ -87,7 +93,10 @@ begin
         and t.removed_at is null
         and t.line_status = 'posted'
       and coalesce(t.currency, 'ILS') = 'ILS'
-        and t.doc_kind in ('invoice', 'credit', 'invoice_receipt')
+        and (
+          (basis = 'cash' and t.doc_kind in ('receipt', 'invoice_receipt'))
+          or (basis = 'invoiced' and t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+        )
     ), 0),
     'direct_agorot', -coalesce((
       select sum(t.amount_net) from public.transactions t
@@ -119,7 +128,10 @@ begin
           coalesce(sum(parts.shared_minor), 0)::bigint as shared_minor
         from (
           select coalesce(t.currency, 'ILS') as currency,
-            case when t.direction = 'income' and t.doc_kind in ('invoice', 'credit', 'invoice_receipt') then t.amount_net else 0 end as income_minor,
+            case when t.direction = 'income' and (
+                (basis = 'cash' and t.doc_kind in ('receipt', 'invoice_receipt'))
+                or (basis = 'invoiced' and t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+              ) then t.amount_net else 0 end as income_minor,
             case when t.direction = 'expense' and t.pnl_role = 'project' then -t.amount_net else 0 end as direct_minor,
             0::bigint as shared_minor
           from public.transactions t
@@ -200,7 +212,10 @@ begin
             and t.line_status = 'posted'
             and coalesce(t.currency, 'ILS') <> 'ILS'
             and (
-              (t.direction = 'income' and t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+              (t.direction = 'income' and (
+                (basis = 'cash' and t.doc_kind in ('receipt', 'invoice_receipt'))
+                or (basis = 'invoiced' and t.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+              ))
               or (t.direction = 'expense' and t.pnl_role = 'project')
             )
           union all
@@ -288,5 +303,22 @@ begin
 end;
 $$;
 
+revoke all on function public.get_project(uuid, text) from public, anon;
+grant execute on function public.get_project(uuid, text) to authenticated, service_role;
+
+-- The one-argument form keeps its signature, grants and SECURITY INVOKER (CREATE OR REPLACE)
+-- and returns the invoiced basis, which is what it returned before and what the app's
+-- get_dashboard call uses (decision 0060).
+create or replace function public.get_project(p_id uuid)
+returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+begin
+  return public.get_project(p_id, 'invoiced');
+end;
+$$;
 
 commit;
