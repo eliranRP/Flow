@@ -47,8 +47,10 @@ import {
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
+import { useKeyboardInset } from "./ui/keyboard-inset";
 
 export function App() {
+  useKeyboardInset();
   useEffect(() => {
     listenForInstallPrompt();
     function onKey(event: KeyboardEvent) {

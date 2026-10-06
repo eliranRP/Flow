@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type Ref, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref, type SubmitEvent } from "react";
 import { BankIcon, CalendarIcon, ChevronDownIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { SectionHead } from "../ui/layout";
@@ -145,14 +145,28 @@ export function LoanSetupForm({
     setTerm(negative ? (digits === "" ? "-" : `-${digits}`) : digits);
   }
 
+  function onFormEnter(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== "Enter") return;
+    // Enter that commits an IME composition (Gboard, Hebrew predictive text) is not "next".
+    if (event.nativeEvent.isComposing) return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const fields = [...event.currentTarget.querySelectorAll<HTMLInputElement>("input:not([disabled])")];
+    const index = fields.indexOf(target);
+    if (index < 0 || index >= fields.length - 1) return;
+    event.preventDefault();
+    fields[index + 1]?.focus();
+  }
+
   return (
-    <form className="ui-stack" onSubmit={submit}>
+    <form className="ui-stack" onSubmit={submit} onKeyDown={onFormEnter}>
       <TextField
         label="מלווה"
         value={name}
         maxLength={80}
         disabled={busy}
         reserveMessage
+        enterKeyHint="next"
         error={shownError("name")}
         onBlur={() => { touch("name"); }}
         onChange={(event) => { setName(event.target.value); }}
@@ -164,6 +178,7 @@ export function LoanSetupForm({
         disabled={busy}
         keepMinus
         reserveMessage
+        enterKeyHint="next"
         error={shownError("principal")}
         onBlur={() => { touch("principal"); }}
         onValueChange={setPrincipal}
@@ -183,6 +198,7 @@ export function LoanSetupForm({
         disabled={busy}
         keepMinus
         reserveMessage
+        enterKeyHint="next"
         error={shownError("rate")}
         onBlur={() => { touch("rate"); }}
         onValueChange={setRate}
@@ -195,6 +211,7 @@ export function LoanSetupForm({
         numeric
         disabled={busy}
         reserveMessage
+        enterKeyHint="next"
         error={shownError("term")}
         onBlur={() => { touch("term"); }}
         onChange={(event) => { onTerm(event.target.value); }}
@@ -230,6 +247,7 @@ export function LoanSetupForm({
         disabled={busy}
         keepMinus
         reserveMessage
+        enterKeyHint={advanced ? "next" : "done"}
         error={shownError("escrow")}
         onBlur={() => { touch("escrow"); }}
         onValueChange={setEscrow}
@@ -253,6 +271,7 @@ export function LoanSetupForm({
             disabled={busy}
             keepMinus
             reserveMessage
+            enterKeyHint="done"
             error={shownError("payment")}
             onValueChange={(next) => { setPayment(next); }}
             onBlur={() => {

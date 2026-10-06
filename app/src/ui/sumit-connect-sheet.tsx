@@ -47,8 +47,8 @@ export function SumitConnectSheet({
       authReconnect={authReconnect}
       fields={(
         <>
-          <TextField label="מספר חברה" value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
-          <TextField label="מפתח API" type="password" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
+          <TextField label="מספר חברה" dir="ltr" numeric value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
+          <TextField label="מפתח API" type="password" dir="ltr" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
         </>
       )}
       submitLabel={submitLabel}

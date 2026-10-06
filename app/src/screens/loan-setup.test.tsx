@@ -171,6 +171,38 @@ describe("company currency", () => {
 });
 
 describe("LoanSetupForm", () => {
+  it("moves from lender to principal on Enter without surfacing errors", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" />);
+    const lender = screen.getByLabelText("מלווה");
+    const principal = screen.getByLabelText("סכום מקורי");
+    fireEvent.change(lender, { target: { value: "בנק דוגמה" } });
+    fireEvent.keyDown(lender, { key: "Enter", code: "Enter" });
+    expect(principal).toHaveFocus();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/חובה|נדרש|שגוי/)).toHaveLength(0);
+  });
+
+  it("cancels Enter's implicit submit on a middle field and leaves it alone on the last", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" />);
+    const lender = screen.getByLabelText("מלווה");
+    const escrow = screen.getByLabelText("מסים וביטוח לחודש");
+    // fireEvent returns false when the handler called preventDefault (jsdom has no implicit submit).
+    expect(fireEvent.keyDown(lender, { key: "Enter", code: "Enter" })).toBe(false);
+    escrow.focus();
+    expect(fireEvent.keyDown(escrow, { key: "Enter", code: "Enter" })).toBe(true);
+    expect(escrow).toHaveFocus();
+  });
+
+  it("does not advance on other keys or while an IME composition is committing", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" />);
+    const lender = screen.getByLabelText("מלווה");
+    lender.focus();
+    expect(fireEvent.keyDown(lender, { key: "a", code: "KeyA" })).toBe(true);
+    expect(lender).toHaveFocus();
+    expect(fireEvent.keyDown(lender, { key: "Enter", code: "Enter", isComposing: true })).toBe(true);
+    expect(lender).toHaveFocus();
+  });
+
   it("defaults a dollar company to $ and USD", () => {
     renderForm(<LoanSetupForm companyCurrency="USD" />);
     expect(screen.getByRole("radio", { name: "$" })).toBeChecked();
