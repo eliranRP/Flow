@@ -285,7 +285,7 @@ export function treasuryVoidIds(
     const pool = [...byId.values()].filter((row) =>
       row.kind === originalKind &&
       row.amountCents === amount &&
-      (accountId == null || row.accountId === accountId) &&
+      (accountId == null || row.accountId == null || row.accountId === accountId) &&
       !voids.has(row.externalId)
     );
     const sameDay = pool.filter((row) => row.docDate === day);
