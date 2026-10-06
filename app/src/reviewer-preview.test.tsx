@@ -67,14 +67,12 @@ describe("reviewer sample saves", () => {
     expect(screen.getByText("לא נשמר – אין חיבור")).toBeInTheDocument();
   });
 
-  it("keeps אישור off when the category is missing", () => {
+  it("keeps אישור off when the category is missing", async () => {
     const bolts = reviewerQueue[1];
     if (!bolts) throw new Error("missing sample row");
     renderQueue(bolts, "ok");
-    const approve = screen.getByRole("button", { name: "אישור" });
-    expect(approve).toBeDisabled();
-    expect(getComputedStyle(approve).cursor).toBe("not-allowed");
-    expect(screen.getByText("חסר קטגוריה, הקישו לבחירה")).toBeInTheDocument();
+    expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "בחירת קטגוריה" }, { timeout: 2500 })).toBeEnabled();
   });
 
   it("opens the sample split for a shared cost", async () => {

@@ -1554,11 +1554,11 @@ a.ui-row,
 .ui-review {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: var(--space-2) var(--space-card-inset) 0;
-  padding: var(--space-2);
+  padding: var(--space-4);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -1640,7 +1640,7 @@ a.ui-row,
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: var(--space-2) var(--space-side) 0;
+  margin: var(--space-4) var(--space-card-inset) 0;
 }
 
 .ui-viewer-note {
@@ -3349,6 +3349,20 @@ div.ui-check-row {
   align-items: flex-start;
   margin-top: var(--space-4);
   border-top: 1px solid var(--color-line);
+}
+
+.ui-sheet-fit .ui-change-swap {
+  padding-block-end: var(--safe-bottom);
+}
+
+.ui-change-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-change-picker [role="radiogroup"] > .ui-radio-row:last-child {
+  border-bottom: 0;
 }
 
 .ui-change-links .ui-text-link {

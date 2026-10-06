@@ -4,7 +4,9 @@ import { callTool, toolsFor } from "./tools.ts";
 const TXN = "22222222-2222-4000-8000-000000000020";
 const PROJECT = "8c1a0b2e-1111-4000-8000-000000000001";
 const CATEGORY = "c0ffee00-1111-4000-8000-0000000000a1";
+const INCOME_CATEGORY = "d1ffee00-1111-4000-8000-0000000000b2";
 const REVIEW = "11111111-1111-4000-8000-000000000010";
+const INCOME_TXN = "33333333-3333-4000-8000-000000000030";
 
 type Rpc = { name: string; body: Record<string, unknown> };
 
@@ -190,6 +192,35 @@ Deno.test("write tools are listed only for a write scope", () => {
     "undo",
   ]);
   assertEquals(toolsFor([]), []);
+});
+
+Deno.test("assign_expense forwards project and category for an income review line", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { undo_kind: "review", id: REVIEW, closed_review: true } },
+  }));
+  const assigned = await callTool("assign_expense", {
+    idempotency_key: "assign-income",
+    transaction_id: INCOME_TXN,
+    project_id: PROJECT,
+    category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(assigned.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_assign_expense",
+    body: {
+      p_idempotency_key: "assign-income",
+      p_transaction_id: INCOME_TXN,
+      p_project_id: PROJECT,
+      p_category_id: INCOME_CATEGORY,
+      p_remember: false,
+    },
+  });
+  if (assigned.structuredContent.ok) {
+    const data = assigned.structuredContent.data as { closed_review: boolean; undo_kind: string };
+    assertEquals(data.closed_review, true);
+    assertEquals(data.undo_kind, "review");
+  }
 });
 
 Deno.test("assign, set category, and undo call their wrappers", async () => {
