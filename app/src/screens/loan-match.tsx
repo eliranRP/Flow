@@ -112,7 +112,7 @@ export function LoanSplitPanel({
   onMatch: (loanId: string) => void;
   onCorrect: () => void;
 }) {
-  const setSheet = useSheetHistory("loan-match", sheetOpen, onSheetOpenChange);
+  const setSheet = onSheetOpenChange;
   const localRowRef = useRef<HTMLButtonElement>(null);
   const rowRef = matchButtonRef ?? localRowRef;
   if (parts == null && (!offerMatch || readOnly)) return null;
@@ -277,6 +277,7 @@ export function LoanTransactionSplit({
   const writesHeld = readOnly || holdWrites;
   const offerMatch = direction !== "income" && categoryName === LOAN_PRINCIPAL_CATEGORY;
   const [sheetOpen, setSheetOpen] = useState(false);
+  const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
   const splitSectionRef = useRef<HTMLHeadingElement>(null);
   const matchRowRef = useRef<HTMLButtonElement>(null);
   const query = useQuery({
@@ -293,7 +294,7 @@ export function LoanTransactionSplit({
     success: "התשלום שויך להלוואה",
     keys: ["loan-split", "loans", "txn"],
     onSuccess: () => {
-      setSheetOpen(false);
+      setSheet(false);
       void query.refetch().then(() => {
         requestAnimationFrame(() => { focusSplitSection(); });
       });
@@ -365,7 +366,7 @@ export function LoanTransactionSplit({
       matchHint={matchHint}
       savingId={savingId}
       sheetOpen={sheetOpen}
-      onSheetOpenChange={setSheetOpen}
+      onSheetOpenChange={setSheet}
       splitSectionRef={splitSectionRef}
       matchButtonRef={matchRowRef}
       readOnly={writesHeld}
@@ -374,7 +375,7 @@ export function LoanTransactionSplit({
         match.mutate(loanId, {
           onError: (error) => {
             if ((error as { code?: string }).code === "23505") {
-              setSheetOpen(false);
+              setSheet(false);
               void query.refetch().then(() => { requestAnimationFrame(() => { focusSplitSection(); }); });
               return;
             }
