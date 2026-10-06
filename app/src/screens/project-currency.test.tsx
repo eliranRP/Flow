@@ -70,6 +70,42 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.queryByRole("link", { name: /categories/ })).not.toBeInTheDocument();
   });
 
+  it("shows waiting USD lines once, in dollars, with no ₪0 row", () => {
+    renderProject({
+      ...usdProject(),
+      pending_count: 2,
+      pending_agorot: 0n,
+      pending_other_currencies: [{ currency: "USD", expense_minor: -3_500n, count: 2 }],
+    });
+    expect(screen.getAllByText("2 ממתינות לאישור")).toHaveLength(1);
+    const pendingRow = screen.getByText("2 ממתינות לאישור").closest(".ui-row");
+    expect(pendingRow?.querySelector(".ui-num")?.textContent).toBe("−$35");
+    expect(screen.queryByText("₪0")).not.toBeInTheDocument();
+  });
+
+  it("splits waiting lines per currency in a mixed project and draws one band line per currency", () => {
+    renderProject({
+      ...usdProject(),
+      income_agorot: 100_000n,
+      direct_agorot: 20_000n,
+      profit_agorot: 80_000n,
+      by_currency: [
+        { currency: "ILS", income_minor: 100_000n, direct_minor: 20_000n, shared_minor: 0n, profit_minor: 80_000n },
+        { currency: "USD", income_minor: 400_000n, direct_minor: 125_000n, shared_minor: 0n, profit_minor: 275_000n },
+      ],
+      pending_count: 3,
+      pending_agorot: 1_000n,
+      pending_other_currencies: [{ currency: "USD", expense_minor: -3_500n, count: 2 }],
+    });
+    expect(screen.getByText("₪800")).toBeInTheDocument();
+    expect(screen.getByText("$2,750")).toBeInTheDocument();
+    expect(document.querySelectorAll(".ui-band-figures")).toHaveLength(2);
+    const ilsRow = screen.getByText("1 ממתינה לאישור").closest(".ui-row");
+    expect(ilsRow?.querySelector(".ui-num")?.textContent).toBe("−₪10");
+    const usdRow = screen.getByText("2 ממתינות לאישור").closest(".ui-row");
+    expect(usdRow?.querySelector(".ui-num")?.textContent).toBe("−$35");
+  });
+
   it("keeps ILS rendering for older payloads", () => {
     renderProject({
       ...usdProject(),

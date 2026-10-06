@@ -98,6 +98,17 @@ describe("formatAmountText", () => {
     expect(formatAmountText(1_234n, "USD", { direction: "expense", detail: true })).toBe("−$12.34");
     expect(formatAmountText(10_000n, "EUR")).toBe("EUR 100");
   });
+
+  it("never signs a figure that rounds to zero", () => {
+    expect(formatAmountText(-30n, "ILS", { direction: "expense" })).toBe("₪0");
+    expect(formatAmountText(50n, "USD", { direction: "expense" })).toBe("$0");
+    expect(formatAmountText(30n, "USD", { direction: "income", plus: true })).toBe("$0");
+    expect(formatAmountText(-30n, "USD")).toBe("$0");
+    expect(formatAmountText(-30n, "ILS")).toBe("₪0");
+    expect(formatMoney(-30n, "USD")).toBe("$0");
+    expect(formatAmountText(-30n, "ILS", { direction: "expense", detail: true })).toBe("−₪0.30");
+    expect(formatAmountText(-150n, "USD", { direction: "expense" })).toBe("−$2");
+  });
 });
 
 describe("formatIls", () => {
