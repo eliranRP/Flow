@@ -150,6 +150,10 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_totals",
     "assign_expense",
     "set_expense_category",
+    "create_project",
+    "create_category",
+    "sync_bank",
+    "hide_category",
     "undo",
   ], "read and write tools");
   const lookup = calls.find((call) => call.url.endsWith("/lookup_mcp_credential"));
@@ -852,7 +856,15 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "tools/list" }),
   }), localDeps);
   const writeNames = ((await writeList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  assertEquals(writeNames, ["assign_expense", "set_expense_category", "undo"], "write token lists writes only");
+  assertEquals(writeNames, [
+    "assign_expense",
+    "set_expense_category",
+    "create_project",
+    "create_category",
+    "sync_bank",
+    "hide_category",
+    "undo",
+  ], "write token lists writes only");
 
   scope = ["read"];
   const readList = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
@@ -863,6 +875,89 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
   assertEquals(readNames.length, 6, "six reads");
+});
+
+Deno.test("sync_bank POSTs mercury-sync with the signed JWT and publishable apikey", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "sync-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"s".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const calls: { url: string; authorization: string; apikey: string; body: Record<string, unknown> | null }[] = [];
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      calls.push({
+        url: input,
+        authorization: headers.get("authorization") ?? "",
+        apikey: headers.get("apikey") ?? "",
+        body,
+      });
+      if (input.includes("/lookup_mcp_credential")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "99999999-9999-4000-8000-000000000009",
+          user_id: "aaaaaaaa-aaaa-4000-8000-00000000000a",
+          company_id: "cccccccc-cccc-4000-8000-00000000000a",
+          scope: ["write"],
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (input.includes("/bump_mcp_rate")) {
+        return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      }
+      if (input.includes("/touch_mcp_credential")) return Promise.resolve(new Response("null"));
+      const rpcName = input.split("/").pop() ?? "";
+      if (rpcName === "mcp_sync_bank_begin") {
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: { state: "proceed" } })));
+      }
+      if (rpcName === "mcp_sync_bank_finish") return Promise.resolve(new Response("null"));
+      if (input.includes("/functions/v1/mercury-sync")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          lines: 1,
+          inserted: 1,
+          updated: 0,
+          removed: 0,
+          newest_date: "2026-09-10",
+        })));
+      }
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 9,
+      method: "tools/call",
+      params: { name: "sync_bank", arguments: { idempotency_key: "sync-handler" } },
+    }),
+  }), localDeps);
+  const payload = await response.json();
+  assertEquals(payload.result.isError, false, "sync succeeded");
+  const mercury = calls.find((call) => call.url.endsWith("/functions/v1/mercury-sync"));
+  if (!mercury) throw new Error("mercury-sync not called");
+  assertEquals(mercury.apikey, "publishable-key", "publishable apikey");
+  const begin = calls.find((call) => call.url.endsWith("/mcp_sync_bank_begin"));
+  if (!begin) throw new Error("mcp_sync_bank_begin not called");
+  assertEquals(mercury.authorization.split(".").length, 3, "signed jwt");
+  assertEquals(mercury.authorization, begin.authorization, "same signed jwt as the RPCs");
+  assertEquals(mercury.authorization.includes("publishable-key"), false, "never the publishable key");
+  assertEquals(mercury.authorization.includes("secret-key"), false, "never the service secret");
+  assertEquals(mercury.body, { force: true }, "force pull");
+  const finish = calls.find((call) => call.url.endsWith("/mcp_sync_bank_finish"));
+  if (!finish) throw new Error("mcp_sync_bank_finish not called");
+  assertEquals(finish.body, {
+    p_idempotency_key: "sync-handler",
+    p_response: { ok: true, data: { added: 1, duplicates: 0, removed: 0, newest_date: "2026-09-10" } },
+  }, "finish stores the mapped counts");
 });
 
 Deno.test("an over-cap body is refused before the rate limit", async () => {

@@ -3,6 +3,8 @@ import type { ConnectorCapabilities } from "../types.ts";
 /** Env name of the Mercury key-encryption key. The value is never in the repo. */
 export const MERCURY_KEK_REF = "MERCURY_KEK";
 
+export const MERCURY_SYNC_FUNCTION = "mercury-sync";
+
 export const MERCURY_CAPABILITIES: ConnectorCapabilities = {
   listing: "window",
   removal: "status",

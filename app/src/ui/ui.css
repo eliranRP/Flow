@@ -510,6 +510,11 @@ a.ui-row,
   color: var(--color-text-secondary);
 }
 
+.ui-row-icon > .ui-spinner {
+  display: block;
+  margin: calc((20px - var(--spinner)) / 2);
+}
+
 .ui-sheet-surface {
   display: flex;
   min-block-size: 0;
