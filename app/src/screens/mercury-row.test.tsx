@@ -226,6 +226,18 @@ describe("Mercury status row", () => {
     await waitFor(() => { expect(disconnect).toHaveFocus(); });
   });
 
+  it("clears the token when the connect sheet closes", async () => {
+    mockLive(null);
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const dialog = screen.getByRole("dialog", { name: "חיבור Mercury" });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "sample-token-12" } });
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "חיבור Mercury" })).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "Mercury" }));
+    expect(within(screen.getByRole("dialog", { name: "חיבור Mercury" })).getByLabelText("מפתח API")).toHaveValue("");
+  });
+
   it("shows a static Mercury row for a viewer", async () => {
     mockLive(mercury({ connected: true }));
     renderSettings(
@@ -239,5 +251,21 @@ describe("Mercury status row", () => {
     if (row == null) throw new Error("missing row");
     expect(row.querySelector("button")).toBeNull();
     expect(row).toHaveTextContent("מחובר");
+  });
+
+  it("sends one refresh when רענון עכשיו is tapped twice", async () => {
+    mockLive(mercury({ connected: true }));
+    let finish: () => void = () => undefined;
+    invokeEdge.mockImplementation(() => new Promise((resolve) => { finish = () => { resolve(undefined); }; }));
+    renderSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "Mercury" }));
+    const refresh = within(screen.getByRole("dialog", { name: "Mercury" })).getByRole("button", { name: "רענון עכשיו" });
+    fireEvent.click(refresh);
+    await waitFor(() => { expect(refresh).toHaveAttribute("aria-busy", "true"); });
+    fireEvent.click(refresh);
+    expect(invokeEdge).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => { expect(screen.getByText("הרענון הסתיים.")).toBeInTheDocument(); });
+    expect(invokeEdge).toHaveBeenCalledTimes(1);
   });
 });

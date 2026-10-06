@@ -1,6 +1,6 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
-import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoanTransactionSplit } from "./loan-match";
 import { absAgorot } from "../agorot";
@@ -3465,7 +3465,12 @@ export function SettingsScreen({
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
   const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
   const setDisconnectSheet = useSheetHistory("sumit-disconnect", disconnectOpen, setDisconnectOpen);
-  const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpen, undefined, adoptSheet);
+  // Every close path (✕, Escape, Back, success) drops the pasted token.
+  const setMercuryConnectOpenClearing = useCallback((open: boolean) => {
+    if (!open) setMercuryApiKey("");
+    setMercuryConnectOpen(open);
+  }, []);
+  const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
   const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
   const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
   const [overheadOn, setOverheadOn] = useState(false);
@@ -4138,7 +4143,7 @@ export function SettingsScreen({
             busy={mercuryRefresh.isPending}
             disabled={mercuryRefreshHeld}
             onClick={() => {
-              if (holdWrites || mercuryRefreshHeld) return;
+              if (holdWrites || mercuryRefreshHeld || mercuryRefresh.isPending) return;
               if (blocked()) return;
               mercuryRefresh.mutate();
             }}
