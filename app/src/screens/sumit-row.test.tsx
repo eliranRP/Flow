@@ -1319,4 +1319,14 @@ describe("SUMIT status row", () => {
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "לנתק את SUMIT?" })).not.toBeInTheDocument(); });
     await waitFor(() => { expect(disconnect).toHaveFocus(); });
   });
+
+  it("uses ltr inputs in the SUMIT connect sheet", async () => {
+    renderSettings(
+      <SettingsScreen sample={{ name: "אלפא", connected: false, companyId: null, lastError: null }} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "SUMIT" }));
+    const sheet = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    expect(within(sheet).getByLabelText("מספר חברה")).toHaveAttribute("dir", "ltr");
+    expect(within(sheet).getByLabelText("מפתח API")).toHaveAttribute("dir", "ltr");
+  });
 });
