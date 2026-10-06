@@ -639,6 +639,10 @@ isOneToOne: false
 { Args: { "p_limit": number }; Returns: {
               "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
             }[]
+                           } |
+{ Args: { "p_limit": number,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: {
+              "company_id": string,"id": number,"provider": Database["public"]['Enums']["connector_provider"]
+            }[]
                            },
 "clear_loan_split_review":
 { Args: { "p_transaction_id": string }; Returns: undefined
@@ -828,7 +832,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo","vat_status": "source"|"derived"|"assumed"|"unknown"
+            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
             "connector_upsert_result": {
@@ -946,7 +950,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo"],"vat_status": ["source", "derived", "assumed", "unknown"]
+            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
           }
         }
 } as const

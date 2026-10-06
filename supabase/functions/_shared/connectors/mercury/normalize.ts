@@ -3,6 +3,11 @@ import { dollarsToCents } from "./money.ts";
 import { jerusalemDate } from "./dates.ts";
 import { redactMercury } from "./redact.ts";
 import {
+  MERCURY_CASHBACK_CATEGORY,
+  MERCURY_TREASURY_CANCEL_OF,
+  MERCURY_TREASURY_FEE_TYPES,
+  MERCURY_TREASURY_OTHER_INCOME_TYPES,
+  MERCURY_TREASURY_YIELD_TYPES,
   isCardAccountKind,
   isExpenseCreditKind,
   isVoidMercuryStatus,
@@ -81,13 +86,16 @@ function bounded(value: string | null): string | null {
  * A transfer whose counterparty is only in ownCounterpartyIds is imported
  * with category_hint העברות. It is not skipped.
  *
- * Treasury yield and dividends are income in הכנסה אחרת. These fixtures only
- * carry "Liquidation of Treasury assets" legs, and this adapter does not
- * call the treasury transactions endpoint.
- * TODO(PR2): import treasury yield and dividends as הכנסה אחרת from that endpoint.
+ * Treasury interest, dividends, Mercury credits, and fee refunds are income
+ * in הכנסה אחרת. A treasury fee is an expense. A cancel voids the original
+ * line instead of importing a second one. A reinvested dividend is skipped
+ * when the dividend itself is imported. Sweeps, deposits, and withdrawals
+ * stay on the ledger as internal transfers, so they are not a second copy
+ * of the checking leg.
  */
 export function normalizeMercury(raw: unknown, ctx: NormalizeContext): NormalizeResult {
   if (!isRecord(raw)) return skip("not_a_line");
+  if (isTreasuryLedgerRow(raw)) return normalizeTreasuryLedger(raw, ctx);
   const id = stringField(raw.id);
   if (!id || id.length > TEXT_LIMITS.externalId) return skip("not_a_line");
 
@@ -192,6 +200,154 @@ export function normalizeMercury(raw: unknown, ctx: NormalizeContext): Normalize
     provider_meta: { kind, providerCategory },
   };
 
+  const parsed = canonicalLineSchema.safeParse(line);
+  if (!parsed.success) return skip("not_a_line");
+  return { ok: true, line: parsed.data };
+}
+
+/** A treasury-ledger row has a type and a canonical day, and no bank status. */
+function isTreasuryLedgerRow(raw: Record<string, unknown>): boolean {
+  return typeof raw.type === "string" && typeof raw.canonicalDay === "string" && raw.status == null;
+}
+
+const TREASURY_INCOME = new Set<string>([
+  ...MERCURY_TREASURY_YIELD_TYPES,
+  ...MERCURY_TREASURY_OTHER_INCOME_TYPES,
+]);
+const TREASURY_FEE = new Set<string>(MERCURY_TREASURY_FEE_TYPES);
+
+export interface TreasuryStoredLine {
+  externalId: string;
+  kind: string;
+  amountCents: number;
+  accountId: string | null;
+  docDate: string;
+}
+
+function explicitCancelId(raw: Record<string, unknown>): string | null {
+  const direct = bounded(stringField(raw.cancelsTransactionId)) ?? bounded(stringField(raw.originalTransactionId));
+  if (direct) return direct;
+  if (!isRecord(raw.details)) return null;
+  return bounded(stringField(raw.details.cancelsTransactionId)) ?? bounded(stringField(raw.details.originalTransactionId));
+}
+
+/**
+ * Ids a treasury cancel voids. An explicit id wins. Otherwise the match is
+ * the same account, the original type, and the same absolute cents. The
+ * same canonical day wins over any other day. A refetched original and the
+ * stored copy are one candidate. Several remaining ids void nothing.
+ */
+export function treasuryVoidIds(
+  rawLines: readonly unknown[],
+  stored: readonly TreasuryStoredLine[],
+): string[] {
+  const batch: TreasuryStoredLine[] = [];
+  for (const raw of rawLines) {
+    if (!isRecord(raw) || !isTreasuryLedgerRow(raw)) continue;
+    const type = stringField(raw.type);
+    const id = bounded(stringField(raw.id));
+    const day = stringField(raw.canonicalDay);
+    if (!type || !id || !day || MERCURY_TREASURY_CANCEL_OF[type]) continue;
+    if (typeof raw.amount !== "number") continue;
+    const signed = dollarsToCents(raw.amount);
+    if (signed == null || signed === 0) continue;
+    batch.push({
+      externalId: id,
+      kind: type,
+      amountCents: Math.abs(signed),
+      accountId: bounded(stringField(raw.accountId)),
+      docDate: day,
+    });
+  }
+
+  const voids = new Set<string>();
+  for (const raw of rawLines) {
+    if (!isRecord(raw) || !isTreasuryLedgerRow(raw)) continue;
+    const type = stringField(raw.type);
+    const originalKind = type ? MERCURY_TREASURY_CANCEL_OF[type] : undefined;
+    if (!type || !originalKind) continue;
+    const explicit = explicitCancelId(raw);
+    if (explicit) {
+      voids.add(explicit);
+      continue;
+    }
+    if (typeof raw.amount !== "number") continue;
+    const signed = dollarsToCents(raw.amount);
+    const day = stringField(raw.canonicalDay);
+    if (signed == null || signed === 0 || !day) continue;
+    const amount = Math.abs(signed);
+    const accountId = bounded(stringField(raw.accountId));
+    const byId = new Map<string, TreasuryStoredLine>();
+    for (const row of batch) byId.set(row.externalId, row);
+    for (const row of stored) {
+      if (!byId.has(row.externalId)) byId.set(row.externalId, row);
+    }
+    const pool = [...byId.values()].filter((row) =>
+      row.kind === originalKind &&
+      row.amountCents === amount &&
+      (accountId == null || row.accountId === accountId) &&
+      !voids.has(row.externalId)
+    );
+    const sameDay = pool.filter((row) => row.docDate === day);
+    const chosen = sameDay.length > 0 ? sameDay : pool;
+    if (chosen.length !== 1) continue;
+    const match = chosen[0];
+    if (match) voids.add(match.externalId);
+  }
+  return [...voids].sort();
+}
+
+function normalizeTreasuryLedger(raw: Record<string, unknown>, ctx: NormalizeContext): NormalizeResult {
+  const id = stringField(raw.id);
+  if (!id || id.length > TEXT_LIMITS.externalId) return skip("not_a_line");
+  const type = stringField(raw.type);
+  if (!type || type.length > TEXT_LIMITS.kind) return skip("not_a_line");
+  const accountId = bounded(stringField(raw.accountId));
+  if (stringField(raw.accountId) && !accountId) return skip("not_a_line");
+  if (ctx.ownAccountIds.length > 0 && (!accountId || !ctx.ownAccountIds.includes(accountId))) {
+    return skip("not_own_account");
+  }
+  if (type === "dividendReinvestmentPosted") return skip("dividend_reinvestment");
+  if (type === "revertTxn") return skip("treasury_activity");
+  if (MERCURY_TREASURY_CANCEL_OF[type]) return skip("treasury_cancel");
+  const amendment = type === "manualAmendmentPosted";
+  const income = TREASURY_INCOME.has(type) || (amendment && typeof raw.amount === "number" && raw.amount > 0);
+  const fee = TREASURY_FEE.has(type) || (amendment && typeof raw.amount === "number" && raw.amount < 0);
+  if (!income && !fee) return skip("treasury_activity");
+
+  const day = stringField(raw.canonicalDay);
+  if (!day) return skip("not_a_line");
+  if (typeof raw.amount !== "number") return skip("refused_amount");
+  const signed = dollarsToCents(raw.amount);
+  if (signed == null) return skip("refused_amount");
+  if (signed === 0) return skip("not_a_line");
+
+  const description = String(redactMercury(stringField(raw.description) ?? "Treasury")).slice(0, TEXT_LIMITS.description);
+  const line: CanonicalLine = {
+    source: "mercury",
+    external_id: id,
+    direction: income ? "income" : "expense",
+    line_status: "posted",
+    doc_kind: income ? "receipt" : "expense",
+    pnl_role: null,
+    currency: "USD",
+    amount_original: Math.abs(signed),
+    amount_negated: signed < 0,
+    doc_date: day,
+    cash_date: day,
+    source_account_id: accountId,
+    counterparty: {
+      name: "Mercury Treasury",
+      external_id: accountId,
+      kind: income ? "customer" : "supplier",
+    },
+    description,
+    vat: { amount: 0, status: "source" },
+    project_hint: null,
+    category_hint: income ? MERCURY_CASHBACK_CATEGORY : null,
+    linked_external_id: null,
+    provider_meta: { kind: type, providerCategory: null },
+  };
   const parsed = canonicalLineSchema.safeParse(line);
   if (!parsed.success) return skip("not_a_line");
   return { ok: true, line: parsed.data };

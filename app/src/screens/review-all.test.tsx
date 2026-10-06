@@ -7,7 +7,7 @@ import { AuthProvider } from "../auth";
 import { refreshLedger } from "../books-focus";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { ChangeForm, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
+import { ChangeForm, ReviewAllList, ReviewScreen, SplitScreen, queueAfterFocus, resetReviewListFocus, reviewFocusPath, reviewListPath, rotateReview } from "./flow-screens";
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args?: unknown }>,
@@ -885,5 +885,33 @@ describe("review queue list", () => {
     expect(cached.some((query) => query.state.data != null)).toBe(true);
     releaseApprove();
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
+  });
+});
+
+describe("review amounts keep their currency", () => {
+  it("shows a dollar review row as dollars", () => {
+    render(
+      <MemoryRouter>
+        <ReviewAllList
+          rows={[{
+            id: "r-usd",
+            transaction_id: "t-usd",
+            description: "Pending credit",
+            doc_date: "2026-09-03",
+            amount_net: 10000n,
+            currency: "USD",
+            direction: "income",
+            reason: "pending_income",
+            project_id: null,
+            category_id: null,
+            supplier_name: null,
+          }]}
+          search=""
+          backTo="/review"
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });

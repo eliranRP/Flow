@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(75);
+select plan(77);
 
 do $users$
 begin
@@ -310,6 +310,11 @@ select throws_ok(
   'interest cannot use an excluded category'
 );
 
+insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl)
+select id, 'ריבית משכנתא', 'income', 4, false, false
+from public.companies
+where name = 'הלוואות בדיקה';
+
 select throws_ok(
   $$
     insert into public.loan_splits (
@@ -321,7 +326,7 @@ select throws_ok(
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
     cross join (
       values
-        ('interest', 'העברות', 'income', 5000),
+        ('interest', 'ריבית משכנתא', 'income', 5000),
         ('escrow', 'מסים וביטוח', 'expense', 2000),
         ('principal', 'תשלומי הלוואה', 'expense', 3000)
     ) as v(part, category, kind, amount)
@@ -378,7 +383,7 @@ select throws_ok(
       values
         ('interest', 'ריבית משכנתא', 'expense', 5000),
         ('escrow', 'מסים וביטוח', 'expense', 2000),
-        ('principal', 'העברות', 'income', 3000)
+        ('principal', 'ריבית משכנתא', 'income', 3000)
     ) as v(part, category, kind, amount)
     join public.categories c
       on c.company_id = l.company_id
@@ -917,6 +922,17 @@ select is(
   'a viewer cannot delete a split'
 );
 
+select throws_ok(
+  $$
+    select public.clear_loan_split_review(id)
+    from public.transactions
+    where idempotency_key = 'loan:paid'
+  $$,
+  '42501',
+  'loan_split_review_denied',
+  'a viewer cannot clear review'
+);
+
 select tests.authenticate_as('loan_other');
 
 select is((select count(*)::int from public.loans), 0, 'another owner cannot read the loan');
@@ -1119,6 +1135,13 @@ select throws_ok(
   '42501',
   null,
   'anon cannot read loans'
+);
+
+select throws_ok(
+  $$select public.clear_loan_split_review('00000000-0000-0000-0000-000000000000')$$,
+  '42501',
+  null,
+  'anon cannot clear review'
 );
 
 reset role;

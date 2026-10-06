@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { Link } from "react-router-dom";
 import { cx } from "./cx";
 
@@ -16,6 +16,7 @@ type Common = {
   className?: string;
   title?: string;
   "aria-label"?: string;
+  buttonRef?: Ref<HTMLButtonElement>;
 };
 
 type AsButton = Common &
@@ -85,9 +86,10 @@ export function Button(props: ButtonProps) {
       </Link>
     );
   }
-  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, to: _to, title: _title, "aria-label": _aria, onClick, ...rest } = props;
+  const { busy, disabled, type = "button", full: _full, quiet: _quiet, variant: _variant, className: _className, children: _children, icon: _icon, iconEnd: _iconEnd, to: _to, title: _title, "aria-label": _aria, buttonRef, onClick, ...rest } = props;
   return (
     <button
+      ref={buttonRef}
       type={type}
       className={classes}
       disabled={disabled}

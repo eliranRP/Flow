@@ -1,0 +1,35 @@
+{
+  "transactions": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "accountId": "08bcdfe6-975f-4082-862e-e6b07e4363d1",
+      "type": "interestPosted",
+      "description": "Treasury interest",
+      "amount": 10,
+      "canonicalDay": "2026-07-29",
+      "balance": 7850
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "accountId": "08bcdfe6-975f-4082-862e-e6b07e4363d1",
+      "type": "dividendPosted",
+      "description": "Treasury dividend",
+      "amount": 6,
+      "canonicalDay": "2026-07-14",
+      "balance": 7550
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "accountId": "08bcdfe6-975f-4082-862e-e6b07e4363d1",
+      "type": "withdrawalPosted",
+      "description": "Liquidation of Treasury assets",
+      "amount": -16950,
+      "canonicalDay": "2026-06-30",
+      "balance": 0,
+      "details": {
+        "withdrawalCounterpartyId": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
+      }
+    }
+  ],
+  "cursor": null
+}

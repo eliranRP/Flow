@@ -69,12 +69,17 @@ enabled = true
 # Local only. The value lives in the shell or supabase/.env, never in git.
 [edge_runtime.secrets]
 SUMIT_KEK = "env(SUMIT_KEK)"
+MERCURY_KEK = "env(MERCURY_KEK)"
 CRON_SECRET = "env(CRON_SECRET)"
 FLOW_MCP_PEPPER = "env(FLOW_MCP_PEPPER)"
 FLOW_MCP_APP_ORIGINS = "http://127.0.0.1:43123,http://localhost:43123,https://flow-app-dx5.pages.dev"
 
 # The cron drain sends x-flow-cron and has no user JWT. The function checks that secret itself.
 [functions.sumit-sync]
+verify_jwt = false
+
+# Mercury cron uses the same header. The user path still checks the bearer inside the function.
+[functions.mercury-sync]
 verify_jwt = false
 
 # CD calls sumit-reseal with the same cron header, before db push. Decision 0085.
