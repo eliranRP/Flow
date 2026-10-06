@@ -127,8 +127,8 @@ select is(
   (select count(*)::int from public.review_queue q
     join public.transactions t on t.id = q.transaction_id
     where t.idempotency_key = 'r4:income'),
-  0,
-  'an income document is not queued'
+  1,
+  'posted income without a project is queued'
 );
 
 select is(

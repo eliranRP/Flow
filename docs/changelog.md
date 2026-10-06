@@ -2,6 +2,8 @@
 
 ## 2026-10-06
 
+Review card tidy, income in review, USD no VAT. Non-ILS review lines drop VAT hint text. The filed-today banner shortens and links לרשימה. The review card drops hint lines, mutes empty rows, and the primary button opens the next picker. Category sheets fit when short; search appears above eight categories. Posted connector income without a project enters review; approval persists a project unless the category is off-P&L. Default category fallback skips off-P&L and loan-payment defaults. Decision [0090](decisions/0090-income-in-review.md).
+
 Mercury connect UI. Settings adds a Mercury row, connect and status sheets, `useMercuryStatusQuery`, shared `ConnectSheet`, and `formatUsd`. CONTROLS and Storybook states updated. No migration.
 
 Loans L-3 review fixes. Loan match keeps the sheet open with a busy picker radio, waits for a successful read before שיוך, guards over-balance and paid-off loans, maps 23505 and correction errors, focuses חלוקת התשלום after success, and shows retry rows when a read fails. Settings loan balances use the same loading and error pattern. CONTROLS updated. No migration.

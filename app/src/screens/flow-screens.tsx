@@ -1304,13 +1304,10 @@ export function ReviewQueue({
         markHandled(filled.id);
         return;
       }
-      if (filled.direction !== "income" && !filled.project_id) throw new Error("missing");
-      const projectId = filled.direction === "income"
-        ? (null as unknown as string)
-        : filled.project_id ?? "";
+      if (!filled.project_id) throw new Error("missing");
       const result = await supabase.rpc("approve_review_item", {
         p_id: filled.id,
-        p_project_id: projectId,
+        p_project_id: filled.project_id,
         p_category_id: filled.category_id,
         p_remember: false,
         p_check_shown: true,
@@ -1414,12 +1411,13 @@ export function ReviewQueue({
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
   const splitCard = reviewIsSplit(view);
-  const approvable = !leaving && !jevLoading && (view.reason === "unallocated_shared"
-    || (splitCard
-      ? view.category_id != null
-      : view.direction === "income"
-        ? view.category_id != null
-        : view.project_id != null && view.category_id != null));
+  const needProject = view.reason !== "unallocated_shared" && !splitCard && view.project_id == null;
+  const needCategory = view.reason !== "unallocated_shared" && view.category_id == null;
+  const settled = !leaving && !jevLoading;
+  const nextPick = settled ? (needProject ? "project" : needCategory ? "category" : null) : null;
+  const approvable = settled && nextPick == null && (view.reason === "unallocated_shared"
+    || (splitCard ? view.category_id != null : view.project_id != null && view.category_id != null));
+  const approveLabel = nextPick === "project" ? "בחירת פרויקט" : nextPick === "category" ? "בחירת קטגוריה" : "אישור";
   return (
     <ViewerScope>
     <div className="ui-review-queue">
@@ -1453,10 +1451,10 @@ export function ReviewQueue({
       {auto > 0 && !hideAuto ? (
         <Banner
           icon={<ReviewIcon />}
-          title={filedTodayBannerTitle(auto, card.assistant_filed_today === true)}
+          title={filedTodayBannerTitle(auto)}
           action={
             <>
-              <TextLink to={filedTo ?? `/review/filed${search}`}>צפייה</TextLink>
+              <TextLink to={filedTo ?? `/review/filed${search}`}>לרשימה</TextLink>
               <IconButton label="סגירה" onClick={() => { setHideAuto(true); }}>
                 <CloseIcon />
               </IconButton>
@@ -1467,7 +1465,7 @@ export function ReviewQueue({
       <div className="ui-review-motion" data-motion={motion === "still" ? undefined : motion} key={card.id}>
         <ReviewCard
           supplier={card.supplier_name ?? card.description}
-          sourceLine={`${docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
+          sourceLine={`${card.direction === "income" ? "הכנסה" : docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
           netAgorot={card.amount_net}
           currency={card.currency}
           vatLine={reviewVatLine(card.vat_agorot, card.currency)}
@@ -1477,7 +1475,7 @@ export function ReviewQueue({
           direction={card.direction}
           projectButtonRef={reviewLineFocus.project}
           categoryButtonRef={reviewLineFocus.category}
-          onProject={holdWrites || card.direction === "income" ? undefined : openProject}
+          onProject={holdWrites ? undefined : openProject}
           onCategory={holdWrites ? undefined : openCategory}
         />
       </div>
@@ -1487,9 +1485,19 @@ export function ReviewQueue({
           <Button
             full
             busy={approve.isPending}
-            disabled={!approvable}
+            disabled={!settled}
+            icon={approveLabel === "אישור" ? <CheckIcon /> : undefined}
             onClick={() => {
-              if (approveGuard.current || jevLoading || !approvable) return;
+              if (approveGuard.current || !settled) return;
+              if (nextPick === "project") {
+                openProject();
+                return;
+              }
+              if (nextPick === "category") {
+                openCategory();
+                return;
+              }
+              if (!approvable) return;
               if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
               if (card.reason === "unallocated_shared") {
                 if (!card.transaction_id) return;
@@ -1507,9 +1515,8 @@ export function ReviewQueue({
                 },
               });
             }}
-            icon={<CheckIcon />}
           >
-            אישור
+            {approveLabel}
           </Button>
         </div>
         <div className="ui-review-actions-row">
@@ -1540,7 +1547,8 @@ function invoiceDate(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function reviewVatLine(vat: bigint | undefined, currency?: string): string {
+function reviewVatLine(vat: bigint | undefined, currency?: string): string | null {
+  if (currency != null && currency !== "ILS") return null;
   if (vat == null) return "לפני מע״מ";
   if (vat === 0n) return "פטור ממע״מ";
   const shown = vat < 0n ? -vat : vat;
@@ -1795,9 +1803,9 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   const splitReview = sample?.split === true || reviewIsSplit(row);
   useEffect(() => {
     if (hold === "") return;
-    const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
+    const complete = splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
     if (complete) setHold("");
-  }, [hold, income, splitReview, projectId, categoryId]);
+  }, [hold, splitReview, projectId, categoryId]);
   useEffect(() => {
     if (leaveNote !== "" && remember === savedRemember) setLeaveNote("");
   }, [leaveNote, remember, savedRemember]);
@@ -1865,7 +1873,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       assertNoError(await supabase.rpc("resolve_review", {
         p_id: item,
         p_action: "changed",
-        ...(income ? {} : { p_project_id: next.projectId }),
+        p_project_id: next.projectId,
         p_category_id: next.categoryId,
         p_remember: next.remember,
       }));
@@ -1941,10 +1949,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       const next = picked.current;
       const transactionId = sharedTx.current;
       if (!supabase || transactionId == null || next.categoryId === "") throw new Error("supabase");
-      if (!income && next.projectId === "") throw new Error("supabase");
+      if (next.projectId === "") throw new Error("supabase");
       assertNoError(await supabase.rpc("reassign_transaction", {
         p_id: transactionId,
-        p_project_id: income ? (null as unknown as string) : next.projectId,
+        p_project_id: next.projectId,
         p_category_id: next.categoryId,
       }));
     },
@@ -2045,9 +2053,9 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
           await saveField.mutateAsync();
           return undefined;
         }
-        const complete = income ? nextCategory !== "" : nextProject !== "" && nextCategory !== "";
+        const complete = nextProject !== "" && nextCategory !== "";
         if (!complete) {
-          setHold(income ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+          setHold("בחרו פרויקט וקטגוריה.");
           return "hold";
         }
         setHold("");
@@ -2061,9 +2069,9 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       onCloseCheck={() => {
         if (sample) return Promise.resolve();
         if (blocked()) return Promise.reject(new Error("preview"));
-        const complete = income || splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
+        const complete = splitReview ? categoryId !== "" : projectId !== "" && categoryId !== "";
         if (!complete) {
-          setHold(income || splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+          setHold(splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           return Promise.reject(new Error("incomplete"));
         }
         if (!splitReview && remember !== savedRemember && (wroteReview.current || closedReview.current)) {
@@ -2310,9 +2318,7 @@ export function TransactionScreen({
   useEffect(() => {
     if (hold === "" || !txn) return;
     const splitLike = collapsedTo == null && (txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1);
-    const complete = (splitLike || txn.direction === "income")
-      ? categoryId !== ""
-      : projectId !== "" && categoryId !== "";
+    const complete = splitLike ? categoryId !== "" : projectId !== "" && categoryId !== "";
     if (complete) setHold("");
   }, [hold, txn, categoryId, projectId, collapsedTo]);
   const undoId = useRef<string | null>(null);
@@ -2356,10 +2362,10 @@ export function TransactionScreen({
       const next = writeTarget.current;
       if (!current) throw new Error("supabase");
       const supabase = getSupabase();
-      if (!supabase || next.projectId === "" && current.direction !== "income" || next.categoryId === "") throw new Error("supabase");
+      if (!supabase || next.projectId === "" || next.categoryId === "") throw new Error("supabase");
       const saved = await supabase.rpc("reassign_transaction", {
         p_id: current.id,
-        p_project_id: current.direction === "income" ? (null as unknown as string) : next.projectId,
+        p_project_id: next.projectId,
         p_category_id: next.categoryId,
       });
       assertNoError(saved);
@@ -2442,11 +2448,9 @@ export function TransactionScreen({
       ? next.projectId !== ""
       : splitRow
         ? next.categoryId !== ""
-        : detailRow.direction === "income"
-          ? next.categoryId !== ""
-          : next.projectId !== "" && next.categoryId !== "";
+        : next.projectId !== "" && next.categoryId !== "";
     if (!complete) {
-      setHold(collapsing ? COLLAPSE_PICK_HOLD : detailRow.direction === "income" || splitRow ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+      setHold(collapsing ? COLLAPSE_PICK_HOLD : splitRow ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
       return undefined;
     }
     setHold("");
@@ -2505,6 +2509,7 @@ export function TransactionScreen({
   );
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
+  const vatShown = (txn.currency ?? "ILS") === "ILS";
   return (
     <div>
       <ScreenHeader
@@ -2516,7 +2521,10 @@ export function TransactionScreen({
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
         <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" currency={txn.currency} /></p>
-        <p className="t-hint">לפני מע״מ · <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi></p>
+        <p className="t-hint">
+          {vatShown ? "לפני מע״מ · " : null}
+          <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
+        </p>
         {reviewLabel || paymentLabel ? (
           <div className="ui-status-row">
             {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
@@ -2554,14 +2562,14 @@ export function TransactionScreen({
         <ListRow
           variant="button"
           title="חשבונית ותשלום"
-          hint="מע״מ, מספר חשבונית, שורת הבנק"
+          hint={vatShown ? "מע״מ, מספר חשבונית, שורת הבנק" : "מספר חשבונית, שורת הבנק"}
           icon={<DocumentIcon size={22} />}
           action={<ChevronDownIcon />}
           expanded={docOpen}
           onClick={() => { setDocOpen((open) => !open); }}
         />
       </List>
-      {docOpen ? (
+      {docOpen && vatShown ? (
         <p className="ui-page-pad t-hint">
           מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
           {" · "}
