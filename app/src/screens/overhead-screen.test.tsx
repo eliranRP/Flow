@@ -173,7 +173,7 @@ describe("project overhead hero", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("₪200,000")).toBeInTheDocument();
-    expect(screen.getByText("₪100,000")).toBeInTheDocument();
+    expect(screen.getByText("−₪100,000")).toBeInTheDocument();
     expect(screen.getByText("₪60,000")).toBeInTheDocument();
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
     expect(screen.getByText("דלוק · החלק בכלליות הוא ₪40,000")).toBeInTheDocument();

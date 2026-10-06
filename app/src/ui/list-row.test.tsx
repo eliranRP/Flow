@@ -21,7 +21,23 @@ describe("ListRow", () => {
     expectTarget(screen.getByRole("link", { name: /הרצל/ }));
     expect(screen.getByText("−₪10,000")).toHaveClass("ui-loss");
     expect(screen.getByText("ספק · פטור ממע״מ")).toBeInTheDocument();
-    expect(screen.getByText("₪12,000")).toBeInTheDocument();
+    const txnAmount = screen.getByText("−₪12,000");
+    expect(txnAmount.closest("bdi")).toHaveAttribute("dir", "ltr");
+    expect(txnAmount.textContent).toBe("−₪12,000");
+  });
+
+  it("renders a USD transaction amount inside one bdi and honours project currency", () => {
+    render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="Wire" agorot={125_000n} sign="out" source="bank" currency="USD" />
+          <ListRow variant="project" title="Harbor" agorot={200_000n} currency="USD" />
+        </>
+      </MemoryRouter>,
+    );
+    const usdTxn = screen.getByText("−$1,250");
+    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250");
+    expect(screen.getByText("$2,000")).toBeInTheDocument();
   });
 
   it("renders static, button, danger, and selectable rows", () => {

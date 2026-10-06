@@ -1,5 +1,5 @@
 import type { Ref } from "react";
-import { formatAmount } from "./big-number";
+import { formatAmountText } from "@flow/shared";
 import { DocumentIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
@@ -44,7 +44,7 @@ export function ReviewCard({
   vatLine,
   suggestion,
   reason,
-  direction: _direction = "expense",
+  direction = "expense",
   onProject,
   onCategory,
   projectButtonRef,
@@ -52,6 +52,10 @@ export function ReviewCard({
   pending = false,
 }: ReviewCardProps) {
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
+  const amountText = formatAmountText(shown, currency, {
+    detail: true,
+    direction,
+  });
   const shared = reason === "unallocated_shared";
   const projectValue = suggestion?.project;
   const categoryValue = suggestion?.category;
@@ -95,7 +99,7 @@ export function ReviewCard({
         </div>
       </div>
       <p className="t-display">
-        <bdi dir="ltr">{formatAmount(shown, "detail", currency)}</bdi>
+        <bdi dir="ltr">{amountText}</bdi>
       </p>
       {vatLine ? <p className="t-hint">{vatLine}</p> : null}
       <div className="ui-review-ai">

@@ -112,6 +112,21 @@ describe("transaction status chips", () => {
     expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
   });
 
+  it("hides VAT and invoice rows for a USD expense", () => {
+    renderTxn({
+      ...expense,
+      currency: "USD",
+      amount_gross: -125_000n,
+      amount_net: -125_000n,
+      vat_amount: 0n,
+      vat_status: "source",
+    });
+    expect(screen.getByText("−$1,250")).toBeInTheDocument();
+    expect(screen.queryByText("לפני מע״מ")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^מע״מ /)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
+  });
+
   it("shows a dollar detail in dollars", () => {
     renderTxn({
       ...expense,

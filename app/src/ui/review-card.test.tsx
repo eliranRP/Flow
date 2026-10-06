@@ -25,4 +25,26 @@ describe("ReviewCard", () => {
     expect(projectRow.querySelector(".ui-row-title")).toHaveClass("ui-row-title-muted");
     expect(screen.getByRole("button", { name: /פרויקט:/ })).toBeInTheDocument();
   });
+
+  it("prefixes expense amounts with a minus and leaves income unsigned", () => {
+    const { rerender } = render(
+      <ReviewCard
+        supplier="Vendor"
+        sourceLine="הוצאה · 01/09/2026"
+        netAgorot={125_000n}
+        direction="expense"
+      />,
+    );
+    expect(screen.getByText("−₪1,250")).toBeInTheDocument();
+    rerender(
+      <ReviewCard
+        supplier="Client"
+        sourceLine="הכנסה · 01/09/2026"
+        netAgorot={125_000n}
+        direction="income"
+      />,
+    );
+    expect(screen.getByText("₪1,250")).toBeInTheDocument();
+    expect(screen.queryByText(/^−/)).not.toBeInTheDocument();
+  });
 });

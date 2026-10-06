@@ -1,4 +1,14 @@
-import { formatIls, roundedProfitAgorot, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
+import { formatIls, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
+import {
+  companyRows,
+  dashboardHasBooks,
+  heroLabelProfit,
+  primaryCurrency,
+  profitInCurrency,
+  projectAmountFigures,
+  projectMarginHint,
+  roundedHeroProfit,
+} from "../by-currency";
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { useHeldOrder } from "../list-hold";
@@ -134,7 +144,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
 }
 
 function hasBooks(data: Dashboard): boolean {
-  return data.projects.length > 0 || data.income_agorot !== 0n || data.expense_agorot !== 0n;
+  return dashboardHasBooks(data);
 }
 
 export function HomeBooks({
@@ -171,14 +181,28 @@ export function HomeBooks({
 }) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
-  const ranked = [...data.projects].sort((a, b) => (a.profit_agorot < b.profit_agorot ? 1 : a.profit_agorot > b.profit_agorot ? -1 : 0)).slice(0, 3);
+  const rankCurrency = primaryCurrency(data);
+  const ranked = [...data.projects]
+    .sort((a, b) => {
+      const left = profitInCurrency(a, rankCurrency);
+      const right = profitInCurrency(b, rankCurrency);
+      return left < right ? 1 : left > right ? -1 : 0;
+    })
+    .slice(0, 3);
   const leading = useHeldOrder(ranked, (project) => project.id);
-  const hero = roundedProfitAgorot(data.income_agorot, data.expense_agorot);
+  const currencyRows = companyRows(data);
+  const heroFigures = currencyRows.map((row) => ({
+    agorot: roundedHeroProfit(row.income_minor, row.expense_minor),
+    currency: row.currency,
+    loss: roundedHeroProfit(row.income_minor, row.expense_minor) < 0n,
+  }));
+  const hero = heroLabelProfit(heroFigures);
+  const ilsOnly = currencyRows.length === 1 && currencyRows[0]?.currency === "ILS";
   const previous =
     data.prev_income_agorot != null && data.prev_expense_agorot != null
-      ? roundedProfitAgorot(data.prev_income_agorot, data.prev_expense_agorot)
+      ? roundedHeroProfit(data.prev_income_agorot, data.prev_expense_agorot)
       : data.prev_net_agorot;
-  const percent = changePercent(hero, previous);
+  const percent = ilsOnly ? changePercent(heroFigures[0]?.agorot ?? 0n, previous) : null;
   const comparison = comparisonWords(period);
   const pending = data.review_count;
   const unpaidReady = unpaidPhase === "ready";
@@ -221,13 +245,23 @@ export function HomeBooks({
           />
         }
       >
-        <Hero label={heroProfitLabel(period, hero)} agorot={hero} explanation={heroExplanation(period)} />
+        <Hero
+          label={heroProfitLabel(period, hero)}
+          figures={heroFigures}
+          explanation={heroExplanation(period)}
+        />
       </TopBand>
 
       {notice}
 
-      <FlowLines income={data.income_agorot} expense={data.expense_agorot} />
-      {comparison && percent != null ? (
+      <FlowLines
+        lines={currencyRows.map((row) => ({
+          currency: row.currency,
+          income: row.income_minor,
+          expense: row.expense_minor,
+        }))}
+      />
+      {ilsOnly && comparison && percent != null ? (
         <p className="ui-flow-note">
           <ChangePill percent={percent} comparison={comparison} />
         </p>
@@ -280,25 +314,23 @@ function unpaidHint(pending: number, unpaidCount: number, unpaidGross: bigint, r
 }
 
 function ProjectLine({ project, search }: { project: ProjectRow; search: string }) {
+  const amounts = projectAmountFigures(project);
+  const single = amounts.length === 1 ? amounts[0] : undefined;
+  const margin = projectMarginHint(project);
   return (
     <ListRow
       variant="project"
       title={project.name}
-      hint={marginHint(project)}
-      agorot={project.profit_agorot}
-      loss={project.profit_agorot < 0n}
+      hint={margin == null ? undefined : (
+        <>
+          רווחיות <bdi dir="ltr">{margin}</bdi>
+        </>
+      )}
+      agorot={single?.minor ?? project.profit_agorot}
+      currency={single?.currency}
+      amounts={amounts.length > 1 ? amounts : undefined}
+      loss={(single?.minor ?? project.profit_agorot) < 0n}
       href={`/projects/${project.id}${search}`}
     />
-  );
-}
-
-function marginHint(project: ProjectRow): ReactNode | undefined {
-  if (project.income_agorot <= 0n) return undefined;
-  const pct = Number((project.profit_agorot * 100n) / project.income_agorot);
-  const shown = pct < 0 ? `−${String(Math.abs(pct))}%` : `${String(pct)}%`;
-  return (
-    <>
-      רווחיות <bdi dir="ltr">{shown}</bdi>
-    </>
   );
 }
