@@ -18,5 +18,6 @@ Every UUID (ids, accountId, counterpartyId, cardId, category ids, and page curso
 | transactions-status-failed.json | ?limit=5&status=failed | 5 failed check deposits |
 | transaction-by-id.json | GET /transaction/{id} | one bare Transaction object (no wrapper) |
 | transaction-not-found-404.json | GET /transaction/<zero uuid> | `{status:404, body:{_error:"{\"errors\":{\"notFound\":[…]}}"}}` |
+| SYNTHETIC-treasury-transactions.json | none (derived) | treasury interest, a dividend, and a withdrawal leg |
 | SYNTHETIC-pending.json | none (derived) | a card line set to pending, postedAt null |
 | SYNTHETIC-pending-then-sent.json | none (derived) | the same id after posting |

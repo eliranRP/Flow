@@ -26,7 +26,15 @@ test("generated Mercury types are the three GET paths", () => {
 });
 
 test("the allowlist is GET paths plus the observed credit and treasury paths", () => {
-  for (const path of ["/accounts", "/credit", "/treasury", "/categories", "/transactions", "/transaction/{transactionId}"]) {
+  for (const path of [
+    "/accounts",
+    "/credit",
+    "/treasury",
+    "/treasury/{treasuryId}/transactions",
+    "/categories",
+    "/transactions",
+    "/transaction/{transactionId}",
+  ]) {
     assert.match(allowlist, new RegExp(path.replaceAll("/", "\\/").replace("{", "\\{").replace("}", "\\}")));
   }
   assert.doesNotMatch(allowlist, /api\.mercury\.com/);

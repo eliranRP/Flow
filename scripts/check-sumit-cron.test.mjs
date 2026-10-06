@@ -10,6 +10,7 @@ const phase1 = new URL("../supabase/migrations/20260928140000_phase1_slice.sql",
 const dailySchedule = new URL("../supabase/migrations/20261003140000_sumit_daily_schedule.sql", import.meta.url);
 const drainUrl = new URL("../supabase/migrations/20261003160000_sumit_drain_url.sql", import.meta.url);
 const engine = new URL("../supabase/migrations/20261003210000_connector_engine.sql", import.meta.url);
+const totals = new URL("../supabase/migrations/20261004130000_mercury_ils_totals.sql", import.meta.url);
 const pgtap = new URL("../supabase/tests/database/sumit_daily_schedule.test.sql", import.meta.url);
 const checkSql = new URL("./check-sumit-cron.sql", import.meta.url);
 
@@ -52,7 +53,7 @@ test("the connector daily and drain commands match across the migration, pgTAP, 
   const tap = readFileSync(pgtap, "utf8");
   const check = readFileSync(checkSql, "utf8");
   const daily = dollarBlocks(migration)[0];
-  const drain = dollarBlocks(migration)[1];
+  const drain = dollarBlocks(readFileSync(totals, "utf8"))[1];
   assert.match(daily, /insert into public\.connector_refresh_requests/);
   assert.equal(dollarCron(tap), daily);
   assert.equal(dollarBlocks(check)[0], daily);
