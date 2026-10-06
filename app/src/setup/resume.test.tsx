@@ -1,11 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { RouterProvider, createMemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
-import { SetupResume } from "./route";
+import { resetSetupResumeForTests, SetupResume } from "./route";
 import { emptySetupStore, markSessionEntered, readSetupStore, writeSetupStore } from "./storage";
 
 const userId = "user-1";
@@ -47,6 +47,7 @@ const dashboard = {
 };
 
 const calls = vi.hoisted(() => ({ rpc: [] as string[], from: [] as string[] }));
+const gate = vi.hoisted(() => ({ ownerId: "user-1" }));
 
 function chain(data: unknown) {
   const result = { data, error: null };
@@ -82,7 +83,7 @@ const supabase = {
   },
   from: (table: string) => {
     calls.from.push(table);
-    if (table === "companies") return chain({ owner_id: userId });
+    if (table === "companies") return chain({ owner_id: gate.ownerId });
     if (table === "review_queue") return chain([]);
     return chain(null);
   },
@@ -97,26 +98,34 @@ function Where() {
   return <p>{pathname}</p>;
 }
 
-function renderAt(path: string) {
+function renderAt(path: string, entries: string[] = [path]) {
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <><SetupResume /><Where /></> },
+      { path: "/review", element: <><SetupResume /><Where /></> },
+      { path: "/setup/:step", element: <p>step</p> },
+    ],
+    { initialEntries: entries, initialIndex: entries.length - 1 },
+  );
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <AuthProvider>
-          <BooksProvider>
-            <SetupResume />
-            <Where />
-          </BooksProvider>
-        </AuthProvider>
-      </MemoryRouter>
+      <AuthProvider>
+        <BooksProvider>
+          <RouterProvider router={router} />
+        </BooksProvider>
+      </AuthProvider>
     </QueryClientProvider>,
   );
+  return { router, unmount: view.unmount };
 }
 
 describe("setup resume", () => {
   afterEach(() => {
     calls.rpc.length = 0;
     calls.from.length = 0;
+    gate.ownerId = userId;
+    resetSetupResumeForTests();
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -131,35 +140,70 @@ describe("setup resume", () => {
   });
 
   it("starts the run from Home", async () => {
-    renderAt("/");
+    const { router } = renderAt("/");
     await waitFor(() => {
-      expect(screen.getByText("/setup/1")).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe("/setup/1");
     });
     expect(calls.rpc).toContain("get_dashboard");
+  });
+
+  it("does not resume when Home is opened after a deep link", async () => {
+    writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    const { router } = renderAt("/review", ["/review"]);
+    await waitFor(() => {
+      expect(screen.getByText("/review")).toBeInTheDocument();
+    });
+    await act(async () => {
+      await router.navigate("/");
+    });
+    await waitFor(() => {
+      expect(calls.from).toContain("review_queue");
+    });
+    expect(screen.getByText("/")).toBeInTheDocument();
+    expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
   });
 
   it("resumes a started run once, and neither the stamp nor the session alone opens it again", async () => {
     writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
     const first = renderAt("/");
     await waitFor(() => {
-      expect(screen.getByText("/setup/1")).toBeInTheDocument();
+      expect(first.router.state.location.pathname).toBe("/setup/1");
     });
     const stamped = readSetupStore(userId, "company-1");
     expect(stamped.run_resumed_at).not.toBeNull();
     first.unmount();
+    resetSetupResumeForTests();
     sessionStorage.clear();
     const second = renderAt("/");
+    await waitFor(() => {
+      expect(calls.from).toContain("review_queue");
+    });
     await waitFor(() => {
       expect(screen.getByText("/")).toBeInTheDocument();
     });
     expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
     second.unmount();
+    resetSetupResumeForTests();
     markSessionEntered(userId);
     writeSetupStore(userId, "company-1", { ...stamped, run_resumed_at: null });
     renderAt("/");
     await waitFor(() => {
+      expect(calls.from).toContain("review_queue");
+    });
+    await waitFor(() => {
       expect(screen.getByText("/")).toBeInTheDocument();
     });
     expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
+  });
+
+  it("ignores viewers on Home", async () => {
+    gate.ownerId = "other";
+    renderAt("/");
+    await waitFor(() => {
+      expect(calls.from).toContain("companies");
+    });
+    expect(screen.getByText("/")).toBeInTheDocument();
+    expect(calls.rpc).not.toContain("get_dashboard");
+    expect(screen.queryByText("/setup/0")).not.toBeInTheDocument();
   });
 });
