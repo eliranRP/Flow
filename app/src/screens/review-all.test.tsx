@@ -122,6 +122,16 @@ function showsPlace(text: string) {
   })).toBeInTheDocument();
 }
 
+/** The next card can paint while אישור is still busy with the previous write. */
+async function clickIdleApprove() {
+  await waitFor(() => {
+    const button = screen.getByRole("button", { name: "אישור" });
+    expect(button).toBeEnabled();
+    expect(button).not.toHaveAttribute("aria-busy");
+  });
+  fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+}
+
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -511,13 +521,13 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: /ברזל הדרום/ }));
     expect(await screen.findByRole("heading", { name: "ברזל הדרום" })).toBeInTheDocument();
     showsPlace("3 מתוך 5");
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await clickIdleApprove();
     expect(await screen.findByRole("heading", { name: "צבע הדרום" })).toBeInTheDocument();
     showsPlace("3 מתוך 4");
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await clickIdleApprove();
     expect(await screen.findByRole("heading", { name: "חשמל הצפון" })).toBeInTheDocument();
     showsPlace("3 מתוך 3");
-    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    await clickIdleApprove();
     expect(await screen.findByRole("heading", { name: "מחסן הנמל" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עגורני החוף" })).not.toBeInTheDocument();
     showsPlace("1 מתוך 2");
