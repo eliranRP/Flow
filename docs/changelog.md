@@ -2,6 +2,8 @@
 
 ## 2026-10-06
 
+sync_bank auth fix. `mercury-sync` resolves the owner company through `_shared/owner.ts`: GoTrue `getUser()` first, then, for the session-less JWT that `flow-mcp` signs, the RLS-readable company whose `owner_id` matches the token `sub` (PostgREST verifies the token). Viewers still get `no company`. No migration.
+
 Review card tidy, income in review, USD no VAT. Non-ILS review lines drop VAT hint text. The filed-today banner shortens and links לרשימה. The review card drops hint lines, mutes empty rows, and the primary button opens the next picker. Category sheets fit when short; search appears above eight categories. Posted connector income without a project enters review; approval persists a project unless the category is off-P&L. Default category fallback skips off-P&L and loan-payment defaults. Decision [0091](decisions/0091-income-in-review.md).
 
 MCP cycle 4. `flow-mcp` adds `create_project`, `create_category`, `sync_bank`, and optional `hide_category`, with undo for project, category, and hide. Migration `20261006120000_mcp_cycle4.sql`. `mercury-sync` returns insert/update/remove counts and `newest_date`. Decision [0090](decisions/0090-mcp-cycle4.md).
