@@ -43,8 +43,8 @@ export const LongHebrew: Story = {
   args: { title: longHebrew, hint: longHebrew, to: "/review" },
 };
 export const WithAction: Story = {
-  args: { title: "3 תנועות שויכו היום בלי להמתין בתור" },
-  render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">צפייה</TextLink>} />,
+  args: { title: "3 תנועות שויכו אוטומטית היום" },
+  render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">לרשימה</TextLink>} />,
 };
 export const NoticeNeutral: Story = {
   args: { title: "מצב תצוגה" },

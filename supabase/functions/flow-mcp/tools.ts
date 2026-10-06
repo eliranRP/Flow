@@ -432,7 +432,7 @@ function readTools() {
 
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense to a project and category. An open review is closed.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       project_id: { type: "string" },

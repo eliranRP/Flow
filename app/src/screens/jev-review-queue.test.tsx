@@ -232,9 +232,9 @@ describe("Jev review one tap", () => {
     }];
     renderQueue();
     await waitFor(() => {
-      expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
+      expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
   });
@@ -259,7 +259,7 @@ describe("Jev review one tap", () => {
     });
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(document.querySelector(".ui-review-note")).toBeNull();
-    expect(document.querySelector(".ui-review-note-slot")).not.toBeNull();
+    expect(document.querySelector(".ui-review-note-slot")).toBeNull();
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeDisabled();
     expect(fieldBox().rows).toBe(2);
@@ -280,7 +280,7 @@ describe("Jev review one tap", () => {
     });
   });
 
-  it("keeps the note row when a slow read settles with no suggestion", async () => {
+  it("offers בחירת פרויקט when a slow read settles with no suggestion", async () => {
     let release: () => void = () => undefined;
     db.holdSuggestions = new Promise<void>((resolve) => {
       release = resolve;
@@ -293,9 +293,7 @@ describe("Jev review one tap", () => {
     });
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     expect(document.querySelector(".ui-review-note")).toBeNull();
-    const slot = document.querySelector(".ui-review-note-slot");
-    expect(slot).not.toBeNull();
-    expect(slot?.textContent).toBe("");
+    expect(document.querySelector(".ui-review-note-slot")).toBeNull();
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
     const pendingRows = fieldBox().rows;
     release();
@@ -305,8 +303,8 @@ describe("Jev review one tap", () => {
     expect(fieldBox().rows).toBe(pendingRows);
     expect(document.querySelector(".ui-review-note")).toBeNull();
     expect(document.querySelector(".ui-review-note-slot")).toBeNull();
-    expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
   });
 
@@ -528,11 +526,11 @@ describe("Jev review one tap", () => {
     renderQueue();
     await waitFor(() => {
       expect(document.querySelector("[data-jev-pending]")).toBeNull();
-      expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
+      expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
     expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).not.toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
   });
 
   it("fails a Jev read without a toast and leaves the stored row", async () => {
@@ -540,9 +538,9 @@ describe("Jev review one tap", () => {
     db.integration = { enabled: true, mode: "shadow" };
     renderQueue();
     await waitFor(() => {
-      expect(screen.getByText("אין הצעה, הקישו לבחירה")).toBeInTheDocument();
+      expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
   });
