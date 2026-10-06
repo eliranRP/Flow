@@ -559,6 +559,15 @@ a.ui-row,
 [data-vaul-drawer].ui-sheet-panel.ui-sheet-tall {
   height: calc(100dvh - var(--sheet-gap)) !important;
   max-height: calc(100dvh - var(--sheet-gap)) !important;
+  padding-bottom: 0;
+}
+
+.ui-sheet-tall .ui-sheet-surface {
+  padding-bottom: 0;
+}
+
+.ui-sheet-tall .ui-sheet-body {
+  max-height: none;
 }
 
 .ui-sheet-fit .ui-sheet-surface {

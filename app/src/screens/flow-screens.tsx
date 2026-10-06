@@ -1452,13 +1452,11 @@ export function ReviewQueue({
         <Banner
           icon={<ReviewIcon />}
           title={filedTodayBannerTitle(auto)}
+          hint={<TextLink to={filedTo ?? `/review/filed${search}`}>לרשימה</TextLink>}
           action={
-            <>
-              <TextLink to={filedTo ?? `/review/filed${search}`}>לרשימה</TextLink>
-              <IconButton label="סגירה" onClick={() => { setHideAuto(true); }}>
-                <CloseIcon />
-              </IconButton>
-            </>
+            <IconButton label="סגירה" onClick={() => { setHideAuto(true); }}>
+              <CloseIcon />
+            </IconButton>
           }
         />
       ) : null}
