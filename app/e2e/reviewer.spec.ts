@@ -88,11 +88,11 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.goto("/reviewer/review");
   await expect(page.getByText("הוצאה משותפת")).toBeVisible();
   await expect(page.getByText("1 מתוך 3")).toBeVisible();
-  await page.getByRole("link", { name: "צפייה" }).click();
+  await page.getByRole("link", { name: "לרשימה" }).click();
   await expect(page).toHaveURL(/\/reviewer\/filed$/);
   await page.goto("/reviewer/review");
   await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("link", { name: "צפייה" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "לרשימה" })).toHaveCount(0);
   await expectNoOverflow(page);
   const approve = page.getByRole("button", { name: "אישור" });
   expect(await approve.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
@@ -111,12 +111,11 @@ test("the queue opens a shared split, blocks a missing category, and approves th
   await page.goto("/reviewer/review");
   await page.getByRole("button", { name: "דלג" }).click();
   await toast(page, "דילגנו על הפריט");
-  await expect(page.getByText("חסר קטגוריה, הקישו לבחירה")).toBeVisible();
-  const held = page.getByRole("button", { name: "אישור" });
-  await expect(held).toBeDisabled();
-  expect(await held.evaluate((node) => getComputedStyle(node).cursor)).toBe("not-allowed");
-  await held.click({ force: true });
-  await expect(page.getByText("חסר קטגוריה, הקישו לבחירה")).toBeVisible();
+  // 0091: a missing category is a muted "לא נבחר" row, and the primary action picks it instead of approving.
+  await expect(page.getByRole("button", { name: "קטגוריה: לא נבחר" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "אישור" })).toHaveCount(0);
+  const held = page.getByRole("button", { name: "בחירת קטגוריה", exact: true });
+  await expect(held).toBeEnabled();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/\/reviewer\/save\?save=ok&item=q-bolts$/);
   await page.goto("/reviewer/review");
@@ -296,7 +295,7 @@ test("category, project queue, and waiting stay inside the sample", async ({ pag
   await expect(page.getByText("צבעי הכרמל בע״מ · ₪300")).toBeVisible();
 
   await page.goto("/reviewer/project");
-  await page.getByRole("link", { name: "צפייה" }).click();
+  await page.getByRole("link", { name: "לרשימה" }).click();
   await expect(page).toHaveURL(/\/reviewer\/filed$/);
   await page.goto("/reviewer/project");
   await page.getByRole("link", { name: "שינוי" }).click();
@@ -432,7 +431,7 @@ test("approving ברגי העמק adds the split to שויכו היום, and ב�
   await expect(undo).toBeVisible();
   // Hover pauses the 5s timer. Later moves use dispatch so the pointer stays put.
   await page.locator(".ui-toast").hover();
-  await page.getByRole("link", { name: "צפייה" }).dispatchEvent("click");
+  await page.getByRole("link", { name: "לרשימה" }).dispatchEvent("click");
   await expect(page).toHaveURL(/\/reviewer\/filed$/);
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   const filed = page.getByRole("link", { name: /ברגי העמק/ });
@@ -457,7 +456,9 @@ test("a saved split category is not a suggestion and אישור is enabled", asy
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
   await expect(page.getByText("מפוצל · 2 פרויקטים")).toBeVisible();
   await expect(page.getByText("הצעה")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "אישור" })).toBeDisabled();
+  // 0091: no category yet, so there is no אישור; the primary action is an enabled בחירת קטגוריה.
+  await expect(page.getByRole("button", { name: "אישור" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "בחירת קטגוריה", exact: true })).toBeEnabled();
   await page.getByRole("link", { name: "שינוי" }).click();
   await expect(page).toHaveURL(/item=q-bolts/);
   await expect(page.getByRole("switch", { name: "לזכור לספק הזה" })).toHaveCount(0);

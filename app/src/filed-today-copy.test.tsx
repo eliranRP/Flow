@@ -8,23 +8,16 @@ describe("שויכו היום copy", () => {
     expect(FILED_TODAY_EMPTY_BODY).toBe("כש־SUMIT משייך תנועה בלי תור, או כשהעוזר מאשר תנועה היום, היא תופיע כאן.");
   });
 
-  it("uses the queue clause only for the old set", () => {
-    render(<p>{filedTodayBannerTitle(4, false)}</p>);
+  it("uses the plural auto-filed copy with an LTR count", () => {
+    render(<p>{filedTodayBannerTitle(4)}</p>);
     expect(screen.getByText("4")).toBeInTheDocument();
-    expect(screen.getByText(/תנועות שויכו היום בלי להמתין בתור/)).toBeInTheDocument();
-  });
-
-  it("drops the queue clause when an assistant approval is in the count", () => {
-    render(<p>{filedTodayBannerTitle(3, true)}</p>);
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText(/תנועות שויכו היום$/)).toBeInTheDocument();
+    expect(screen.getByText(/תנועות שויכו אוטומטית היום/)).toBeInTheDocument();
     expect(screen.queryByText(/בלי להמתין/)).not.toBeInTheDocument();
   });
 
-  it("uses the singular, with no digit", () => {
-    const { rerender } = render(<p>{filedTodayBannerTitle(1, false)}</p>);
-    expect(screen.getByText("תנועה אחת שויכה היום בלי להמתין בתור")).toBeInTheDocument();
-    rerender(<p>{filedTodayBannerTitle(1, true)}</p>);
-    expect(screen.getByText("תנועה אחת שויכה היום")).toBeInTheDocument();
+  it("uses the singular auto-filed copy with no digit", () => {
+    render(<p>{filedTodayBannerTitle(1)}</p>);
+    expect(screen.getByText("תנועה אחת שויכה אוטומטית היום")).toBeInTheDocument();
+    expect(screen.queryByText(/בלי להמתין/)).not.toBeInTheDocument();
   });
 });
