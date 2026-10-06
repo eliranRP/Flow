@@ -33,8 +33,10 @@ create unique index mcp_writes_loan_open_idx
   on private.mcp_writes (user_id, loan_id)
   where kind = 'loan' and undone_at is null;
 
-create unique index mcp_writes_loan_update_open_idx
-  on private.mcp_writes (user_id, loan_id)
+-- loan_update has no open-write unique index: a loan can be edited many times.
+-- Undo takes the newest open edit, so edits unwind newest first.
+create index mcp_writes_loan_update_open_idx
+  on private.mcp_writes (user_id, loan_id, created_at desc)
   where kind = 'loan_update' and undone_at is null;
 
 create unique index mcp_writes_loan_split_open_idx
@@ -426,8 +428,11 @@ begin
         'escrow_minor', cur.escrow_minor
       );
 
-      insert into private.mcp_writes (token_id, user_id, kind, loan_id, prior)
-      values (token, auth.uid(), 'loan_update', p_loan_id, jsonb_build_object('before', before, 'after', after));
+      insert into private.mcp_writes (token_id, user_id, kind, loan_id, prior, created_at)
+      values (
+        token, auth.uid(), 'loan_update', p_loan_id,
+        jsonb_build_object('before', before, 'after', after), clock_timestamp()
+      );
 
       response := jsonb_build_object(
         'ok', true,
@@ -693,6 +698,8 @@ begin
         or (p_kind = 'loan_update' and w.kind = 'loan_update' and w.loan_id = p_id)
         or (p_kind = 'loan_split' and w.kind = 'loan_split' and w.transaction_id = p_id)
       )
+    order by w.created_at desc
+    limit 1
     for update;
 
     if not found then
