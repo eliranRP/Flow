@@ -14,6 +14,7 @@ type SegmentedControlProps<T extends string> = {
   onChange: (value: T) => void;
   /** The hint under the control. The group points at it. */
   describedBy?: string;
+  disabled?: boolean;
 };
 
 /** Roving tabindex. Arrow keys follow the reading direction, so they reverse under dir=rtl. */
@@ -25,6 +26,7 @@ export function SegmentedControl<T extends string>({
   options,
   onChange,
   describedBy,
+  disabled = false,
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const index = Math.max(0, options.findIndex((option) => option.value === value));
@@ -53,7 +55,14 @@ export function SegmentedControl<T extends string>({
   return (
     <div className="ui-field">
       {showLabel ? <span className="ui-field-label">{label}</span> : null}
-    <div className={cx("ui-seg", radius === "input" && "ui-seg-input")} role="radiogroup" aria-label={label} aria-describedby={describedBy} onKeyDown={onKeyDown}>
+      <div
+        className={cx("ui-seg", radius === "input" && "ui-seg-input")}
+        role="radiogroup"
+        aria-label={label}
+        aria-describedby={describedBy}
+        aria-disabled={disabled || undefined}
+        onKeyDown={disabled ? undefined : onKeyDown}
+      >
       {options.map((option, optionIndex) => {
         const selected = value === option.value;
         return (
@@ -68,7 +77,9 @@ export function SegmentedControl<T extends string>({
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             aria-label={option.label}
+            disabled={disabled}
             onClick={() => {
+              if (disabled) return;
               onChange(option.value);
             }}
           >
