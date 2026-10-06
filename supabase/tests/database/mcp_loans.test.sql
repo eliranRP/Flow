@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(42);
+select plan(36);
 
 do $users$
 begin
@@ -58,13 +58,13 @@ reset role;
 
 select lives_ok(
   format(
-    $$select public.store_mcp_credential(%L::uuid, 'hash-mcp5-write', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
+    $$select public.store_mcp_credential(%L::uuid, 'hash-mcp5-write1', array['read','write'], now() + interval '90 days', 'pepper-1')$$,
     tests.get_supabase_uid('mcp5_owner')
   ),
   'store write token'
 );
 insert into mcp5 (label, id)
-select 'write', id from private.mcp_credentials where token_hash = 'hash-mcp5-write';
+select 'write', id from private.mcp_credentials where token_hash = 'hash-mcp5-write1';
 
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
 select tests.get_supabase_uid('mcp5_owner'), c.id, 'hash-mcp5-read0', 'pepper-1', array['read'], now() + interval '90 days'
@@ -180,7 +180,7 @@ select is(
 );
 select is(
   (select sum(amount_minor)::bigint from public.loan_splits where transaction_id = (select id from mcp5 where label = 'txn')),
-  100000,
+  100000::bigint,
   'parts sum to the line'
 );
 select is(
@@ -194,7 +194,44 @@ select is(
   'second attach is refused'
 );
 
+reset role;
+insert into public.transactions (
+  company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
+  vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
+)
+select c.id, 'expense', 'expense', -100000, -100000, 100000, 0, 'unknown',
+  '2026-01-01', 'USD', 'manual', 'mcp5:other-pay', 'Other payment'
+from mcp5 c where c.label = 'other_company';
+insert into mcp5 (label, id)
+select 'other_txn', id from public.transactions where idempotency_key = 'mcp5:other-pay';
+
 select pg_temp.as_mcp('other_write', 'mcp5_other');
+select is(jsonb_array_length(public.mcp_list_loans()), 0, 'cross-tenant list sees no loans');
+select is(
+  public.mcp_attach_loan_payment(
+    'split-cross-loan',
+    (select id from mcp5 where label = 'other_txn'),
+    (select id from mcp5 where label = 'loan_a'),
+    '[]'::jsonb
+  )->'error'->>'message',
+  'loan not found',
+  'cross-tenant attach on loan is refused'
+);
+select is(
+  public.mcp_undo('undo-cross-loan', 'loan', (select id from mcp5 where label = 'loan_a'))->'error'->>'code',
+  'not_found',
+  'cross-tenant undo loan is not_found'
+);
+select is(
+  public.mcp_undo('undo-cross-up', 'loan_update', (select id from mcp5 where label = 'loan_a'))->'error'->>'code',
+  'not_found',
+  'cross-tenant undo loan_update is not_found'
+);
+select is(
+  public.mcp_undo('undo-cross-split', 'loan_split', (select id from mcp5 where label = 'txn'))->'error'->>'code',
+  'not_found',
+  'cross-tenant undo loan_split is not_found'
+);
 select is(
   public.mcp_update_loan(
     'loan-cross',
@@ -224,6 +261,16 @@ select is(
   'true'::jsonb,
   'owner positive control on update'
 );
+select is(
+  public.mcp_undo('undo-own', 'loan_update', (select id from mcp5 where label = 'loan_a'))->'data'->>'kind',
+  'loan_update',
+  'undo takes the newest open edit'
+);
+select is(
+  (select name from public.loans where id = (select id from mcp5 where label = 'loan_a')),
+  'Manual Edit',
+  'newest edit undo restores the value before it'
+);
 
 select is(
   public.mcp_undo('undo-loan-del', 'loan', (select id from mcp5 where label = 'loan_a'))->'error'->>'code',
@@ -246,6 +293,7 @@ select is(
   'undo loan after split undo succeeds'
 );
 
+reset role;
 insert into public.transactions (
   company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
   vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
@@ -255,6 +303,7 @@ select c.id, 'expense', 'expense', -50000, -50000, 50000, 0, 'unknown',
 from mcp5 c where c.label = 'company';
 insert into mcp5 (label, id) select 'txn_ils', id from public.transactions where idempotency_key = 'mcp5:ils';
 
+select pg_temp.as_mcp('write');
 insert into mcp5 (label, id)
 select 'loan_b', (
   public.mcp_add_loan('loan-b', 'USD Loan', 5000000, 0, 120, '2026-02-01'::date, 50000, 0, 'USD')->'data'->>'id'
@@ -275,6 +324,7 @@ select is(
   'currency mismatch is refused'
 );
 
+reset role;
 insert into public.transactions (
   company_id, direction, doc_kind, amount_gross, amount_net, amount_original,
   vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
@@ -284,6 +334,7 @@ select c.id, 'expense', 'expense', -50000000, -50000000, 50000000, 0, 'unknown',
 from mcp5 c where c.label = 'company';
 insert into mcp5 (label, id) select 'txn_big', id from public.transactions where idempotency_key = 'mcp5:big';
 
+select pg_temp.as_mcp('write');
 select is(
   public.mcp_attach_loan_payment(
     'split-bal',
