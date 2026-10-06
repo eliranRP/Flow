@@ -40,6 +40,18 @@ export function resetSetupResumeForTests(): void {
   resumeConsidered = false;
 }
 
+const AUTH_ENTRY = new Set(["/sign-in", "/auth/callback"]);
+
+/** Records the first app route once. Mounted for every route, so a full-screen deep link counts. */
+export function noteSetupLanding(pathname: string): void {
+  if (landingPath === null && !AUTH_ENTRY.has(pathname)) landingPath = pathname;
+}
+
+export function SetupLanding(): null {
+  noteSetupLanding(useLocation().pathname);
+  return null;
+}
+
 function useFromCard(): boolean {
   const [params] = useSearchParams();
   return params.get("from") === "card";
@@ -48,7 +60,7 @@ function useFromCard(): boolean {
 export function SetupResume() {
   const preview = usePreviewMode();
   const { pathname } = useLocation();
-  if (landingPath === null) landingPath = pathname;
+  noteSetupLanding(pathname);
   const home = pathname === "/";
   const resumeAtLandingHome = landingPath === "/" && pathname === "/" && !resumeConsidered;
   const { status, session } = useAuth();

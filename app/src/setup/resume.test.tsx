@@ -1,11 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { RouterProvider, createMemoryRouter, useLocation } from "react-router-dom";
+import { Outlet, RouterProvider, createMemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
-import { resetSetupResumeForTests, SetupResume } from "./route";
+import { resetSetupResumeForTests, SetupLanding, SetupResume } from "./route";
 import { emptySetupStore, markSessionEntered, readSetupStore, writeSetupStore } from "./storage";
 
 const userId = "user-1";
@@ -98,15 +98,7 @@ function Where() {
   return <p>{pathname}</p>;
 }
 
-function renderAt(path: string, entries: string[] = [path]) {
-  const router = createMemoryRouter(
-    [
-      { path: "/", element: <><SetupResume /><Where /></> },
-      { path: "/review", element: <><SetupResume /><Where /></> },
-      { path: "/setup/:step", element: <p>step</p> },
-    ],
-    { initialEntries: entries, initialIndex: entries.length - 1 },
-  );
+function providers(router: ReturnType<typeof createMemoryRouter>) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={client}>
@@ -118,6 +110,18 @@ function renderAt(path: string, entries: string[] = [path]) {
     </QueryClientProvider>,
   );
   return { router, unmount: view.unmount };
+}
+
+function renderAt(path: string, entries: string[] = [path]) {
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <><SetupResume /><Where /></> },
+      { path: "/review", element: <><SetupResume /><Where /></> },
+      { path: "/setup/:step", element: <p>step</p> },
+    ],
+    { initialEntries: entries, initialIndex: entries.length - 1 },
+  );
+  return providers(router);
 }
 
 describe("setup resume", () => {
@@ -159,8 +163,34 @@ describe("setup resume", () => {
     await waitFor(() => {
       expect(calls.from).toContain("review_queue");
     });
-    expect(screen.getByText("/")).toBeInTheDocument();
-    expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
+  });
+
+  it("does not resume when Home is opened after a full-screen deep link", async () => {
+    writeSetupStore(userId, "company-1", { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
+    const router = createMemoryRouter(
+      [{
+        element: <><SetupLanding /><Outlet /></>,
+        children: [
+          { path: "/", element: <><SetupResume /><Where /></> },
+          { path: "/transactions/:id", element: <p>tx</p> },
+          { path: "/setup/:step", element: <p>step</p> },
+        ],
+      }],
+      { initialEntries: ["/transactions/t1"] },
+    );
+    providers(router);
+    await act(async () => {
+      await router.navigate("/");
+    });
+    await waitFor(() => {
+      expect(calls.from).toContain("review_queue");
+    });
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
   });
 
   it("resumes a started run once, and neither the stamp nor the session alone opens it again", async () => {
@@ -178,32 +208,31 @@ describe("setup resume", () => {
     await waitFor(() => {
       expect(calls.from).toContain("review_queue");
     });
-    await waitFor(() => {
-      expect(screen.getByText("/")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
+    await expect(
+      waitFor(() => { expect(second.router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
     second.unmount();
     resetSetupResumeForTests();
     markSessionEntered(userId);
     writeSetupStore(userId, "company-1", { ...stamped, run_resumed_at: null });
-    renderAt("/");
+    const third = renderAt("/");
     await waitFor(() => {
       expect(calls.from).toContain("review_queue");
     });
-    await waitFor(() => {
-      expect(screen.getByText("/")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("/setup/1")).not.toBeInTheDocument();
+    await expect(
+      waitFor(() => { expect(third.router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
   });
 
   it("ignores viewers on Home", async () => {
     gate.ownerId = "other";
-    renderAt("/");
+    const { router } = renderAt("/");
     await waitFor(() => {
       expect(calls.from).toContain("companies");
     });
-    expect(screen.getByText("/")).toBeInTheDocument();
+    await expect(
+      waitFor(() => { expect(router.state.location.pathname).not.toBe("/"); }, { timeout: 500 }),
+    ).rejects.toThrow();
     expect(calls.rpc).not.toContain("get_dashboard");
-    expect(screen.queryByText("/setup/0")).not.toBeInTheDocument();
   });
 });
