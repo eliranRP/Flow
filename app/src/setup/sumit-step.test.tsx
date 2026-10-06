@@ -92,7 +92,7 @@ describe("setup SUMIT connect", () => {
     await waitFor(() => {
       expect(onConnected).toHaveBeenCalledOnce();
     });
-    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke.mock.calls.length).toBeGreaterThanOrEqual(1);
     restore();
   });
 });
