@@ -4062,7 +4062,7 @@ export function SettingsScreen({
         <List>
           <ListRow
             variant="button"
-            title="רענון עכשיו"
+            title={refresh.isPending ? "מרענן…" : "רענון עכשיו"}
             hint={refreshHint}
             icon={<RefreshIcon />}
             chevron
@@ -4072,7 +4072,7 @@ export function SettingsScreen({
             busy={refresh.isPending}
             disabled={refreshHeld}
             onClick={() => {
-              if (holdWrites || refreshHeld) return;
+              if (holdWrites || refreshHeld || refresh.isPending) return;
               if (blocked()) return;
               refresh.mutate();
             }}
@@ -4133,7 +4133,7 @@ export function SettingsScreen({
         <List>
           <ListRow
             variant="button"
-            title="רענון עכשיו"
+            title={mercuryRefresh.isPending ? "מרענן…" : "רענון עכשיו"}
             hint={mercuryRefreshHint}
             icon={<RefreshIcon />}
             chevron
