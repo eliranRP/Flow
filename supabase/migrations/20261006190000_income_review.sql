@@ -1,5 +1,5 @@
 -- Income without a project enters review. USD lines show no VAT hint in the app.
--- Default category fallback skips off-P&L and loan-payment defaults. Decision 0090.
+-- Default category fallback skips off-P&L and loan-payment defaults. Decision 0091.
 
 begin;
 
@@ -490,7 +490,7 @@ begin
       from public.categories c
       where c.id = p_category_id and c.company_id = cid
     ), false) and p_project_id is null then
-      raise exception 'project not found';
+      raise exception 'project and category are required';
     end if;
     if p_project_id is not null and not exists (
       select 1 from public.projects p where p.id = p_project_id and p.company_id = cid
@@ -613,6 +613,8 @@ begin
       and c.is_default
       and not c.hidden
       and not c.excluded_from_pnl
+      -- Loan-payment parts (0088) are never a guess for a new line.
+      and c.name not in ('ריבית משכנתא', 'מסים וביטוח')
     order by c.sort_order, c.name
     limit 1;
   end if;

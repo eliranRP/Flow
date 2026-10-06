@@ -1652,6 +1652,18 @@ a.ui-row,
   margin: var(--space-4) var(--space-card-inset) 0;
 }
 
+/* Short phones (320×693): keep the primary action above the tab bar. */
+@media (max-height: 720px) {
+  .ui-review {
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+
+  .ui-review-actions {
+    margin-block-start: var(--space-2);
+  }
+}
+
 .ui-viewer-note {
   margin-block-start: var(--space-2);
 }

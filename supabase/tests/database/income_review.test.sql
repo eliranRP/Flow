@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(11);
+select plan(19);
 
 do $users$
 begin
@@ -212,7 +212,21 @@ begin
   perform set_config('request.jwt.claim.role', 'service_role', true);
   perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
   perform set_config('request.jwt.claim.sub', '', true);
-  perform public.sync_review_queue((select id from inc_ref where label = 'company'));
+  perform public.upsert_sumit_documents(
+    (select id from inc_ref where label = 'company'),
+    jsonb_build_array(
+      jsonb_build_object(
+        'idempotency_key', 'inc:sumit', 'external_id', 'sumit-inc', 'direction', 'income', 'doc_kind', 'invoice',
+        'amount_gross', '5900', 'amount_net', '5000', 'vat_amount', '900', 'vat_status', 'derived',
+        'doc_date', '2026-06-01', 'description', 'קבלה', 'party_name', 'לקוח', 'party_kind', 'customer'
+      ),
+      jsonb_build_object(
+        'idempotency_key', 'inc:off', 'external_id', 'off-inc', 'direction', 'income', 'doc_kind', 'invoice',
+        'amount_gross', '1000', 'amount_net', '1000', 'vat_amount', '0', 'vat_status', 'derived',
+        'doc_date', '2026-06-02', 'description', 'העברה', 'party_name', 'לקוח', 'party_kind', 'customer'
+      )
+    )
+  );
 end
 $$;
 
@@ -224,6 +238,16 @@ select is(
   ),
   (select id from inc_ref where label = 'project'),
   'a re-sync keeps the income project'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.review_queue q
+    join public.transactions t on t.id = q.transaction_id
+    where t.idempotency_key = 'inc:sumit' and q.status = 'open'
+  ),
+  0,
+  'a re-sync does not queue the approved income again'
 );
 
 select tests.authenticate_as('inc_b');
@@ -238,6 +262,26 @@ select is(
   ),
   0,
   'another company sees no row from company a'
+);
+select throws_ok(
+  format(
+    'select public.resolve_review(%L::uuid, ''changed'', %L::uuid, %L::uuid)',
+    (select q.id from public.review_queue q join public.transactions t on t.id = q.transaction_id where t.idempotency_key = 'inc:sumit'),
+    (select id from inc_ref where label = 'project'),
+    (select id from inc_ref where label = 'income_cat')
+  ),
+  'review item not found',
+  'another company cannot resolve the income review row'
+);
+select throws_ok(
+  format(
+    'select public.reassign_transaction(%L::uuid, %L::uuid, %L::uuid)',
+    (select id from public.transactions where idempotency_key = 'inc:sumit'),
+    (select id from inc_ref where label = 'project'),
+    (select id from inc_ref where label = 'income_cat')
+  ),
+  'transaction not found',
+  'another company cannot reassign the income line'
 );
 
 select tests.authenticate_as('inc_a');
@@ -255,11 +299,14 @@ select is(
 );
 
 -- Default category fallback skips off-P&L defaults when only those remain visible.
+-- Hide only the building-trade defaults (sort 1-7); the loan defaults (0088) stay visible.
+reset role;
 update public.categories
 set hidden = true
 where company_id = (select id from inc_ref where label = 'company')
   and kind = 'expense'
-  and not excluded_from_pnl;
+  and is_default
+  and sort_order <= 7;
 
 insert into public.transactions (
   company_id, direction, doc_kind, amount_gross, amount_net, vat_amount, vat_status,
@@ -282,7 +329,7 @@ insert into public.transactions (
 select is(
   (select category_id from public.transactions where idempotency_key = 'inc:fallback'),
   null,
-  'fallback does not suggest תשלומי הלוואה or העברות'
+  'fallback suggests no loan category (תשלומי הלוואה, העברות, ריבית משכנתא, מסים וביטוח)'
 );
 
 select * from finish();
