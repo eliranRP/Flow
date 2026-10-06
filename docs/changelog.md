@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-06
+
+Loans L-3 review fixes. Loan match keeps the sheet open with a busy picker radio, waits for a successful read before שיוך, guards over-balance and paid-off loans, maps 23505 and correction errors, focuses חלוקת התשלום after success, and shows retry rows when a read fails. Settings loan balances use the same loading and error pattern. CONTROLS updated. No migration.
+
 ## 2026-10-04
 
 Unit tests. The cold SUMIT sheet stays at history index 0 until the layer is its own entry, then a close pops back to Settings. אישור waits until the button is idle, and the review card swaps once per next item instead of restarting that swap on every list render. No migration.

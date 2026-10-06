@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
@@ -9,10 +9,12 @@ import {
   scheduleRowForDate,
   type LoanSplitPart,
 } from "@flow/shared";
-import { BankIcon } from "../ui/icons";
+import { BankIcon, AlertIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
+import { RadioRow } from "../ui/radio-row";
+import { TextLink } from "../ui/text-link";
 import { useSheetHistory } from "../ui/back";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
@@ -50,6 +52,7 @@ type LoanChoice = {
   startDate: string;
   paymentMinor: number;
   escrowMinor: number;
+  balanceMinor: bigint;
 };
 
 export type LoanBalanceRow = {
@@ -73,57 +76,83 @@ function showMoney(minor: bigint, currency: string): string {
 
 export function LoanSplitPanel({
   offerMatch,
-  currency,
+  lineCurrency,
+  displayCurrency,
   parts,
   loans,
   needsReview,
   currencyMismatch,
   busy,
+  matchHint,
+  savingId = null,
+  sheetOpen,
+  onSheetOpenChange,
+  splitSectionRef,
+  matchButtonRef,
   readOnly = false,
   onMatch,
   onCorrect,
 }: {
   offerMatch: boolean;
-  currency: string;
+  lineCurrency: string;
+  displayCurrency: string;
   parts: readonly SplitRow[] | null;
   loans: readonly LoanChoice[];
   needsReview: boolean;
   currencyMismatch: boolean;
   busy: boolean;
+  matchHint?: string;
+  savingId?: string | null;
+  sheetOpen: boolean;
+  onSheetOpenChange: (open: boolean) => void;
+  splitSectionRef: RefObject<HTMLHeadingElement | null>;
+  matchButtonRef?: RefObject<HTMLButtonElement | null>;
   /** A viewer can read the split and cannot match or correct it. */
   readOnly?: boolean;
   onMatch: (loanId: string) => void;
   onCorrect: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const setSheet = useSheetHistory("loan-match", open, setOpen);
-  const rowRef = useRef<HTMLButtonElement>(null);
+  const setSheet = useSheetHistory("loan-match", sheetOpen, onSheetOpenChange);
+  const localRowRef = useRef<HTMLButtonElement>(null);
+  const rowRef = matchButtonRef ?? localRowRef;
   if (parts == null && (!offerMatch || readOnly)) return null;
   const ordered = parts == null ? [] : (["interest", "escrow", "principal"] as const).flatMap((part) => {
     const row = parts.find((item) => item.part === part);
     return row ? [row] : [];
   });
+  const selectableLoans = loans.filter((loan) => loan.currency === lineCurrency);
   return (
     <>
-      <List>
-        {ordered.length > 0 ? ordered.map((part) => (
-          <ListRow
-            key={part.part}
-            variant="static"
-            title={PART_LABEL[part.part]}
-            meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(part.amountMinor, currency)}</bdi>}
-          />
-        )) : (
+      {ordered.length > 0 ? (
+        <>
+          <h2 ref={splitSectionRef} tabIndex={-1} className="ui-focus-title t-title-3 ui-page-pad">
+            חלוקת התשלום
+          </h2>
+          <List>
+            {ordered.map((part) => (
+              <ListRow
+                key={part.part}
+                variant="static"
+                title={PART_LABEL[part.part]}
+                meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(part.amountMinor, displayCurrency)}</bdi>}
+              />
+            ))}
+          </List>
+        </>
+      ) : (
+        <List>
           <ListRow
             variant="button"
             title="שיוך להלוואה"
+            hint={matchHint}
             icon={<BankIcon />}
             chevron
+            busy={busy}
             buttonRef={rowRef}
-            onClick={() => { if (!readOnly) setSheet(true); }}
+            onClick={() => { if (!readOnly && !busy) setSheet(true); }}
           />
-        )}
-      </List>
+        </List>
+      )}
       {needsReview ? (
         <div className="ui-stack ui-page-pad">
           <p className="t-hint ui-loan-caution">החלוקה ממתינה לבדיקה.</p>
@@ -135,24 +164,24 @@ export function LoanSplitPanel({
         </div>
       ) : null}
       {readOnly ? null : (
-      <Sheet open={open} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={rowRef}>
-        {loans.length === 0 ? (
+      <Sheet open={sheetOpen} onOpenChange={setSheet} title="שיוך להלוואה" returnFocusRef={rowRef}>
+        {selectableLoans.length === 0 ? (
           <p className="t-hint">אין עדיין הלוואה.</p>
         ) : (
-          <List>
-            {loans.map((loan) => (
-              <ListRow
+          <div role="radiogroup" aria-label="הלוואה">
+            {selectableLoans.map((loan) => (
+              <RadioRow
                 key={loan.id}
-                variant="button"
-                title={loan.name}
-                chevron
-                onClick={() => {
-                  onMatch(loan.id);
-                  setSheet(false);
-                }}
+                layout="picker"
+                label={loan.name}
+                busy={loan.id === savingId}
+                disabled={savingId != null && loan.id !== savingId}
+                disabledReason={loan.balanceMinor <= 0n ? "ההלוואה נפרעה" : undefined}
+                selected={false}
+                onSelect={() => { onMatch(loan.id); }}
               />
             ))}
-          </List>
+          </div>
         )}
       </Sheet>
       )}
@@ -179,13 +208,52 @@ export function LoanBalanceList({ rows }: { rows: readonly LoanBalanceRow[] }) {
   );
 }
 
+export function LoanReadError({ label, busy, onRetry }: { label: string; busy: boolean; onRetry: () => void }) {
+  const retryRef = useRef<HTMLButtonElement>(null);
+  return (
+    <List>
+      <ListRow
+        variant="static"
+        title={label}
+        icon={<AlertIcon size={24} />}
+        tone="muted"
+        describeHint
+        hintStatus
+        hint="לא הצלחנו לטעון."
+        action={(
+          <TextLink
+            size="label"
+            chevron={false}
+            label={`ניסיון חוזר: ${label}`}
+            busy={busy}
+            buttonRef={retryRef}
+            onClick={onRetry}
+          >
+            ניסיון חוזר
+          </TextLink>
+        )}
+      />
+    </List>
+  );
+}
+
 function failureText(error: Error): string {
   const code = (error as { code?: string }).code;
   if (code === "42501") return "אין הרשאה לשייך הלוואה.";
+  if (code === "23505") return "התשלום כבר שויך להלוואה.";
+  if (error.message === "loan_split_over_balance") return "התשלום גבוה מיתרת ההלוואה.";
   if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
   if (error.message.includes("loan_split_sum")) return "החלוקה לא מסתכמת לשורה.";
   if (error.message === "date") return "התאריך לא על לוח הסילוקין.";
   return "לא הצלחנו לשייך את ההלוואה.";
+}
+
+function correctFailureText(error: Error): string {
+  const code = (error as { code?: string }).code;
+  if (code === "42501") return "אין הרשאה לעדכן את החלוקה.";
+  if (error.message.includes("loan_split_currency")) return "המטבע של השורה לא מתאים להלוואה.";
+  if (error.message.includes("loan_split_sum")) return "החלוקה לא מסתכמת לשורה.";
+  return "לא הצלחנו לעדכן את החלוקה.";
 }
 
 export function LoanTransactionSplit({
@@ -204,22 +272,35 @@ export function LoanTransactionSplit({
   /** From the transaction screen. A viewer, and a role that is still loading, pass true. */
   readOnly?: boolean;
 }) {
+  const queryClient = useQueryClient();
   const holdWrites = useHoldWrites();
   const writesHeld = readOnly || holdWrites;
   const offerMatch = direction !== "income" && categoryName === LOAN_PRINCIPAL_CATEGORY;
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const splitSectionRef = useRef<HTMLHeadingElement>(null);
+  const matchRowRef = useRef<HTMLButtonElement>(null);
   const query = useQuery({
     queryKey: ["loan-split", transactionId],
     enabled: active && direction !== "income",
     retry: false,
     queryFn: () => readLoanMatch(transactionId),
   });
+  const focusSplitSection = () => {
+    splitSectionRef.current?.focus({ preventScroll: true });
+  };
   const match = useWrite<string>({
     failure: failureText,
     success: "התשלום שויך להלוואה",
     keys: ["loan-split", "loans", "txn"],
+    onSuccess: () => {
+      setSheetOpen(false);
+      void query.refetch().then(() => {
+        requestAnimationFrame(() => { focusSplitSection(); });
+      });
+    },
     run: async (loanId) => {
       if (writesHeld) throw new Error("preview");
-      const loaded = query.data;
+      const loaded = queryClient.getQueryData<LoadedMatch>(["loan-split", transactionId]);
       if (!loaded) throw new Error("supabase");
       const loan = loaded.loans.find((item) => item.id === loanId);
       if (!loan) throw new Error("supabase");
@@ -227,33 +308,77 @@ export function LoanTransactionSplit({
     },
   });
   const correct = useWrite({
-    failure: failureText,
+    failure: correctFailureText,
     success: "החלוקה עודכנה",
     keys: ["loan-split", "loans", "txn"],
+    onSuccess: () => {
+      void query.refetch().then(() => {
+        requestAnimationFrame(() => { focusSplitSection(); });
+      });
+    },
     run: async () => {
       if (writesHeld) throw new Error("preview");
-      const loaded = query.data;
+      const loaded = queryClient.getQueryData<LoadedMatch>(["loan-split", transactionId]);
       if (!loaded || loaded.splits.length !== 3) throw new Error("supabase");
       await correctSplit(transactionId, loaded);
     },
   });
   if (!active || direction === "income") return null;
+  if (query.isLoading) {
+    if (!offerMatch) return null;
+    return (
+      <List>
+        <ListRow variant="skeleton" />
+      </List>
+    );
+  }
+  if (query.isError) {
+    if (!offerMatch) return null;
+    return (
+      <LoanReadError
+        label="שיוך להלוואה"
+        busy={query.isFetching}
+        onRetry={() => { void query.refetch(); }}
+      />
+    );
+  }
   const loaded = query.data;
-  const parts = loaded && loaded.splits.length === 3 ? loaded.splits : null;
+  if (!loaded) return null;
+  const parts = loaded.splits.length === 3 ? loaded.splits : null;
   if (parts == null && !offerMatch) return null;
-  const loan = loaded?.loans.find((item) => item.id === parts?.[0]?.loanId);
-  const currency = loaded?.currency ?? loan?.currency ?? "ILS";
+  const loan = loaded.loans.find((item) => item.id === parts?.[0]?.loanId);
+  const lineCurrency = loaded.currency;
+  const displayCurrency = loan?.currency ?? lineCurrency;
+  const currencyLoans = loaded.loans.filter((item) => item.currency === lineCurrency);
+  const matchHint = currencyLoans.length === 1 ? currencyLoans[0]?.name : undefined;
+  const savingId = match.isPending ? match.variables : null;
   return (
     <LoanSplitPanel
-      offerMatch={offerMatch}
-      currency={currency}
+      offerMatch={offerMatch && loaded.splits.length === 0}
+      lineCurrency={lineCurrency}
+      displayCurrency={displayCurrency}
       parts={parts}
-      loans={loaded?.loans ?? []}
+      loans={loaded.loans}
       needsReview={parts?.some((part) => part.needsReview) ?? false}
-      currencyMismatch={loan != null && loan.currency !== currency}
+      currencyMismatch={loan != null && loan.currency !== lineCurrency}
       busy={match.isPending || correct.isPending}
+      matchHint={matchHint}
+      savingId={savingId}
+      sheetOpen={sheetOpen}
+      onSheetOpenChange={setSheetOpen}
+      splitSectionRef={splitSectionRef}
+      matchButtonRef={matchRowRef}
       readOnly={writesHeld}
-      onMatch={(loanId) => { if (!writesHeld) match.mutate(loanId); }}
+      onMatch={(loanId) => {
+        if (writesHeld || match.isPending) return;
+        match.mutate(loanId, {
+          onError: (error) => {
+            if ((error as { code?: string }).code === "23505") void query.refetch();
+            const row = document.querySelector<HTMLElement>(".ui-pick-row[aria-busy=\"true\"]");
+            (row ?? matchRowRef.current)?.focus({ preventScroll: true });
+          },
+        });
+      }}
       onCorrect={() => { if (!writesHeld) correct.mutate(); }}
     />
   );
@@ -306,7 +431,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
   assertNoError(txn);
   if (!txn.data) throw new Error("supabase");
   const companyId = txn.data.company_id;
-  const [splits, loans, categories] = await Promise.all([
+  const [splits, loans, categories, balances] = await Promise.all([
     supabase
       .from("loan_splits")
       .select("id, part, amount_minor, scheduled_minor, needs_review, loan_id")
@@ -321,10 +446,16 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .eq("company_id", companyId)
       .eq("kind", "expense")
       .in("name", [LOAN_INTEREST_CATEGORY, LOAN_ESCROW_CATEGORY, LOAN_PRINCIPAL_CATEGORY]),
+    supabase
+      .from("loan_balances")
+      .select("loan_id, balance_minor")
+      .eq("company_id", companyId),
   ]);
   assertNoError(splits);
   assertNoError(loans);
   assertNoError(categories);
+  assertNoError(balances);
+  const balanceByLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, BigInt(row.balance_minor ?? 0)]));
   const categoryIds: Partial<Record<LoanSplitPart, string>> = {};
   for (const category of categories.data ?? []) {
     const part = (Object.keys(PART_CATEGORY) as LoanSplitPart[]).find((key) => PART_CATEGORY[key] === category.name);
@@ -352,6 +483,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       startDate: loan.start_date,
       paymentMinor: loan.payment_minor,
       escrowMinor: loan.escrow_minor,
+      balanceMinor: balanceByLoan.get(loan.id) ?? 0n,
     })),
     categoryIds,
   };
@@ -361,6 +493,7 @@ async function writeSplit(transactionId: string, docDate: string, loaded: Loaded
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   if (loan.currency !== loaded.currency) throw new Error("loan_split_currency");
+  if (loan.balanceMinor <= 0n) throw new Error("loan_split_over_balance");
   const schedule = buildLoanSchedule({
     principalMinor: BigInt(loan.principalMinor),
     annualRatePpm: loan.annualRatePpm,
@@ -377,6 +510,8 @@ async function writeSplit(transactionId: string, docDate: string, loaded: Loaded
     escrowMinor: row.escrowMinor,
     principalMinor: row.principalMinor,
   });
+  const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
+  if (principalPart > loan.balanceMinor) throw new Error("loan_split_over_balance");
   const rows = parts.map((part) => {
     const categoryId = loaded.categoryIds[part.part];
     if (!categoryId) throw new Error("supabase");
