@@ -87,6 +87,19 @@ describe("ListRow", () => {
     expect(screen.getByRole("button", { name: "חשבונית ותשלום" })).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("shows a spinner instead of the icon and hides the chevron while a button row is busy", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="button" title="מרענן…" icon={<svg data-testid="row-icon" />} chevron busy onClick={() => undefined} />
+      </MemoryRouter>,
+    );
+    const button = screen.getByRole("button", { name: "מרענן…" });
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button.querySelector(".ui-spinner")).not.toBeNull();
+    expect(screen.queryByTestId("row-icon")).toBeNull();
+    expect(button.querySelector(".ui-row-chevron")).toBeNull();
+  });
+
   it("hides the chevron on a disabled row and keeps a clear hint at full opacity", () => {
     render(
       <MemoryRouter>

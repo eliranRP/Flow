@@ -262,10 +262,15 @@ describe("Mercury status row", () => {
     const refresh = within(screen.getByRole("dialog", { name: "Mercury" })).getByRole("button", { name: "רענון עכשיו" });
     fireEvent.click(refresh);
     await waitFor(() => { expect(refresh).toHaveAttribute("aria-busy", "true"); });
+    expect(refresh).toHaveAccessibleName("מרענן…");
+    expect(refresh.querySelector(".ui-spinner")).not.toBeNull();
+    expect(refresh.querySelector(".ui-row-chevron")).toBeNull();
     fireEvent.click(refresh);
     expect(invokeEdge).toHaveBeenCalledTimes(1);
     finish();
     await waitFor(() => { expect(screen.getByText("הרענון הסתיים.")).toBeInTheDocument(); });
     expect(invokeEdge).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveAccessibleName("רענון עכשיו");
+    expect(refresh.querySelector(".ui-spinner")).toBeNull();
   });
 });

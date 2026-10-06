@@ -68,11 +68,14 @@ export function ListRow(props: ListRowProps) {
   const described = props.describeHint === true && props.hint != null ? hintId : undefined;
   const softDisabled = props.variant === "button" && props.ariaDisabled === true;
   const rowDisabled = ((props.variant === "button" || props.variant === "danger") && props.disabled === true) || softDisabled;
-  const showChevron = props.chevron === true && props.variant !== "static" && !rowDisabled;
+  const busyRow = props.variant === "button" && props.busy === true;
+  const showChevron = props.chevron === true && props.variant !== "static" && !rowDisabled && !busyRow;
   const toneClass = props.tone === "warning" ? "ui-row-tone-warning" : props.tone === "muted" ? "ui-row-tone-muted" : false;
-  const icon =
+  const baseIcon =
     props.icon ??
     (props.variant === "transaction" ? props.source === "bank" ? <BankIcon /> : <DocumentIcon size={24} /> : null);
+  // A busy action row shows a spinner in place of its icon, so a tap visibly started.
+  const icon = busyRow && baseIcon ? <span className="ui-spinner" aria-hidden="true" /> : baseIcon;
   const blockCopy = props.variant === "static";
   const CopyMain = blockCopy ? "div" : "span";
   const CopyText = blockCopy ? "div" : "span";

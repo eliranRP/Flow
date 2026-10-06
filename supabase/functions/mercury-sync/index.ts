@@ -336,14 +336,14 @@ async function noteFailure(admin: SupabaseClient, companyId: string, code: strin
 }
 
 const STORED_PAGE = 1000;
-const STORED_COLUMNS = "external_id, line_status, doc_date, amount_original, source_account_id, provider_meta";
+// transactions has no source_account_id column (the upsert never stores it), so don't select it.
+const STORED_COLUMNS = "external_id, line_status, doc_date, amount_original, provider_meta";
 
 interface StoredRow {
   external_id: string;
   line_status: string;
   doc_date: string;
   amount_original: number | null;
-  source_account_id: string | null;
   provider_meta: unknown;
 }
 
@@ -452,7 +452,7 @@ async function loadStored(
       externalId: row.external_id,
       kind,
       amountCents: Math.abs(row.amount_original),
-      accountId: typeof row.source_account_id === "string" ? row.source_account_id : null,
+      accountId: null,
       docDate: row.doc_date,
     });
   }
