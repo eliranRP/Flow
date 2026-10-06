@@ -127,7 +127,7 @@ describe("setup demos", () => {
       () => {
         expect(screen.getByText(SUMIT_ALT)).toBeInTheDocument();
         expect(frame()).toBe("4");
-        expect(visibleText()).toContain("חומרי בניין השרון");
+        expect(visibleText()).toContain("חומרי בניין הדר");
         expect(visibleText()).toContain("אבי חשמל");
         expect(visibleText()).toContain("וילה רעננה");
         expect(visibleText()).toContain("מחובר");
@@ -150,7 +150,7 @@ describe("setup demos", () => {
       expect(frame()).toBe("4");
       expect(demoText()).toContain("לאישור");
       expect(demoText()).toContain("הצעה");
-      expect(demoText()).toContain("חומרי בניין השרון בע״מ");
+      expect(demoText()).toContain("חומרי בניין הדר בע״מ");
       expect(demoText()).toContain("וילה רעננה");
       expect(demoText()).toContain("חומרים");
       expect(demoText()).toContain("21/09/2026");
@@ -166,7 +166,7 @@ describe("setup demos", () => {
       expect(visibleText()).toContain("מוסתרות");
       expect(demoText()).toContain("פרויקטים");
       expect(demoText()).toContain("קטגוריות");
-      expect(demoText()).toContain("מגדל משרדים פ״ת");
+      expect(demoText()).toContain("מגדל משרדים לוד");
       expect(demoText()).toContain("רכב");
       expect(demoText()).not.toContain("פרסום");
     });
@@ -180,7 +180,7 @@ describe("setup demos", () => {
       expect(visibleText()).toContain("אבי חשמל");
       expect(visibleText()).toContain("2,340");
       expect(visibleText()).toContain("קבלני משנה");
-      expect(visibleText()).not.toContain("חומרי בניין השרון בע״מ");
+      expect(visibleText()).not.toContain("חומרי בניין הדר בע״מ");
     });
     check(<IosInstallDemo />, () => {
       expect(screen.getByText(IOS_ALT)).toBeInTheDocument();
@@ -214,12 +214,12 @@ describe("setup demos", () => {
     );
     expect(frame()).toBe("1");
     expect(visibleText()).toContain("מספר חברה");
-    expect(visibleText()).not.toContain("חומרי בניין השרון");
+    expect(visibleText()).not.toContain("חומרי בניין הדר");
     act(() => {
       vi.advanceTimersByTime(SUMIT_DEMO_MS + 200);
     });
     expect(frame()).toBe("4");
-    expect(visibleText()).toContain("חומרי בניין השרון");
+    expect(visibleText()).toContain("חומרי בניין הדר");
     expect(screen.getByRole("button", { name: "שוב" })).toHaveTextContent("שוב");
   });
 
@@ -227,13 +227,13 @@ describe("setup demos", () => {
     vi.useFakeTimers();
     render(<FirstApprovalDemo />);
     expect(document.querySelector("[data-demo-count]")?.textContent).toBe("12");
-    expect(visibleText()).toContain("חומרי בניין השרון בע״מ");
+    expect(visibleText()).toContain("חומרי בניין הדר בע״מ");
     act(() => {
       vi.advanceTimersByTime(APPROVAL_DEMO_MS + 200);
     });
     expect(document.querySelector("[data-demo-count]")?.textContent).toBe("11");
     expect(visibleText()).toContain("אבי חשמל");
-    expect(visibleText()).not.toContain("חומרי בניין השרון בע״מ");
+    expect(visibleText()).not.toContain("חומרי בניין הדר בע״מ");
   });
 
   it("keeps the Jev pills off frame 1 and fills the card rows later", () => {
