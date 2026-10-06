@@ -429,6 +429,35 @@ a.ui-row,
   text-wrap: pretty;
 }
 
+.ui-loan-caution {
+  color: var(--color-warning);
+}
+
+.ui-num-field {
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  text-align: start;
+}
+
+.ui-date-field .ui-num {
+  flex: 1;
+  direction: ltr;
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.ui-date-field:disabled {
+  cursor: not-allowed;
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -665,6 +694,10 @@ a.ui-row,
   line-height: var(--type-hint-line);
 }
 
+.ui-field-message-slot {
+  min-block-size: calc(var(--type-hint-size) * var(--type-hint-line));
+}
+
 .ui-money-field {
   position: relative;
   display: flex;
@@ -743,7 +776,7 @@ a.ui-row,
 
 .ui-toggle:disabled,
 .ui-toggle:has(input:disabled) {
-  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .ui-toggle input:focus-visible {
@@ -1595,6 +1628,25 @@ a.ui-row,
   flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-2) var(--space-side) 0;
+}
+
+.ui-viewer-note {
+  margin-block-start: var(--space-2);
+}
+
+.ui-viewer-note[aria-hidden="true"] {
+  visibility: hidden;
+}
+
+.ui-menu-slot {
+  display: block;
+  flex: none;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+}
+
+.ui-review-queue > .ui-viewer-note {
+  margin-inline: var(--space-side);
 }
 
 .ui-review-approve {
@@ -2527,11 +2579,20 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-switch-row:has(input:disabled) {
-  opacity: 0.45;
-  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
 .ui-switch-row input:disabled + .ui-switch {
+  background: var(--color-disabled-bg);
+  box-shadow: inset 0 0 0 var(--stroke-strong) var(--color-control-border);
+}
+
+.ui-switch-row input:disabled:checked + .ui-switch {
+  background: color-mix(in srgb, var(--color-accent) 75%, var(--color-disabled-bg));
+  box-shadow: none;
+}
+
+.ui-switch-row input:disabled:checked + .ui-switch i {
   background: var(--color-disabled-bg);
 }
 

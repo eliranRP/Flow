@@ -106,6 +106,8 @@ export interface ClassifiedError {
   class: ConnectorErrorClass;
   /** ISO-8601 timestamp, or null when the class has no wait. */
   retry_after: string | null;
+  /** Stored last_error when it is narrower than the class. Page cap is sync_page_cap. */
+  code?: string;
 }
 
 export type ValidateResult =
@@ -143,6 +145,12 @@ export interface FetchSinceResult {
    * A single page of a multi-page listing is false.
    */
   complete: boolean;
+  /**
+   * Calendar date sent as the provider start filter, when this fetch has one.
+   * Null is מההתחלה. The engine uses it to recheck a stored line that the
+   * window cannot return.
+   */
+  windowStart?: string | null;
 }
 
 /** A source document the VAT split of a linked row needs. Amounts are minor units. */
@@ -202,6 +210,8 @@ export interface ProviderMeta {
    * "kind only" rule is the one the brief replaces.
    */
   providerCategory?: string | null;
+  /** ISO time of the last status recheck. Normalize does not set it. */
+  checked_at?: string | null;
 }
 
 /**
@@ -262,6 +272,8 @@ const nullableName = z.string().max(TEXT_LIMITS.name).nullable();
 export const providerMetaSchema = z.strictObject({
   kind: z.string().max(TEXT_LIMITS.kind).nullable().optional(),
   providerCategory: z.string().max(TEXT_LIMITS.hint).nullable().optional(),
+  /** ISO time of the last status recheck. The engine writes it. Normalize leaves it unset. */
+  checked_at: z.string().min(1).max(40).nullable().optional(),
 });
 
 const namedParty = z.strictObject({

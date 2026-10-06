@@ -252,6 +252,8 @@ jobs:
           supabase functions deploy sumit-connect --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy sumit-reseal --project-ref sxqpnetmtufkzowutduq
           bash scripts/cd-sumit-reseal.sh
+          supabase functions deploy mercury-connect --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy mercury-sync --project-ref sxqpnetmtufkzowutduq
 
       - name: Read-only preflight and migration push
         env:
@@ -317,6 +319,15 @@ jobs:
               echo 'What failed: the read-only Playwright smoke. The step log has the Playwright output. This summary does not.'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
+          fi
+          if grep -q '(retries)' "$log" || grep -q ' flaky' "$log"; then
+            if ! grep -q 'passed on retry' "${GITHUB_STEP_SUMMARY:-/dev/null}"; then
+              printf '%s\n' \
+                '### Warning: read-only smoke passed on retry' \
+                '' \
+                'The first attempt failed and a retry passed. Production is already live. The Playwright output is in the step log, not in this summary.' \
+                >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
           cat "$log"
 

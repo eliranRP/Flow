@@ -19,6 +19,7 @@ type ReviewCardProps = {
   supplier: string;
   sourceLine: string;
   netAgorot: bigint;
+  currency?: string;
   vatLine: string;
   suggestion?: ReviewSuggestion;
   /** Queue reason. An unallocated shared cost is not a missing project. */
@@ -40,6 +41,7 @@ export function ReviewCard({
   supplier,
   sourceLine,
   netAgorot,
+  currency = "ILS",
   vatLine,
   suggestion,
   reason,
@@ -104,7 +106,7 @@ export function ReviewCard({
         </div>
       </div>
       <p className="t-display">
-        <bdi dir="ltr">{formatAmount(shown, "detail")}</bdi>
+        <bdi dir="ltr">{formatAmount(shown, "detail", currency)}</bdi>
       </p>
       <p className="t-hint">{vatLine}</p>
       <div className="ui-review-ai">
@@ -130,13 +132,13 @@ export function ReviewCard({
             onClick={line.onOpen}
           />
         ) : (
-          <p className="ui-review-line" key={line.key}>
-            <span className="t-label">{line.label}</span>
-            <span>
-              {line.value}
-              {line.suggested ? <SuggestTag /> : null}
-            </span>
-          </p>
+          <ListRow
+            key={line.key}
+            variant="static"
+            eyebrow={line.label}
+            title={line.value}
+            tag={line.suggested ? <SuggestTag /> : undefined}
+          />
         ))}
         {note == null ? null : pending ? (
           <p className="t-label ui-review-note-slot" aria-hidden="true" />

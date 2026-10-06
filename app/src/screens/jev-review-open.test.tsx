@@ -425,20 +425,17 @@ describe("cold review scope", () => {
     window.clearTimeout(releaseAt);
   });
 
-  it("reads the connector when getSession hangs", async () => {
+  it("does not list review while getSession has not answered", async () => {
     db.holdSession = new Promise<void>(() => undefined);
     db.integration = { enabled: false, mode: "off" };
     db.review = [stored];
-    const started = Date.now();
     renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
-    expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 800 })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
-    }, { timeout: 1800 });
-    expect(Date.now() - started).toBeLessThan(1800);
-    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
-    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
-    expect(boundJevConnectorScope()).toBeNull();
+      expect(screen.getByText("טוען…")).toBeInTheDocument();
+    });
+    expect(db.reviewReads).toBe(0);
+    expect(screen.queryByRole("heading", { name: stored.supplier_name })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
   });
 
   it("sends one approve when Jev was never enabled and the company lookup fails", async () => {
@@ -471,7 +468,7 @@ describe("cold review scope", () => {
     await waitFor(() => {
       expect(jevScopeFollowsLive()).toBe(true);
     });
-    const approve = screen.getByRole("button", { name: "אישור" });
+    const approve = await screen.findByRole("button", { name: "אישור" });
     expect(approve).toBeEnabled();
     expect(document.querySelector("[data-jev-pending]")).toBeNull();
     fireEvent.click(approve);
@@ -492,8 +489,9 @@ describe("cold review scope", () => {
     observer.observe(document.body, { childList: true, subtree: true, attributes: true });
     renderReview(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
     expect(await screen.findByRole("heading", { name: stored.supplier_name }, { timeout: 800 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אישור" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "פרויקט: פרויקט שמור" })).not.toBeInTheDocument();
+    expect(screen.getByText("פרויקט שמור")).toBeInTheDocument();
     expect(document.querySelector("[data-jev-pending]")).toBeNull();
     expect(pendingFrames).toEqual([]);
     expect(boundJevConnectorScope()).toBeNull();

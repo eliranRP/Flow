@@ -100,6 +100,23 @@ describe("transaction status chips", () => {
     expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
   });
 
+  it("shows a dollar detail in dollars", () => {
+    renderTxn({
+      ...expense,
+      direction: "income",
+      amount_gross: 1234n,
+      amount_net: 1234n,
+      vat_amount: 0n,
+      currency: "USD",
+      review_status: null,
+      paid: null,
+      open_gross_agorot: null,
+      customer_name: "לקוח",
+      supplier_name: null,
+    });
+    expect(screen.getByText("$12.34")).toBeInTheDocument();
+  });
+
   it("draws no status chip when the review and payment are unknown", () => {
     renderTxn({ ...expense, review_status: null, paid: null, open_gross_agorot: null });
     expect(screen.queryByText("ממתין לאישור")).not.toBeInTheDocument();
