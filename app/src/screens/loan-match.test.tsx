@@ -66,6 +66,26 @@ describe("LoanSplitPanel", () => {
     expect(onCorrect).toHaveBeenCalled();
   });
 
+  it("hides matching for a viewer", () => {
+    panel({ readOnly: true });
+    expect(screen.queryByRole("button", { name: "שיוך להלוואה" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the split and hides the correction for a viewer", () => {
+    panel({
+      readOnly: true,
+      needsReview: true,
+      parts: [
+        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
+        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
+        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1" },
+      ],
+    });
+    expect(screen.getByText("ריבית")).toBeInTheDocument();
+    expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עדכון החלוקה" })).not.toBeInTheDocument();
+  });
+
   it("does not offer a one-tap correction when the currency does not match", () => {
     panel({
       needsReview: true,
