@@ -1,6 +1,16 @@
 import { assertEquals } from "jsr:@std/assert@1";
+import {
+  allocateLoanSplit,
+  scheduleRowForDate,
+} from "../../../packages/shared/src/loan-split.ts";
+import {
+  buildLoanSchedule,
+  contractualPaymentMinor,
+} from "../../../packages/shared/src/loan-schedule.ts";
 import { callTool, toolsFor } from "./tools.ts";
 
+const LOAN = "dddddddd-dddd-4000-8000-0000000000d1";
+const LOAN_TXN = "eeeeeeee-eeee-4000-8000-0000000000e1";
 const TXN = "22222222-2222-4000-8000-000000000020";
 const PROJECT = "8c1a0b2e-1111-4000-8000-000000000001";
 const CATEGORY = "c0ffee00-1111-4000-8000-0000000000a1";
@@ -32,7 +42,7 @@ Deno.test("search_expenses filed and all call search_transactions", async () => 
   assertEquals(calls[1]?.body.p_scope, "all");
 });
 
-Deno.test("the six read tools call their own functions", async () => {
+Deno.test("the eight read tools call their own functions", async () => {
   const { calls, rpc } = rpcOf((name) => {
     if (name === "get_dashboard") {
       return { status: 200, json: { company_id: "company-a", name: "א", projects: [], basis: "cash", income_agorot: 1, direct_agorot: 0, shared_agorot: 0, overhead_agorot: 0, expense_agorot: 0, net_profit_agorot: 1, active_projects: 0, review_count: 0 } };
@@ -40,6 +50,20 @@ Deno.test("the six read tools call their own functions", async () => {
     if (name === "list_categories") return { status: 200, json: [{ id: "c1" }] };
     if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: "11111111-1111-4000-8000-000000000001", description: "אלפא" }] };
     if (name === "get_transaction") return { status: 200, json: { id: "11111111-1111-4000-8000-000000000001", description: "אלפא" } };
+    if (name === "mcp_list_loans") {
+      return { status: 200, json: [{
+        id: LOAN,
+        name: "Example Bank",
+        currency: "USD",
+        principal_minor: 12000000,
+        annual_rate_ppm: 68750,
+        term_months: 360,
+        start_date: "2026-01-01",
+        payment_minor: 100000,
+        escrow_minor: 10000,
+        balance_minor: 12000000,
+      }] };
+    }
     return { status: 500, json: null };
   });
   const projects = await callTool("list_projects", {}, ["read"], rpc);
@@ -48,12 +72,16 @@ Deno.test("the six read tools call their own functions", async () => {
   const expense = await callTool("get_expense", { transaction_id: "11111111-1111-4000-8000-000000000001" }, ["read"], rpc);
   const pending = await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
   const totals = await callTool("get_totals", {}, ["read"], rpc);
+  const loans = await callTool("list_loans", {}, ["read"], rpc);
+  const schedule = await callTool("get_loan_schedule", { loan_id: LOAN }, ["read"], rpc);
   assertEquals(projects.isError, false);
   assertEquals(categories.isError, false);
   assertEquals(review.isError, false);
   assertEquals(expense.isError, false);
   assertEquals(pending.isError, false);
   assertEquals(totals.isError, false);
+  assertEquals(loans.isError, false);
+  assertEquals(schedule.isError, false);
   assertEquals(calls.map((call) => call.name), [
     "get_dashboard",
     "list_categories",
@@ -61,6 +89,8 @@ Deno.test("the six read tools call their own functions", async () => {
     "get_transaction",
     "list_review",
     "get_dashboard",
+    "mcp_list_loans",
+    "mcp_list_loans",
   ]);
 });
 
@@ -181,6 +211,9 @@ Deno.test("write tools are listed only for a write scope", () => {
     "create_category",
     "sync_bank",
     "hide_category",
+    "add_loan",
+    "update_loan",
+    "attach_loan_payment",
     "undo",
   ]);
   for (const tool of toolsFor(["write"])) {
@@ -193,12 +226,17 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_expense",
     "search_expenses",
     "get_totals",
+    "list_loans",
+    "get_loan_schedule",
     "assign_expense",
     "set_expense_category",
     "create_project",
     "create_category",
     "sync_bank",
     "hide_category",
+    "add_loan",
+    "update_loan",
+    "attach_loan_payment",
     "undo",
   ]);
   assertEquals(toolsFor([]), []);
@@ -550,4 +588,157 @@ Deno.test("sync_bank proceed, replay, errors, and skipped", async () => {
   });
   assertEquals(noInvoke.isError, true);
   if (!noInvoke.structuredContent.ok) assertEquals(noInvoke.structuredContent.error.code, "unavailable");
+});
+
+Deno.test("add_loan sends exact p_* bodies and default payment matches the schedule", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_company_loan_currency") return { status: 200, json: "USD" };
+    if (name === "mcp_add_loan") {
+      return { status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const principalMinor = 25000000n;
+  const ratePpm = 68750;
+  const escrowMinor = 10000n;
+  const term = 360;
+  const level = contractualPaymentMinor({ principalMinor, annualRatePpm: ratePpm, termMonths: term }) + escrowMinor;
+  const result = await callTool("add_loan", {
+    idempotency_key: "loan-add-1",
+    name: "Example Bank",
+    principal: "250000.00",
+    annual_rate_percent: 6.875,
+    term_months: term,
+    start_date: "2026-01-01",
+    escrow: "100.00",
+  }, ["write"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_add_loan",
+    body: {
+      p_idempotency_key: "loan-add-1",
+      p_name: "Example Bank",
+      p_principal_minor: Number(principalMinor),
+      p_annual_rate_ppm: ratePpm,
+      p_term_months: term,
+      p_start_date: "2026-01-01",
+      p_payment_minor: Number(level),
+      p_escrow_minor: Number(escrowMinor),
+      p_currency: "USD",
+    },
+  });
+});
+
+Deno.test("loan amount and rate conversion and validation", async () => {
+  const { rpc } = rpcOf((name) => {
+    if (name === "mcp_company_loan_currency") return { status: 200, json: "ILS" };
+    if (name === "mcp_add_loan") return { status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan" } } };
+    if (name === "mcp_update_loan") return { status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_update" } } };
+    return { status: 500, json: null };
+  });
+  const zeroRate = await callTool("add_loan", {
+    idempotency_key: "loan-z",
+    name: "Zero",
+    principal: 1000,
+    annual_rate_percent: 0,
+    term_months: 12,
+    start_date: "2026-01-01",
+  }, ["write"], rpc);
+  assertEquals(zeroRate.isError, false);
+  const big = await callTool("add_loan", {
+    idempotency_key: "loan-big",
+    name: "Big",
+    principal: "1000000.01",
+    annual_rate_percent: "6.875",
+    term_months: 12,
+    start_date: "2026-01-01",
+    currency: "USD",
+  }, ["write"], rpc);
+  assertEquals(big.isError, false);
+  const badCases = [
+    callTool("add_loan", { idempotency_key: "k", name: "X", principal: 1, annual_rate_percent: 1, term_months: 12, start_date: "2026-01-01", extra: true }, ["write"], rpc),
+    callTool("add_loan", { idempotency_key: "k", name: "X", principal: 1, annual_rate_percent: 1, term_months: 12, start_date: "2026-01-01", company_id: LOAN }, ["write"], rpc),
+    callTool("add_loan", { idempotency_key: "k", name: "X", principal: 1, annual_rate_percent: 1, term_months: 0, start_date: "2026-01-01" }, ["write"], rpc),
+    callTool("add_loan", { idempotency_key: "k", name: "X", principal: 1, annual_rate_percent: 1, term_months: 601, start_date: "2026-01-01" }, ["write"], rpc),
+    callTool("add_loan", { idempotency_key: "k", name: "X", principal: -1, annual_rate_percent: 1, term_months: 12, start_date: "2026-01-01" }, ["write"], rpc),
+    callTool("add_loan", { idempotency_key: "k", name: "X", principal: 1, annual_rate_percent: 1, term_months: 12, start_date: "01-01-2026" }, ["write"], rpc),
+    callTool("update_loan", { idempotency_key: "k", loan_id: LOAN, currency: "EUR" }, ["write"], rpc),
+  ];
+  for (const pending of badCases) {
+    const out = await pending;
+    assertEquals(out.isError, true);
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("add_loan", {
+    idempotency_key: "k",
+    name: "X",
+    principal: 1,
+    annual_rate_percent: 1,
+    term_months: 12,
+    start_date: "2026-01-01",
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+});
+
+Deno.test("attach_loan_payment matches writeSplit parts and schedule paging works", async () => {
+  const loanRow = {
+    id: LOAN,
+    name: "Example Bank",
+    currency: "USD",
+    principal_minor: 12000000,
+    annual_rate_ppm: 68750,
+    term_months: 360,
+    start_date: "2026-01-01",
+    payment_minor: 100000,
+    escrow_minor: 10000,
+    balance_minor: 12000000,
+  };
+  const lineMinor = 100000n;
+  const schedule = buildLoanSchedule({
+    principalMinor: BigInt(loanRow.principal_minor),
+    annualRatePpm: loanRow.annual_rate_ppm,
+    termMonths: loanRow.term_months,
+    startDate: loanRow.start_date,
+    paymentMinor: BigInt(loanRow.payment_minor),
+    escrowMinor: BigInt(loanRow.escrow_minor),
+  });
+  const row = scheduleRowForDate(schedule.rows, "2026-01-01");
+  if (row == null) throw new Error("missing schedule row");
+  const expected = allocateLoanSplit({
+    lineMinor,
+    interestMinor: row.interestMinor,
+    escrowMinor: row.escrowMinor,
+    principalMinor: row.principalMinor,
+  });
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_transaction") {
+      return { status: 200, json: { id: LOAN_TXN, doc_date: "2026-01-01", amount_original: Number(lineMinor), currency: "USD" } };
+    }
+    if (name === "mcp_list_loans") return { status: 200, json: [loanRow] };
+    if (name === "mcp_attach_loan_payment") {
+      return { status: 200, json: { ok: true, data: { loan_id: LOAN, transaction_id: LOAN_TXN, undo_kind: "loan_split" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const attached = await callTool("attach_loan_payment", {
+    idempotency_key: "split-1",
+    transaction_id: LOAN_TXN,
+    loan_id: LOAN,
+  }, ["write"], rpc);
+  assertEquals(attached.isError, false);
+  assertEquals(calls[2]?.body.p_parts, expected.map((part) => ({
+    part: part.part,
+    amount_minor: Number(part.amountMinor),
+    scheduled_minor: Number(part.scheduledMinor),
+  })));
+  const page = await callTool("get_loan_schedule", { loan_id: LOAN, from: 1, limit: 2 }, ["read"], rpc);
+  assertEquals(page.isError, false);
+  if (page.structuredContent.ok) {
+    const data = page.structuredContent.data as { from: number; limit: number; total: number; rows: unknown[] };
+    assertEquals(data.from, 1);
+    assertEquals(data.limit, 2);
+    assertEquals(data.rows.length, 2);
+    assertEquals(data.total, schedule.rows.length);
+  }
 });
