@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(18);
+select plan(20);
 
 do $users$
 begin
@@ -164,18 +164,40 @@ select is(
   'undo puts both shares back'
 );
 
-select lives_ok(
+select throws_ok(
   format(
     'select public.reassign_transaction(%L::uuid, null, %L::uuid)',
     (select id from r7 where label = 'income'),
     (select id from r7 where label = 'income_cat')
   ),
-  'income is reassigned without a project'
+  'P0001',
+  'project and category are required',
+  'income with a P&L category is not reassigned without a project'
+);
+select lives_ok(
+  format(
+    'select public.reassign_transaction(%L::uuid, null, %L::uuid)',
+    (select id from r7 where label = 'income'),
+    (select c.id from public.categories c
+      where c.company_id = (select company_id from public.transactions where id = (select id from r7 where label = 'income'))
+        and c.kind = 'income' and c.excluded_from_pnl
+      order by c.sort_order limit 1)
+  ),
+  'income with an off-P&L category is reassigned without a project'
+);
+select lives_ok(
+  format(
+    'select public.reassign_transaction(%L::uuid, %L::uuid, %L::uuid)',
+    (select id from r7 where label = 'income'),
+    (select id from r7 where label = 'beta'),
+    (select id from r7 where label = 'income_cat')
+  ),
+  'income is reassigned with a project'
 );
 select is(
   (select project_id from public.transactions where id = (select id from r7 where label = 'income')),
-  null,
-  'income has no project'
+  (select id from r7 where label = 'beta'),
+  'income keeps the picked project'
 );
 select is(
   (select category_id from public.transactions where id = (select id from r7 where label = 'income')),
