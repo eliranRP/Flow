@@ -100,6 +100,28 @@ export function roundedProfitAgorot(incomeAgorot: bigint, expenseAgorot: bigint)
  * Summaries are whole shekels. `{ agorot: true }` keeps a non-zero agora remainder.
  * Decision 0016 and the implementation guide §6.4.
  */
+/**
+ * Minor units in the line's own currency.
+ * ILS uses ₪. USD uses $. Any other code is written before the digits.
+ * Two-decimal currencies share the shekel rounding. Summaries are whole units.
+ */
+export function formatMoney(minor: bigint, currency = "ILS", options?: { agorot?: boolean }): string {
+  if (currency === "" || currency === "ILS") return formatIls(minor, options);
+  const negative = minor < 0n;
+  const abs = negative ? -minor : minor;
+  const sign = negative ? "−" : "";
+  const prefix = currency === "USD" ? "$" : `${currency} `;
+  if (options?.agorot && abs % 100n !== 0n) {
+    const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const fraction = (abs % 100n).toString().padStart(2, "0");
+    return `${sign}${prefix}${whole}.${fraction}`;
+  }
+  const major = wholeShekels(abs);
+  if (major === 0) return `${prefix}0`;
+  const digits = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${sign}${prefix}${digits}`;
+}
+
 export function formatIls(agorot: bigint, options?: { agorot?: boolean }): string {
   const negative = agorot < 0n;
   const abs = negative ? -agorot : agorot;
