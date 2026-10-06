@@ -30,7 +30,7 @@ import {
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
-import { LoanBalanceList, useLoanBalances } from "./loan-match";
+import { LoanBalanceList, LoanReadError, useLoanBalances } from "./loan-match";
 
 export type { LoanCurrency } from "./loan-form";
 
@@ -362,7 +362,19 @@ export function LoanSettingsSection({
   return (
     <>
       <SectionHead title="הלוואות" />
-      <LoanBalanceList rows={balances.data ?? []} />
+      {balances.isLoading ? (
+        <List>
+          <ListRow variant="skeleton" />
+        </List>
+      ) : balances.isError ? (
+        <LoanReadError
+          label="יתרות הלוואות"
+          busy={balances.isFetching}
+          onRetry={() => { void balances.refetch(); }}
+        />
+      ) : (
+        <LoanBalanceList rows={balances.data ?? []} />
+      )}
       {holdWrites ? null : (
         <List>
           <ListRow
