@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contractualPaymentMinor } from "@flow/shared";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
+import { ViewerPreview } from "../use-is-viewer";
 import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "./loan-form";
 import { LoanSettingsSection, LoanSetupForm } from "./loan-setup";
 
@@ -18,6 +19,7 @@ const db = vi.hoisted(() => ({
   currencyHold: null as Promise<void> | null,
   offline: false,
   selects: 0,
+  balanceError: null as { message: string } | null,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -33,6 +35,17 @@ vi.mock("../lib/supabase", () => ({
               if (db.hold) return db.hold.then(() => finish());
               return Promise.resolve(finish());
             },
+            select: () => ({
+              eq: () => Promise.resolve({ data: [], error: null }),
+            }),
+          };
+        }
+        if (table === "loan_balances") {
+          return {
+            select: () => Promise.resolve({
+              data: db.balanceError ? null : [],
+              error: db.balanceError,
+            }),
           };
         }
         if (table === "transactions") {
@@ -74,6 +87,7 @@ beforeEach(() => {
   db.currencyHold = null;
   db.offline = false;
   db.selects = 0;
+  db.balanceError = null;
 });
 
 function renderForm(ui: ReactNode) {
@@ -506,11 +520,31 @@ describe("LoanSetupForm", () => {
 });
 
 describe("LoanSettingsSection", () => {
+  it("hides a new loan from a viewer", () => {
+    renderSection(
+      <ViewerPreview>
+        <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
+      </ViewerPreview>,
+    );
+    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
+  });
+
   it("opens the sheet on the company currency", () => {
     renderSection(<LoanSettingsSection companyId={null} companyCurrency="USD" />);
     openLoan();
     expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "$" })).toBeChecked();
+  });
+
+  it("shows a retry when the balances read fails", async () => {
+    db.balanceError = { message: "offline" };
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: יתרות הלוואות" });
+    db.balanceError = null;
+    fireEvent.click(retry);
+    await waitFor(() => { expect(screen.queryByRole("button", { name: "ניסיון חוזר: יתרות הלוואות" })).not.toBeInTheDocument(); });
   });
 
   it("inserts the allowed columns, in minor units, with the typed rate", async () => {

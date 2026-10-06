@@ -14,6 +14,7 @@ import { useSheetHistory } from "../ui/back";
 import { formatDisplay } from "../ui/date-math";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
+import { useHoldWrites } from "../use-is-viewer";
 import {
   LOAN_CURRENCY_MARK,
   firstOfNextMonth,
@@ -29,6 +30,7 @@ import {
   type LoanInsert,
   type LoanPreview,
 } from "./loan-form";
+import { LoanBalanceList, LoanReadError, useLoanBalances } from "./loan-match";
 
 export type { LoanCurrency } from "./loan-form";
 
@@ -320,6 +322,8 @@ export function LoanSettingsSection({
     setOpenState(next);
   }, [clearDraft]);
   const setSheet = useSheetHistory("loan-new", open, setOpen);
+  const balances = useLoanBalances(companyId);
+  const holdWrites = useHoldWrites();
   const query = useQuery({
     queryKey: ["loan-currency", companyId],
     enabled: companyCurrency == null && companyId != null,
@@ -335,12 +339,13 @@ export function LoanSettingsSection({
       return "לא הצלחנו לשמור את ההלוואה.";
     },
     success: "ההלוואה נשמרה",
-    keys: [],
+    keys: ["loans"],
     onSuccess: () => {
       clearDraft();
       setSheet(false);
     },
     run: async (row) => {
+      if (holdWrites) throw new Error("preview");
       const supabase = getSupabase();
       if (!supabase || companyId == null) throw new Error("supabase");
       assertNoError(await supabase.from("loans").insert({ ...row, company_id: companyId }));
@@ -348,6 +353,7 @@ export function LoanSettingsSection({
   });
 
   function setLoanSheet(next: boolean) {
+    if (next && holdWrites) return;
     if (next) keepDraft.current = true;
     else clearDraft();
     setSheet(next);
@@ -356,17 +362,32 @@ export function LoanSettingsSection({
   return (
     <>
       <SectionHead title="הלוואות" />
-      <List>
-        <ListRow
-          variant="button"
-          title="הלוואה חדשה"
-          icon={<BankIcon />}
-          chevron
-          buttonRef={rowRef}
-          onClick={() => { setLoanSheet(true); }}
+      {balances.isLoading ? (
+        <List>
+          <ListRow variant="skeleton" />
+        </List>
+      ) : balances.isError ? (
+        <LoanReadError
+          label="יתרות הלוואות"
+          busy={balances.isFetching}
+          onRetry={() => { void balances.refetch(); }}
         />
-      </List>
-      <Sheet open={open} onOpenChange={setLoanSheet} title="הלוואה" returnFocusRef={rowRef}>
+      ) : (
+        <LoanBalanceList rows={balances.data ?? []} />
+      )}
+      {holdWrites ? null : (
+        <List>
+          <ListRow
+            variant="button"
+            title="הלוואה חדשה"
+            icon={<BankIcon />}
+            chevron
+            buttonRef={rowRef}
+            onClick={() => { setLoanSheet(true); }}
+          />
+        </List>
+      )}
+      <Sheet open={holdWrites ? false : open} onOpenChange={setLoanSheet} title="הלוואה" returnFocusRef={rowRef}>
         {currency == null ? (
           <p role="status">טוען…</p>
         ) : (
@@ -378,7 +399,7 @@ export function LoanSettingsSection({
             keepDraft={keepDraft}
             onDraft={(next) => { draftRef.current = next; }}
             onSave={(row) => {
-              if (blocked?.()) return;
+              if (holdWrites || blocked?.()) return;
               if (posted.current || save.isPending) return;
               posted.current = true;
               save.mutate(row, {
