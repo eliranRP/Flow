@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
@@ -20,6 +20,10 @@ const session = {
 } satisfies Session;
 
 const gate = vi.hoisted(() => ({ owner: "user-1" }));
+const invoke = vi.hoisted(() => vi.fn(
+  (_name: string, _options?: { body?: unknown }): Promise<{ data: unknown; error: null }> =>
+    Promise.resolve({ data: null, error: null }),
+));
 
 const dashboard = {
   company_id: companyId,
@@ -78,6 +82,9 @@ const supabase = {
     if (table === "review_queue") return chain([]);
     return chain(null);
   },
+  functions: {
+    invoke: (name: string, options?: { body?: unknown }) => invoke(name, options),
+  },
 };
 
 vi.mock("../lib/supabase", () => ({
@@ -113,6 +120,7 @@ describe("setup route history", () => {
     localStorage.clear();
     sessionStorage.clear();
     gate.owner = userId;
+    invoke.mockReset();
     window.history.replaceState(null, "");
   });
 
@@ -133,17 +141,57 @@ describe("setup route history", () => {
     expect(router.state.location.pathname).toBe("/setup/2");
   });
 
-  it("pushes SUMIT connect and returns to step 1", async () => {
+  it("closes the SUMIT sheet on back and stays on step 1", async () => {
     const router = renderRoute("/setup/1");
+    window.history.replaceState({ idx: 1 }, "");
     fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/settings");
-    });
-    expect(router.state.location.search).toBe("?sheet=sumit&return=%2Fsetup%2F1");
+    await screen.findByRole("dialog", { name: "חיבור SUMIT" });
     await act(async () => {
       await router.navigate(-1);
     });
-    expect(router.state.location.pathname).toBe("/setup/1");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/1");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("advances to step 2 after a successful connect", async () => {
+    invoke.mockResolvedValue({ data: {}, error: null });
+    const router = renderRoute("/setup/1");
+    fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/setup/2");
+    });
+  });
+
+  it("returns home from step 1 when opened from the card", async () => {
+    invoke.mockResolvedValue({ data: {}, error: null });
+    window.history.replaceState({ idx: 1 }, "");
+    const router = renderRoute("/setup/1?from=card", ["/", "/setup/1?from=card"]);
+    fireEvent.click(await screen.findByRole("button", { name: "חיבור SUMIT" }));
+    const dialog = await screen.findByRole("dialog", { name: "חיבור SUMIT" });
+    fireEvent.change(within(dialog).getByLabelText("מספר חברה"), { target: { value: "1001" } });
+    fireEvent.change(within(dialog).getByLabelText("מפתח API"), { target: { value: "secret-key" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+    });
+  });
+
+  it("keeps from=card when step 4 opens the review queue", async () => {
+    const router = renderRoute("/setup/4?from=card");
+    fireEvent.click(await screen.findByRole("button", { name: "כרטיס דוגמה" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/review");
+    });
+    expect(router.state.location.search).toBe("?setup=1&from=card");
   });
 
   it("pops back to Home when the step was opened from the card", async () => {

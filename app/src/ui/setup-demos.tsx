@@ -204,7 +204,7 @@ function SumitScene({ pointer }: SceneProps) {
             <CheckIcon size={16} />
           </span>
         </div>
-        <SumitLine title="חומרי בניין השרון" hint="הוצאה · 21/09" agorot={850_000n} sign="out" drop={line1} />
+        <SumitLine title="חומרי בניין הדר" hint="הוצאה · 21/09" agorot={850_000n} sign="out" drop={line1} />
         <SumitLine title="אבי חשמל" hint="הוצאה · 20/09" agorot={234_000n} sign="out" drop={line2} />
         <SumitLine title="וילה רעננה" hint="הכנסה · 19/09" agorot={4_500_000n} sign="in" drop={line3} />
         <div className="ui-setup-tabs ui-setup-drop" style={styleOf({ "--setup-drop": hello })}>
@@ -276,7 +276,7 @@ function JevScene({ pointer }: SceneProps) {
         <p className="t-title-3">לאישור</p>
       </div>
       <DemoFact
-        supplier="חומרי בניין השרון בע״מ"
+        supplier="חומרי בניין הדר בע״מ"
         date="21/09/2026"
         agorot={850_000n}
         vat="₪1,530"
@@ -322,7 +322,7 @@ function ProjectsScene({ pointer }: SceneProps) {
       <p className="t-label">פרויקטים</p>
       <ProjectRow label="וילה רעננה" amount={rowA} checked={rowA >= 1} />
       <ProjectRow label="בניין מגורים חולון" amount={rowB} checked={rowB >= 1} />
-      <ProjectRow label="מגדל משרדים פ״ת" amount={rowC} checked={chips >= 1} />
+      <ProjectRow label="מגדל משרדים לוד" amount={rowC} checked={chips >= 1} />
       <p className="t-label">קטגוריות</p>
       <div className="ui-setup-pills">
         <ChoiceChip label="חומרים" amount={chips} />
@@ -393,7 +393,7 @@ function ApprovalScene({ pointer }: SceneProps) {
       </div>
       <div className="ui-setup-stack">
         <div className="ui-setup-leave" data-setup-visible={leave < 1 ? "true" : "false"} style={styleOf({ "--setup-leave": leave })}>
-          <ApprovalCard supplier="חומרי בניין השרון בע״מ" agorot={850_000n} vat="₪1,530" project="וילה רעננה" category="חומרים" tap="approve" />
+          <ApprovalCard supplier="חומרי בניין הדר בע״מ" agorot={850_000n} vat="₪1,530" project="וילה רעננה" category="חומרים" tap="approve" />
         </div>
         <div className="ui-setup-fade" data-setup-visible={next >= 1 ? "true" : "false"} style={styleOf({ "--setup-fade": next })}>
           <ApprovalCard supplier="אבי חשמל" agorot={234_000n} vat="₪421" project="וילה רעננה" category="קבלני משנה" />

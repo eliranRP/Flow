@@ -24,7 +24,7 @@ describe("setup step chrome", () => {
         step={2}
         title="תיוג חכם"
         line="Flow יציע פרויקט וקטגוריה לכל תנועה."
-        demoAlt="הדגמה: לתנועה נוספת הצעה של פרויקט וקטגוריה, מסומנת הצעה."
+        demo="jev"
         onBack={() => undefined}
         onSkip={skip}
         primary={<Button type="button">המשך</Button>}
@@ -33,7 +33,7 @@ describe("setup step chrome", () => {
     expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuenow", "2");
     expect(screen.getByRole("meter", { name: "התקדמות ההגדרה" })).toHaveAttribute("aria-valuemax", "5");
     expect(screen.getByText(/מתוך/)).toBeInTheDocument();
-    expect(document.querySelector("[data-demo-slot]")).toHaveAttribute("aria-hidden", "true");
+    expect(document.querySelector("[data-demo-slot]")).toBeInTheDocument();
     const meter = document.querySelector(".ui-setup-meter .ui-bar-thin");
     const setup = document.querySelector(".ui-setup");
     expect(meter).not.toBeNull();

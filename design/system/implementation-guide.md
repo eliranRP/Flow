@@ -198,9 +198,9 @@ From top to bottom:
 ### 3.4 Template C: full-screen flow (onboarding) and full-screen task
 - There is **no tab bar** and **no band**.
 - The top bar has **back** (steps 2 and later), or **✕** for tasks opened from elsewhere (Split, Upload results).
-- **Onboarding only:** a progress row under the top bar, made of a 4px progress bar (`tint` track, `accent` fill) and the hint "שלב X מתוך 4". The sign-in step (09a, Google) has no top bar and no progress row.
+- **Onboarding only:** a progress row under the top bar, made of a 4px progress bar (`tint` track, `accent` fill) and the hint "שלב X מתוך 5". Step 0 (פרטי העסק) has no progress row. The sign-in step (09a, Google) has no top bar and no progress row. דלג is the top-bar text link on a counted step, not a second primary under the CTA.
 - The header is `title-1` plus a one-line `label` explaining why this step matters.
-- **Pinned action area:** the primary CTA (52px) sits `calc(var(--safe-bottom) + 16px)` above the bottom edge, with an optional ghost secondary (40px high, e.g. "דלג לעכשיו") under it. Content scrolls behind it and **MUST NOT** be hidden by it (add bottom padding equal to the action area's height).
+- **Pinned action area:** the primary CTA (52px) sits `calc(var(--safe-bottom) + 16px)` above the bottom edge. Content scrolls behind it and **MUST NOT** be hidden by it (add bottom padding equal to the action area's height).
 - One primary per step. Step titles are short nouns (e.g. "פרטי החברה", "הפרויקטים שלך").
 
 ---
@@ -395,7 +395,7 @@ Reference CSS is in `flow.py` (`BASE`), and the states are shown on boards `ds-4
 |---|---|---|
 | **Primary** | `accent` fill, `on-accent` text, 52px high, 14px radius, weight 600 | The one main action of the screen or sheet ("אישור", "שמירה", "המשך") |
 | **Secondary** | `tint` fill, `accent-text` text | Important alternatives ("שינוי", "פיצול בין פרויקטים"), and the empty-state action |
-| **Ghost** | Text only, `accent-text` (or `text-secondary` for "ביטול") | Low-emphasis options ("דלג", "דלג לעכשיו") |
+| **Ghost** | Text only, `accent-text` (or `text-secondary` for "ביטול") | Low-emphasis options ("דלג") |
 | **Destructive** | Text only, `bad`, with a trash icon | "מחיקה", always confirmed or undoable |
 | **Small pill** (`.btn.sm`) | 36px high, fully round, usually secondary | Inline actions in rows and headers ("סימון כשולם", "פרויקט חדש") |
 

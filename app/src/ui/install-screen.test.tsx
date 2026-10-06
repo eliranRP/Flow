@@ -25,32 +25,36 @@ describe("InstallScreen", () => {
     const onDismiss = vi.fn();
     renderInstall("android-steps", onDismiss);
     expect(screen.getByRole("list").children).toHaveLength(3);
-    expect(screen.getByText(/מקישים על ⋮/)).toBeInTheDocument();
+    expect(screen.getByText("⋮")).toBeInTheDocument();
+    expect(screen.getByText("בוחרים ״הוספה למסך הבית״")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "התקנה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "הבנתי" }));
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
-  it("keeps the Safari share label with its icon", () => {
+  it("shows the iOS 26 rows on iPhone", () => {
     renderInstall("iphone");
-    const unit = screen.getByText("״שיתוף״").parentElement;
-    expect(unit).toHaveClass("ui-install-unit");
-    expect(screen.getByText("כפתור השיתוף נמצא למטה")).toBeInTheDocument();
+    expect(screen.getByRole("list").children).toHaveLength(3);
+    expect(screen.getByText("•••")).toBeInTheDocument();
+    expect(screen.getByText("שיתוף ואז הוספה למסך הבית")).toBeInTheDocument();
+    expect(screen.getByText("מקישים הוספה")).toBeInTheDocument();
+    expect(screen.queryByText("ההתקנה באייפון עובדת רק מספארי.")).not.toBeInTheDocument();
+    expect(screen.queryByText("פותחים את הקישור הזה בספארי")).not.toBeInTheDocument();
   });
 
-  it("points an iPad at the top share button", () => {
+  it("uses the same iOS 26 rows on iPad", () => {
     renderInstall("ipad");
-    expect(screen.getByText("כפתור השיתוף נמצא למעלה")).toBeInTheDocument();
+    expect(screen.getByText("שיתוף ואז הוספה למסך הבית")).toBeInTheDocument();
+    expect(screen.queryByText("כפתור השיתוף נמצא למעלה")).not.toBeInTheDocument();
   });
 
-  it("copies the link from a non-Safari iPhone", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
-    renderInstall("iphone-other");
-    expect(screen.getByText("ההתקנה באייפון עובדת רק מספארי.")).toBeInTheDocument();
-    expect(screen.getByRole("list").children).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "העתקת קישור" }));
-    expect(writeText).toHaveBeenCalledOnce();
-    expect(await screen.findByText("הקישור הועתק")).toBeInTheDocument();
+  it("uses the same iOS 26 rows in another iPhone browser", () => {
+    const onDismiss = vi.fn();
+    renderInstall("iphone-other", onDismiss);
+    expect(screen.getByRole("list").children).toHaveLength(3);
+    expect(screen.getByText("•••")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "העתקת קישור" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "הבנתי" }));
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 });

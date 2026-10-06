@@ -48,9 +48,9 @@ const modulePatterns = [
   /[/\\]assistant-sample\./,
 ];
 
-/** The setup stage and its player ship. A fixture file named demo* stays blocked. */
+/** The setup stage, its player, and the player's pointer ship. A fixture file named demo* stays blocked. */
 function isSetupProductModule(id) {
-  return /[/\\]setup[/\\]demo-slot\.tsx$/.test(id) || /[/\\]ui[/\\]demo-player\.tsx$/.test(id);
+  return /[/\\]setup[/\\]demo-slot\.tsx$/.test(id) || /[/\\]ui[/\\]demo-(player|pointer)\.tsx$/.test(id);
 }
 
 /** @param {string} id */
