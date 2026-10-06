@@ -14,6 +14,7 @@ import { isVoidMercuryStatus } from "../_shared/connectors/mercury/rules.ts";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import type { ConnectorSession } from "../_shared/connectors/types.ts";
+import { resolveOwnerCompany } from "../_shared/owner.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -72,12 +73,23 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: header } },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const user = await userClient.auth.getUser();
-    if (user.error || !user.data.user) return json({ error: "unauthorized" }, 401);
-    const company = await admin.from("companies").select("id").eq("owner_id", user.data.user.id).maybeSingle();
-    if (company.error || !company.data) return json({ error: "no company" }, 400);
+    const owner = await resolveOwnerCompany(header, {
+      getUserId: async () => {
+        const user = await userClient.auth.getUser();
+        return user.error ? null : user.data.user?.id ?? null;
+      },
+      ownedBy: async (userId) => {
+        const company = await admin.from("companies").select("id").eq("owner_id", userId).maybeSingle();
+        return company.error ? null : company.data?.id ?? null;
+      },
+      readableCompanies: async () => {
+        const rows = await userClient.from("companies").select("id, owner_id");
+        return rows.error ? null : (rows.data ?? []) as Array<{ id: string; owner_id: string }>;
+      },
+    });
+    if ("error" in owner) return json({ error: owner.error }, owner.error === "unauthorized" ? 401 : 400);
     const body = (await req.json().catch(() => ({}))) as { force?: boolean };
-    const result = await syncCompany(admin, company.data.id, decodeKek(kekSecret), body.force === true, false);
+    const result = await syncCompany(admin, owner.companyId, decodeKek(kekSecret), body.force === true, false);
     return json(result);
   } catch (error) {
     if (error instanceof SyncHold) return json({ error: "rate_limited", retry_at: error.retryAt }, 429);
