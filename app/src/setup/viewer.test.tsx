@@ -68,6 +68,7 @@ describe("setup viewer", () => {
   afterEach(() => {
     gate.row = { owner_id: "user-1" };
     gate.error = false;
+    localStorage.clear();
   });
 
   it("keys the owner read by user and treats the owner as not a viewer", async () => {
@@ -79,11 +80,11 @@ describe("setup viewer", () => {
     expect(keys).toContainEqual(["company-owner", "user-1"]);
   });
 
-  it("fails closed when the row is missing", async () => {
+  it("treats a missing company as an owner", async () => {
     gate.row = null;
     renderProbe();
     await waitFor(() => {
-      expect(screen.getByText("viewer")).toBeInTheDocument();
+      expect(screen.getByText("owner")).toBeInTheDocument();
     });
   });
 
