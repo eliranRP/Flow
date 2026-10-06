@@ -6,6 +6,8 @@ sync_bank auth fix. `mercury-sync` resolves the owner company through `_shared/o
 
 MCP cycle 4. `flow-mcp` adds `create_project`, `create_category`, `sync_bank`, and optional `hide_category`, with undo for project, category, and hide. Migration `20261006120000_mcp_cycle4.sql`. `mercury-sync` returns insert/update/remove counts and `newest_date`. Decision [0090](decisions/0090-mcp-cycle4.md).
 
+MCP cycle 5 loans. `flow-mcp` adds `list_loans`, `get_loan_schedule`, `add_loan`, `update_loan`, and `attach_loan_payment`, with undo for loan, loan update, and split. Migration `20261006200000_mcp_loans.sql`. Decision [0092](decisions/0092-mcp-loans.md).
+
 Mercury connect UI. Settings adds a Mercury row, connect and status sheets, `useMercuryStatusQuery`, shared `ConnectSheet`, and `formatUsd`. CONTROLS and Storybook states updated. No migration.
 
 Loans L-3 review fixes. Loan match keeps the sheet open with a busy picker radio, waits for a successful read before שיוך, guards over-balance and paid-off loans, maps 23505 and correction errors, focuses חלוקת התשלום after success, and shows retry rows when a read fails. Settings loan balances use the same loading and error pattern. CONTROLS updated. No migration.
