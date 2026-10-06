@@ -45,7 +45,24 @@ Deno.test("search_expenses filed and all call search_transactions", async () => 
 Deno.test("the eight read tools call their own functions", async () => {
   const { calls, rpc } = rpcOf((name) => {
     if (name === "get_dashboard") {
-      return { status: 200, json: { company_id: "company-a", name: "א", projects: [], basis: "cash", income_agorot: 1, direct_agorot: 0, shared_agorot: 0, overhead_agorot: 0, expense_agorot: 0, net_profit_agorot: 1, active_projects: 0, review_count: 0 } };
+      return {
+        status: 200,
+        json: {
+          company_id: "company-a",
+          name: "א",
+          projects: [],
+          basis: "cash",
+          income_agorot: 1,
+          direct_agorot: 0,
+          shared_agorot: 0,
+          overhead_agorot: 0,
+          expense_agorot: 0,
+          net_profit_agorot: 1,
+          active_projects: 0,
+          review_count: 0,
+          by_currency: [{ currency: "USD", income_minor: 100, direct_minor: 0, shared_minor: 0, overhead_minor: 0, expense_minor: 0, net_profit_minor: 100, count: 1 }],
+        },
+      };
     }
     if (name === "list_categories") return { status: 200, json: [{ id: "c1" }] };
     if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: "11111111-1111-4000-8000-000000000001", description: "אלפא" }] };
@@ -80,6 +97,10 @@ Deno.test("the eight read tools call their own functions", async () => {
   assertEquals(expense.isError, false);
   assertEquals(pending.isError, false);
   assertEquals(totals.isError, false);
+  if (totals.structuredContent.ok) {
+    const data = totals.structuredContent.data as { by_currency: { currency: string }[] };
+    assertEquals(data.by_currency[0]?.currency, "USD");
+  }
   assertEquals(loans.isError, false);
   assertEquals(schedule.isError, false);
   assertEquals(calls.map((call) => call.name), [
@@ -118,7 +139,16 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     company_id: "company-a",
     name: "א",
     basis: "invoiced",
-    projects: [{ id: "p1", name: "הרצל", status: "active", income_agorot: 1, direct_agorot: 0, shared_agorot: 0, profit_agorot: 1 }],
+    projects: [{
+      id: "p1",
+      name: "הרצל",
+      status: "active",
+      income_agorot: 1,
+      direct_agorot: 0,
+      shared_agorot: 0,
+      profit_agorot: 1,
+      by_currency: [{ currency: "USD", income_minor: 50, direct_minor: 0, shared_minor: 0, profit_minor: 50 }],
+    }],
     income_agorot: 1,
     direct_agorot: 0,
     shared_agorot: 0,
@@ -157,8 +187,9 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
   assertEquals(pending.isError, false);
   assertEquals(expense.isError, false);
   if (projects.structuredContent.ok && "projects" in (projects.structuredContent.data as Record<string, unknown>)) {
-    const rows = (projects.structuredContent.data as { projects: { name: string }[] }).projects;
+    const rows = (projects.structuredContent.data as { projects: { name: string; by_currency: { currency: string }[] }[] }).projects;
     assertEquals(rows[0]?.name, "הרצל");
+    assertEquals(rows[0]?.by_currency[0]?.currency, "USD");
   }
   if (totals.structuredContent.ok) {
     assertEquals((totals.structuredContent.data as { basis: string }).basis, "invoiced");
