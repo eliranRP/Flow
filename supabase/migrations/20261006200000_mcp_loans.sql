@@ -513,6 +513,13 @@ begin
   cid := private.current_company_id();
   response := private.mcp_error('refused', 'The write was refused.');
   begin
+    -- Lock the loan before the transaction: the app's loan_splits insert takes
+    -- its FK locks in that order (loan, then transaction), so the reverse deadlocks.
+    perform 1 from public.loans l
+    where l.id = p_loan_id
+      and l.company_id = cid
+    for update;
+
     select t.currency, t.amount_original
     into txn
     from public.transactions t

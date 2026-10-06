@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(36);
+select plan(44);
 
 do $users$
 begin
@@ -193,6 +193,35 @@ select is(
   'loan already attached',
   'second attach is refused'
 );
+select is(
+  public.mcp_attach_loan_payment(
+    'split-1',
+    (select id from mcp5 where label = 'txn'),
+    (select id from mcp5 where label = 'loan_a'),
+    jsonb_build_array(
+      jsonb_build_object('part', 'interest', 'amount_minor', 50000, 'scheduled_minor', 50000),
+      jsonb_build_object('part', 'escrow', 'amount_minor', 10000, 'scheduled_minor', 10000),
+      jsonb_build_object('part', 'principal', 'amount_minor', 40000, 'scheduled_minor', 40000)
+    )
+  )->'data'->>'undo_kind',
+  'loan_split',
+  'attach replay returns the stored result'
+);
+select is(
+  (select count(*)::int from public.loan_splits where transaction_id = (select id from mcp5 where label = 'txn')),
+  3,
+  'attach replay writes nothing'
+);
+select is(
+  public.mcp_attach_loan_payment(
+    'split-1',
+    (select id from mcp5 where label = 'txn'),
+    (select id from mcp5 where label = 'loan_a'),
+    '[]'::jsonb
+  )->'error'->>'code',
+  'conflict',
+  'attach key reuse with another body is conflict'
+);
 
 reset role;
 insert into public.transactions (
@@ -308,6 +337,34 @@ insert into mcp5 (label, id)
 select 'loan_b', (
   public.mcp_add_loan('loan-b', 'USD Loan', 5000000, 0, 120, '2026-02-01'::date, 50000, 0, 'USD')->'data'->>'id'
 )::uuid;
+
+select is(
+  public.mcp_update_loan('loan-b-up', (select id from mcp5 where label = 'loan_b'), jsonb_build_object('escrow_minor', 5000))->'ok',
+  'true'::jsonb,
+  'update loan_b escrow'
+);
+select is(
+  public.mcp_update_loan('loan-b-up', (select id from mcp5 where label = 'loan_b'), jsonb_build_object('escrow_minor', 6000))->'error'->>'code',
+  'conflict',
+  'update key reuse with another patch is conflict'
+);
+update public.loans set annual_rate_ppm = 1 where id = (select id from mcp5 where label = 'loan_b');
+select is(
+  public.mcp_undo('undo-b-up', 'loan_update', (select id from mcp5 where label = 'loan_b'))->'error'->>'code',
+  'conflict',
+  'undo conflicts when a field it did not write changed'
+);
+select is(
+  (select escrow_minor::int from public.loans where id = (select id from mcp5 where label = 'loan_b')),
+  5000,
+  'conflicting undo writes nothing'
+);
+update public.loans set annual_rate_ppm = 0 where id = (select id from mcp5 where label = 'loan_b');
+select is(
+  public.mcp_undo('undo-b-up-2', 'loan_update', (select id from mcp5 where label = 'loan_b'))->'data'->>'kind',
+  'loan_update',
+  'undo succeeds once the row equals what it wrote'
+);
 
 select is(
   public.mcp_attach_loan_payment(
