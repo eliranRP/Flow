@@ -30,4 +30,15 @@ describe("PercentField", () => {
     render(<Field />);
     expect(screen.getByRole("textbox", { name: "אחוז, חולון" })).toHaveValue("");
   });
+
+  it("keeps three decimals for a loan rate", () => {
+    function Rate() {
+      const [rate, setRate] = useState("");
+      return <PercentField label="ריבית שנתית" value={rate} decimals={3} onValueChange={setRate} />;
+    }
+    render(<Rate />);
+    const input = screen.getByRole("textbox", { name: "ריבית שנתית" });
+    fireEvent.change(input, { target: { value: "6.1259" } });
+    expect(input).toHaveValue("6.125");
+  });
 });
