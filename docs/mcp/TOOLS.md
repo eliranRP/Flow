@@ -51,7 +51,7 @@ These reads need the standby signing key. Without it, `tools/list` is empty and 
 
 Input: `{ "from": "2026-09-01", "to": "2026-09-30", "basis": "cash" }`.
 
-Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`.
+Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
 
 ### list_categories
 
@@ -90,7 +90,7 @@ Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 
 ### get_totals
 
-`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `active_projects`, `review_count`.
+`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `count`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
 
 ## Writes · cycle 3
 

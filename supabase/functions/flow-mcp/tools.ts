@@ -376,6 +376,7 @@ function projectRow(row: Review) {
     direct_agorot: row.direct_agorot,
     shared_agorot: row.shared_agorot,
     profit_agorot: row.profit_agorot,
+    by_currency: row.by_currency ?? [],
   };
 }
 
@@ -394,6 +395,7 @@ function totalsOf(body: Review) {
     net_profit_agorot: body.net_profit_agorot,
     active_projects: body.active_projects,
     review_count: body.review_count,
+    by_currency: body.by_currency ?? [],
   };
 }
 
@@ -427,7 +429,7 @@ export function isWriteTool(name: string): boolean {
 
 function readTools() {
   return [
-    toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time.", {
+    toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD).", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
@@ -452,7 +454,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time.", {
+    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD).", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
