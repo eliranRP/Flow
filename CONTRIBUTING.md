@@ -30,6 +30,10 @@ Do not rewrite history by editing an accepted decision into a different one.
 4. Update the index: the old row becomes `Superseded`, the new row is `Accepted`.
 5. Add a changelog entry that names both numbers.
 
+## MCP-first
+
+Every new feature or user action ships with a `flow-mcp` tool in the same pull request, before or together with the UI (write tools: idempotency key, write rate limit, `undo`). When it can also be an API (RPC or edge endpoint), add that too, and list the tool in `docs/mcp/TOOLS.md`. A user action without MCP support is Blocking. See [0095](docs/decisions/0095-mcp-first.md).
+
 ## Review handoff
 
 From r23 on, this is how a change is handed off. Decision [0073](docs/decisions/0073-review-handoff.md). Eliran approved it.
