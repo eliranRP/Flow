@@ -1035,6 +1035,66 @@ export const SettingsSumitLoading: Story = {
   ),
 };
 
+const mercuryBusiness = {
+  name: "בית הספר אלון",
+  email: "owner@example.com",
+  companyId: 1001,
+  lastError: null,
+  connected: true,
+  mercuryConnected: false,
+  mercuryLastError: null,
+};
+
+export const SettingsMercuryConnected: Story = {
+  name: "Mercury connected",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: true, mercuryLastSyncAt: "2026-10-03T09:05:00.000Z" }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsMercuryDisconnected: Story = {
+  name: "Mercury disconnected",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsMercuryReconnect: Story = {
+  name: "Mercury reconnect",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercuryLastError: "auth" }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsMercuryError: Story = {
+  name: "Mercury error",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "error" }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsMercuryLoading: Story = {
+  name: "Mercury loading",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "loading" }} />
+    </StoryRoute>
+  ),
+};
+
 export const CategoriesList: Story = {
   render: () => (
     <StoryRoute entry="/settings/categories" tabs>

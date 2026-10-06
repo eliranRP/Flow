@@ -43,6 +43,18 @@ vi.mock("../lib/supabase", () => ({
     functions: {
       invoke: (name: string, body?: unknown) => edge.invoke(name, body),
     },
+    from: (table: string) => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () => {
+            if (table === "connector_connection_status") {
+              return Promise.resolve({ data: null, error: null });
+            }
+            return Promise.resolve({ data: null, error: null });
+          },
+        }),
+      }),
+    }),
   }),
 }));
 
