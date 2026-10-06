@@ -441,11 +441,18 @@ export function ChangeAssignment(props: Props) {
     pickerKind,
   );
   const title = view === "project" ? "בחירת פרויקט" : view === "category" ? "בחירת קטגוריה" : view === "new" ? "פרויקט חדש" : "שינוי שיוך";
-  const leading = view === "summary" ? undefined : (
+  const leading = view === "summary" || landedOnPicker() ? undefined : (
     <IconButton label="חזרה" onClick={back}>
       <BackIcon />
     </IconButton>
   );
+  const pickerTotal = ordered(
+    pickerKind === "project" ? props.projects : props.categories,
+    pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId,
+    pickerKind === "project" ? props.projectId : props.categoryId,
+    "",
+    pickerKind,
+  ).length;
   const showRemember = !income && props.remember != null && props.onRemember != null;
   const propsRef = useRef(props);
   propsRef.current = props;
@@ -544,7 +551,7 @@ export function ChangeAssignment(props: Props) {
             {props.amount !== "" ? <bdi className="ui-num" dir="ltr">{props.amount}</bdi> : null}
           </p>
           <div className="ui-change-rows">
-            {income || props.categoryOnly ? null : (
+            {props.categoryOnly ? null : (
               <ListRow
                 variant="button"
                 buttonRef={projectBtn}
@@ -596,6 +603,7 @@ export function ChangeAssignment(props: Props) {
       {view === "project" || view === "category" ? (
         <Picker
           kind={pickerKind}
+          searchable={pickerKind === "project" || pickerTotal > 8}
           query={query}
           onQuery={setQuery}
           loading={props.loading === true}
@@ -638,8 +646,7 @@ export function ChangeAssignment(props: Props) {
     title,
     leading,
     titleRef,
-    panelClassName: view === "summary" ? "ui-sheet-fit" : "ui-sheet-tall",
-    footClassName: view === "summary" ? "ui-sheet-foot-safe" : undefined,
+    panelClassName: view === "project" || view === "new" ? "ui-sheet-tall" : "ui-sheet-fit",
     onEscape: view === "summary" ? undefined : back,
     onBeforeClose: allowClose,
     onRequestClose: requestClose,
@@ -654,6 +661,7 @@ export function ChangeAssignment(props: Props) {
 
 function Picker({
   kind,
+  searchable,
   query,
   onQuery,
   loading,
@@ -668,6 +676,7 @@ function Picker({
   onSplit,
 }: {
   kind: "project" | "category";
+  searchable: boolean;
   query: string;
   onQuery: (value: string) => void;
   loading: boolean;
@@ -685,13 +694,15 @@ function Picker({
   const empty = !loading && needle !== "" && listed.length === 0;
   return (
     <div className="ui-change-picker">
-      <SearchField
-        label={kind === "project" ? "חיפוש פרויקט" : "חיפוש קטגוריה"}
-        value={query}
-        onChange={onQuery}
-        placeholder={kind === "project" ? "חיפוש פרויקט או קוד (P-12)" : "חיפוש קטגוריה"}
-        autoFocus={false}
-      />
+      {searchable ? (
+        <SearchField
+          label={kind === "project" ? "חיפוש פרויקט" : "חיפוש קטגוריה"}
+          value={query}
+          onChange={onQuery}
+          placeholder={kind === "project" ? "חיפוש פרויקט או קוד (P-12)" : "חיפוש קטגוריה"}
+          autoFocus={false}
+        />
+      ) : null}
       {note ? <p className="t-hint ui-pick-note">{note}</p> : null}
       {loading ? (
         <div aria-busy="true">
