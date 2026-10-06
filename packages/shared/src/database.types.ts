@@ -717,6 +717,9 @@ isOneToOne: false
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_assign_expenses":
+{ Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
+                           },
 "mcp_create_category":
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
                            },
@@ -740,6 +743,9 @@ isOneToOne: false
                            },
 "mcp_undo":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
+                           },
+"mcp_undo_batch":
+{ Args: { "p_batch_key": string,"p_idempotency_key": string }; Returns: Json
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined

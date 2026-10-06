@@ -149,12 +149,14 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "search_expenses",
     "get_totals",
     "assign_expense",
+    "assign_expenses",
     "set_expense_category",
     "create_project",
     "create_category",
     "sync_bank",
     "hide_category",
     "undo",
+    "undo_batch",
   ], "read and write tools");
   const lookup = calls.find((call) => call.url.endsWith("/lookup_mcp_credential"));
   assertEquals(lookup?.body?.p_token_hash, hash, "lookup hash");
@@ -858,12 +860,14 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   const writeNames = ((await writeList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(writeNames, [
     "assign_expense",
+    "assign_expenses",
     "set_expense_category",
     "create_project",
     "create_category",
     "sync_bank",
     "hide_category",
     "undo",
+    "undo_batch",
   ], "write token lists writes only");
 
   scope = ["read"];
@@ -875,6 +879,81 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
   assertEquals(readNames.length, 6, "six reads");
+});
+
+Deno.test("assign_expenses is one write rate hit for many rows", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "batch-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"e".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const kinds: string[] = [];
+  const txn = "22222222-2222-4000-8000-000000000020";
+  const txn2 = "22222222-2222-4000-8000-000000000021";
+  const project = "8c1a0b2e-1111-4000-8000-000000000001";
+  const category = "c0ffee00-1111-4000-8000-0000000000a1";
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      const name = input.split("/").pop() ?? "";
+      if (name === "lookup_mcp_credential") {
+        const asked = typeof body?.p_token_hash === "string" ? body.p_token_hash : "";
+        if (asked !== hash) return Promise.resolve(new Response(JSON.stringify({ found: false })));
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "88888888-8888-4000-8000-000000000008",
+          user_id: "aaaaaaaa-aaaa-4000-8000-00000000000a",
+          company_id: "cccccccc-cccc-4000-8000-00000000000a",
+          scope: ["write"],
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") {
+        kinds.push(String(body?.p_kind));
+        return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      }
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      if (name === "mcp_assign_expenses") {
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: {
+            batch_key: "33333333-3333-4000-8000-000000000003",
+            ok_count: 2,
+            error_count: 0,
+            results: [],
+          },
+        })));
+      }
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 7,
+      method: "tools/call",
+      params: {
+        name: "assign_expenses",
+        arguments: {
+          idempotency_key: "batch-rate",
+          items: [
+            { transaction_id: txn, project_id: project, category_id: category },
+            { transaction_id: txn2, category_id: category },
+          ],
+        },
+      },
+    }),
+  }), localDeps);
+  const payload = await response.json();
+  assertEquals(response.status, 200, "batch call succeeds");
+  assertEquals(payload.result.isError, false, "batch tool result");
+  assertEquals(kinds, ["write"], "one write bucket hit for the whole batch");
 });
 
 Deno.test("sync_bank POSTs mercury-sync with the signed JWT and publishable apikey", async () => {
