@@ -125,9 +125,9 @@ export function LoanSplitPanel({
     <>
       {ordered.length > 0 ? (
         <>
-          <h2 ref={splitSectionRef} tabIndex={-1} className="ui-focus-title t-title-3 ui-page-pad">
-            חלוקת התשלום
-          </h2>
+          <div className="ui-section-head">
+            <h2 ref={splitSectionRef} tabIndex={-1} className="ui-focus-title t-title-3">חלוקת התשלום</h2>
+          </div>
           <List>
             {ordered.map((part) => (
               <ListRow
@@ -327,7 +327,7 @@ export function LoanTransactionSplit({
   if (query.isLoading) {
     if (!offerMatch) return null;
     return (
-      <List>
+      <List className="ui-loan-skel">
         <ListRow variant="skeleton" />
       </List>
     );
@@ -373,7 +373,11 @@ export function LoanTransactionSplit({
         if (writesHeld || match.isPending) return;
         match.mutate(loanId, {
           onError: (error) => {
-            if ((error as { code?: string }).code === "23505") void query.refetch();
+            if ((error as { code?: string }).code === "23505") {
+              setSheetOpen(false);
+              void query.refetch().then(() => { requestAnimationFrame(() => { focusSplitSection(); }); });
+              return;
+            }
             const row = document.querySelector<HTMLElement>(".ui-pick-row[aria-busy=\"true\"]");
             (row ?? matchRowRef.current)?.focus({ preventScroll: true });
           },

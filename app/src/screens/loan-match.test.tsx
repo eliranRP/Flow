@@ -337,9 +337,39 @@ describe("LoanTransactionSplit", () => {
     fireEvent.click(radio);
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     fireEvent.click(radio);
+    await new Promise((r) => { setTimeout(r, 50); });
     expect(db.inserts).toHaveLength(1);
     act(() => { release(); });
-    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(db.inserts).toHaveLength(1);
+  });
+
+  it("maps 23505, refetches, and closes the picker", async () => {
+    db.insertError = { message: "duplicate key", code: "23505" };
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    db.splits = [
+      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: false, loan_id: "loan-1" },
+      { id: "b", part: "escrow", amount_minor: 0, scheduled_minor: 0, needs_review: false, loan_id: "loan-1" },
+      { id: "c", part: "principal", amount_minor: 99_500, scheduled_minor: 99_500, needs_review: false, loan_id: "loan-1" },
+    ];
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(screen.getByText("התשלום כבר שויך להלוואה.")).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument(); });
+    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+  });
+
+  it("shows a paid-off loan disabled with its reason", async () => {
+    db.balances = [{ loan_id: "loan-1", balance_minor: 0 }];
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    const radio = screen.getByRole("radio", { name: "הלוואת דוגמה" });
+    expect(radio).toBeDisabled();
+    expect(radio).toHaveAccessibleDescription("ההלוואה נפרעה");
+    fireEvent.click(radio);
+    expect(db.inserts).toHaveLength(0);
   });
 
   it("shows a busy radio while the insert is pending", async () => {
