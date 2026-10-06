@@ -265,6 +265,10 @@ export function useSumitStatusQuery(active = true) {
       if (error) throw error;
       return sumitStatusSchema.parse(data);
     },
+    // syncing is the server claim of a running refresh. Poll until it clears.
+    refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    // Another tab may have started a run: re-read the claim when this tab is shown again.
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -291,7 +295,7 @@ export function useMercuryStatusQuery(active = true) {
       await waitForAccessToken(supabase);
       const { data, error } = await supabase
         .from("connector_connection_status")
-        .select("company_id, provider, connected, last_sync_at, last_error, next_attempt_at, import_from, account_labels, skip_count")
+        .select("company_id, provider, connected, last_sync_at, last_error, next_attempt_at, import_from, account_labels, skip_count, syncing")
         .eq("provider", "mercury")
         .maybeSingle();
       if (error) throw error;
@@ -299,9 +303,14 @@ export function useMercuryStatusQuery(active = true) {
       const parsed = mercuryStatusSchema.parse({
         ...data,
         connected: data.connected === true,
+        syncing: data.syncing === true,
       });
       return parsed;
     },
+    // syncing is the server claim of a running refresh. Poll until it clears.
+    refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    // Another tab may have started a run: re-read the claim when this tab is shown again.
+    refetchOnWindowFocus: true,
   });
 }
 

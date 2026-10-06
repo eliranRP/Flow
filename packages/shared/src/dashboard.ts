@@ -113,6 +113,7 @@ export const sumitStatusSchema = z.object({
   last_sync_at: z.string().nullable(),
   last_error: z.string().nullable(),
   next_attempt_at: z.string().nullable().optional(),
+  syncing: z.boolean().optional(),
 });
 
 export const mercuryStatusSchema = z.object({
@@ -125,6 +126,7 @@ export const mercuryStatusSchema = z.object({
   import_from: z.string().nullable(),
   account_labels: z.unknown().nullable(),
   skip_count: z.number().nullable(),
+  syncing: z.boolean().optional(),
 });
 
 export const projectDetailSchema = z
