@@ -720,6 +720,9 @@ isOneToOne: false
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_assign_expenses":
+{ Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
+                           },
 "mcp_attach_loan_payment":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
@@ -752,6 +755,9 @@ isOneToOne: false
                            },
 "mcp_undo":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
+                           },
+"mcp_undo_batch":
+{ Args: { "p_batch_key": string,"p_idempotency_key": string }; Returns: Json
                            },
 "mcp_update_loan":
 { Args: { "p_idempotency_key": string,"p_loan_id": string,"p_patch": Json }; Returns: Json
