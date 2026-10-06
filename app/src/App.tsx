@@ -46,7 +46,7 @@ import {
 } from "./screens/flow-screens";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
-import { SetupIndex, SetupResume, SetupStepScreen } from "./setup/route";
+import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
 
 export function App() {
   useEffect(() => {
@@ -87,6 +87,7 @@ function AppRoutes() {
   const background = readSheetBackground(location.state);
   return (
     <>
+      <SetupLanding />
       <Routes location={background ?? location}>
           <Route path="/sign-in" element={<SignInScreen />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
