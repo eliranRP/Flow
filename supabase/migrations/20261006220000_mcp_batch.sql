@@ -48,9 +48,10 @@ declare
   error_count int := 0;
   response jsonb;
 begin
+  -- Row keys are key:ordinal, and every per-row wrapper caps keys at 128.
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
-    or char_length(p_idempotency_key) > 128
+    or char_length(p_idempotency_key) > 124
     or p_items is null
     or jsonb_typeof(p_items) <> 'array'
   then
@@ -213,9 +214,10 @@ declare
   undo_id uuid;
   row_key text;
 begin
+  -- Row keys are key:ordinal, and mcp_undo caps keys at 128.
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
-    or char_length(p_idempotency_key) > 128
+    or char_length(p_idempotency_key) > 124
     or p_batch_key is null
     or p_batch_key !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   then
