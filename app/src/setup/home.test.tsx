@@ -162,5 +162,7 @@ describe("setup home card", () => {
     await waitFor(() => {
       expect(readSetupStore(userId, companyId).completed_toast_at).toBe(stamped);
     });
+    await expect(screen.findByText("ההגדרה הושלמה.", {}, { timeout: 500 })).rejects.toThrow();
+    expect(readSetupStore(userId, companyId).completed_toast_at).toBe(stamped);
   });
 });

@@ -5,7 +5,7 @@ import { IconButton } from "../ui/icon-button";
 import { ProgressBar } from "../ui/progress-bar";
 import { TextLink } from "../ui/text-link";
 import { SETUP_TOTAL } from "./copy";
-import { DemoSlot, type SetupDemoId } from "./demo-slot";
+import { DemoSlot } from "./demo-slot";
 import type { SetupStepId } from "./model";
 
 /** Template C for one setup step. Step 0 has no counter and no דלג. */
@@ -13,7 +13,7 @@ export function SetupStep({
   step,
   title,
   line,
-  demo,
+  demoAlt,
   onBack,
   onSkip,
   onSubmit,
@@ -24,8 +24,7 @@ export function SetupStep({
   step: SetupStepId;
   title: string;
   line: ReactNode;
-  /** Plays after the primary in the tab order. CSS order puts it under the line. */
-  demo?: SetupDemoId;
+  demoAlt?: string;
   onBack?: () => void;
   onSkip?: () => void;
   onSubmit?: (event: SubmitEvent<HTMLFormElement>) => void;
@@ -71,6 +70,7 @@ export function SetupStep({
         <FocusTitle className="t-title-1">{title}</FocusTitle>
         <p className="ui-setup-line t-label">{line}</p>
       </div>
+      {demoAlt ? <DemoSlot alt={demoAlt} /> : null}
       {children ? <div className="ui-setup-body">{children}</div> : null}
       {primary || secondary ? (
         <div className="ui-setup-cta">
@@ -78,7 +78,6 @@ export function SetupStep({
           {secondary}
         </div>
       ) : null}
-      {demo ? <DemoSlot demo={demo} /> : null}
     </>
   );
   if (onSubmit) {

@@ -1,14 +1,16 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useSumitConnect } from "../use-sumit-connect";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
 import { getSupabase } from "../lib/supabase";
 import { JEV_DEFAULT, saveJevIntegration } from "../screens/jev-settings";
-import { hebrewSumitError } from "../sumit-copy";
+import { Notice } from "../ui/banner";
 import { Button } from "../ui/button";
+import { useSheetHistory } from "../ui/back";
 import { ANDROID_INSTALL_STEPS, IOS_INSTALL_STEPS } from "../ui/install-copy";
 import { List, ListRow } from "../ui/list-row";
 import { SegmentedControl } from "../ui/segmented-control";
-import { Sheet } from "../ui/sheet";
+import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { TextField } from "../ui/text-field";
 import { Toggle } from "../ui/toggle";
 import { detectInstallMode, hasInstallPrompt, isStandalone, runInstallPrompt, type InstallMode } from "../ui/install-prompt";
@@ -32,7 +34,6 @@ import {
   setupHost,
 } from "./copy";
 import { SetupStep } from "./shell";
-import { connectSumit } from "./sumit-connect";
 import { markCompanyCreated } from "./storage";
 
 function displayName(metadata: unknown): string {
@@ -108,12 +109,7 @@ export function StepBusiness({ userId, onDone }: { userId: string | null; onDone
 }
 
 export function SumitFailureNote() {
-  return (
-    <div className="ui-setup-note" role="status">
-      <p className="ui-setup-note-title">{SUMIT_FAILURE_TITLE}</p>
-      <p className="t-hint">{SUMIT_FAILURE_LINE}</p>
-    </div>
-  );
+  return <Notice tone="bad" title={SUMIT_FAILURE_TITLE} body={SUMIT_FAILURE_LINE} />;
 }
 
 export function StepSumit({
@@ -126,18 +122,17 @@ export function StepSumit({
   onSkip: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const setConnectSheet = useSheetHistory("sumit-connect", open, setOpen);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [companyNumber, setCompanyNumber] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const connect = useWrite({
-    failure: (error) => hebrewSumitError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.",
-    success: "SUMIT מחובר. המפתח נשאר בשרת.",
-    keys: ["sumit", "dashboard"],
+  const connect = useSumitConnect({
+    companyId: companyNumber,
+    apiKey,
+    setApiKey,
     onSuccess: () => {
-      setOpen(false);
+      setConnectSheet(false);
       onConnected();
-    },
-    run: async () => {
-      await connectSumit(companyNumber, apiKey);
     },
   });
   const failed = connect.isError;
@@ -150,36 +145,27 @@ export function StepSumit({
       onBack={onBack}
       onSkip={onSkip}
       primary={
-        <Button type="button" full onClick={() => { setOpen(true); }}>
+        <Button type="button" full buttonRef={triggerRef} onClick={() => { setConnectSheet(true); }}>
           {failed ? "ניסיון חוזר" : "חיבור SUMIT"}
         </Button>
       }
     >
       {failed && !open ? <SumitFailureNote /> : null}
-      <Sheet open={open} onOpenChange={setOpen} title="חיבור SUMIT">
-        <form
-          className="ui-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            connect.mutate();
-          }}
-        >
-          <TextField
-            label="מספר חברה"
-            value={companyNumber}
-            inputMode="numeric"
-            onChange={(event) => { setCompanyNumber(event.target.value); }}
-          />
-          <TextField
-            label="מפתח API"
-            type="password"
-            value={apiKey}
-            autoComplete="off"
-            onChange={(event) => { setApiKey(event.target.value); }}
-          />
-          <Button type="submit" busy={connect.isPending}>חיבור</Button>
-        </form>
-      </Sheet>
+      <SumitConnectSheet
+        open={open}
+        onOpenChange={setConnectSheet}
+        title="חיבור SUMIT"
+        returnFocusRef={triggerRef}
+        companyId={companyNumber}
+        setCompanyId={setCompanyNumber}
+        apiKey={apiKey}
+        setApiKey={setApiKey}
+        submitLabel="חיבור"
+        busy={connect.isPending}
+        onSubmit={() => {
+          connect.mutate();
+        }}
+      />
     </SetupStep>
   );
 }
