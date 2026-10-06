@@ -1145,6 +1145,26 @@ export type ReviewPreviewWrite = {
   onUndo: (id: string) => void;
 };
 
+function reviewFlagKey(value: boolean | undefined): string {
+  if (value === true) return "1";
+  if (value === false) return "0";
+  return "";
+}
+
+function reviewMotionKey(row: ReviewRow | null): string {
+  if (row == null) return "";
+  return [
+    row.id,
+    row.category_id ?? "",
+    row.category_name ?? "",
+    reviewFlagKey(row.category_suggested),
+    reviewFlagKey(row.project_suggested),
+    row.project_name ?? "",
+    String(row.share_count ?? ""),
+    String(row.auto_approved_today ?? ""),
+  ].join("\u0000");
+}
+
 export function ReviewQueue({
   rows: incoming,
   search,
@@ -1210,8 +1230,14 @@ export function ReviewQueue({
   }
   const row = rows[0];
   const leaving = motion === "out";
+  const nextCard = rows[0] ?? null;
+  const nextCardRef = useRef(nextCard);
+  nextCardRef.current = nextCard;
+  // The head's identity is the swap. A fresh array for the same item must not
+  // cancel the card that is already on its way in.
+  const motionKey = reviewMotionKey(nextCard);
   useEffect(() => {
-    const next = rows[0] ?? null;
+    const next = nextCardRef.current;
     if (next?.id === shown?.id) {
       if (
         next != null
@@ -1236,13 +1262,14 @@ export function ReviewQueue({
     setMotion("out");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(() => {
-      setShown(next);
-      setMotion(next ? "in" : "still");
+      const landed = nextCardRef.current;
+      setShown(landed);
+      setMotion(landed ? "in" : "still");
     }, reduce ? 0 : 200);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [rows, shown]);
+  }, [motionKey, shown]);
   const approve = useWrite({
     failure: (error) => {
       if (previewWrite) return changeSaveFailure(error);
