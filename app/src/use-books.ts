@@ -77,9 +77,12 @@ export function useOptionalBooks(): BooksContextValue | null {
   return useContext(BooksContext);
 }
 
-function rpcArgs(period: PeriodChoice): { p_basis: "invoiced"; p_from?: string; p_to?: string } {
+/** The one books basis (decision 0060). Home and the project screen both read it, so project income counts the same doc kinds as Home. */
+const BOOKS_BASIS = "invoiced";
+
+function rpcArgs(period: PeriodChoice): { p_basis: typeof BOOKS_BASIS; p_from?: string; p_to?: string } {
   return {
-    p_basis: "invoiced",
+    p_basis: BOOKS_BASIS,
     ...(period.from && period.to ? { p_from: period.from, p_to: period.to } : {}),
   };
 }
@@ -323,7 +326,7 @@ export function useProjectQuery(projectId: string) {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       await waitForAccessToken(supabase);
-      const { data, error } = await supabase.rpc("get_project", { p_id: projectId });
+      const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: BOOKS_BASIS });
       if (error) throw error;
       return projectDetailSchema.parse(data);
     },
