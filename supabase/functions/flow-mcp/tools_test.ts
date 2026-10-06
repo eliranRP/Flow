@@ -174,7 +174,15 @@ Deno.test("a token without read scope is forbidden", async () => {
 
 Deno.test("write tools are listed only for a write scope", () => {
   assertEquals(toolsFor(["read"]).map((tool) => tool.name).includes("assign_expense"), false);
-  assertEquals(toolsFor(["write"]).map((tool) => tool.name), ["assign_expense", "set_expense_category", "undo"]);
+  assertEquals(toolsFor(["write"]).map((tool) => tool.name), [
+    "assign_expense",
+    "set_expense_category",
+    "create_project",
+    "create_category",
+    "sync_bank",
+    "hide_category",
+    "undo",
+  ]);
   for (const tool of toolsFor(["write"])) {
     assertEquals(tool.annotations, { readOnlyHint: false, destructiveHint: true, idempotentHint: true });
   }
@@ -187,6 +195,10 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_totals",
     "assign_expense",
     "set_expense_category",
+    "create_project",
+    "create_category",
+    "sync_bank",
+    "hide_category",
     "undo",
   ]);
   assertEquals(toolsFor([]), []);
@@ -339,4 +351,203 @@ Deno.test("a database refusal stays a tool error and an HTTP failure is generic"
   }, ["write"], () => Promise.resolve({ status: 400, json: { message: "secret material" } }));
   assertEquals(http.isError, true);
   if (!http.structuredContent.ok) assertEquals(http.structuredContent.error.message, "The write was refused.");
+});
+
+const PROJECT_NEW = "aaaaaaaa-aaaa-4000-8000-0000000000a1";
+const CATEGORY_NEW = "bbbbbbbb-bbbb-4000-8000-0000000000b1";
+
+Deno.test("create_project and create_category send exact p_* bodies", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: PROJECT_NEW, undo_kind: "project" } },
+  }));
+  const project = await callTool("create_project", {
+    idempotency_key: "proj-1",
+    name: "Site Alpha",
+    status: "finished",
+  }, ["write"], rpc);
+  assertEquals(project.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_create_project",
+    body: { p_idempotency_key: "proj-1", p_name: "Site Alpha", p_status: "finished" },
+  });
+  const category = await callTool("create_category", {
+    idempotency_key: "cat-new-1",
+    name: "Tools",
+    kind: "expense",
+  }, ["write"], rpc);
+  assertEquals(category.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_create_category",
+    body: { p_idempotency_key: "cat-new-1", p_name: "Tools", p_kind: "expense" },
+  });
+});
+
+Deno.test("cycle 4 write validation and read-token forbidden", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const cases = [
+    callTool("create_project", { idempotency_key: "k", name: "x" }, ["write"], rpc),
+    callTool("create_project", { idempotency_key: "k", name: "Good", status: "open" }, ["write"], rpc),
+    callTool("create_project", { idempotency_key: "k", name: "Good", company_id: "forged" }, ["write"], rpc),
+    callTool("create_category", { idempotency_key: "k", name: "x", kind: "expense" }, ["write"], rpc),
+    callTool("create_category", { idempotency_key: "k", name: "Good", kind: "asset" }, ["write"], rpc),
+    callTool("create_category", { idempotency_key: "k", name: "Good", kind: "expense", extra: true }, ["write"], rpc),
+    callTool("sync_bank", { idempotency_key: "k", from: "2026-01-01" }, ["write"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("create_project", {
+    idempotency_key: "k",
+    name: "Site Beta",
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("undo accepts project and category kinds", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { kind: "project", id: PROJECT_NEW } },
+  }));
+  const project = await callTool("undo", {
+    idempotency_key: "undo-proj",
+    kind: "project",
+    id: PROJECT_NEW,
+  }, ["write"], rpc);
+  assertEquals(project.isError, false);
+  assertEquals(calls[0]?.body.p_kind, "project");
+  const category = await callTool("undo", {
+    idempotency_key: "undo-cat",
+    kind: "category",
+    id: CATEGORY_NEW,
+  }, ["write"], rpc);
+  assertEquals(category.isError, false);
+  assertEquals(calls[1]?.body.p_kind, "category");
+});
+
+Deno.test("sync_bank proceed, replay, errors, and skipped", async () => {
+  const invokeCalls: { fn: string; body: Record<string, unknown> }[] = [];
+  const invoke = (fn: string, body: Record<string, unknown>) => {
+    invokeCalls.push({ fn, body });
+    return Promise.resolve({
+      status: 200,
+      json: { ok: true, lines: 2, inserted: 1, updated: 1, removed: 0, newest_date: "2026-09-15" },
+    });
+  };
+  let beginCount = 0;
+  const rpc = (name: string, body: Record<string, unknown>) => {
+    if (name === "mcp_sync_bank_begin") {
+      beginCount += 1;
+      if (beginCount === 1) {
+        return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+      }
+      return Promise.resolve({
+        status: 200,
+        json: { ok: true, data: { added: 1, duplicates: 1, removed: 0, newest_date: "2026-09-15" } },
+      });
+    }
+    if (name === "mcp_sync_bank_finish") {
+      return Promise.resolve({ status: 200, json: null });
+    }
+    return Promise.resolve({ status: 500, json: null });
+  };
+  const first = await callTool("sync_bank", { idempotency_key: "sync-1" }, ["write"], rpc, invoke);
+  assertEquals(first.isError, false);
+  if (first.structuredContent.ok) {
+    assertEquals(first.structuredContent.data, {
+      added: 1,
+      duplicates: 1,
+      removed: 0,
+      newest_date: "2026-09-15",
+    });
+  }
+  assertEquals(invokeCalls, [{ fn: "mercury-sync", body: { force: true } }]);
+  invokeCalls.length = 0;
+  const replay = await callTool("sync_bank", { idempotency_key: "sync-1" }, ["write"], rpc, invoke);
+  assertEquals(replay.isError, false);
+  assertEquals(invokeCalls.length, 0);
+
+  const noConn = await callTool("sync_bank", { idempotency_key: "sync-2" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({
+        status: 200,
+        json: { ok: false, error: { code: "not_found", message: "bank is not connected" } },
+      });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, invoke);
+  assertEquals(noConn.isError, true);
+  if (!noConn.structuredContent.ok) {
+    assertEquals(noConn.structuredContent.error.code, "not_found");
+    assertEquals(noConn.structuredContent.error.message, "bank is not connected");
+  }
+
+  const skipped = await callTool("sync_bank", { idempotency_key: "sync-3" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 200, json: { ok: true, lines: 0, skipped: true } }));
+  assertEquals(skipped.isError, true);
+  if (!skipped.structuredContent.ok) assertEquals(skipped.structuredContent.error.code, "unavailable");
+
+  const rate = await callTool("sync_bank", { idempotency_key: "sync-4" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 429, json: { error: "rate_limited" } }));
+  assertEquals(rate.isError, true);
+  if (!rate.structuredContent.ok) assertEquals(rate.structuredContent.error.message, "retry");
+
+  const gone = await callTool("sync_bank", { idempotency_key: "sync-4b" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 500, json: { error: "Mercury is not connected" } }));
+  assertEquals(gone.isError, true);
+  if (!gone.structuredContent.ok) assertEquals(gone.structuredContent.error.code, "not_found");
+
+  const auth = await callTool("sync_bank", { idempotency_key: "sync-5" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 500, json: { error: "auth" } }));
+  assertEquals(auth.isError, true);
+  if (!auth.structuredContent.ok) {
+    assertEquals(auth.structuredContent.error.message, "bank key was rejected; reconnect in Settings");
+  }
+
+  const unauthorized = await callTool("sync_bank", { idempotency_key: "sync-6" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 401, json: null }));
+  assertEquals(unauthorized.isError, true);
+  if (!unauthorized.structuredContent.ok) assertEquals(unauthorized.structuredContent.error.code, "unavailable");
+
+  const failed = await callTool("sync_bank", { idempotency_key: "sync-7" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  }, () => Promise.resolve({ status: 500, json: { error: "sync_failed" } }));
+  assertEquals(failed.isError, true);
+  if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.message, "The bank sync failed.");
+
+  const noInvoke = await callTool("sync_bank", { idempotency_key: "sync-8" }, ["write"], (name) => {
+    if (name === "mcp_sync_bank_begin") {
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+    }
+    return Promise.resolve({ status: 200, json: null });
+  });
+  assertEquals(noInvoke.isError, true);
+  if (!noInvoke.structuredContent.ok) assertEquals(noInvoke.structuredContent.error.code, "unavailable");
 });

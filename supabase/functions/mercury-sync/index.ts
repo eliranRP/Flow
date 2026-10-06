@@ -139,7 +139,7 @@ async function syncCompany(
   kek: Uint8Array,
   force: boolean,
   alreadyClaimed: boolean,
-): Promise<{ ok: boolean; lines: number; skipped?: boolean }> {
+): Promise<{ ok: boolean; lines: number; skipped?: boolean; inserted?: number; updated?: number; removed?: number; newest_date?: string | null }> {
   const connection = await admin
     .from("connector_connections")
     .select("key_ciphertext, key_nonce, dek_ciphertext, dek_nonce, kek_version, envelope_version, sync_cursor, import_from, last_sync_at, last_error, next_attempt_at, sync_claimed_at, settings")
@@ -276,7 +276,32 @@ async function syncCompany(
         throw new Error("rejected");
       }
     }
-    return { ok: true, lines: plan.lines.length };
+    const counts = saved.data as { inserted?: number; updated?: number; removed?: number } | null;
+    let newestDate: string | null = null;
+    try {
+      const newest = await admin
+        .from("transactions")
+        .select("doc_date")
+        .eq("company_id", companyId)
+        .eq("source", "mercury")
+        .is("removed_at", null)
+        .order("doc_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!newest.error && newest.data?.doc_date) {
+        newestDate = String(newest.data.doc_date);
+      }
+    } catch {
+      newestDate = null;
+    }
+    return {
+      ok: true,
+      lines: plan.lines.length,
+      inserted: counts?.inserted ?? 0,
+      updated: counts?.updated ?? 0,
+      removed: counts?.removed ?? 0,
+      newest_date: newestDate,
+    };
   } catch (error) {
     logFailure("mercury sync failed", error, apiKey);
     const message = error instanceof Error ? error.message : "";

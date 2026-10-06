@@ -1,5 +1,5 @@
 // flow-mcp. Stateless MCP 2025-06-18, plus mint, revoke, and status.
-// Decision 0080. Reads and the three single-expense writes. verify_jwt is false.
+// Decision 0080. Reads, single-expense writes, and cycle 4 writes. verify_jwt is false.
 // The signed pass uses the credential row. The signing key has no user identity.
 
 import { corsHeadersFor } from "../_shared/http.ts";
@@ -197,6 +197,40 @@ async function rpc(deps: Deps, name: string, body: Record<string, unknown>): Pro
     }
   }
   return { status: response.status, json };
+}
+
+async function invokeFunction(
+  deps: Deps,
+  jwt: string,
+  fn: string,
+  body: Record<string, unknown>,
+): Promise<{ status: number; json: unknown }> {
+  const url = deps.env("SUPABASE_URL") ?? "";
+  const key = publishableKey(deps);
+  try {
+    const response = await deps.fetch(`${url}/functions/v1/${fn}`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        authorization: `Bearer ${jwt}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    });
+    const text = await response.text();
+    let json: unknown = null;
+    if (text) {
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = null;
+      }
+    }
+    return { status: response.status, json };
+  } catch {
+    return { status: 504, json: null };
+  }
 }
 
 async function userRpc(deps: Deps, jwt: string, name: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown }> {
@@ -516,7 +550,13 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
       jti: crypto.randomUUID(),
       now: Math.floor(Date.now() / 1000),
     });
-    const result = await callTool(name, record?.arguments, scope, (rpcName, rpcBody) => userRpc(deps, signed, rpcName, rpcBody));
+    const result = await callTool(
+      name,
+      record?.arguments,
+      scope,
+      (rpcName, rpcBody) => userRpc(deps, signed, rpcName, rpcBody),
+      (fn, fnBody) => invokeFunction(deps, signed, fn, fnBody),
+    );
     const text = JSON.stringify(result.structuredContent);
     return jsonResponse(req, {
       jsonrpc: "2.0",

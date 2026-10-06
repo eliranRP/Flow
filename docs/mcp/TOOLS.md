@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `set_expense_category`, `undo` | false | true | true |
+| `assign_expense`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `undo` | false | true | true |
 
 ## Which id
 
@@ -20,6 +20,9 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `get_expense`, `assign_expense`, `set_expense_category` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
+| `undo` `kind: "project"` | `id` | the project id `create_project` returned |
+| `undo` `kind: "category"` | `id` | the category id `create_category` returned |
+| `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -31,7 +34,7 @@ Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" 
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -128,6 +131,46 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 { "idempotency_key": "undo-30", "kind": "review", "id": "11111111-1111-4000-8000-000000000010" }
 ```
 
+## Writes · cycle 4
+
+`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it. Otherwise undo is `conflict` and the row stays.
+
+### create_project
+
+```json
+{ "idempotency_key": "proj-1", "name": "Site Alpha", "status": "active" }
+```
+
+`status` is optional (`active` or `finished`). Output `data`: `{ "id", "undo_kind": "project" }`.
+
+### create_category
+
+```json
+{ "idempotency_key": "cat-new-1", "name": "Tools", "kind": "expense" }
+```
+
+There is no cost-type argument on categories. Output `data`: `{ "id", "undo_kind": "category" }`.
+
+### hide_category
+
+```json
+{ "idempotency_key": "hide-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1" }
+```
+
+Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the prior `hidden` flag.
+
+### sync_bank
+
+```json
+{ "idempotency_key": "sync-1" }
+```
+
+There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_from`, lookback). Filtering after fetch would advance the cursor past dropped rows. `sync_bank` takes no dates and does not call `set_import_from`.
+
+Output `data`: `{ "added", "duplicates", "removed", "newest_date" }`. `added` is new lines. `duplicates` counts rows already stored that were refreshed in place. `removed` is voided or dropped lines. `newest_date` is the latest `doc_date` among live Mercury transactions, or null.
+
+`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`. A sync that was skipped because another run claimed the connector or ran inside the quiet window is `unavailable` / `retry` and is not stored.
+
 ## Not in tools/list
 
-`create_project`, `rename_project`, `finish_project`, `split_expense`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, `create_manual_entry`, and `create_category`. No tool performs outbound HTTP.
+`rename_project`, `finish_project`, `split_expense`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
