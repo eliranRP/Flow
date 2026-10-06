@@ -151,7 +151,8 @@ export function ListRow(props: ListRowProps) {
         aria-label={described ? rowName(props) : props.label}
         aria-describedby={described}
         onClick={() => {
-          if (props.disabled === true || props.ariaDisabled === true) return;
+          // A busy row stays focusable but ignores taps, so one run cannot start twice.
+          if (props.disabled === true || props.ariaDisabled === true || props.busy === true) return;
           props.onClick?.();
         }}
       >

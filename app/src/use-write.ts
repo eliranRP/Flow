@@ -43,6 +43,8 @@ export function useWrite<T = void>(options: {
   onSplit?: () => void;
   /** Runs before a retry, while the toast action is still focused. */
   retryFocus?: () => void;
+  /** An error that needs no toast, because the screen already shows the state. */
+  silent?: (error: Error) => boolean;
 }) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
@@ -63,6 +65,7 @@ export function useWrite<T = void>(options: {
     },
     onError: (error, payload) => {
       const failure = error instanceof Error ? error : new Error("failed");
+      if (options.silent?.(failure) === true) return;
       const reported = typeof options.failure === "function" ? options.failure(failure) : options.failure;
       const retryable = failureRetries(reported, failure);
       const tone = typeof reported === "string" ? "bad" : (reported.tone ?? "bad");

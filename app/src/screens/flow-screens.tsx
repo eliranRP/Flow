@@ -54,6 +54,7 @@ import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle 
 import { useHeldOrder } from "../list-hold";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
+import { useSyncSettled } from "../use-sync-settled";
 import { invokeEdge } from "../edge";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
@@ -3430,6 +3431,10 @@ function onboardingFromSettings(search: string): string {
   return `/onboarding?${params.toString()}`;
 }
 
+const REFRESH_DONE = "הרענון הסתיים.";
+const SUMIT_REFRESH_KEYS = ["sumit", "dashboard", "unpaid", "review", "project"];
+const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
+
 export function SettingsScreen({
   sample,
   sampleSecret,
@@ -3540,12 +3545,16 @@ export function SettingsScreen({
   });
   const refresh = useWrite({
     failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
-    success: "הרענון הסתיים.",
-    keys: ["sumit", "dashboard", "unpaid", "review", "project"],
+    silent: (error) => error.message === "sync_held",
+    success: REFRESH_DONE,
+    keys: SUMIT_REFRESH_KEYS,
     run: async () => {
       const data = await invokeEdge("sumit-sync", { force: true });
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        throw new Error("sync_skipped");
+        // Another tab or an earlier load holds the claim: show it as syncing, without a skip toast.
+        await queryClient.refetchQueries({ queryKey: ["sumit"] });
+        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["sumit"] }).some(([, d]) => d?.syncing === true);
+        throw new Error(held ? "sync_held" : "sync_skipped");
       }
     },
   });
@@ -3568,14 +3577,38 @@ export function SettingsScreen({
   });
   const mercuryRefresh = useWrite({
     failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
-    success: "הרענון הסתיים.",
-    keys: ["mercury", "dashboard", "unpaid", "review", "project"],
+    silent: (error) => error.message === "sync_held",
+    success: REFRESH_DONE,
+    keys: MERCURY_REFRESH_KEYS,
     run: async () => {
       const data = await invokeEdge("mercury-sync", { force: true });
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        throw new Error("sync_skipped");
+        await queryClient.refetchQueries({ queryKey: ["mercury"] });
+        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["mercury"] }).some(([, d]) => d?.syncing === true);
+        throw new Error(held ? "sync_held" : "sync_skipped");
       }
     },
+  });
+  // syncing comes from the server claim, so the busy row survives a reload, a new tab, and reopening the app.
+  const sumitSyncing = status.data?.syncing === true;
+  const mercurySyncing = mercuryStatus.data?.syncing === true;
+  const sumitRefreshBusy = refresh.isPending || sumitSyncing;
+  const mercuryRefreshBusy = mercuryRefresh.isPending || mercurySyncing;
+  useSyncSettled({
+    syncing: sumitSyncing,
+    pending: refresh.isPending,
+    lastSyncAt: status.data?.last_sync_at,
+    lastError: status.data?.last_error,
+    keys: SUMIT_REFRESH_KEYS,
+    success: REFRESH_DONE,
+  });
+  useSyncSettled({
+    syncing: mercurySyncing,
+    pending: mercuryRefresh.isPending,
+    lastSyncAt: mercuryStatus.data?.last_sync_at,
+    lastError: mercuryStatus.data?.last_error,
+    keys: MERCURY_REFRESH_KEYS,
+    success: REFRESH_DONE,
   });
   const mercuryDisconnect = useWrite({
     failure: "לא הצלחנו לנתק.",
@@ -4068,17 +4101,17 @@ export function SettingsScreen({
         <List>
           <ListRow
             variant="button"
-            title={refresh.isPending ? "מרענן…" : "רענון עכשיו"}
+            title={sumitRefreshBusy ? "מרענן…" : "רענון עכשיו"}
             hint={refreshHint}
             icon={<RefreshIcon />}
             chevron
             clearHint={retry != null}
             describeHint={refreshHint != null}
             wrapHint
-            busy={refresh.isPending}
+            busy={sumitRefreshBusy}
             disabled={refreshHeld}
             onClick={() => {
-              if (holdWrites || refreshHeld || refresh.isPending) return;
+              if (holdWrites || refreshHeld || sumitRefreshBusy) return;
               if (blocked()) return;
               refresh.mutate();
             }}
@@ -4139,17 +4172,17 @@ export function SettingsScreen({
         <List>
           <ListRow
             variant="button"
-            title={mercuryRefresh.isPending ? "מרענן…" : "רענון עכשיו"}
+            title={mercuryRefreshBusy ? "מרענן…" : "רענון עכשיו"}
             hint={mercuryRefreshHint}
             icon={<RefreshIcon />}
             chevron
             clearHint={mercuryRetry != null}
             describeHint={mercuryRefreshHint != null}
             wrapHint
-            busy={mercuryRefresh.isPending}
+            busy={mercuryRefreshBusy}
             disabled={mercuryRefreshHeld}
             onClick={() => {
-              if (holdWrites || mercuryRefreshHeld || mercuryRefresh.isPending) return;
+              if (holdWrites || mercuryRefreshHeld || mercuryRefreshBusy) return;
               if (blocked()) return;
               mercuryRefresh.mutate();
             }}
