@@ -1,5 +1,5 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import { formatIls, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -85,6 +85,7 @@ import { AssistantSettings, type AssistantSample } from "./assistant-settings";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
+import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
 import { Banner } from "../ui/banner";
 import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
@@ -1090,6 +1091,7 @@ export function ReviewAllList({
             title={row.supplier_name ?? row.description}
             hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
             agorot={row.amount_net}
+            currency={row.currency}
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
             href={reviewFocusPath(search, row.id)}
@@ -1430,7 +1432,8 @@ export function ReviewQueue({
           supplier={card.supplier_name ?? card.description}
           sourceLine={`${docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
           netAgorot={card.amount_net}
-          vatLine={reviewVatLine(card.vat_agorot)}
+          currency={card.currency}
+          vatLine={reviewVatLine(card.vat_agorot, card.currency)}
           suggestion={suggestion}
           pending={jevLoading}
           reason={card.reason}
@@ -1500,11 +1503,11 @@ function invoiceDate(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function reviewVatLine(vat: bigint | undefined): string {
+function reviewVatLine(vat: bigint | undefined, currency?: string): string {
   if (vat == null) return "לפני מע״מ";
   if (vat === 0n) return "פטור ממע״מ";
   const shown = vat < 0n ? -vat : vat;
-  return `לפני מע״מ · מע״מ ${formatIls(shown)}`;
+  return `לפני מע״מ · מע״מ ${formatMoney(shown, currency)}`;
 }
 
 function docKindLabel(kind: string | undefined): string {
@@ -1956,7 +1959,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       closeTo={closeTo}
       returnFocusRef={returnFocusRef}
       supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
-      amount={sample?.amount ?? (row ? formatIls(absAgorot(row.amount_net)) : "")}
+      amount={sample?.amount ?? (row ? formatMoney(absAgorot(row.amount_net), row.currency) : "")}
       direction={income ? "income" : "expense"}
       projects={projectOptions}
       categories={categoryOptions}
@@ -2475,7 +2478,7 @@ export function TransactionScreen({
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
-        <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" /></p>
+        <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" currency={txn.currency} /></p>
         <p className="t-hint">לפני מע״מ · <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi></p>
         {reviewLabel || paymentLabel ? (
           <div className="ui-status-row">
@@ -2513,7 +2516,7 @@ export function TransactionScreen({
       </List>
       {docOpen ? (
         <p className="ui-page-pad t-hint">
-          מע״מ <bdi dir="ltr">{formatIls(txn.vat_amount, { agorot: true })}</bdi>
+          מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
           {" · "}
           {vatStatusLabel(txn.vat_status)}
         </p>
@@ -2532,7 +2535,7 @@ export function TransactionScreen({
         open={changeOpen}
         onOpenChange={setChangeSheet}
         supplier={party}
-        amount={formatIls(absAgorot(txn.amount_net))}
+        amount={formatMoney(absAgorot(txn.amount_net), txn.currency)}
         direction={txn.direction === "income" ? "income" : "expense"}
         projects={changeProjects}
         categories={changeCategories}
@@ -3153,7 +3156,7 @@ export function SplitScreen({
         trailing={example}
       />
       <div className="ui-split-amount">
-        <p className="t-title-1"><BigNumber agorot={amount} presentation="detail" /></p>
+        <p className="t-title-1"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
         {meta ? <p className="ui-split-meta t-label">{meta}</p> : null}
       </div>
       <h2 className="ui-split-question t-title-3">איך לחלק?</h2>
@@ -3339,6 +3342,8 @@ type SettingsSample = {
   sumit?: "loading" | "error";
   assistant?: AssistantSample;
   jev?: JevCardState;
+  /** Preview only. Live settings read the company's lines. */
+  loanCurrency?: LoanCurrency;
 };
 
 type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
@@ -3872,6 +3877,11 @@ export function SettingsScreen({
               }}
             />
           </div>
+          <LoanSettingsSection
+            companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
+            companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
+            blocked={blocked}
+          />
         </>
       )}
       {showInstall || showSignOut ? (

@@ -252,6 +252,8 @@ jobs:
           supabase functions deploy sumit-connect --project-ref sxqpnetmtufkzowutduq
           supabase functions deploy sumit-reseal --project-ref sxqpnetmtufkzowutduq
           bash scripts/cd-sumit-reseal.sh
+          supabase functions deploy mercury-connect --project-ref sxqpnetmtufkzowutduq
+          supabase functions deploy mercury-sync --project-ref sxqpnetmtufkzowutduq
 
       - name: Read-only preflight and migration push
         env:

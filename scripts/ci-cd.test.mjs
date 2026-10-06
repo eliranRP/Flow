@@ -207,7 +207,9 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const reseal = deploy.indexOf("bash scripts/cd-sumit-reseal.sh");
   assert.ok(build >= 0 && stamp > build && guard > stamp && migrate > guard && publish > migrate && smoke > publish);
   assert.ok(validate >= 0 && validate < probe && probe < migrate && publish < mktemp && mktemp < secretsFile && secretsFile < fn && fn < jevFn && jevFn < smoke);
-  assert.ok(probe < preflightStep && preflightStep < sumitSync && sumitSync < sumitConnect && sumitConnect < sumitResealFn && sumitResealFn < reseal && reseal < migrate);
+  const mercuryConnect = deploy.indexOf("functions deploy mercury-connect");
+  const mercurySync = deploy.indexOf("functions deploy mercury-sync");
+  assert.ok(probe < preflightStep && preflightStep < sumitSync && sumitSync < sumitConnect && sumitConnect < sumitResealFn && sumitResealFn < reseal && reseal < mercuryConnect && mercuryConnect < mercurySync && mercurySync < migrate);
   const resealScript = readFileSync(new URL("./cd-sumit-reseal.sh", import.meta.url), "utf8");
   assert.match(resealScript, /::add-mask::/);
   assert.match(resealScript, /-H @-/);

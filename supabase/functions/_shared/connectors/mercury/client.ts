@@ -43,16 +43,19 @@ export class MercuryRequestError extends Error {
 
 export class MercuryPageCapError extends Error {
   readonly code = "sync_page_cap";
-
+  /** Lines already fetched on this collection. The engine upserts them when resumeAfter is set. */
+  readonly lines: unknown[];
   /**
-   * TODO(PR2): a first sync that passes MERCURY_PAGE_CAP does not resume.
-   * This error carries no start_after. The run rejects before nextCursor
-   * moves, so the next run repeats the same pages and hits the cap again.
-   * The engine must persist the last nextPage and continue from it.
+   * Next page token. Null when nextPage repeated: that is a loop, and the
+   * engine must not resume it. A cap with a token is continued on the next run.
    */
-  constructor() {
+  readonly resumeAfter: string | null;
+
+  constructor(lines: unknown[] = [], resumeAfter: string | null = null) {
     super("sync_page_cap");
     this.name = "MercuryPageCapError";
+    this.lines = lines;
+    this.resumeAfter = resumeAfter;
   }
 }
 
@@ -90,9 +93,11 @@ function stateOf(session: ConnectorSession): SessionState {
 }
 
 export function classifyMercuryError(error: unknown): ClassifiedError {
-  if (error instanceof MercuryPageCapError) return { class: "rejected", retry_after: null };
+  if (error instanceof MercuryPageCapError) {
+    return { class: "rejected", retry_after: null, code: "sync_page_cap" };
+  }
   if (error instanceof MercuryRequestError) {
-    return { class: error.errorClass, retry_after: error.retryAfter };
+    return { class: error.errorClass, retry_after: error.retryAfter, code: error.code };
   }
   if (error instanceof Error && (
     error.message === "mercury_method" ||
@@ -198,7 +203,7 @@ async function listCollection(
 ): Promise<unknown[]> {
   const rows: unknown[] = [];
   const seen = new Set<string>();
-  let startAfter: string | undefined;
+  let startAfter = query.start_after;
   for (let page = 0; page < MERCURY_PAGE_CAP; page += 1) {
     const body = await mercuryGet(session, path, {
       ...query,
@@ -216,27 +221,40 @@ async function listCollection(
     const pageInfo = isRecord(body.page) ? body.page : {};
     const next = typeof pageInfo.nextPage === "string" && pageInfo.nextPage.length > 0 ? pageInfo.nextPage : null;
     if (!next || items.length === 0) return rows;
-    if (seen.has(next)) throw new MercuryPageCapError();
+    if (seen.has(next)) throw new MercuryPageCapError(rows, null);
     seen.add(next);
     startAfter = next;
   }
-  throw new MercuryPageCapError();
+  throw new MercuryPageCapError(rows, startAfter ?? null);
 }
 
 function accountLabel(row: unknown, fallback: string): AccountLabel | null {
   if (!isRecord(row) || typeof row.id !== "string") return null;
   const id = row.id.trim();
-  if (id.length === 0 || id.length > 128) return null;
+  if (id.length === 0 || id.length > 128 || id.includes("/")) return null;
   const name = typeof row.name === "string" && row.name.trim() ? row.name.trim() : fallback;
   return { id, label: String(redactMercury(name)).slice(0, 300) };
 }
 
+/** A treasury row with no usable id is a rejected validation, not a silent drop. The log has no payload. */
+function requireTreasuryLabel(row: unknown): AccountLabel {
+  const named = isRecord(row) && typeof row.name !== "string" ? { ...row, name: "Mercury Treasury" } : row;
+  const label = accountLabel(named, "Mercury Treasury");
+  if (!label) {
+    console.error("mercury_treasury_account_id");
+    throw new MercuryRequestError("rejected", "mercury_treasury_account_id", null, null, "rejected");
+  }
+  return label;
+}
+
+async function listTreasuryAccounts(session: ConnectorSession): Promise<unknown[]> {
+  return await listCollection(session, "/treasury", "accounts", {}, true);
+}
+
 /**
- * Connected account ids. `/treasury` is required.
- * A failed or unreadable GET refuses validation, so a sync never starts
- * without the treasury account ids. Starting anyway would import a
- * liquidation into checking as income and a deposit into Treasury as an
- * expense. An empty `accounts` array is a successful "no treasury account".
+ * Connected account ids. `/accounts`, `/credit`, and `/treasury` are required.
+ * A 403 or 404 on treasury refuses the sync. An empty accounts array is a
+ * successful "no treasury account". A row with no id still refuses.
  */
 export async function validateMercury(session: ConnectorSession): Promise<ValidateResult> {
   try {
@@ -245,7 +263,8 @@ export async function validateMercury(session: ConnectorSession): Promise<Valida
     if (!isRecord(creditBody) || !Array.isArray(creditBody.accounts)) {
       throw new MercuryRequestError("rejected", "rejected", null, null, "rejected");
     }
-    const treasury = await listCollection(session, "/treasury", "accounts", {}, true);
+    const treasury = await listTreasuryAccounts(session);
+    const treasuryLabels = treasury.map((account) => requireTreasuryLabel(account));
     const labels: AccountLabel[] = [];
     const seen = new Set<string>();
     for (const row of [...accounts, ...creditBody.accounts.map((account) => {
@@ -253,14 +272,14 @@ export async function validateMercury(session: ConnectorSession): Promise<Valida
         return { ...account, name: "Mercury Credit" };
       }
       return account;
-    }), ...treasury.map((account) => {
-      if (isRecord(account) && typeof account.name !== "string") {
-        return { ...account, name: "Mercury Treasury" };
-      }
-      return account;
     })]) {
       const label = accountLabel(row, "Mercury");
       if (!label || seen.has(label.id)) continue;
+      seen.add(label.id);
+      labels.push(label);
+    }
+    for (const label of treasuryLabels) {
+      if (seen.has(label.id)) continue;
       seen.add(label.id);
       labels.push(label);
     }
@@ -278,14 +297,73 @@ export function timestampFromCursor(cursor: string | null): string | null {
   return new Date(time).toISOString();
 }
 
+export type MercuryCursorPhase = "window" | "pending" | "treasury";
+
+export interface MercuryCursor {
+  /** ISO time of the run that opened this window. Plain cursors use this as lastSyncAt. */
+  at: string | null;
+  /** The start query already sent. A resume repeats it so the page token stays on the same window. */
+  start: string | null;
+  page: string | null;
+  phase: MercuryCursorPhase;
+  treasuryId: string | null;
+}
+
+/**
+ * A finished sync stores an ISO timestamp. A page cap stores JSON with the
+ * same start date and the next page token. A bare page token would make
+ * timestampFromCursor return null and the next run would restart the window.
+ */
+export function decodeMercuryCursor(cursor: string | null): MercuryCursor {
+  const empty: MercuryCursor = { at: null, start: null, page: null, phase: "window", treasuryId: null };
+  if (!cursor) return empty;
+  if (cursor.startsWith("{")) {
+    try {
+      const parsed: unknown = JSON.parse(cursor);
+      if (!isRecord(parsed)) return empty;
+      const phase: MercuryCursorPhase = parsed.phase === "pending" || parsed.phase === "treasury"
+        ? parsed.phase
+        : "window";
+      const start = typeof parsed.start === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.start) ? parsed.start : null;
+      const page = typeof parsed.page === "string" && parsed.page.length > 0 ? parsed.page : null;
+      const treasuryId = typeof parsed.treasuryId === "string" && parsed.treasuryId.length > 0 ? parsed.treasuryId : null;
+      return {
+        at: typeof parsed.at === "string" ? timestampFromCursor(parsed.at) : null,
+        start,
+        page,
+        phase,
+        treasuryId,
+      };
+    } catch {
+      return empty;
+    }
+  }
+  return { ...empty, at: timestampFromCursor(cursor) };
+}
+
+export function encodeMercuryResume(input: {
+  at: string;
+  start: string | null;
+  page: string;
+  phase: MercuryCursorPhase;
+  treasuryId?: string | null;
+}): string {
+  return JSON.stringify({
+    at: input.at,
+    start: input.start,
+    page: input.page,
+    phase: input.phase,
+    ...(input.treasuryId ? { treasuryId: input.treasuryId } : {}),
+  });
+}
+
 /**
  * Start of the posted lookback. Null means מההתחלה (no start query).
  * A later sync uses lastSync minus lookbackDays, and never starts before importFrom.
  *
- * TODO(PR2): a reversal more than MERCURY_POSTED_LOOKBACK_DAYS after the
- * original post is outside this window. This fetch does not return that
- * line, so the stored row stays posted. The engine must void it from a
- * status recheck. Widening this date is not that fix.
+ * A reversal more than MERCURY_POSTED_LOOKBACK_DAYS after the original post
+ * is outside this window. This date is not widened. The engine rechecks that
+ * stored line with GET /transaction/{id} and voids it from the status.
  */
 export function mercuryStartDate(input: {
   lastSyncAt: string | null;
@@ -301,7 +379,11 @@ export function mercuryStartDate(input: {
 
 function withinImport(row: unknown, importFrom: string | null): boolean {
   if (!importFrom) return true;
-  if (!isRecord(row) || typeof row.createdAt !== "string") return true;
+  if (!isRecord(row)) return true;
+  if (typeof row.canonicalDay === "string" && /^\d{4}-\d{2}-\d{2}$/.test(row.canonicalDay)) {
+    return row.canonicalDay >= importFrom;
+  }
+  if (typeof row.createdAt !== "string") return true;
   try {
     return jerusalemDate(row.createdAt) >= importFrom;
   } catch {
@@ -322,35 +404,172 @@ function dedupe(rows: unknown[]): unknown[] {
   return out;
 }
 
-export async function fetchMercurySince(
-  session: ConnectorSession,
-  input: FetchSinceInput,
-): Promise<FetchSinceResult> {
-  const state = stateOf(session);
-  const lastSyncAt = timestampFromCursor(input.cursor);
-  const start = mercuryStartDate({
-    lastSyncAt,
-    importFrom: input.importFrom,
-    lookbackDays: input.lookbackDays,
-  });
-  const windowRows = await listCollection(session, "/transactions", "transactions", {
-    start: start ?? undefined,
-  });
-  const pendingRows = await listCollection(session, "/transactions", "transactions", {
-    status: "pending",
-  });
-  const lines = dedupe([...windowRows, ...pendingRows]).filter((row) => withinImport(row, input.importFrom));
+function removedFrom(lines: unknown[]): string[] {
   const removedIds: string[] = [];
   for (const row of lines) {
     if (!isRecord(row) || typeof row.id !== "string" || typeof row.status !== "string") continue;
     if (isVoidMercuryStatus(row.status)) removedIds.push(row.id);
   }
   removedIds.sort();
+  return removedIds;
+}
+
+function resumeResult(
+  lines: unknown[],
+  at: string,
+  start: string | null,
+  page: string,
+  phase: MercuryCursorPhase,
+  treasuryId?: string | null,
+): FetchSinceResult {
   return {
     lines,
-    removedIds,
+    removedIds: removedFrom(lines),
+    nextCursor: encodeMercuryResume({ at, start, page, phase, treasuryId }),
+    complete: false,
+    windowStart: start,
+  };
+}
+
+function takePageCap(error: unknown, prior: unknown[], at: string, start: string | null, phase: MercuryCursorPhase, treasuryId?: string | null): FetchSinceResult {
+  if (error instanceof MercuryPageCapError && error.resumeAfter) {
+    return resumeResult([...prior, ...error.lines], at, start, error.resumeAfter, phase, treasuryId);
+  }
+  throw error;
+}
+
+async function listTreasuryTransactions(
+  session: ConnectorSession,
+  treasuryId: string,
+  cursor: string | undefined,
+): Promise<unknown[]> {
+  const path = `/treasury/${treasuryId}/transactions`;
+  const rows: unknown[] = [];
+  const seen = new Set<string>();
+  let pageCursor = cursor;
+  for (let page = 0; page < MERCURY_PAGE_CAP; page += 1) {
+    const body = await mercuryGet(session, path, {
+      limit: String(MERCURY_PAGE_LIMIT),
+      order: "desc",
+      cursor: pageCursor,
+    });
+    if (!isRecord(body) || !Array.isArray(body.transactions)) {
+      throw new MercuryRequestError("rejected", "rejected", null, null, "rejected");
+    }
+    rows.push(...body.transactions);
+    const next = body.cursor;
+    if (typeof next !== "number" && typeof next !== "string") return rows;
+    const token = String(next);
+    if (token.length === 0 || (pageCursor != null && token === pageCursor) || seen.has(token)) {
+      throw new MercuryPageCapError(rows, null);
+    }
+    seen.add(token);
+    pageCursor = token;
+  }
+  throw new MercuryPageCapError(rows, pageCursor ?? null);
+}
+
+/**
+ * Yield and dividends live on the treasury ledger, not on GET /transactions.
+ * Deposit and withdrawal legs stay on that ledger too; normalize skips them
+ * so they are not a second copy of a checking transfer.
+ */
+async function fetchTreasuryLedger(
+  session: ConnectorSession,
+  resumeId: string | null,
+  resumeCursor: string | undefined,
+): Promise<{ lines: unknown[]; resume: { treasuryId: string; page: string } | null }> {
+  const accounts = await listTreasuryAccounts(session);
+  const ids = accounts.map((account) => requireTreasuryLabel(account).id);
+  const startAt = resumeId && ids.includes(resumeId) ? ids.indexOf(resumeId) : 0;
+  const lines: unknown[] = [];
+  for (let index = startAt; index < ids.length; index += 1) {
+    const treasuryId = ids[index];
+    if (!treasuryId) continue;
+    const cursor = index === startAt ? resumeCursor : undefined;
+    try {
+      lines.push(...await listTreasuryTransactions(session, treasuryId, cursor));
+    } catch (error) {
+      if (error instanceof MercuryPageCapError && error.resumeAfter) {
+        return {
+          lines: [...lines, ...error.lines],
+          resume: { treasuryId, page: error.resumeAfter },
+        };
+      }
+      throw error;
+    }
+  }
+  return { lines, resume: null };
+}
+
+export async function fetchMercurySince(
+  session: ConnectorSession,
+  input: FetchSinceInput,
+): Promise<FetchSinceResult> {
+  const state = stateOf(session);
+  const decoded = decodeMercuryCursor(input.cursor);
+  const at = decoded.at ?? state.now().toISOString();
+  const start = decoded.page || decoded.phase !== "window"
+    ? decoded.start
+    : mercuryStartDate({
+      lastSyncAt: decoded.at,
+      importFrom: input.importFrom,
+      lookbackDays: input.lookbackDays,
+    });
+
+  let windowRows: unknown[] = [];
+  if (decoded.phase === "window") {
+    try {
+      windowRows = await listCollection(session, "/transactions", "transactions", {
+        start: start ?? undefined,
+        start_after: decoded.page ?? undefined,
+      });
+    } catch (error) {
+      return takePageCap(error, [], at, start, "window");
+    }
+  }
+
+  let pendingRows: unknown[] = [];
+  if (decoded.phase !== "treasury") {
+    try {
+      pendingRows = await listCollection(session, "/transactions", "transactions", {
+        status: "pending",
+        start_after: decoded.phase === "pending" ? decoded.page ?? undefined : undefined,
+      });
+    } catch (error) {
+      return takePageCap(error, windowRows, at, start, "pending");
+    }
+  }
+
+  let treasuryRows: unknown[] = [];
+  try {
+    const ledger = await fetchTreasuryLedger(
+      session,
+      decoded.phase === "treasury" ? decoded.treasuryId : null,
+      decoded.phase === "treasury" ? decoded.page ?? undefined : undefined,
+    );
+    treasuryRows = ledger.lines;
+    if (ledger.resume) {
+      return resumeResult(
+        [...windowRows, ...pendingRows, ...treasuryRows],
+        at,
+        start,
+        ledger.resume.page,
+        "treasury",
+        ledger.resume.treasuryId,
+      );
+    }
+  } catch (error) {
+    return takePageCap(error, [...windowRows, ...pendingRows], at, start, "treasury");
+  }
+
+  const lines = dedupe([...windowRows, ...pendingRows, ...treasuryRows]).filter((row) => withinImport(row, input.importFrom));
+  return {
+    lines,
+    removedIds: removedFrom(lines),
     nextCursor: state.now().toISOString(),
     complete: true,
+    windowStart: start,
   };
 }
 
