@@ -15,6 +15,7 @@ export function useMercuryConnect({
     failure: (error) => {
       if (error.message === "auth") return "החיבור נכשל. בדקו את המפתח.";
       if (error.message === "rejected") return hebrewMercuryError("rejected") ?? "לא הצלחנו להתחבר. נסו שוב.";
+      if (error.message === "transient" || error.message === "rate_limited") return "לא הצלחנו להתחבר. נסו שוב.";
       return hebrewMercuryError(error.message) ?? "לא הצלחנו להתחבר. נסו שוב.";
     },
     success: "Mercury מחובר. המפתח נשאר בשרת.",
