@@ -20,7 +20,10 @@ const session = {
 } satisfies Session;
 
 const gate = vi.hoisted(() => ({ owner: "user-1" }));
-const invoke = vi.hoisted(() => vi.fn());
+const invoke = vi.hoisted(() => vi.fn(
+  (_name: string, _options?: { body?: unknown }): Promise<{ data: unknown; error: null }> =>
+    Promise.resolve({ data: null, error: null }),
+));
 
 const dashboard = {
   company_id: companyId,
@@ -80,7 +83,7 @@ const supabase = {
     return chain(null);
   },
   functions: {
-    invoke: (...args: unknown[]) => invoke(...args),
+    invoke: (name: string, options?: { body?: unknown }) => invoke(name, options),
   },
 };
 
@@ -145,6 +148,9 @@ describe("setup route history", () => {
     await screen.findByRole("dialog", { name: "חיבור SUMIT" });
     await act(async () => {
       await router.navigate(-1);
+    });
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
     });
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/setup/1");

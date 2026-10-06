@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -77,6 +77,7 @@ const supabase = {
   },
   rpc: (name: string, args?: unknown) => {
     rpc.calls.push({ name, args });
+    if (name === "get_dashboard") return Promise.resolve({ data: dashboard, error: null });
     return rpc.impl(name, args);
   },
   from: (table: string) => {
@@ -162,8 +163,13 @@ describe("review setup handoff", () => {
       return Promise.resolve({ data: null, error: null });
     };
     renderAt("/review?setup=1&from=card");
-    fireEvent.click(await screen.findByRole("button", { name: "אישור" }));
-    fireEvent.click(await screen.findByRole("button", { name: "המשך" }));
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    await waitFor(() => {
+      expect(approve).toBeEnabled();
+    });
+    fireEvent.click(approve);
+    expect(await screen.findByText(SAMPLE_TOAST)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "המשך" }));
     await waitFor(() => {
       expect(screen.getByText("home")).toBeInTheDocument();
     });
