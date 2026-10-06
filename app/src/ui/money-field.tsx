@@ -1,4 +1,4 @@
-import { useId, type CSSProperties } from "react";
+import { useId, type CSSProperties, type KeyboardEventHandler } from "react";
 import { flowControlName } from "./field-name";
 import { holdFieldMouse, holdFieldPointer } from "./field-pointer";
 
@@ -15,8 +15,10 @@ type MoneyFieldProps = {
   keepMinus?: boolean;
   /** Keeps the message line when there is no error, so the form does not jump. */
   reserveMessage?: boolean;
+  enterKeyHint?: "next" | "done";
   onBlur?: () => void;
   onFocus?: () => void;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 };
 
 function digitsOnly(raw: string, keepMinus: boolean): string {
@@ -52,8 +54,10 @@ export function MoneyField({
   prefix = "₪",
   keepMinus = false,
   reserveMessage = false,
+  enterKeyHint = "next",
   onBlur,
   onFocus,
+  onKeyDown,
 }: MoneyFieldProps) {
   const generated = useId();
   const fieldId = flowControlName("flow-amount", generated, id);
@@ -87,11 +91,13 @@ export function MoneyField({
           type="text"
           value={shown}
           disabled={disabled}
+          enterKeyHint={enterKeyHint}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           onPointerDown={holdFieldPointer}
           onFocus={onFocus}
           onBlur={onBlur}
+          onKeyDown={onKeyDown}
           onChange={(event) => {
             onValueChange(digitsOnly(event.target.value, keepMinus));
           }}
