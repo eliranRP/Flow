@@ -26,9 +26,15 @@ create unique index mcp_writes_project_open_idx
   on private.mcp_writes (user_id, project_id)
   where kind = 'project' and undone_at is null;
 
+-- One open create and one open hide per category. A shared index would refuse
+-- hiding a category this user just created.
 create unique index mcp_writes_category_open_idx
   on private.mcp_writes (user_id, category_id)
-  where kind in ('category', 'category_hidden') and undone_at is null;
+  where kind = 'category' and undone_at is null;
+
+create unique index mcp_writes_category_hidden_open_idx
+  on private.mcp_writes (user_id, category_id)
+  where kind = 'category_hidden' and undone_at is null;
 
 create or replace function private.mcp_refused(p_message text)
 returns jsonb
