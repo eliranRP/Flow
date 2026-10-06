@@ -12,6 +12,8 @@ type SegmentedControlProps<T extends string> = {
   value: T;
   options: Array<Option<T>>;
   onChange: (value: T) => void;
+  /** The hint under the control. The group points at it. */
+  describedBy?: string;
   disabled?: boolean;
 };
 
@@ -23,6 +25,7 @@ export function SegmentedControl<T extends string>({
   value,
   options,
   onChange,
+  describedBy,
   disabled = false,
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
@@ -52,13 +55,14 @@ export function SegmentedControl<T extends string>({
   return (
     <div className="ui-field">
       {showLabel ? <span className="ui-field-label">{label}</span> : null}
-    <div
-      className={cx("ui-seg", radius === "input" && "ui-seg-input")}
-      role="radiogroup"
-      aria-label={label}
-      aria-disabled={disabled || undefined}
-      onKeyDown={disabled ? undefined : onKeyDown}
-    >
+      <div
+        className={cx("ui-seg", radius === "input" && "ui-seg-input")}
+        role="radiogroup"
+        aria-label={label}
+        aria-describedby={describedBy}
+        aria-disabled={disabled || undefined}
+        onKeyDown={disabled ? undefined : onKeyDown}
+      >
       {options.map((option, optionIndex) => {
         const selected = value === option.value;
         return (
