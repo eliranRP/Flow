@@ -1831,6 +1831,11 @@ a.ui-row,
   text-align: start;
 }
 
+/* Mixed currencies: one hero figure per line. Inline spans ran together ("$1,500₪600") and overflowed. */
+.ui-hero-figure-line {
+  display: block;
+}
+
 .ui-hero-explain {
   margin: 0;
   max-inline-size: 100%;
