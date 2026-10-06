@@ -4,6 +4,10 @@
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).
 
+USD totals in SQL and MCP. Migration `20261006230000_usd_totals.sql` adds `by_currency` to `company_pnl` and passes it through `get_totals` and `list_projects`. Decision [0094](decisions/0094-usd-totals.md).
+
+MCP cycle 6 batch. `assign_expenses` and `undo_batch` file up to 200 review rows in one write hit, with partial success and batch undo. Migration `20261006220000_mcp_batch.sql`. Decision [0093](decisions/0093-mcp-batch.md).
+
 sync_bank auth fix. `mercury-sync` resolves the owner company through `_shared/owner.ts`: GoTrue `getUser()` first, then, for the session-less JWT that `flow-mcp` signs, the RLS-readable company whose `owner_id` matches the token `sub` (PostgREST verifies the token). Viewers still get `no company`. No migration.
 
 Refresh syncing state. The busy רענון עכשיו row on SUMIT and Mercury comes from the server, so "מרענן…" and the spinner survive a hard reload, a new tab, and reopening the app. `connector_connection_status` and `sumit_status()` add `syncing`, true while `sync_claimed_at` is within 15 minutes. `note_connector_failure` clears the claim. `sumit-sync` claims the connection on a manual refresh like `mercury-sync` does, a second tap is skipped, and both functions release their claim when the run ends. Settings polls the status every 3 seconds while it is syncing, and when a run this tab did not start finishes it reloads the books and toasts "הרענון הסתיים.". A busy button row ignores taps. Migration `20261006211000_connector_syncing.sql`.
