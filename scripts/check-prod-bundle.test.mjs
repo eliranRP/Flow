@@ -209,6 +209,7 @@ test("ships the setup stage and the sample tag, and still blocks a fixture demo"
     modules: [
       "/repo/app/src/setup/demo-slot.tsx",
       "/repo/app/src/ui/demo-player.tsx",
+      "/repo/app/src/ui/demo-pointer.tsx",
       "/repo/app/src/setup/sample-review.tsx",
       "/repo/app/src/ui/setup-demos.tsx",
     ],
@@ -216,7 +217,7 @@ test("ships the setup stage and the sample tag, and still blocks a fixture demo"
   });
   assert.deepEqual(setup, []);
   const fixture = violations({
-    modules: ["/repo/app/src/demo/model.ts", "/repo/app/src/ui/demo-player.stories.tsx"],
+    modules: ["/repo/app/src/demo/model.ts", "/repo/app/src/ui/demo-player.stories.tsx", "/repo/app/src/ui/demo-pointer.stories.tsx"],
     files: [{ name: "app/dist/assets/index.js", body: "Example data" }],
   });
   assert.ok(fixture.some((line) => line.includes("/demo/")));

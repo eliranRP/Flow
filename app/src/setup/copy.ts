@@ -44,16 +44,6 @@ export const STEP_TITLE: Record<number, string> = {
   5: "התקנה",
 };
 
-export const DEMO_ALT: Record<number, string> = {
-  1: "הדגמה: מחברים את SUMIT, והתנועות נכנסות ללשונית לאישור.",
-  2: "הדגמה: לתנועה נוספת הצעה של פרויקט וקטגוריה, מסומנת הצעה.",
-  3: "הדגמה: רשימת הפרויקטים מ־SUMIT מסומנת, וקטגוריה אחת עוברת למוסתרות.",
-  4: "הדגמה: הקשה על אישור, הכרטיס יוצא והמונה יורד באחד.",
-  5: "הדגמה: בספארי מקישים על שלוש הנקודות, ואז שיתוף והוספה למסך הבית.",
-};
-
-export const DEMO_ALT_ANDROID = "הדגמה: הקשה על התקנה, והסמל של Flow מופיע במסך הבית.";
-
 export function setupHost(): string {
   if (typeof location === "undefined" || location.host === "") return new URL(SETUP_PRODUCTION_ORIGIN).host;
   return location.host;

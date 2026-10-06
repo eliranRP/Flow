@@ -41,6 +41,13 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Setup, step 2 | תיוג חכם (Jev) | Sets the switch. The save waits for המשך. | never | no | the switch moves | none | unit |
 | Setup, step 2 | המשך | Saves Jev on or off and moves on. | never | שומר inside the button | the next step, or Home from the card | toast "לא הצלחנו לשמור." | unit |
 | Setup, step 3 | נראה טוב | Confirms the lists and moves on. | never | no | the next step, or Home from the card | none | unit |
+| Setup, step 1 | חיבור SUMIT | Opens the connect sheet. A failed connect toasts above the sheet and keeps the company number and the key. | never | חיבור inside the sheet | the next step, toast "SUMIT מחובר. המפתח נשאר בשרת." | toast above the sheet, values kept, then "SUMIT עוד לא מחובר." | unit |
+| Setup, step 1 | ניסיון חוזר | Reopens the sheet with the company number and the key still filled. | never | no | the sheet opens | none | unit |
+| Setup, step 4 | כרטיס דוגמה | Opens `/review?setup=1`. An empty queue shows one sample card. | never | no | the sample card | none | unit |
+| Review, setup sample | אישור | Writes nothing to the books. Stores `sample_review_at`, shows הכל מאושר, and toasts המשך to step 5. | until the company id is known | no | toast "אישור ראשון. אפשר להמשיך בהגדרה." and route `/setup/5` | none | unit |
+| Review, setup | first אישור | After the first real approval in setup, toasts SAMPLE_TOAST with המשך to step 5 or Home from the card. | never | no | toast and the setup handoff route | none | unit |
+| Setup, step 5 | סיום | Marks the iOS steps seen, or the install, and leaves the run. | never | no | Home, or the next step from inside the run | none | unit |
+| Setup, step 5 | התקנה | Shown only after `beforeinstallprompt`. Runs the saved prompt. | until the prompt exists | no | the browser sheet, then the run ends | none | unit |
 | Home card | הסתרה | Hides the card and toasts above the tab bar. | never | no | toast "ההגדרה זמינה בהגדרות." | none | unit |
 | Home card | ביטול | Brings the card back. | never | no | the card returns | none | unit |
 | Home card | a remaining step | Opens that step alone. | never | no | route `/setup/N?from=card` | none | unit |
@@ -177,7 +184,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Notifications | Back | Returns to settings. | never | no | route `/settings` | none | pass |
 | Install | ✕ and לא עכשיו and הבנתי | Dismiss, back to settings. | never | no | route `/settings` | none | pass |
 | Install | התקנה | Runs the browser install prompt. Android prompt only. | never | no | the browser sheet | none | pass |
-| Install | העתקת קישור | Copies the page URL. Other-browser iPhone only. | never | no | toast "הקישור הועתק" | toast "לא הצלחנו להעתיק את הקישור." | pass |
+| Install | iPhone steps | Three iOS 26 rows, shared with setup step 5, on iPhone, iPad, and another iPhone browser. הבנתי dismisses. The Safari-only sentences are gone. | never | no | route `/settings` | none | e2e |
 
 ## Reviewer preview
 

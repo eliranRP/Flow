@@ -47,7 +47,6 @@
 
 .ui-setup-stage-host {
   margin-block-start: var(--space-5);
-  padding-inline: var(--space-card-inset);
 }
 
 .ui-setup-stage {
@@ -126,17 +125,6 @@
 
 .ui-setup-steps li {
   min-block-size: var(--touch-min);
-}
-
-.ui-setup-note {
-  padding: var(--space-4);
-  border-radius: var(--radius-card);
-  background: var(--color-tint);
-}
-
-.ui-setup-note-title {
-  margin: 0;
-  color: var(--color-toast-bad);
 }
 
 .ui-setup-card {
