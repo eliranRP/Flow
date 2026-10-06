@@ -3539,14 +3539,16 @@ export function SettingsScreen({
   });
   const refresh = useWrite({
     failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
+    silent: (error) => error.message === "sync_held",
     success: REFRESH_DONE,
     keys: SUMIT_REFRESH_KEYS,
     run: async () => {
       const data = await invokeEdge("sumit-sync", { force: true });
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        // Another tab or an earlier load may hold the claim. Reading the status shows it as syncing.
-        void queryClient.invalidateQueries({ queryKey: ["sumit"] });
-        throw new Error("sync_skipped");
+        // Another tab or an earlier load holds the claim: show it as syncing, without a skip toast.
+        await queryClient.refetchQueries({ queryKey: ["sumit"] });
+        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["sumit"] }).some(([, d]) => d?.syncing === true);
+        throw new Error(held ? "sync_held" : "sync_skipped");
       }
     },
   });
@@ -3569,13 +3571,15 @@ export function SettingsScreen({
   });
   const mercuryRefresh = useWrite({
     failure: (error) => hebrewMercuryError(error.message) ?? "הרענון נכשל.",
+    silent: (error) => error.message === "sync_held",
     success: REFRESH_DONE,
     keys: MERCURY_REFRESH_KEYS,
     run: async () => {
       const data = await invokeEdge("mercury-sync", { force: true });
       if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        void queryClient.invalidateQueries({ queryKey: ["mercury"] });
-        throw new Error("sync_skipped");
+        await queryClient.refetchQueries({ queryKey: ["mercury"] });
+        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["mercury"] }).some(([, d]) => d?.syncing === true);
+        throw new Error(held ? "sync_held" : "sync_skipped");
       }
     },
   });
