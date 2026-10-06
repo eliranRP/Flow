@@ -185,6 +185,15 @@ describe("setup route history", () => {
     });
   });
 
+  it("keeps from=card when step 4 opens the review queue", async () => {
+    const router = renderRoute("/setup/4?from=card");
+    fireEvent.click(await screen.findByRole("button", { name: "כרטיס דוגמה" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/review");
+    });
+    expect(router.state.location.search).toBe("?setup=1&from=card");
+  });
+
   it("pops back to Home when the step was opened from the card", async () => {
     window.history.replaceState({ idx: 1 }, "");
     const router = renderRoute("/setup/2?from=card", ["/", "/setup/2?from=card"]);
