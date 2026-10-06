@@ -9,10 +9,16 @@ export function useKeyboardInset() {
     if (!vv) return;
     const root = document.documentElement;
     const on = () => {
+      // Space below the visual viewport, for insets. On iOS it drops to 0 when the
+      // visual viewport is panned down with the keyboard still up, so it can't detect the keyboard.
       const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // Screen height the visual viewport doesn't cover. Panning (offsetTop) and
+      // pinch-zoom (scale) leave it unchanged; only the keyboard takes it away.
+      const scale = vv.scale > 0 ? vv.scale : 1;
+      const covered = Math.max(0, window.innerHeight - vv.height * scale);
       root.style.setProperty("--vvh", `${String(vv.height)}px`);
       root.style.setProperty("--kb", `${String(kb)}px`);
-      const open = kb > 120;
+      const open = covered > 120;
       if (open !== (root.dataset.kb === "open")) {
         if (open) root.dataset.kb = "open";
         else delete root.dataset.kb;
