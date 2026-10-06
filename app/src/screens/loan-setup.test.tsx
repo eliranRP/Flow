@@ -171,6 +171,17 @@ describe("company currency", () => {
 });
 
 describe("LoanSetupForm", () => {
+  it("moves from lender to principal on Enter without surfacing errors", () => {
+    renderForm(<LoanSetupForm companyCurrency="ILS" />);
+    const lender = screen.getByLabelText("מלווה");
+    const principal = screen.getByLabelText("סכום מקורי");
+    fireEvent.change(lender, { target: { value: "בנק דוגמה" } });
+    fireEvent.keyDown(lender, { key: "Enter", code: "Enter" });
+    expect(principal).toHaveFocus();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/חובה|נדרש|שגוי/)).toHaveLength(0);
+  });
+
   it("defaults a dollar company to $ and USD", () => {
     renderForm(<LoanSetupForm companyCurrency="USD" />);
     expect(screen.getByRole("radio", { name: "$" })).toBeChecked();

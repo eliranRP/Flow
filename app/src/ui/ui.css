@@ -535,12 +535,12 @@ a.ui-row,
   overflow-x: hidden;
   overflow-y: auto;
   overflow-wrap: anywhere;
-  max-height: calc(100dvh - var(--sheet-gap) - 11rem);
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap) - 11rem);
   padding-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
 }
 
 [data-vaul-drawer].ui-sheet-panel {
-  max-height: calc(100dvh - var(--sheet-gap)) !important;
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
   /* The toast pad grows padding above the header. Scroll anchoring would
      scroll that padding away and leave ✕ under the toast. */
   overflow-anchor: none;
@@ -552,8 +552,8 @@ a.ui-row,
 }
 
 [data-vaul-drawer].ui-sheet-panel.ui-sheet-tall {
-  height: calc(100dvh - var(--sheet-gap)) !important;
-  max-height: calc(100dvh - var(--sheet-gap)) !important;
+  height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap)) !important;
 }
 
 .ui-sheet-fit .ui-sheet-surface {
@@ -1902,6 +1902,22 @@ a.ui-row,
   unicode-bidi: isolate;
 }
 
+html[data-kb="open"] .ui-tabbar {
+  display: none;
+}
+
+html[data-kb="open"] .below-tabbar {
+  padding-bottom: var(--space-4);
+}
+
+html[data-kb="open"] .ui-sheet-panel {
+  padding-bottom: var(--space-2);
+}
+
+html[data-kb="open"] .ui-sheet-body {
+  padding-block-end: var(--space-3);
+}
+
 .ui-tabbar {
   position: fixed;
   inset-inline: 0;
@@ -2063,8 +2079,8 @@ button.ui-tab-slot {
   bottom: 0;
   width: 100%;
   max-width: var(--content-max);
-  max-block-size: calc(100dvh - var(--sheet-gap));
-  max-height: calc(100dvh - var(--sheet-gap));
+  max-block-size: calc(var(--vvh, 100dvh) - var(--sheet-gap));
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap));
   margin-inline: auto;
   overflow: hidden;
   padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
