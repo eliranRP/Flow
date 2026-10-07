@@ -35,8 +35,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | in-progress (#83) |
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | in-progress (#95) |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
-| 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
-| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
+| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | in-progress (#98) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
@@ -44,7 +44,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
+| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
@@ -53,6 +53,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
 | 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
+| 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -154,7 +156,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-117"></a>
 ### FLOW-117 · Reversal section in the category picker
-- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-104 (done, #76)
+- **Type:** SMALL UI · **Status:** in-progress (#101) · **Depends on:** FLOW-104 (done, #76)
+- **Approval:** 2026-10-07, design reviewer's option A (a closed section under the list), built under the owner's standing rule for UI tasks.
 - **What:** The server accepts the other kind's category since FLOW-104. In the app category picker, list the other kind's categories under a "reversal" section, so a bounced rent payment or a supplier refund can be filed from the app.
 - **Acceptance:** mockup approved; e2e picks a reversal category both ways; design review.
 
@@ -164,6 +167,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message.
 - [ ] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited.
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
+- [ ] (#101 review) Overhead lines (`pnl_role` overhead) still offer the picker's reversal section; settle with the shared-line call above. Split and shared lines don't offer it.
+- [ ] (#101 review) A hidden, loan or kept-out other-kind category already on a line (filed through MCP) shows החזר on the review card but sits in the own-kind list with no mark in the change sheet.
+- [ ] (#101 review) The picker's search shows above 8 own-kind categories only; consider counting the reversal section too.
+- [ ] (#101 review) If a suggestion can ever be of the other kind, the summary shows הצעה, not החזר. Rules never learn reversals today.
 
 <a id="flow-119"></a>
 ### FLOW-119 · Project picker in the loan sheet
@@ -311,25 +318,36 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** plan-first, planning claimed (UI task 4 thread, 2026-10-07, claude/project-thread-uf00mt) · **Depends on:** —
 - **What:** Tapping נכנס (income) or יצא (expenses) on Home opens every line of that kind for the selected period across all projects, grouped and totaled by category, project or payer, each line tappable to its detail. Same period selector as Home, amounts shown like the rest of the app, kept-out categories respected. MCP: a tool and RPC returning the aggregated lines (direction, period, group_by).
+- **Plan:** [flow-301-drill-down.md](../review/flow-301-drill-down.md). Owner approved option A (group totals, then a group's lines) on 2026-10-07. Server PR first (RPCs + MCP `get_breakdown`), then the screens.
 - **Acceptance:** mockup approved; totals match Home for the same period; MCP test.
 
 <a id="flow-302"></a>
 ### FLOW-302 · Month dividers in every transaction list
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (#98) · **Depends on:** —
+- **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/AHkHqk9WgUeCXb9wHYwdVB) (compact sticky header, month name, +income −expenses per currency), under the owner's standing rule for UI tasks.
 - **What:** One list, no new page: a sticky month header (for example "יולי 2026") between months, with that month's income and expenses (expenses with a minus, `$` for USD). Built once in the shared list component so every list gets it (project lists, recent transactions, review lists).
 - **Acceptance:** mockup approved; subtotals match the rows; RTL and 320px checks; design review.
+
+<a id="flow-313"></a>
+### FLOW-313 · Month dividers follow-ups (#98 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-302 (#98)
+- [ ] The month totals add rows by direction: a shared line counts at its full amount and a refund counts as income, so a month header is not that project's P&L for the month. Owner to decide whether that's fine or the header should follow the P&L rules (Decisions needed).
+- [ ] Switching between the flat and the grouped list (a held order splitting a month, or a second month loading) remounts the rows, so a focused row loses focus.
+- [ ] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines.
+- [ ] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed.
+- [ ] `MonthList` takes a `className` no caller passes; drop it or use it.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
 - **Type:** SMALL UI · **Status:** in-progress (#100) · **Depends on:** —
-- **Approval:** 2026-10-07, the design reviewer's option A (˄ ˅ in the card's top bar, ArrowLeft/ArrowRight, replace on move), built under the owner's standing rule for UI tasks. Swipe moved to [FLOW-313](#flow-313).
+- **Approval:** 2026-10-07, the design reviewer's option A (˄ ˅ in the card's top bar, ArrowLeft/ArrowRight, replace on move), built under the owner's standing rule for UI tasks. Swipe moved to [FLOW-314](#flow-314).
 - **What:** Swipe (RTL-aware) or tap small arrows in the header to move to the previous or next transaction, in the same list and order the card was opened from (project list, review queue, recent, filtered). Keep the list position on return; prefetch neighbours.
 - **Acceptance:** mockup approved; Back returns to the same scroll spot; keyboard and screen-reader access; design review.
 
-<a id="flow-313"></a>
-### FLOW-313 · Swipe between transactions on the card
+<a id="flow-314"></a>
+### FLOW-314 · Swipe between transactions on the card
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-303 (#100)
 - **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
 - **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.

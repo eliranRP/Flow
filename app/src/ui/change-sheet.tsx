@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState, type RefObject, type SubmitEvent } from "react";
+import { useEffect, useId, useRef, useState, type RefObject, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { REVERSAL_HEADING, REVERSAL_HINT } from "../reversal";
 import { isTransientWriteError, type WriteFailure } from "../use-write";
 import { Button } from "./button";
 import { HoldLine } from "./hold-line";
 import { IconButton } from "./icon-button";
-import { BackIcon, PlusIcon, SplitIcon } from "./icons";
+import { BackIcon, ChevronDownIcon, PlusIcon, SplitIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { RadioRow } from "./radio-row";
 import { RouteSheet } from "./route-sheet";
 import { SearchField } from "./search-field";
-import { SuggestTag } from "./suggest-tag";
+import { ReversalTag, SuggestTag } from "./suggest-tag";
 import { Sheet } from "./sheet";
 import { Skeleton } from "./skeleton";
 import { TextField } from "./text-field";
@@ -105,6 +106,11 @@ type Shared = {
   onCreateProject: (name: string) => Promise<ChangeChoice>;
   /** Story search text. A real open starts empty. */
   initialQuery?: string;
+  /**
+   * The other kind's categories, for a bounced payment or a refund ([0103](../../../docs/decisions/0103-reversals-across-directions.md)).
+   * Listed under their own heading in the category picker. Omitted on a split line.
+   */
+  reversals?: ChangeChoice[];
   loading?: boolean;
 };
 
@@ -157,6 +163,7 @@ export function ChangeAssignment(props: Props) {
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [ownedCategory, setOwnedCategory] = useState(props.categorySuggested === false);
+  const [reversalOpen, setReversalOpen] = useState(false);
   const settled = useRef(false);
   const inflight = useRef<Promise<boolean> | null>(null);
   const warned = useRef(false);
@@ -259,6 +266,7 @@ export function ChangeAssignment(props: Props) {
   function openPicker(next: "project" | "category") {
     opener.current = next;
     setQuery("");
+    setReversalOpen(false);
     setCreatingNew(false);
     if (props.contained) {
       setContainedView(next);
@@ -428,7 +436,9 @@ export function ChangeAssignment(props: Props) {
 
   const projectName = props.projects.find((option) => option.id === props.projectId)?.name ?? "";
   const projectLabel = projectName !== "" ? projectName : (props.projectTitle ?? "לא נבחר");
-  const categoryName = props.categories.find((option) => option.id === props.categoryId)?.name ?? "";
+  const reversalOptions = props.reversals ?? [];
+  const categoryReversal = reversalOptions.some((option) => option.id === props.categoryId);
+  const categoryName = [...props.categories, ...reversalOptions].find((option) => option.id === props.categoryId)?.name ?? "";
   const projectSuggested = props.suggestionProjectId != null && props.suggestionProjectId !== "" && props.projectId === props.suggestionProjectId;
   const categorySuggestionId = ownedCategory ? "" : (props.suggestionCategoryId ?? "");
   const categorySuggested = categorySuggestionId !== "" && props.categoryId === categorySuggestionId;
@@ -446,6 +456,9 @@ export function ChangeAssignment(props: Props) {
       <BackIcon />
     </IconButton>
   );
+  const reversalListed = pickerKind === "category"
+    ? ordered(reversalOptions, "", props.categoryId, query, "category")
+    : [];
   const pickerTotal = ordered(
     pickerKind === "project" ? props.projects : props.categories,
     pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId,
@@ -453,7 +466,7 @@ export function ChangeAssignment(props: Props) {
     "",
     pickerKind,
   ).length;
-  const showRemember = !income && props.remember != null && props.onRemember != null;
+  const showRemember = !income && !categoryReversal && props.remember != null && props.onRemember != null;
   const propsRef = useRef(props);
   propsRef.current = props;
 
@@ -570,8 +583,8 @@ export function ChangeAssignment(props: Props) {
               buttonRef={categoryBtn}
               eyebrow="קטגוריה"
               title={categoryName === "" ? "לא נבחר" : categoryName}
-              label={`קטגוריה: ${categoryName === "" ? "לא נבחר" : categoryName}, שינוי`}
-              tag={categorySuggested ? <SuggestTag /> : undefined}
+              label={`קטגוריה: ${categoryName === "" ? "לא נבחר" : categoryName}${categoryReversal ? ", החזר" : ""}, שינוי`}
+              tag={categorySuggested ? <SuggestTag /> : categoryReversal ? <ReversalTag /> : undefined}
               chevron
               onClick={() => {
                 openPicker("category");
@@ -612,6 +625,15 @@ export function ChangeAssignment(props: Props) {
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId}
           savingId={savingId}
           note={pickerKind === "project" ? props.projectNote : undefined}
+          reversal={pickerKind === "category" && reversalOptions.length > 0 ? {
+            heading: REVERSAL_HEADING[props.direction],
+            hint: REVERSAL_HINT[props.direction],
+            listed: reversalListed,
+            open: reversalOpen,
+            onToggle: () => {
+              setReversalOpen((open) => !open);
+            },
+          } : undefined}
           splitLink={pickerKind === "project" && props.hideSplitLink !== true}
           onSelect={(id) => {
             void choose(pickerKind, id);
@@ -670,6 +692,7 @@ function Picker({
   suggestionId,
   savingId,
   note,
+  reversal,
   splitLink = true,
   onSelect,
   onCreate,
@@ -685,13 +708,45 @@ function Picker({
   suggestionId: string;
   savingId: string | null;
   note?: string;
+  /** The other kind's section. Shown only when it has categories. */
+  reversal?: {
+    heading: string;
+    hint: string;
+    listed: ChangeChoice[];
+    open: boolean;
+    onToggle: () => void;
+  };
   splitLink?: boolean;
   onSelect: (id: string) => void;
   onCreate?: () => void;
   onSplit?: () => void;
 }) {
   const needle = query.trim();
-  const empty = !loading && needle !== "" && listed.length === 0;
+  const sectionId = useId();
+  const reversalListed = reversal?.listed ?? [];
+  const empty = !loading && needle !== "" && listed.length === 0 && reversalListed.length === 0;
+  // A checked reversal, or a search that finds one, keeps the section open so the match can be seen and reached.
+  const reversalForced = reversalListed.some((option) => option.id === selectedId) || (needle !== "" && reversalListed.length > 0);
+  const reversalShown = reversal != null && (reversal.open || reversalForced);
+  const reversalVisible = reversal != null && (needle === "" || reversalListed.length > 0);
+  function row(option: ChangeChoice) {
+    return (
+      <RadioRow
+        key={option.id}
+        layout="picker"
+        label={option.name}
+        code={option.code}
+        date={needle === "" ? option.recent : undefined}
+        tag={option.id === suggestionId}
+        selected={option.id === selectedId}
+        busy={option.id === savingId}
+        disabled={savingId != null && option.id !== savingId}
+        onSelect={() => {
+          onSelect(option.id);
+        }}
+      />
+    );
+  }
   return (
     <div className="ui-change-picker">
       {searchable ? (
@@ -717,22 +772,34 @@ function Picker({
         <>
           {listed.length > 0 ? (
             <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
-              {listed.map((option) => (
-                <RadioRow
-                  key={option.id}
-                  layout="picker"
-                  label={option.name}
-                  code={option.code}
-                  date={needle === "" ? option.recent : undefined}
-                  tag={option.id === suggestionId}
-                  selected={option.id === selectedId}
-                  busy={option.id === savingId}
-                  disabled={savingId != null && option.id !== savingId}
-                  onSelect={() => {
-                    onSelect(option.id);
-                  }}
-                />
-              ))}
+              {listed.map(row)}
+            </div>
+          ) : null}
+          {reversal && reversalVisible ? (
+            <div className="ui-reversal">
+              {reversalForced ? (
+                <p className="t-label ui-reversal-head">{reversal.heading}</p>
+              ) : (
+                <TextLink
+                  chevron={false}
+                  expanded={reversalShown}
+                  controls={sectionId}
+                  trailing={<ChevronDownIcon size={16} />}
+                  onClick={reversal.onToggle}
+                >
+                  {reversal.heading}
+                </TextLink>
+              )}
+              <div id={sectionId} hidden={!reversalShown}>
+                {reversalShown ? (
+                  <>
+                    <p className="t-hint ui-reversal-hint" id={`${sectionId}-hint`}>{reversal.hint}</p>
+                    <div role="radiogroup" aria-label={reversal.heading} aria-describedby={`${sectionId}-hint`}>
+                      {reversalListed.map(row)}
+                    </div>
+                  </>
+                ) : null}
+              </div>
             </div>
           ) : null}
           {empty ? <p className="t-hint">{kind === "project" ? "לא נמצא פרויקט בשם הזה" : "לא נמצאה קטגוריה בשם הזה"}</p> : null}

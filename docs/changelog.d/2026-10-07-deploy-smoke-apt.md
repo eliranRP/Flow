@@ -1,0 +1,1 @@
+The deploy's live-app smoke no longer hangs on the Ubuntu mirror. It installs Playwright's system packages through `scripts/ci-apt-cache.sh install`, which has a time limit and a mirror fallback, and the step stops after 15 minutes.

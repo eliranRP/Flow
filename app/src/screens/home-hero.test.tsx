@@ -114,3 +114,19 @@ describe("Home hero", () => {
     expect(screen.getByText(heroExplanation(period))).toBeInTheDocument();
   });
 });
+
+describe("Home flow rows (FLOW-301)", () => {
+  it("opens the breakdown from נכנס and יצא, naming the period and amount", () => {
+    renderHome(books());
+    const out = screen.getByRole("link", { name: "יצא החודש −₪432,836 – פירוט" });
+    expect(out).toHaveAttribute("href", "/flow/expense");
+    expect(screen.getByRole("link", { name: /^נכנס החודש/ })).toHaveAttribute("href", "/flow/income");
+  });
+
+  it("shows a month where refunds beat costs as a positive יצא, like its breakdown", () => {
+    renderHome(books({ expense_agorot: -1_250_000n, direct_agorot: -1_250_000n, net_profit_agorot: 48_450_000n }));
+    const out = screen.getByRole("link", { name: "יצא החודש ₪12,500 – פירוט" });
+    expect(out).toHaveTextContent("₪12,500");
+    expect(out).not.toHaveTextContent("−");
+  });
+});

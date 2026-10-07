@@ -3,7 +3,7 @@ import { formatAmountText } from "@flow/shared";
 import { DocumentIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
-import { SuggestTag } from "./suggest-tag";
+import { ReversalTag, SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
   project?: string;
@@ -13,6 +13,8 @@ export type ReviewSuggestion = {
   projectSuggested?: boolean;
   /** This category line is a guess. A rule or an owner pick is not. */
   categorySuggested?: boolean;
+  /** The category is of the other kind: a bounced payment or a refund. Shows החזר. */
+  categoryReversal?: boolean;
 };
 
 type ReviewCardProps = {
@@ -64,6 +66,7 @@ export function ReviewCard({
     label: string;
     value: string;
     suggested: boolean;
+    reversal?: boolean;
     onOpen?: () => void;
   }> = [];
   if (projectValue || onProject) {
@@ -81,6 +84,7 @@ export function ReviewCard({
       label: "קטגוריה",
       value: categoryValue ?? "לא נבחר",
       suggested: suggestion?.categorySuggested === true && categoryValue != null,
+      reversal: suggestion?.categoryReversal === true && categoryValue != null,
       onOpen: onCategory,
     });
   }
@@ -119,8 +123,8 @@ export function ReviewCard({
             eyebrow={line.label}
             title={line.value}
             muted={line.value === "לא נבחר"}
-            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : ""}`}
-            tag={line.suggested ? <SuggestTag /> : undefined}
+            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : line.reversal ? ", החזר" : ""}`}
+            tag={line.suggested ? <SuggestTag /> : line.reversal ? <ReversalTag /> : undefined}
             chevron
             buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
             onClick={line.onOpen}
@@ -131,7 +135,7 @@ export function ReviewCard({
             variant="static"
             eyebrow={line.label}
             title={line.value}
-            tag={line.suggested ? <SuggestTag /> : undefined}
+            tag={line.suggested ? <SuggestTag /> : line.reversal ? <ReversalTag /> : undefined}
           />
         ))}
         {note == null ? null : pending ? (

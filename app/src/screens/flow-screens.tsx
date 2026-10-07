@@ -87,6 +87,7 @@ import { IconButton } from "../ui/icon-button";
 import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { MonthList } from "../ui/month-list";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
 import { MoneyField, PercentField } from "../ui/money-field";
@@ -105,6 +106,8 @@ import { useToast } from "../ui/toast";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
+import { isReversal, reversalChoices } from "../reversal";
+import { ReversalTag } from "../ui/suggest-tag";
 
 function blockedPreview(preview: HomePreview, tell: (message: string) => void): boolean {
   if (preview === "off") return false;
@@ -737,10 +740,14 @@ export function ProjectDetailScreen({
         heldTransactions.length === 0 ? (
           <EmptyState icon={<DocumentIcon />} title="אין עדיין תנועות" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
         ) : (
-          <List>
-            {heldTransactions.map((txn) => (
+          <MonthList
+            rows={heldTransactions}
+            keyOf={(txn) => txn.id}
+            dateOf={(txn) => txn.doc_date}
+            amountOf={(txn) => ({ minor: txn.amount_net, currency: txn.currency ?? "ILS", direction: txn.direction === "income" ? "income" : "expense" })}
+            complete={heldTransactions.length < PROJECT_RECENT_CAP}
+            renderRow={(txn) => (
               <ListRow
-                key={txn.id}
                 variant="transaction"
                 title={txn.description}
                 {...loanRowProps(projectMarks.get(txn.id), `${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`)}
@@ -751,8 +758,8 @@ export function ProjectDetailScreen({
                 href={`/transactions/${txn.id}${search}`}
                 state={txnListState(heldIds, txn.id, listFrom)}
               />
-            ))}
-          </List>
+            )}
+          />
         )
       ) : null}
     </div>
@@ -926,6 +933,9 @@ export function FiledTodayScreen({
     </ScreenState>
   );
 }
+
+/** get_project returns at most this many recent transactions, so a full page may hide older rows of its last month. */
+const PROJECT_RECENT_CAP = 40;
 
 const EMPTY_REVIEW: ReviewRow[] = [];
 
@@ -1190,10 +1200,13 @@ export function ReviewAllList({
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
-      <List>
-        {ordered.map((row) => (
+      <MonthList
+        rows={ordered}
+        keyOf={(row) => row.id}
+        dateOf={(row) => row.doc_date}
+        amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: row.direction })}
+        renderRow={(row) => (
           <ListRow
-            key={row.id}
             variant="transaction"
             title={row.supplier_name ?? row.description}
             hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
@@ -1203,8 +1216,8 @@ export function ReviewAllList({
             source="invoice"
             href={reviewFocusPath(search, row.id)}
           />
-        ))}
-      </List>
+        )}
+      />
     </div>
   );
 }
@@ -1224,10 +1237,13 @@ export function ProjectWaitingList({
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
-      <List>
-        {ordered.map((row) => (
+      <MonthList
+        rows={ordered}
+        keyOf={(row) => row.transaction_id}
+        dateOf={(row) => row.doc_date}
+        amountOf={(row) => ({ minor: row.amount_net, currency: "ILS", direction: "expense" })}
+        renderRow={(row) => (
           <ListRow
-            key={row.transaction_id}
             variant="transaction"
             title={row.description}
             hint={formatDayMonth(row.doc_date)}
@@ -1240,8 +1256,8 @@ export function ProjectWaitingList({
                 ? `/transactions/${row.transaction_id}${search}`
                 : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
           />
-        ))}
-      </List>
+        )}
+      />
     </div>
   );
 }
@@ -1314,6 +1330,7 @@ export function ReviewQueue({
   const blocked = useBlockedPreview();
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
+  const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
   const rows = useHeldOrder(incoming, (item) => item.id);
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
@@ -1518,7 +1535,7 @@ export function ReviewQueue({
   }
   const auto = card.auto_approved_today ?? 0;
   const view = withJev(card, jev);
-  const suggestion = reviewSuggestion(view);
+  const suggestion = reviewSuggestion(view, isReversal(kindRows ?? [], view.category_id, view.direction === "income" ? "income" : "expense"));
   const place = visitPlace(visit.current, openIds);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
@@ -1681,7 +1698,7 @@ function vatStatusLabel(status: string): string {
   return "לא ידוע";
 }
 
-function reviewSuggestion(row: ReviewRow) {
+function reviewSuggestion(row: ReviewRow, reversal = false) {
   const split = reviewIsSplit(row);
   const project = split ? reviewSplitTitle(row) : row.project_name || undefined;
   const category = row.category_name || undefined;
@@ -1693,6 +1710,7 @@ function reviewSuggestion(row: ReviewRow) {
     ...(category ? { category } : {}),
     ...(projectSuggested ? { projectSuggested: true } : {}),
     ...(categorySuggested ? { categorySuggested: true } : {}),
+    ...(reversal && category ? { categoryReversal: true } : {}),
   };
 }
 
@@ -1794,10 +1812,14 @@ export function ProjectCategoryScreen({
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
-        <List>
-          {rows.map((txn) => (
+        <MonthList
+          rows={rows}
+          keyOf={(txn) => txn.id}
+          dateOf={(txn) => txn.doc_date}
+          amountOf={(txn) => ({ minor: txn.amount_net, currency: "ILS", direction: "expense" })}
+          complete={!more}
+          renderRow={(txn) => (
             <ListRow
-              key={txn.id}
               variant="transaction"
               title={txn.description}
               {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
@@ -1807,8 +1829,8 @@ export function ProjectCategoryScreen({
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
               state={rowHref ? undefined : txnListState(rowIds, txn.id, `${location.pathname}${location.search}`)}
             />
-          ))}
-        </List>
+          )}
+        />
       )}
       {more ? (
         <div className="ui-page-pad">
@@ -1960,12 +1982,16 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     projectId,
     row?.project_name,
   );
+  const reversalOptions = splitReview ? [] : reversalChoices(sample?.categories ?? categories.data ?? [], income ? "income" : "expense");
+  const isReversalId = (id: string) => reversalOptions.some((option) => option.id === id);
+  // The switch is hidden on a reversal, so it must not hold the sheet open.
+  const rememberDirty = !income && !splitReview && !isReversalId(categoryId) && remember !== savedRemember;
   const categoryOptions = withChoice(
     (sample?.categories ?? categories.data ?? []).filter((category) => {
       if (category.hidden) return false;
       return income ? category.kind === "income" : category.kind !== "income";
     }).map((category) => ({ id: category.id, name: category.name })),
-    categoryId,
+    isReversalId(categoryId) ? "" : categoryId,
     row?.category_name,
   );
   const save = useWrite({
@@ -2127,6 +2153,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       direction={income ? "income" : "expense"}
       projects={projectOptions}
       categories={categoryOptions}
+      reversals={reversalOptions}
       projectId={projectId}
       categoryId={categoryId}
       suggestionProjectId={suggestionProjectId}
@@ -2136,7 +2163,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       {...(income || splitReview ? {} : { remember, onRemember: setRemember })}
       categorySuggested={sample ? sample.categorySuggested !== false : filledRow?.category_suggested !== false}
       hold={hold || leaveNote}
-      pending={!income && !splitReview && remember !== savedRemember && !wroteReview.current && !closedReview.current}
+      pending={rememberDirty && !wroteReview.current && !closedReview.current}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}
       projectTitle={sample?.splitTitle ?? (splitReview && row ? reviewSplitTitle(row) : undefined)}
       initialQuery={sample?.initialQuery}
@@ -2154,7 +2181,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
-        picked.current = { projectId: nextProject, categoryId: nextCategory, remember };
+        // A supplier rule never learns a reversal: the next line from this supplier is the usual kind.
+        picked.current = { projectId: nextProject, categoryId: nextCategory, remember: remember && !isReversalId(nextCategory) };
         const fromLine = params.get("from") === "line";
         if (splitReview) {
           if (kind === "project") {
@@ -2193,7 +2221,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
           setHold(splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           return Promise.reject(new Error("incomplete"));
         }
-        if (!splitReview && remember !== savedRemember && (wroteReview.current || closedReview.current)) {
+        if (rememberDirty && (wroteReview.current || closedReview.current)) {
           setLeaveNote("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
           return Promise.reject(new Error("remember"));
         }
@@ -2203,7 +2231,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         if (sample || holdWrites) return;
         if (blocked()) throw new Error("preview");
         setHold("");
-        picked.current = { projectId, categoryId, remember };
+        picked.current = { projectId, categoryId, remember: remember && !isReversalId(categoryId) };
         await save.mutateAsync();
       }}
       onSplit={() => {
@@ -2635,14 +2663,17 @@ export function TransactionScreen({
     projectId,
     txn.project_name,
   );
+  const txnDirection = txn.direction === "income" ? "income" : "expense";
+  const changeReversals = sample || splitRow ? [] : reversalChoices(categories.data ?? [], txnDirection);
   const changeCategories = withChoice(
     (sample
       ? (sampleCategories ?? [])
       : (categories.data ?? []).filter((category) => !category.hidden && (txn.direction === "income" ? category.kind === "income" : category.kind !== "income"))
     ).map((category) => ({ id: category.id, name: category.name })),
-    categoryId,
+    changeReversals.some((option) => option.id === categoryId) ? "" : categoryId,
     txn.category_name,
   );
+  const shownReversal = sample == null && isReversal(categories.data ?? [], categoryId || txn.category_id, txnDirection);
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
@@ -2694,9 +2725,9 @@ export function TransactionScreen({
           }} />
         )}
         {holdWrites ? (
-          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} />
+          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} />
         ) : (
-          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} chevron onClick={() => { setChangeSheet(true); }} />
         )}
       </List>
       <LoanTransactionSplit
@@ -2748,6 +2779,7 @@ export function TransactionScreen({
         direction={txn.direction === "income" ? "income" : "expense"}
         projects={changeProjects}
         categories={changeCategories}
+        reversals={changeReversals}
         projectId={projectId}
         categoryId={categoryId}
         onProjectId={setProjectId}
