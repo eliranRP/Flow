@@ -37,7 +37,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
+| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (design session first) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
@@ -323,7 +323,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (design session first) · **Depends on:** —
 - **What:** Swipe (RTL-aware) or tap small arrows in the header to move to the previous or next transaction, in the same list and order the card was opened from (project list, review queue, recent, filtered). Keep the list position on return; prefetch neighbours.
 - **Acceptance:** mockup approved; Back returns to the same scroll spot; keyboard and screen-reader access; design review.
 
