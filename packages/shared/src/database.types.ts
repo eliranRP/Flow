@@ -743,6 +743,9 @@ isOneToOne: false
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
                            },
+"mcp_set_category_pnl":
+{ Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
+                           },
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -820,6 +823,9 @@ isOneToOne: false
                            },
 "set_category_hidden":
 { Args: { "p_hidden": boolean,"p_id": string }; Returns: undefined
+                           },
+"set_category_excluded_from_pnl":
+{ Args: { "p_excluded": boolean,"p_id": string }; Returns: undefined
                            },
 "set_company_integration":
 { Args: { "p_enabled": boolean,"p_mode"?: string,"p_provider"?: string,"p_threshold"?: number }; Returns: Json

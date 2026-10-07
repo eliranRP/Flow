@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Categories outside the P&L. Migration `20261007120000_category_pnl.sql` backfills English default names, adds `private.pnl_lines`, filters `company_pnl`, `get_home`, `get_project`, and `overhead_share`, returns excluded totals separately, exposes `set_category_excluded_from_pnl` and MCP `set_category_pnl`, and extends `list_categories`. Decision [0099](decisions/0099-categories-outside-pnl.md).
+
 Synthetic Mercury fixtures. The Mercury connector fixtures under `supabase/tests/connectors/mercury/fixtures` are now synthetic: counterparty names, descriptors, codes, dates, balances, and amounts are generated, with the same kinds, statuses, skips, and edge cases as before. `canonical-snapshot.json` is regenerated from them. The `MERCURY_FIXTURE_DENYLIST` check now also scans the Mercury test sources.
 
 Mercury income as invoice-receipt. `mercury-sync` imports deposits and treasury income as `doc_kind: invoice_receipt` instead of `receipt`, so a Mercury-only USD company shows income on the invoiced basis. Expense credits stay `credit` and outflows stay `expense`. Migration `20261007010000_mercury_income_doc_kind.sql` relabels stored Mercury income rows and refreshes matching skipped-review fingerprints. Data labeling only, no new user action (MCP-first exemption, decision 0095). Decision [0097](decisions/0097-mercury-income-invoice-receipt.md).

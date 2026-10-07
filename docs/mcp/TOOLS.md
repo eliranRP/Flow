@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
+| `assign_expense`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
 
 ## Which id
 
@@ -23,6 +23,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "project"` | `id` | the project id `create_project` returned |
 | `undo` `kind: "category"` | `id` | the category id `create_category` returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
+| `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
 | `undo` `kind: "loan"` | `id` | the loan id `add_loan` returned |
 | `undo` `kind: "loan_update"` | `id` | the loan id |
 | `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
@@ -37,7 +38,7 @@ Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" 
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -55,7 +56,7 @@ Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agoro
 
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`.
 
 ### list_review
 
@@ -90,7 +91,7 @@ Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 
 ### get_totals
 
-`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `count`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
+`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields.
 
 ## Writes · cycle 3
 
@@ -161,6 +162,14 @@ There is no cost-type argument on categories. Output `data`: `{ "id", "undo_kind
 ```
 
 Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the prior `hidden` flag.
+
+### set_category_pnl
+
+```json
+{ "idempotency_key": "pnl-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "excluded": true }
+```
+
+Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior `excluded_from_pnl` value. `refused` / `loan category is fixed` for `ריבית משכנתא`, `מסים וביטוח`, and `תשלומי הלוואה` (expense). Other refusals match `category not found` and the usual write envelope.
 
 ### sync_bank
 
