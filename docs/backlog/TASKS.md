@@ -31,7 +31,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
 | 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | in-progress (#83) |
-| 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
+| 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | claimed (FLOW-511 thread, 2026-10-07, claude/flow-511-onboarding-opt-out-bsc568) |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
@@ -508,7 +508,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-511"></a>
 ### FLOW-511 · Easy opt-out from the Home setup card
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** claimed (FLOW-511 thread, 2026-10-07, claude/flow-511-onboarding-opt-out-bsc568) · **Depends on:** —
 - **What:** A UX review of the setup flow and its Home card ("הגדרה • 4 מתוך 5"). The owner finds it sticky: the only way out is the small quiet הסתרה link, and it's not clear that it stops the card for good. Review the whole flow (setup runner, Home card, the "ההגדרה זמינה בהגדרות." toast, re-entry from Settings, skip flags per [0089](../decisions/0089-setup-runner.md)) and propose one clear button that opts out of setup in a single tap, with the way back from Settings. Mock up the options with Claude Design for the owner.
 - **Acceptance:** written plan and mockup; owner picks an option and the approval is written here before any build; then one SMALL UI PR with design review and a CONTROLS row.
 
