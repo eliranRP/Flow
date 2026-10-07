@@ -382,7 +382,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-308"></a>
 ### FLOW-308 · Return to the intended route after sign-in
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** claimed (UI task thread, 2026-10-07, claude/project-thread-nksx31) · **Depends on:** —
 - **What:** Sign-in always lands on Home, so a deep link (for example the evening review nudge to `/review`) is lost. Return to the requested route after sign-in, through a strict allowlist like the existing `?return=` handling.
 - **Acceptance:** e2e for a signed-out deep link to `/review`; an off-list route still goes Home.
 
