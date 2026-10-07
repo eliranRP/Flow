@@ -18,7 +18,7 @@ A Mercury deposit is received income. The adapter labels it `invoice_receipt`.
 | Card refund or reversal (expense credit) | expense | `credit` (unchanged) |
 | Outflow, treasury fee | expense | `expense` (unchanged) |
 
-Migration `20261007010000_mercury_income_doc_kind.sql` relabels stored rows: `source = 'mercury'`, `direction = 'income'`, `doc_kind = 'receipt'`. It also refreshes `review_queue.doc_fingerprint` where the fingerprint matched the line as a receipt, so a skipped Mercury income line stays skipped.
+Migration `20261007010000_mercury_income_doc_kind.sql` relabels stored rows: `source = 'mercury'`, `direction = 'income'`, `doc_kind = 'receipt'`. It also refreshes `review_queue.doc_fingerprint` where the fingerprint matched the line as a receipt, so a skipped Mercury income line stays skipped. Functions deploy before migrations, so a sync in between can relabel a skipped line and queue it again; the migration closes that open row when the skip before it matches the line as a receipt. The relabel is `private.relabel_mercury_income()`, so pgTAP runs it on a fixture.
 
 ## Alternatives rejected
 
