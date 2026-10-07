@@ -248,6 +248,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "sync_bank",
     "hide_category",
     "set_category_pnl",
+    "set_overhead_project",
     "rename_company",
     "add_loan",
     "update_loan",
@@ -277,6 +278,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "sync_bank",
     "hide_category",
     "set_category_pnl",
+    "set_overhead_project",
     "rename_company",
     "add_loan",
     "update_loan",
@@ -1483,4 +1485,93 @@ Deno.test("get_project needs the read scope", async () => {
   assertEquals(none.isError, true);
   if (!none.structuredContent.ok) assertEquals(none.structuredContent.error.code, "forbidden");
   assertEquals(calls.length, 0);
+});
+
+Deno.test("set_overhead_project forwards a project or null, rejects bad input, and undo accepts overhead_project", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: "company-a", overhead_project_id: PROJECT, undo_kind: "overhead_project" } },
+  }));
+  const set = await callTool("set_overhead_project", { idempotency_key: "oh-1", project_id: PROJECT }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_overhead_project",
+    body: { p_idempotency_key: "oh-1", p_project_id: PROJECT },
+  });
+  const cleared = await callTool("set_overhead_project", { idempotency_key: "oh-2", project_id: null }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_set_overhead_project",
+    body: { p_idempotency_key: "oh-2", p_project_id: null },
+  });
+  for (
+    const bad of [
+      { idempotency_key: "oh-3" },
+      { project_id: PROJECT },
+      { idempotency_key: "oh-4", project_id: "not-a-uuid" },
+      { idempotency_key: "oh-5", project_id: PROJECT, company_id: "forged" },
+    ]
+  ) {
+    assertEquals((await callTool("set_overhead_project", bad, ["write"], rpc)).isError, true);
+  }
+  assertEquals(calls.length, 2, "bad input never reaches the RPC");
+  const readOnly = await callTool("set_overhead_project", { idempotency_key: "oh-6", project_id: PROJECT }, ["read"], rpc);
+  assertEquals(readOnly.isError, true);
+  const undo = await callTool("undo", { idempotency_key: "oh-undo", kind: "overhead_project", id: PROJECT_B }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[2]?.name, "mcp_undo");
+  assertEquals(calls[2]?.body?.p_kind, "overhead_project");
+});
+
+Deno.test("get_totals and list_projects carry the unassigned bucket and the overhead project", async () => {
+  const dashboard = {
+    company_id: "company-a",
+    name: "Example Holdings LLC",
+    basis: "cash",
+    income_agorot: 30000,
+    direct_agorot: 5000,
+    shared_agorot: 0,
+    overhead_agorot: 2000,
+    expense_agorot: 8000,
+    unassigned_income_agorot: 10000,
+    unassigned_expense_agorot: 1000,
+    overhead_project_id: PROJECT_B,
+    net_profit_agorot: 22000,
+    by_currency: [{ currency: "ILS", unassigned_income_minor: 10000, unassigned_expense_minor: 1000 }],
+    projects: [
+      { id: PROJECT, name: "Site Alpha", is_overhead: false, by_currency: [] },
+      { id: PROJECT_B, name: "Office", is_overhead: true, by_currency: [] },
+    ],
+  };
+  const { rpc } = rpcOf((name) => name === "get_dashboard" ? { status: 200, json: dashboard } : { status: 500, json: null });
+  const totals = await callTool("get_totals", {}, ["read"], rpc);
+  assertEquals(totals.isError, false);
+  if (totals.structuredContent.ok) {
+    const data = totals.structuredContent.data as Record<string, unknown>;
+    assertEquals(data.unassigned_income_agorot, 10000);
+    assertEquals(data.unassigned_expense_agorot, 1000);
+    assertEquals(data.overhead_project_id, PROJECT_B);
+    assertEquals((data.by_currency as Record<string, unknown>[])[0]?.unassigned_expense_minor, 1000);
+  }
+  const listed = await callTool("list_projects", {}, ["read"], rpc);
+  assertEquals(listed.isError, false);
+  if (listed.structuredContent.ok) {
+    const rows = (listed.structuredContent.data as { projects: { is_overhead: boolean }[] }).projects;
+    assertEquals(rows.map((row) => row.is_overhead), [false, true]);
+  }
+});
+
+Deno.test("get_totals does not report a missing unassigned bucket as 0", async () => {
+  const { rpc } = rpcOf((name) =>
+    name === "get_dashboard"
+      ? { status: 200, json: { company_id: "company-a", basis: "cash", income_agorot: 1000, expense_agorot: 0, by_currency: [] } }
+      : { status: 500, json: null }
+  );
+  const totals = await callTool("get_totals", {}, ["read"], rpc);
+  assertEquals(totals.isError, false);
+  if (totals.structuredContent.ok) {
+    const data = totals.structuredContent.data as Record<string, unknown>;
+    assertEquals(data.unassigned_income_agorot, undefined);
+    assertEquals(data.unassigned_expense_agorot, undefined);
+  }
 });
