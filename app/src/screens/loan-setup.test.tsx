@@ -21,6 +21,12 @@ const db = vi.hoisted(() => ({
   offline: false,
   selects: 0,
   balanceError: null as { message: string } | null,
+  loans: [] as Array<{ id: string; name: string; currency: string; project_id: string | null }>,
+  projects: [] as Array<{ id: string; name: string }>,
+  updates: [] as Array<{ row: Record<string, unknown>; id: string }>,
+  updateRows: 1,
+  updateError: null as { message: string; code?: string } | null,
+  updateHold: null as Promise<void> | null,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -37,14 +43,34 @@ vi.mock("../lib/supabase", () => ({
               return Promise.resolve(finish());
             },
             select: () => ({
-              eq: () => Promise.resolve({ data: [], error: null }),
+              eq: () => Promise.resolve({ data: db.loans, error: null }),
+            }),
+            update: (row: Record<string, unknown>) => ({
+              eq: (_column: string, id: string) => ({
+                select: () => {
+                  db.updates.push({ row, id });
+                  const finish = () => ({
+                    data: db.updateError ? null : Array.from({ length: db.updateRows }, () => ({ id })),
+                    error: db.updateError,
+                  });
+                  if (db.updateHold) return db.updateHold.then(() => finish());
+                  return Promise.resolve(finish());
+                },
+              }),
+            }),
+          };
+        }
+        if (table === "projects") {
+          return {
+            select: () => ({
+              in: () => Promise.resolve({ data: db.projects, error: null }),
             }),
           };
         }
         if (table === "loan_balances") {
           return {
             select: () => Promise.resolve({
-              data: db.balanceError ? null : [],
+              data: db.balanceError ? null : db.loans.map((loan) => ({ loan_id: loan.id, balance_minor: 500000, flagged_parts: 0, currency: loan.currency })),
               error: db.balanceError,
             }),
           };
@@ -97,6 +123,12 @@ beforeEach(() => {
   db.offline = false;
   db.selects = 0;
   db.balanceError = null;
+  db.loans = [];
+  db.projects = [];
+  db.updates = [];
+  db.updateRows = 1;
+  db.updateError = null;
+  db.updateHold = null;
 });
 
 function renderForm(ui: ReactNode) {
@@ -611,6 +643,7 @@ describe("LoanSettingsSection", () => {
       payment_minor: Number(payment),
       escrow_minor: 0,
       currency: "ILS",
+      project_id: null,
     });
   });
 
@@ -740,5 +773,284 @@ describe("LoanSettingsSection", () => {
     release();
     expect(await screen.findByLabelText("מלווה")).toHaveValue("בנק דוגמה");
     expect(screen.getByLabelText("סכום מקורי")).toHaveValue("1,500");
+  });
+});
+
+describe("FLOW-119 loan project", () => {
+  const projects = {
+    rows: [
+      { id: "p-a", name: "פרויקט א", status: "active" as const },
+      { id: "p-b", name: "פרויקט ב", status: "active" as const },
+      { id: "p-old", name: "פרויקט ישן", status: "finished" as const },
+    ],
+  };
+
+  it("files a new loan under the picked project and back returns to the form", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    fillSavable();
+    const field = screen.getByRole("button", { name: "פרויקט ללא פרויקט" });
+    fireEvent.click(field);
+    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "פרויקט ישן" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    expect(screen.getByLabelText("מלווה")).toHaveValue("הלוואת דוגמה");
+    expect(screen.getByRole("button", { name: "פרויקט פרויקט א" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    expect(db.inserts[0]?.project_id).toBe("p-a");
+  });
+
+  it("keeps ללא פרויקט when the projects fail to load", () => {
+    renderSection(
+      <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={{ rows: [], error: true }} />,
+    );
+    openLoan();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    expect(screen.getByRole("radio", { name: "ללא פרויקט" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ניסיון חוזר: פרויקטים" })).toBeInTheDocument();
+  });
+
+  it("moves focus to the picker title, and back to the field on חזרה", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    const field = screen.getByRole("button", { name: "פרויקט ללא פרויקט" });
+    field.focus();
+    fireEvent.click(field);
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "פרויקט" })).toHaveFocus(); });
+    expect(field).not.toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    await waitFor(() => { expect(screen.getByRole("button", { name: "פרויקט ללא פרויקט" })).toHaveFocus(); });
+  });
+
+  it("moves an existing loan to another project and clears it", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: "p-a" }];
+    db.projects = [{ id: "p-a", name: "פרויקט א" }];
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    const row = await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט א$/ });
+    fireEvent.click(row);
+    expect(screen.getByRole("radio", { name: "פרויקט א" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט ב" }));
+    await waitFor(() => { expect(db.updates).toHaveLength(1); });
+    expect(db.updates[0]).toEqual({ row: { project_id: "p-b" }, id: "l-1" });
+    await waitFor(() => { expect(screen.getByRole("status")).toHaveTextContent("ההלוואה שויכה לפרויקט"); });
+    await waitFor(() => { expect(screen.queryByRole("heading", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: /^הלוואת דוגמה, .*פרויקט:/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "ללא פרויקט" }));
+    await waitFor(() => { expect(db.updates).toHaveLength(2); });
+    expect(db.updates[1]).toEqual({ row: { project_id: null }, id: "l-1" });
+  });
+
+  it("treats no row back as a refusal and keeps the sheet", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: null }];
+    db.updateRows = 0;
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: ללא פרויקט$/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("אין הרשאה לעדכן הלוואה.");
+    });
+    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "ללא פרויקט" })).toHaveAttribute("aria-checked", "true"); });
+  });
+
+  it("waits for the save: other rows are disabled and Escape does not close", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: "p-a" }];
+    db.projects = [{ id: "p-a", name: "פרויקט א" }];
+    let release: () => void = () => undefined;
+    db.updateHold = new Promise((resolve) => { release = resolve; });
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט א$/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט ב" }));
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "פרויקט א" })).toHaveAttribute("aria-disabled", "true"); });
+    expect(screen.getByRole("radio", { name: "ללא פרויקט" })).toHaveAttribute("aria-disabled", "true");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await act(async () => { await new Promise((resolve) => { setTimeout(resolve, 50); }); });
+    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    await act(async () => { release(); await Promise.resolve(); });
+    await waitFor(() => { expect(screen.queryByRole("heading", { name: "פרויקט" })).not.toBeInTheDocument(); });
+  });
+
+  it("keeps the sheet on Back while a tap is saving", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: "p-a" }];
+    db.projects = [{ id: "p-a", name: "פרויקט א" }];
+    let release: () => void = () => undefined;
+    db.updateHold = new Promise((resolve) => { release = resolve; });
+    const router = createMemoryRouter(
+      [{ path: "/settings", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} /> }],
+      { initialEntries: ["/settings"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט א$/ }));
+    await waitFor(() => {
+      expect(router.state.location.state).toMatchObject({ flowLayer: "loan-project" });
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט ב" }));
+    await act(async () => {
+      await router.navigate(-1);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      await new Promise((resolve) => { setTimeout(resolve, 50); });
+    });
+    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    await act(async () => { release(); await Promise.resolve(); });
+    await waitFor(() => { expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("ההלוואה שויכה לפרויקט"); });
+    await waitFor(() => { expect(screen.queryByRole("heading", { name: "פרויקט" })).not.toBeInTheDocument(); });
+  });
+
+  it("goes back to the form on Back in the new-loan picker and keeps the draft", async () => {
+    const router = createMemoryRouter(
+      [{ path: "/settings", element: <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} /> }],
+      { initialEntries: ["/settings"] },
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "הלוואה חדשה" }));
+    await waitFor(() => {
+      expect(router.state.location.state).toMatchObject({ flowLayer: "loan-new" });
+    });
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate(-1);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      await new Promise((resolve) => { setTimeout(resolve, 50); });
+    });
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    expect(screen.getByLabelText("מלווה")).toHaveValue("הלוואת דוגמה");
+  });
+
+  it("shows a viewer static loan rows", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: "p-a" }];
+    db.projects = [{ id: "p-a", name: "פרויקט א" }];
+    renderSection(
+      <ViewerPreview>
+        <LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />
+      </ViewerPreview>,
+    );
+    expect(await screen.findByText("פרויקט א")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /הלוואת דוגמה/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps a finished current project, marked הסתיים, and closes without a write on the checked row", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: "p-old" }];
+    db.projects = [{ id: "p-old", name: "פרויקט ישן" }];
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט ישן$/ }));
+    const current = screen.getByRole("radio", { name: /^פרויקט ישן/ });
+    expect(current).toHaveAttribute("aria-checked", "true");
+    expect(within(current).getByText("הסתיים")).toBeInTheDocument();
+    fireEvent.click(current);
+    await waitFor(() => { expect(screen.queryByRole("heading", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    expect(db.updates).toHaveLength(0);
+  });
+
+  it("rolls back and keeps the sheet when the project is gone (23503)", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: "p-a" }];
+    db.projects = [{ id: "p-a", name: "פרויקט א" }];
+    db.updateError = { message: "fk", code: "23503" };
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט א$/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט ב" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("הפרויקט לא נמצא.");
+    });
+    expect(screen.getByRole("heading", { name: "פרויקט" })).toBeInTheDocument();
+    await waitFor(() => { expect(screen.getByRole("radio", { name: "פרויקט א" })).toHaveAttribute("aria-checked", "true"); });
+  });
+
+  it("refetches loans and the project screen after a change and after a new loan", async () => {
+    db.loans = [{ id: "l-1", name: "הלוואת דוגמה", currency: "ILS", project_id: null }];
+    const view = renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    const invalidate = vi.spyOn(view.client, "invalidateQueries");
+    fireEvent.click(await screen.findByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: ללא פרויקט$/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
+    await waitFor(() => { expect(screen.queryByRole("heading", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["loans"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["project"] });
+    invalidate.mockClear();
+    openLoan();
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    await waitFor(() => { expect(invalidate).toHaveBeenCalledWith({ queryKey: ["project"] }); });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["loans"] });
+  });
+
+  it("resets the project to ללא פרויקט when the project is gone on save", async () => {
+    db.insertError = { message: "fk", code: "23503" };
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("הפרויקט לא נמצא.");
+    });
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט ללא פרויקט" })).toBeInTheDocument();
+  });
+
+  it("reopens on the form with ללא פרויקט after closing from the picker", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    fireEvent.click(screen.getByRole("radio", { name: "פרויקט א" }));
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט פרויקט א" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "פרויקט" })).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog")).not.toBeInTheDocument(); });
+    openLoan();
+    expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט ללא פרויקט" })).toBeInTheDocument();
+  });
+
+  it("returns to the form on Escape in the picker and keeps the draft", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    fillSavable();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "הלוואה" })).toBeInTheDocument(); });
+    expect(screen.getByLabelText("מלווה")).toHaveValue("הלוואת דוגמה");
+  });
+
+  it("searches above eight projects and keeps ללא פרויקט", () => {
+    const many = { rows: Array.from({ length: 9 }, (_, index) => ({ id: `m${String(index)}`, name: `פרויקט ${String(index + 1)}`, status: "active" as const })) };
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={many} />);
+    openLoan();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    const search = screen.getByRole("searchbox", { name: "חיפוש פרויקט" });
+    fireEvent.change(search, { target: { value: "9" } });
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    expect(screen.getByRole("radio", { name: "פרויקט 9" })).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "אין כזה" } });
+    expect(screen.getByText("לא נמצא פרויקט בשם הזה")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "ללא פרויקט" })).toBeInTheDocument();
+  });
+
+  it("has no search with eight projects", () => {
+    const eight = { rows: Array.from({ length: 8 }, (_, index) => ({ id: `m${String(index)}`, name: `פרויקט ${String(index + 1)}`, status: "active" as const })) };
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={eight} />);
+    openLoan();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
   });
 });

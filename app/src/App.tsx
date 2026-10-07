@@ -518,6 +518,10 @@ function DevSettings() {
                 : assistant === "nocompany"
                   ? { state: "no-company" }
                   : { state: "empty" },
+        loanProjects: [
+          { id: "p1", name: "שיפוץ הרצל 12", status: "active" },
+          { id: "p2", name: "פרגולה בית כהן", status: "active" },
+        ],
       }}
       sampleSecret={devAssistantSecret}
     />

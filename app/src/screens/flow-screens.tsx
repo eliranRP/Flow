@@ -3,7 +3,7 @@ import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type Categor
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { LoanTransactionSplit } from "./loan-match";
+import { LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
@@ -68,7 +68,7 @@ import { RenameCompanySheet } from "./rename-company";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
-import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
+import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice } from "./loan-setup";
 import { SetupSampleReview } from "../setup/sample-review";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { Banner } from "../ui/banner";
@@ -700,6 +700,12 @@ export function ProjectDetailScreen({
         <div className="ui-page-pad">
           <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
         </div>
+      ) : null}
+      {(project.loans ?? []).length > 0 ? (
+        <>
+          <SectionHead title="הלוואות" />
+          <ProjectLoanList rows={project.loans ?? []} />
+        </>
       ) : null}
       <SectionHead title="הוצאות לפי קטגוריה" />
       <ProjectCategories
@@ -3541,6 +3547,8 @@ type SettingsSample = {
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */
   loanCurrency?: LoanCurrency;
+  /** FLOW-119. Projects for the loan's project picker. */
+  loanProjects?: LoanProjectChoice[];
 };
 
 type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
@@ -4392,6 +4400,15 @@ export function SettingsScreen({
               companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
               companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
               blocked={blocked}
+              projects={sample != null || preview !== "off"
+                ? { rows: sample?.loanProjects ?? [] }
+                : {
+                  rows: (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status })),
+                  loading: dashboard.isLoading,
+                  error: dashboard.isError,
+                  retrying: dashboard.isFetching,
+                  onRetry: () => { void dashboard.refetch(); },
+                }}
             />
           )}
         </>

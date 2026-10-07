@@ -69,6 +69,9 @@ export type LoanBalanceRow = {
   currency: string;
   balanceMinor: bigint;
   flaggedParts: number;
+  /** FLOW-119. */
+  projectId?: string | null;
+  projectName?: string | null;
 };
 
 function asCurrency(currency: string): LoanCurrency | null {
@@ -219,7 +222,57 @@ export function LoanSplitPanel({
   );
 }
 
-export function LoanBalanceList({ rows }: { rows: readonly LoanBalanceRow[] }) {
+function loanRowHint(row: LoanBalanceRow): string | undefined {
+  const project = row.projectName ?? null;
+  if (row.flaggedParts > 0) return project == null ? "ממתין לבדיקה" : `ממתין לבדיקה · ${project}`;
+  return project ?? undefined;
+}
+
+export function LoanBalanceList({
+  rows,
+  onOpen,
+  rowRef,
+}: {
+  rows: readonly LoanBalanceRow[];
+  /** FLOW-119. The owner opens a loan's project. A viewer gets static rows. */
+  onOpen?: (row: LoanBalanceRow) => void;
+  rowRef?: (id: string, node: HTMLButtonElement | null) => void;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <List>
+      {rows.map((row) => {
+        const common = {
+          title: row.name,
+          icon: <BankIcon />,
+          tone: row.flaggedParts > 0 ? ("warning" as const) : undefined,
+          hint: loanRowHint(row),
+          meta: <bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balanceMinor, row.currency)}</bdi>,
+        };
+        return onOpen ? (
+          <ListRow
+            key={row.id}
+            variant="button"
+            {...common}
+            label={`${row.name}, ${showMoney(row.balanceMinor, row.currency)}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
+            chevron
+            buttonRef={(node) => { rowRef?.(row.id, node); }}
+            onClick={() => { onOpen(row); }}
+          />
+        ) : (
+          <ListRow key={row.id} variant="static" {...common} />
+        );
+      })}
+    </List>
+  );
+}
+
+/** FLOW-119. The loans under a project, on the project screen. Static for everyone. */
+export function ProjectLoanList({
+  rows,
+}: {
+  rows: ReadonlyArray<{ id: string; name: string; currency: string; balance_minor: bigint }>;
+}) {
   if (rows.length === 0) return null;
   return (
     <List>
@@ -229,9 +282,8 @@ export function LoanBalanceList({ rows }: { rows: readonly LoanBalanceRow[] }) {
           variant="static"
           title={row.name}
           icon={<BankIcon />}
-          tone={row.flaggedParts > 0 ? "warning" : undefined}
-          hint={row.flaggedParts > 0 ? "ממתין לבדיקה" : undefined}
-          meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balanceMinor, row.currency)}</bdi>}
+          hint={row.balance_minor <= 0n ? "נפרעה" : undefined}
+          meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balance_minor, row.currency)}</bdi>}
         />
       ))}
     </List>
@@ -437,11 +489,18 @@ export function useLoanBalances(companyId: string | null) {
     queryFn: async (): Promise<LoanBalanceRow[]> => {
       const supabase = getSupabase();
       if (!supabase || companyId == null) return [];
-      const loans = await supabase.from("loans").select("id, name, currency").eq("company_id", companyId);
+      const loans = await supabase.from("loans").select("id, name, currency, project_id").eq("company_id", companyId);
       assertNoError(loans);
       const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency");
       assertNoError(balances);
       const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
+      const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
+      const projectNames = new Map<string, string>();
+      if (projectIds.length > 0) {
+        const projects = await supabase.from("projects").select("id, name").in("id", projectIds);
+        assertNoError(projects);
+        for (const project of projects.data ?? []) projectNames.set(project.id, project.name);
+      }
       return (loans.data ?? []).map((loan) => {
         const balance = byLoan.get(loan.id);
         return {
@@ -450,6 +509,8 @@ export function useLoanBalances(companyId: string | null) {
           currency: balance?.currency ?? loan.currency,
           balanceMinor: BigInt(balance?.balance_minor ?? 0),
           flaggedParts: balance?.flagged_parts ?? 0,
+          projectId: loan.project_id,
+          projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),
         };
       });
     },
