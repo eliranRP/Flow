@@ -191,11 +191,14 @@ export function ListRow(props: ListRowProps) {
     );
   }
 
-  const className = props.variant === "project"
-    ? "ui-row ui-row-project ui-hit"
-    : props.variant === "item" && props.plain === true
-      ? "ui-row"
-      : "ui-row ui-hit";
+  const className = cx(
+    props.variant === "project"
+      ? "ui-row ui-row-project ui-hit"
+      : props.variant === "item" && props.plain === true
+        ? "ui-row"
+        : "ui-row ui-hit",
+    toneClass,
+  );
   const row = props.href ? (
     <Link
       to={props.href}

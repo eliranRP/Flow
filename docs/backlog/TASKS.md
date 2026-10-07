@@ -30,24 +30,26 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 17 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
-| 18 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
-| 19 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
-| 20 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 21 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 22 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
-| 23 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 24 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
-| 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
-| 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 28 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
-| 29 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
-| 30 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
-| 31 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
-| 32 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
-| 33 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
-| 34 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
+| 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | in-progress (#83) |
+| 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
+| 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
+| 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
+| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
+| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
+| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
+| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
+| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
+| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
+| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
+| 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
+| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
+| 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -98,9 +100,17 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-107"></a>
 ### FLOW-107 · Loan split breakdown on the transaction
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-101 (done, #70)
+- **Type:** SMALL UI · **Status:** in-progress (#83) · **Depends on:** FLOW-101 (merged, #70)
+- **Approved:** owner chose option A of the [mockups](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) on 2026-10-07 (parts list with icons, minus, total, "מחוץ לרווח", "נספר ברווח"; list rows "3 חלקים"). Decision [0107](../decisions/0107-loan-split-on-the-transaction.md).
 - **What:** When a bank line is a split loan payment, show its parts (principal, interest, escrow) on the transaction row and in the detail, so the expense makes sense. Icon-based, minimal wording, expenses with a minus. MCP: `get_expense` returns the split parts.
 - **Acceptance:** quick mockup approved; parts add up to the line amount on screen; MCP test; design review.
+
+<a id="flow-121"></a>
+### FLOW-121 · Loan split follow-ups (#83 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-107
+- [ ] Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
+- [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
+- [ ] "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
