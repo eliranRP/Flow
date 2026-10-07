@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Review alongside CI, then auto-merge (FLOW-813). Reviews start as soon as a PR is pushed, while CI runs. Once the reviewers approve the current head, the coordinator turns on auto-merge (squash), and GitHub merges when `lint`, `check`, and `e2e` are green. `main` no longer requires an up-to-date branch, so a PR does not merge `main` and rerun CI after every other merge. `main` still runs the full suite before each deploy. GitHub's merge queue needs an organization-owned repo, so it is not used.
+
 CI, fewer runners (FLOW-812). Each pull request now uses 9 jobs instead of 12, so busy hours wait less for GitHub's 20-runner limit. `check (core)` runs the `@flow/app` unit tests too (`check (unit)` is gone), and the main Playwright suite runs in 2 shards instead of 3. Same tests and the same required checks (`lint`, `check`, `e2e`). The deploy smoke retries `/settings` like `build.txt` and the homepage.
 
 Per-user cache on a shared device (FLOW-603). When the signed-in user changes (sign-out, an expired session, another tab, or a switch without reload), the app clears its query cache, remounts its screens, and keeps a saved role only for the signed-in user. A role read that finishes after sign-out saves nothing. Follow-ups are FLOW-605.
