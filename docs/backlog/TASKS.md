@@ -21,7 +21,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | ready |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
-| 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
+| 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | claimed (Claude FLOW-603 thread, 2026-10-07, claude/project-thread-xrhped) |
 | 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
@@ -446,7 +446,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device
-- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **Type:** BUG · **Status:** claimed (Claude FLOW-603 thread, 2026-10-07, claude/project-thread-xrhped) · **Depends on:** —
 - **What:** Query cache keys are shared across users and the cache isn't cleared on sign-out; saved roles stay in localStorage after sign-out; the dashboard cache isn't user-scoped, so a user switch without a reload could show the wrong company's flag. Scope keys by user and company and clear on sign-out (including an expired session or another tab).
 - **Acceptance:** tests for sign-out, a user switch without reload, and an expired session.
 
