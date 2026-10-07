@@ -19,6 +19,7 @@ const db = vi.hoisted(() => ({
     loan_id: string;
   }>,
   inserts: [] as unknown[],
+  counted: null as Record<string, unknown> | null,
   insertError: null as { message: string; code?: string } | null,
   insertHold: null as Promise<void> | null,
   readError: null as { message: string } | null,
@@ -157,7 +158,7 @@ vi.mock("../lib/supabase", () => ({
       }
       throw new Error(table);
     },
-    rpc: () => Promise.resolve({ data: null, error: null }),
+    rpc: (name: string) => Promise.resolve({ data: name === "get_loan_split" ? db.counted : null, error: null }),
   }),
 }));
 
@@ -215,6 +216,7 @@ beforeEach(() => {
   db.txn = { company_id: "co-1", amount_original: 100_000, currency: "ILS" };
   db.splits = [];
   db.inserts = [];
+  db.counted = null;
   db.insertError = null;
   db.insertHold = null;
   db.readError = null;
@@ -248,22 +250,60 @@ describe("LoanSplitPanel", () => {
     panel({
       onCorrect,
       needsReview: true,
+      byParts: true,
       parts: [
         { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
         { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1" },
+        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1", inPnl: false },
       ],
     });
     expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument();
     expect(screen.getByText("ריבית")).toBeInTheDocument();
     expect(screen.getByText("מסים וביטוח")).toBeInTheDocument();
     expect(screen.getByText("קרן")).toBeInTheDocument();
-    expect(screen.getByText("₪5")).toBeInTheDocument();
-    expect(screen.getByText("₪2")).toBeInTheDocument();
-    expect(screen.getByText("₪3")).toBeInTheDocument();
+    expect(screen.getByText("−₪5")).toBeInTheDocument();
+    expect(screen.getByText("−₪2")).toBeInTheDocument();
+    expect(screen.getByText("−₪3")).toBeInTheDocument();
+    expect(screen.getByText("−₪10")).toBeInTheDocument();
     expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
+    expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
+    expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
     expect(onCorrect).toHaveBeenCalled();
+  });
+
+  it("shows what counts in profit, the kept-out principal, and a total equal to the line", () => {
+    panel({
+      byParts: true,
+      parts: [
+        { id: "c", part: "principal", amountMinor: 100_000n, scheduledMinor: 100_000n, needsReview: false, loanId: "loan-1", inPnl: false },
+        { id: "a", part: "interest", amountMinor: 105_000n, scheduledMinor: 105_000n, needsReview: false, loanId: "loan-1", inPnl: true },
+        { id: "b", part: "escrow", amountMinor: 40_000n, scheduledMinor: 40_000n, needsReview: false, loanId: "loan-1", inPnl: true },
+      ],
+    });
+    expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח ₪1,450");
+    expect(screen.getAllByText("מחוץ לרווח")).toHaveLength(1);
+    const principal = screen.getByText("קרן").closest(".ui-row");
+    expect(principal).toHaveTextContent("מחוץ לרווח");
+    expect(principal).toHaveTextContent("−₪1,000");
+    const total = screen.getByText("סה״כ").closest(".ui-row");
+    expect(total).toHaveTextContent("−₪2,450");
+    const titles = [...document.querySelectorAll(".ui-row-title")].map((node) => node.textContent);
+    expect(titles).toEqual(["ריבית", "מסים וביטוח", "קרן", "סה״כ"]);
+  });
+
+  it("counts the whole line when the P&L does not count by parts", () => {
+    panel({
+      byParts: false,
+      parts: [
+        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: false, loanId: "loan-1", inPnl: null },
+        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: false, loanId: "loan-1", inPnl: null },
+        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: false, loanId: "loan-1", inPnl: false },
+      ],
+    });
+    expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
+    expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
+    expect(screen.getByText("סה״כ").closest(".ui-row")).toHaveTextContent("−₪10");
   });
 
   it("hides matching for a viewer", () => {
@@ -452,9 +492,19 @@ describe("LoanTransactionSplit", () => {
       { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: false, loan_id: "loan-1" },
       { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: false, loan_id: "loan-1" },
     ];
+    db.counted = {
+      by_parts: true,
+      parts: [
+        { part: "interest", amount_minor: 500, in_pnl: true },
+        { part: "escrow", amount_minor: 200, in_pnl: true },
+        { part: "principal", amount_minor: 300, in_pnl: false },
+      ],
+    };
     renderSplit();
     await waitFor(() => { expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument(); });
-    expect(screen.getByText("$5")).toBeInTheDocument();
+    expect(screen.getByText("−$5")).toBeInTheDocument();
+    expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח $7");
+    expect(screen.getByText("קרן").closest(".ui-row")).toHaveTextContent("מחוץ לרווח");
   });
 
   it("hints the lone matching loan on the שיוך row", async () => {
