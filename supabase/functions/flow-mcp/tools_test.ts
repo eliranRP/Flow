@@ -1768,6 +1768,9 @@ const PROJECT_FIXTURE = {
   excluded_categories_by_currency: [
     { currency: "USD", id: CATEGORY_NEW, name: "Example Loan Principal", amount_minor: 50000, has_shared_share: false },
   ],
+  excluded_income_by_currency: [
+    { currency: "USD", id: CATEGORY, name: "Example Owner Money", amount_minor: 3000, count: 1 },
+  ],
   other_currencies: [{ currency: "USD", income_minor: 250000, expense_minor: -1250, count: 2 }],
   pending_count: 0,
   pending_agorot: 0,
@@ -1833,6 +1836,7 @@ Deno.test("get_project calls get_project with the id and each basis", async () =
       assertEquals(data.categories_by_currency, PROJECT_FIXTURE.categories_by_currency);
       assertEquals(data.excluded_categories_by_currency, PROJECT_FIXTURE.excluded_categories_by_currency);
       assertEquals(data.excluded_categories_by_currency[0]?.amount_minor, 50000);
+      assertEquals(data.excluded_income_by_currency, PROJECT_FIXTURE.excluded_income_by_currency);
       assertEquals(data.transactions, PROJECT_FIXTURE.transactions);
       assertEquals(data.transactions.map((row) => row.currency), ["USD", "USD"]);
       assertEquals(data.budget_agorot, null);

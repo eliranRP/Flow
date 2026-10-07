@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(24);
+select plan(27);
 
 do $users$
 begin
@@ -73,6 +73,21 @@ from (values
 ) as v(co, direction, doc_kind, pnl_role, currency, amount, ikey, cat, project);
 insert into kog (label, id) select replace(idempotency_key, 'kog:', 'txn_'), id
 from public.transactions where idempotency_key like 'kog:%';
+
+-- Two connector income lines with no project, both in the kept-out income category; one is a guess.
+insert into public.transactions (
+  company_id, direction, doc_kind, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, category_id, description
+)
+select (select id from kog where label = 'co'), 'income', 'receipt', 'posted', 'ILS',
+  v.amount, v.amount, v.amount, 0, 'source', '2026-06-11', '2026-06-11', 'sumit', v.ikey,
+  (select id from kog where label = 'cat_owner_in'), v.ikey
+from (values (4000, 'kog:guess_in'), (6000, 'kog:kept_in')) as v(amount, ikey);
+insert into kog (label, id) select replace(idempotency_key, 'kog:', 'txn_'), id
+from public.transactions where idempotency_key in ('kog:guess_in', 'kog:kept_in');
+update public.transactions set category_suggested = true
+where id = (select id from kog where label = 'txn_guess_in');
 
 -- Two lines carry a guessed category: a kept-out one and the loan principal.
 update public.transactions
@@ -190,6 +205,32 @@ select lives_ok(
   format('select public.set_transaction_pnl(%L, null)', pg_temp.id('txn_rent')),
   'bring the rent line back'
 );
+
+-- A guessed kept-out income line counts, so the income review picks it up until it is confirmed.
+select is(pg_temp.pnl('cash', 'unassigned_income_agorot'), 4000::bigint, 'a guessed kept-out income line counts as unassigned income');
+reset role;
+do $sync$
+begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  set local role service_role;
+  perform public.sync_review_queue((select id from pg_temp.kog where label = 'co'));
+end
+$sync$;
+reset role;
+select is(
+  (select count(*)::integer from public.review_queue q
+   where q.transaction_id = pg_temp.id('txn_guess_in') and q.status = 'open'),
+  1,
+  'income review: a guessed kept-out income line waits for review'
+);
+select is(
+  (select count(*)::integer from public.review_queue q
+   where q.transaction_id = pg_temp.id('txn_kept_in') and q.status = 'open'),
+  0,
+  'income review: a confirmed kept-out income line needs no project'
+);
+select tests.authenticate_as('kog_owner');
 
 -- Another company's project is not readable; that company still sees its own.
 select is(
