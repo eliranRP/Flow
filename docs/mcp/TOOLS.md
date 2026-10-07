@@ -11,13 +11,13 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `undo` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
 | Tool | Argument | Kind |
 | --- | --- | --- |
-| `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category`, `split_line` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
+| `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category`, `split_line`, `set_line_pnl` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
 | `undo` `kind: "project"` | `id` | the project id `create_project` returned |
@@ -30,6 +30,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
 | `undo` `kind: "overhead_project"` | `id` | the company id `set_overhead_project` returned |
 | `undo` `kind: "line_split"` | `id` | the transaction id `split_line` used |
+| `undo` `kind: "line_pnl"` | `id` | the transaction id `set_line_pnl` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -105,6 +106,8 @@ Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transacti
 `get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
 
 Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, each `{part, amount_minor, in_pnl}`. `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read.
+
+The row also has `in_pnl` (whether the line counts in the P&L), `in_pnl_override` (`false` out, `true` in, `null` follows the category; see [set_line_pnl](#set_line_pnl)) and `category_excluded_from_pnl` ([FLOW-108](../backlog/TASKS.md#flow-108)).
 
 ### search_expenses
 
@@ -364,6 +367,36 @@ Once split, the line counts by part in `get_totals`, `list_projects`, `get_proje
 
 `get_expense` on a split line adds `line_split`: `{ "currency", "line_minor", "parts": [{ "category_id", "category_name", "project_id", "project_name", "amount_minor" }], "parts_match" }`.
 
+### set_line_pnl
+
+Takes one line out of the P&L, or counts one line of a kept-out category. Decision [0112](../decisions/0112-line-out-of-pnl.md).
+
+```json
+{ "idempotency_key": "out-1", "transaction_id": "22222222-2222-4000-8000-000000000020", "in_pnl": false }
+```
+
+- `in_pnl: false` keeps the line out, `true` counts it although its category is kept out, `null` clears the override so the line follows its category again. The override wins over the category's `excluded_from_pnl` and covers every part of a split line.
+- An out line moves to the `excluded_*` totals of `get_totals`, `list_projects` and `get_project`, and to `get_breakdown`'s `excluded` group, on both bases. Nothing is hidden.
+- Refused: `transaction not found` (also another company's line) and `loan line is fixed` (a line with a loan split or in a loan category; its parts decide what counts).
+
+Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "line_pnl", "id" }`. Undo `kind: "line_pnl"` with the transaction id puts back the override from before this write. If the override changed since (for example in the app), undo is `conflict`.
+
+### set_lines_pnl
+
+`set_line_pnl` for up to 200 lines in one write. Each item is `{ "transaction_id", "in_pnl" }`, and `in_pnl` is required (`null` clears). Duplicate `transaction_id` values are `validation`. A bad row does not block good rows. Rows use the key `idempotency_key:ordinal`, so the key is 1–124 characters.
+
+```json
+{
+  "idempotency_key": "out-batch-1",
+  "items": [
+    { "transaction_id": "22222222-2222-4000-8000-000000000020", "in_pnl": false },
+    { "transaction_id": "22222222-2222-4000-8000-000000000021", "in_pnl": null }
+  ]
+}
+```
+
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`, each result `{ "transaction_id", "ok": true, "in_pnl", "undo_kind": "line_pnl" }` or `{ "transaction_id", "ok": false, "code" }`. [undo_batch](#undo_batch) with `batch_key` undoes the rows that succeeded.
+
 ## Batch · cycle 6
 
 `assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. When `shares[]` is set, the row behaves like `assign_expense_split`: `category_id` is optional, and `project_id` or `remember` on the same row is `validation`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters.
@@ -401,7 +434,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from that batch through `mcp_undo`, newest first. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from an `assign_expenses` or `set_lines_pnl` batch through `mcp_undo`, newest first. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Not in tools/list
 

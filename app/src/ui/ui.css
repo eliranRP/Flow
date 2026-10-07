@@ -950,6 +950,12 @@ a.ui-row,
   font-weight: var(--type-micro-weight);
 }
 
+.ui-status-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
 .ui-bar {
   height: var(--bar-h);
   overflow: hidden;

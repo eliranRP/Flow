@@ -128,7 +128,10 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Unpaid | סימון כשולם | Opens the explanation sheet. Flow does not mark the invoice paid in SUMIT. | never | no | sheet title סימון כשולם | none | pass |
 | Unpaid | הבנתי | Hides that row for this visit and closes the sheet. | never | no | the row leaves the list | none | pass |
 | Transaction | Back | Returns to the project, or the filed list when that opened it. | never | no | the parent screen | none | pass |
-| Transaction | עוד | Opens the more sheet. SUMIT rows explain they are not deleted here. A manual row shows מחיקה. | never | no | the sheet | none | pass |
+| Transaction | עוד | Opens the more sheet: מחוץ לרווח והפסד or החזרה לרווח והפסד (a locked "תשלום הלוואה · נספר לפי החלוקה" line on a loan line), then מחיקה on a manual row, or the note that SUMIT rows are not deleted here. | never | no | the sheet | none | pass |
+| Transaction | מחוץ לרווח והפסד | Calls `set_transaction_pnl`: `false`, or `null` when the line was forced in against a kept-out category. Saves on tap. | a loan line (locked line instead) | the button shows "מעדכן…" and מחיקה is disabled | the sheet closes, the ⊘ "מחוץ לרווח" pill shows, toast "<party> · מחוץ לרווח והפסד" with ביטול | toast "לא הצלחנו לעדכן את השורה." with ניסיון חוזר, or "אין הרשאה לעדכן את השורה."; the sheet stays open | unit |
+| Transaction | החזרה לרווח והפסד | The mirror: `null`, or `true` when the category is kept out. | a loan line | as above | the pill goes (or "ברווח והפסד" on a line forced in), toast "<party> · ברווח והפסד" with ביטול | as above | unit |
+| Transaction | toast ביטול after מחוץ / החזרה | Writes the previous override back. No second ביטול. | never | no | the pill as before, toast "<party> · …" | as above | unit |
 | Transaction | מחיקה | Opens the delete confirm. Manual rows only. | never | no | confirm sheet | none | pass |
 | Transaction | confirm מחיקה | Calls `delete_transaction`. | never | the confirm button | route `/` | toast "לא הצלחנו למחוק." | pass |
 | Transaction | project row | Opens the change sheet. A shared cost opens Split instead. | never | no | the change sheet, or `/transactions/:id/split` | none | pass |

@@ -1493,6 +1493,43 @@ export const Transaction: Story = {
   ),
 };
 
+export const TransactionOutOfPnl: Story = {
+  name: "Out of the P&L",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "החזר פיקדון",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -120_000n,
+          amount_net: -120_000n,
+          vat_amount: 0n,
+          vat_status: "unknown",
+          doc_kind: "expense",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "ספק לדוגמה עם שם ארוך במיוחד לבדיקה",
+          customer_name: null,
+          review_status: "open",
+          paid: false,
+          open_gross_agorot: null,
+          in_pnl_override: false,
+          category_excluded_from_pnl: false,
+          in_pnl: false,
+          pnl_fixed: false,
+        }}
+        sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const TransactionShared: Story = {
   name: "Shared",
   render: () => (
