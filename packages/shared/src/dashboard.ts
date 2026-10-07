@@ -11,6 +11,25 @@ const agorotOrNull = z
   .union([agorotInput, z.null()])
   .transform((value) => (value == null ? null : BigInt(value)));
 
+const projectByCurrencyRowSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  income_minor: agorotSchema,
+  direct_minor: agorotSchema,
+  shared_minor: agorotSchema,
+  profit_minor: agorotSchema,
+});
+
+const companyByCurrencyRowSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  income_minor: agorotSchema,
+  direct_minor: agorotSchema,
+  shared_minor: agorotSchema,
+  overhead_minor: agorotSchema,
+  expense_minor: agorotSchema,
+  net_profit_minor: agorotSchema,
+  count: z.number().int().nonnegative(),
+});
+
 export const projectRowSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -23,6 +42,7 @@ export const projectRowSchema = z.object({
   shared_agorot: agorotSchema,
   profit_before_shared_agorot: agorotSchema,
   profit_agorot: agorotSchema,
+  by_currency: z.array(projectByCurrencyRowSchema).optional().default([]),
 });
 
 export const dashboardSchema = z.object({
@@ -45,6 +65,7 @@ export const dashboardSchema = z.object({
   review_count: z.number(),
   projects: z.array(projectRowSchema),
   after_overhead: z.boolean().optional(),
+  by_currency: z.array(companyByCurrencyRowSchema).optional().default([]),
 });
 
 export const unpaidRowSchema = z.object({
@@ -144,6 +165,18 @@ export const projectDetailSchema = z
     overhead_share_agorot: agorotOrNull.optional(),
     profit_after_overhead_agorot: agorotSchema.optional(),
     overhead_weighted: z.boolean().optional(),
+    by_currency: z.array(projectByCurrencyRowSchema).optional(),
+    categories_by_currency: z
+      .array(
+        z.object({
+          currency: z.string().regex(/^[A-Z]{3}$/),
+          id: z.string().nullable(),
+          name: z.string().nullable(),
+          amount_minor: agorotSchema,
+          has_shared_share: z.boolean().optional(),
+        }),
+      )
+      .optional(),
     categories: z.array(
       z.object({
         id: z.string().nullable(),
@@ -168,6 +201,7 @@ export const projectDetailSchema = z
         description: z.string(),
         doc_date: z.string(),
         amount_net: agorotSchema,
+        currency: z.string().regex(/^[A-Z]{3}$/).optional(),
         direction: z.string(),
         source: z.string().optional(),
         doc_kind: z.string().optional(),

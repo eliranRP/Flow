@@ -116,6 +116,7 @@ export const ListOfRows: Story = {
   args: { variant: "project", title: "טק-ליין", agorot: "-2940000", loss: true },
   render: () => (
     <List>
+      <ListRow variant="transaction" title="Sample vendor" hint="Utilities · 10/09" agorot={125_000n} sign="out" source="bank" currency="USD" />
       <ListRow variant="project" title="טק-ליין" agorot={-2_940_000n} loss />
       <ListRow variant="project" title={longHebrew} agorot={largeAgorot} />
     </List>

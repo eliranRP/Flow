@@ -450,10 +450,11 @@ const devDashboard: Dashboard = {
   active_projects: 2,
   review_count: 2,
   after_overhead: false,
+  by_currency: [],
   projects: [
-    { id: "p1", name: "שיפוץ הרצל 12", status: "active", income_agorot: 1_000n, direct_agorot: 400n, shared_agorot: 0n, profit_before_shared_agorot: 600n, profit_agorot: 600n },
-    { id: "p2", name: "וילה רעננה", status: "active", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n },
-    { id: "p3", name: "פרויקט ישן", status: "finished", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n },
+    { id: "p1", name: "שיפוץ הרצל 12", status: "active", income_agorot: 1_000n, direct_agorot: 400n, shared_agorot: 0n, profit_before_shared_agorot: 600n, profit_agorot: 600n, by_currency: [] },
+    { id: "p2", name: "וילה רעננה", status: "active", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n, by_currency: [] },
+    { id: "p3", name: "פרויקט ישן", status: "finished", income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n, by_currency: [] },
   ],
 };
 

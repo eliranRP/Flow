@@ -25,6 +25,7 @@ function books(overrides: Partial<Dashboard> = {}): Dashboard {
     active_projects: 0,
     review_count: 0,
     projects: [],
+    by_currency: [],
     ...overrides,
   };
 }
@@ -65,6 +66,44 @@ describe("Home hero", () => {
     expect(document.querySelector(".ui-band .ui-band-figures")).toBeNull();
     expect(screen.getByText("מחודש שעבר").closest(".ui-band")).toBeNull();
     expect(screen.getByRole("button", { name: "החודש" }).closest(".ui-band")).not.toBeNull();
+  });
+
+  it("shows USD-only books without shekel placeholders or change pill", () => {
+    renderHome(books({
+      income_agorot: 0n,
+      expense_agorot: 0n,
+      net_profit_agorot: 0n,
+      projects: [],
+      by_currency: [{
+        currency: "USD",
+        income_minor: 500_000n,
+        direct_minor: 200_000n,
+        shared_minor: 0n,
+        overhead_minor: 0n,
+        expense_minor: 200_000n,
+        net_profit_minor: 300_000n,
+        count: 4,
+      }],
+    }));
+    expect(screen.getByRole("heading", { name: "$3,000" })).toBeInTheDocument();
+    expect(screen.getByText("−$2,000")).toBeInTheDocument();
+    expect(screen.getByText("$5,000")).toBeInTheDocument();
+    expect(screen.queryByText("₪0")).not.toBeInTheDocument();
+    expect(screen.queryByText("מחודש שעבר")).not.toBeInTheDocument();
+  });
+
+  it("shows one figure per currency without converting", () => {
+    renderHome(books({
+      income_agorot: 100_000n,
+      expense_agorot: 40_000n,
+      by_currency: [
+        { currency: "ILS", income_minor: 100_000n, direct_minor: 40_000n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 40_000n, net_profit_minor: 60_000n, count: 1 },
+        { currency: "USD", income_minor: 200_000n, direct_minor: 50_000n, shared_minor: 0n, overhead_minor: 0n, expense_minor: 50_000n, net_profit_minor: 150_000n, count: 1 },
+      ],
+    }));
+    expect(screen.getByText("₪600")).toBeInTheDocument();
+    expect(screen.getByText("$1,500")).toBeInTheDocument();
+    expect(screen.getByText("רווח נקי החודש")).toBeInTheDocument();
   });
 
   it("names a loss in the label", () => {

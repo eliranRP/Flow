@@ -43,7 +43,14 @@ type Common = {
 };
 
 export type ListRowProps =
-  | (Common & { variant: "project"; agorot: bigint; loss?: boolean; currency?: string })
+  | (Common & {
+    variant: "project";
+    agorot: bigint;
+    loss?: boolean;
+    currency?: string;
+    amounts?: { minor: bigint; currency: string }[];
+    amountDirection?: "expense" | "income";
+  })
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string })
   | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
@@ -230,15 +237,41 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
     const abs = props.agorot < 0n ? -props.agorot : props.agorot;
-    const text = props.sign === "out" ? `−` : `+`;
     return (
       <span className="t-title-3">
-        <span aria-hidden="true">{text}</span>
-        <BigNumber agorot={abs} currency={props.currency} />
+        <BigNumber
+          agorot={abs}
+          currency={props.currency}
+          direction={props.sign === "out" ? "expense" : "income"}
+          plus
+        />
       </span>
     );
   }
-  return <BigNumber agorot={props.agorot} size="list" loss={props.loss === true} />;
+  if (props.amounts != null && props.amounts.length > 0) {
+    return (
+      <span className="ui-row-amounts t-title-3">
+        {props.amounts.map((amount) => (
+          <BigNumber
+            key={amount.currency}
+            agorot={amount.minor}
+            currency={amount.currency}
+            size="list"
+            loss={amount.minor < 0n}
+          />
+        ))}
+      </span>
+    );
+  }
+  return (
+    <BigNumber
+      agorot={props.agorot}
+      currency={props.currency}
+      size="list"
+      loss={props.loss === true}
+      direction={props.amountDirection}
+    />
+  );
 }
 
 export function List({ children, className }: { children: ReactNode; className?: string }) {

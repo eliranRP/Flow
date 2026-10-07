@@ -3,6 +3,7 @@ import {
   STANDARD_VAT_RATE_BP,
   allocateByWeights,
   divHalfEven,
+  formatAmountText,
   formatIls,
   formatMoney,
   formatUsd,
@@ -82,6 +83,31 @@ describe("allocateByWeights", () => {
   it("emits basis points that sum to 10000", () => {
     const shares = shareBp([10, 12, 8, 6, 4]);
     expect(shares.reduce((sum, share) => sum + share, 0)).toBe(10000);
+  });
+});
+
+describe("formatAmountText", () => {
+  it("formats ILS and USD with expense minus, income plus, and zero expense without a sign", () => {
+    expect(formatAmountText(125_000n, "USD", { direction: "expense" })).toBe("−$1,250");
+    expect(formatAmountText(125_000n, "ILS", { direction: "expense" })).toBe("−₪1,250");
+    expect(formatAmountText(125_000n, "USD", { direction: "income", plus: true })).toBe("+$1,250");
+    expect(formatAmountText(125_000n, "USD", { direction: "income" })).toBe("$1,250");
+    expect(formatAmountText(0n, "USD", { direction: "expense" })).toBe("$0");
+    expect(formatAmountText(0n, "ILS", { direction: "expense" })).toBe("₪0");
+    expect(formatAmountText(-125_000n, "USD")).toBe("−$1,250");
+    expect(formatAmountText(1_234n, "USD", { direction: "expense", detail: true })).toBe("−$12.34");
+    expect(formatAmountText(10_000n, "EUR")).toBe("EUR 100");
+  });
+
+  it("never signs a figure that rounds to zero", () => {
+    expect(formatAmountText(-30n, "ILS", { direction: "expense" })).toBe("₪0");
+    expect(formatAmountText(50n, "USD", { direction: "expense" })).toBe("$0");
+    expect(formatAmountText(30n, "USD", { direction: "income", plus: true })).toBe("$0");
+    expect(formatAmountText(-30n, "USD")).toBe("$0");
+    expect(formatAmountText(-30n, "ILS")).toBe("₪0");
+    expect(formatMoney(-30n, "USD")).toBe("$0");
+    expect(formatAmountText(-30n, "ILS", { direction: "expense", detail: true })).toBe("−₪0.30");
+    expect(formatAmountText(-150n, "USD", { direction: "expense" })).toBe("−$2");
   });
 });
 
