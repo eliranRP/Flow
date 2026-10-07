@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(56);
+select plan(61);
 
 do $users$
 begin
@@ -233,6 +233,23 @@ from (values
   ('income',  'receipt', 'project',   3000, 'materials', 'gbp-cost-refund')
 ) as v(direction, doc_kind, pnl_role, amount, cat, ikey);
 
+-- A CAD line split by category (decision 0104): 6000 to Site Beta, 4000 kept on the line's
+-- Site Alpha, both in materials. Each part counts under its own project.
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description, user_assigned
+) values (
+  (select id from fb_ref where label = 'co'), 'expense', 'expense', 'project', 'posted', 'CAD',
+  -10000, -10000, 10000, 0, 'source', '2026-06-14', 'manual', 'fb:CAD:split',
+  (select id from fb_ref where label = 'alpha'), (select id from fb_ref where label = 'materials'), 'cad-split', true
+);
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+select t.company_id, t.id, v.ordinal, (select id from fb_ref where label = 'materials'), (select id from fb_ref where label = v.project), v.amount
+from public.transactions t
+cross join (values (1, 'beta', 6000), (2, null, 4000)) as v(ordinal, project, amount)
+where t.idempotency_key = 'fb:CAD:split';
+
 -- One open expense review, one open income review, one closed expense review, an open
 -- review on the GBP outflow under an income category (it counts as income), and an open
 -- review on a pending line, which is not in the totals and so not in the count.
@@ -269,7 +286,9 @@ insert into fb_out (label, body) values
   ('lines:page', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 0)),
   ('lines:page2', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 1)),
   ('lines:last', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 2)),
-  ('lines:unassigned', public.get_breakdown_lines('expense', 'project', 'unassigned', 'ILS'));
+  ('lines:unassigned', public.get_breakdown_lines('expense', 'project', 'unassigned', 'ILS')),
+  ('lines:cad', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'CAD')),
+  ('lines:cad:beta', public.get_breakdown_lines('expense', 'project', (select id::text from fb_ref where label = 'beta'), 'CAD'));
 
 -- Reversals follow the category kind, like Home (decision 0103).
 select is(pg_temp.total(pg_temp.out_of('in:category:invoiced'), 'GBP'), (pg_temp.cur(pg_temp.out_of('dash:invoiced'), 'GBP') ->> 'income_minor')::bigint,
@@ -403,6 +422,16 @@ select throws_ok(
 );
 
 -- Another company sees none of these lines.
+-- A line split by category counts each part under its own project, and lists once in its category.
+select is(pg_temp.total(pg_temp.out_of('ex:category'), 'CAD'), (pg_temp.cur(pg_temp.out_of('dash:cash'), 'CAD') ->> 'expense_minor')::bigint,
+  'a split line''s total matches Home (CAD)');
+select is((pg_temp.grp(pg_temp.out_of('ex:project'), 'CAD', (select id::text from fb_ref where label = 'beta')) ->> 'amount_minor')::bigint, 6000::bigint,
+  'the part with Site Beta counts under Site Beta');
+select is((pg_temp.grp(pg_temp.out_of('ex:project'), 'CAD', (select id::text from fb_ref where label = 'alpha')) ->> 'amount_minor')::bigint, 4000::bigint,
+  'the part with no project keeps the line''s Site Alpha');
+select is(jsonb_array_length(pg_temp.out_of('lines:cad') -> 'rows'), 1, 'two parts in one category list as one row');
+select is(pg_temp.out_of('lines:cad:beta') -> 'rows' -> 0 ->> 'project_name', 'Site Beta', 'a part names its own project');
+
 select tests.authenticate_as('fb_other');
 select is(jsonb_array_length(public.get_breakdown('expense', null, null, 'category', 'cash') -> 'totals'), 0,
   'another company''s breakdown is empty');

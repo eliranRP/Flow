@@ -47,6 +47,7 @@ export const WRITE_TOOL_NAMES = [
   "add_loan",
   "update_loan",
   "attach_loan_payment",
+  "split_line",
   "undo",
   "undo_batch",
 ] as const;
@@ -80,10 +81,11 @@ const ALLOWED: Record<string, Set<string>> = {
   rename_company: new Set(["idempotency_key", "name"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
-    "start_date", "payment", "escrow", "currency",
+    "start_date", "payment", "escrow", "currency", "project_id",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
+  split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -126,6 +128,28 @@ const assignExpenseSplitSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
+const linePartSchema = z.object({
+  category_id: UUID_TEXT,
+  project_id: UUID_TEXT.nullable().optional(),
+  amount_minor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+}).strict();
+// Two to 50 parts, or none to clear the split. A category and project pair appears once.
+// The database checks that the parts sum to the line.
+const splitLineSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  parts: z.array(linePartSchema).max(50).refine((parts) => parts.length !== 1),
+}).strict().superRefine((body, ctx) => {
+  const seen = new Set<string>();
+  for (const part of body.parts) {
+    const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
+    if (seen.has(pair)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      return;
+    }
+    seen.add(pair);
+  }
+});
 const categorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
@@ -133,7 +157,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split"]),
   id: UUID_TEXT,
 }).strict();
 const renameCompanySchema = z.object({
@@ -152,6 +176,7 @@ const addLoanSchema = z.object({
   payment: z.union([z.number(), z.string()]).optional(),
   escrow: z.union([z.number(), z.string()]).optional(),
   currency: LOAN_CURRENCY.optional(),
+  project_id: UUID_TEXT.optional(),
 }).strict();
 const updateLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -163,6 +188,8 @@ const updateLoanSchema = z.object({
   start_date: z.string().regex(DATE).optional(),
   payment: z.union([z.number(), z.string()]).optional(),
   escrow: z.union([z.number(), z.string()]).optional(),
+  // null clears the project, an absent key leaves it.
+  project_id: UUID_TEXT.nullable().optional(),
 }).strict();
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -377,6 +404,8 @@ type LoanRow = {
   payment_minor: number;
   escrow_minor: number;
   balance_minor: number;
+  project_id?: string | null;
+  project_name?: string | null;
 };
 
 function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
@@ -507,7 +536,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
@@ -522,7 +551,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations. transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations and, for a split line, line_split.parts. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id.", {
@@ -536,7 +565,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance.", {}),
+    toolSpec("list_loans", "Loans in the company with current principal balance. project_id and project_name show the project a loan is filed under, or null.", {}),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
       loan_id: { type: "string" },
       from: { type: "integer" },
@@ -653,7 +682,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       name: { type: "string" },
     }, true),
-    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
+    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set. project_id (optional) files the loan under a project of this company; another company's project is refused.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       principal: { type: "string" },
@@ -663,8 +692,9 @@ function writeTools() {
       payment: { type: "string" },
       escrow: { type: "string" },
       currency: { type: "string" },
+      project_id: { type: "string" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. Undo restores the previous project.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -674,15 +704,33 @@ function writeTools() {
       start_date: { type: "string" },
       payment: { type: "string" },
       escrow: { type: "string" },
+      project_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why. Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
     }, true),
+    toolSpec("split_line", "Split one bank line into parts, each with its own category, optional project, and exact amount in minor units (cents). Parts must sum to the line. A part without project_id keeps the line's project. parts [] clears the split. Undo is kind line_split with the transaction id.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      parts: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            category_id: { type: "string" },
+            project_id: { type: ["string", "null"] },
+            amount_minor: { type: "integer" },
+          },
+          required: ["category_id", "amount_minor"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -862,6 +910,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
     p_payment_minor: Number(paymentMinor),
     p_escrow_minor: Number(escrowMinor),
     p_currency: currency,
+    ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
   });
   if (result.status >= 400) return fail("refused", WRITE_REFUSED);
   const wrapped = envelopeOf(result.json);
@@ -902,6 +951,7 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     if (typeof minor !== "bigint") return minor;
     patch.escrow_minor = Number(minor);
   }
+  if (parsed.data.project_id !== undefined) patch.project_id = parsed.data.project_id;
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
   const result = await rpc("mcp_update_loan", {
     p_idempotency_key: parsed.data.idempotency_key,
@@ -1074,6 +1124,19 @@ async function callWrite(
     return updateLoanWrite(args, rpc);
   } else if (name === "attach_loan_payment") {
     return attachLoanWrite(args, rpc);
+  } else if (name === "split_line") {
+    const parsed = splitLineSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_split_line";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_parts: parsed.data.parts.map((part) => ({
+        category_id: part.category_id,
+        project_id: part.project_id ?? null,
+        amount_minor: part.amount_minor,
+      })),
+    };
   } else if (name === "assign_expenses") {
     const parsed = assignExpensesSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -1304,5 +1367,17 @@ export async function callTool(
   const result = await rpc("get_transaction", { p_id: transactionId });
   if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
+  // A line split by category shows its parts. A failed parts read fails the whole read, so a
+  // split line never looks whole under its own category.
+  const split = await rpc("get_line_split", { p_transaction_id: transactionId });
+  if (split.status >= 400) return fail("refused", "The read was refused.");
+  const parts = (split.json as { parts?: unknown } | null)?.parts;
+  if (
+    Array.isArray(parts) && parts.length > 0 &&
+    typeof result.json === "object" && !Array.isArray(result.json)
+  ) {
+    const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
+    return ok({ ...(result.json as Record<string, unknown>), line_split: lineSplit });
+  }
   return ok(result.json);
 }

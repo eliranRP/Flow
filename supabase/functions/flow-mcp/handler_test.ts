@@ -167,6 +167,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "split_line",
     "undo",
     "undo_batch",
   ], "read and write tools");
@@ -754,6 +755,7 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
         const id = sub === userA ? expenseA : expenseB;
         return Promise.resolve(new Response(JSON.stringify({ id, description: sub === userA ? "אלפא" : "ביתא" })));
       }
+      if (name === "get_line_split") return Promise.resolve(new Response("null"));
       return Promise.resolve(new Response("{}", { status: 500 }));
     },
   };
@@ -980,6 +982,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "split_line",
     "undo",
     "undo_batch",
     "get_sync_status",

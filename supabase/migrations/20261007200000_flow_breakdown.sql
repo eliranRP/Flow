@@ -25,7 +25,9 @@ returns table (
   amount_minor bigint,
   in_pnl boolean,
   shared boolean,
-  doc_date date
+  doc_date date,
+  category_id uuid,
+  project_id uuid
 )
 language sql
 stable
@@ -77,7 +79,7 @@ as $$
     s.transaction_id, s.part, s.currency,
     coalesce(s.category_id::text, 'none'),
     c.name,
-    s.amount_minor, s.in_pnl, false, s.doc_date
+    s.amount_minor, s.in_pnl, false, s.doc_date, s.category_id, s.project_id
   from signed s
   left join public.categories c on c.id = s.category_id
   where p_group_by = 'category'
@@ -86,7 +88,7 @@ as $$
     s.transaction_id, s.part, s.currency,
     coalesce(s.supplier_id::text, 'none'),
     sup.name,
-    s.amount_minor, s.in_pnl, false, s.doc_date
+    s.amount_minor, s.in_pnl, false, s.doc_date, s.category_id, s.project_id
   from signed s
   left join public.suppliers sup on sup.id = s.supplier_id
   where p_group_by = 'payer'
@@ -104,7 +106,7 @@ as $$
       when s.unassigned or (p_direction = 'expense' and s.pnl_role = 'overhead') then null
       else p.name
     end,
-    s.amount_minor, s.in_pnl, false, s.doc_date
+    s.amount_minor, s.in_pnl, false, s.doc_date, s.category_id, s.project_id
   from signed s
   left join public.projects p on p.id = s.project_id
   where p_group_by = 'project'
@@ -115,7 +117,7 @@ as $$
     a.project_id::text,
     p.name,
     (-coalesce(private.div_half_even(a.amount_net::numeric * s.amount_net, s.line_amount_net), 0))::bigint,
-    s.in_pnl, true, s.doc_date
+    s.in_pnl, true, s.doc_date, s.category_id, a.project_id
   from signed s
   join public.allocations a on a.transaction_id = s.transaction_id
   left join public.projects p on p.id = a.project_id
@@ -312,25 +314,37 @@ begin
         or (not coalesce(p_excluded, false) and x.in_pnl and x.group_key = p_group_key)
       )
   ),
-  page as (
+  -- A line split by category can put two parts of one line in the same group; they show
+  -- as one row. Each part names its own category and project (loan or line split).
+  merged as (
     select
       r.transaction_id,
       r.part,
-      r.amount_minor,
-      r.doc_date,
       r.shared,
+      max(r.doc_date) as doc_date,
+      sum(r.amount_minor)::bigint as amount_minor,
+      case when count(distinct r.category_id) = 1 then (array_agg(r.category_id))[1] end as category_id,
+      case when count(distinct r.project_id) = 1 then (array_agg(r.project_id))[1] end as project_id
+    from r
+    group by r.transaction_id, r.part, r.shared
+  ),
+  page as (
+    select
+      m.transaction_id,
+      m.part,
+      m.amount_minor,
+      m.doc_date,
+      m.shared,
       t.description,
       sup.name as supplier_name,
       p.name as project_name,
       c.name as category_name,
-      row_number() over (order by r.doc_date desc, r.transaction_id, r.part) as n
-    from r
-    join public.transactions t on t.id = r.transaction_id
+      row_number() over (order by m.doc_date desc, m.transaction_id, m.part, m.shared) as n
+    from merged m
+    join public.transactions t on t.id = m.transaction_id
     left join public.suppliers sup on sup.id = t.supplier_id
-    left join public.projects p on p.id = t.project_id
-    -- A loan-split part names its own category, not the bank line's.
-    left join public.loan_splits ls on ls.transaction_id = r.transaction_id and ls.part = r.part
-    left join public.categories c on c.id = coalesce(ls.category_id, t.category_id)
+    left join public.projects p on p.id = m.project_id
+    left join public.categories c on c.id = m.category_id
   )
   select jsonb_build_object(
     'rows', coalesce((
