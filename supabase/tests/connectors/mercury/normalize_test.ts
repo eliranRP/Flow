@@ -582,8 +582,20 @@ Deno.test("a fork of this repo skips the deny-list when the secret is absent", (
   assertEquals(grams.has("one two three four five six seven"), false);
 });
 
+function hasDeniedGram(text: string): boolean {
+  for (const gram of wordGrams(text)) {
+    if (fixtureDenyNames.has(gram)) return true;
+  }
+  return false;
+}
+
+/**
+ * The deny-list is the MERCURY_FIXTURE_DENYLIST Actions secret: one name per line, at most six words each.
+ * It lists the real names and codes the recorded fixtures once held, so they never come back.
+ * The Mercury test sources are scanned too, since their assertions name fixture counterparties.
+ */
 Deno.test({
-  name: "fixtures contain none of the denied personal names",
+  name: "fixtures and Mercury tests contain none of the denied names",
   ignore: fixtureDenyNames.size === 0 && !denyListIsRequired,
   fn() {
     if (fixtureDenyNames.size === 0) {
@@ -594,17 +606,17 @@ Deno.test({
     for (const entry of Deno.readDirSync(dir)) {
       if (!entry.isFile) continue;
       files += 1;
-      const text = Deno.readTextFileSync(new URL(entry.name, dir));
-      let denied = false;
-      for (const gram of wordGrams(text)) {
-        if (fixtureDenyNames.has(gram)) {
-          denied = true;
-          break;
-        }
-      }
-      assertEquals(denied, false, entry.name);
+      assertEquals(hasDeniedGram(Deno.readTextFileSync(new URL(entry.name, dir))), false, entry.name);
     }
     assertEquals(files >= 12, true);
+    const testDir = new URL("./", import.meta.url);
+    let sources = 0;
+    for (const entry of Deno.readDirSync(testDir)) {
+      if (!entry.isFile || !entry.name.endsWith(".ts")) continue;
+      sources += 1;
+      assertEquals(hasDeniedGram(Deno.readTextFileSync(new URL(entry.name, testDir))), false, entry.name);
+    }
+    assertEquals(sources >= 3, true);
   },
 });
 
