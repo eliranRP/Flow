@@ -694,14 +694,39 @@ test("split stays calm and pins the summary", async ({ page }) => {
   }
 });
 
-test("a title focused on open draws no ring", async ({ page }) => {
+/** The route stories are checked in halves, so two workers or shards can share the work. */
+const FOCUS_PARTS = 2;
+
+for (let part = 0; part < FOCUS_PARTS; part += 1) {
+  test(`a title focused on open draws no ring (part ${String(part + 1)}/${String(FOCUS_PARTS)})`, async ({ page }) => {
+    await checkFocusTitles(page, part);
+  });
+}
+
+test("tab from a focused title reaches a control that draws a ring", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/iframe.html?id=screens-routes--install-iphone&viewMode=story", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "הוספה למסך הבית" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const control = await page.evaluate(() => {
+    const node = document.activeElement;
+    if (!(node instanceof HTMLElement)) return { title: true, outline: "none" };
+    const style = getComputedStyle(node);
+    return { title: node.classList.contains("ui-focus-title"), outline: style.outlineStyle };
+  });
+  expect(control.title).toBe(false);
+  expect(control.outline).not.toBe("none");
+});
+
+async function checkFocusTitles(page: Page, part: number): Promise<void> {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 390, height: 844 });
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
-  const stories = Object.values(index.entries).filter(
+  const allStories = Object.values(index.entries).filter(
     (story) => story.type === "story" && story.id.startsWith("screens-routes--"),
   );
-  expect(stories.length).toBeGreaterThan(10);
+  expect(allStories.length).toBeGreaterThan(10);
+  const stories = allStories.filter((_, i) => i % FOCUS_PARTS === part);
   const failures: string[] = [];
   for (const story of stories) {
     await page.goto(`/iframe.html?id=${story.id}&viewMode=story`, { waitUntil: "domcontentloaded" });
@@ -747,19 +772,7 @@ test("a title focused on open draws no ring", async ({ page }) => {
     if (sheetProblem) failures.push(`${story.id}: ${sheetProblem}`);
   }
   expect(failures).toEqual([]);
-
-  await page.goto("/iframe.html?id=screens-routes--install-iphone&viewMode=story", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "הוספה למסך הבית" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  const control = await page.evaluate(() => {
-    const node = document.activeElement;
-    if (!(node instanceof HTMLElement)) return { title: true, outline: "none" };
-    const style = getComputedStyle(node);
-    return { title: node.classList.contains("ui-focus-title"), outline: style.outlineStyle };
-  });
-  expect(control.title).toBe(false);
-  expect(control.outline).not.toBe("none");
-});
+}
 
 test("hebrew counts keep their reading order around the numbers", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

@@ -76,16 +76,22 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "after_overhead": boolean,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
+                    "after_overhead": boolean,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "companies_overhead_project_fk"
+      columns: ["id","overhead_project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    }
                   ]
                 },"company_integrations": {
                   Row: {
@@ -749,17 +755,26 @@ isOneToOne: false
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"mcp_rename_company":
+{ Args: { "p_idempotency_key": string,"p_name": string }; Returns: Json
+                           },
 "mcp_set_category_pnl":
 { Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
                            },
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_overhead_project":
+{ Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
+                           },
 "mcp_sync_bank_begin":
 { Args: { "p_idempotency_key": string }; Returns: Json
                            },
 "mcp_sync_bank_finish":
-{ Args: { "p_idempotency_key": string,"p_response": Json }; Returns: undefined
+{ Args: { "p_job_id": string,"p_response": Json }; Returns: Json
+                           },
+"mcp_sync_status":
+{ Args: { "p_job_id": string }; Returns: Json
                            },
 "mcp_undo":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
@@ -796,6 +811,9 @@ isOneToOne: false
                            },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
+                           },
+"rename_company":
+{ Args: { "p_company_id": string,"p_name": string }; Returns: Json
                            },
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
@@ -835,6 +853,9 @@ isOneToOne: false
                            },
 "set_import_from":
 { Args: { "p_from": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
+                           },
+"set_overhead_project":
+{ Args: { "p_project_id": string }; Returns: undefined
                            },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined

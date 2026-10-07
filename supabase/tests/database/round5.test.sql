@@ -155,16 +155,14 @@ insert into r5 (label, id)
 select 'review', id from public.review_queue where transaction_id = (select id from r5 where label = 'sync') and status = 'open';
 
 select tests.authenticate_as('r5_a');
-select throws_ok(
+select lives_ok(
   format(
-    'select public.reassign_transaction(%L::uuid, %L::uuid, %L::uuid)',
+    'select public.undo_reassign(public.reassign_transaction(%L::uuid, %L::uuid, %L::uuid))',
     (select id from r5 where label = 'sync'),
     (select id from r5 where label = 'alpha'),
     (select id from r5 where label = 'income_cat')
   ),
-  'P0001',
-  'category kind must match the direction',
-  'an income category cannot label an expense'
+  'an income category can label an expense, and undo puts it back (FLOW-104: a reversal)'
 );
 
 select lives_ok(
