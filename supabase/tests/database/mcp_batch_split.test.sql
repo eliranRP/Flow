@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(24);
+select plan(30);
 
 do $users$
 begin
@@ -373,6 +373,105 @@ select is(
   (select q.status::text from public.review_queue q where q.transaction_id = (select id from mcpbs where label = 'review')),
   'open',
   'batch undo reopens the review the split closed'
+);
+
+-- Cross-company: another company's line or category in a split row is refused, and the owner's
+-- own line in the same batch still splits (positive control).
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, source, idempotency_key, project_id, category_id, description,
+  user_assigned, category_suggested
+)
+select c.id, 'expense', 'expense', null, 'ILS',
+  -12000, -12000, 12000, 0, 'unknown',
+  '2026-09-15', 'manual', v.k, null, null, 'Synthetic line',
+  false, false
+from mcpbs c
+cross join (values
+  ('other_company', 'mcpbs:other-line'),
+  ('company', 'mcpbs:own-line'),
+  ('company', 'mcpbs:own-foreign-cat')
+) v(company_label, k)
+where c.label = v.company_label;
+
+insert into mcpbs (label, id)
+select replace(t.idempotency_key, 'mcpbs:', ''), t.id
+from public.transactions t
+where t.idempotency_key in ('mcpbs:other-line', 'mcpbs:own-line', 'mcpbs:own-foreign-cat');
+
+insert into mcpbs (label, id)
+select 'other_materials', c.id
+from public.categories c
+where c.company_id = (select id from mcpbs where label = 'other_company')
+  and c.kind = 'expense'
+order by c.name
+limit 1;
+
+insert into mcpbs_state (label, state)
+select v.label, pg_temp.line_state((select id from mcpbs where label = v.label))
+from (values ('other-line'), ('own-foreign-cat')) v(label);
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+
+insert into mcpbs_json (label, body)
+select 'cross', public.mcp_assign_expenses('batch-split-cross', jsonb_build_array(
+  jsonb_build_object(
+    'transaction_id', (select id::text from mcpbs where label = 'other-line'),
+    'shares', jsonb_build_array(pg_temp.share('north', 50), pg_temp.share('south', 50))
+  ),
+  jsonb_build_object(
+    'transaction_id', (select id::text from mcpbs where label = 'own-foreign-cat'),
+    'category_id', (select id::text from mcpbs where label = 'other_materials'),
+    'shares', jsonb_build_array(pg_temp.share('north', 50), pg_temp.share('south', 50))
+  ),
+  jsonb_build_object(
+    'transaction_id', (select id::text from mcpbs where label = 'own-line'),
+    'category_id', (select id::text from mcpbs where label = 'materials'),
+    'shares', jsonb_build_array(pg_temp.share('north', 50), pg_temp.share('south', 50))
+  )
+));
+
+reset role;
+
+select ok(
+  (select id from mcpbs where label = 'other_materials') is not null,
+  'fixture: the other company has an expense category'
+);
+
+select is(
+  (
+    select jsonb_agg(coalesce(elem->>'code', 'ok') order by ord)
+    from mcpbs_json j,
+      jsonb_array_elements(j.body->'data'->'results') with ordinality as r(elem, ord)
+    where j.label = 'cross'
+  ),
+  '["refused", "refused", "ok"]'::jsonb,
+  'another company line or category is refused; the owner line in the same batch splits'
+);
+
+select is(
+  pg_temp.line_state((select id from mcpbs where label = 'other-line')),
+  (select state from mcpbs_state where label = 'other-line'),
+  'a split row cannot touch another company line'
+);
+
+select is(
+  (select count(*)::int from public.allocations a where a.transaction_id = (select id from mcpbs where label = 'other-line')),
+  0,
+  'another company line gets no allocations'
+);
+
+select is(
+  pg_temp.line_state((select id from mcpbs where label = 'own-foreign-cat')),
+  (select state from mcpbs_state where label = 'own-foreign-cat'),
+  'a split row with another company category leaves the owner line untouched'
+);
+
+select is(
+  (select array_agg(a.amount_net order by a.project_id) from public.allocations a where a.transaction_id = (select id from mcpbs where label = 'own-line')),
+  array[-6000, -6000]::bigint[],
+  'the owner still splits their own line in the same batch'
 );
 
 select * from finish();
