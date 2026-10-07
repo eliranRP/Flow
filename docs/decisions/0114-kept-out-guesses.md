@@ -22,3 +22,7 @@
 ## Consequences
 
 A line guessed into a kept-out category now shows in the totals and in the review queue until it is confirmed, then moves to the `excluded_*` totals.
+
+## Follow-up (FLOW-126)
+
+Income that already had a project and only a guess of a kept-out category never reached the review queue, so the guess was never confirmed and the line kept counting. `sync_review_queue` now queues it with reason `suggested`; approving it confirms the category and takes the line out. The owner was asked on 2026-10-07; this is the recommended answer and can still be reversed. Migration `20261007224500_kept_out_income_review.sql`.
