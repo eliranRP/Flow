@@ -2410,12 +2410,19 @@ type LinePnlChange = {
 
 type LinePnl = { override: boolean | null; categoryOut: boolean; out: boolean; forcedIn: boolean; next: boolean | null };
 
-/** FLOW-108, decision 0112. Going back to the category's own state always clears the override. */
+/**
+ * FLOW-108, decision 0112. Going back to the category's own state always clears the override.
+ * FLOW-121, decision 0114: a guessed kept-out category counts until it is confirmed.
+ */
 export function linePnlState(
-  txn: { category_excluded_from_pnl?: boolean },
+  txn: { category_excluded_from_pnl?: boolean; category_suggested?: boolean; pnl_fixed?: boolean; in_pnl?: boolean },
   override: boolean | null,
 ): LinePnl {
-  const categoryOut = txn.category_excluded_from_pnl === true;
+  // A loan line ignores the override, so the server's in_pnl is the category's say. Only a loan
+  // category stays out as a guess; a loan-split line under a guessed other category counts.
+  const categoryOut = txn.pnl_fixed === true && txn.in_pnl != null
+    ? !txn.in_pnl
+    : txn.category_excluded_from_pnl === true && txn.category_suggested !== true;
   const out = override === false || (override == null && categoryOut);
   const forcedIn = override === true && categoryOut;
   const next = out ? (categoryOut ? true : null) : (categoryOut ? null : false);

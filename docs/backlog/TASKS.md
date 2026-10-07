@@ -24,8 +24,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP merged; screen next) | SMALL CYCLE | in-progress (#82) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
-| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
+| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | in-progress (#113) |
 | 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | in-progress (#112) |
+| 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
@@ -51,7 +52,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
-| 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
+| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
@@ -98,9 +99,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-121"></a>
 ### FLOW-121 · Kept-out lines: guessed categories and project income
-- **Type:** SMALL CYCLE · **Status:** ready (item a waits on the owner's answer) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
+- **Type:** SMALL CYCLE · **Status:** in-progress (#113) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
 - **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
 - **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
+- **Answer to (a):** built as recommended, a guess counts until confirmed (decision [0114](../decisions/0114-kept-out-guesses.md)); the owner was asked again on 2026-10-07 and can still pick the other way.
+
+<a id="flow-126"></a>
+### FLOW-126 · Kept-out guesses follow-ups (#113 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-121
+- [ ] Income that already has a project and a guessed kept-out category is never queued for review, so the guess is never confirmed and the line keeps counting. Owner call: queue a guessed kept-out category for income too, or leave it.
 
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
@@ -129,8 +136,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** When a bank line is a split loan payment, show its parts (principal, interest, escrow) on the transaction row and in the detail, so the expense makes sense. Icon-based, minimal wording, expenses with a minus. MCP: `get_expense` returns the split parts.
 - **Acceptance:** quick mockup approved; parts add up to the line amount on screen; MCP test; design review.
 
-<a id="flow-121"></a>
-### FLOW-121 · Loan split follow-ups (#83 review)
+<a id="flow-125"></a>
+### FLOW-125 · Loan split follow-ups (#83 review)
+- Renumbered from a second FLOW-121 (2026-10-07).
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-107
 - [ ] Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
 - [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.

@@ -274,6 +274,8 @@ export const transactionDetailSchema = z
     /** FLOW-108: false keeps the line out of the P&L, true counts it, null follows the category. */
     in_pnl_override: z.boolean().nullable().optional(),
     category_excluded_from_pnl: z.boolean().optional(),
+    /** FLOW-121: a guessed category. A guessed kept-out category still counts in the P&L. */
+    category_suggested: z.boolean().optional(),
     in_pnl: z.boolean().optional(),
     /** A loan line: its parts decide what counts, so the override is refused. */
     pnl_fixed: z.boolean().optional(),
