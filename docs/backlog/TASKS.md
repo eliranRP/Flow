@@ -25,7 +25,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
 | 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
-| 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
+| 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | claimed |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
@@ -104,7 +104,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
-- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** FLOW-112 (#81)
+- **Type:** SMALL CYCLE · **Status:** claimed · **Depends on:** FLOW-112 (#81)
 - **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name; the categories screen's locked loan line (`loanCategoryLine` in `app/src/screens/flow-screens.tsx`, FLOW-113) matches the Hebrew names too. Read `categories.loan_part` instead. No visible change.
 - **Acceptance:** app unit test with a renamed loan category; connector test; no design review needed.
 
