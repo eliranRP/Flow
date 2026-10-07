@@ -146,6 +146,7 @@ describe("rename company sheet", () => {
     expect(await screen.findByText(RENAME_FAILED)).toBeInTheDocument();
     expect(screen.getByText("open")).toBeInTheDocument();
     expect(field()).toHaveValue("בטא");
+    await waitFor(() => { expect(field()).toHaveFocus(); });
   });
 
   it("shows the refusal without a retry when the database says no", async () => {
