@@ -22,7 +22,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 6 | [FLOW-104](#flow-104) | Reversals across directions (negative income, negative expense) | SMALL CYCLE | in-progress (#76) |
 | 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
-| 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
+| 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
@@ -44,7 +44,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 28 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 | 29 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
 | 30 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
-| 31 | [FLOW-117](#flow-117) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
+| 31 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
+| 32 | [FLOW-117](#flow-117) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -495,9 +496,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device
-- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **Type:** BUG · **Status:** in-progress (#79) · **Depends on:** —
 - **What:** Query cache keys are shared across users and the cache isn't cleared on sign-out; saved roles stay in localStorage after sign-out; the dashboard cache isn't user-scoped, so a user switch without a reload could show the wrong company's flag. Scope keys by user and company and clear on sign-out (including an expired session or another tab).
 - **Acceptance:** tests for sign-out, a user switch without reload, and an expired session.
+
+<a id="flow-605"></a>
+### FLOW-605 · Shared-device follow-ups (#79 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] Unsaved split drafts (the `flow-split:` sessionStorage keys) survive a sign-out in the same tab. Drop them when the user changes, with a test.
+- [ ] `ToastProvider` wraps `AuthProvider`, so the last user's toast and its retry or undo action outlive a user switch. Swap the providers and add a test.
 
 ## Jev
 
