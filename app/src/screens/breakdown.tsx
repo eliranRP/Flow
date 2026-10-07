@@ -107,6 +107,7 @@ function BreakdownBody({
   search: string;
 }) {
   const preview = useHomePreview();
+  const books = useBooks();
   const [groupBy, setGroupBy] = useState<BreakdownGroupBy>(() => sampleGroupBy ?? readGroupBy());
   const query = useBreakdownQuery(direction, groupBy, sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
@@ -124,11 +125,13 @@ function BreakdownBody({
   const empty = data == null || (data.totals.length === 0 && data.groups.length === 0 && data.excluded.length === 0);
   const excluded = [...(data?.excluded ?? [])].sort((a, b) => currencyFirst(a.currency, b.currency));
   const review = data?.review_count ?? 0;
+  const count = (data?.totals ?? []).reduce((sum, total) => sum + total.count, 0);
 
   return (
     <div>
-      <ScreenHeader title={title} backTo={back} trailing={period} />
+      <ScreenHeader layout="stacked" title={title} backTo={back} trailing={period} />
       <Totals direction={direction} totals={data?.totals ?? []} />
+      {count > 0 ? <p className="ui-breakdown-hint ui-page-pad t-hint">{lineCountHint(count, false)} · {periodLabel(books.period)}</p> : null}
       {empty ? (
         <EmptyState
           icon={<ChartIcon />}
@@ -150,6 +153,7 @@ function BreakdownBody({
           <div className="ui-page-pad">
             <SegmentedControl
               label="לפי"
+              showLabel={false}
               value={groupBy}
               options={groupByOptions(direction)}
               onChange={(next) => {
@@ -271,7 +275,7 @@ function LinesBody({
 
   return (
     <div>
-      <ScreenHeader title={title} subtitle={subtitleParts.join(" · ")} backTo={back} />
+      <ScreenHeader layout="stacked" title={title} subtitle={subtitleParts.join(" · ")} backTo={back} />
       {sum ? <Totals direction={direction} totals={[sum]} /> : null}
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות כאן בתקופה הזו" body="אפשר לחזור ולבחור תקופה אחרת." />

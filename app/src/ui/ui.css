@@ -1893,7 +1893,17 @@ a.ui-row,
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin: 0 0 var(--space-4);
+  margin: 0;
+}
+
+.ui-breakdown-hint {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-breakdown-total + .ui-page-pad:not(.ui-breakdown-hint),
+.ui-breakdown-hint + .ui-page-pad {
+  margin-top: var(--space-4);
 }
 
 .ui-flow-amounts,
