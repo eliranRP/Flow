@@ -103,6 +103,7 @@ as $$
         'loan categories missing',
         'invalid loan terms',
         'loan category is fixed',
+        'project not found',
         'payment below interest',
         'invalid loan parts'
       ) then p_message
@@ -648,6 +649,7 @@ declare
   cur_loan record;
   written jsonb;
   before jsonb;
+  cur_overhead uuid;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -656,7 +658,7 @@ begin
     or p_kind is null
     or p_kind not in (
       'review', 'reassign', 'project', 'category', 'category_hidden', 'category_pnl',
-      'loan', 'loan_update', 'loan_split'
+      'loan', 'loan_update', 'loan_split', 'overhead_project'
     )
   then
     return private.mcp_error('validation', 'validation');
@@ -691,6 +693,7 @@ begin
         or (p_kind = 'loan' and w.kind = 'loan' and w.loan_id = p_id)
         or (p_kind = 'loan_update' and w.kind = 'loan_update' and w.loan_id = p_id)
         or (p_kind = 'loan_split' and w.kind = 'loan_split' and w.transaction_id = p_id)
+        or (p_kind = 'overhead_project' and w.kind = 'overhead_project' and w.prior->>'company_id' = p_id::text)
       )
     order by w.created_at desc
     limit 1
@@ -698,6 +701,25 @@ begin
 
     if not found then
       response := private.mcp_error('not_found', 'not found');
+    elsif p_kind = 'overhead_project' then
+      select c.overhead_project_id into cur_overhead
+      from public.companies c
+      where c.id = p_id and c.id = cid
+      for update;
+      if not found then
+        response := private.mcp_error('not_found', 'not found');
+      elsif cur_overhead::text is distinct from rec.prior->>'written' then
+        response := private.mcp_error('conflict', 'conflict');
+      else
+        perform public.set_overhead_project((rec.prior->>'before')::uuid);
+        update private.mcp_writes
+        set undone_at = clock_timestamp()
+        where id = rec.id and user_id = auth.uid() and undone_at is null;
+        response := jsonb_build_object(
+          'ok', true,
+          'data', jsonb_build_object('kind', p_kind, 'id', p_id)
+        );
+      end if;
     elsif p_kind = 'loan' then
       perform 1 from public.loans l
       where l.id = p_id and l.company_id = cid
