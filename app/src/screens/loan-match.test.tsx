@@ -250,10 +250,11 @@ describe("LoanSplitPanel", () => {
     panel({
       onCorrect,
       needsReview: true,
+      byParts: true,
       parts: [
         { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
         { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1" },
+        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1", inPnl: false },
       ],
     });
     expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument();
@@ -297,7 +298,7 @@ describe("LoanSplitPanel", () => {
       parts: [
         { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: false, loanId: "loan-1", inPnl: null },
         { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: false, loanId: "loan-1", inPnl: null },
-        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: false, loanId: "loan-1", inPnl: null },
+        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: false, loanId: "loan-1", inPnl: false },
       ],
     });
     expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();

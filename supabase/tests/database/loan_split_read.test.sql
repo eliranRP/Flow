@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(14);
+select plan(15);
 
 do $users$
 begin
@@ -92,7 +92,7 @@ language sql
 as $$
   select public.get_loan_split((select id from lr_ref where label = p_label));
 $$;
-grant execute on function pg_temp.split(text) to authenticated;
+grant execute on function pg_temp.split(text) to authenticated, service_role;
 
 select tests.authenticate_as('lr_owner');
 
@@ -143,6 +143,12 @@ select is(
 );
 
 select tests.clear_authentication();
+
+-- service_role skips RLS, so only the function's own company filter keeps this null.
+set local role service_role;
+select set_config('lr.service_split', coalesce(pg_temp.split('lr_main')::text, 'null'), true);
+reset role;
+select is(current_setting('lr.service_split'), 'null', 'service_role with no user reads null');
 
 select ok(
   not has_function_privilege('anon', 'public.get_loan_split(uuid)', 'execute'),

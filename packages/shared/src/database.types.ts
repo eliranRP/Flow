@@ -758,6 +758,9 @@ isOneToOne: false
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"mcp_rename_company":
+{ Args: { "p_idempotency_key": string,"p_name": string }; Returns: Json
+                           },
 "mcp_set_category_pnl":
 { Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
                            },
@@ -771,7 +774,10 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string }; Returns: Json
                            },
 "mcp_sync_bank_finish":
-{ Args: { "p_idempotency_key": string,"p_response": Json }; Returns: undefined
+{ Args: { "p_job_id": string,"p_response": Json }; Returns: Json
+                           },
+"mcp_sync_status":
+{ Args: { "p_job_id": string }; Returns: Json
                            },
 "mcp_undo":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
@@ -808,6 +814,9 @@ isOneToOne: false
                            },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
+                           },
+"rename_company":
+{ Args: { "p_company_id": string,"p_name": string }; Returns: Json
                            },
 "reopen_review":
 { Args: { "p_id": string }; Returns: undefined
