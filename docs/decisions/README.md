@@ -119,3 +119,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0096](0096-currency-display.md) | 2026-10-07 | Accepted | Per-currency display in the app; one formatter; expenses always signed |
 | [0097](0097-mercury-income-invoice-receipt.md) | 2026-10-07 | Accepted | Mercury deposits and treasury income import as `invoice_receipt`, so they count on the invoiced basis; stored rows are relabeled |
 | [0099](0099-categories-outside-pnl.md) | 2026-10-07 | Accepted | `excluded_from_pnl` defaults, `private.pnl_lines`, separate excluded totals, API + MCP `set_category_pnl`; UI deferred |
+| [0100](0100-loan-split-pnl.md) | 2026-10-07 | Accepted | Loan payments count by split part in every P&L read: interest and escrow in, principal kept out; flagged or VAT lines fall back and are counted in `loan_split_fallback_count` |

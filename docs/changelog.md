@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Loan payments count by split part. Migration `20261007140000_loan_split_pnl.sql` makes `private.pnl_lines` emit one row per interest, escrow, and principal part for a valid split (interest and escrow in the P&L, principal in the excluded totals), adds the `loan_split_fallback` column, returns `loan_split_fallback_count` per `by_currency` row in `company_pnl`, and points the project category helpers at the view. A flagged split, a VAT line, or parts that no longer sum to the line still count whole. Shared parts round half to even per project (`private.div_half_even`, also in `get_project`), and `count` stays a count of lines. New decision [0100](decisions/0100-loan-split-pnl.md). `docs/mcp/TOOLS.md` updated for `attach_loan_payment` and `get_totals`. pgTAP `loan_split_pnl.test.sql`.
+
 Backlog and agent guide. New `docs/backlog/README.md` (the build cycle, rules, how an agent claims a task through a draft PR, and the team a new coordinator sets up, with copy-paste role charters) and `docs/backlog/TASKS.md` (every open task with a stable `FLOW-` id, type, status, dependencies, and acceptance, plus a priority queue). Linked from the root README. No decision.
 
 MCP assign_expense_split. `flow-mcp` adds the write tool `assign_expense_split` (`transaction_id`, optional `category_id`, `shares[]` of whole percents summing to 100, `idempotency_key`). It wraps `public.save_split` and records undo like `assign_expense`. Migration `20261007130000_mcp_assign_expense_split.sql`. Batch split in `assign_expenses` is a follow-up.
