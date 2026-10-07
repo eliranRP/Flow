@@ -157,7 +157,7 @@ export function normalizeMercury(raw: unknown, ctx: NormalizeContext): Normalize
 
   const expenseCredit = isExpenseCreditKind(kind);
   const direction = expenseCredit || signed < 0 ? "expense" : "income";
-  const docKind = expenseCredit ? "credit" : signed < 0 ? "expense" : "receipt";
+  const docKind = expenseCredit ? "credit" : signed < 0 ? "expense" : "invoice_receipt";
   const name = stringField(raw.counterpartyName);
   if (name && name.length > TEXT_LIMITS.name) return skip("not_a_line");
 
@@ -328,7 +328,7 @@ function normalizeTreasuryLedger(raw: Record<string, unknown>, ctx: NormalizeCon
     external_id: id,
     direction: income ? "income" : "expense",
     line_status: "posted",
-    doc_kind: income ? "receipt" : "expense",
+    doc_kind: income ? "invoice_receipt" : "expense",
     pnl_role: null,
     currency: "USD",
     amount_original: Math.abs(signed),
