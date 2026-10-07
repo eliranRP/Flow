@@ -34,6 +34,7 @@ import { getSupabase } from "./lib/supabase";
 import { waitForAccessToken } from "./wait-for-session";
 import { thisMonth, type PeriodChoice } from "./period";
 import { useHomePreview, type HomePreview } from "./preview";
+import { parseTxnMetaList, type TxnMeta } from "./txn-meta";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,
@@ -465,9 +466,36 @@ export function useTransactionQuery(transactionId: string) {
   });
 }
 
+export function lineMetaQueryKey(preview: string, transactionId: string) {
+  return ["line-meta", preview, transactionId] as const;
+}
+
+/**
+ * FLOW-304. Bank details for one line. Supplementary: a failed read leaves `data`
+ * undefined and the card and detail render as before. No read in preview or sample.
+ */
+export function useLineMetaQuery(transactionId: string | null | undefined, enabled = true) {
+  const preview = useHomePreview();
+  const id = transactionId ?? "";
+  return useQuery({
+    queryKey: lineMetaQueryKey(preview, id),
+    enabled: enabled && preview === "off" && id !== "",
+    staleTime: 5 * 60_000,
+    retry: 1,
+    queryFn: async (): Promise<TxnMeta | null> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("get_line_meta", { p_ids: [id] });
+      if (error) throw error;
+      return parseTxnMetaList(data).find((row) => row.transaction_id === id) ?? null;
+    },
+  });
+}
+
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines"]) => {
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta"]) => {
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }

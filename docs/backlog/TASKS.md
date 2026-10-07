@@ -367,9 +367,20 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (#107) · **Depends on:** —
+- **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/4Wsob4i3XEuLcMgX4SRj3M) (one meta line on the review card, a static "פרטי הבנק" section on the detail), under the owner's standing rule for UI tasks. Decision [0113](../decisions/0113-bank-details-per-line.md).
 - **What:** Show the bank or provider metadata per line on the review card and the detail: payment method (card and last 4, ACH, wire, check), memo, counterparty, bank account, original bank description. Icon-based (a card icon and ••1234, a memo on tap). Source: `transactions.provider_meta`. Also a better detail screen for what isn't shown at first glance. MCP: `get_expense`, `list_review` and `search_expenses` return the normalized fields.
 - **Acceptance:** mockup approved; no account numbers beyond the last 4 anywhere.
+
+<a id="flow-315"></a>
+### FLOW-315 · Bank details follow-ups (#107 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-304 (#107)
+- [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
+- [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
+- [ ] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
+- [ ] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read.
+- [ ] Stored Mercury account labels lose their digits at import, so the account row never shows a last 4. Keep the label's last 4 at import if the owner wants it.
+- [ ] The review queue warms the first other row's details, not the next card's.
 
 <a id="flow-305"></a>
 ### FLOW-305 · Review list in a bank-statement style

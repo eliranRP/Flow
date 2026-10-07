@@ -21,6 +21,15 @@ const PROJECT_B = "8c1a0b2e-1111-4000-8000-000000000002";
 
 type Rpc = { name: string; body: Record<string, unknown> };
 
+const NO_META = {
+  method: null,
+  card_last4: null,
+  memo: null,
+  account: null,
+  counterparty: null,
+  bank_description: null,
+};
+
 function rpcOf(handler: (name: string, body: Record<string, unknown>) => { status: number; json: unknown }) {
   const calls: Rpc[] = [];
   const rpc = (name: string, body: Record<string, unknown>) => {
@@ -31,18 +40,20 @@ function rpcOf(handler: (name: string, body: Record<string, unknown>) => { statu
 }
 
 Deno.test("search_expenses filed and all call search_transactions", async () => {
-  const { calls, rpc } = rpcOf(() => ({
-    status: 200,
-    json: { total: 1, expenses: [{ id: "11111111-1111-4000-8000-000000000001" }] },
-  }));
+  const { calls, rpc } = rpcOf((name) => name === "get_line_meta"
+    ? { status: 200, json: [] }
+    : {
+      status: 200,
+      json: { total: 1, expenses: [{ id: "11111111-1111-4000-8000-000000000001" }] },
+    });
   const filed = await callTool("search_expenses", { scope: "filed", query: "אלפא" }, ["read"], rpc);
   assertEquals(filed.isError, false);
   assertEquals(calls[0]?.name, "search_transactions");
   assertEquals(calls[0]?.body.p_scope, "filed");
   const all = await callTool("search_expenses", { scope: "all" }, ["read"], rpc);
   assertEquals(all.isError, false);
-  assertEquals(calls[1]?.name, "search_transactions");
-  assertEquals(calls[1]?.body.p_scope, "all");
+  assertEquals(calls[2]?.name, "search_transactions");
+  assertEquals(calls[2]?.body.p_scope, "all");
 });
 
 Deno.test("the eight read tools call their own functions", async () => {
@@ -72,6 +83,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     if (name === "get_transaction") return { status: 200, json: { id: "11111111-1111-4000-8000-000000000001", description: "אלפא" } };
     if (name === "get_line_split") return { status: 200, json: null };
     if (name === "get_loan_split") return { status: 200, json: null };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     if (name === "mcp_list_loans") {
       return { status: 200, json: [{
         id: LOAN,
@@ -112,10 +124,13 @@ Deno.test("the eight read tools call their own functions", async () => {
     "get_dashboard",
     "list_categories",
     "list_review",
+    "get_line_meta",
     "get_transaction",
+    "get_line_meta",
     "get_line_split",
     "get_loan_split",
     "list_review",
+    "get_line_meta",
     "get_dashboard",
     "mcp_list_loans",
     "mcp_list_loans",
@@ -173,6 +188,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "get_line_split") return { status: 200, json: null };
     if (name === "get_loan_split") return { status: 200, json: null };
     if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
   const dates = { from: "2026-09-01", to: "2026-09-30", basis: "invoiced" };
@@ -260,6 +276,7 @@ Deno.test("get_expense returns the loan split parts, and skips the read for inco
     if (name === "get_transaction") return { status: 200, json: { id, direction: "expense", amount_net: -100000 } };
     if (name === "get_loan_split") return { status: 200, json: split };
     if (name === "get_line_split") return { status: 200, json: null };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
   const expense = await callTool("get_expense", { transaction_id: id }, ["read"], rpc);
@@ -274,18 +291,21 @@ Deno.test("get_expense returns the loan split parts, and skips the read for inco
   assertEquals(calls.find((call) => call.name === "get_loan_split")?.body, { p_transaction_id: id });
 
   const plain = await callTool("get_expense", { transaction_id: id }, ["read"], rpcOf((name) => (
-    name === "get_transaction" ? { status: 200, json: { id, direction: "expense" } } : { status: 200, json: null }
+    name === "get_transaction"
+      ? { status: 200, json: { id, direction: "expense" } }
+      : name === "get_line_meta" ? { status: 200, json: [] } : { status: 200, json: null }
   )).rpc);
   if (plain.structuredContent.ok) assertEquals((plain.structuredContent.data as { loan_split: unknown }).loan_split, null);
 
   const income = rpcOf((name) => (
     name === "get_transaction"
       ? { status: 200, json: { id, direction: "income" } }
-      : name === "get_line_split" ? { status: 200, json: null } : { status: 500, json: null }
+      : name === "get_line_split" ? { status: 200, json: null }
+      : name === "get_line_meta" ? { status: 200, json: [] } : { status: 500, json: null }
   ));
   const incomeRow = await callTool("get_expense", { transaction_id: id }, ["read"], income.rpc);
   assertEquals(incomeRow.isError, false);
-  assertEquals(income.calls.map((call) => call.name), ["get_transaction", "get_line_split"]);
+  assertEquals(income.calls.map((call) => call.name), ["get_transaction", "get_line_meta", "get_line_split"]);
 
   const failed = await callTool("get_expense", { transaction_id: id }, ["read"], rpcOf((name) => (
     name === "get_transaction"
@@ -542,6 +562,7 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
       return { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 300, parts, parts_match: false } };
     }
     if (name === "get_loan_split") return { status: 200, json: null };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
   const split = await callTool("get_expense", { transaction_id: TXN }, ["read"], rpc);
@@ -550,17 +571,19 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
     assertEquals(split.structuredContent.data, {
       id: TXN,
       amount_net: -300,
+      meta: NO_META,
       line_split: { currency: "USD", line_minor: 300, parts, parts_match: false },
       loan_split: null,
     });
   }
-  assertEquals(calls[1], { name: "get_line_split", body: { p_transaction_id: TXN } });
+  assertEquals(calls[2], { name: "get_line_split", body: { p_transaction_id: TXN } });
   const whole = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction"
       ? { status: 200, json: { id: TXN } }
-      : name === "get_loan_split" ? { status: 200, json: null } : { status: 200, json: { transaction_id: TXN, parts: [] } }));
+      : name === "get_loan_split" ? { status: 200, json: null }
+      : name === "get_line_meta" ? { status: 200, json: [] } : { status: 200, json: { transaction_id: TXN, parts: [] } }));
   assertEquals(whole.isError, false);
-  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN, loan_split: null });
+  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN, meta: NO_META, loan_split: null });
   const failed = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction" ? { status: 200, json: { id: TXN } } : { status: 500, json: null }));
   assertEquals(failed.isError, true);
@@ -2210,5 +2233,66 @@ Deno.test("get_project passes the loans of the project through next to the P&L",
     const data = result.structuredContent.data as typeof PROJECT_FIXTURE & { loans: typeof loans };
     assertEquals(data.loans, loans);
     assertEquals(data.by_currency, PROJECT_FIXTURE.by_currency);
+  }
+});
+
+Deno.test("FLOW-304: get_expense, list_review and search_expenses carry the line's bank details", async () => {
+  const id = "11111111-1111-4000-8000-000000000001";
+  const other = "11111111-1111-4000-8000-000000000002";
+  const card = {
+    method: "card",
+    card_last4: "4242",
+    memo: null,
+    account: "Example Checking",
+    counterparty: "Example Office Suite",
+    bank_description: "Example Office Suite",
+  };
+  const { calls, rpc } = rpcOf((name, body) => {
+    if (name === "get_transaction") return { status: 200, json: { id, description: "Example Office Suite" } };
+    if (name === "get_line_split") return { status: 200, json: null };
+    if (name === "get_loan_split") return { status: 200, json: null };
+    if (name === "list_review") {
+      return { status: 200, json: [
+        { id: "r1", transaction_id: id, description: "א", direction: "expense", doc_date: "2026-09-01" },
+        { id: "r2", transaction_id: other, description: "ב", direction: "expense", doc_date: "2026-09-02" },
+      ] };
+    }
+    if (name === "search_transactions") return { status: 200, json: { total: 1, expenses: [{ id }] } };
+    if (name === "get_line_meta") {
+      assertEquals(Array.isArray(body.p_ids), true);
+      return { status: 200, json: [{ transaction_id: id, ...card }] };
+    }
+    return { status: 500, json: null };
+  });
+  const expense = await callTool("get_expense", { transaction_id: id }, ["read"], rpc);
+  assertEquals(expense.structuredContent.ok, true);
+  if (expense.structuredContent.ok) assertEquals((expense.structuredContent.data as { meta: unknown }).meta, card);
+  const review = await callTool("list_review", {}, ["read"], rpc);
+  if (!review.structuredContent.ok) throw new Error("list_review failed");
+  const reviews = (review.structuredContent.data as { reviews: Array<{ transaction_id: string; meta: Record<string, unknown> }> }).reviews;
+  assertEquals(reviews.find((row) => row.transaction_id === id)?.meta, card);
+  // A line with no bank details still carries meta, with every field null.
+  assertEquals(reviews.find((row) => row.transaction_id === other)?.meta, NO_META);
+  const filed = await callTool("search_expenses", { scope: "filed" }, ["read"], rpc);
+  if (!filed.structuredContent.ok) throw new Error("search_expenses failed");
+  assertEquals((filed.structuredContent.data as { expenses: Array<{ meta: unknown }> }).expenses[0]?.meta, card);
+  const metaCalls = calls.filter((call) => call.name === "get_line_meta");
+  assertEquals(metaCalls.length, 3);
+  assertEquals(metaCalls[1]?.body.p_ids, [id, other]);
+});
+
+Deno.test("FLOW-304: a refused bank-details read fails the read instead of dropping meta", async () => {
+  const id = "11111111-1111-4000-8000-000000000001";
+  const { rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id } };
+    if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: id }] };
+    return { status: 500, json: null };
+  });
+  for (const result of [
+    await callTool("get_expense", { transaction_id: id }, ["read"], rpc),
+    await callTool("list_review", {}, ["read"], rpc),
+  ]) {
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "refused");
   }
 });
