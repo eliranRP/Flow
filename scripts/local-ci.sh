@@ -59,7 +59,7 @@ fi
 pnpm install --frozen-lockfile --silent
 git fetch -q origin main || true
 
-phase "lint and check, side by side"
+phase "lint and check: lint, static checks, and builds, side by side"
 logs="$(mktemp -d)"
 lint_part() {
   pnpm lint
@@ -95,24 +95,31 @@ build_part() {
   pnpm check:reviewer-bundle
   test ! -f app/dist/build.txt
 }
-pids=()
-for part in lint static unit build; do
-  ( set -euo pipefail; "${part}_part" ) >"$logs/$part.log" 2>&1 &
-  pids+=("$!:$part")
-done
-failed=()
-for entry in "${pids[@]}"; do
-  wait "${entry%%:*}" || failed+=("${entry#*:}")
-done
-for part in "${failed[@]}"; do
-  echo "---- local-ci: $part failed ----"
-  cat "$logs/$part.log"
-done
+# Runs the named parts at the same time and prints the log of each one that fails.
+run_parts() {
+  local part entry
+  local pids=() failed=()
+  for part in "$@"; do
+    ( set -euo pipefail; "${part}_part" ) >"$logs/$part.log" 2>&1 &
+    pids+=("$!:$part")
+  done
+  for entry in "${pids[@]}"; do
+    wait "${entry%%:*}" || failed+=("${entry#*:}")
+  done
+  for part in "${failed[@]}"; do
+    echo "---- local-ci: $part failed ----"
+    cat "$logs/$part.log"
+  done
+  if (( ${#failed[@]} > 0 )); then
+    echo "local-ci: failed: ${failed[*]}" >&2
+    exit 1
+  fi
+}
+run_parts lint static build
+# The unit tests run alone: next to the builds, slow renders miss Testing Library's 1-second wait.
+phase "check: unit and connector tests"
+run_parts unit
 rm -rf "$logs"
-if (( ${#failed[@]} > 0 )); then
-  echo "local-ci: failed: ${failed[*]}" >&2
-  exit 1
-fi
 
 phase "check: Storybook"
 pnpm --filter @flow/app exec playwright install chromium
