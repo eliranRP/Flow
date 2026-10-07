@@ -132,6 +132,8 @@ export const categoryRowSchema = z.object({
   hidden: z.boolean(),
   is_default: z.boolean(),
   excluded_from_pnl: z.boolean().optional(),
+  /** Set on the three loan categories. Omitted on older payloads. */
+  loan_part: z.string().nullable().optional(),
 });
 
 export const sumitStatusSchema = z.object({

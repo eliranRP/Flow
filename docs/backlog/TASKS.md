@@ -44,7 +44,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
+| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
@@ -155,7 +155,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-117"></a>
 ### FLOW-117 · Reversal section in the category picker
-- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-104 (done, #76)
+- **Type:** SMALL UI · **Status:** in-progress (#101) · **Depends on:** FLOW-104 (done, #76)
+- **Approval:** 2026-10-07, design reviewer's option A (a closed section under the list), built under the owner's standing rule for UI tasks.
 - **What:** The server accepts the other kind's category since FLOW-104. In the app category picker, list the other kind's categories under a "reversal" section, so a bounced rent payment or a supplier refund can be filed from the app.
 - **Acceptance:** mockup approved; e2e picks a reversal category both ways; design review.
 
@@ -165,6 +166,10 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message.
 - [ ] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited.
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
+- [ ] (#101 review) Overhead lines (`pnl_role` overhead) still offer the picker's reversal section; settle with the shared-line call above. Split and shared lines don't offer it.
+- [ ] (#101 review) A hidden, loan or kept-out other-kind category already on a line (filed through MCP) shows החזר on the review card but sits in the own-kind list with no mark in the change sheet.
+- [ ] (#101 review) The picker's search shows above 8 own-kind categories only; consider counting the reversal section too.
+- [ ] (#101 review) If a suggestion can ever be of the other kind, the summary shows הצעה, not החזר. Rules never learn reversals today.
 
 <a id="flow-119"></a>
 ### FLOW-119 · Project picker in the loan sheet
