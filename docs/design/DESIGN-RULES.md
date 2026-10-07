@@ -402,7 +402,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - 09a sign-in: [09a-onboarding-light.png](../../design/screens/09a-onboarding-light.png), [09a-onboarding-dark.png](../../design/screens/09a-onboarding-dark.png). No top bar, no progress. Wordmark, one value line, "כניסה או הרשמה", Google button, privacy line. [0033](../decisions/0033-google-sign-in.md), guide §7.24.
   - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry. No help link.
   - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
-  - Success: a new account goes to step 0. A returning account goes to Home.
+  - Success: a new account goes to step 0. A returning account goes to the screen it asked for when that screen is on the sign-in return list (FLOW-308), otherwise Home. The callback line names it ("נכנסתם. עוברים לאישור.").
 - 09b company, merged into step 0 and retired: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). The live step has no counter and no דלג.
 - 09c bank report, superseded: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
 - 09d projects, merged into step 3 and retired: [09d-onboarding-light.png](../../design/screens/09d-onboarding-light.png).

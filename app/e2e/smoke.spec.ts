@@ -99,6 +99,17 @@ test("help links are at least 44px and sign-in help does not grow the stack", as
   expect(stack).toBeLessThan(32);
 });
 
+test("a signed-out deep link to review keeps it for after sign-in; an off-list route does not", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/review");
+  await expect(page).toHaveURL(/\/sign-in\?return=%2Freview$/);
+  await expect(page.getByRole("heading", { name: "כניסה או הרשמה" })).toBeVisible();
+  await page.goto("/install");
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await page.goto("/sign-in?return=%2F%2Fevil.example");
+  await expect(page.getByRole("heading", { name: "כניסה או הרשמה" })).toBeVisible();
+});
+
 test("signed-out home redirects to sign-in", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
