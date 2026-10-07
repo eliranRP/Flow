@@ -54,13 +54,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
-| 39 | [FLOW-314](#flow-314) | Type sizes, headers and text colours, income in green | SMALL UI | claimed (Mercury UI pass thread, 2026-10-07, claude/project-thread-0wt3o6) |
-| 40 | [FLOW-315](#flow-315) | Open the picker that was tapped on the transaction detail | SMALL UI | ready |
+| 39 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | claimed (Mercury UI pass thread, 2026-10-07, claude/project-thread-0wt3o6) |
+| 40 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | ready |
 | 41 | [FLOW-410](#flow-410) | Find every project in project search | BUG | ready |
-| 42 | [FLOW-316](#flow-316) | Two rows in Home's attention card (review and unpaid) | SMALL UI | ready |
-| 43 | [FLOW-317](#flow-317) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
+| 42 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | ready |
+| 43 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 44 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
-| 45 | [FLOW-318](#flow-318) | Search and all transactions | PLAN FIRST | plan-first |
+| 45 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -408,35 +408,35 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
 
-<a id="flow-314"></a>
-### FLOW-314 · Type sizes, headers and text colours, income in green
+<a id="flow-319"></a>
+### FLOW-319 · Type sizes, headers and text colours, income in green
 - **Type:** SMALL UI · **Status:** claimed (Mercury UI pass thread, 2026-10-07, claude/project-thread-0wt3o6) · **Depends on:** —
 - **What:** The owner's ask (2026-10-07), with a bank app's transaction list as the reference: clean up type sizes and header sizes, review text colours and sizes across screens, and show income amounts in green. Done at the token and shared-component level (type scale, page titles, section and month headers, row title and secondary line, list amounts), so one PR moves every screen. Income green replaces the "green only with ▲" rule for amounts, through a new decision. Row layout changes (avatars, bank-statement rows) stay in FLOW-305.
 - **Acceptance:** the design reviewer's recommended option built; WCAG AA for the income colour in light and dark; decision record; clip-check at 320; design review.
 
-<a id="flow-315"></a>
-### FLOW-315 · Open the picker that was tapped on the transaction detail
+<a id="flow-320"></a>
+### FLOW-320 · Open the picker that was tapped on the transaction detail
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. On the transaction detail, the project row opens the change sheet straight on the project picker and the category row on the category picker, instead of the summary sheet. The review card's שינוי keeps the summary. A split row keeps opening the split.
 - **MCP:** none new; `assign_expense` and `set_expense_category` cover the write.
 - **Acceptance:** re-filing a project or category from the detail is 2 taps; Back from the picker returns to the detail with no dead history step; focus returns to the tapped row; tests for both rows; design review.
 
-<a id="flow-316"></a>
-### FLOW-316 · Two rows in Home's attention card (review and unpaid)
+<a id="flow-321"></a>
+### FLOW-321 · Two rows in Home's attention card (review and unpaid)
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. Unpaid invoices can't be reached while the review queue has items: the Home card links only to Review. When both exist, the card shows two rows, one to Review and one to Unpaid with its total; one row when only one exists. Singular copy for a count of 1.
 - **MCP:** none.
 - **Acceptance:** unpaid is 1 tap from Home with items waiting; tests for 0, 1 and many on each side; each row has its own accessible name; light, dark, 320px; design review.
 
-<a id="flow-317"></a>
-### FLOW-317 · Copy and dead-end fixes from the UX review
+<a id="flow-322"></a>
+### FLOW-322 · Copy and dead-end fixes from the UX review
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** —
 - **What:** From the 2026-10-07 UX review: a period control on the group-lines screen and an empty state that offers choosing a period (today a dead end); singular copy for one waiting item on the breakdown; the detail's document-row hint names only what the row shows; the Review subtitle covers bank lines too; category rows in Settings open that category's lines; the `/notifications` route that nothing links to is removed or linked.
 - **MCP:** none.
 - **Acceptance:** each string in a test; no empty state is a dead end; a category row opens its lines; design review.
 
-<a id="flow-318"></a>
-### FLOW-318 · Search and all transactions
+<a id="flow-323"></a>
+### FLOW-323 · Search and all transactions
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
 - **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
