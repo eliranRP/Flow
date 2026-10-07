@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Synthetic Mercury fixtures. The Mercury connector fixtures under `supabase/tests/connectors/mercury/fixtures` are now synthetic: counterparty names, descriptors, codes, dates, balances, and amounts are generated, with the same kinds, statuses, skips, and edge cases as before. `canonical-snapshot.json` is regenerated from them. The `MERCURY_FIXTURE_DENYLIST` check now also scans the Mercury test sources.
+
 Mercury income as invoice-receipt. `mercury-sync` imports deposits and treasury income as `doc_kind: invoice_receipt` instead of `receipt`, so a Mercury-only USD company shows income on the invoiced basis. Expense credits stay `credit` and outflows stay `expense`. Migration `20261007010000_mercury_income_doc_kind.sql` relabels stored Mercury income rows and refreshes matching skipped-review fingerprints. Data labeling only, no new user action (MCP-first exemption, decision 0095). Decision [0097](decisions/0097-mercury-income-invoice-receipt.md).
 
 Per-currency display in the app. Home, projects, and project detail read `by_currency` from the dashboard and `get_project`, use shared `formatAmountText`, and show expenses with a leading minus inside `<bdi>`. Non-ILS transaction detail hides VAT and "חשבונית ותשלום". Migration `20261007000000_project_currency.sql`. Decision [0096](decisions/0096-currency-display.md).

@@ -2,7 +2,7 @@ import type { Direction } from "../types.ts";
 
 /**
  * Loan servicers, matched on the normalised counterparty name.
- * The match is a prefix: NEWREZ-EXAMPLE, Lakeview Loan Servicing, Servease.
+ * The match is a prefix, so a suffixed name such as "NEWREZ-EXAMPLE" still matches.
  */
 export const MERCURY_LOAN_COUNTERPARTY_PREFIXES = ["NEWREZ", "LAKEVIEW LOAN", "SERVEASE"] as const;
 

@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit -p scripts/tsconfig.json && pnpm -r --if-present --filter \"!flow\" typecheck",
     "lint": "eslint .",
     "test:unit": "node --test scripts/*.test.mjs && pnpm -r --if-present test && deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared && deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors",
-    "test:connectors": "deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json --allow-read=supabase/tests/connectors/mercury/fixtures --allow-env=MERCURY_FIXTURE_DENYLIST,GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_EVENT_HEAD_REPO_FORK supabase/tests/connectors",
+    "test:connectors": "deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json --allow-read=supabase/tests/connectors/mercury --allow-env=MERCURY_FIXTURE_DENYLIST,GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_EVENT_HEAD_REPO_FORK supabase/tests/connectors",
     "test": "pnpm test:unit && pnpm test:connectors",
     "test:jev": "deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared",
     "test:e2e": "pnpm --filter @flow/app test:e2e",
