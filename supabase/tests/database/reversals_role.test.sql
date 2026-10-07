@@ -1,6 +1,6 @@
 -- FLOW-104 review. set_transaction_category must leave the same stored role and shares
 -- as reassign_transaction when the new category's kind differs from the line's own kind
--- (decision 0102: role and project follow the category kind). Invented data only.
+-- (decision 0103: role and project follow the category kind). Invented data only.
 
 begin;
 

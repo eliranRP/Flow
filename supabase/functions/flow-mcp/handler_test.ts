@@ -151,6 +151,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_totals",
     "list_loans",
     "get_loan_schedule",
+    "get_sync_status",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -978,7 +979,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "attach_loan_payment",
     "undo",
     "undo_batch",
-  ], "write token lists writes only");
+    "get_sync_status",
+  ], "write token lists writes and its sync status");
 
   scope = ["read"];
   const readList = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
@@ -988,7 +990,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 9, "nine reads");
+  assertEquals(readNames.length, 10, "ten reads");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {
@@ -1066,6 +1068,8 @@ Deno.test("assign_expenses is one write rate hit for many rows", async () => {
   assertEquals(kinds, ["write"], "one write bucket hit for the whole batch");
 });
 
+const SYNC_JOB = "abababab-abab-4000-8000-0000000000ab";
+
 Deno.test("sync_bank POSTs mercury-sync with the signed JWT and publishable apikey", async () => {
   const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
@@ -1103,9 +1107,14 @@ Deno.test("sync_bank POSTs mercury-sync with the signed JWT and publishable apik
       if (input.includes("/touch_mcp_credential")) return Promise.resolve(new Response("null"));
       const rpcName = input.split("/").pop() ?? "";
       if (rpcName === "mcp_sync_bank_begin") {
-        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: { state: "proceed" } })));
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: { state: "proceed", job_id: SYNC_JOB } })));
       }
-      if (rpcName === "mcp_sync_bank_finish") return Promise.resolve(new Response("null"));
+      if (rpcName === "mcp_sync_bank_finish") {
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: { job_id: SYNC_JOB, state: "done" } })));
+      }
+      if (rpcName === "mcp_sync_status") {
+        return Promise.resolve(new Response(JSON.stringify({ ok: true, data: { job_id: SYNC_JOB, state: "running" } })));
+      }
       if (input.includes("/functions/v1/mercury-sync")) {
         return Promise.resolve(new Response(JSON.stringify({
           ok: true,
@@ -1144,9 +1153,95 @@ Deno.test("sync_bank POSTs mercury-sync with the signed JWT and publishable apik
   const finish = calls.find((call) => call.url.endsWith("/mcp_sync_bank_finish"));
   if (!finish) throw new Error("mcp_sync_bank_finish not called");
   assertEquals(finish.body, {
-    p_idempotency_key: "sync-handler",
+    p_job_id: SYNC_JOB,
     p_response: { ok: true, data: { added: 1, duplicates: 0, removed: 0, newest_date: "2026-09-10" } },
   }, "finish stores the mapped counts");
+});
+
+Deno.test("sync_bank answers before the pull ends and signs a fresh JWT for the finish", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "sync-bg-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"b".repeat(43)}`;
+  const calls: { url: string; authorization: string; body: Record<string, unknown> | null }[] = [];
+  let releasePull: () => void = () => {};
+  const pullGate = new Promise<void>((resolve) => {
+    releasePull = resolve;
+  });
+  const deferred: Promise<unknown>[] = [];
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const realNow = Date.now;
+  let clock = realNow();
+  Date.now = () => clock;
+  try {
+    const localDeps = {
+      env: (name: string) => localEnv[name],
+      waitUntil: (work: Promise<unknown>) => {
+        deferred.push(work);
+      },
+      fetch: async (input: string, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+        calls.push({ url: input, authorization: headers.get("authorization") ?? "", body });
+        if (input.includes("/lookup_mcp_credential")) {
+          return new Response(JSON.stringify({
+            found: true,
+            id: "99999999-9999-4000-8000-00000000000b",
+            user_id: "aaaaaaaa-aaaa-4000-8000-00000000000b",
+            company_id: "cccccccc-cccc-4000-8000-00000000000b",
+            scope: ["write"],
+            expires_at: "2099-01-01T00:00:00.000Z",
+            revoked_at: null,
+          }));
+        }
+        if (input.includes("/bump_mcp_rate")) return new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 }));
+        if (input.includes("/touch_mcp_credential")) return new Response("null");
+        if (input.endsWith("/mcp_sync_bank_begin")) {
+          return new Response(JSON.stringify({ ok: true, data: { state: "proceed", job_id: SYNC_JOB } }));
+        }
+        if (input.endsWith("/mcp_sync_bank_finish")) {
+          return new Response(JSON.stringify({ ok: true, data: { job_id: SYNC_JOB, state: "done" } }));
+        }
+        if (input.includes("/functions/v1/mercury-sync")) {
+          await pullGate;
+          clock += 90_000;
+          return new Response(JSON.stringify({ ok: true, inserted: 0, updated: 2, removed: 0, newest_date: null }));
+        }
+        return new Response("{}", { status: 500 });
+      },
+    };
+    const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 10,
+        method: "tools/call",
+        params: { name: "sync_bank", arguments: { idempotency_key: "sync-bg" } },
+      }),
+    }), localDeps);
+    const payload = await response.json();
+    assertEquals(payload.result.structuredContent, { ok: true, data: { job_id: SYNC_JOB, state: "running" } }, "answers at once");
+    assertEquals(calls.some((call) => call.url.endsWith("/mcp_sync_bank_finish")), false, "finish waits for the pull");
+    assertEquals(deferred.length, 1, "the pull runs in the background");
+    releasePull();
+    await Promise.all(deferred);
+    const begin = calls.find((call) => call.url.endsWith("/mcp_sync_bank_begin"));
+    const finish = calls.find((call) => call.url.endsWith("/mcp_sync_bank_finish"));
+    if (!begin || !finish) throw new Error("begin or finish missing");
+    assert(finish.authorization !== begin.authorization, "finish has a fresh JWT");
+    const claimsOf = (authorization: string) => decodeJwtPart(authorization.replace("Bearer ", "").split(".")[1] ?? "");
+    const finishClaims = claimsOf(finish.authorization);
+    assert(Number(finishClaims.exp) * 1000 > clock, "finish JWT is not expired at finish time");
+    assertEquals(finishClaims.mcp_tid, claimsOf(begin.authorization).mcp_tid, "same token id");
+    assertEquals(finish.body, {
+      p_job_id: SYNC_JOB,
+      p_response: { ok: true, data: { added: 0, duplicates: 2, removed: 0, newest_date: null } },
+    }, "finish stores the counts");
+  } finally {
+    Date.now = realNow;
+  }
 });
 
 Deno.test("an over-cap body is refused before the rate limit", async () => {

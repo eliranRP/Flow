@@ -1,5 +1,5 @@
 -- FLOW-104. A reversal is an outflow under an income category (negative income)
--- or an inflow under an expense category (negative expense). Decision 0102.
+-- or an inflow under an expense category (negative expense). Decision 0103.
 -- Invented data only. Amounts are minor units (10000 is 100.00), ILS and USD.
 
 begin;

@@ -1,5 +1,5 @@
 -- FLOW-104 review. When resolve_review changes only the project, the role comes from the
--- line's own category kind, not from its direction (decision 0102). Invented data only.
+-- line's own category kind, not from its direction (decision 0103). Invented data only.
 
 begin;
 

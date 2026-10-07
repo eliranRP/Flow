@@ -1,6 +1,6 @@
 -- FLOW-104 with FLOW-102. On the overhead project a reversal income line (an outflow under an
 -- income category) is income, not overhead, and a refund of a cost (an inflow under an expense
--- category) lowers overhead (decisions 0101 and 0102). Invented data only. Amounts are minor units.
+-- category) lowers overhead (decisions 0101 and 0103). Invented data only. Amounts are minor units.
 
 begin;
 

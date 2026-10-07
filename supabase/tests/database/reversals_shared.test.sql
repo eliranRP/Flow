@@ -1,5 +1,5 @@
 -- FLOW-104 review. A shared or overhead outflow moved to an income category counts as
--- company income with no project (decision 0102). No read may still count it as a
+-- company income with no project (decision 0103). No read may still count it as a
 -- shared cost or as overhead. Invented data only. Amounts are minor units.
 
 begin;

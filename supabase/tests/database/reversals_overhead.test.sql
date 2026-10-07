@@ -1,6 +1,6 @@
 -- FLOW-104 review. The overhead income weights read the category kind and let a reversal
 -- income line (an outflow under an income category) lower a project's weight on both
--- document kinds (decision 0102). Invented data only. Amounts are minor units.
+-- document kinds (decision 0103). Invented data only. Amounts are minor units.
 
 begin;
 
