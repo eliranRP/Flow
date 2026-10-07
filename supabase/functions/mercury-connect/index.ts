@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { MERCURY_KEK_REF } from "../_shared/connectors/mercury/capabilities.ts";
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
+import { mercuryAccountsChanged } from "../_shared/connectors/mercury/client.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
@@ -48,6 +49,17 @@ Deno.serve(async (req) => {
       return json({ error: validated.code ?? validated.class }, status);
     }
 
+    const previous = await admin
+      .from("connector_connections")
+      .select("account_labels")
+      .eq("company_id", company.data.id)
+      .eq("provider", "mercury")
+      .maybeSingle();
+    if (previous.error) return json({ error: "could not store the connection" }, 500);
+    // A token for other accounts must not resume the old accounts' cursor.
+    const accountsChanged = previous.data != null &&
+      mercuryAccountsChanged(previous.data.account_labels, validated.accounts);
+
     const kekVersion = Deno.env.get("MERCURY_KEK_VERSION") || "1";
     const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "3", "mercury");
     const saved = await admin.rpc("replace_connector_connection", {
@@ -66,7 +78,7 @@ Deno.serve(async (req) => {
 
     const labeled = await admin
       .from("connector_connections")
-      .update({ account_labels: validated.accounts })
+      .update({ account_labels: validated.accounts, ...(accountsChanged ? { sync_cursor: null } : {}) })
       .eq("company_id", company.data.id)
       .eq("provider", "mercury");
     if (labeled.error) return json({ error: "could not store the connection" }, 500);

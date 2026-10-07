@@ -340,6 +340,93 @@ Deno.test("a rate-limited recheck keeps the line and does not fail the run", asy
   if (!plan.ok) return;
   assertEquals(plan.removedIds, []);
   assertEquals(plan.rechecked, []);
+  assertEquals(plan.rateLimited, { retryAfter: null });
+});
+
+Deno.test("a rate-limited recheck stops calling, backs off, and keeps every pending clock", async () => {
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [],
+      removedIds: [],
+      nextCursor: NOW.toISOString(),
+      complete: true,
+      windowStart: "2026-09-04",
+    },
+  });
+  built.port.classifyError = () => ({ class: "rate_limited", retry_after: "2026-10-04T09:00:00.000Z" });
+  const stored: StoredLine[] = [
+    { externalId: "pending-a", lineStatus: "pending", docDate: "2026-09-20", missingSince: "2026-10-01T00:00:00.000Z" },
+    { externalId: "pending-b", lineStatus: "pending", docDate: "2026-09-21", missingSince: null },
+    { externalId: "pending-c", lineStatus: "pending", docDate: "2026-09-22", missingSince: "2026-10-02T00:00:00.000Z" },
+    { externalId: "old-posted", lineStatus: "posted", docDate: "2026-08-01", missingSince: null },
+  ];
+  const calls: string[] = [];
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored,
+    now: () => NOW,
+    confirmLine(line) {
+      calls.push(line.externalId);
+      return Promise.reject(new Error("rate_limited"));
+    },
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(calls.length, 1);
+  assertEquals(plan.rateLimited, { retryAfter: "2026-10-04T09:00:00.000Z" });
+  assertEquals(plan.rechecked, []);
+  const clocks = new Map(plan.pendingMissing.map((item) => [item.externalId, item.missingSince]));
+  assertEquals(clocks.get("pending-a"), "2026-10-01T00:00:00.000Z");
+  assertEquals(clocks.get("pending-c"), "2026-10-02T00:00:00.000Z");
+  assertEquals(plan.removedIds, []);
+});
+
+Deno.test("a transient recheck error keeps going and is not a back-off", async () => {
+  const built = port({
+    accounts,
+    fetched: {
+      lines: [],
+      removedIds: [],
+      nextCursor: NOW.toISOString(),
+      complete: true,
+      windowStart: "2026-09-04",
+    },
+  });
+  built.port.classifyError = () => ({ class: "transient", retry_after: null });
+  const calls: string[] = [];
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored: [
+      { externalId: "old-1", lineStatus: "posted", docDate: "2026-08-01", missingSince: null },
+      { externalId: "old-2", lineStatus: "posted", docDate: "2026-08-02", missingSince: null },
+    ],
+    now: () => NOW,
+    confirmLine(line) {
+      calls.push(line.externalId);
+      return Promise.reject(new Error("transient"));
+    },
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(calls, ["old-1", "old-2"]);
+  assertEquals(plan.rateLimited, null);
 });
 
 Deno.test("a refetched yield and its stored copy still void on a cancel", async () => {

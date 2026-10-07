@@ -4,6 +4,7 @@ import { MERCURY_KEK_REF, MERCURY_POSTED_LOOKBACK_DAYS } from "../_shared/connec
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
 import {
   MercuryRequestError,
+  backoffUntil,
   getMercuryTransaction,
   recheckMissingPending,
 } from "../_shared/connectors/mercury/client.ts";
@@ -291,6 +292,15 @@ async function syncCompany(
           throw new Error("rejected");
         }
       }
+      if (plan.rateLimited) {
+        // A recheck hit Mercury's rate limit. The lines are saved; hold the next run.
+        const backoff = await admin
+          .from("connector_connections")
+          .update({ next_attempt_at: backoffUntil(plan.rateLimited.retryAfter, new Date()) })
+          .eq("company_id", companyId)
+          .eq("provider", "mercury");
+        if (backoff.error) logFailure("mercury sync backoff", backoff.error, apiKey);
+      }
       const counts = saved.data as { inserted?: number; updated?: number; removed?: number } | null;
       let newestDate: string | null = null;
       try {
@@ -488,22 +498,26 @@ async function stampChecked(
   companyId: string,
   rechecked: { externalId: string; checkedAt: string }[],
 ): Promise<void> {
-  for (const item of rechecked) {
-    const current = await admin
-      .from("transactions")
-      .select("provider_meta")
-      .eq("company_id", companyId)
-      .eq("source", "mercury")
-      .eq("external_id", item.externalId)
-      .maybeSingle();
-    if (current.error) throw new Error("rejected");
-    const meta = isRecord(current.data?.provider_meta) ? current.data.provider_meta : {};
+  const ids = [...new Set(rechecked.map((item) => item.externalId))];
+  if (ids.length === 0) return;
+  // One read for every rechecked line instead of a read and a write per line.
+  const current = await admin
+    .from("transactions")
+    .select("id, external_id, provider_meta")
+    .eq("company_id", companyId)
+    .eq("source", "mercury")
+    .in("external_id", ids);
+  if (current.error) throw new Error("rejected");
+  const stampOf = new Map(rechecked.map((item) => [item.externalId, item.checkedAt]));
+  for (const row of (current.data ?? []) as Array<{ id: string; external_id: string; provider_meta: unknown }>) {
+    const checkedAt = stampOf.get(row.external_id);
+    if (!checkedAt) continue;
+    const meta = isRecord(row.provider_meta) ? row.provider_meta : {};
     const saved = await admin
       .from("transactions")
-      .update({ provider_meta: { ...meta, checked_at: item.checkedAt } })
+      .update({ provider_meta: { ...meta, checked_at: checkedAt } })
       .eq("company_id", companyId)
-      .eq("source", "mercury")
-      .eq("external_id", item.externalId);
+      .eq("id", row.id);
     if (saved.error) throw new Error("rejected");
   }
 }
