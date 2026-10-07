@@ -268,6 +268,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_totals",
     "list_loans",
     "get_loan_schedule",
+    "get_breakdown",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -1534,4 +1535,74 @@ Deno.test("get_totals does not report a missing unassigned bucket as 0", async (
     assertEquals(data.unassigned_income_agorot, undefined);
     assertEquals(data.unassigned_expense_agorot, undefined);
   }
+});
+
+Deno.test("get_breakdown calls the group totals, then a group's lines, and checks its arguments", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_breakdown") {
+      return { status: 200, json: { direction: "expense", totals: [], groups: [], excluded: [], review_count: 0 } };
+    }
+    return { status: 200, json: { rows: [], has_more: false } };
+  });
+  const groups = await callTool("get_breakdown", { direction: "expense" }, ["read"], rpc);
+  assertEquals(groups.isError, false);
+  assertEquals(calls[0], {
+    name: "get_breakdown",
+    body: { p_direction: "expense", p_from: null, p_to: null, p_group_by: "category", p_basis: "cash" },
+  });
+
+  const lines = await callTool("get_breakdown", {
+    direction: "income",
+    group_by: "project",
+    group: "unassigned",
+    currency: "USD",
+    from: "2026-06-01",
+    to: "2026-06-30",
+    basis: "invoiced",
+    limit: 10,
+    offset: 20,
+  }, ["read"], rpc);
+  assertEquals(lines.isError, false);
+  assertEquals(calls[1], {
+    name: "get_breakdown_lines",
+    body: {
+      p_direction: "income",
+      p_from: "2026-06-01",
+      p_to: "2026-06-30",
+      p_group_by: "project",
+      p_basis: "invoiced",
+      p_group_key: "unassigned",
+      p_currency: "USD",
+      p_excluded: false,
+      p_limit: 10,
+      p_offset: 20,
+    },
+  });
+
+  const kept = await callTool("get_breakdown", { direction: "expense", excluded: true }, ["read"], rpc);
+  assertEquals(kept.isError, false);
+  assertEquals(calls[2]?.name, "get_breakdown_lines");
+  assertEquals(calls[2]?.body.p_excluded, true);
+  assertEquals(calls[2]?.body.p_group_key, null);
+
+  const before = calls.length;
+  for (const bad of [
+    {},
+    { direction: "both" },
+    { direction: "expense", group_by: "week" },
+    { direction: "expense", basis: "accrual" },
+    { direction: "expense", from: "06-01" },
+    { direction: "expense", currency: "USD" },
+    { direction: "expense", group: "x", currency: "usd" },
+    { direction: "expense", group: "x", limit: 500 },
+    { direction: "expense", excluded: "yes" },
+    { direction: "expense", company_id: "x" },
+  ]) {
+    const result = await callTool("get_breakdown", bad, ["read"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before, "a bad argument never reaches the database");
+
+  const denied = await callTool("get_breakdown", { direction: "expense" }, ["write"], rpc);
+  assertEquals(denied.isError, true, "a write-only token cannot read");
 });

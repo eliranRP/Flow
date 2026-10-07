@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Home breakdown data (FLOW-301, server part). Migration `20261007190000_flow_breakdown.sql` adds `public.get_breakdown` (income or expenses for a period grouped by category, project, or payer, with totals equal to `company_pnl`, kept-out lines in `excluded`, and the open review count) and `public.get_breakdown_lines` (one group's lines, paged). New MCP read tool `get_breakdown`. Decision [0110](decisions/0110-home-breakdown.md). `docs/mcp/TOOLS.md` updated. pgTAP `flow_breakdown.test.sql`. The screens follow in the next PR.
+
 Unassigned bucket and overhead project (FLOW-102). Migration `20261007161020_unassigned_overhead_project.sql` adds `companies.overhead_project_id` and an `unassigned` column on `private.pnl_lines`, maps project lines filed to the overhead project to the overhead role, and returns `unassigned_income_*`, `unassigned_expense_*`, `overhead_project_id`, and per-project `is_overhead` from `company_pnl` (and `is_overhead` from `get_project`). New `public.set_overhead_project` and MCP write `set_overhead_project` with undo kind `overhead_project`. `get_totals` and `list_projects` pass the new fields through. The unpaid-expense rule is unchanged and documented. Decision [0101](decisions/0101-unassigned-and-overhead-project.md). `docs/mcp/TOOLS.md` and the calculations page updated. pgTAP `unassigned_overhead.test.sql`.
 
 Faster CI, round 2. `check` adds `check (unit)` for the app unit tests and splits storybook into `check (storybook)` and `check (stories 1/2, 2/2)`; `e2e` runs in 3 shards; local Supabase skips the containers CI does not use. The storybook smoke config runs tests fully in parallel, and the focused-title layout check is split in two halves plus its own tab test. Same tests, same required check names.

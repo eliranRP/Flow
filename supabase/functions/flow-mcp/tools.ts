@@ -24,6 +24,7 @@ export const READ_TOOL_NAMES = [
   "get_totals",
   "list_loans",
   "get_loan_schedule",
+  "get_breakdown",
 ] as const;
 
 export const WRITE_TOOL_NAMES = [
@@ -58,6 +59,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set([]),
   get_loan_schedule: new Set(["loan_id", "from", "limit"]),
+  get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -525,6 +527,18 @@ function readTools() {
       loan_id: { type: "string" },
       from: { type: "integer" },
       limit: { type: "integer" },
+    }),
+    toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is cash or invoiced (default cash, like get_totals). Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default ILS): that group's lines, newest first, in rows[] with has_more. excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part.", {
+      direction: { type: "string", enum: ["income", "expense"] },
+      from: { type: "string" },
+      to: { type: "string" },
+      group_by: { type: "string", enum: ["category", "project", "payer"] },
+      basis: { type: "string", enum: ["cash", "invoiced"] },
+      group: { type: "string" },
+      currency: { type: "string" },
+      excluded: { type: "boolean" },
+      limit: { type: "integer" },
+      offset: { type: "integer" },
     }),
   ];
 }
@@ -1045,6 +1059,50 @@ export async function callTool(
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
     return ok({ ...(result.json as Review), basis });
+  }
+
+  if (name === "get_breakdown") {
+    const direction = args.direction;
+    if (direction !== "income" && direction !== "expense") return fail("validation", "validation");
+    const groupBy = args.group_by == null ? "category" : args.group_by;
+    if (groupBy !== "category" && groupBy !== "project" && groupBy !== "payer") return fail("validation", "validation");
+    const basis = args.basis == null ? "cash" : args.basis;
+    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const from = dateOf(args.from);
+    if (typeof from !== "string" && from != null) return from;
+    const to = dateOf(args.to);
+    if (typeof to !== "string" && to != null) return to;
+    const range = { p_direction: direction, p_from: from, p_to: to, p_group_by: groupBy, p_basis: basis };
+    const excluded = args.excluded == null ? false : args.excluded;
+    if (typeof excluded !== "boolean") return fail("validation", "validation");
+    if (args.group == null && !excluded) {
+      if (args.currency != null || args.limit != null || args.offset != null) return fail("validation", "validation");
+      const result = await rpc("get_breakdown", range);
+      if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+        return fail("refused", READ_REFUSED);
+      }
+      return ok(result.json as Review);
+    }
+    const group = args.group == null ? null : args.group;
+    if (group != null && (typeof group !== "string" || group.length === 0 || group.length > 64)) return fail("validation", "validation");
+    const currency = args.currency == null ? "ILS" : args.currency;
+    if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) return fail("validation", "validation");
+    const limit = limitOf(args.limit, 40);
+    if (typeof limit !== "number") return limit;
+    const offset = offsetOf(args.offset);
+    if (typeof offset !== "number") return offset;
+    const result = await rpc("get_breakdown_lines", {
+      ...range,
+      p_group_key: group,
+      p_currency: currency,
+      p_excluded: excluded,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (result.status >= 400 || result.json == null || typeof result.json !== "object" || Array.isArray(result.json)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(result.json as Review);
   }
 
   if (name === "list_categories") {

@@ -28,14 +28,15 @@ Home shows נכנס and יצא for the period, but they are dead text. To see wh
 - **Group switch:** segmented control קטגוריה · פרויקט · ספק (expenses) / לקוח (income), group label "לפי". Default קטגוריה; the last choice is remembered on the device.
 - **Group rows:** name, line count hint ("12 תנועות", or "12 תנועות · כולל חלק משותף"), amount (expenses with a minus, `$` for USD), chevron. Sorted by amount, largest first, held in place while open (`useHeldOrder`). Every currency's rows open their lines (today's project rows don't for USD; fixed here). A blank supplier or customer groups as "בלי ספק" / "בלי לקוח". Multi-currency: ILS groups first, then each currency, like the project screen.
 - **Special rows:** under פרויקט, "בלי פרויקט" (unassigned) and the overhead project as their own groups. Decision 0101 says Home doesn't show these yet, so this needs your OK (question 2). Shared costs show by the project's share. Figures are stored ones; the after-overhead switch doesn't change them (same as the hero, 0032).
-- **"לא נכלל בסכום" section:** a quiet section under the list. "מחוץ לרווח" (kept-out categories, 0099) opens those lines; "N ממתינים לאישור" opens Review. Neither adds to the total.
+- **"לא נכלל בסכום" section:** a quiet section under the list. "מחוץ לרווח" (kept-out categories, 0099) opens those lines and never adds to the total.
+- **Waiting for approval:** Home's totals already include lines still waiting in review, so the breakdown does too. When some are open, a quiet "N ממתינים לאישור" row (no amount) opens Review.
 - **Rounding:** group rows are whole shekels, so they can miss the total by ₪1. Rule: the total is exact and rows round independently (question 3).
 - **Group lines screen:** title = group name, subtitle "נכנס · החודש · 6 תנועות", the group total; rows: source icon, name, the other grouping plus date ("מגדל הים · 05/10"), amount (+ for income, − for expenses); "עוד תנועות" paging; tap opens the transaction.
 - **States:** skeleton while loading, empty ("אין הוצאות בתקופה הזו" / "אפשר לבחור תקופה אחרת." with a "בחירת תקופה" button), error with retry, offline with cached data. Light and dark, 320 and 390px.
 
 ## Data and MCP
 
-- New read RPC `public.flow_breakdown(p_company_id, p_direction, p_from, p_to, p_group_by, p_basis)` reading `private.pnl_lines`, so totals match `company_pnl` by construction (loan split parts, kept-out, overhead project, unassigned all follow the same rules). Returns groups `{key, name, currency, amount_minor, count}`, plus `excluded` and `pending` buckets.
+- New read RPC `public.flow_breakdown(p_company_id, p_direction, p_from, p_to, p_group_by, p_basis)` reading `private.pnl_lines`, so totals match `company_pnl` by construction (loan split parts, kept-out, overhead project, unassigned all follow the same rules). Returns groups `{key, name, currency, amount_minor, count, shared}`, plus `excluded` and the open review count.
 - New read RPC `public.flow_lines(..., p_group_key, p_limit, p_offset)` for one group's lines.
 - MCP: one read tool `get_breakdown` (`direction`, `from`, `to`, `group_by` = category | project | payer, optional `group` to list lines, limit/offset). Read annotations, no undo.
 
