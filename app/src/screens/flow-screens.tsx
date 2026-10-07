@@ -2424,7 +2424,8 @@ export function TransactionScreen({
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const remove = useWrite({
     failure: "לא הצלחנו למחוק.",
-    keys: ["dashboard", "txn", "unpaid", "review"],
+    // A card opened from a list returns to it, so that list drops the row too.
+    keys: ["dashboard", "txn", "unpaid", "review", "project", "project-category", "filed-today"],
     onSuccess: () => {
       setConfirm(false);
       // Opened from a list: back to that list, not Home.

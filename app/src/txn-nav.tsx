@@ -8,7 +8,7 @@ import { IconButton } from "./ui/icon-button";
 import { ChevronDownIcon, ChevronUpIcon } from "./ui/icons";
 
 /** The list a card was opened from: its rows in the order shown, and its address. */
-export type TxnList = { ids: string[]; from: string };
+export type TxnList = { ids: readonly string[]; from: string };
 
 type Via = "next" | "prev" | "key";
 
@@ -21,6 +21,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Location state for a row link. The ids are a snapshot, so a refetch never reshuffles the walk. */
 export function txnListState(ids: readonly string[], id: string, from: string): { txnList: TxnList } {
+  // Every row of a list up to the window's size shares the one array: no copy per row.
+  if (ids.length <= SIDE * 2 + 1) return { txnList: { ids, from } };
   const at = ids.indexOf(id);
   const start = at > SIDE ? at - SIDE : 0;
   return { txnList: { ids: ids.slice(start, start + SIDE * 2 + 1), from } };
@@ -59,8 +61,10 @@ export function useTxnNav(transactionId: string): TxnNav | null {
   const index = list == null ? -1 : list.ids.indexOf(transactionId);
   const prev = list != null && index > 0 ? list.ids[index - 1] ?? null : null;
   const next = list != null && index >= 0 ? list.ids[index + 1] ?? null : null;
-  // The URL changes before the next card renders. A second press in between
-  // would step again from this card's stale neighbours, so it waits for the render.
+  // The URL changes before the next card renders. A second press in between still
+  // sees this card's neighbours, so it would only replace the same target again
+  // under a fresh history key; one move per card keeps that from happening.
+  // No test can tell the two apart, which is why this guard has none.
   const movedFrom = useRef<string | null>(null);
   const move = useCallback((direction: "next" | "prev", via: Via) => {
     const target = direction === "next" ? next : prev;
@@ -110,6 +114,8 @@ export function useTxnNavKeys(nav: TxnNav | null): void {
   useEffect(() => {
     if (move == null || open) return;
     function onKey(event: KeyboardEvent) {
+      // A held key would open a card per repeat, each with its own read and announcement.
+      if (event.repeat) return;
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (editableTarget(event.target)) return;
       if (document.querySelector("[role='dialog']") != null) return;
