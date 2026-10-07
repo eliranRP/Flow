@@ -27,7 +27,7 @@ import { createContext, createElement, useCallback, useContext, useMemo, useStat
 import { getSupabase } from "./lib/supabase";
 import { waitForAccessToken } from "./wait-for-session";
 import { thisMonth, type PeriodChoice } from "./period";
-import { useHomePreview } from "./preview";
+import { useHomePreview, type HomePreview } from "./preview";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,
@@ -374,11 +374,10 @@ export function useProjectWaitingQuery(projectId: string) {
   });
 }
 
-export function useTransactionQuery(transactionId: string) {
-  const preview = useHomePreview();
-  return useQuery({
+/** The card's read. Prev and next prefetch the neighbours with the same key. */
+export function transactionQueryOptions(preview: HomePreview, transactionId: string) {
+  return {
     queryKey: ["txn", preview, transactionId],
-    enabled: preview === "off" && transactionId !== "",
     queryFn: async (): Promise<TransactionDetail> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -387,6 +386,14 @@ export function useTransactionQuery(transactionId: string) {
       if (error) throw error;
       return transactionDetailSchema.parse(data);
     },
+  };
+}
+
+export function useTransactionQuery(transactionId: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    ...transactionQueryOptions(preview, transactionId),
+    enabled: preview === "off" && transactionId !== "",
   });
 }
 

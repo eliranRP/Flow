@@ -3927,3 +3927,20 @@ div.ui-check-row {
   border-radius: 999px;
   background: var(--color-text);
 }
+
+/* FLOW-303: prev and next on the transaction card, before ⋯ in the top bar. */
+.ui-txn-end,
+.ui-txn-nav {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.ui-icon-btn-unavailable {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.ui-icon-btn-unavailable:active {
+  background: transparent;
+}

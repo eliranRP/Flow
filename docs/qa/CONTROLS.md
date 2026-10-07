@@ -120,8 +120,10 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Unpaid | הבנתי | Hides that row for this visit and closes the sheet. | never | no | the row leaves the list | none | pass |
 | Transaction | Back | Returns to the project, or the filed list when that opened it. | never | no | the parent screen | none | pass |
 | Transaction | עוד | Opens the more sheet. SUMIT rows explain they are not deleted here. A manual row shows מחיקה. | never | no | the sheet | none | pass |
+| Transaction, opened from a list | ˄ התנועה הקודמת / ˅ התנועה הבאה | Opens the row above or below in the list the card came from (project recent list, category drill-down, שויכו היום), in the order shown. Replaces the history entry, so Back returns to the list at its scroll spot. The pressed button keeps focus; a status line says "תנועה N מתוך M" with the party and amount. The neighbours are prefetched. | shown only when the card came from a list with two or more rows; at a list end the button stays, aria-disabled, described as "זו התנועה הראשונה ברשימה" / "זו התנועה האחרונה ברשימה" | no | the next card, scrolled to the top | the next card's own error state; the buttons stay | e2e |
+| Transaction, opened from a list | ArrowLeft / ArrowRight | ArrowLeft opens the next card and ArrowRight the previous one, the right-to-left way. Not in a field, with a modifier, or while a sheet is open. | same as ˄ ˅ | no | the next card; focus on its title | none | e2e |
 | Transaction | מחיקה | Opens the delete confirm. Manual rows only. | never | no | confirm sheet | none | pass |
-| Transaction | confirm מחיקה | Calls `delete_transaction`. | never | the confirm button | route `/` | toast "לא הצלחנו למחוק." | pass |
+| Transaction | confirm מחיקה | Calls `delete_transaction`. | never | the confirm button | route `/`, or back to the list when the card was opened from one | toast "לא הצלחנו למחוק." | pass |
 | Transaction | project row | Opens the change sheet. A shared cost opens Split instead. | never | no | the change sheet, or `/transactions/:id/split` | none | pass |
 | Transaction | category row | Opens the change sheet. | never | no | the change sheet | none | pass |
 | Transaction | חשבונית ותשלום | Expands the VAT line (ILS only). | never | no | the VAT line is visible for ILS | none | pass |

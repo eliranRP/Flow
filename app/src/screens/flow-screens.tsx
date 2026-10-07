@@ -54,6 +54,7 @@ import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-re
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
+import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { useSyncSettled } from "../use-sync-settled";
@@ -398,6 +399,14 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
   );
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function movesShown(state: unknown): boolean {
+  return isPlainRecord(state) && state.moves === true;
+}
+
 function ReservedMenuSlot() {
   return <span className="ui-menu-slot" aria-hidden="true" />;
 }
@@ -586,10 +595,15 @@ export function ProjectDetailScreen({
   const preview = useHomePreview();
   const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
-  const [moves, setMoves] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Kept on the history entry, so Back from a card reopens the list at its scroll spot.
+  const [moves, setMoves] = useState(() => movesShown(location.state));
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
   const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
+  const heldIds = heldTransactions.map((txn) => txn.id);
+  const listFrom = `${location.pathname}${location.search}`;
   const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null && moves);
   useEffect(() => {
     if (sample) return;
@@ -710,6 +724,10 @@ export function ProjectDetailScreen({
           tone="accent"
           onClick={() => {
             setMoves(true);
+            void navigate(`${location.pathname}${location.search}${location.hash}`, {
+              replace: true,
+              state: { ...(isPlainRecord(location.state) ? location.state : {}), moves: true },
+            });
           }}
         >
           תנועות אחרונות
@@ -731,6 +749,7 @@ export function ProjectDetailScreen({
                 currency={txn.currency ?? "ILS"}
                 source="invoice"
                 href={`/transactions/${txn.id}${search}`}
+                state={txnListState(heldIds, txn.id, listFrom)}
               />
             ))}
           </List>
@@ -877,6 +896,8 @@ export function FiledTodayScreen({
   const filed = useFiledTodayQuery(shown == null);
   const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
   const rows = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
+  const location = useLocation();
+  const rowIds = rows.map((row) => row.id);
   const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
   return (
     <ScreenState
@@ -898,6 +919,7 @@ export function FiledTodayScreen({
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
             href={rowHref ? rowHref(row) : `/transactions/${row.id}${search}`}
+            state={rowHref ? undefined : txnListState(rowIds, row.id, `${location.pathname}${location.search}`)}
           />
         ))}
       </List>
@@ -1746,6 +1768,7 @@ export function ProjectCategoryScreen({
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId);
+  const location = useLocation();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
@@ -1763,6 +1786,7 @@ export function ProjectCategoryScreen({
   const projectName = sample?.projectName ?? first?.project_name ?? "";
   const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
+  const rowIds = rows.map((row) => row.id);
   const more = sample?.pageSize != null ? !sampleOpen && allRows.length > sample.pageSize : !sample && category.hasNextPage;
   return (
     <div>
@@ -1781,6 +1805,7 @@ export function ProjectCategoryScreen({
               sign="out"
               source="invoice"
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
+              state={rowHref ? undefined : txnListState(rowIds, txn.id, `${location.pathname}${location.search}`)}
             />
           ))}
         </List>
@@ -2323,6 +2348,16 @@ function splitProjectLabel(
   return `מפוצל · ${String(rows.length)} פרויקטים`;
 }
 
+/** What a screen reader hears after prev or next: the party and the amount. */
+function txnAnnouncement(txn: NonNullable<TransactionDetail>): string {
+  const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const amount = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", {
+    detail: true,
+    direction: txn.direction === "income" ? "income" : "expense",
+  });
+  return `${party}, ${amount}`;
+}
+
 export function TransactionScreen({
   sample,
   sampleProjects,
@@ -2356,6 +2391,9 @@ export function TransactionScreen({
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
+  const nav = useTxnNav(sample?.id ?? transactionId);
+  const goBack = useGoBack();
+  useTxnNavKeys(nav);
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
@@ -2364,7 +2402,9 @@ export function TransactionScreen({
     keys: ["dashboard", "txn", "unpaid", "review"],
     onSuccess: () => {
       setConfirm(false);
-      void navigate(`/${search}`);
+      // Opened from a list: back to that list, not Home.
+      if (nav) goBack(nav.list.from);
+      else void navigate(`/${search}`);
     },
     run: async () => {
       const supabase = getSupabase();
@@ -2375,6 +2415,8 @@ export function TransactionScreen({
   });
   const txn = sample ?? detail.data;
   const parent = transactionParent(txn?.project_id, search);
+  usePrefetchNeighbours(nav, txn != null);
+  useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -2515,9 +2557,9 @@ export function TransactionScreen({
     },
   });
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
-    return <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
+    return <ScreenState title="פרטי תנועה" backTo={parent} action={nav ? <TxnNavButtons nav={nav} /> : undefined} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
-  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
+  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} trailing={nav ? <TxnNavButtons nav={nav} /> : undefined} />;
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
   const splitRow = collapsedTo == null && serverSplit;
@@ -2604,13 +2646,19 @@ export function TransactionScreen({
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
+  const menuButton = holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>;
   return (
     <div>
       <ScreenHeader
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
+        trailing={nav ? (
+          <div className="ui-txn-end">
+            <TxnNavButtons nav={nav} />
+            {menuButton}
+          </div>
+        ) : menuButton}
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>

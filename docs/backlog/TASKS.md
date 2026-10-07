@@ -37,7 +37,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (design session first) |
+| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
@@ -323,9 +323,17 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
-- **Type:** SMALL UI · **Status:** in-progress (design session first) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (#100) · **Depends on:** —
+- **Approval:** 2026-10-07, the design reviewer's option A (˄ ˅ in the card's top bar, ArrowLeft/ArrowRight, replace on move), built under the owner's standing rule for UI tasks. Swipe moved to [FLOW-313](#flow-313).
 - **What:** Swipe (RTL-aware) or tap small arrows in the header to move to the previous or next transaction, in the same list and order the card was opened from (project list, review queue, recent, filtered). Keep the list position on return; prefetch neighbours.
 - **Acceptance:** mockup approved; Back returns to the same scroll spot; keyboard and screen-reader access; design review.
+
+<a id="flow-313"></a>
+### FLOW-313 · Swipe between transactions on the card
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-303 (#100)
+- **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
+- **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.
+- Also from #100's design session: add the project's waiting list (card rows only) and let ˅ at the last loaded category row load the next page.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
