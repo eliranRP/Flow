@@ -30,7 +30,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 14 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 15 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
 | 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | blocked on FLOW-101 |
-| 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
+| 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first (planning claimed) |
 | 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
 | 20 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
@@ -83,7 +83,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-113"></a>
 ### FLOW-113 · Kept-out toggle on the categories screen
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** FLOW-101
+- **Type:** SMALL UI · **Status:** plan-first (planning claimed; plan and mockup waiting on the owner) · **Depends on:** FLOW-101 (merged)
 - **What:** The per-category P&L flag exists only through the API and MCP. Smallest option: one secondary action in the category row's "עוד" sheet next to הסתרה ("מחוץ לרווח והפסד" / "החזרה לרווח והפסד") plus a muted icon on kept-out rows with a Hebrew aria-label. On `/settings/categories`, not on Settings itself. The three loan categories stay fixed.
 - **Acceptance:** mockup approved; CONTROLS.md row; design review.
 
