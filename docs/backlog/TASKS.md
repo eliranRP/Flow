@@ -24,23 +24,25 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
-| 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
+| 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
-| 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
-| 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 20 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 21 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
-| 22 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 23 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
-| 24 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
-| 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
-| 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 17 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
+| 18 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
+| 19 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
+| 20 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 21 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
+| 22 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 23 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
+| 24 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
+| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 29 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -177,16 +179,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-204"></a>
 ### FLOW-204 · assign_expense_split follow-ups (#68 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Undo turns a suggested category into a confirmed one (the existing undo functions do this too).
-- [ ] `closed_review` is reported false when the split closes an `unallocated_shared` review.
-- [ ] No `lock_timeout` in the migration.
-- [ ] Reordering the shares counts as different arguments for idempotency.
-- [ ] No SQL cap on the number of shares.
-- [ ] Hidden categories and finished projects are accepted.
-- [ ] Zod `int` / `min` / `strict` cases are untested.
-- [ ] The cross-tenant code is `refused`, not `not_found` (matches `assign_expense`; decide once for all tools).
-- [ ] The PR description of #68 is stale; fix it for the record.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#88) · **Depends on:** —
+- [x] Undo turns a suggested category into a confirmed one (the existing undo functions do this too).
+- [x] `closed_review` is reported false when the split closes an `unallocated_shared` review.
+- [x] No `lock_timeout` in the migration.
+- [x] Reordering the shares counts as different arguments for idempotency.
+- [x] No SQL cap on the number of shares.
+- [x] Hidden categories and finished projects are accepted.
+- [x] Zod `int` / `min` / `strict` cases are untested.
+- [x] The cross-tenant code is `refused`, not `not_found` (matches `assign_expense`; decide once for all tools).
+- [x] The PR description of #68 is stale; fix it for the record.
 
 <a id="flow-205"></a>
 ### FLOW-205 · MCP hardening follow-ups
@@ -215,6 +217,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs.
 - [ ] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
 - [ ] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
+
+<a id="flow-208"></a>
+### FLOW-208 · Split and undo follow-ups (#88 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`.
+- [ ] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1).
+- [ ] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess.
 
 ## Transactions and app UX
 
@@ -442,6 +451,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
 - [ ] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it.
+
+<a id="flow-511"></a>
+### FLOW-511 · Easy opt-out from the Home setup card
+- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **What:** A UX review of the setup flow and its Home card ("הגדרה • 4 מתוך 5"). The owner finds it sticky: the only way out is the small quiet הסתרה link, and it's not clear that it stops the card for good. Review the whole flow (setup runner, Home card, the "ההגדרה זמינה בהגדרות." toast, re-entry from Settings, skip flags per [0089](../decisions/0089-setup-runner.md)) and propose one clear button that opts out of setup in a single tap, with the way back from Settings. Mock up the options with Claude Design for the owner.
+- **Acceptance:** written plan and mockup; owner picks an option and the approval is written here before any build; then one SMALL UI PR with design review and a CONTROLS row.
 
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
