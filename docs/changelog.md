@@ -50,6 +50,8 @@ Mercury income as invoice-receipt. `mercury-sync` imports deposits and treasury 
 
 Per-currency display in the app. Home, projects, and project detail read `by_currency` from the dashboard and `get_project`, use shared `formatAmountText`, and show expenses with a leading minus inside `<bdi>`. Non-ILS transaction detail hides VAT and "חשבונית ותשלום". Migration `20261007000000_project_currency.sql`. Decision [0096](decisions/0096-currency-display.md).
 
+Review alongside CI, then auto-merge (FLOW-813). Reviews start as soon as a PR is pushed, while CI runs. Once the reviewers approve the current head, the coordinator turns on auto-merge (squash), and GitHub merges when `lint`, `check`, and `e2e` are green. `main` no longer requires an up-to-date branch, so a PR does not merge `main` and rerun CI after every other merge. `main` still runs the full suite before each deploy. GitHub's merge queue needs an organization-owned repo, so it is not used.
+
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).

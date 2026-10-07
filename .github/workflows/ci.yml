@@ -136,9 +136,19 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
+      # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
+      - name: Cache Playwright system packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flow-apt
+          key: ${{ runner.os }}-playwright-apt-1.63.0
+      - name: Restore Playwright system packages
+        run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: pnpm --filter @flow/app exec playwright install-deps chromium
+      - name: Keep Playwright system packages for the next run
+        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
@@ -179,9 +189,19 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
+      # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
+      - name: Cache Playwright system packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flow-apt
+          key: ${{ runner.os }}-playwright-apt-1.63.0
+      - name: Restore Playwright system packages
+        run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: pnpm --filter @flow/app exec playwright install-deps chromium
+      - name: Keep Playwright system packages for the next run
+        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
@@ -244,9 +264,19 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-1.63.0
+      # The Ubuntu mirror can stall on the font packages, so their .deb files come from this cache.
+      - name: Cache Playwright system packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/flow-apt
+          key: ${{ runner.os }}-playwright-apt-1.63.0
+      - name: Restore Playwright system packages
+        run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: pnpm --filter @flow/app exec playwright install-deps chromium
+      - name: Keep Playwright system packages for the next run
+        run: bash scripts/ci-apt-cache.sh save
       - name: Install Playwright browsers
         timeout-minutes: 5
         run: pnpm --filter @flow/app exec playwright install chromium
