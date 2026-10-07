@@ -208,7 +208,7 @@ Renames the token's company. The owner only: a viewer or a read token is `forbid
 { "idempotency_key": "rename-1", "name": "Example Holdings" }
 ```
 
-Output `data`: `{ "id", "name", "prior_name", "undo_kind": "company" }`. Undo with `kind: "company"` and the company id restores `prior_name`. If the name changed again after this write, undo is `conflict` and the newer name stays.
+Output `data`: `{ "id", "name", "prior_name", "undo_kind": "company" }`. Undo with `kind: "company"` and the company id restores `prior_name`. If the current name is not the name this write set, undo is `conflict` and the current name stays.
 
 ### sync_bank
 
