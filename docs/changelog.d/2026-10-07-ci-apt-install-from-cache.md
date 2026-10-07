@@ -1,0 +1,1 @@
+CI installs Playwright's system packages from the cache when it can. When the cached files cover every missing package, CI installs them with `apt-get install --no-download` and skips `apt-get update`, so a stalled Ubuntu mirror no longer holds up the job. Otherwise it runs `install-deps` with the 30-second timeout and retries.
