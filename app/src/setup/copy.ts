@@ -98,7 +98,10 @@ export const SUMIT_FAILURE_LINE = "בודקים את מספר החברה ואת 
 
 export const COMPLETED_TOAST = "ההגדרה הושלמה.";
 
-export const DISMISS_TOAST = "ההגדרה זמינה בהגדרות.";
+/** One tap opts out of setup for good: the card and the next-launch resume both stop. */
+export const DISMISS_LABEL = "סגירת ההגדרה";
+
+export const DISMISS_TOAST = "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות.";
 
 export const SAMPLE_TOAST = "אישור ראשון. אפשר להמשיך בהגדרה.";
 

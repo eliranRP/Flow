@@ -48,8 +48,8 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Review, setup | first אישור | After the first real approval in setup, toasts SAMPLE_TOAST with המשך to step 5 or Home from the card. | never | no | toast and the setup handoff route | none | unit |
 | Setup, step 5 | סיום | Marks the iOS steps seen, or the install, and leaves the run. | never | no | Home, or the next step from inside the run | none | unit |
 | Setup, step 5 | התקנה | Shown only after `beforeinstallprompt`. Runs the saved prompt. | until the prompt exists | no | the browser sheet, then the run ends | none | unit |
-| Home card | הסתרה | Hides the card and toasts above the tab bar. | never | no | toast "ההגדרה זמינה בהגדרות." | none | unit |
-| Home card | ביטול | Brings the card back. | never | no | the card returns | none | unit |
+| Home card | ✕ סגירת ההגדרה | 44×44 icon button in the card head. Sets `card_dismissed_at`: the card is gone and the next launch makes no setup redirect. Settings › הגדרה ראשונה stays. | never | no | card gone, toast "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות." with ביטול, above the tab bar | none | unit |
+| Home card | ביטול | Brings the card back, and the one automatic resume with it. | never | no | the card returns | none | unit |
 | Home card | a remaining step | Opens that step alone. | never | no | route `/setup/N?from=card` | none | unit |
 | Home card | מתקדם · עוזר AI | Opens Settings with the assistant sheet. Not counted. | never | no | route `/settings?sheet=assistant` | none | unit |
 | Settings | הגדרה ראשונה | Opens the next remaining step. Hidden before the run starts and when all 5 are done. | never | no | route `/setup/N?from=card` | none | unit |
