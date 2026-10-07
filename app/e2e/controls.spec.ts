@@ -448,8 +448,15 @@ test("settings connect, refresh, categories, and the account row", async ({ page
   await page.getByRole("button", { name: "חיבור" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByRole("group", { name: "בדיקה" })).toBeVisible();
   await expect(page.getByText("owner@example.com")).toBeVisible();
+  await page.getByRole("button", { name: "שם העסק: בדיקה" }).click();
+  const rename = page.getByRole("dialog", { name: "שם העסק" });
+  await expect(rename.getByLabel("שם")).toHaveValue("בדיקה");
+  await rename.getByLabel("שם").fill("בדיקה חדשה");
+  await rename.getByRole("button", { name: "שמירה" }).click();
+  await toast(page, previewToast);
+  await rename.getByRole("button", { name: "סגירה" }).click();
+  await expect(page.getByRole("button", { name: "שם העסק: בדיקה" })).toBeFocused();
   await expect(page.getByText("עוסק מורשה")).toHaveCount(0);
   await expect(page.getByText("Flow 0.1")).toBeVisible();
   await page.getByRole("link", { name: "קטגוריות" }).click();

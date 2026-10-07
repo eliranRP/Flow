@@ -384,3 +384,14 @@ export function TrashIcon(props: IconProps) {
     </Svg>
   );
 }
+
+export function BuildingIcon(props: IconProps) {
+  return (
+    <Svg size={24} stroke={1.9} {...props}>
+      <path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16" />
+      <path d="M15 10h4a1 1 0 0 1 1 1v10" />
+      <path d="M3 21h18" />
+      <path d="M8 8h3M8 12h3M8 16h3" />
+    </Svg>
+  );
+}

@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Rename a company in the app (FLOW-602 screen). In Settings, the business name is now its own row, and the Google email is a separate static row. An owner taps the business row to open a one-field "שם העסק" sheet. The sheet saves through `rename_company` (2 to 100 characters, checked on blur and on save) and shows "שם העסק נשמר" with ביטול, which writes the previous name back. A viewer sees the row static. No migration. New decision [0102](decisions/0102-rename-company-row.md), which amends [0082](decisions/0082-settings-redesign.md) §2. CONTROLS.md and DESIGN-RULES §4 updated.
+
 Rename a company (FLOW-602). Migration `20261007171500_rename_company.sql` adds the owner-only RPC `public.rename_company(p_company_id, p_name)` (trimmed, 2 to 100 characters; a viewer, another company, or no company is `42501`) and the MCP write tool `rename_company` with an idempotency key, the write rate limit, and undo `kind: "company"`. `private.mcp_writes` gets a `company_id` column. The in-app screen is plan-first and ships later. `docs/mcp/TOOLS.md` updated. pgTAP `rename_company.test.sql`. Decision [0095](decisions/0095-mcp-first.md).
 
 Faster CI. The `check` and `e2e` jobs are now gates over jobs that run side by side: `check (core)`, two storybook shards, and two e2e shards. Local Supabase starts in the background while node and Playwright install. The static-story smoke is 8 tests instead of 1. Same tests, same required check names. Runbook: [ci-cd](runbooks/ci-cd.md).

@@ -36,6 +36,7 @@ import {
 } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
 import { TabBar } from "./tab-bar";
+import { ViewerPreview } from "../use-is-viewer";
 
 const sampleDashboard: Dashboard = {
   company_id: "story",
@@ -715,6 +716,68 @@ export const SettingsLongEmail: Story = {
       />
     </StoryRoute>
   ),
+};
+
+const renameBusiness = {
+  name: "סטודיו אלפא לעיצוב ובנייה בע״מ",
+  connected: false,
+  companyId: null,
+  lastError: null,
+  email: "owner@example.com",
+};
+
+export const SettingsBusinessRow: Story = {
+  name: "Business row, long name",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsBusinessRowViewer: Story = {
+  name: "Business row, viewer",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <SettingsScreen sample={renameBusiness} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const SettingsRenameSheet: Story = {
+  name: "Rename sheet",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
+  },
+};
+
+export const SettingsRenameTooShort: Story = {
+  name: "Rename sheet, name too short",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
+    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
+    const field = within(sheet).getByLabelText("שם");
+    await userEvent.clear(field);
+    await userEvent.type(field, "א");
+    await userEvent.tab();
+  },
 };
 
 export const SettingsAssistantConnected: Story = {
