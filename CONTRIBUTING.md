@@ -6,7 +6,7 @@ Write in English. Use Hebrew only to quote a UI label, and keep the English mean
 
 ## Changelog
 
-Every documentation change gets an entry in [docs/changelog.md](docs/changelog.md). Put the newest date first. Use `YYYY-MM-DD`. Say what changed and which decision or screen it affects.
+Every documentation change gets a changelog entry. Do not edit [docs/changelog.md](docs/changelog.md) in a PR. Add one file, `docs/changelog.d/YYYY-MM-DD-<id>.md`, with the entry and no heading, so parallel PRs never conflict on it ([how](docs/changelog.d/README.md)). Say what changed and which decision or screen it affects.
 
 ## Decisions
 
