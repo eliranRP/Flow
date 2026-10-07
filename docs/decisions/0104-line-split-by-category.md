@@ -26,4 +26,4 @@
 
 ## Consequences
 
-Every P&L read (totals, projects, categories, drill-down) follows the parts with no change outside the view and the category helper. A project's own transaction list still shows only lines filed to it or shared with it, not lines that reach it through a part (follow-up FLOW-312). After FLOW-104 lands, a part may take the other kind as a reversal like a whole line does.
+Every P&L read (totals, projects, categories, drill-down) follows the parts with no change outside the view and the category helper. A project's own transaction list still shows only lines filed to it or shared with it, not lines that reach it through a part (follow-up FLOW-312). Since FLOW-104 ([0103](0103-reversals-across-directions.md)) the view takes the P&L side from each part's category kind, like a whole line; `save_line_split` still requires each part to match the line's direction, and reversal parts are a follow-up (FLOW-312).

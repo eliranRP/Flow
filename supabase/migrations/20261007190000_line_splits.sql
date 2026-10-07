@@ -1,5 +1,5 @@
 -- FLOW-311. Split one bank line into parts, each with its own category, optional project,
--- and an exact amount in minor units. The parts sum to the line. Decision 0103.
+-- and an exact amount in minor units. The parts sum to the line. Decision 0104.
 
 begin;
 
@@ -28,7 +28,7 @@ create table public.line_splits (
 );
 
 comment on table public.line_splits is
-  'Parts of one bank line, each with its own category, optional project and exact minor-unit amount. The parts sum to abs(amount_net). Decision 0103.';
+  'Parts of one bank line, each with its own category, optional project and exact minor-unit amount. The parts sum to abs(amount_net). Decision 0104.';
 
 comment on column public.line_splits.project_id is
   'Null keeps the line''s own project and P&L role for this part.';
@@ -106,7 +106,7 @@ select
   t.id as transaction_id,
   t.project_id,
   case
-    when t.direction = 'expense' and t.pnl_role = 'project' and t.project_id is not null
+    when coalesce(c.kind::text, t.direction::text) = 'expense' and t.pnl_role = 'project' and t.project_id is not null
       and t.project_id = co.overhead_project_id
       then 'overhead'::public.pnl_role
     else t.pnl_role
@@ -123,10 +123,11 @@ select
   not coalesce(c.excluded_from_pnl, false) as in_pnl,
   false as loan_split_fallback,
   case
-    when t.direction = 'income' then t.project_id is null
+    when coalesce(c.kind::text, t.direction::text) = 'income' then t.project_id is null
     else t.pnl_role is null or (t.pnl_role = 'project' and t.project_id is null)
       or (t.pnl_role = 'shared' and not exists (select 1 from public.allocations a where a.transaction_id = t.id))
-  end as unassigned
+  end as unassigned,
+  coalesce(c.kind::text, t.direction::text) as kind
 from public.transactions t
 join split sp on sp.transaction_id = t.id and sp.parts = 3 and not sp.flagged
   and sp.parts_minor = abs(t.amount_net)
@@ -142,11 +143,12 @@ select
   t.id as transaction_id,
   coalesce(s.project_id, t.project_id) as project_id,
   case
-    when t.direction = 'expense' and s.project_id is not null and s.project_id = co.overhead_project_id
+    when coalesce(c.kind::text, t.direction::text) = 'expense' and s.project_id is not null
+      and s.project_id = co.overhead_project_id
       then 'overhead'::public.pnl_role
-    when t.direction = 'expense' and s.project_id is not null
+    when coalesce(c.kind::text, t.direction::text) = 'expense' and s.project_id is not null
       then 'project'::public.pnl_role
-    when t.direction = 'expense' and t.pnl_role = 'project' and t.project_id is not null
+    when coalesce(c.kind::text, t.direction::text) = 'expense' and t.pnl_role = 'project' and t.project_id is not null
       and t.project_id = co.overhead_project_id
       then 'overhead'::public.pnl_role
     else t.pnl_role
@@ -163,11 +165,12 @@ select
   not coalesce(c.excluded_from_pnl, false) as in_pnl,
   false as loan_split_fallback,
   case
-    when t.direction = 'income' then coalesce(s.project_id, t.project_id) is null
+    when coalesce(c.kind::text, t.direction::text) = 'income' then coalesce(s.project_id, t.project_id) is null
     when s.project_id is not null then false
     else t.pnl_role is null or (t.pnl_role = 'project' and t.project_id is null)
       or (t.pnl_role = 'shared' and not exists (select 1 from public.allocations a where a.transaction_id = t.id))
-  end as unassigned
+  end as unassigned,
+  coalesce(c.kind::text, t.direction::text) as kind
 from public.transactions t
 join lsplit lp on lp.transaction_id = t.id and lp.parts >= 2
   and lp.parts_minor = abs(t.amount_net)
@@ -183,7 +186,7 @@ select
   t.id as transaction_id,
   t.project_id,
   case
-    when t.direction = 'expense' and t.pnl_role = 'project' and t.project_id is not null
+    when coalesce(c.kind::text, t.direction::text) = 'expense' and t.pnl_role = 'project' and t.project_id is not null
       and t.project_id = co.overhead_project_id
       then 'overhead'::public.pnl_role
     else t.pnl_role
@@ -200,10 +203,11 @@ select
   not coalesce(c.excluded_from_pnl, false) as in_pnl,
   sp.transaction_id is not null as loan_split_fallback,
   case
-    when t.direction = 'income' then t.project_id is null
+    when coalesce(c.kind::text, t.direction::text) = 'income' then t.project_id is null
     else t.pnl_role is null or (t.pnl_role = 'project' and t.project_id is null)
       or (t.pnl_role = 'shared' and not exists (select 1 from public.allocations a where a.transaction_id = t.id))
-  end as unassigned
+  end as unassigned,
+  coalesce(c.kind::text, t.direction::text) as kind
 from public.transactions t
 left join public.categories c on c.id = t.category_id
 left join public.companies co on co.id = t.company_id
@@ -246,7 +250,7 @@ as $$
   join public.transactions t on t.id = l.transaction_id
   where l.project_id = p_project
     and l.company_id = (select private.current_company_id())
-    and l.direction = 'expense'
+    and l.kind = 'expense'
     and l.pnl_role = 'project'
     and not t.category_suggested
     and not exists (
@@ -268,7 +272,7 @@ as $$
   join public.transactions t on t.id = l.transaction_id
   where a.project_id = p_project
     and l.company_id = (select private.current_company_id())
-    and l.direction = 'expense'
+    and l.kind = 'expense'
     and l.pnl_role = 'shared'
     and not t.category_suggested
     and l.category_id is not null;
