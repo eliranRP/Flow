@@ -154,7 +154,7 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   const deno2 = "deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors";
   assert.equal(rootScripts["test:unit"], `node --test scripts/*.test.mjs && pnpm -r --if-present test && ${deno1} && ${deno2}`);
   const unitStep = job("check-core").slice(job("check-core").indexOf("- name: Unit tests"));
-  for (const part of ["node --test scripts/*.test.mjs", "pnpm -r --if-present --filter '!@flow/app' test", deno1, deno2]) {
+  for (const part of ["node --test scripts/*.test.mjs", "pnpm -r --if-present --filter '!@flow/app' --filter '!flow' test", deno1, deno2]) {
     assert.ok(unitStep.includes(`\n          ${part}\n`), part);
   }
   assert.equal((job("check-core").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);

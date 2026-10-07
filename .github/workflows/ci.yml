@@ -65,13 +65,14 @@ jobs:
       - name: Deno tests for flow-mcp
         run: deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
       - run: pnpm typecheck
-      # `pnpm test:unit` without the @flow/app suite, which runs in `check (unit)`.
+      # `pnpm test:unit` without the @flow/app suite, which runs in `check (unit)`. '!flow' keeps the root
+      # package's own `test` script (test:unit and test:connectors) from running again here.
       # scripts/ci-cd.test.mjs pins the test:unit script, so a new part there must be added here too.
       - name: Unit tests
         run: |
           set -euo pipefail
           node --test scripts/*.test.mjs
-          pnpm -r --if-present --filter '!@flow/app' test
+          pnpm -r --if-present --filter '!@flow/app' --filter '!flow' test
           deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared
           deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors
       # The Mercury fixture deny-list is an Actions secret. Fork PRs do not receive it.
