@@ -16,6 +16,9 @@ case "$mode" in
     # apt-get keeps downloaded files unless a clean hook removes them.
     if [[ -z "${FLOW_APT_ARCHIVES:-}" ]]; then
       echo 'APT::Keep-Downloaded-Packages "true";' | $sudo_cmd tee /etc/apt/apt.conf.d/99flow-keep-debs >/dev/null
+      # A stalled mirror connection gives up after 30 seconds and is retried, instead of hanging the job.
+      printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' 'Acquire::Retries "5";' \
+        | $sudo_cmd tee /etc/apt/apt.conf.d/99flow-retry >/dev/null
       $sudo_cmd rm -f /etc/apt/apt.conf.d/docker-clean
     fi
     shopt -s nullglob
