@@ -210,6 +210,17 @@ begin
           if review_id is not null and review_reason is distinct from 'unallocated_shared' then
             begin
               perform public.approve_split_review(review_id);
+              -- approve_split_review snapshots the line after this write; reopen_review must
+              -- restore the line as it was before the split and category change.
+              update public.review_queue
+              set prior_project_id = prior_project,
+                  prior_category_id = prior_category,
+                  prior_pnl_role = prior_role,
+                  prior_user_assigned = coalesce(prior_assigned, false),
+                  prior_category_suggested = prior_suggested,
+                  prior_allocations = prior_shares
+              where id = review_id
+                and company_id = cid;
               closed_review := true;
               response := private.mcp_record_write(token, p_transaction_id, review_id, null, 'review');
             exception
