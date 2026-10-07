@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
 
 ## Which id
 
@@ -27,6 +27,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "loan"` | `id` | the loan id `add_loan` returned |
 | `undo` `kind: "loan_update"` | `id` | the loan id |
 | `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
+| `undo` `kind: "overhead_project"` | `id` | the company id `set_overhead_project` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -38,7 +39,7 @@ Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" 
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -52,7 +53,7 @@ These reads need the standby signing key. Without it, `tools/list` is empty and 
 
 Input: `{ "from": "2026-09-01", "to": "2026-09-30", "basis": "cash" }`.
 
-Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
+Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `is_overhead`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
 
 ### get_project
 
@@ -101,7 +102,7 @@ Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 
 ### get_totals
 
-`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`, `loan_split_fallback_count`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields. A loan payment with a valid three-part split counts by part: interest and escrow in the totals, the principal in `excluded_expense_*` and `excluded_count`, and the bank line's own category gets nothing. `loan_split_fallback_count` is the number of lines in the period that have a split but count whole, because a part needs review or the line carries VAT. It is 0 when none do. `count` counts lines, so a split line counts once. A project's shared share of each part rounds half to even.
+`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `unassigned_income_agorot`, `unassigned_expense_agorot`, `overhead_project_id`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`, `loan_split_fallback_count`, `unassigned_income_minor`, `unassigned_expense_minor`). The buckets add up ([0101](../decisions/0101-unassigned-and-overhead-project.md)): `direct + shared + overhead + unassigned_expense = expense`, and the projects' `profit_minor` minus `overhead` plus `unassigned_income - unassigned_expense` is `net_profit`, within 1 minor unit per shared loan-split part. Unassigned income has no project. Unassigned cost has no `pnl_role`, a project role and no project, or a shared role and no split. Cost filed to the overhead project (see `set_overhead_project`) is in `overhead_*`, not `direct_*`. `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields. A loan payment with a valid three-part split counts by part: interest and escrow in the totals, the principal in `excluded_expense_*` and `excluded_count`, and the bank line's own category gets nothing. `loan_split_fallback_count` is the number of lines in the period that have a split but count whole, because a part needs review or the line carries VAT. It is 0 when none do. `count` counts lines, so a split line counts once. A project's shared share of each part rounds half to even.
 
 ## Writes · cycle 3
 
@@ -198,6 +199,14 @@ Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the pri
 ```
 
 Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior `excluded_from_pnl` value. `refused` / `loan category is fixed` for `ריבית משכנתא`, `מסים וביטוח`, and `תשלומי הלוואה` (expense). Other refusals match `category not found` and the usual write envelope.
+
+### set_overhead_project
+
+```json
+{ "idempotency_key": "oh-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000002" }
+```
+
+Marks one project as the company's overhead project. Expense lines filed to it with a project role count as overhead in `get_totals`, `list_projects`, and `get_project`, not as direct cost, and the overhead share of the after-overhead view includes them. `project_id: null` clears it. `project_id` is required. Output `data`: `{ "id", "overhead_project_id", "undo_kind": "overhead_project" }`, where `id` is the company id. Undo restores the prior overhead project, or is `conflict` if it changed since. A project in another company is `refused` / `project not found`. `list_projects` and `get_project` return `is_overhead`, and `get_totals` returns `overhead_project_id`.
 
 ### sync_bank
 
