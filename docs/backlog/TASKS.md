@@ -30,21 +30,22 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
-| 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
-| 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 20 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 21 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
-| 22 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 23 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
-| 24 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 25 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
-| 26 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 27 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
-| 28 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
-| 29 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
-| 30 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
-| 30 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
+| 17 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
+| 18 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
+| 19 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
+| 20 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 21 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
+| 22 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 23 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
+| 24 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
+| 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 28 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
+| 29 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
+| 30 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
+| 31 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
+| 32 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -475,6 +476,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
 - [ ] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it.
+
+<a id="flow-511"></a>
+### FLOW-511 · Easy opt-out from the Home setup card
+- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **What:** A UX review of the setup flow and its Home card ("הגדרה • 4 מתוך 5"). The owner finds it sticky: the only way out is the small quiet הסתרה link, and it's not clear that it stops the card for good. Review the whole flow (setup runner, Home card, the "ההגדרה זמינה בהגדרות." toast, re-entry from Settings, skip flags per [0089](../decisions/0089-setup-runner.md)) and propose one clear button that opts out of setup in a single tap, with the way back from Settings. Mock up the options with Claude Design for the owner.
+- **Acceptance:** written plan and mockup; owner picks an option and the approval is written here before any build; then one SMALL UI PR with design review and a CONTROLS row.
 
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
