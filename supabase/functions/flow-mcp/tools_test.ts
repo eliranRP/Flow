@@ -374,6 +374,19 @@ Deno.test("assign_expense_split validates shares and refuses read tokens", async
       ],
       mcp_tid: TXN,
     }, ["write"], rpc),
+    // A share is a whole percent from 1 to 100, a share row takes no other key, and 50 rows is the cap.
+    ...[
+      [{ project_id: PROJECT, share: 50.5 }, { project_id: PROJECT_B, share: 49.5 }],
+      [{ project_id: PROJECT, share: 0 }, { project_id: PROJECT_B, share: 100 }],
+      [{ project_id: PROJECT, share: 101 }, { project_id: PROJECT_B, share: -1 }],
+      [{ project_id: PROJECT, share: 50, note: "x" }, { project_id: PROJECT_B, share: 50 }],
+      Array.from({ length: 51 }, (_, i) => ({
+        project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`,
+        share: i === 0 ? 50 : 1,
+      })),
+    ].map((shares) =>
+      callTool("assign_expense_split", { idempotency_key: "k", transaction_id: TXN, shares }, ["write"], rpc)
+    ),
   ];
   for (const pending of cases) {
     const result = await pending;
