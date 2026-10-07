@@ -2411,7 +2411,6 @@ export function TransactionScreen({
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [docOpen, setDocOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const leaveChange = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
@@ -2748,20 +2747,7 @@ export function TransactionScreen({
         active={sample == null}
         readOnly={holdWrites}
       />
-      {vatShown ? (
-        <List>
-          <ListRow
-            variant="button"
-            title="חשבונית ותשלום"
-            hint="מע״מ, מספר חשבונית, שורת הבנק"
-            icon={<DocumentIcon size={22} />}
-            action={<ChevronDownIcon />}
-            expanded={docOpen}
-            onClick={() => { setDocOpen((open) => !open); }}
-          />
-        </List>
-      ) : null}
-      {docOpen && vatShown ? (
+      {vatShown && txn.vat_amount !== 0n ? (
         <p className="ui-page-pad t-hint">
           מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
           {" · "}
