@@ -148,7 +148,6 @@ export function TxnNavButtons({ nav }: { nav: TxnNav }) {
         label="התנועה הקודמת"
         aria-disabled={atStart ? true : undefined}
         aria-describedby={atStart ? `${hintId}-start` : undefined}
-        className={atStart ? "ui-icon-btn-unavailable" : undefined}
         onClick={() => { nav.move("prev", "prev"); }}
       >
         <ChevronUpIcon size={20} />
@@ -158,7 +157,6 @@ export function TxnNavButtons({ nav }: { nav: TxnNav }) {
         label="התנועה הבאה"
         aria-disabled={atEnd ? true : undefined}
         aria-describedby={atEnd ? `${hintId}-end` : undefined}
-        className={atEnd ? "ui-icon-btn-unavailable" : undefined}
         onClick={() => { nav.move("next", "next"); }}
       >
         <ChevronDownIcon size={20} />

@@ -2376,14 +2376,12 @@ function splitProjectLabel(
   return `מפוצל · ${String(rows.length)} פרויקטים`;
 }
 
-/** What a screen reader hears after prev or next: the party and the amount. */
+/** What a screen reader hears after prev or next: the kind, the party and the amount, with no bare minus. */
 function txnAnnouncement(txn: NonNullable<TransactionDetail>): string {
   const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
-  const amount = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", {
-    detail: true,
-    direction: txn.direction === "income" ? "income" : "expense",
-  });
-  return `${party}, ${amount}`;
+  const kind = txn.direction === "income" ? "הכנסה" : "הוצאה";
+  const amount = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
+  return `${kind}, ${party}, ${amount}`;
 }
 
 export function TransactionScreen({
@@ -2584,10 +2582,22 @@ export function TransactionScreen({
       undoId.current = await collapseSplit(current.id, writeTarget.current.projectId);
     },
   });
+  // While a card loads or fails, ⋯ keeps its slot so ˄ ˅ stay under the finger,
+  // and the long title sits under the bar so it fits at 320.
+  const navEnd = nav ? (
+    <div className="ui-txn-end">
+      <TxnNavButtons nav={nav} />
+      <ReservedMenuSlot />
+    </div>
+  ) : undefined;
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
-    return <ScreenState title="פרטי תנועה" backTo={parent} action={nav ? <TxnNavButtons nav={nav} /> : undefined} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
+    return <ScreenState title="פרטי תנועה" backTo={parent} stacked={nav != null} action={navEnd} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
-  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} trailing={nav ? <TxnNavButtons nav={nav} /> : undefined} />;
+  if (!txn) {
+    return nav
+      ? <ScreenHeader layout="stacked" title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} trailing={navEnd} />
+      : <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
+  }
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
   const splitRow = collapsedTo == null && serverSplit;
