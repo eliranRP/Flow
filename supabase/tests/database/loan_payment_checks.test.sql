@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(32);
+select plan(36);
 
 do $users$
 begin
@@ -97,6 +97,8 @@ select is(
 );
 
 -- The app writes loans directly. The same rule holds there.
+-- discard plans: the trigger's plan cached under the definer above would hide a missing grant.
+discard plans;
 select tests.authenticate_as('f111_owner');
 select throws_ok(
   $$
@@ -133,6 +135,16 @@ select is(
   public.mcp_update_loan('f111-legacy-fix', (select id from f111 where label = 'legacy'), '{"payment_minor": 80000}'::jsonb)->'ok',
   'true'::jsonb,
   'raising the payment above the interest saves'
+);
+select is(
+  public.mcp_undo('f111-legacy-undo', 'loan_update', (select id from f111 where label = 'legacy'))->'error'->>'message',
+  'payment below interest',
+  'undo that would restore a payment below the interest is refused by name'
+);
+select is(
+  (select payment_minor from public.loans where id = (select id from f111 where label = 'legacy')),
+  80000::bigint,
+  'the refused undo keeps the raised payment'
 );
 
 -- Name and nulls.
@@ -225,6 +237,14 @@ select is(
       {"part": "principal", "amount_minor": 1, "scheduled_minor": 10000}]'::jsonb)->'error'->>'message',
   'invalid loan parts',
   'parts that do not sum to the line are refused by name'
+);
+select is(
+  public.mcp_attach_loan_payment('f111-parts-no-scheduled', (select id from f111 where label = 'txn'), (select id from f111 where label = 'loan'),
+    '[{"part": "interest", "amount_minor": 60000},
+      {"part": "escrow", "amount_minor": 0, "scheduled_minor": 0},
+      {"part": "principal", "amount_minor": 10000, "scheduled_minor": 10000}]'::jsonb)->'error'->>'message',
+  'invalid loan parts',
+  'a part without scheduled_minor is refused by name'
 );
 select is(
   (select count(*)::int from public.loan_splits where transaction_id = (select id from f111 where label = 'txn')),
@@ -322,6 +342,26 @@ select throws_ok(
   '23514',
   'loan_split_balance',
   'an app split past the principal is refused'
+);
+reset role;
+update public.transactions set amount_gross = -12000000, amount_net = -12000000, amount_original = 12000000
+where idempotency_key = 'f111:big';
+select tests.authenticate_as('f111_owner');
+select lives_ok(
+  $$
+    insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
+    select t.company_id, (select id from f111 where label = 'loan'), t.id, v.part::public.loan_split_part, v.amount, v.amount, c.id
+    from public.transactions t
+    cross join (values
+      ('interest', 'ריבית משכנתא', 0),
+      ('escrow', 'מסים וביטוח', 0),
+      ('principal', 'תשלומי הלוואה', 12000000)
+    ) as v(part, category, amount)
+    join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
+    where t.idempotency_key = 'f111:big';
+    set constraints all immediate;
+  $$,
+  'an app split that pays the balance down to exactly zero saves'
 );
 reset role;
 

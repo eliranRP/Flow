@@ -70,6 +70,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** MCP `update_loan` doesn't re-check the schedule, so a client can store a payment smaller than the interest, after which `get_loan_schedule` and `attach_loan_payment` throw uncaught. Validate in SQL and return a fixed refusal. In the same PR: trim the name and treat explicit nulls correctly, give a specific refusal for bad parts, add a DB balance check for the app split path, make `loan_split` undo refuse (conflict) when the split was corrected in the app afterwards, cap the currency-default read (the app reads at most 1000 lines), and add `set local lock_timeout` to the migration.
 - **Acceptance:** tests for each refusal and for undo after an app correction; existing loan tests unchanged.
 
+<a id="flow-116"></a>
+### FLOW-116 · Loan balance checks follow-ups (#72 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** #72
+- [ ] `private.loan_splits_check` does not lock the loan, so two app splits on the same loan at once can both pass the balance check (the MCP path locks it).
+- [ ] The balance check runs only when splits change. A line that becomes posted, a removed line that comes back, or an edit that lowers the principal below what was paid can still take `loan_balances` below zero.
+
 <a id="flow-112"></a>
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —

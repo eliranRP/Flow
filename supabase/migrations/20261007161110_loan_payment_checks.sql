@@ -27,6 +27,9 @@ $$;
 
 revoke all on function private.loan_payment_covers_interest(bigint, integer, bigint, bigint)
   from public, anon, authenticated;
+-- The trigger runs as the caller, so the app's own loan writes need this.
+grant execute on function private.loan_payment_covers_interest(bigint, integer, bigint, bigint)
+  to authenticated, service_role;
 
 -- A trigger, not a check constraint: rows saved before this migration stay readable,
 -- and a name-only edit of such a row still saves.
@@ -505,14 +508,16 @@ begin
           -- Exactly interest, escrow and principal, once each, as whole non-negative minor units.
           select count(*) = 3
              and count(distinct e.value->>'part') = 3
-             and bool_and(
+             -- coalesce: a missing key is null, and bool_and would skip it.
+             and bool_and(coalesce(
                jsonb_typeof(e.value) = 'object'
                and e.value->>'part' in ('interest', 'escrow', 'principal')
                and jsonb_typeof(e.value->'amount_minor') = 'number'
                and jsonb_typeof(e.value->'scheduled_minor') = 'number'
                and (e.value->>'amount_minor') ~ '^[0-9]{1,18}$'
-               and (e.value->>'scheduled_minor') ~ '^[0-9]{1,18}$'
-             )
+               and (e.value->>'scheduled_minor') ~ '^[0-9]{1,18}$',
+               false
+             ))
           into parts_ok
           from jsonb_array_elements(p_parts) e;
 
@@ -942,6 +947,12 @@ begin
       end if;
     end if;
   exception
+    when check_violation then
+      if sqlerrm = 'loan_payment_below_interest' then
+        response := private.mcp_refused('payment below interest');
+      else
+        response := private.mcp_refused(sqlerrm);
+      end if;
     when deadlock_detected or serialization_failure then
       return private.mcp_error('unavailable', 'retry');
     when others then
