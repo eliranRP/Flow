@@ -2326,6 +2326,8 @@ export const TransactionMetaLongMemoOpen: Story = {
   play: async ({ canvasElement }) => {
     const toggle = await within(canvasElement).findByRole("button", { name: /הערה/ });
     await userEvent.click(toggle);
+    // Route stories open with the title focused (storybook-layout's focus check); the click moved it.
+    canvasElement.querySelector<HTMLElement>(".ui-focus-title")?.focus();
   },
 };
 

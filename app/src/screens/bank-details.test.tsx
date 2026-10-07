@@ -139,15 +139,18 @@ describe("transaction פרטי הבנק (FLOW-304)", () => {
     expect(within(section).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("renders the screen without the section when the meta read fails", async () => {
+  it("shows a פרטי הבנק retry row when the meta read fails, and the rows after a retry", async () => {
     db.metaError = true;
     renderDetail();
     expect(await screen.findByText("Example Office Suite")).toBeInTheDocument();
-    await vi.waitFor(() => {
-      expect(db.calls.some((call) => call.name === "get_line_meta")).toBe(true);
-    });
+    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: פרטי הבנק" }, { timeout: 4000 });
+    expect(screen.getByText("לא הצלחנו לטעון.")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "פרטי הבנק" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    db.metaError = false;
+    db.meta = [{ ...empty, method: "ach" }];
+    fireEvent.click(retry);
+    expect(await screen.findByRole("heading", { name: "פרטי הבנק" })).toBeInTheDocument();
+    expect(screen.getByText("העברת ACH")).toBeInTheDocument();
   });
 });
 

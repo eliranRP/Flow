@@ -9,7 +9,7 @@ Mercury sends each line with how the money moved, the card used, a memo, and the
 
 ## Decision
 
-1. The connector keeps four more fields in `transactions.provider_meta`: `method` (`card`, `ach`, `wire`, `check`, `transfer`, `other`), `card_last4`, `memo` and `account_id` (the provider's account id, never an account number). `method` comes from the provider's kind and which routing block the line has; only the block's presence is read. `card_last4` comes from the card's "••1234" label and is kept only when it is exactly 4 digits. `memo` is the sender's memo, else the team's note, redacted and capped at 200 characters.
+1. The connector keeps four more fields in `transactions.provider_meta`: `method` (`card`, `ach`, `wire`, `check`, `transfer`, `other`), `card_last4`, `memo` and `account_id` (the provider's account id, never an account number). `method` comes from the provider's kind and which routing block the line has; only the block's presence is read. `card_last4` comes from the card's "••1234" label and is kept only when it is exactly 4 digits. `memo` is the sender's memo, else the team's note, redacted and capped at 200 characters. Redaction replaces every run of 4 or more digits with `****` (the Mercury redactor), so a memo from Mercury keeps no number of 4 digits or more.
 2. `private.clean_provider_meta` is the one allowlist for `provider_meta` on insert and update in `upsert_connector_lines`. Any other key is dropped. A run of 5 or more digits in the memo keeps its last 4 (`private.mask_long_digits`).
 3. `public.get_line_meta(p_ids)` returns `{transaction_id, method, card_last4, memo, account, counterparty, bank_description}` for up to 200 lines of the caller's company. `account` is the connection's label for `account_id`, with masked digits dropped. Lines imported earlier get `method` from their stored kind. The memo and the bank text are masked again on read.
 4. flow-mcp `get_expense`, `list_review` and `search_expenses` carry the same object as `meta`. A failed read fails the tool, so a row never looks like it has no bank details when the read was refused.
@@ -19,4 +19,4 @@ The design session compared chips on the card with a collapsible row on the deta
 
 ## Consequences
 
-A re-sync fills the new fields on lines already imported; until then those lines show the method from their kind and no card digits. Long invoice numbers in a memo are cut to their last 4. SUMIT lines carry no bank details yet.
+A re-sync fills the new fields on lines already imported; until then those lines show the method from their kind and no card digits. A Mercury memo shows `****` for any number of 4 digits or more, invoice numbers included ("Invoice 1042" reads "Invoice ****"); the database mask, which keeps the last 4 of a run of 5 or more, is the guard for any other writer. SUMIT lines carry no bank details yet.

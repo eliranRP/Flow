@@ -495,7 +495,7 @@ export function useLineMetaQuery(transactionId: string | null | undefined, enabl
 
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines"]) => {
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta"]) => {
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }
