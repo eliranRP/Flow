@@ -375,7 +375,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Income empty: [es-07](../../design/states/es-07-categories-income-light.png).
 - Entry: Settings → קטגוריות.
 - Steps: expense and income segments. Rename, reorder, hide (23), merge (22a then 22b). Delete only when the category has no transactions. [0008](../decisions/0008-flat-categories-hide-or-merge.md).
-- Kept out of the P&L: a ⊘ mark in `--color-text-muted` right after the name (`role="img"`, label "מחוץ לרווח והפסד"). The name keeps `--color-text`, so the row does not read as hidden, and only the name truncates. A legend line under the list explains ⊘ when the segment has a kept-out row. The row sheet's third button toggles the flag on tap, with a hint line under it and a ביטול toast. The three loan categories show a locked line instead. [0104](../decisions/0104-kept-out-toggle.md).
+- Kept out of the P&L: a ⊘ mark in `--color-text-muted` right after the name (`role="img"`, label "מחוץ לרווח והפסד"). The name keeps `--color-text`, so the row does not read as hidden, and only the name truncates. A legend line under the list explains ⊘ when the segment has a kept-out row. The row sheet's third button toggles the flag on tap, with a hint line under it and a ביטול toast. The three loan categories show a locked line instead. [0106](../decisions/0106-kept-out-toggle.md).
 - Back: chevron to Settings.
 - Success: undo toast after hide or merge.
 
