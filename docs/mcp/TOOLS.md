@@ -40,7 +40,7 @@ Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" 
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found` and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`. A row that is missing or belongs to another company is answered the same way on every tool: write tools return `refused` with a `... not found` message, and read tools and `undo` return `not_found`. Neither says whether the id exists in another company.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -135,7 +135,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 ### assign_expense_split
 
-Splits one expense across at least two projects. Each `shares[]` row has `project_id` and `share` (whole percent). The shares must sum to 100, projects must be unique, and each project must belong to the company. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`.
+Splits one expense across 2 to 50 projects. Each `shares[]` row has `project_id` and `share` (whole percent). The shares must sum to 100, projects must be unique, and each project must belong to the company. A finished project and a hidden category are accepted, so a late bill can still land on a sold property. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. The idempotency key compares the shares as a set, so the same shares in another order replay the stored response. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`, and a category that was a suggestion before the write is a suggestion again after undo.
 
 ```json
 {
@@ -149,7 +149,7 @@ Splits one expense across at least two projects. Each `shares[]` row has `projec
 }
 ```
 
-Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as `assign_expense`.
+Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as `assign_expense`. A line waiting in review as an unsplit shared cost (`unallocated_shared`) is closed by the split itself: `closed_review` is true, `undo_kind` is `reassign`, and undo reopens it.
 
 ### set_expense_category
 
