@@ -268,7 +268,7 @@ Refused messages add `loan not found`, `loan currency mismatch`, `loan already a
 
 ## Batch · cycle 6
 
-`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters.
+`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. When `shares[]` is set, the row behaves like `assign_expense_split`: `category_id` is optional, and `project_id` or `remember` on the same row is `validation`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters.
 
 ```json
 {
@@ -282,12 +282,20 @@ Refused messages add `loan not found`, `loan currency mismatch`, `loan already a
     {
       "transaction_id": "22222222-2222-4000-8000-000000000021",
       "category_id": "c0ffee00-1111-4000-8000-0000000000a1"
+    },
+    {
+      "transaction_id": "22222222-2222-4000-8000-000000000022",
+      "category_id": "c0ffee00-1111-4000-8000-0000000000a1",
+      "shares": [
+        { "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "share": 50 },
+        { "project_id": "8c1a0b2e-1111-4000-8000-000000000002", "share": 50 }
+      ]
     }
   ]
 }
 ```
 
-Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is either `{ "transaction_id", "ok": true, "undo_kind" }` or `{ "transaction_id", "ok": false, "code" }`.
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is either `{ "transaction_id", "ok": true, "undo_kind" }` or `{ "transaction_id", "ok": false, "code" }`. A successful split row also has `closed_review`.
 
 ### undo_batch
 
@@ -295,8 +303,8 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from that batch through `mcp_undo`, newest first. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from that batch through `mcp_undo`, newest first. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Not in tools/list
 
-`rename_project`, `finish_project`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. A batch split in `assign_expenses` is a follow-up. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
+`rename_project`, `finish_project`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
