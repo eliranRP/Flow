@@ -22,7 +22,7 @@ describe("BigNumber", () => {
     expect(heroStepClass("display", 0)).toBe("t-display");
     expect(heroStepClass("display", 2)).toBe("t-title-2");
     expect(heroStepClass("display", 9)).toBe("t-title-3");
-    expect(heroStepClass("list", 3)).toBe("t-title-3");
+    expect(heroStepClass("list", 3)).toBe("t-amount");
     const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
     if (!rect) throw new Error("getBoundingClientRect is missing");
     const original = rect.value as (this: Element) => DOMRect;
@@ -81,7 +81,8 @@ describe("BigNumber", () => {
           </span>
         </div>,
       );
-      const shown = screen.getByText("−₪99,999,999.99", { selector: "bdi[dir=ltr]" });
+      // The agorot sit in their own smaller span, so match the whole figure by its text content.
+      const shown = screen.getByText((_, el) => el?.matches("bdi[dir=ltr]") === true && el.textContent === "−₪99,999,999.99");
       expect(shown).toHaveClass("t-title-2");
       expect(shown).not.toHaveClass("t-display");
       expect(probed).not.toContain("t-hero");
