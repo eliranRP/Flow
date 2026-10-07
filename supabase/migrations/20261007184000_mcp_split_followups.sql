@@ -1,5 +1,5 @@
 -- FLOW-204: assign_expense_split follow-ups from the #68 review. Decision 0095.
--- Shares are capped at 50 and hashed in project order, a hidden category is refused,
+-- Shares are capped at 50 and hashed in project order,
 -- closing an unallocated_shared review is reported, and undo puts a suggested category back.
 
 begin;
@@ -92,7 +92,6 @@ declare
   review_reason text;
   shares_save jsonb;
   cat_kind text;
-  cat_hidden boolean;
   undo_id uuid;
   closed_review boolean := false;
   blocked boolean := false;
@@ -193,14 +192,11 @@ begin
         for update;
 
         if p_category_id is not null then
-          select c.kind::text, c.hidden into cat_kind, cat_hidden
+          select c.kind::text into cat_kind
           from public.categories c
           where c.id = p_category_id and c.company_id = cid;
           if cat_kind is null then
             response := private.mcp_refused('category not found');
-            blocked := true;
-          elsif cat_hidden then
-            response := private.mcp_error('refused', 'category is hidden');
             blocked := true;
           elsif cat_kind is distinct from direction::text then
             response := private.mcp_refused('category kind must match the direction');

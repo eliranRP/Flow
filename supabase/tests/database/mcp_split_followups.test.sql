@@ -1,5 +1,5 @@
 -- FLOW-204: assign_expense_split follow-ups. Share cap, order-free idempotency, hidden
--- category, closed unallocated_shared review, and undo keeping a suggested category.
+-- category and finished project accepted, closed unallocated_shared review, and undo keeping a suggested category.
 
 begin;
 
@@ -63,6 +63,9 @@ insert into splitfu (label, id) select 'north', id from public.projects where na
 insert into splitfu (label, id) select 'south', id from public.projects where name = 'South Property';
 insert into splitfu (label, id)
 select 'materials', id from public.categories where name = 'חומרים' and kind = 'expense';
+-- The shared line's guess is חומרים, so its split writes another category to tell the snapshots apart.
+insert into splitfu (label, id)
+select 'labor', id from public.categories where name = 'עבודה' and kind = 'expense';
 insert into splitfu (label, id)
 select 'hidden', c.id
 from public.categories c
@@ -164,24 +167,28 @@ select is(
   'the same shares in another order replay the stored response'
 );
 
--- A hidden category is refused and writes nothing.
+-- A hidden category and a finished project are accepted (owner's call, FLOW-204).
+reset role;
+update public.projects set status = 'finished' where id = (select id from splitfu where label = 'south');
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
 select is(
   public.mcp_assign_expense_split(
     'splitfu-hidden',
-    (select id from splitfu where label = 'sugg'),
+    (select id from splitfu where label = 'plain'),
     pg_temp.shares(50, 50),
     (select id from splitfu where label = 'hidden')
-  )->'error',
-  '{"code": "refused", "message": "category is hidden"}'::jsonb,
-  'a hidden category is refused'
+  )->>'ok',
+  'true',
+  'a hidden category and a finished project are accepted'
 );
 
 reset role;
 select is(
-  (select count(*) from public.allocations a where a.transaction_id = (select id from splitfu where label = 'sugg')),
-  0::bigint,
-  'the refused split writes no allocation'
+  (select t.category_id from public.transactions t where t.id = (select id from splitfu where label = 'plain')),
+  (select id from splitfu where label = 'hidden'),
+  'the hidden category is written'
 );
+update public.projects set status = 'active' where id = (select id from splitfu where label = 'south');
 
 -- Undo of a reassign split puts the suggested category back.
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
@@ -253,7 +260,7 @@ select is(
     'splitfu-shared',
     (select id from splitfu where label = 'shared'),
     pg_temp.shares(40, 60),
-    (select id from splitfu where label = 'materials')
+    (select id from splitfu where label = 'labor')
   )->'data') - 'id',
   '{"undo_kind": "reassign", "closed_review": true}'::jsonb,
   'closing an unallocated_shared review reports closed_review true'
@@ -261,9 +268,11 @@ select is(
 
 reset role;
 select is(
-  (select jsonb_build_object('status', q.status, 'prior_category_id', q.prior_category_id, 'prior_pnl_role', q.prior_pnl_role)
+  (select jsonb_build_object('status', q.status, 'prior_category_id', q.prior_category_id, 'prior_pnl_role', q.prior_pnl_role,
+     'prior_category_suggested', q.prior_category_suggested)
    from public.review_queue q where q.transaction_id = (select id from splitfu where label = 'shared')),
-  (select jsonb_build_object('status', 'changed', 'prior_category_id', id, 'prior_pnl_role', 'shared')
+  (select jsonb_build_object('status', 'changed', 'prior_category_id', id, 'prior_pnl_role', 'shared',
+     'prior_category_suggested', true)
    from splitfu where label = 'shared_guess'),
   'the closed review stores the line from before the category write'
 );
