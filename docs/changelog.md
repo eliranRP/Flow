@@ -56,6 +56,8 @@ Review alongside CI, then auto-merge (FLOW-813). Reviews start as soon as a PR i
 
 Rename a company in the app (FLOW-602 screen). In Settings, the business name is now its own row, and the Google email is a separate static row. An owner taps the business row to open a one-field "שם העסק" sheet. The sheet saves through `rename_company` (2 to 100 characters, checked on blur and on save) and shows "שם העסק נשמר" with ביטול, which writes the previous name back. A viewer sees the row static. No migration. New decision [0108](decisions/0108-rename-company-row.md), which amends [0082](decisions/0082-settings-redesign.md) §2. CONTROLS.md and DESIGN-RULES §4 updated.
 
+CI no longer hangs on a stalled Ubuntu mirror. Before Playwright installs its system packages, apt is set to give up on a stalled connection after 30 seconds and retry it up to 5 times. Pull requests also read the package cache that `main` saves.
+
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).
