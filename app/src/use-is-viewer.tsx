@@ -54,11 +54,13 @@ export function useCompanyRole(): CompanyRole {
     queryKey: ["company-owner", userId],
     enabled: pinned !== true && status === "authed" && userId != null && canReadOwner,
     retry: false,
-    queryFn: async (): Promise<KnownRole> => {
+    queryFn: async ({ signal }): Promise<KnownRole> => {
       const read = getSupabase();
       if (!read || typeof read.from !== "function" || userId == null) return { companyId: "", role: "owner" };
       const { data, error } = await read.from("companies").select("id, owner_id").maybeSingle();
       if (error) throw error;
+      // A sign-out clears the cache and aborts this read. A late answer saves no role.
+      signal.throwIfAborted();
       const known = roleFromRow(userId, data);
       writeRoleCache(userId, known.companyId, known.role);
       return known;

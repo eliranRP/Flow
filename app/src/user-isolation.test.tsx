@@ -1,13 +1,20 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "./auth";
 import { readRoleCache, writeRoleCache } from "./company-role-cache";
+import { useCompanyRole } from "./use-is-viewer";
 
 const auth = vi.hoisted(() => ({
   handlers: [] as Array<(event: string, session: Session | null) => void>,
+}));
+
+const roleRead = vi.hoisted(() => ({
+  calls: 0,
+  gate: null as Promise<void> | null,
+  row: null as { id: string; owner_id: string } | null,
 }));
 
 vi.mock("./lib/supabase", () => ({
@@ -18,6 +25,15 @@ vi.mock("./lib/supabase", () => ({
         return { data: { subscription: { unsubscribe: () => undefined } } };
       },
     },
+    from: () => ({
+      select: () => ({
+        maybeSingle: async () => {
+          roleRead.calls += 1;
+          if (roleRead.gate) await roleRead.gate;
+          return { data: roleRead.row, error: null };
+        },
+      }),
+    }),
   }),
 }));
 
@@ -93,8 +109,8 @@ describe("per-user cache on a shared device", () => {
     expect(client.getQueryData(["dashboard", "off", "month"])).toBeUndefined();
     expect(screen.queryByText("company A flag on")).not.toBeInTheDocument();
     expect(readRoleCache(USER_A)).toBeNull();
-    // Another person's saved role on this device is theirs to keep.
-    expect(readRoleCache(USER_B)).toEqual({ companyId: COMPANY_B, role: "owner" });
+    // One session per device: a role saved for anyone else was already stale.
+    expect(readRoleCache(USER_B)).toBeNull();
   });
 
   it("an expired session clears the same way as a sign-out", async () => {
@@ -109,6 +125,28 @@ describe("per-user cache on a shared device", () => {
     expect(client.getQueryCache().getAll().filter((query) => query.state.data !== undefined)).toEqual([]);
     expect(readRoleCache(USER_A)).toBeNull();
     expect(localStorage.getItem("flow-company-role")).toBeNull();
+  });
+
+  it("a session that ended while no tab was open leaves no saved role", () => {
+    writeRoleCache(USER_A, COMPANY_A, "owner");
+    renderApp((userId) => Promise.resolve(companyOf(userId)));
+
+    // The refresh token expired between visits: this load starts with no user.
+    emit("INITIAL_SESSION", null);
+
+    expect(readRoleCache(USER_A)).toBeNull();
+    expect(localStorage.getItem("flow-company-role")).toBeNull();
+  });
+
+  it("a load keeps the signed-in user's saved role and drops the rest", () => {
+    writeRoleCache(USER_A, COMPANY_A, "viewer");
+    writeRoleCache(USER_B, COMPANY_B, "owner");
+    renderApp((userId) => Promise.resolve(companyOf(userId)));
+
+    emit("INITIAL_SESSION", sessionFor(USER_B));
+
+    expect(readRoleCache(USER_B)).toEqual({ companyId: COMPANY_B, role: "owner" });
+    expect(readRoleCache(USER_A)).toBeNull();
   });
 
   it("a user switch without a reload never shows the last user's company", async () => {
@@ -152,5 +190,55 @@ describe("per-user cache on a shared device", () => {
     expect(screen.getByLabelText("note")).toHaveValue("draft by A");
     expect(readRoleCache(USER_A)).toEqual({ companyId: COMPANY_A, role: "owner" });
     expect(fetchFor).toHaveBeenCalledTimes(1);
+  });
+
+  it("a role read still on its way at sign-out saves no role", async () => {
+    let release: () => void = () => undefined;
+    roleRead.calls = 0;
+    roleRead.gate = new Promise<void>((resolve) => { release = resolve; });
+    roleRead.row = { id: COMPANY_A, owner_id: USER_B };
+    function RoleProbe() {
+      return <p>{useCompanyRole()}</p>;
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AuthProvider>
+          <RoleProbe />
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    emit("INITIAL_SESSION", sessionFor(USER_A));
+    await waitFor(() => { expect(roleRead.calls).toBe(1); });
+
+    emit("SIGNED_OUT", null);
+    await act(async () => {
+      release();
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+    });
+
+    expect(readRoleCache(USER_A)).toBeNull();
+    expect(localStorage.getItem("flow-company-role")).toBeNull();
+    roleRead.gate = null;
+  });
+
+  it("a role read that settles while signed in still saves the role", async () => {
+    roleRead.gate = null;
+    roleRead.row = { id: COMPANY_A, owner_id: USER_B };
+    function RoleProbe() {
+      return <p>{useCompanyRole()}</p>;
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <AuthProvider>
+          <RoleProbe />
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    emit("INITIAL_SESSION", sessionFor(USER_A));
+
+    expect(await screen.findByText("viewer")).toBeInTheDocument();
+    expect(readRoleCache(USER_A)).toEqual({ companyId: COMPANY_A, role: "viewer" });
   });
 });

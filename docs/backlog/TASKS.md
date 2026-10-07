@@ -450,6 +450,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** Query cache keys are shared across users and the cache isn't cleared on sign-out; saved roles stay in localStorage after sign-out; the dashboard cache isn't user-scoped, so a user switch without a reload could show the wrong company's flag. Scope keys by user and company and clear on sign-out (including an expired session or another tab).
 - **Acceptance:** tests for sign-out, a user switch without reload, and an expired session.
 
+<a id="flow-604"></a>
+### FLOW-604 · Shared-device follow-ups (#79 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] Unsaved split drafts (the `flow-split:` sessionStorage keys) survive a sign-out in the same tab. Drop them when the user changes, with a test.
+- [ ] `ToastProvider` wraps `AuthProvider`, so the last user's toast and its retry or undo action outlive a user switch. Swap the providers and add a test.
+
 ## Jev
 
 <a id="flow-701"></a>

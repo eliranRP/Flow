@@ -66,3 +66,24 @@ export function forgetCompanyRole(userId: string): void {
     }
   }
 }
+
+/**
+ * One session per device: only the signed-in user's role may stay saved. A
+ * session that ended while no tab was open never reaches forgetCompanyRole,
+ * so a load with no user, or with someone else, drops it here.
+ */
+export function keepOnlyCompanyRole(userId: string | null): void {
+  try {
+    const raw = localStorage.getItem(COMPANY_ROLE_CACHE_KEY);
+    if (raw == null) return;
+    const kept = userId == null ? null : readRoleCache(userId);
+    if (kept == null || userId == null) localStorage.removeItem(COMPANY_ROLE_CACHE_KEY);
+    else if (raw !== JSON.stringify({ [userId]: kept })) localStorage.setItem(COMPANY_ROLE_CACHE_KEY, JSON.stringify({ [userId]: kept }));
+  } catch {
+    try {
+      localStorage.removeItem(COMPANY_ROLE_CACHE_KEY);
+    } catch {
+      // A private window can refuse the delete.
+    }
+  }
+}

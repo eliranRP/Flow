@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Per-user cache on a shared device (FLOW-603). When the signed-in user changes (sign-out, an expired session, another tab, or a switch without reload), the app clears its query cache, remounts its screens, and keeps a saved role only for the signed-in user. A role read that finishes after sign-out saves nothing. Follow-ups are FLOW-604.
+
 Faster CI. The `check` and `e2e` jobs are now gates over jobs that run side by side: `check (core)`, two storybook shards, and two e2e shards. Local Supabase starts in the background while node and Playwright install. The static-story smoke is 8 tests instead of 1. Same tests, same required check names. Runbook: [ci-cd](runbooks/ci-cd.md).
 
 Income filed to a project (FLOW-109). Checked that income filed through MCP `assign_expense` or `assign_expenses` counts in that project's `get_project` and `list_projects` income and once in the company total, in ILS and in its own currency, and that `undo` removes it. The null `pnl_role` and missing allocation row on income are by design: the P&L reads income by `project_id`. No code change. New pgTAP `project_income.test.sql`, a flow-mcp test for the income path, and a note under `assign_expense` in `docs/mcp/TOOLS.md`.
