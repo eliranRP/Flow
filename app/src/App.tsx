@@ -44,6 +44,7 @@ import {
   TransactionScreen,
   UnpaidScreen,
 } from "./screens/flow-screens";
+import { BreakdownLinesScreen, BreakdownScreen } from "./screens/breakdown";
 import { JevReviewE2e } from "./screens/jev-review-card";
 import { SignInScreen } from "./screens/SignInScreen";
 import { SetupIndex, SetupLanding, SetupResume, SetupStepScreen } from "./setup/route";
@@ -155,6 +156,9 @@ function AppRoutes() {
               <Route path="projects" element={<ProjectsScreen />} />
               <Route path="projects/:projectId" element={<ProjectDetailScreen />} />
               <Route path="projects/:projectId/categories/:categoryId" element={<ProjectCategoryScreen />} />
+              <Route path="flow/:direction" element={<BreakdownScreen />} />
+              <Route path="flow/:direction/excluded/:currency" element={<BreakdownLinesScreen excluded />} />
+              <Route path="flow/:direction/:groupBy/:currency/:groupKey" element={<BreakdownLinesScreen />} />
               <Route element={<ReviewWithSheet />}>
                 <Route path="review" element={null} />
                 <Route path="review/all" element={null} />

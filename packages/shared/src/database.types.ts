@@ -720,6 +720,12 @@ isOneToOne: false
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"get_breakdown":
+{ Args: { "p_basis"?: string,"p_direction": string,"p_from"?: string,"p_group_by"?: string,"p_to"?: string }; Returns: Json
+                           },
+"get_breakdown_lines":
+{ Args: { "p_basis"?: string,"p_currency": string,"p_direction": string,"p_excluded"?: boolean,"p_from"?: string,"p_group_by": string,"p_group_key": string,"p_limit"?: number,"p_offset"?: number,"p_to"?: string }; Returns: Json
+                           },
 "get_dashboard":
 { Args: { "p_basis"?: string,"p_from"?: string,"p_to"?: string }; Returns: Json
                            },

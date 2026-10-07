@@ -25,7 +25,7 @@ type Section = "home" | "projects" | "review" | "settings";
 
 /** Pushed screens keep the tab of the section they belong to. /add highlights none. */
 export function tabSection(pathname: string): Section | null {
-  if (pathname === "/" || pathname.startsWith("/unpaid")) return "home";
+  if (pathname === "/" || pathname.startsWith("/unpaid") || pathname.startsWith("/flow/")) return "home";
   if (pathname.startsWith("/projects")) return "projects";
   if (pathname.startsWith("/review")) return "review";
   if (pathname.startsWith("/settings") || pathname.startsWith("/notifications")) return "settings";

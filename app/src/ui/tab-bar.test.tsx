@@ -81,6 +81,15 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "בית" })).not.toHaveAttribute("aria-current");
   });
 
+  it("keeps home active on Home's breakdown", () => {
+    render(
+      <MemoryRouter initialEntries={["/flow/expense/category/ILS/c1"]}>
+        <TabBar />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "בית" })).toHaveAttribute("aria-current", "page");
+  });
+
   it("keeps home active on unpaid and settings active on categories", () => {
     const { unmount } = render(
       <MemoryRouter initialEntries={["/unpaid"]}>
