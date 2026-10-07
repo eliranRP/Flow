@@ -130,6 +130,39 @@ export function retryAfterToIso(header: string | null, now: Date): string | null
   return parsed.toISOString();
 }
 
+const RATE_LIMIT_BACKOFF_MS = 15 * 60 * 1000;
+const RATE_LIMIT_BACKOFF_MAX_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * When to try again after a rate limit. Mercury's Retry-After when it is later
+ * than now (capped at a day), else the 15 minutes note_connector_failure uses.
+ */
+export function backoffUntil(retryAfter: string | null, now: Date): string {
+  const fallback = now.getTime() + RATE_LIMIT_BACKOFF_MS;
+  const parsed = retryAfter ? Date.parse(retryAfter) : Number.NaN;
+  const until = Number.isNaN(parsed) || parsed <= now.getTime()
+    ? fallback
+    : Math.min(parsed, now.getTime() + RATE_LIMIT_BACKOFF_MAX_MS);
+  return new Date(until).toISOString();
+}
+
+/**
+ * True when a reconnect returns a different set of account ids than the stored
+ * labels. The stored cursor belongs to the old accounts, so the caller clears it
+ * and the next sync reads from import_from again. No stored labels is a change.
+ */
+export function mercuryAccountsChanged(previous: unknown, next: readonly AccountLabel[]): boolean {
+  if (!Array.isArray(previous)) return true;
+  const before = new Set<string>();
+  for (const row of previous) {
+    if (isRecord(row) && typeof row.id === "string") before.add(row.id);
+  }
+  const after = new Set(next.map((account) => account.id));
+  if (before.size !== after.size) return true;
+  for (const id of after) if (!before.has(id)) return true;
+  return false;
+}
+
 function classForStatus(status: number): { errorClass: ConnectorErrorClass; code: ConnectorErrorClass } {
   if (status === 401 || status === 403) return { errorClass: "auth", code: "auth" };
   if (status === 429) return { errorClass: "rate_limited", code: "rate_limited" };
