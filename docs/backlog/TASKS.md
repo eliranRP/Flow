@@ -20,8 +20,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 5b | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | in-progress (FLOW-311 thread, claude/project-thread-cuhg10) |
-| 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
-| 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
+| 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
+| 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
@@ -42,6 +42,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -169,7 +170,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-202"></a>
 ### FLOW-202 · sync_bank returns before slow MCP clients time out
-- **Type:** MCP · **Status:** ready · **Depends on:** —
+- **Type:** MCP · **Status:** in-progress (#75) · **Depends on:** —
 - **What:** A bank pull through `sync_bank` can take about 45 seconds, and clients with a 30-second timeout cut it off. The MCP token also lives 60 seconds while a pull can take 120, so the finish step can fail silently. Start the sync and return a job id, plus a read tool for the job status (or stream progress).
 - **Acceptance:** tool returns within a few seconds; status tool reports added, skipped and newest date; the finish step validates the response shape before storing.
 
@@ -212,6 +213,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** MCP · **Status:** ready · **Depends on:** —
 - **What:** `create_project` and `create_category` hit HTTP 429 after about 10 calls in a row during a company setup. Add batch create tools (like `assign_expenses`) or a higher burst for setup. Also send the MCP `tools/list_changed` notification so clients refresh a stale tool list after a deploy.
 - **Acceptance:** a setup of 30 projects and categories runs without a 429; tests for the batch and the notification.
+
+<a id="flow-207"></a>
+### FLOW-207 · sync_bank job follow-ups (#75 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `mcp_sync_bank_finish` accepts any 1–200 character failure message for a known code; allow-list the fixed strings the edge sends, like `mcp_refused`.
+- [ ] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs.
+- [ ] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
+- [ ] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
 
 ## Transactions and app UX
 
@@ -466,9 +475,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-602"></a>
 ### FLOW-602 · Rename a company
-- **Type:** SMALL CYCLE · **Status:** ready (RPC and MCP); the screen is plan-first · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** in-progress (#77) for the RPC and MCP; the screen is plan-first · **Depends on:** —
 - **What:** An owner-only RPC and MCP tool `rename_company` (idempotency key, write bucket, undo). The in-app place is a small focused screen or sheet, not a Settings catch-all; it needs a quick mockup and can ship in a second PR.
 - **Acceptance:** viewer refused, other company refused with a positive control, undo restores, TOOLS.md.
+
+<a id="flow-604"></a>
+### FLOW-604 · rename_company follow-ups (#77 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-602
+- **What:** (1) The MCP length check counts UTF-16 units, SQL counts code points; align them. (2) SQL `btrim` strips only spaces while the MCP trims all whitespace; trim all whitespace and reject control characters in `rename_company`. (3) A direct table update can still set any name; add a not-valid check constraint for 2 to 100 characters, or revoke `update(name)` once the screen uses the RPC. (4) pgTAP: assert an `audit_log` row after the MCP rename and after undo, and cover the refused path.
+- **Acceptance:** the same name is accepted or refused by the MCP, the RPC, and the table; audit rows tested.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device
