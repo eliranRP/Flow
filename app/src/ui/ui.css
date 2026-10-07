@@ -2908,6 +2908,8 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   min-block-size: var(--touch-min);
   margin: 0;
   color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  text-wrap: balance;
 }
 
 .ui-section-head {

@@ -1,7 +1,7 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoanTransactionSplit } from "./loan-match";
 import { absAgorot } from "../agorot";
@@ -4455,15 +4455,13 @@ export function CategoriesScreen({
   const [pickOpen, setPickOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const toast = useToast();
-  const pnlDone = useRef<PnlChange | null>(null);
   const menuOpener = useRef<HTMLElement | null>(null);
+  const pnlHintId = useId();
   const pnl = useWrite<PnlChange>({
     failure: "לא הצלחנו לעדכן את הקטגוריה.",
     keys: ["categories", "dashboard", "project", "project-category"],
-    onSuccess: () => {
+    onSuccess: (done) => {
       setMenu(null);
-      const done = pnlDone.current;
-      if (!done) return;
       toast.show({
         message: `${done.name} · ${done.excluded ? KEPT_OUT : "ברווח והפסד"}`,
         ...(done.undo ? {} : {
@@ -4476,7 +4474,6 @@ export function CategoriesScreen({
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       assertNoError(await supabase.rpc("set_category_excluded_from_pnl", { p_id: change.id, p_excluded: change.excluded }));
-      pnlDone.current = change;
     },
   });
   const createCategory = useWrite({
@@ -4635,7 +4632,11 @@ export function CategoriesScreen({
       <Sheet
         open={menu != null}
         onOpenChange={(open) => {
-          if (!open) setMenu(null);
+          // A dismiss during the P&L write waits for it: success closes the sheet, failure keeps it.
+          if (open) return true;
+          if (pnl.isPending) return false;
+          setMenu(null);
+          return true;
         }}
         title={menu?.name ?? "קטגוריה"}
         returnFocusRef={menuOpener}
@@ -4672,6 +4673,7 @@ export function CategoriesScreen({
               <Button
                 variant="secondary"
                 busy={pnl.isPending}
+                aria-describedby={pnlHintId}
                 onClick={() => {
                   if (pnl.isPending || blocked()) return;
                   pnl.mutate({ id: menu.id, name: menu.name, excluded: !menuKeptOut, undo: false });
@@ -4679,7 +4681,7 @@ export function CategoriesScreen({
               >
                 {pnl.isPending ? "מעדכן…" : menuKeptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
               </Button>
-              <p className="t-hint ui-cat-pnl-hint">
+              <p id={pnlHintId} className="t-hint ui-cat-pnl-hint">
                 {menuKeptOut ? "הסכומים ייספרו שוב כהכנסה או הוצאה." : "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה."}
               </p>
             </>

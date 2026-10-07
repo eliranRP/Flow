@@ -11,6 +11,7 @@ import { CategoriesScreen } from "./flow-screens";
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   failPnl: false,
+  holdPnl: null as Promise<void> | null,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -28,6 +29,9 @@ vi.mock("../lib/supabase", () => ({
           ],
           error: null,
         });
+      }
+      if (name === "set_category_excluded_from_pnl" && rpc.holdPnl) {
+        return rpc.holdPnl.then(() => ({ data: null, error: null }));
       }
       if (name === "set_category_excluded_from_pnl" && rpc.failPnl) {
         return Promise.resolve({ data: null, error: { message: "category not found", code: "P0001" } });
@@ -57,6 +61,7 @@ function pnlCalls() {
 beforeEach(() => {
   rpc.calls.length = 0;
   rpc.failPnl = false;
+  rpc.holdPnl = null;
 });
 
 describe("categories kept out of the P&L", () => {
@@ -137,6 +142,27 @@ describe("categories kept out of the P&L", () => {
     expect(await screen.findByText("לא הצלחנו לעדכן את הקטגוריה.")).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
     expect(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" })).toBeEnabled();
+  });
+
+  it("waits for the save when the sheet is dismissed mid-write", async () => {
+    let release: () => void = () => undefined;
+    rpc.holdPnl = new Promise<void>((resolve) => { release = resolve; });
+    renderScreen(<CategoriesScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
+    const sheet = await screen.findByRole("dialog", { name: "חומרים" });
+    const action = within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" });
+    expect(action).toHaveAccessibleDescription("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.");
+    fireEvent.click(action);
+    expect(await within(sheet).findByText("מעדכן…")).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "הסתרה" })).toBeDisabled();
+    fireEvent.keyDown(sheet, { key: "Escape" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByRole("dialog", { name: "חומרים" })).toBeInTheDocument();
+    release();
+    expect(await screen.findByText("חומרים · מחוץ לרווח והפסד")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "חומרים" })).not.toBeInTheDocument();
+    });
   });
 
   it("shows the mark to a viewer, with no row menu", () => {
