@@ -126,24 +126,27 @@ function checksumProblems(script) {
 }
 
 test("CI keeps the hosted and reviewer builds apart and skips live writers", () => {
-  assert.match(ci, /pull_request:\n {2}push:\n {4}branches:\n {6}- main\n/);
+  // Pull requests are gated by scripts/local-ci.sh. main runs CI in batches, or by hand.
+  assert.match(ci, /\non:\n {2}push:\n {4}branches:\n {6}- main\n {2}workflow_dispatch:\n/);
+  assert.equal(ci.includes("pull_request:"), false);
   assert.equal(ci.includes("head.repo.full_name"), false);
+  assert.match(job("plan"), /run: bash scripts\/ci-deploy-plan\.sh\n/);
+  assert.match(job("plan"), /FLOW_DEPLOY_BATCH: "5"\n/);
+  assert.match(job("plan"), /fetch-depth: 0\n/);
+  assert.match(job("plan"), /deployments: read\n/);
   for (const name of ["lint", "check-core", "check-storybook", "check-stories", "e2e-shard"]) {
-    assert.equal(job(name).includes("\n    if:"), false, name);
+    assert.match(job(name), /\n {4}needs: \[plan\]\n {4}if: needs\.plan\.outputs\.run == 'true'\n/, name);
   }
   // check and e2e are the required checks. They are gates that run always and pass only on success.
-  assert.match(job("check"), /needs: \[check-core, check-storybook, check-stories\]\n {4}if: always\(\)\n/);
+  assert.match(job("check"), /needs: \[plan, check-core, check-storybook, check-stories\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("check"), /test "\$CORE" = success\n/);
   for (const name of ["CORE", "STORYBOOK", "STORIES"]) {
     assert.match(job("check"), new RegExp(`test "\\$${name}" = success\n`), name);
   }
-  assert.match(job("e2e"), /needs: \[e2e-shard\]\n {4}if: always\(\)\n/);
+  assert.match(job("e2e"), /needs: \[plan, e2e-shard\]\n {4}if: always\(\) && needs\.plan\.outputs\.run == 'true'\n/);
   assert.match(job("e2e"), /test "\$SHARDS" = success\n/);
   assert.match(ci, /pnpm check:bundle/);
   assert.match(ci, /pnpm check:reviewer-bundle/);
-  assert.match(ci, /hosted-dist/);
-  assert.match(ci, /reviewer-dist/);
-  assert.match(ci, /storybook-static/);
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
   assert.match(ci, /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\}\/2\n/);
@@ -183,8 +186,8 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
 test("deploy runs only after CI on a push to main, and the bundle is checked before the migration", () => {
   assert.equal(existsSync(new URL("../.github/workflows/cd.yml", import.meta.url)), false);
   const deploy = job("deploy");
-  assert.match(deploy, /needs: \[lint, check, e2e\]/);
-  assert.match(deploy, /if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
+  assert.match(deploy, /needs: \[plan, lint, check, e2e\]/);
+  assert.match(deploy, /if: needs\.plan\.outputs\.run == 'true' && github\.ref == 'refs\/heads\/main'/);
   assert.match(deploy, /environment: production/);
   assert.match(deploy, /group: cd-production/);
   assert.match(deploy, /cancel-in-progress: false/);
@@ -369,7 +372,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
   assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
-  assert.match(ci, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/);
+  assert.equal(ci.includes("upload-artifact"), false);
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
@@ -466,17 +469,17 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
   ]);
   assert.equal(jobIn(e2eCli, "deploy").includes(`supabase/setup-cli@${ACTION_SHA["supabase/setup-cli"]}`), true);
 
-  const oneUpload = replaceInJob(
+  const oneCache = replaceInJob(
     ci,
-    "check-core",
-    `uses: actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`,
-    `uses: actions/upload-artifact@${ACTION_SHA["denoland/setup-deno"]}`,
+    "check-storybook",
+    `uses: actions/cache@${ACTION_SHA["actions/cache"]}`,
+    `uses: actions/cache@${ACTION_SHA["denoland/setup-deno"]}`,
   );
-  assert.deepEqual(usesProblems(oneUpload), [
-    `uses: actions/upload-artifact@${ACTION_SHA["denoland/setup-deno"]} # v7.0.1`,
+  assert.deepEqual(usesProblems(oneCache), [
+    `uses: actions/cache@${ACTION_SHA["denoland/setup-deno"]} # v6.1.0`,
   ]);
   assert.equal(
-    jobIn(oneUpload, "check-core").split(`actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`).length - 1,
+    jobIn(oneCache, "check-storybook").split(`actions/cache@${ACTION_SHA["actions/cache"]}`).length - 1,
     1,
   );
 
@@ -565,4 +568,45 @@ test("verify_sha256 rejects a download that does not match the pinned checksum",
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it", () => {
+  const local = readFileSync(new URL("./local-ci.sh", import.meta.url), "utf8");
+  for (const part of [
+    "pnpm lint",
+    "node scripts/check-migration-order.mjs --base",
+    "node scripts/check-migration-transaction.mjs",
+    "deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp",
+    "pnpm typecheck",
+    "pnpm test:unit",
+    "pnpm test:connectors",
+    "pnpm check:bundle",
+    "pnpm check:reviewer-bundle",
+    "pnpm test:storybook\n",
+    "pnpm build-storybook",
+    "pnpm test:storybook:smoke\n",
+    "supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime",
+    "bash scripts/mcp-function-smoke.sh",
+    "supabase test db supabase/tests/database",
+    "bash scripts/check-db-types.sh",
+    "bash scripts/cd-preflight.sh",
+    "bash scripts/cd-dry-run-pending.sh",
+    "bash scripts/check-sumit-cron.sh",
+    "pnpm test:e2e\n",
+  ]) {
+    assert.ok(local.includes(part), part);
+    assert.ok(ci.includes(part.trim().replace(/^pnpm test:e2e$/, "pnpm test:e2e --shard")), `CI ${part}`);
+  }
+  // The fast gate stamps after the Storybook tests; --full stamps only after e2e.
+  const stamps = [...local.matchAll(/echo "\$head" >/g)].map((m) => m.index);
+  assert.equal(stamps.length, 2);
+  assert.ok(stamps[0] > local.indexOf("pnpm test:storybook\n") && stamps[0] < local.indexOf("pnpm test:storybook:smoke"));
+  assert.ok(local.indexOf("if (( ! full )); then") < stamps[0]);
+  assert.ok(stamps[1] > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
+  assert.match(local, /--full\) full=1 ;;/);
+  const hook = readFileSync(new URL("../.githooks/pre-push", import.meta.url), "utf8");
+  assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" <\/dev\/null/);
+  assert.match(hook, /bash "\$root\/scripts\/local-ci\.sh" --full <\/dev\/null/);
+  const install = readFileSync(new URL("./cloud-agent-install.sh", import.meta.url), "utf8");
+  assert.match(install, /git config core\.hooksPath \.githooks\n/);
 });
