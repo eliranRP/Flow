@@ -29,7 +29,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 13 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
 | 14 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 15 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | blocked on FLOW-101 |
+| 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | claimed (UI task 2 thread, 2026-10-07, claude/project-thread-onkan2), plan with owner |
 | 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
 | 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
