@@ -372,8 +372,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** Show the bank or provider metadata per line on the review card and the detail: payment method (card and last 4, ACH, wire, check), memo, counterparty, bank account, original bank description. Icon-based (a card icon and ••1234, a memo on tap). Source: `transactions.provider_meta`. Also a better detail screen for what isn't shown at first glance. MCP: `get_expense`, `list_review` and `search_expenses` return the normalized fields.
 - **Acceptance:** mockup approved; no account numbers beyond the last 4 anywhere.
 
-<a id="flow-314"></a>
-### FLOW-314 · Bank details follow-ups (#107 review)
+<a id="flow-315"></a>
+### FLOW-315 · Bank details follow-ups (#107 review)
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-304 (#107)
 - [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
 - [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
