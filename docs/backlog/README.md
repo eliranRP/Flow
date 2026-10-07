@@ -77,7 +77,7 @@ Limits that apply to the whole cycle:
 - **ON HOLD tasks** wait until the owner says go. Don't start them, even if they look ready.
 - **Migrations.** One new SQL file per PR in `supabase/migrations/`. Its timestamp must be later than the last line of `supabase/migrations.lock`, and different from every other open PR's migration. Append `<file> <sha256>` as the last line of the lock. Never edit a migration that is already applied; add a new one. CI checks this with `scripts/check-migration-order.mjs` and `scripts/check-migration-transaction.mjs`.
 - **Decisions** go in `docs/decisions/` with the next number after the highest one in [the index](../decisions/README.md). Never reuse a number or fill a gap. Update the index in the same commit.
-- **Changelog.** Every docs change gets a dated entry at the top of [docs/changelog.md](../changelog.md).
+- **Changelog.** Every docs change gets an entry as its own file, `docs/changelog.d/YYYY-MM-DD-<id>.md` ([how](../changelog.d/README.md)). Never edit `docs/changelog.md` in a task PR: parallel PRs conflict on it. The coordinator folds the fragments in with `node scripts/changelog-fold.mjs`, in its own PR, after a batch deploys.
 - **Don't guess.** Write anything unclear under "Decisions needed" in the PR body.
 - **Old nits.** Before you fix an item older than a week, check that it still happens on `main`. If it doesn't, mark it done with a one-line note.
 
@@ -202,7 +202,8 @@ Do:
   and document it in docs/mcp/TOOLS.md.
 - Use invented names, round amounts, and example.com addresses only.
 - Migration: one file, timestamp after the last line of supabase/migrations.lock, appended to the lock.
-- Add a decision (next free number) if the brief asks, and a docs/changelog.md entry.
+- Add a decision (next free number) if the brief asks, and a changelog fragment docs/changelog.d/YYYY-MM-DD-flow-<id>.md
+  (never edit docs/changelog.md).
 - Write anything unclear under "Decisions needed" in the PR body. Don't guess.
 Then run pnpm lint, pnpm typecheck, and the touched tests. Push, open or update the PR, and STOP.
 Don't watch CI, re-run jobs, take screenshots, or run mutation tests.
@@ -329,7 +330,7 @@ A brief is short. It points the builder to exactly what to read and change:
 | Design rules and controls | [DESIGN-RULES](../design/DESIGN-RULES.md), [CONTROLS.md](../qa/CONTROLS.md), [implementation guide](../../design/system/implementation-guide.md), screen sources in `design/src/` |
 | MCP tools | [TOOLS.md](../mcp/TOOLS.md), code in `supabase/functions/flow-mcp/` |
 | Decisions | [docs/decisions](../decisions/README.md) |
-| Changelog | [docs/changelog.md](../changelog.md) |
+| Changelog | [docs/changelog.md](../changelog.md), and entries not yet folded in: [docs/changelog.d/](../changelog.d/README.md) |
 | CI, deploy, rollback | [CI and CD](../runbooks/ci-cd.md), `.github/workflows/ci.yml` |
 | Connectors | [connector contract](../tech/connector-contract.md), [connector UI states](../tech/connector-ui-states.md), [SUMIT runbook](../runbooks/sumit-connect.md), [Jev runbook](../runbooks/jev.md) |
 | Product spec and calculations | [spec](../module-1-project-pnl/spec.md), [calculations](../module-1-project-pnl/calculations.md) |
