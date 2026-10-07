@@ -79,9 +79,9 @@ const ALLOWED: Record<string, Set<string>> = {
   rename_company: new Set(["idempotency_key", "name"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
-    "start_date", "payment", "escrow", "currency",
+    "start_date", "payment", "escrow", "currency", "project_id",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
@@ -174,6 +174,7 @@ const addLoanSchema = z.object({
   payment: z.union([z.number(), z.string()]).optional(),
   escrow: z.union([z.number(), z.string()]).optional(),
   currency: LOAN_CURRENCY.optional(),
+  project_id: UUID_TEXT.optional(),
 }).strict();
 const updateLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -185,6 +186,8 @@ const updateLoanSchema = z.object({
   start_date: z.string().regex(DATE).optional(),
   payment: z.union([z.number(), z.string()]).optional(),
   escrow: z.union([z.number(), z.string()]).optional(),
+  // null clears the project, an absent key leaves it.
+  project_id: UUID_TEXT.nullable().optional(),
 }).strict();
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -399,6 +402,8 @@ type LoanRow = {
   payment_minor: number;
   escrow_minor: number;
   balance_minor: number;
+  project_id?: string | null;
+  project_name?: string | null;
 };
 
 function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
@@ -529,7 +534,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
@@ -558,7 +563,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance.", {}),
+    toolSpec("list_loans", "Loans in the company with current principal balance. project_id and project_name show the project a loan is filed under, or null.", {}),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
       loan_id: { type: "string" },
       from: { type: "integer" },
@@ -663,7 +668,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       name: { type: "string" },
     }, true),
-    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
+    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set. project_id (optional) files the loan under a project of this company; another company's project is refused.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       principal: { type: "string" },
@@ -673,8 +678,9 @@ function writeTools() {
       payment: { type: "string" },
       escrow: { type: "string" },
       currency: { type: "string" },
+      project_id: { type: "string" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. Undo restores the previous project.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -684,8 +690,9 @@ function writeTools() {
       start_date: { type: "string" },
       payment: { type: "string" },
       escrow: { type: "string" },
+      project_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why. Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
@@ -889,6 +896,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
     p_payment_minor: Number(paymentMinor),
     p_escrow_minor: Number(escrowMinor),
     p_currency: currency,
+    ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
   });
   if (result.status >= 400) return fail("refused", WRITE_REFUSED);
   const wrapped = envelopeOf(result.json);
@@ -929,6 +937,7 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     if (typeof minor !== "bigint") return minor;
     patch.escrow_minor = Number(minor);
   }
+  if (parsed.data.project_id !== undefined) patch.project_id = parsed.data.project_id;
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
   const result = await rpc("mcp_update_loan", {
     p_idempotency_key: parsed.data.idempotency_key,

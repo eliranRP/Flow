@@ -289,13 +289,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"start_date": string,"term_months": number,"updated_at": string
+                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"project_id": string | null,"start_date": string,"term_months": number,"updated_at": string
                   }
                   Insert: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"start_date": string,"term_months": number,"updated_at"?: string
+                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"project_id"?: string | null,"start_date": string,"term_months": number,"updated_at"?: string
                   }
                   Update: {
-                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"start_date"?: string,"term_months"?: number,"updated_at"?: string
+                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"term_months"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -304,6 +304,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "loans_company_id_project_id_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"overhead": {
@@ -763,7 +769,7 @@ isOneToOne: false
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
 "mcp_add_loan":
-{ Args: { "p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_start_date": string,"p_term_months": number }; Returns: Json
+{ Args: { "p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
