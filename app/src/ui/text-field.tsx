@@ -1,10 +1,11 @@
-import { useId, type InputHTMLAttributes } from "react";
+import { useId, type InputHTMLAttributes, type Ref } from "react";
 import { cx } from "./cx";
 import { flowControlName } from "./field-name";
 import { holdFieldPointer } from "./field-pointer";
 
 type TextFieldProps = {
   label: string;
+  ref?: Ref<HTMLInputElement>;
   error?: string;
   /** Keeps the message line when there is no error, so the form does not jump. */
   reserveMessage?: boolean;
