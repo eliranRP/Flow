@@ -134,7 +134,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     description: "אלפא",
     direction: "expense",
     reason: "missing_category",
-    supplier_name: "מנופי",
+    supplier_name: "גמא",
     doc_date: "2026-09-15",
   };
   const dashboard = {
@@ -174,7 +174,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
   const reviewPage = await callTool("list_review", {
     direction: "expense",
     reason: "missing_category",
-    supplier: "מנופי",
+    supplier: "גמא",
     query: "אלפא",
     from: "2026-09-01",
     to: "2026-09-30",
