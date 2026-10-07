@@ -97,6 +97,7 @@ The migration revokes the default `EXECUTE` privilege from `PUBLIC` for every fu
 | [Technical plan](docs/tech/tech-plan.md) | Supabase pilot. The Cloudflare version is superseded |
 | [Decisions](docs/decisions/README.md) | Decision records 0001–0043 and the record format |
 | [Open questions](docs/open-questions.md) | What is not decided yet |
+| [Backlog and agent guide](docs/backlog/README.md) | Open tasks ([TASKS.md](docs/backlog/TASKS.md)), how an agent claims one, the build cycle, and the agent team setup |
 | [CI and CD](docs/runbooks/ci-cd.md) | GitHub Actions checks, production deploy, secrets, and rollback |
 | [Changelog](docs/changelog.md) | Dated log of documentation changes |
 | [Contributing](CONTRIBUTING.md) | How to change docs, decisions, and wireframes |
