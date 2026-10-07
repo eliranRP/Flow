@@ -38,7 +38,7 @@ export function useWrite<T = void>(options: {
   keys: string[];
   success?: string;
   failure: string | ((error: Error) => WriteFailure);
-  onSuccess?: () => void;
+  onSuccess?: (payload: T) => void;
   /** Where לחלוקה goes when the database refuses one project on a shared cost. */
   onSplit?: () => void;
   /** Runs before a retry, while the toast action is still focused. */
@@ -58,10 +58,10 @@ export function useWrite<T = void>(options: {
       retryToast.current = null;
       toast.dismiss(id);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, payload) => {
       await invalidate(options.keys);
       if (options.success) toast.show({ message: options.success });
-      options.onSuccess?.();
+      options.onSuccess?.(payload);
     },
     onError: (error, payload) => {
       const failure = error instanceof Error ? error : new Error("failed");
