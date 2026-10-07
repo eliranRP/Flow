@@ -3,7 +3,7 @@ import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type Categor
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { LoanTransactionSplit, ProjectLoanList } from "./loan-match";
+import { LoanReadError, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
@@ -47,6 +47,7 @@ import {
   useReviewQuery,
   useMercuryStatusQuery,
   useSumitStatusQuery,
+  useLineMetaQuery,
   useTransactionQuery,
   useUnpaidQuery,
 } from "../use-books";
@@ -94,6 +95,7 @@ import { MoneyField, PercentField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { RadioRow } from "../ui/radio-row";
 import { ReviewCard } from "../ui/review-card";
+import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SearchField } from "../ui/search-field";
@@ -1346,6 +1348,10 @@ export function ReviewQueue({
   );
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
+  const metaLive = !sample && previewWrite == null;
+  const lineMeta = useLineMetaQuery(shownId, metaLive);
+  // Warm the next card's bank details so its meta line paints with the card.
+  useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
   const jev = jevQueue.stateFor(shownId);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
@@ -1610,6 +1616,7 @@ export function ReviewQueue({
           categoryButtonRef={reviewLineFocus.category}
           onProject={holdWrites ? undefined : openProject}
           onCategory={holdWrites ? undefined : openCategory}
+          meta={lineMeta.data}
         />
       </div>
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
@@ -2455,6 +2462,7 @@ export function TransactionScreen({
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
+  const lineMeta = useLineMetaQuery(sample ? sample.id : transactionId, sample == null);
   const nav = useTxnNav(sample?.id ?? transactionId);
   const goBack = useGoBack();
   useTxnNavKeys(nav);
@@ -2831,6 +2839,11 @@ export function TransactionScreen({
           {vatStatusLabel(txn.vat_status)}
         </p>
       ) : null}
+      {lineMeta.isError && lineMeta.data == null ? (
+        <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
+      ) : (
+        <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
+      )}
       {holdWrites ? null : (
       <div className="ui-stack ui-page-pad">
         {onOpenSplit ? (
