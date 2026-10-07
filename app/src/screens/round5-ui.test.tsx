@@ -444,7 +444,7 @@ describe("split monthly rule", () => {
 });
 
 describe("settings account", () => {
-  it("shows the business and the Google email on one row", () => {
+  it("shows the business row and a separate Google email row", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ToastProvider>
@@ -464,11 +464,13 @@ describe("settings account", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const account = screen.getByRole("group", { name: "אלפא" });
-    expect(account.querySelector("path[fill='#4285F4']")).not.toBeNull();
-    const hint = document.getElementById(account.getAttribute("aria-describedby") ?? "");
-    expect(hint).toHaveClass("t-hint");
-    expect(hint).toHaveTextContent("owner@example.com");
+    const business = screen.getByText("אלפא").closest(".ui-row");
+    const account = screen.getByText("owner@example.com").closest(".ui-row");
+    expect(business).not.toBeNull();
+    expect(account).not.toBe(business);
+    expect(business?.querySelector("path[fill='#4285F4']")).toBeNull();
+    expect(account?.querySelector("path[fill='#4285F4']")).not.toBeNull();
+    expect(account?.querySelector(".ui-row-hint")).toBeNull();
     expect(screen.queryByText("עוסק מורשה")).not.toBeInTheDocument();
     expect(screen.queryByText("עוסק פטור")).not.toBeInTheDocument();
     expect(screen.queryByText("חשבון Google")).not.toBeInTheDocument();
@@ -746,8 +748,8 @@ describe("settings account", () => {
         handler("INITIAL_SESSION", { user: { email: "real-owner@example.com" } } as Session);
       }
     });
-    const account = screen.getByRole("group", { name: "בית הספר אלון" });
-    expect(account).toHaveTextContent("owner@example.com");
+    expect(screen.getByText("בית הספר אלון")).toBeInTheDocument();
+    const account = screen.getByText("owner@example.com");
     expect(account.closest("button")).toBeNull();
     expect(screen.queryByText("real-owner@example.com")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: (name) => name.trim() === "" })).not.toBeInTheDocument();
@@ -870,7 +872,7 @@ describe("settings account", () => {
     return declared(".ui-row", "box-sizing") === "border-box" ? Math.max(content, min) : content;
   }
 
-  it("uses the single-line height for the no-company account row and 72px for a two-line row", () => {
+  it("uses the single-line height for the account rows, with or without a company", () => {
     document.documentElement.style.setProperty("--row-pad", "14px");
     const { unmount } = render(
       <QueryClientProvider client={new QueryClient()}>
@@ -918,9 +920,10 @@ describe("settings account", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const paired = screen.getByRole("group", { name: "אלפא" });
-    expect(paired.querySelector(".ui-row-hint")).not.toBeNull();
-    expect(rowHeight(true)).toBe(72);
+    const paired = screen.getByText("owner@example.com").closest(".ui-row");
+    expect(paired?.querySelector(".ui-row-hint")).toBeNull();
+    expect(screen.getByText("אלפא").closest(".ui-row")?.querySelector(".ui-row-hint")).toBeNull();
+    expect(rowHeight(false)).toBe(53);
     document.documentElement.style.removeProperty("--row-pad");
   });
 

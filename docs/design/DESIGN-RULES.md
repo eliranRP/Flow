@@ -445,6 +445,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Mockups: [14-settings-light.png](../../design/screens/14-settings-light.png), [14-settings-dark.png](../../design/screens/14-settings-dark.png).
 - Entry: tab הגדרות.
 - Steps: the account row, חיבורים, תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
+- With a company, the account area is two rows: the business name, which opens the one-field "שם העסק" sheet for an owner (static for a viewer), and the static Google email. [0108](../decisions/0108-rename-company-row.md).
 - Back: none. This is a tab root.
 - Logout clears the session. There is no second confirmation in the approved set.
 
