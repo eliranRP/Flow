@@ -12,11 +12,13 @@ import { jerusalemDate } from "../../../functions/_shared/connectors/mercury/dat
 import {
   MercuryPageCapError,
   MercuryRequestError,
+  backoffUntil,
   classifyMercuryError,
   decodeMercuryCursor,
   encodeMercuryResume,
   fetchMercurySince,
   getMercuryTransaction,
+  mercuryAccountsChanged,
   mercuryFailureCode,
   mercuryStartDate,
   openMercury,
@@ -792,4 +794,51 @@ Deno.test("403 and 404 on the treasury ledger refuse the sync", async () => {
     assertEquals(error.errorClass, status === 403 ? "auth" : "rejected");
     assertEquals(error.code, status === 403 ? "auth" : "rejected");
   }
+});
+
+Deno.test("a line dated exactly on import_from imports", async () => {
+  const onDay = {
+    ...page1.transactions[0],
+    id: "on-import-from",
+    createdAt: "2026-09-30T21:30:00.000Z",
+  };
+  const dayBefore = {
+    ...page1.transactions[1],
+    id: "day-before-import-from",
+    createdAt: "2026-09-30T20:30:00.000Z",
+  };
+  assertEquals(jerusalemDate(onDay.createdAt), "2026-10-01");
+  assertEquals(jerusalemDate(dayBefore.createdAt), "2026-09-30");
+  const { fetchImpl } = bankTransport((url) => {
+    if (url.searchParams.get("status") === "pending") return jsonResponse({ transactions: [], page: {} });
+    if (!url.searchParams.get("start_after")) return jsonResponse({ transactions: [onDay, dayBefore], page: {} });
+    return jsonResponse({ transactions: [], page: {} });
+  });
+  const result = await fetchMercurySince(openMercury(`test-${crypto.randomUUID()}`, { fetch: fetchImpl, now: () => NOW }), {
+    cursor: null,
+    importFrom: "2026-10-01",
+    lookbackDays: 30,
+  });
+  const ids = result.lines.map((row) => (row as { id: string }).id);
+  assertEquals(ids.includes("on-import-from"), true);
+  assertEquals(ids.includes("day-before-import-from"), false);
+});
+
+Deno.test("a rate limit backs off until Retry-After, else 15 minutes, and at most a day", () => {
+  const in15 = new Date(NOW.getTime() + 15 * 60 * 1000).toISOString();
+  assertEquals(backoffUntil(null, NOW), in15);
+  assertEquals(backoffUntil("not a date", NOW), in15);
+  assertEquals(backoffUntil("2026-10-04T07:00:00.000Z", NOW), in15);
+  assertEquals(backoffUntil("2026-10-04T09:00:00.000Z", NOW), "2026-10-04T09:00:00.000Z");
+  assertEquals(backoffUntil("2026-10-09T08:00:00.000Z", NOW), "2026-10-05T08:00:00.000Z");
+});
+
+Deno.test("a reconnect to other accounts is a change; the same accounts in another order are not", () => {
+  const next = [{ id: "acct-a", label: "Checking" }, { id: "acct-b", label: "Credit" }];
+  assertEquals(mercuryAccountsChanged([{ id: "acct-b", label: "x" }, { id: "acct-a", label: "y" }], next), false);
+  assertEquals(mercuryAccountsChanged([{ id: "acct-a", label: "Checking" }], next), true);
+  assertEquals(mercuryAccountsChanged([{ id: "acct-a" }, { id: "acct-c" }], next), true);
+  assertEquals(mercuryAccountsChanged([{ id: "acct-a" }, { id: "acct-b" }, { id: "acct-c" }], next), true);
+  assertEquals(mercuryAccountsChanged(null, next), true);
+  assertEquals(mercuryAccountsChanged([], []), false);
 });

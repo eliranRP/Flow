@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { MERCURY_KEK_REF } from "../_shared/connectors/mercury/capabilities.ts";
 import { mercuryAdapter } from "../_shared/connectors/mercury/adapter.ts";
+import { mercuryAccountsChanged } from "../_shared/connectors/mercury/client.ts";
 import { redactMercury } from "../_shared/connectors/mercury/redact.ts";
 import { decodeKek, sealApiKey } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
@@ -46,6 +47,27 @@ Deno.serve(async (req) => {
     if (!validated.ok) {
       const status = validated.class === "rate_limited" ? 429 : validated.class === "transient" ? 503 : 400;
       return json({ error: validated.code ?? validated.class }, status);
+    }
+
+    const previous = await admin
+      .from("connector_connections")
+      .select("account_labels")
+      .eq("company_id", company.data.id)
+      .eq("provider", "mercury")
+      .maybeSingle();
+    if (previous.error) return json({ error: "could not store the connection" }, 500);
+    // A token for other accounts must not resume the old accounts' cursor.
+    const accountsChanged = previous.data != null &&
+      mercuryAccountsChanged(previous.data.account_labels, validated.accounts);
+
+    if (accountsChanged) {
+      // Clear before the new key is stored, so no sync can pair it with the old cursor.
+      const cleared = await admin
+        .from("connector_connections")
+        .update({ sync_cursor: null })
+        .eq("company_id", company.data.id)
+        .eq("provider", "mercury");
+      if (cleared.error) return json({ error: "could not store the connection" }, 500);
     }
 
     const kekVersion = Deno.env.get("MERCURY_KEK_VERSION") || "1";
