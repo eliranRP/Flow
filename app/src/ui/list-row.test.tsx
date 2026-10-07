@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ListRow } from "./list-row";
+import { ListRow, type StatementRowProps } from "./list-row";
 import { SuggestTag } from "./suggest-tag";
 import { expectRtl, expectTarget } from "./test-support";
 
@@ -314,5 +314,74 @@ describe("ListRow", () => {
     expect(hint).toHaveClass("t-hint");
     // jsdom keeps the custom property unresolved, so the token name is what is compared.
     expect(getComputedStyle(hint).fontSize).toBe("var(--type-hint-size)");
+  });
+});
+
+describe("ListRow statement (FLOW-305)", () => {
+  function renderRow(props: Partial<StatementRowProps>) {
+    return render(
+      <MemoryRouter>
+        <ListRow
+          variant="statement"
+          title="חשמל השרון בע״מ"
+          fallback="invoice"
+          agorot={-120_050n}
+          sign="out"
+          href="/review/all?item=1"
+          {...props}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  it("is one link with a 40px-class avatar, the title, and the amount with cents", () => {
+    renderRow({});
+    const link = screen.getByRole("link");
+    expectTarget(link);
+    expect(link).toHaveClass("ui-row", "ui-hit");
+    const avatar = link.querySelector(".ui-avatar");
+    expect(avatar?.textContent).toBe("חה");
+    expect(avatar).toHaveAttribute("dir", "rtl");
+    expect(avatar).toHaveAttribute("aria-hidden", "true");
+    expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "rtl");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("−₪1,200.50");
+    expect(link.querySelector(".ui-num-cents")?.textContent).toBe(".50");
+    // No suggestion and not pending: no second line, no method unless one is passed.
+    expect(link.querySelector(".ui-statement-line")).toBeNull();
+    expect(link.querySelector(".ui-statement-method")).toBeNull();
+    expect(link).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הוצאה −₪1,200.50");
+  });
+
+  it("puts the pending chip before the suggestion and hides the ✦ mark", () => {
+    renderRow({ pending: true, suggestion: "וילה לדוגמה · חומרים" });
+    const line = screen.getByRole("link").querySelector(".ui-statement-line");
+    expect(line?.firstElementChild).toHaveClass("ui-status");
+    expect(line?.querySelector(".ui-statement-suggest")).toHaveAttribute("data-clip-ok");
+    expect(line?.querySelector(".ui-statement-spark")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
+  });
+
+  it("draws a passed method under the amount, isolating a Latin label, and speaks its words", () => {
+    renderRow({ method: { icon: null, text: "••4242", spoken: "כרטיס שמסתיים ב־4242", ltr: true } });
+    const method = screen.getByRole("link").querySelector(".ui-statement-method");
+    expect(method?.querySelector("bdi")).toHaveAttribute("dir", "ltr");
+    expect(method?.textContent).toBe("••4242");
+    expect(screen.getByRole("link").getAttribute("aria-label")).toContain("כרטיס שמסתיים ב־4242");
+  });
+
+  it("shows income green with no plus and the hidden word", () => {
+    renderRow({ title: "Northwind Traders", agorot: 500_000n, sign: "in", currency: "USD" });
+    const link = screen.getByRole("link");
+    expect(link.querySelector(".ui-income")?.textContent).toBe("$5,000.00");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה $5,000.00");
+    expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
+    expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "ltr");
+  });
+
+  it("falls back to the source icon when the name has no letter", () => {
+    renderRow({ title: "4242-1234", fallback: "bank" });
+    const avatar = screen.getByRole("link").querySelector(".ui-avatar");
+    expect(avatar).toHaveAttribute("data-avatar", "icon");
+    expect(avatar?.querySelector("svg")).not.toBeNull();
   });
 });

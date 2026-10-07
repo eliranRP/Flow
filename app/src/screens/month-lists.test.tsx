@@ -109,7 +109,70 @@ describe("review list months", () => {
       search=""
       backTo="/review"
     />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250הכנסות $100");
+    // FLOW-305: the statement rows show cents, so the month total shows exact cents too.
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250.00הכנסות $100.00");
+  });
+
+  it("adds exact cents, so the month matches its statement rows", () => {
+    wrap(<ReviewAllList
+      rows={[
+        review("a", "2026-08-03", -10_050n, "expense"),
+        review("b", "2026-08-04", -10_050n, "expense"),
+        review("c", "2026-09-01", -5_000n, "expense"),
+      ]}
+      search=""
+      backTo="/review"
+    />);
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪201.00");
+  });
+});
+
+describe("review list statement rows (FLOW-305)", () => {
+  const base: ReviewRow = {
+    id: "s1",
+    transaction_id: "t-s1",
+    description: "Northwind Traders",
+    doc_date: "2026-09-29",
+    amount_net: -120_050n,
+    currency: "USD",
+    direction: "expense",
+    reason: null,
+    project_id: "p1",
+    category_id: "c1",
+    project_name: "וילה לדוגמה",
+    category_name: "חומרים",
+    supplier_name: null,
+    line_status: "pending",
+    source: "mercury",
+  };
+
+  it("draws the avatar, pending chip, suggestion, amount and method, and names the row in reading order", () => {
+    wrap(<ReviewAllList rows={[base]} search="" backTo="/review" />);
+    const link = screen.getByRole("link", { name: /Northwind Traders/ });
+    expect(link.getAttribute("aria-label")).toBe("Northwind Traders, בנק, הצעה: וילה לדוגמה · חומרים, הוצאה −$1,200.50, בהמתנה");
+    expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
+    expect(link.querySelector(".ui-avatar")?.getAttribute("aria-hidden")).toBe("true");
+    expect(link.querySelector(".ui-status")?.textContent).toBe("בהמתנה");
+    expect(link.querySelector(".ui-statement-suggest")?.textContent).toBe("✦ וילה לדוגמה · חומרים");
+    expect(link.querySelector(".ui-statement-method")?.textContent).toBe("בנק");
+    expect(link.querySelector(".ui-row-title")?.getAttribute("dir")).toBe("ltr");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("−$1,200.50");
+    expect(screen.getByRole("heading", { level: 3 }).textContent).toMatch(/29\/09/);
+  });
+
+  it("labels a SUMIT invoice row with its document kind and green income with no plus", () => {
+    wrap(<ReviewAllList
+      rows={[{ ...base, description: "לקוח לדוגמה", amount_net: 500_000n, currency: "ILS", direction: "income", line_status: "posted", source: "sumit", doc_kind: "invoice", project_name: null, category_name: null }]}
+      search=""
+      backTo="/review"
+    />);
+    const link = screen.getByRole("link", { name: /לקוח לדוגמה/ });
+    expect(link.querySelector(".ui-statement-method")?.textContent).toBe("חשבונית");
+    expect(link.querySelector(".ui-status")).toBeNull();
+    expect(link.querySelector(".ui-statement-line")).toBeNull();
+    expect(link.querySelector(".ui-income")?.textContent).toBe("₪5,000.00");
+    expect(link.textContent).not.toContain("+");
+    expect(link.getAttribute("aria-label")).toBe("לקוח לדוגמה, חשבונית, הכנסה ₪5,000.00");
   });
 });
 

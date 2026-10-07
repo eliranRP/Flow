@@ -88,6 +88,7 @@ import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIc
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
+import { statementMethodOf } from "../ui/statement";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
 import { MoneyField, PercentField } from "../ui/money-field";
@@ -1205,27 +1206,38 @@ export function ReviewAllList({
   const ordered = useHeldOrder(rows, (row) => row.id);
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} />
       <MonthList
         rows={ordered}
         keyOf={(row) => row.id}
         dateOf={(row) => row.doc_date}
         amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: row.direction })}
+        days
+        cents
         renderRow={(row) => (
           <ListRow
-            variant="transaction"
+            variant="statement"
             title={row.supplier_name ?? row.description}
-            hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
+            fallback={row.source === "mercury" ? "bank" : "invoice"}
+            method={statementMethodOf(row.source, row.doc_kind)}
+            suggestion={statementSuggestion(row)}
+            pending={row.line_status === "pending"}
             agorot={row.amount_net}
             currency={row.currency}
             sign={row.direction === "income" ? "in" : "out"}
-            source="invoice"
             href={reviewFocusPath(search, row.id)}
           />
         )}
       />
     </div>
   );
+}
+
+/** "project · category" for the statement row's ✦ line: what the card shows (U11). FLOW-305. */
+export function statementSuggestion(row: ReviewRow): string | null {
+  const suggestion = reviewSuggestion(row);
+  if (suggestion == null) return null;
+  return [suggestion.project, suggestion.category].filter((part) => part != null).join(" · ");
 }
 
 export function ProjectWaitingList({

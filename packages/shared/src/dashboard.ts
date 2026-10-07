@@ -91,6 +91,10 @@ export const reviewRowSchema = z.object({
   amount_net: agorotSchema,
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
   direction: z.enum(["income", "expense"]),
+  /** Bank state of the line. A pending line may still change; the statement row shows a chip. FLOW-305. */
+  line_status: z.enum(["pending", "posted", "void"]).optional().catch(undefined),
+  /** Where the line came from. Older payloads omit it. FLOW-305. */
+  source: z.enum(["sumit", "mercury", "manual", "photo"]).optional().catch(undefined),
   reason: z.string().nullable(),
   /** Set by list_review so a split is not treated as a single project. */
   pnl_role: z.enum(["project", "shared", "overhead"]).nullable().optional(),

@@ -1,7 +1,10 @@
 import { useId, type ReactNode, type Ref } from "react";
 import { Link } from "react-router-dom";
+import { Avatar } from "./avatar";
 import { BigNumber } from "./big-number";
+import { StatusPill } from "./chip";
 import { cx } from "./cx";
+import { statementRowLabel, textDir, type StatementMethod } from "./statement";
 import { BankIcon, ChevronIcon, DocumentIcon, GripIcon } from "./icons";
 import { Skeleton } from "./skeleton";
 
@@ -52,6 +55,7 @@ export type ListRowProps =
     amountDirection?: "expense" | "income";
   })
   | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string; /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */ inWord?: string })
+  | StatementRowProps
   | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
@@ -59,8 +63,36 @@ export type ListRowProps =
   | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
+/**
+ * A bank-statement row (FLOW-305, option A): initials avatar, the counterparty, then a pending chip
+ * and "✦ project · category"; the amount with small cents at the end and the method under it.
+ * Same ui-row base, hit area, pressed tint and focus ring as the other link rows.
+ */
+export type StatementRowProps = {
+  variant: "statement";
+  /** The counterparty: supplier name, else the line's description. */
+  title: string;
+  /** The avatar's icon when the name has no letter. */
+  fallback: "bank" | "invoice";
+  /** Optional: drawn under the amount when passed. */
+  method?: StatementMethod | null;
+  /** "project · category", already joined. */
+  suggestion?: string | null;
+  pending?: boolean;
+  agorot: bigint;
+  currency?: string;
+  sign: "in" | "out";
+  /** Hidden word before money in. Default הכנסה. */
+  inWord?: string;
+  href: string;
+  state?: unknown;
+  /** Replaces the built name (statementRowLabel). */
+  label?: string;
+};
+
 export function ListRow(props: ListRowProps) {
   const hintId = useId();
+  if (props.variant === "statement") return <StatementRow {...props} />;
   if (props.variant === "skeleton") {
     return (
       <div className="ui-row" aria-hidden="true">
@@ -237,25 +269,65 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
   );
 }
 
+function SignedAmount(props: { agorot: bigint; currency?: string; sign: "in" | "out"; inWord?: string }) {
+  const abs = props.agorot < 0n ? -props.agorot : props.agorot;
+  // The amount's sign wins over the direction: a negative income (an income credit) shows its
+  // minus in the main text colour and is never green (decision 0114).
+  const income = props.sign === "in" && props.agorot >= 0n;
+  // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
+  return (
+    <span className="t-amount">
+      {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
+      <BigNumber
+        agorot={abs}
+        currency={props.currency}
+        direction={income ? "income" : "expense"}
+        income={income}
+        cents="always"
+      />
+    </span>
+  );
+}
+
+function StatementRow(props: StatementRowProps) {
+  const dir = textDir(props.title);
+  const label = props.label ?? statementRowLabel(props);
+  const line2 = props.pending === true || (props.suggestion != null && props.suggestion !== "");
+  return (
+    <Link to={props.href} state={props.state} className="ui-row ui-hit ui-row-statement" aria-label={label}>
+      <span className="ui-row-main">
+        <Avatar name={props.title} fallback={props.fallback} />
+        <span className="ui-row-text">
+          <span className="ui-row-title ui-statement-title" dir={dir}>{props.title}</span>
+          {line2 ? (
+            <span className="ui-row-hint ui-statement-line">
+              {props.pending === true ? <StatusPill>בהמתנה</StatusPill> : null}
+              {props.suggestion ? (
+                <span className="ui-statement-suggest" data-clip-ok="">
+                  <span className="ui-statement-spark" aria-hidden="true">✦ </span>
+                  {props.suggestion}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+        </span>
+      </span>
+      <span className="ui-statement-end">
+        <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />
+        {props.method != null ? (
+          <span className="ui-statement-method t-meta">
+            <span className="ui-statement-method-icon" aria-hidden="true">{props.method.icon}</span>
+            {props.method.ltr === true ? <bdi dir="ltr" className="ui-num">{props.method.text}</bdi> : <span>{props.method.text}</span>}
+          </span>
+        ) : null}
+      </span>
+    </Link>
+  );
+}
+
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
-    const abs = props.agorot < 0n ? -props.agorot : props.agorot;
-    // The amount's sign wins over the direction: a negative income (an income credit) shows its
-    // minus in the main text colour and is never green (decision 0114).
-    const income = props.sign === "in" && props.agorot >= 0n;
-    // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
-    return (
-      <span className="t-amount">
-        {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
-        <BigNumber
-          agorot={abs}
-          currency={props.currency}
-          direction={income ? "income" : "expense"}
-          income={income}
-          cents="always"
-        />
-      </span>
-    );
+    return <SignedAmount agorot={props.agorot} currency={props.currency} sign={props.sign} inWord={props.inWord} />;
   }
   if (props.amounts != null && props.amounts.length > 0) {
     return (

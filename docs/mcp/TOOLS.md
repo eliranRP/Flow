@@ -99,7 +99,7 @@ Input:
 }
 ```
 
-Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`.
+Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, `line_status` (`pending`, `posted`, or `void`; a pending bank line may still change) and `source` (`sumit`, `mercury`, `manual`, or `photo`) ([FLOW-305](../backlog/TASKS.md#flow-305)). `search_expenses` with `scope: "pending"` returns the same rows, so it carries both fields too.
 
 ### get_expense
 

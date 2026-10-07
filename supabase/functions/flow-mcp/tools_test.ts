@@ -2212,3 +2212,32 @@ Deno.test("get_project passes the loans of the project through next to the P&L",
     assertEquals(data.by_currency, PROJECT_FIXTURE.by_currency);
   }
 });
+
+Deno.test("list_review and pending search_expenses pass line_status and source through (FLOW-305)", async () => {
+  const row = {
+    id: "rev-305",
+    transaction_id: "11111111-1111-4000-8000-000000000305",
+    description: "חשמל השרון",
+    direction: "expense",
+    reason: "missing_project",
+    supplier_name: null,
+    doc_date: "2026-10-05",
+    line_status: "pending",
+    source: "mercury",
+  };
+  const { rpc } = rpcOf((name) => name === "list_review" ? { status: 200, json: [row] } : { status: 500, json: null });
+  const listed = await callTool("list_review", {}, ["read"], rpc);
+  const pending = await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
+  assertEquals(listed.structuredContent.ok, true);
+  assertEquals(pending.structuredContent.ok, true);
+  if (listed.structuredContent.ok) {
+    const first = (listed.structuredContent.data as { reviews: Record<string, unknown>[] }).reviews[0];
+    assertEquals(first?.line_status, "pending");
+    assertEquals(first?.source, "mercury");
+  }
+  if (pending.structuredContent.ok) {
+    const first = (pending.structuredContent.data as { expenses: Record<string, unknown>[] }).expenses[0];
+    assertEquals(first?.line_status, "pending");
+    assertEquals(first?.source, "mercury");
+  }
+});

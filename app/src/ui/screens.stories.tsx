@@ -27,6 +27,7 @@ import {
 } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
 import { Banner } from "./banner";
+import { israelToday } from "./date-math";
 import { OfflineIcon } from "./icons";
 import { TextLink } from "./text-link";
 import { InstallScreen } from "./install-screen";
@@ -294,7 +295,7 @@ export const ReviewAll: Story = {
         backTo="/review"
         search=""
         rows={[
-          sampleReview,
+          { ...sampleReview, source: "sumit", doc_kind: "invoice", line_status: "posted" },
           {
             ...sampleReview,
             id: "r2",
@@ -305,11 +306,47 @@ export const ReviewAll: Story = {
             supplier_name: "עגורני החוף בע״מ",
             project_name: null,
             category_name: "שינוע",
+            source: "mercury",
+            line_status: "pending",
           },
         ]}
       />
     </StoryRoute>
   ),
+};
+
+/** FLOW-305: the review list as a bank statement, two months, with היום / אתמול / date heads. Invented data. */
+function reviewDay(daysAgo: number): string {
+  const today = israelToday();
+  const date = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10)) - daysAgo));
+  return date.toISOString().slice(0, 10);
+}
+
+const statementReviews: ReviewRow[] = [
+  { ...sampleReview, id: "s1", transaction_id: "ts1", doc_date: reviewDay(0), supplier_name: null, description: "Northwind Traders", amount_net: -4_299n, currency: "USD", source: "mercury", line_status: "pending", project_name: null, category_name: null },
+  { ...sampleReview, id: "s2", transaction_id: "ts2", doc_date: reviewDay(0), supplier_name: "חשמל השרון בע״מ", amount_net: -120_050n, source: "mercury", line_status: "posted" },
+  { ...sampleReview, id: "s3", transaction_id: "ts3", doc_date: reviewDay(1), supplier_name: "לקוח לדוגמה", direction: "income", amount_net: 500_000n, source: "sumit", doc_kind: "invoice", project_name: "וילה רעננה", category_name: "מקדמות" },
+  { ...sampleReview, id: "s4", transaction_id: "ts4", doc_date: reviewDay(3), supplier_name: "שיש הגליל", amount_net: -345_000n, source: "sumit", doc_kind: "receipt" },
+  { ...sampleReview, id: "s5", transaction_id: "ts5", doc_date: reviewDay(40), supplier_name: "Contoso Building Supplies International", amount_net: -999_999_999n, currency: "USD", source: "mercury", line_status: "pending", category_name: "שיפוץ דירת הגג ברחוב הרצל, כולל הריסה וחשמל" },
+  { ...sampleReview, id: "s6", transaction_id: "ts6", doc_date: reviewDay(41), supplier_name: null, description: "4242-1234", amount_net: -10_000n, source: "mercury", project_name: null, category_name: null },
+];
+
+function ReviewStatement() {
+  return (
+    <StoryRoute entry="/review/all" tabs reviewCount={statementReviews.length}>
+      <ExampleBar />
+      <ReviewAllList backTo="/review" search="" rows={statementReviews} />
+    </StoryRoute>
+  );
+}
+
+export const ReviewAllStatement: Story = { render: () => <ReviewStatement /> };
+export const ReviewAllStatementDark: Story = { render: () => <ReviewStatement />, globals: { theme: "dark" } };
+export const ReviewAllStatement320: Story = { render: () => <ReviewStatement />, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const ReviewAllStatement320Dark: Story = {
+  render: () => <ReviewStatement />,
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 export const ReviewWithoutSuggestion: Story = {

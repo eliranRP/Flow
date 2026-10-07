@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { BigNumber } from "./big-number";
+import { BankIcon } from "./icons";
 import { List, ListRow } from "./list-row";
+import { statementMethodOf } from "./statement";
 import { largeAgorot, longHebrew, padded } from "./story-support";
 
 /** Agorot is a decimal string so story args stay JSON-serializable. */
@@ -152,3 +154,59 @@ export const MercuryDark: Story = {
   globals: { theme: "dark" },
   render: () => <MercuryRows />,
 };
+
+/**
+ * FLOW-305 option A: the statement row. Initials in the tint, the counterparty, a pending chip and
+ * "✦ project · category", the amount with small cents and the method under it. Invented data.
+ */
+const bankMethod = statementMethodOf("mercury", undefined);
+const invoiceMethod = statementMethodOf("sumit", "invoice");
+const cardMethod = { icon: <BankIcon size={16} />, text: "••4242", spoken: "כרטיס שמסתיים ב־4242", ltr: true };
+
+function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "long" | "fallback" | "all" }) {
+  const rows = {
+    income: <ListRow key="income" variant="statement" title="לקוח לדוגמה" fallback="invoice" method={invoiceMethod} agorot={500_000n} sign="in" href="/review/all?item=1" />,
+    expense: <ListRow key="expense" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={bankMethod} agorot={-120_050n} sign="out" href="/review/all?item=2" />,
+    pending: <ListRow key="pending" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} pending agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=3" />,
+    suggestion: (
+      <ListRow key="suggestion" variant="statement" title="שיש הגליל" fallback="invoice" method={invoiceMethod} suggestion="וילה לדוגמה · חומרים" agorot={-345_000n} sign="out" href="/review/all?item=4" />
+    ),
+    long: (
+      <ListRow
+        key="long"
+        variant="statement"
+        title="Contoso Building Supplies International"
+        fallback="bank"
+        method={bankMethod}
+        pending
+        suggestion={longHebrew}
+        agorot={-999_999_999n}
+        currency="USD"
+        sign="out"
+        href="/review/all?item=5"
+      />
+    ),
+    fallback: <ListRow key="fallback" variant="statement" title="4242-1234" fallback="bank" method={bankMethod} agorot={-10_000n} sign="out" href="/review/all?item=6" />,
+  };
+  if (kind === "all") return <List>{Object.values(rows)}</List>;
+  return <List>{rows[kind]}</List>;
+}
+
+const statementArgs = { variant: "transaction", title: "statement" } as const;
+function statementFrame(width: "flow320" | "flow390", theme: "light" | "dark"): Pick<Story, "globals" | "parameters"> {
+  return {
+    ...(theme === "dark" ? { globals: { theme: "dark" as const } } : {}),
+    parameters: { viewport: { defaultViewport: width } },
+  };
+}
+
+export const StatementIncome: Story = { args: statementArgs, render: () => <StatementSample kind="income" /> };
+export const StatementExpense: Story = { args: statementArgs, render: () => <StatementSample kind="expense" /> };
+export const StatementPending: Story = { args: statementArgs, render: () => <StatementSample kind="pending" /> };
+export const StatementSuggestion: Story = { args: statementArgs, render: () => <StatementSample kind="suggestion" /> };
+export const StatementLongName: Story = { args: statementArgs, render: () => <StatementSample kind="long" /> };
+export const StatementNoLetters: Story = { args: statementArgs, render: () => <StatementSample kind="fallback" /> };
+export const StatementAll390: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow390", "light") };
+export const StatementAll390Dark: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow390", "dark") };
+export const StatementAll320: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow320", "light") };
+export const StatementAll320Dark: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow320", "dark") };

@@ -3012,6 +3012,80 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   column-gap: var(--space-2);
 }
 
+/* FLOW-305: quiet day heads inside a month (היום, אתמול, יום ב׳ · 05/10). 15/1.4/500 text-secondary,
+   16px above and 4px below, not sticky (one pinned bar is enough at 320), no hairline. */
+.ui-day-head {
+  margin: var(--space-4) 0 var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-meta-line);
+}
+
+/* FLOW-305: statement row (ListRow variant="statement"). A 40px initials circle in the tint, the
+   counterparty over a pending chip and "✦ project · category", and the amount over the method. */
+.ui-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-10);
+  block-size: var(--space-10);
+  border-radius: 50%;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ui-statement-title[dir="ltr"] {
+  text-align: end;
+}
+
+.ui-statement-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.ui-statement-line > .ui-status {
+  flex: none;
+}
+
+.ui-statement-suggest {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-statement-spark {
+  color: var(--color-accent-text);
+}
+
+.ui-statement-end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-statement-method {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ui-statement-method-icon {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+}
+
 .ui-section-head,
 .ui-page-pad {
   padding-inline: var(--space-side);
