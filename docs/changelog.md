@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Faster CI, round 2. `check` adds `check (unit)` for the app unit tests and splits storybook into `check (storybook)` and `check (stories 1/2, 2/2)`; `e2e` runs in 3 shards; local Supabase skips the containers CI does not use. The storybook smoke config runs tests fully in parallel, and the focused-title layout check is split in two halves plus its own tab test. Same tests, same required check names.
+
 Faster CI. The `check` and `e2e` jobs are now gates over jobs that run side by side: `check (core)`, two storybook shards, and two e2e shards. Local Supabase starts in the background while node and Playwright install. The static-story smoke is 8 tests instead of 1. Same tests, same required check names. Runbook: [ci-cd](runbooks/ci-cd.md).
 
 Income filed to a project (FLOW-109). Checked that income filed through MCP `assign_expense` or `assign_expenses` counts in that project's `get_project` and `list_projects` income and once in the company total, in ILS and in its own currency, and that `undo` removes it. The null `pnl_role` and missing allocation row on income are by design: the P&L reads income by `project_id`. No code change. New pgTAP `project_income.test.sql`, a flow-mcp test for the income path, and a note under `assign_expense` in `docs/mcp/TOOLS.md`.
