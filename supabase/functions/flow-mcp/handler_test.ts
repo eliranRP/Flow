@@ -152,6 +152,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "list_loans",
     "get_loan_schedule",
     "assign_expense",
+    "assign_expense_split",
     "assign_expenses",
     "set_expense_category",
     "create_project",
@@ -961,6 +962,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   const writeNames = ((await writeList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(writeNames, [
     "assign_expense",
+    "assign_expense_split",
     "assign_expenses",
     "set_expense_category",
     "create_project",

@@ -11,13 +11,13 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
 
 ## Which id
 
 | Tool | Argument | Kind |
 | --- | --- | --- |
-| `get_expense`, `assign_expense`, `set_expense_category` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
+| `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
 | `undo` `kind: "project"` | `id` | the project id `create_project` returned |
@@ -119,6 +119,24 @@ Passes the project and category into `approve_review_item` when a review is open
 ```
 
 Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-1111-4000-8000-000000000010", "closed_review": true }`. The id is the review-queue id. `resolve_review` with `approved` does not return a `reassign_undo` id. When no review was open, `undo_kind` is `reassign` and `id` is that undo id.
+
+### assign_expense_split
+
+Splits one expense across at least two projects. Each `shares[]` row has `project_id` and `share` (whole percent). The shares must sum to 100, projects must be unique, and each project must belong to the company. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`.
+
+```json
+{
+  "idempotency_key": "split-1",
+  "transaction_id": "22222222-2222-4000-8000-000000000020",
+  "category_id": "c0ffee00-1111-4000-8000-0000000000a1",
+  "shares": [
+    { "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "share": 50 },
+    { "project_id": "8c1a0b2e-1111-4000-8000-000000000002", "share": 50 }
+  ]
+}
+```
+
+Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as `assign_expense`.
 
 ### set_expense_category
 
@@ -270,4 +288,4 @@ Undoes every successful row from that batch through `mcp_undo`, newest first. An
 
 ## Not in tools/list
 
-`rename_project`, `finish_project`, `split_expense`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.
+`rename_project`, `finish_project`, `collapse_expense`, `bulk_assign`, and `skip_review` wait. A batch split in `assign_expenses` is a follow-up. So do the SUMIT writers, `delete_transaction`, `create_company`, and `create_manual_entry`. Only `sync_bank` calls an internal Flow function; no tool calls a third party directly.

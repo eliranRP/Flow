@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+MCP assign_expense_split. `flow-mcp` adds the write tool `assign_expense_split` (`transaction_id`, optional `category_id`, `shares[]` of whole percents summing to 100, `idempotency_key`). It wraps `public.save_split` and records undo like `assign_expense`. Migration `20261007120000_mcp_assign_expense_split.sql`. Batch split in `assign_expenses` is a follow-up.
+
 MCP get_project. `flow-mcp` adds the read tool `get_project` (`id`, optional `basis` `cash` or `invoiced`, default `cash` like `list_projects` and `get_totals`). It calls `public.get_project(p_id, p_basis)` and returns the project summary, `by_currency`, `categories_by_currency`, and the newest transactions with their currency. Another company's project is `not_found`. No migration. Decision [0095](decisions/0095-mcp-first.md).
 
 Synthetic Mercury fixtures. The Mercury connector fixtures under `supabase/tests/connectors/mercury/fixtures` are now synthetic: counterparty names, descriptors, codes, dates, balances, and amounts are generated, with the same kinds, statuses, skips, and edge cases as before. `canonical-snapshot.json` is regenerated from them. The `MERCURY_FIXTURE_DENYLIST` check now also scans the Mercury test sources.
