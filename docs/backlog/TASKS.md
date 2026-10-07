@@ -26,7 +26,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
 | 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | in-progress (#113) |
 | 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | in-progress (#112) |
-| 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | claimed (thread agent, 2026-10-07, claude/project-thread-50x1dg) |
+| 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | in-progress (#114) |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
@@ -106,8 +106,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-126"></a>
 ### FLOW-126 · Kept-out guesses follow-ups (#113 review)
-- **Type:** BACKLOG NIT · **Status:** claimed (thread agent, 2026-10-07, claude/project-thread-50x1dg) · **Depends on:** FLOW-121
-- [ ] Income that already has a project and a guessed kept-out category is never queued for review, so the guess is never confirmed and the line keeps counting. Owner call: queue a guessed kept-out category for income too, or leave it.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#114) · **Depends on:** FLOW-121
+- [x] Income that already has a project and a guessed kept-out category is never queued for review, so the guess is never confirmed and the line keeps counting. Owner call: queue a guessed kept-out category for income too, or leave it. (#114: queued with reason `suggested`, the recommended answer; the owner was asked on 2026-10-07 and can still pick "leave it".)
 
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
