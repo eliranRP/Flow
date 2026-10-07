@@ -132,6 +132,8 @@ export const categoryRowSchema = z.object({
   hidden: z.boolean(),
   is_default: z.boolean(),
   excluded_from_pnl: z.boolean().optional(),
+  /** Set on the three loan categories. Omitted on older payloads. */
+  loan_part: z.string().nullable().optional(),
 });
 
 export const sumitStatusSchema = z.object({
@@ -225,6 +227,13 @@ export const projectDetailSchema = z
         category: z.string().nullable(),
       }),
     ),
+    /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
+    loans: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      currency: z.string(),
+      balance_minor: agorotSchema,
+    })).optional(),
   })
   .nullable();
 

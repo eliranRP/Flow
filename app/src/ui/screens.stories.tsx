@@ -1530,6 +1530,72 @@ export const TransactionOutOfPnl: Story = {
   ),
 };
 
+/** FLOW-303: opened from a list, so ˄ ˅ sit before ⋯. The middle row has both. */
+export const TransactionInList: Story = {
+  name: "In a list",
+  render: () => (
+    <StoryRoute entry="/transactions/t1" state={{ txnList: { ids: ["t0", "t1", "t2"], from: "/projects/holon" } }}>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "חשבונית חומרים",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -1_003_000n,
+          amount_net: -850_000n,
+          vat_amount: -153_000n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "חומרי בניין השרון בע״מ",
+          customer_name: null,
+          review_status: "approved",
+          paid: true,
+          open_gross_agorot: null,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+/** The last row: ˅ stays in place, marked unavailable. */
+export const TransactionListEnd: Story = {
+  name: "Last in a list",
+  render: () => (
+    <StoryRoute entry="/transactions/t2" state={{ txnList: { ids: ["t0", "t1", "t2"], from: "/projects/holon" } }}>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t2",
+          description: "הובלה",
+          direction: "income",
+          doc_date: "2026-09-22",
+          amount_gross: 12_345_678n,
+          amount_net: 10_462_439n,
+          vat_amount: 1_883_239n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "הכנסות מפרויקט",
+          supplier_name: null,
+          customer_name: "לקוח לדוגמה עם שם ארוך מאוד לבדיקה",
+          review_status: "open",
+          paid: false,
+          open_gross_agorot: 12_345_678n,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const TransactionShared: Story = {
   name: "Shared",
   render: () => (
@@ -1819,6 +1885,30 @@ export const ChangeCategoryPicker: Story = {
   name: "Category picker",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
+};
+
+const reversalCategories = [
+  ...changeCategories,
+  { id: "i1", name: "שכירות", hidden: false, kind: "income" },
+  { id: "i2", name: "דמי ניהול", hidden: false, kind: "income" },
+];
+
+export const ChangeReversalPicker: Story = {
+  name: "Category picker with reversals",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} />,
+};
+
+export const ChangeReversalPicked: Story = {
+  name: "Reversal picked, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
+};
+
+export const ChangeReversalSummary: Story = {
+  name: "Reversal on the summary, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
 };
 
 export const ChangeSaveError: Story = {

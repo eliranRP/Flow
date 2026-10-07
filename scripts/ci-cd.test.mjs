@@ -266,6 +266,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.ok(job("deploy").includes(psql));
   // Every apt-get that reaches the mirror goes through scripts/ci-apt-cache.sh, with its time limit.
   assert.equal(/apt-get (update|install)/.test(ci), false);
+  assert.equal(ci.includes("exec playwright install-deps"), false);
   assert.equal(push.includes("--include-seed"), false);
   assert.equal(push.includes("db reset"), false);
   assert.match(preflight, /SET TRANSACTION READ ONLY/);

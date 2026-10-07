@@ -448,6 +448,7 @@ jobs:
         run: bash scripts/cd-smoke.sh "$GITHUB_SHA"
 
       - name: Read-only smoke of the live app
+        timeout-minutes: 15
         env:
           SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
@@ -463,7 +464,7 @@ jobs:
               >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          pnpm --filter @flow/app exec playwright install-deps chromium
+          bash scripts/ci-apt-cache.sh install
           pnpm --filter @flow/app exec playwright install chromium
           log="$(mktemp)"
           if ! pnpm --filter @flow/app test:e2e:smoke >"$log" 2>&1; then

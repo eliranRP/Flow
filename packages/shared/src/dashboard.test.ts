@@ -44,6 +44,16 @@ describe("projectDetailSchema", () => {
     });
     expect(parsed?.excluded_categories_by_currency?.[0]?.amount_minor).toBe(1000n);
   });
+
+  it("parses the project's loans with a bigint balance, and a payload without them", () => {
+    const parsed = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      loans: [{ id: "l", name: "הלוואת דוגמה", currency: "USD", balance_minor: "12345" }],
+    });
+    expect(parsed?.loans?.[0]?.balance_minor).toBe(12345n);
+    expect(projectDetailSchema.parse({ ...project, categories: [] })?.loans).toBeUndefined();
+  });
 });
 
 describe("categoryRowSchema", () => {

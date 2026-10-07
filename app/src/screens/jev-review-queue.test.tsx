@@ -68,6 +68,8 @@ vi.mock("../lib/supabase", () => ({
       return table([{ id: "c1", name: "חומרים", hidden: false }]);
     },
     rpc: (name: string, args?: Record<string, unknown>) => {
+      // The queue reads the category kinds for the החזר mark. A read, not a write.
+      if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       db.writes.push({ name, args });
       if (name === "approve_review_item" && args?.p_check_shown === true) {
         const id = typeof args.p_id === "string" ? args.p_id : "";

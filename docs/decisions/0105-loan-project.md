@@ -26,4 +26,4 @@ A loan ([0088](0088-loans.md)) belongs to a company. A property loan really belo
 
 ## Consequences
 
-The loan sheet picker is a later task (FLOW-119). A line that was attached before a loan had a project stays where it is.
+The app sets and clears the project since FLOW-119: a פרויקט field in the new-loan sheet, and a tap on a loan row in Settings writes `loans.project_id` directly under RLS. The project screen lists its loans from `get_project.loans`. The app's own loan split path does not file the line under the loan's project yet; only MCP `attach_loan_payment` does (FLOW-120). A line that was attached before a loan had a project stays where it is.

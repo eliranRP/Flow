@@ -112,6 +112,17 @@ describe("transaction status chips", () => {
     expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
   });
 
+  it("shows the VAT as a plain line, with no empty invoice row", () => {
+    renderTxn(expense);
+    expect(screen.getByText(/^מע״מ /)).toHaveTextContent("מע״מ −₪1,800 · מע״מ משוער 18%");
+    expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
+  });
+
+  it("hides the VAT line when a shekel line has no VAT", () => {
+    renderTxn({ ...expense, amount_gross: -1_000_000n, vat_amount: 0n, vat_status: "source" });
+    expect(screen.queryByText(/^מע״מ /)).not.toBeInTheDocument();
+  });
+
   it("hides VAT and invoice rows for a USD expense", () => {
     renderTxn({
       ...expense,
