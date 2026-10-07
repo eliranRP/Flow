@@ -1,6 +1,7 @@
 -- FLOW-203. get_project lists its 40 newest lines by doc_date, then created_at.
 -- Lines with equal values sorted in any order, so the 40th line could change between calls.
--- The id is the last tiebreaker. Only the two order by clauses change.
+-- The id is the last tiebreaker. Re-created from 20261007193000_loan_project.sql;
+-- only the two order by clauses change.
 
 begin;
 
@@ -273,7 +274,22 @@ begin
     'profit_agorot', profit,
     'overhead_share_agorot', case when coalesce(available, false) then coalesce(share, 0) else null end,
     'overhead_weighted', coalesce(available, false),
-    'profit_after_overhead_agorot', profit - case when coalesce(available, false) then coalesce(share, 0) else 0 end
+    'profit_after_overhead_agorot', profit - case when coalesce(available, false) then coalesce(share, 0) else 0 end,
+    -- FLOW-105: the loans filed under this project. Nothing above reads them.
+    'loans', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', l.id,
+        'name', l.name,
+        'currency', l.currency,
+        'balance_minor', b.balance_minor
+      ) order by l.name, l.id)
+      from public.loans l
+      join public.loan_balances b
+        on b.company_id = l.company_id
+       and b.loan_id = l.id
+      where l.company_id = cid
+        and l.project_id = p_id
+    ), '[]'::jsonb)
   );
 end;
 $$;
