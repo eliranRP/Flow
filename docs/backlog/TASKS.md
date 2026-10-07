@@ -19,6 +19,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | in-progress (#74) |
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
+| 5b | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | claimed (FLOW-311 thread, 2026-10-07, claude/project-thread-cuhg10) |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
@@ -213,6 +214,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** a setup of 30 projects and categories runs without a 429; tests for the batch and the notification.
 
 ## Transactions and app UX
+
+<a id="flow-311"></a>
+### FLOW-311 · Split one bank line across several categories
+- **Type:** MCP · **Status:** claimed (FLOW-311 thread, 2026-10-07, claude/project-thread-cuhg10) · **Depends on:** — · **Owner's go:** 2026-10-07 (bookkeeping requests first: FLOW-104, FLOW-311, FLOW-105, FLOW-106)
+- **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units), category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income categories); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
+- **MCP:** a write tool (idempotency key, write rate limit, `undo`) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
+- **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income categories on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
 
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home
