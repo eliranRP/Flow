@@ -272,6 +272,25 @@ export function TagIcon(props: IconProps) {
   );
 }
 
+/** A circle with a slash: a category kept out of the P&L. */
+export function KeptOutIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 5.6l12.8 12.8" />
+    </Svg>
+  );
+}
+
+export function LockIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </Svg>
+  );
+}
+
 export function BellIcon(props: IconProps) {
   return (
     <Svg {...props}>
@@ -381,6 +400,40 @@ export function TrashIcon(props: IconProps) {
       <path d="M4 7h16" />
       <path d="M9 7V5h6v2" />
       <path d="M6 7l1 13h10l1-13" />
+    </Svg>
+  );
+}
+
+export function BuildingIcon(props: IconProps) {
+  return (
+    <Svg size={24} stroke={1.9} {...props}>
+      <path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16" />
+      <path d="M15 10h4a1 1 0 0 1 1 1v10" />
+      <path d="M3 21h18" />
+      <path d="M8 8h3M8 12h3M8 16h3" />
+    </Svg>
+  );
+}
+
+/** FLOW-107. The interest part of a loan payment. */
+export function PercentIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M19 5 5 19" />
+      <circle cx="7" cy="7" r="2.5" />
+      <circle cx="17" cy="17" r="2.5" />
+    </Svg>
+  );
+}
+
+/** FLOW-107. A part that stays out of the profit. */
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 9 6 9 6a17 17 0 0 1-2.4 3" />
+      <path d="M6.6 6.6C4.3 8.1 3 12 3 12s4 6 9 6a9 9 0 0 0 4.4-1.1" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </Svg>
   );
 }

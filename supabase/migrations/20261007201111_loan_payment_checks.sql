@@ -189,15 +189,15 @@ begin
         c.kind is distinct from 'expense'::public.category_kind
         or (
           s.part = 'interest'::public.loan_split_part
-          and (c.name is distinct from 'ריבית משכנתא' or c.excluded_from_pnl)
+          and (c.loan_part is distinct from 'interest'::public.loan_split_part or c.excluded_from_pnl)
         )
         or (
           s.part = 'escrow'::public.loan_split_part
-          and (c.name is distinct from 'מסים וביטוח' or c.excluded_from_pnl)
+          and (c.loan_part is distinct from 'escrow'::public.loan_split_part or c.excluded_from_pnl)
         )
         or (
           s.part = 'principal'::public.loan_split_part
-          and (c.name is distinct from 'תשלומי הלוואה' or c.excluded_from_pnl is distinct from true)
+          and (c.loan_part is distinct from 'principal'::public.loan_split_part or c.excluded_from_pnl is distinct from true)
         )
       )
   ) then
@@ -572,13 +572,13 @@ begin
           else
             select c.id into cat_interest
             from public.categories c
-            where c.company_id = cid and c.kind = 'expense' and c.name = 'ריבית משכנתא';
+            where c.company_id = cid and c.loan_part = 'interest'::public.loan_split_part;
             select c.id into cat_escrow
             from public.categories c
-            where c.company_id = cid and c.kind = 'expense' and c.name = 'מסים וביטוח';
+            where c.company_id = cid and c.loan_part = 'escrow'::public.loan_split_part;
             select c.id into cat_principal
             from public.categories c
-            where c.company_id = cid and c.kind = 'expense' and c.name = 'תשלומי הלוואה';
+            where c.company_id = cid and c.loan_part = 'principal'::public.loan_split_part;
 
             if cat_interest is null or cat_escrow is null or cat_principal is null then
               response := private.mcp_refused('loan categories missing');

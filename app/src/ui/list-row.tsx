@@ -90,7 +90,7 @@ export function ListRow(props: ListRowProps) {
   const titleDir = props.ltrTitle ? "ltr" : undefined;
   const titleBody = (
     <>
-      {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
+      {props.tag ? <span className="ui-row-title-text" data-clip-ok="">{titleText(props)}</span> : titleText(props)}
       {props.tag}
     </>
   );
@@ -191,11 +191,14 @@ export function ListRow(props: ListRowProps) {
     );
   }
 
-  const className = props.variant === "project"
-    ? "ui-row ui-row-project ui-hit"
-    : props.variant === "item" && props.plain === true
-      ? "ui-row"
-      : "ui-row ui-hit";
+  const className = cx(
+    props.variant === "project"
+      ? "ui-row ui-row-project ui-hit"
+      : props.variant === "item" && props.plain === true
+        ? "ui-row"
+        : "ui-row ui-hit",
+    toneClass,
+  );
   const row = props.href ? (
     <Link
       to={props.href}

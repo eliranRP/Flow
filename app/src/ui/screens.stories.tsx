@@ -36,6 +36,7 @@ import {
 } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
 import { TabBar } from "./tab-bar";
+import { ViewerPreview } from "../use-is-viewer";
 
 const sampleDashboard: Dashboard = {
   company_id: "story",
@@ -544,6 +545,27 @@ export const ProjectCategory: Story = {
   ),
 };
 
+/** FLOW-107. Loan payments show their parts in the hint; one waits for review. */
+const loanCategorySample = {
+  categoryName: "תשלומי הלוואה",
+  projectName: "וילה רעננה",
+  rows: [
+    { id: "l1", description: "Northgate Home Loans", doc_date: "2026-09-05", amount_net: -245_000n },
+    { id: "l2", description: "Northgate Home Loans", doc_date: "2026-08-05", amount_net: -245_000n },
+    { id: "l3", description: "Northgate Home Loans", doc_date: "2026-07-05", amount_net: -245_000n },
+  ],
+  loanMarks: { l1: "split", l2: "split", l3: "review" } as const,
+};
+
+export const ProjectCategoryLoanSplit: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c1">
+      <ExampleBar />
+      <ProjectCategoryScreen sample={loanCategorySample} backTo="/projects/a" />
+    </StoryRoute>
+  ),
+};
+
 export const ProjectCategoryEmpty: Story = {
   render: () => (
     <StoryRoute entry="/projects/a/categories/c1">
@@ -715,6 +737,50 @@ export const SettingsLongEmail: Story = {
       />
     </StoryRoute>
   ),
+};
+
+const renameBusiness = {
+  name: "סטודיו אלפא לעיצוב ובנייה בע״מ",
+  connected: false,
+  companyId: null,
+  lastError: null,
+  email: "owner@example.com",
+};
+
+export const SettingsBusinessRow: Story = {
+  name: "Business row, long name",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsBusinessRowViewer: Story = {
+  name: "Business row, viewer",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <SettingsScreen sample={renameBusiness} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const SettingsRenameSheet: Story = {
+  name: "Rename sheet",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
+  },
 };
 
 export const SettingsAssistantConnected: Story = {
@@ -1158,6 +1224,75 @@ export const CategoriesLongHebrew: Story = {
     <StoryRoute entry="/settings/categories" tabs>
       <ExampleBar />
       <CategoriesScreen sample={longHebrewCategories} />
+    </StoryRoute>
+  ),
+};
+
+const keptOutCategories: Array<CategoryRow & { count?: number }> = [
+  { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 42 },
+  { id: "c6", name: "פיקדונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: true, count: 3 },
+  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 12 },
+  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, count: 12 },
+  { id: "c4", name: "עבודה", kind: "expense", hidden: true, is_default: true, excluded_from_pnl: true, count: 1 },
+  { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false, count: 3 },
+];
+
+export const CategoriesKeptOut: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} hiddenOpen />
+    </StoryRoute>
+  ),
+};
+
+export const CategoriesKeptOutMenu: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, חומרים" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "חומרים" });
+  },
+};
+
+export const CategoriesKeptOutBackMenu: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, פיקדונות" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "פיקדונות" });
+  },
+};
+
+export const CategoriesKeptOutLoanMenu: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, תשלומי הלוואה" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "תשלומי הלוואה" });
+  },
+};
+
+export const CategoriesKeptOutLongHebrew: Story = {
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen
+        sample={longHebrewCategories.map((category) => ({ ...category, hidden: false, excluded_from_pnl: true, count: 1204 }))}
+      />
     </StoryRoute>
   ),
 };

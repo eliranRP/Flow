@@ -542,12 +542,12 @@ export function isWriteTool(name: string): boolean {
 
 function readTools() {
   return [
-    toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD).", {
+    toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). The output echoes basis.", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's all-time P&L, categories, and its 40 newest lines. It takes no dates, so it matches list_projects only when list_projects omits both dates. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency and its full line amount, including pending lines and the whole of a shared line. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
@@ -562,7 +562,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations and, for a split line, line_split.parts. transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id.", {
@@ -1200,7 +1200,7 @@ export async function callTool(
     if (isFail(body)) return body;
     if (name === "get_totals") return ok(totalsOf(body));
     const projects = Array.isArray(body.projects) ? body.projects as Review[] : [];
-    return ok({ projects: projects.map(projectRow) });
+    return ok({ basis, projects: projects.map(projectRow) });
   }
 
   if (name === "get_project") {
@@ -1320,17 +1320,19 @@ export async function callTool(
   const result = await rpc("get_transaction", { p_id: transactionId });
   if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
+  const row = result.json as Record<string, unknown>;
   // A line split by category shows its parts. A failed parts read fails the whole read, so a
   // split line never looks whole under its own category.
   const split = await rpc("get_line_split", { p_transaction_id: transactionId });
   if (split.status >= 400) return fail("refused", "The read was refused.");
   const parts = (split.json as { parts?: unknown } | null)?.parts;
-  if (
-    Array.isArray(parts) && parts.length > 0 &&
-    typeof result.json === "object" && !Array.isArray(result.json)
-  ) {
+  let out: Record<string, unknown> = row;
+  if (Array.isArray(parts) && parts.length > 0 && typeof row === "object" && !Array.isArray(row)) {
     const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
-    return ok({ ...(result.json as Record<string, unknown>), line_split: lineSplit });
+    out = { ...row, line_split: lineSplit };
   }
-  return ok(result.json);
+  if (row.direction === "income") return ok({ ...out, loan_split: null });
+  const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
+  if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
+  return ok({ ...out, loan_split: loanSplit.json ?? null });
 }

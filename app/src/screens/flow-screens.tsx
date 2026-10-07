@@ -1,9 +1,10 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoanTransactionSplit } from "./loan-match";
+import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
@@ -63,6 +64,7 @@ import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
+import { RenameCompanySheet } from "./rename-company";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
@@ -81,7 +83,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
@@ -588,6 +590,7 @@ export function ProjectDetailScreen({
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
   const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
+  const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null && moves);
   useEffect(() => {
     if (sample) return;
     if (detail.data) setOverheadOn(detail.data.after_overhead === true);
@@ -722,7 +725,7 @@ export function ProjectDetailScreen({
                 key={txn.id}
                 variant="transaction"
                 title={txn.description}
-                hint={`${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`}
+                {...loanRowProps(projectMarks.get(txn.id), `${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`)}
                 agorot={txn.amount_net}
                 sign={txn.direction === "income" ? "in" : "out"}
                 currency={txn.currency ?? "ILS"}
@@ -874,6 +877,7 @@ export function FiledTodayScreen({
   const filed = useFiledTodayQuery(shown == null);
   const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
   const rows = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
+  const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
   return (
     <ScreenState
       title="שויכו היום"
@@ -889,7 +893,7 @@ export function FiledTodayScreen({
             key={row.id}
             variant="transaction"
             title={row.supplier_name ?? row.description}
-            hint={[row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · ")}
+            {...loanRowProps(filedMarks.get(row.id), [row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · "))}
             agorot={row.amount_net}
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
@@ -1725,6 +1729,8 @@ type CategorySample = {
   rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
   /** Shows עוד תנועות until the rest of the sample rows are revealed. */
   pageSize?: number;
+  /** FLOW-107. Loan split marks by row id, for stories. */
+  loanMarks?: Record<string, LoanMark>;
 };
 
 export function ProjectCategoryScreen({
@@ -1744,6 +1750,7 @@ export function ProjectCategoryScreen({
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   const heldRows = useHeldOrder(loadedRows, (row) => row.id);
+  const liveMarks = useLoanMarks(heldRows.map((row) => row.id), sample == null);
   const back = `/projects/${projectId}${search}`;
   if (phase.kind === "loading" || phase.kind === "error") {
     return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
@@ -1769,7 +1776,7 @@ export function ProjectCategoryScreen({
               key={txn.id}
               variant="transaction"
               title={txn.description}
-              hint={formatDayMonth(txn.doc_date)}
+              {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
               agorot={txn.amount_net}
               sign="out"
               source="invoice"
@@ -3572,6 +3579,8 @@ export function SettingsScreen({
   const [mercuryConnectOpen, setMercuryConnectOpen] = useState(false);
   const [mercuryStatusOpen, setMercuryStatusOpen] = useState(false);
   const [mercuryDisconnectOpen, setMercuryDisconnectOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const businessRowRef = useRef<HTMLButtonElement>(null);
   const adoptSheet = useRef(false);
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
   const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
@@ -3584,6 +3593,7 @@ export function SettingsScreen({
   const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
   const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
   const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
+  const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
@@ -3941,7 +3951,6 @@ export function SettingsScreen({
   const mercuryRefreshHint = mercuryRetryHint;
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const namedBusiness = (businessName ?? "").trim();
-  const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
   const showInstall = !isStandalone();
   const showSignOut = preview === "off" || previewValue === "empty";
   return (
@@ -3957,15 +3966,31 @@ export function SettingsScreen({
         ) : null
       ) : namedBusiness !== "" ? (
         <List>
-          <ListRow
-            variant="static"
-            title={namedBusiness}
-            hint={accountHint}
-            icon={<GoogleIcon />}
-            describeHint={accountHint != null}
-            wrapHint
-          />
+          {holdWrites ? (
+            <ListRow variant="static" title={namedBusiness} icon={<BuildingIcon />} />
+          ) : (
+            <ListRow
+              variant="button"
+              title={namedBusiness}
+              label={`שם העסק: ${namedBusiness}`}
+              icon={<BuildingIcon />}
+              chevron
+              buttonRef={businessRowRef}
+              onClick={() => { setRenameSheet(true); }}
+            />
+          )}
+          {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
         </List>
+      ) : null}
+      {!noCompany && !holdWrites && namedBusiness !== "" ? (
+        <RenameCompanySheet
+          open={renameOpen}
+          onOpenChange={(next) => { setRenameSheet(next); }}
+          companyId={sample || previewSample ? null : dashboard.data?.company_id ?? null}
+          currentName={namedBusiness}
+          blocked={() => blocked(sample != null ? "empty" : undefined)}
+          returnFocusRef={businessRowRef}
+        />
       ) : null}
       <SectionHead title="חיבורים" />
       {kind === "loading" || mercuryKind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}
@@ -4376,6 +4401,21 @@ export function SettingsScreen({
   );
 }
 
+const KEPT_OUT = "מחוץ לרווח והפסד";
+
+/** The three loan categories the server keeps fixed, and whether each counts in the P&L (decision 0099). */
+const LOAN_CATEGORY_LINES: Record<string, string> = {
+  "ריבית משכנתא": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  "מסים וביטוח": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  "תשלומי הלוואה": "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
+};
+
+function loanCategoryLine(category: CategoryRow): string | null {
+  return category.kind === "expense" ? (LOAN_CATEGORY_LINES[category.name] ?? null) : null;
+}
+
+type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
+
 function CategoryLine({
   category,
   muted = false,
@@ -4386,7 +4426,7 @@ function CategoryLine({
   muted?: boolean;
   /** A viewer row keeps the height and drops the pointer. */
   plain?: boolean;
-  onMenu?: () => void;
+  onMenu?: (opener: HTMLElement) => void;
 }) {
   return (
     <ListRow
@@ -4395,10 +4435,15 @@ function CategoryLine({
       title={category.name}
       muted={muted}
       meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
+      tag={category.excluded_from_pnl === true ? (
+        <span className="ui-cat-out" role="img" aria-label={KEPT_OUT}>
+          <KeptOutIcon size={18} />
+        </span>
+      ) : undefined}
       action={onMenu == null ? undefined : (
         <IconButton
           label={`עוד, ${category.name}`}
-          onClick={onMenu}
+          onClick={(event) => { onMenu(event.currentTarget); }}
         >
           <MoreIcon />
         </IconButton>
@@ -4434,6 +4479,28 @@ export function CategoriesScreen({
   const [mergeOpen, setMergeOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
+  const toast = useToast();
+  const menuOpener = useRef<HTMLElement | null>(null);
+  const pnlHintId = useId();
+  const pnl = useWrite<PnlChange>({
+    failure: "לא הצלחנו לעדכן את הקטגוריה.",
+    keys: ["categories", "dashboard", "project", "project-category"],
+    onSuccess: (done) => {
+      setMenu(null);
+      toast.show({
+        message: `${done.name} · ${done.excluded ? KEPT_OUT : "ברווח והפסד"}`,
+        ...(done.undo ? {} : {
+          action: "ביטול",
+          onAction: () => { pnl.mutate({ ...done, excluded: !done.excluded, undo: true }); },
+        }),
+      });
+    },
+    run: async (change) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_category_excluded_from_pnl", { p_id: change.id, p_excluded: change.excluded }));
+    },
+  });
   const createCategory = useWrite({
     failure: (error) => (error.message.includes("already") ? "יש כבר קטגוריה בשם הזה." : "לא הצלחנו ליצור את הקטגוריה."),
     success: "הקטגוריה נשמרה",
@@ -4475,6 +4542,9 @@ export function CategoriesScreen({
   const shown = rows.filter((category) => category.kind === kind && !category.hidden);
   const hiddenRows = rows.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
+  const anyKeptOut = rows.some((category) => category.kind === kind && category.excluded_from_pnl === true);
+  const menuLoanLine = menu ? loanCategoryLine(menu) : null;
+  const menuKeptOut = menu?.excluded_from_pnl === true;
   const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
   const previewNoCompany = sample == null && params.get("preview") === "empty";
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
@@ -4520,7 +4590,8 @@ export function CategoriesScreen({
             key={category.id}
             category={category}
             plain={holdWrites}
-            onMenu={holdWrites ? undefined : () => {
+            onMenu={holdWrites ? undefined : (opener) => {
+              menuOpener.current = opener;
               setMenu(category);
             }}
           />
@@ -4567,7 +4638,8 @@ export function CategoriesScreen({
                   category={category}
                   muted
                   plain={holdWrites}
-                  onMenu={holdWrites ? undefined : () => {
+                  onMenu={holdWrites ? undefined : (opener) => {
+                    menuOpener.current = opener;
                     setMenu(category);
                   }}
                 />
@@ -4576,16 +4648,28 @@ export function CategoriesScreen({
           ) : null}
         </div>
       ) : null}
+      {anyKeptOut ? (
+        <p className="t-hint ui-page-pad ui-cat-legend">
+          <KeptOutIcon size={14} />
+          {KEPT_OUT}
+        </p>
+      ) : null}
       <Sheet
         open={menu != null}
         onOpenChange={(open) => {
-          if (!open) setMenu(null);
+          // A dismiss during the P&L write waits for it: success closes the sheet, failure keeps it.
+          if (open) return true;
+          if (pnl.isPending) return false;
+          setMenu(null);
+          return true;
         }}
         title={menu?.name ?? "קטגוריה"}
+        returnFocusRef={menuOpener}
       >
         <div className="ui-stack">
           <Button
             variant="secondary"
+            disabled={pnl.isPending}
             onClick={() => {
               setHideTarget(menu);
               setMenu(null);
@@ -4595,6 +4679,7 @@ export function CategoriesScreen({
           </Button>
           <Button
             variant="secondary"
+            disabled={pnl.isPending}
             onClick={() => {
               setMergeFrom(menu?.id ?? "");
               setMenu(null);
@@ -4603,6 +4688,29 @@ export function CategoriesScreen({
           >
             מיזוג
           </Button>
+          {menuLoanLine != null ? (
+            <p className="ui-cat-fixed">
+              <LockIcon size={18} />
+              {menuLoanLine}
+            </p>
+          ) : menu != null ? (
+            <>
+              <Button
+                variant="secondary"
+                busy={pnl.isPending}
+                aria-describedby={pnlHintId}
+                onClick={() => {
+                  if (pnl.isPending || blocked()) return;
+                  pnl.mutate({ id: menu.id, name: menu.name, excluded: !menuKeptOut, undo: false });
+                }}
+              >
+                {pnl.isPending ? "מעדכן…" : menuKeptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
+              </Button>
+              <p id={pnlHintId} className="t-hint ui-cat-pnl-hint">
+                {menuKeptOut ? "הסכומים ייספרו שוב כהכנסה או הוצאה." : "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה."}
+              </p>
+            </>
+          ) : null}
         </div>
       </Sheet>
       <Sheet open={pickOpen} onOpenChange={setPickOpen} title="מיזוג אל">

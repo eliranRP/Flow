@@ -229,4 +229,13 @@ describe("ListRow", () => {
     expect(textStyle.textAlign).toBe("start");
     expect(getComputedStyle(title as Element).justifyContent).toBe("flex-start");
   });
+
+  it("paints a linked transaction row in the warning tone", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="משכנתא" hint="ממתין לבדיקה" tone="warning" agorot={-245000n} sign="out" source="invoice" href="/transactions/1" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: /משכנתא/ })).toHaveClass("ui-row-tone-warning");
+  });
 });

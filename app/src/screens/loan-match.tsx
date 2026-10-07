@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type RefObject } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
@@ -9,7 +9,7 @@ import {
   scheduleRowForDate,
   type LoanSplitPart,
 } from "@flow/shared";
-import { BankIcon, AlertIcon } from "../ui/icons";
+import { BankIcon, AlertIcon, EyeOffIcon, HomeIcon, PercentIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
@@ -27,6 +27,12 @@ const PART_LABEL: Record<LoanSplitPart, string> = {
   principal: "קרן",
 };
 
+const PART_ICON: Record<LoanSplitPart, () => ReactNode> = {
+  interest: () => <PercentIcon />,
+  escrow: () => <HomeIcon />,
+  principal: () => <BankIcon />,
+};
+
 const PART_CATEGORY: Record<LoanSplitPart, string> = {
   interest: LOAN_INTEREST_CATEGORY,
   escrow: LOAN_ESCROW_CATEGORY,
@@ -40,6 +46,8 @@ type SplitRow = {
   scheduledMinor: bigint;
   needsReview: boolean;
   loanId: string;
+  /** From get_loan_split. Null when the P&L counts the whole line, not this part. */
+  inPnl?: boolean | null;
 };
 
 type LoanChoice = {
@@ -79,6 +87,7 @@ export function LoanSplitPanel({
   lineCurrency,
   displayCurrency,
   parts,
+  byParts = false,
   loans,
   needsReview,
   currencyMismatch,
@@ -97,6 +106,8 @@ export function LoanSplitPanel({
   lineCurrency: string;
   displayCurrency: string;
   parts: readonly SplitRow[] | null;
+  /** The P&L counts the line by its parts (get_loan_split). Otherwise the whole line counts. */
+  byParts?: boolean;
   loans: readonly LoanChoice[];
   needsReview: boolean;
   currencyMismatch: boolean;
@@ -121,6 +132,9 @@ export function LoanSplitPanel({
     return row ? [row] : [];
   });
   const selectableLoans = loans.filter((loan) => loan.currency === lineCurrency);
+  const totalMinor = ordered.reduce((sum, part) => sum + part.amountMinor, 0n);
+  const countedMinor = ordered.reduce((sum, part) => (part.inPnl === true ? sum + part.amountMinor : sum), 0n);
+  const showCounted = byParts && !needsReview;
   return (
     <>
       {ordered.length > 0 ? (
@@ -128,15 +142,31 @@ export function LoanSplitPanel({
           <div className="ui-section-head">
             <h2 ref={splitSectionRef} tabIndex={-1} className="ui-focus-title t-title-3">חלוקת התשלום</h2>
           </div>
+          {showCounted ? (
+            <p className="ui-page-pad t-hint">
+              נספר ברווח <bdi className="ui-num" dir="ltr">{showMoney(countedMinor, displayCurrency)}</bdi>
+            </p>
+          ) : null}
           <List>
             {ordered.map((part) => (
               <ListRow
                 key={part.part}
                 variant="static"
+                icon={PART_ICON[part.part]()}
                 title={PART_LABEL[part.part]}
-                meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(part.amountMinor, displayCurrency)}</bdi>}
+                hint={showCounted && part.inPnl === false ? (
+                  <span className="ui-loan-out"><EyeOffIcon size={16} />מחוץ לרווח</span>
+                ) : undefined}
+                meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
               />
             ))}
+            <ListRow
+              variant="static"
+              className="ui-loan-total"
+              icon={<span className="ui-loan-spacer" aria-hidden="true" />}
+              title="סה״כ"
+              meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
+            />
           </List>
         </>
       ) : (
@@ -286,8 +316,17 @@ export function LoanTransactionSplit({
     retry: false,
     queryFn: () => readLoanMatch(transactionId),
   });
+  // The closing sheet can hold or take focus for a few frames, so retry until the heading keeps it.
   const focusSplitSection = () => {
-    splitSectionRef.current?.focus({ preventScroll: true });
+    const started = performance.now();
+    const tryFocus = () => {
+      const heading = splitSectionRef.current;
+      if (heading?.isConnected) heading.focus({ preventScroll: true });
+      if (document.activeElement !== heading && performance.now() - started < 1000) {
+        requestAnimationFrame(tryFocus);
+      }
+    };
+    tryFocus();
   };
   const match = useWrite<string>({
     failure: failureText,
@@ -359,6 +398,7 @@ export function LoanTransactionSplit({
       lineCurrency={lineCurrency}
       displayCurrency={displayCurrency}
       parts={parts}
+      byParts={loaded.byParts}
       loans={loaded.loans}
       needsReview={parts?.some((part) => part.needsReview) ?? false}
       currencyMismatch={loan != null && loan.currency !== lineCurrency}
@@ -421,6 +461,7 @@ type LoadedMatch = {
   lineMinor: bigint;
   currency: string;
   splits: SplitRow[];
+  byParts: boolean;
   loans: LoanChoice[];
   categoryIds: Partial<Record<LoanSplitPart, string>>;
 };
@@ -436,7 +477,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
   assertNoError(txn);
   if (!txn.data) throw new Error("supabase");
   const companyId = txn.data.company_id;
-  const [splits, loans, categories, balances] = await Promise.all([
+  const [splits, loans, categories, balances, counted] = await Promise.all([
     supabase
       .from("loan_splits")
       .select("id, part, amount_minor, scheduled_minor, needs_review, loan_id")
@@ -455,11 +496,14 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .from("loan_balances")
       .select("loan_id, balance_minor")
       .eq("company_id", companyId),
+    supabase.rpc("get_loan_split", { p_transaction_id: transactionId }),
   ]);
   assertNoError(splits);
   assertNoError(loans);
   assertNoError(categories);
   assertNoError(balances);
+  assertNoError(counted);
+  const pnl = readCounted(counted.data);
   const balanceByLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, BigInt(row.balance_minor ?? 0)]));
   const categoryIds: Partial<Record<LoanSplitPart, string>> = {};
   for (const category of categories.data ?? []) {
@@ -477,7 +521,9 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       scheduledMinor: BigInt(row.scheduled_minor),
       needsReview: row.needs_review,
       loanId: row.loan_id,
+      inPnl: pnl.parts.get(row.part) ?? null,
     })),
+    byParts: pnl.byParts,
     loans: (loans.data ?? []).map((loan) => ({
       id: loan.id,
       name: loan.name,
@@ -492,6 +538,19 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
     })),
     categoryIds,
   };
+}
+
+/** get_loan_split is null or { by_parts, parts: [{ part, in_pnl }] }. Anything else reads as the whole line. */
+function readCounted(data: unknown): { byParts: boolean; parts: Map<string, boolean | null> } {
+  const parts = new Map<string, boolean | null>();
+  if (data == null || typeof data !== "object") return { byParts: false, parts };
+  const value = data as { by_parts?: unknown; parts?: unknown };
+  if (Array.isArray(value.parts)) {
+    for (const item of value.parts as Array<{ part?: unknown; in_pnl?: unknown }>) {
+      if (typeof item.part === "string") parts.set(item.part, typeof item.in_pnl === "boolean" ? item.in_pnl : null);
+    }
+  }
+  return { byParts: value.by_parts === true, parts };
 }
 
 async function writeSplit(transactionId: string, docDate: string, loaded: LoadedMatch, loan: LoanChoice): Promise<void> {
