@@ -565,6 +565,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Add `supabase migration repair` to the CI/CD runbook.
 - [ ] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR.
 
+<a id="flow-812"></a>
+### FLOW-812 · Faster CI
+- **Type:** SMALL CYCLE · **Status:** claimed (CI agent, 2026-10-07, claude/project-thread-uiob2d) · **Depends on:** —
+- **What:** A PR waits about 11 minutes for CI because one runner does every storybook step after the unit tests, and the static-story smoke opens every story in one serial test (about 6 minutes). Run the storybook smoke and the main Playwright suite as shards on parallel runners behind the `check` and `e2e` gate jobs. Start local Supabase while dependencies install.
+- **Acceptance:** Same tests run; the required check names stay `lint`, `check`, `e2e`; PR CI wall time drops by at least a third.
+
 ## Data hygiene (public repo)
 
 <a id="flow-901"></a>
