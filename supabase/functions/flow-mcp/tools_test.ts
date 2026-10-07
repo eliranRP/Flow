@@ -322,6 +322,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -359,6 +361,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
   ]);
@@ -437,6 +441,67 @@ Deno.test("split_line forwards parts in order with null projects", async () => {
   const undo = await callTool("undo", { idempotency_key: "u-1", kind: "line_split", id: TXN }, ["write"], rpc);
   assertEquals(undo.isError, false);
   assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_split", p_id: TXN } });
+});
+
+Deno.test("set_line_pnl and set_lines_pnl forward in_pnl, null included", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, in_pnl: false, undo_kind: "line_pnl", id: TXN } },
+  }));
+  const out = await callTool("set_line_pnl", { idempotency_key: "p-1", transaction_id: TXN, in_pnl: false }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_line_pnl",
+    body: { p_idempotency_key: "p-1", p_transaction_id: TXN, p_in_pnl: false },
+  });
+  const cleared = await callTool("set_line_pnl", { idempotency_key: "p-2", transaction_id: TXN, in_pnl: null }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1]?.body.p_in_pnl, null);
+  const batch = await callTool("set_lines_pnl", {
+    idempotency_key: "b-1",
+    items: [{ transaction_id: TXN, in_pnl: true }, { transaction_id: PROJECT, in_pnl: null }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[2], {
+    name: "mcp_set_lines_pnl",
+    body: { p_idempotency_key: "b-1", p_items: [{ transaction_id: TXN, in_pnl: true }, { transaction_id: PROJECT, in_pnl: null }] },
+  });
+  const undo = await callTool("undo", { idempotency_key: "u-1", kind: "line_pnl", id: TXN }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[3], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_pnl", p_id: TXN } });
+});
+
+Deno.test("set_line_pnl and set_lines_pnl validate input and refuse read tokens", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const denied = await callTool("set_line_pnl", { idempotency_key: "k", transaction_id: TXN, in_pnl: false }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const badOne: unknown[] = [
+    { idempotency_key: "k", transaction_id: TXN },
+    { idempotency_key: "k", transaction_id: TXN, in_pnl: "no" },
+    { idempotency_key: "k", transaction_id: "not-a-uuid", in_pnl: false },
+    { idempotency_key: "", transaction_id: TXN, in_pnl: false },
+    { idempotency_key: "k", transaction_id: TXN, in_pnl: false, company_id: TXN },
+  ];
+  for (const input of badOne) {
+    const result = await callTool("set_line_pnl", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const badMany: unknown[] = [
+    { idempotency_key: "k", items: [] },
+    { idempotency_key: "k", items: [{ transaction_id: TXN, in_pnl: false }, { transaction_id: TXN, in_pnl: true }] },
+    { idempotency_key: "k", items: [{ transaction_id: TXN }] },
+    { idempotency_key: "k", items: [{ transaction_id: TXN, in_pnl: false, project_id: PROJECT }] },
+    { idempotency_key: "k".repeat(125), items: [{ transaction_id: TXN, in_pnl: false }] },
+    { idempotency_key: "k", items: Array.from({ length: 201 }, () => ({ transaction_id: TXN, in_pnl: false })) },
+  ];
+  for (const input of badMany) {
+    const result = await callTool("set_lines_pnl", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
 });
 
 Deno.test("split_line validates parts and refuses read tokens", async () => {
