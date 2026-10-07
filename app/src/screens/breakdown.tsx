@@ -24,7 +24,7 @@ import { BigNumber } from "../ui/big-number";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { ChartIcon, DocumentIcon } from "../ui/icons";
+import { ChartIcon, DocumentIcon, ReviewIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { PeriodPicker, RangeSheet } from "../ui/period-picker";
@@ -119,7 +119,7 @@ function BreakdownBody({
   const period = <PeriodControl sheet={sheet} setSheet={setSheet} />;
 
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState title={title} backTo={back} phase={phase} onRetry={() => { void query.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} trailing={period} phase={phase} onRetry={() => { void query.refetch(); }} />;
   }
 
   const empty = data == null || (data.totals.length === 0 && data.groups.length === 0 && data.excluded.length === 0);
@@ -176,20 +176,24 @@ function BreakdownBody({
                 href={groupLinesPath(direction, groupBy, group.currency, group.key, search)}
               />
             ))}
-            {review > 0 ? (
+          </List>
+          {review > 0 ? (
+            <List className="ui-breakdown-quiet">
               <ListRow
                 variant="item"
                 tone="muted"
+                icon={<ReviewIcon />}
                 title={`${String(review)} ממתינים לאישור`}
+                hint="כבר כלולים בסכום"
                 chevron
                 href={`/review${search}`}
               />
-            ) : null}
-          </List>
+            </List>
+          ) : null}
           {excluded.length > 0 ? (
             <>
               <SectionHead title="לא נכלל בסכום" />
-              <List>
+              <List className="ui-breakdown-quiet">
                 {excluded.map((sum) => (
                   <ListRow
                     key={sum.currency}
@@ -266,7 +270,7 @@ function LinesBody({
   const back = `/flow/${direction}${search}`;
 
   if (phase.kind === "loading" || phase.kind === "error") {
-    return <ScreenState title={title} backTo={back} phase={phase} onRetry={() => { void lines.refetch(); }} />;
+    return <ScreenState stacked title={title} backTo={back} phase={phase} onRetry={() => { void lines.refetch(); }} />;
   }
 
   const subtitleParts: string[] = [directionLabel(direction), periodLabel(period)];
@@ -290,7 +294,7 @@ function LinesBody({
               <ListRow
                 key={`${row.transaction_id}:${row.part ?? ""}`}
                 variant="transaction"
-                title={row.supplier_name ?? row.description}
+                title={groupBy === "payer" && !excluded ? row.description : row.supplier_name ?? row.description}
                 hint={hint}
                 agorot={row.amount_minor}
                 currency={row.currency}

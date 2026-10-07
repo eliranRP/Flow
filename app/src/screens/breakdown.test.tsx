@@ -114,6 +114,7 @@ describe("Breakdown screen", () => {
     const waiting = await screen.findByRole("link", { name: /3 ממתינים לאישור/ });
     expect(waiting).toHaveAttribute("href", "/review");
     expect(within(waiting).queryByText(/₪/)).not.toBeInTheDocument();
+    expect(within(waiting).getByText("כבר כלולים בסכום")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "לא נכלל בסכום" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /מחוץ לרווח/ })).toHaveAttribute("href", "/flow/expense/excluded/ILS");
   });
@@ -166,6 +167,11 @@ describe("Breakdown lines screen", () => {
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "get_breakdown_lines" && (c.args as { p_offset: number }).p_offset === 40)).toBe(true);
     });
+  });
+
+  it("titles a supplier group's lines by their description, not the supplier again", async () => {
+    wrap("/flow/expense/payer/ILS/s1");
+    expect(await screen.findByRole("link", { name: /חשבונית 101/ })).toHaveAttribute("href", "/transactions/t1");
   });
 
   it("asks for the kept-out lines", async () => {

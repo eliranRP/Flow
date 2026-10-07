@@ -27,8 +27,8 @@ const expenses: NonNullable<Breakdown> = {
     { key: "c2", name: "קבלני משנה", currency: "ILS", amount_minor: 1_280_000n, count: 5, shared: false },
     { key: "c3", name: "שכר עובדים", currency: "ILS", amount_minor: 820_000n, count: 4, shared: false },
     { key: "c4", name: "ריבית משכנתא", currency: "ILS", amount_minor: 412_000n, count: 2, shared: false },
-    { key: "c5", name: "כלים וציוד", currency: "ILS", amount_minor: 235_000n, count: 6, shared: false },
     { key: "none", name: null, currency: "ILS", amount_minor: 240_000n, count: 3, shared: false },
+    { key: "c5", name: "כלים וציוד", currency: "ILS", amount_minor: 235_000n, count: 6, shared: false },
   ],
   excluded: [{ currency: "ILS", amount_minor: 125_000n, count: 2 }],
   review_count: 3,
@@ -40,8 +40,8 @@ const byProject: NonNullable<Breakdown> = {
   groups: [
     { key: "p1", name: "מגדל הים", currency: "ILS", amount_minor: 2_210_000n, count: 15, shared: true },
     { key: "p2", name: "וילה בהרצליה", currency: "ILS", amount_minor: 1_340_000n, count: 9, shared: true },
-    { key: "overhead", name: null, currency: "ILS", amount_minor: 640_000n, count: 6, shared: false },
     { key: "unassigned", name: null, currency: "ILS", amount_minor: 642_000n, count: 4, shared: false },
+    { key: "overhead", name: null, currency: "ILS", amount_minor: 640_000n, count: 6, shared: false },
   ],
 };
 
@@ -86,6 +86,12 @@ const linesPage: NonNullable<BreakdownLinesPage> = {
     { transaction_id: "t4", part: null, description: "זיכוי 12", supplier_name: "הום סנטר", project_name: null, category_name: "חומרים", doc_date: "2026-10-02", currency: "ILS", amount_minor: -19_400n, shared: false },
   ],
   has_more: false,
+};
+
+/** The group the lines story opens: its count and total match the four lines shown. */
+const linesBreakdown: NonNullable<Breakdown> = {
+  ...expenses,
+  groups: [{ key: "c1", name: "חומרים", currency: "ILS", amount_minor: 1_003_600n, count: 4, shared: true }],
 };
 
 function breakdownStory(sample: Breakdown | undefined, entry = "/flow/expense", groupBy?: BreakdownGroupBy) {
@@ -135,7 +141,7 @@ function linesStory() {
       <Routes>
         <Route
           path="/flow/:direction/:groupBy/:currency/:groupKey"
-          element={<BreakdownLinesScreen sample={{ breakdown: expenses, pages: [linesPage] }} />}
+          element={<BreakdownLinesScreen sample={{ breakdown: linesBreakdown, pages: [linesPage] }} />}
         />
       </Routes>
     </StoryRoute>

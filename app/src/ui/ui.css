@@ -1896,6 +1896,16 @@ a.ui-row,
   margin: 0;
 }
 
+/* Rows beside the counted groups: the waiting count and the kept-out lines read quieter. */
+.ui-breakdown-quiet .ui-row-title,
+.ui-breakdown-quiet .t-title-3 {
+  color: var(--color-text-secondary);
+}
+
+.ui-breakdown-quiet .t-title-3 {
+  font-weight: var(--type-body-weight);
+}
+
 .ui-breakdown-hint {
   margin: var(--space-1) 0 0;
   color: var(--color-text-secondary);
