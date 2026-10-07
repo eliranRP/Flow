@@ -85,15 +85,23 @@ export function rememberSignInReturn(path: string | null): void {
   }
 }
 
-/** Reads and clears the stored return path. */
-export function takeSignInReturn(): string | null {
+/**
+ * Reads the stored return path without clearing it. The auth callback clears it
+ * only once it navigates, so a re-run effect (React StrictMode) still sees it.
+ */
+export function peekSignInReturn(): string | null {
   try {
-    const value = window.sessionStorage.getItem(RETURN_KEY);
-    window.sessionStorage.removeItem(RETURN_KEY);
-    return safeSignInReturn(value);
+    return safeSignInReturn(window.sessionStorage.getItem(RETURN_KEY));
   } catch {
     return null;
   }
+}
+
+/** Reads and clears the stored return path. */
+export function takeSignInReturn(): string | null {
+  const value = peekSignInReturn();
+  rememberSignInReturn(null);
+  return value;
 }
 
 /** Where the auth callback goes: setup first for a new user, else the stored return or Home. */

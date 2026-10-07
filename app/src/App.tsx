@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { afterSignInMessage, afterSignInPath, signInPathFor, takeSignInReturn } from "./safe-return";
+import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { homeSummarySchema, type Dashboard } from "@flow/shared";
 import { thisMonth } from "./period";
 import { AuthProvider, useAuth } from "./auth";
@@ -816,7 +816,7 @@ function AuthCallback() {
     }
     cancelled.current = false;
     const stopped = (): boolean => cancelled.current;
-    const stored = takeSignInReturn();
+    const stored = peekSignInReturn();
     const back = stored ? `&return=${encodeURIComponent(stored)}` : "";
     client.auth
       .getSession()
@@ -837,6 +837,7 @@ function AuthCallback() {
           return;
         }
         const summary = homeSummarySchema.parse(home.data);
+        rememberSignInReturn(null);
         setMessage(afterSignInMessage(Boolean(summary.company_id), stored));
         void navigate(afterSignInPath(Boolean(summary.company_id), stored), { replace: true });
       })

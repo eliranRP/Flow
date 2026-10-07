@@ -107,6 +107,7 @@ test("a signed-out deep link to review keeps it for after sign-in; an off-list r
   await page.goto("/install");
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/sign-in?return=%2F%2Fevil.example");
+  await expect(page).toHaveURL(/\/sign-in\?return=%2F%2Fevil\.example$/);
   await expect(page.getByRole("heading", { name: "כניסה או הרשמה" })).toBeVisible();
 });
 
