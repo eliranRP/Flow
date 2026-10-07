@@ -1941,6 +1941,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
   );
   const reversalOptions = splitReview ? [] : reversalChoices(sample?.categories ?? categories.data ?? [], income ? "income" : "expense");
   const isReversalId = (id: string) => reversalOptions.some((option) => option.id === id);
+  // The switch is hidden on a reversal, so it must not hold the sheet open.
+  const rememberDirty = !income && !splitReview && !isReversalId(categoryId) && remember !== savedRemember;
   const categoryOptions = withChoice(
     (sample?.categories ?? categories.data ?? []).filter((category) => {
       if (category.hidden) return false;
@@ -2118,7 +2120,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       {...(income || splitReview ? {} : { remember, onRemember: setRemember })}
       categorySuggested={sample ? sample.categorySuggested !== false : filledRow?.category_suggested !== false}
       hold={hold || leaveNote}
-      pending={!income && !splitReview && remember !== savedRemember && !wroteReview.current && !closedReview.current}
+      pending={rememberDirty && !wroteReview.current && !closedReview.current}
       projectNote={splitReview ? COLLAPSE_SPLIT_NOTE : undefined}
       projectTitle={sample?.splitTitle ?? (splitReview && row ? reviewSplitTitle(row) : undefined)}
       initialQuery={sample?.initialQuery}
@@ -2176,7 +2178,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
           setHold(splitReview ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
           return Promise.reject(new Error("incomplete"));
         }
-        if (!splitReview && remember !== savedRemember && (wroteReview.current || closedReview.current)) {
+        if (rememberDirty && (wroteReview.current || closedReview.current)) {
           setLeaveNote("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.");
           return Promise.reject(new Error("remember"));
         }

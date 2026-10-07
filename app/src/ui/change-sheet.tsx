@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject, type SubmitEvent } from "react";
+import { useEffect, useId, useRef, useState, type RefObject, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { REVERSAL_HEADING, REVERSAL_HINT } from "../reversal";
 import { isTransientWriteError, type WriteFailure } from "../use-write";
@@ -722,6 +722,7 @@ function Picker({
   onSplit?: () => void;
 }) {
   const needle = query.trim();
+  const sectionId = useId();
   const reversalListed = reversal?.listed ?? [];
   const empty = !loading && needle !== "" && listed.length === 0 && reversalListed.length === 0;
   // A checked reversal, or a search that finds one, keeps the section open so the match can be seen and reached.
@@ -782,18 +783,18 @@ function Picker({
                 <TextLink
                   chevron={false}
                   expanded={reversalShown}
-                  controls="change-reversal"
+                  controls={sectionId}
                   trailing={<ChevronDownIcon size={16} />}
                   onClick={reversal.onToggle}
                 >
                   {reversal.heading}
                 </TextLink>
               )}
-              <div id="change-reversal" hidden={!reversalShown}>
+              <div id={sectionId} hidden={!reversalShown}>
                 {reversalShown ? (
                   <>
-                    <p className="t-hint ui-reversal-hint" id="change-reversal-hint">{reversal.hint}</p>
-                    <div role="radiogroup" aria-label={reversal.heading} aria-describedby="change-reversal-hint">
+                    <p className="t-hint ui-reversal-hint" id={`${sectionId}-hint`}>{reversal.hint}</p>
+                    <div role="radiogroup" aria-label={reversal.heading} aria-describedby={`${sectionId}-hint`}>
                       {reversalListed.map(row)}
                     </div>
                   </>

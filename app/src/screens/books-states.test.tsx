@@ -1349,7 +1349,10 @@ describe("an unchanged complete review", () => {
       }
       if (name === "list_categories") {
         return Promise.resolve({
-          data: [{ id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true }],
+          data: [
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true },
+            { id: "i1", name: "שכירות", kind: "income", hidden: false, is_default: true },
+          ],
           error: null,
         });
       }
@@ -1372,6 +1375,23 @@ describe("an unchanged complete review", () => {
   function writes(calls: string[]): string[] {
     return calls.filter((name) => name === "resolve_review" || name === "reassign_transaction");
   }
+
+  it("closes after a reversal pick, with no remember note and no supplier rule", async () => {
+    const calls = await openComplete();
+    fireEvent.click(screen.getByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    fireEvent.click(await screen.findByRole("button", { name: "הכנסה שהוחזרה" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "שכירות" }));
+    await waitFor(() => {
+      expect(writes(calls)).toContain("resolve_review");
+    });
+    expect(await screen.findByRole("button", { name: "קטגוריה: שכירות, החזר, שינוי" })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "לזכור לספק הזה" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText("הזכירה נשמרת עם השיוך. החזירו את המתג כדי לסגור.")).not.toBeInTheDocument();
+  });
 
   it("does not write when ✕ closes an unchanged sheet", async () => {
     const calls = await openComplete();

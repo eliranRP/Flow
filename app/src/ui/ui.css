@@ -3952,7 +3952,3 @@ div.ui-check-row {
 .ui-reversal-hint {
   margin: 0 0 var(--space-2);
 }
-
-.ui-reversal [role="radiogroup"] > .ui-radio-row:last-child {
-  border-bottom: 0;
-}
