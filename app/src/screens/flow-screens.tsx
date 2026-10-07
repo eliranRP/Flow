@@ -86,6 +86,7 @@ import { IconButton } from "../ui/icon-button";
 import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { MonthList } from "../ui/month-list";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
 import { FocusTitle } from "../ui/focus-title";
 import { MoneyField, PercentField } from "../ui/money-field";
@@ -719,10 +720,14 @@ export function ProjectDetailScreen({
         heldTransactions.length === 0 ? (
           <EmptyState icon={<DocumentIcon />} title="אין עדיין תנועות" body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן." />
         ) : (
-          <List>
-            {heldTransactions.map((txn) => (
+          <MonthList
+            rows={heldTransactions}
+            keyOf={(txn) => txn.id}
+            dateOf={(txn) => txn.doc_date}
+            amountOf={(txn) => ({ minor: txn.amount_net, currency: txn.currency ?? "ILS", direction: txn.direction === "income" ? "income" : "expense" })}
+            complete={heldTransactions.length < PROJECT_RECENT_CAP}
+            renderRow={(txn) => (
               <ListRow
-                key={txn.id}
                 variant="transaction"
                 title={txn.description}
                 {...loanRowProps(projectMarks.get(txn.id), `${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`)}
@@ -732,8 +737,8 @@ export function ProjectDetailScreen({
                 source="invoice"
                 href={`/transactions/${txn.id}${search}`}
               />
-            ))}
-          </List>
+            )}
+          />
         )
       ) : null}
     </div>
@@ -904,6 +909,9 @@ export function FiledTodayScreen({
     </ScreenState>
   );
 }
+
+/** get_project returns at most this many recent transactions, so a full page may hide older rows of its last month. */
+const PROJECT_RECENT_CAP = 40;
 
 const EMPTY_REVIEW: ReviewRow[] = [];
 
@@ -1168,10 +1176,13 @@ export function ReviewAllList({
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
-      <List>
-        {ordered.map((row) => (
+      <MonthList
+        rows={ordered}
+        keyOf={(row) => row.id}
+        dateOf={(row) => row.doc_date}
+        amountOf={(row) => ({ minor: row.amount_net, currency: row.currency ?? "ILS", direction: row.direction })}
+        renderRow={(row) => (
           <ListRow
-            key={row.id}
             variant="transaction"
             title={row.supplier_name ?? row.description}
             hint={<bdi dir="ltr">{formatDayMonth(row.doc_date)}</bdi>}
@@ -1181,8 +1192,8 @@ export function ReviewAllList({
             source="invoice"
             href={reviewFocusPath(search, row.id)}
           />
-        ))}
-      </List>
+        )}
+      />
     </div>
   );
 }
@@ -1202,10 +1213,13 @@ export function ProjectWaitingList({
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
-      <List>
-        {ordered.map((row) => (
+      <MonthList
+        rows={ordered}
+        keyOf={(row) => row.transaction_id}
+        dateOf={(row) => row.doc_date}
+        amountOf={(row) => ({ minor: row.amount_net, currency: "ILS", direction: "expense" })}
+        renderRow={(row) => (
           <ListRow
-            key={row.transaction_id}
             variant="transaction"
             title={row.description}
             hint={formatDayMonth(row.doc_date)}
@@ -1218,8 +1232,8 @@ export function ProjectWaitingList({
                 ? `/transactions/${row.transaction_id}${search}`
                 : `/review/change${search}${search ? "&" : "?"}item=${row.review_id}`}
           />
-        ))}
-      </List>
+        )}
+      />
     </div>
   );
 }
@@ -1770,10 +1784,14 @@ export function ProjectCategoryScreen({
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
-        <List>
-          {rows.map((txn) => (
+        <MonthList
+          rows={rows}
+          keyOf={(txn) => txn.id}
+          dateOf={(txn) => txn.doc_date}
+          amountOf={(txn) => ({ minor: txn.amount_net, currency: "ILS", direction: "expense" })}
+          complete={!more}
+          renderRow={(txn) => (
             <ListRow
-              key={txn.id}
               variant="transaction"
               title={txn.description}
               {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
@@ -1782,8 +1800,8 @@ export function ProjectCategoryScreen({
               source="invoice"
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
             />
-          ))}
-        </List>
+          )}
+        />
       )}
       {more ? (
         <div className="ui-page-pad">
