@@ -26,7 +26,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
 | 10b | [FLOW-117](#flow-117) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
 | 10c | [FLOW-118](#flow-118) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
-| 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
+| 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
@@ -43,6 +43,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 | 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 28 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -190,16 +191,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-204"></a>
 ### FLOW-204 · assign_expense_split follow-ups (#68 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Undo turns a suggested category into a confirmed one (the existing undo functions do this too).
-- [ ] `closed_review` is reported false when the split closes an `unallocated_shared` review.
-- [ ] No `lock_timeout` in the migration.
-- [ ] Reordering the shares counts as different arguments for idempotency.
-- [ ] No SQL cap on the number of shares.
-- [ ] Hidden categories and finished projects are accepted.
-- [ ] Zod `int` / `min` / `strict` cases are untested.
-- [ ] The cross-tenant code is `refused`, not `not_found` (matches `assign_expense`; decide once for all tools).
-- [ ] The PR description of #68 is stale; fix it for the record.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#88) · **Depends on:** —
+- [x] Undo turns a suggested category into a confirmed one (the existing undo functions do this too).
+- [x] `closed_review` is reported false when the split closes an `unallocated_shared` review.
+- [x] No `lock_timeout` in the migration.
+- [x] Reordering the shares counts as different arguments for idempotency.
+- [x] No SQL cap on the number of shares.
+- [x] Hidden categories and finished projects are accepted.
+- [x] Zod `int` / `min` / `strict` cases are untested.
+- [x] The cross-tenant code is `refused`, not `not_found` (matches `assign_expense`; decide once for all tools).
+- [x] The PR description of #68 is stale; fix it for the record.
 
 <a id="flow-205"></a>
 ### FLOW-205 · MCP hardening follow-ups
@@ -228,6 +229,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs.
 - [ ] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
 - [ ] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
+
+<a id="flow-208"></a>
+### FLOW-208 · Split and undo follow-ups (#88 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`.
+- [ ] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1).
+- [ ] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess.
 
 ## Transactions and app UX
 

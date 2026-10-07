@@ -324,7 +324,7 @@ begin
 end;
 $$;
 
--- Based on the FLOW-111 versions (20261007161110_loan_payment_checks.sql); only the category match changes.
+-- Based on the FLOW-111 versions (20261007190111_loan_payment_checks.sql); only the category match changes.
 create or replace function private.loan_splits_check(txn uuid)
 returns void
 language plpgsql
