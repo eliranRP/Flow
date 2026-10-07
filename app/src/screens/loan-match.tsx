@@ -254,7 +254,7 @@ export function LoanBalanceList({
             key={row.id}
             variant="button"
             {...common}
-            label={`${row.name}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
+            label={`${row.name}, ${showMoney(row.balanceMinor, row.currency)}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
             chevron
             buttonRef={(node) => { rowRef?.(row.id, node); }}
             onClick={() => { onOpen(row); }}

@@ -198,6 +198,8 @@ export function LoanSetupForm({
             </span>
             <ChevronDownIcon size={20} />
           </button>
+          {/* Same rhythm as the fields around it, which reserve their message line. */}
+          <span className="ui-field-message ui-field-message-slot" aria-hidden="true" />
         </div>
       ) : null}
       <MoneyField
@@ -460,14 +462,15 @@ function LoanProjectSheet({
   onOpenChange,
   source,
   returnFocusRef,
-  onSaved,
+  busyRef,
 }: {
   loan: LoanBalanceRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   source: LoanProjectSource;
   returnFocusRef: { current: HTMLElement | null };
-  onSaved?: (loanId: string, projectId: string | null) => void;
+  /** True while a tap is saving. The parent's Back handler waits on it. */
+  busyRef?: { current: boolean };
 }) {
   const toast = useToast();
   const holdWrites = useHoldWrites();
@@ -479,9 +482,8 @@ function LoanProjectSheet({
   const save = useWrite<{ loanId: string; projectId: string | null }>({
     failure: projectFailure,
     keys: ["loans", "project"],
-    onSuccess: ({ loanId, projectId }) => {
+    onSuccess: ({ projectId }) => {
       toast.show({ message: projectId == null ? "ההלוואה הוסרה מהפרויקט" : "ההלוואה שויכה לפרויקט" });
-      onSaved?.(loanId, projectId);
       onOpenChange(false);
     },
     run: async ({ loanId, projectId }) => {
@@ -519,9 +521,13 @@ function LoanProjectSheet({
           const previous = picked;
           setPicked(id);
           setSaving({ id });
+          if (busyRef) busyRef.current = true;
           save.mutate({ loanId: loan.id, projectId: id }, {
             onError: () => { setPicked(previous); },
-            onSettled: () => { setSaving(undefined); },
+            onSettled: () => {
+              if (busyRef) busyRef.current = false;
+              setSaving(undefined);
+            },
           });
         }}
       />
@@ -548,6 +554,7 @@ export function LoanSettingsSection({
   const [draftProject, setDraftProject] = useState<string | null>(null);
   const rowRef = useRef<HTMLButtonElement>(null);
   const projectFieldRef = useRef<HTMLButtonElement>(null);
+  const sheetTitle = useRef<HTMLHeadingElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
   const posted = useRef(false);
   const draftRef = useRef<LoanSetupInitial | null>(null);
@@ -562,10 +569,17 @@ export function LoanSettingsSection({
     if (!next) clearDraft();
     setOpenState(next);
   }, [clearDraft]);
-  const setSheet = useSheetHistory("loan-new", open, setOpen);
+  // Back in the picker view returns to the form, like Escape and חזרה.
+  const setSheet = useSheetHistory("loan-new", open, setOpen, () => {
+    if (view !== "project") return true;
+    backToForm();
+    return false;
+  });
   const [editing, setEditing] = useState<LoanBalanceRow | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const setEditSheet = useSheetHistory("loan-project", editOpen, setEditOpen);
+  const editBusy = useRef(false);
+  // Back during a save waits for it, like ✕ and Escape (0075).
+  const setEditSheet = useSheetHistory("loan-project", editOpen, setEditOpen, () => !editBusy.current);
   const loanRows = useRef(new Map<string, HTMLButtonElement>());
   const editReturn = useRef<HTMLElement | null>(null);
   const balances = useLoanBalances(companyId);
@@ -605,6 +619,12 @@ export function LoanSettingsSection({
     if (next) keepDraft.current = true;
     else clearDraft();
     setSheet(next);
+  }
+
+  function openPicker() {
+    setView("project");
+    // The פרויקט field is hidden now. Focus the title, like the change sheet's picker.
+    requestAnimationFrame(() => { sheetTitle.current?.focus({ preventScroll: true }); });
   }
 
   function backToForm() {
@@ -658,6 +678,7 @@ export function LoanSettingsSection({
         open={holdWrites ? false : open}
         onOpenChange={setLoanSheet}
         title={picking ? "פרויקט" : "הלוואה"}
+        titleRef={sheetTitle}
         returnFocusRef={rowRef}
         leading={picking ? (
           <IconButton label="חזרה" onClick={backToForm}>
@@ -691,7 +712,7 @@ export function LoanSettingsSection({
                 project={{
                   name: projectNameOf(source, draftProject),
                   buttonRef: projectFieldRef,
-                  onOpen: () => { setView("project"); },
+                  onOpen: openPicker,
                 }}
                 onSave={(row) => {
                   if (holdWrites || blocked?.()) return;
@@ -717,6 +738,7 @@ export function LoanSettingsSection({
           onOpenChange={setEditSheet}
           source={source}
           returnFocusRef={editReturn}
+          busyRef={editBusy}
         />
       )}
     </>
