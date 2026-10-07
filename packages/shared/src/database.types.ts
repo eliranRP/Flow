@@ -207,6 +207,43 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"line_splits": {
+                  Row: {
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"ordinal": number,"project_id": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"ordinal": number,"project_id"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"ordinal"?: number,"project_id"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "line_splits_company_id_category_id_fkey"
+      columns: ["company_id","category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "line_splits_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "line_splits_company_id_project_id_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "line_splits_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"loan_splits": {
                   Row: {
                     "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"loan_id": string,"needs_review": boolean,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at": string
@@ -252,13 +289,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"start_date": string,"term_months": number,"updated_at": string
+                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"project_id": string | null,"start_date": string,"term_months": number,"updated_at": string
                   }
                   Insert: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"start_date": string,"term_months": number,"updated_at"?: string
+                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"project_id"?: string | null,"start_date": string,"term_months": number,"updated_at"?: string
                   }
                   Update: {
-                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"start_date"?: string,"term_months"?: number,"updated_at"?: string
+                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"term_months"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -267,6 +304,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "loans_company_id_project_id_fkey"
+      columns: ["company_id","project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
     }
                   ]
                 },"overhead": {
@@ -683,6 +726,9 @@ isOneToOne: false
 "get_home":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"get_line_split":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
 "get_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
@@ -726,7 +772,7 @@ isOneToOne: false
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
 "mcp_add_loan":
-{ Args: { "p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_start_date": string,"p_term_months": number }; Returns: Json
+{ Args: { "p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
@@ -769,6 +815,9 @@ isOneToOne: false
                            },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
+                           },
+"mcp_split_line":
+{ Args: { "p_idempotency_key": string,"p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_sync_bank_begin":
 { Args: { "p_idempotency_key": string }; Returns: Json
@@ -835,6 +884,9 @@ isOneToOne: false
                            },
 "revoke_mcp_credential":
 { Args: { "p_id": string,"p_user": string }; Returns: Json
+                           },
+"save_line_split":
+{ Args: { "p_parts": Json,"p_transaction_id": string }; Returns: Json
                            },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
