@@ -1,6 +1,6 @@
 # FLOW-301 · Income and expense drill-down from Home: plan
 
-Status: waiting for Eliran's approval. Nothing is built until he picks an option.
+Status: Eliran approved option A on 2026-10-07. Questions 2 and 3 open (defaults apply to the screen PR).
 Draft PR (planning claim): https://github.com/eliranRP/Flow/pull/85
 Mockups (Claude Design canvas): https://claude.ai/artifact/YK8cfkUhsdZWYdCoyAc5u7
 
