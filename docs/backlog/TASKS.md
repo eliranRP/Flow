@@ -170,9 +170,9 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-203"></a>
 ### FLOW-203 · get_project docs and list_projects basis echo (#66 review)
 - **Type:** BACKLOG NIT · **Status:** claimed (FLOW-203 thread, 2026-10-07, claude/project-thread-bjb30w) · **Depends on:** —
-- [ ] TOOLS.md: `get_project` is all-time (matches `list_projects` only without dates); `transactions[]` includes pending lines and shows shared lines at full amount; the Mercury both-bases note; `other_currencies` sub-fields with negative expenses.
-- [ ] `list_projects` should echo `basis`.
-- [ ] The `get_project` transaction sort needs an id tiebreaker (equal dates sort non-deterministically).
+- [x] TOOLS.md: `get_project` is all-time (matches `list_projects` only without dates); `transactions[]` includes pending lines and shows shared lines at full amount; the Mercury both-bases note; `other_currencies` sub-fields with negative expenses.
+- [x] `list_projects` should echo `basis`.
+- [x] The `get_project` transaction sort needs an id tiebreaker (equal dates sort non-deterministically).
 
 <a id="flow-204"></a>
 ### FLOW-204 · assign_expense_split follow-ups (#68 review)

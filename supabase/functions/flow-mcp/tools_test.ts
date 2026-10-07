@@ -197,6 +197,15 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
   if (totals.structuredContent.ok) {
     assertEquals((totals.structuredContent.data as { basis: string }).basis, "invoiced");
   }
+  assertEquals(projects.structuredContent.ok, true);
+  if (projects.structuredContent.ok) {
+    assertEquals((projects.structuredContent.data as { basis: string }).basis, "invoiced");
+  }
+  const cashProjects = await callTool("list_projects", {}, ["read"], rpc);
+  assertEquals(cashProjects.structuredContent.ok, true);
+  if (cashProjects.structuredContent.ok) {
+    assertEquals((cashProjects.structuredContent.data as { basis: string }).basis, "cash");
+  }
   if (pending.structuredContent.ok) {
     const found = pending.structuredContent.data as { expenses: { id: string }[] };
     assertEquals(found.expenses[0]?.id, review.transaction_id);
