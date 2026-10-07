@@ -70,6 +70,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     if (name === "list_categories") return { status: 200, json: [{ id: "c1" }] };
     if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: "11111111-1111-4000-8000-000000000001", description: "אלפא" }] };
     if (name === "get_transaction") return { status: 200, json: { id: "11111111-1111-4000-8000-000000000001", description: "אלפא" } };
+    if (name === "get_line_split") return { status: 200, json: null };
     if (name === "mcp_list_loans") {
       return { status: 200, json: [{
         id: LOAN,
@@ -167,6 +168,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "list_categories") return { status: 200, json: [{ id: "c1" }] };
     if (name === "list_review") return { status: 200, json: [review] };
     if (name === "get_transaction") return { status: 200, json: { id: review.transaction_id, description: "אלפא" } };
+    if (name === "get_line_split") return { status: 200, json: null };
     if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
     return { status: 500, json: null };
   });
@@ -417,10 +419,12 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
     Promise.resolve(name === "get_transaction"
       ? { status: 200, json: { id: TXN } }
       : { status: 200, json: { transaction_id: TXN, parts: [] } }));
+  assertEquals(whole.isError, false);
   if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN });
   const failed = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction" ? { status: 200, json: { id: TXN } } : { status: 500, json: null }));
-  if (failed.structuredContent.ok) assertEquals(failed.structuredContent.data, { id: TXN });
+  assertEquals(failed.isError, true);
+  if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.code, "refused");
 });
 
 Deno.test("assign_expense_split validates shares and refuses read tokens", async () => {

@@ -475,6 +475,58 @@ $$;
 revoke all on function public.save_line_split(uuid, jsonb) from public, anon, authenticated, service_role;
 grant execute on function public.save_line_split(uuid, jsonb) to authenticated;
 
+-- Merging a category moves the parts that use it too. A line with a part in each category
+-- for the same project is refused, so the owner fixes that split first.
+create or replace function public.merge_category(p_from uuid, p_into uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  from_kind public.category_kind;
+  into_kind public.category_kind;
+begin
+  cid := private.current_company_id();
+  if cid is null then
+    raise exception 'no company';
+  end if;
+  if p_from = p_into then
+    raise exception 'pick a different category';
+  end if;
+  select kind into from_kind from public.categories where company_id = cid and id = p_from;
+  select kind into into_kind from public.categories where company_id = cid and id = p_into and hidden = false;
+  if from_kind is null or into_kind is null then
+    raise exception 'category not found';
+  end if;
+  if from_kind is distinct from into_kind then
+    raise exception 'categories must be the same kind';
+  end if;
+  if exists (
+    select 1
+    from public.line_splits f
+    join public.line_splits s
+      on s.transaction_id = f.transaction_id
+      and s.category_id = p_into
+      and s.project_id is not distinct from f.project_id
+    where f.company_id = cid and f.category_id = p_from
+  ) then
+    raise exception 'a split line has both categories';
+  end if;
+  update public.transactions
+  set category_id = p_into,
+      user_assigned = true
+  where company_id = cid and category_id = p_from;
+  update public.line_splits
+  set category_id = p_into
+  where company_id = cid and category_id = p_from;
+  update public.categories
+  set hidden = true
+  where id = p_from and company_id = cid;
+end;
+$$;
+
 -- MCP write: split_line. Undo kind line_split takes the transaction id.
 
 alter table private.mcp_writes drop constraint mcp_writes_kind_check;

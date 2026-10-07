@@ -230,6 +230,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] After FLOW-104: let a part take the other kind as a reversal, like a whole line.
 - [ ] App screen to view and edit the parts (SMALL UI, plan with a mockup first).
 - [ ] `split_line` inside the `assign_expenses` batch, with `undo_batch`.
+- [ ] `get_home.other_currencies[].count` (`count(*)`) and `get_project.other_currencies[].count` (one per row) count each part of a split line, and each loan split part, as a line. Count `distinct transaction_id`, as `company_pnl` does.
 
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home

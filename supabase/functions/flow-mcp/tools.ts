@@ -1204,11 +1204,13 @@ export async function callTool(
   const result = await rpc("get_transaction", { p_id: transactionId });
   if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
-  // A line split by category shows its parts. A failed parts read leaves the row as it is.
+  // A line split by category shows its parts. A failed parts read fails the whole read, so a
+  // split line never looks whole under its own category.
   const split = await rpc("get_line_split", { p_transaction_id: transactionId });
+  if (split.status >= 400) return fail("refused", "The read was refused.");
   const parts = (split.json as { parts?: unknown } | null)?.parts;
   if (
-    split.status < 400 && Array.isArray(parts) && parts.length > 0 &&
+    Array.isArray(parts) && parts.length > 0 &&
     typeof result.json === "object" && !Array.isArray(result.json)
   ) {
     const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;

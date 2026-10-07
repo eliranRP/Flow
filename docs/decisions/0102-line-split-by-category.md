@@ -14,6 +14,7 @@
 - A part with a project counts under that project with the project role, or the overhead role when it is the overhead project ([0101](0101-unassigned-and-overhead-project.md)). A part with no project keeps the line's project and role; on a shared line it is shared by the line's allocations in proportion, rounded half to even per part.
 - Parts that no longer sum to the line (a bank re-sync changed the amount) are ignored and the line counts whole. `get_line_split` reports `parts_match: false` so the owner can fix them.
 - A line takes a loan split or a split by category, never both; a trigger on each table refuses the other.
+- `merge_category` moves the parts in the merged category to the kept one. It refuses a line with a part in each category for the same project (`a split line has both categories`); the owner fixes that split first.
 - `public.save_line_split(transaction_id, parts)` replaces the parts (an empty array clears them) and marks the line as the owner's choice. It refuses a part whose category kind differs from the line's direction, a project or category of another company, parts that do not sum to the line, a line with a loan split, and a line with an open review (resolve the review first). VAT stays on the line; parts split the net amount.
 - MCP write `split_line` wraps it with an idempotency key and the write rate limit. Undo kind `line_split` with the transaction id restores the parts and flags from before the write, or is `conflict` if the parts changed since. `get_expense` adds `line_split` for a split line.
 

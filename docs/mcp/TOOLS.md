@@ -303,6 +303,7 @@ Splits one bank line into parts, each with its own category, optional project, a
 - `parts: []` clears the split, and the line counts whole again.
 - Refused: `transaction not found`, `category not found`, `project not found`, `category kind must match the direction`, `parts must sum to the line`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first).
 - VAT stays on the line. The parts split the net amount.
+- While a split is in place, `set_expense_category` and `assign_expense` change only the line's own category and project, which the P&L does not read for a split line. Clear the split with `parts: []` first, or send new parts.
 
 Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "amount_minor" }], "undo_kind": "line_split", "id" }`. Undo `kind: "line_split"` with the transaction id puts back the parts from before this write (none, or an earlier split) and the line's assignment flags. If the parts changed since, undo is `conflict`.
 

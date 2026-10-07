@@ -752,6 +752,7 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
         const id = sub === userA ? expenseA : expenseB;
         return Promise.resolve(new Response(JSON.stringify({ id, description: sub === userA ? "אלפא" : "ביתא" })));
       }
+      if (name === "get_line_split") return Promise.resolve(new Response("null"));
       return Promise.resolve(new Response("{}", { status: 500 }));
     },
   };
