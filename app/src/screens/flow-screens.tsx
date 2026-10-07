@@ -81,7 +81,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
@@ -4376,6 +4376,21 @@ export function SettingsScreen({
   );
 }
 
+const KEPT_OUT = "מחוץ לרווח והפסד";
+
+/** The three loan categories the server keeps fixed, and whether each counts in the P&L (decision 0099). */
+const LOAN_CATEGORY_LINES: Record<string, string> = {
+  "ריבית משכנתא": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  "מסים וביטוח": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  "תשלומי הלוואה": "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
+};
+
+function loanCategoryLine(category: CategoryRow): string | null {
+  return category.kind === "expense" ? (LOAN_CATEGORY_LINES[category.name] ?? null) : null;
+}
+
+type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
+
 function CategoryLine({
   category,
   muted = false,
@@ -4386,7 +4401,7 @@ function CategoryLine({
   muted?: boolean;
   /** A viewer row keeps the height and drops the pointer. */
   plain?: boolean;
-  onMenu?: () => void;
+  onMenu?: (opener: HTMLElement) => void;
 }) {
   return (
     <ListRow
@@ -4395,10 +4410,15 @@ function CategoryLine({
       title={category.name}
       muted={muted}
       meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
+      tag={category.excluded_from_pnl === true ? (
+        <span className="ui-cat-out" role="img" aria-label={KEPT_OUT}>
+          <KeptOutIcon size={18} />
+        </span>
+      ) : undefined}
       action={onMenu == null ? undefined : (
         <IconButton
           label={`עוד, ${category.name}`}
-          onClick={onMenu}
+          onClick={(event) => { onMenu(event.currentTarget); }}
         >
           <MoreIcon />
         </IconButton>
@@ -4434,6 +4454,31 @@ export function CategoriesScreen({
   const [mergeOpen, setMergeOpen] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
+  const toast = useToast();
+  const pnlDone = useRef<PnlChange | null>(null);
+  const menuOpener = useRef<HTMLElement | null>(null);
+  const pnl = useWrite<PnlChange>({
+    failure: "לא הצלחנו לעדכן את הקטגוריה.",
+    keys: ["categories", "dashboard", "project", "project-category"],
+    onSuccess: () => {
+      setMenu(null);
+      const done = pnlDone.current;
+      if (!done) return;
+      toast.show({
+        message: `${done.name} · ${done.excluded ? KEPT_OUT : "ברווח והפסד"}`,
+        ...(done.undo ? {} : {
+          action: "ביטול",
+          onAction: () => { pnl.mutate({ ...done, excluded: !done.excluded, undo: true }); },
+        }),
+      });
+    },
+    run: async (change) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_category_excluded_from_pnl", { p_id: change.id, p_excluded: change.excluded }));
+      pnlDone.current = change;
+    },
+  });
   const createCategory = useWrite({
     failure: (error) => (error.message.includes("already") ? "יש כבר קטגוריה בשם הזה." : "לא הצלחנו ליצור את הקטגוריה."),
     success: "הקטגוריה נשמרה",
@@ -4475,6 +4520,9 @@ export function CategoriesScreen({
   const shown = rows.filter((category) => category.kind === kind && !category.hidden);
   const hiddenRows = rows.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
+  const anyKeptOut = rows.some((category) => category.kind === kind && category.excluded_from_pnl === true);
+  const menuLoanLine = menu ? loanCategoryLine(menu) : null;
+  const menuKeptOut = menu?.excluded_from_pnl === true;
   const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
   const previewNoCompany = sample == null && params.get("preview") === "empty";
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
@@ -4520,7 +4568,8 @@ export function CategoriesScreen({
             key={category.id}
             category={category}
             plain={holdWrites}
-            onMenu={holdWrites ? undefined : () => {
+            onMenu={holdWrites ? undefined : (opener) => {
+              menuOpener.current = opener;
               setMenu(category);
             }}
           />
@@ -4567,7 +4616,8 @@ export function CategoriesScreen({
                   category={category}
                   muted
                   plain={holdWrites}
-                  onMenu={holdWrites ? undefined : () => {
+                  onMenu={holdWrites ? undefined : (opener) => {
+                    menuOpener.current = opener;
                     setMenu(category);
                   }}
                 />
@@ -4576,16 +4626,24 @@ export function CategoriesScreen({
           ) : null}
         </div>
       ) : null}
+      {anyKeptOut ? (
+        <p className="t-hint ui-page-pad ui-cat-legend">
+          <KeptOutIcon size={14} />
+          {KEPT_OUT}
+        </p>
+      ) : null}
       <Sheet
         open={menu != null}
         onOpenChange={(open) => {
           if (!open) setMenu(null);
         }}
         title={menu?.name ?? "קטגוריה"}
+        returnFocusRef={menuOpener}
       >
         <div className="ui-stack">
           <Button
             variant="secondary"
+            disabled={pnl.isPending}
             onClick={() => {
               setHideTarget(menu);
               setMenu(null);
@@ -4595,6 +4653,7 @@ export function CategoriesScreen({
           </Button>
           <Button
             variant="secondary"
+            disabled={pnl.isPending}
             onClick={() => {
               setMergeFrom(menu?.id ?? "");
               setMenu(null);
@@ -4603,6 +4662,28 @@ export function CategoriesScreen({
           >
             מיזוג
           </Button>
+          {menuLoanLine != null ? (
+            <p className="ui-cat-fixed">
+              <LockIcon size={18} />
+              {menuLoanLine}
+            </p>
+          ) : menu != null ? (
+            <>
+              <Button
+                variant="secondary"
+                busy={pnl.isPending}
+                onClick={() => {
+                  if (pnl.isPending || blocked()) return;
+                  pnl.mutate({ id: menu.id, name: menu.name, excluded: !menuKeptOut, undo: false });
+                }}
+              >
+                {pnl.isPending ? "מעדכן…" : menuKeptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
+              </Button>
+              <p className="t-hint ui-cat-pnl-hint">
+                {menuKeptOut ? "הסכומים ייספרו שוב כהכנסה או הוצאה." : "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה."}
+              </p>
+            </>
+          ) : null}
         </div>
       </Sheet>
       <Sheet open={pickOpen} onOpenChange={setPickOpen} title="מיזוג אל">
