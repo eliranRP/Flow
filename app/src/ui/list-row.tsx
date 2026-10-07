@@ -240,20 +240,23 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
     const abs = props.agorot < 0n ? -props.agorot : props.agorot;
+    const income = props.sign !== "out";
+    // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
     return (
-      <span className="t-title-3">
+      <span className="t-amount">
+        {income ? <span className="sr-only">הכנסה </span> : null}
         <BigNumber
           agorot={abs}
           currency={props.currency}
-          direction={props.sign === "out" ? "expense" : "income"}
-          plus
+          direction={income ? "income" : "expense"}
+          income={income}
         />
       </span>
     );
   }
   if (props.amounts != null && props.amounts.length > 0) {
     return (
-      <span className="ui-row-amounts t-title-3">
+      <span className="ui-row-amounts t-amount">
         {props.amounts.map((amount) => (
           <BigNumber
             key={amount.currency}

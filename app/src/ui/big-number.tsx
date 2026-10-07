@@ -30,12 +30,30 @@ type BigNumberProps = {
   loss?: boolean;
   direction?: "income" | "expense";
   plus?: boolean;
+  /**
+   * Money in: draws the figure in the income colour (decision 0112). Only a figure that shows no
+   * minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
+   */
+  income?: boolean;
 };
+
+/** True when the formatted figure starts with a minus sign. */
+export function showsMinus(text: string): boolean {
+  return text.startsWith("−") || text.startsWith("-");
+}
+
+/** Detail figures with agorot split into the whole part and the ".50" tail, which is drawn smaller. */
+export function splitCents(text: string, presentation: AmountPresentation): { whole: string; cents: string | null } {
+  if (presentation !== "detail") return { whole: text, cents: null };
+  const match = /\.\d{2}$/.exec(text);
+  if (match == null) return { whole: text, cents: null };
+  return { whole: text.slice(0, match.index), cents: match[0] };
+}
 
 const sizeClass = {
   hero: "t-hero",
   display: "t-display",
-  list: "t-title-3",
+  list: "t-amount",
 } as const;
 
 const heroSteps = ["t-hero", "t-display", "t-title-1", "t-title-2", "t-title-3"] as const;
@@ -57,6 +75,7 @@ export function BigNumber({
   loss = false,
   direction,
   plus,
+  income = false,
 }: BigNumberProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
@@ -135,9 +154,20 @@ export function BigNumber({
       host.remove();
     };
   }, [size, text]);
+  const green = income && !loss && !showsMinus(text);
+  const { whole, cents } = splitCents(text, presentation);
   return (
-    <bdi ref={ref} dir="ltr" className={["ui-num", heroStepClass(size, step), loss ? "ui-loss" : ""].filter(Boolean).join(" ")}>
-      {text}
+    <bdi
+      ref={ref}
+      dir="ltr"
+      className={["ui-num", heroStepClass(size, step), loss ? "ui-loss" : "", green ? "ui-income" : ""].filter(Boolean).join(" ")}
+    >
+      {cents == null ? text : (
+        <>
+          {whole}
+          <span className="ui-num-cents">{cents}</span>
+        </>
+      )}
     </bdi>
   );
 }

@@ -308,6 +308,18 @@ a.ui-row,
   color: var(--color-bad);
 }
 
+/* Money in: income rows, income totals, Home נכנס, an income detail. Only on a figure with no
+   minus, never on the band, and always with words beside it (decision 0112). */
+.ui-income {
+  color: var(--color-income);
+}
+
+/* Detail amounts draw agorot smaller and raised; the dot and digits stay real text. */
+.ui-num-cents {
+  font-size: 0.58em;
+  vertical-align: 0.62em;
+}
+
 .ui-row {
   display: flex;
   align-items: center;
@@ -327,7 +339,8 @@ a.ui-row,
 }
 
 .ui-row > .ui-num,
-.ui-row > .t-title-3 {
+.ui-row > .t-title-3,
+.ui-row > .t-amount {
   flex: none;
 }
 
@@ -421,7 +434,7 @@ a.ui-row,
 
 .ui-row-project .ui-row-title {
   font-size: var(--type-title-3-size);
-  font-weight: 500;
+  font-weight: var(--type-body-weight);
   line-height: var(--type-title-3-line);
 }
 
@@ -491,9 +504,9 @@ a.ui-row,
   display: block;
   overflow-wrap: anywhere;
   color: var(--color-text-muted);
-  font-size: var(--type-hint-size);
-  font-weight: var(--type-hint-weight);
-  line-height: var(--type-hint-line);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
   white-space: normal;
   text-wrap: pretty;
 }
@@ -1919,12 +1932,8 @@ a.ui-row,
 
 /* Rows beside the counted groups: the waiting count and the kept-out lines read quieter. */
 .ui-breakdown-quiet .ui-row-title,
-.ui-breakdown-quiet .t-title-3 {
+.ui-breakdown-quiet .t-amount {
   color: var(--color-text-secondary);
-}
-
-.ui-breakdown-quiet .t-title-3 {
-  font-weight: var(--type-body-weight);
 }
 
 /* Groups from the previous grouping or period while the new ones load. */
@@ -2905,6 +2914,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   color: var(--color-accent-text);
 }
 
+.ui-page .t-title-1 {
+  letter-spacing: var(--type-title-1-tracking);
+}
+
 .ui-page .t-title-1,
 .ui-page .t-label {
   display: -webkit-box;
@@ -2942,11 +2955,16 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   padding-block: var(--space-2);
   padding-inline: var(--space-side);
   background: var(--color-bg);
-  border-bottom: 1px solid var(--color-line);
 }
 
+/* Month groups are 32px apart, and their rows have no hairline (decision 0112). The pressed and
+   focus tint is drawn by ::before, so it is unaffected. Other lists keep their hairline. */
 .ui-month + .ui-month .ui-month-head {
-  margin-block-start: var(--space-4);
+  margin-block-start: var(--space-8);
+}
+
+.ui-month .ui-row {
+  border-bottom: 0;
 }
 
 /* A row reached by Tab or scrolled into view stops below the pinned month bar (up to three

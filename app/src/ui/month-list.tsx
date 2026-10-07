@@ -57,7 +57,7 @@ function MonthSection<T>({
   return (
     <div className="ui-month" role="group" aria-labelledby={id}>
       <div className="ui-month-head">
-        <h2 className="ui-month-title t-title-3" id={id}>{group.title}</h2>
+        <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
         {showTotals ? (
           <p className="ui-month-totals t-label">
             {group.totals.map((total) => <MonthTotalLine key={total.currency} total={total} />)}
@@ -70,7 +70,7 @@ function MonthSection<T>({
 }
 
 function MonthTotalLine({ total }: { total: MonthTotal }) {
-  const income = total.incomeMinor > 0n ? formatAmountText(total.incomeMinor, total.currency, { direction: "income", plus: true }) : null;
+  const income = total.incomeMinor > 0n ? formatAmountText(total.incomeMinor, total.currency, { direction: "income" }) : null;
   const expense = total.expenseMinor > 0n ? formatAmountText(total.expenseMinor, total.currency, { direction: "expense" }) : null;
   if (income == null && expense == null) return null;
   return (
@@ -78,7 +78,7 @@ function MonthTotalLine({ total }: { total: MonthTotal }) {
       {income != null ? (
         <span>
           <span className="sr-only">הכנסות </span>
-          <bdi dir="ltr" className="ui-num">{income}</bdi>
+          <bdi dir="ltr" className="ui-num ui-income">{income}</bdi>
         </span>
       ) : null}
       {expense != null ? (

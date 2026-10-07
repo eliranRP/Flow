@@ -238,4 +238,23 @@ describe("ListRow", () => {
     );
     expect(screen.getByRole("link", { name: /משכנתא/ })).toHaveClass("ui-row-tone-warning");
   });
+
+  it("draws an income row green with a hidden הכנסה and no plus, an expense row with a minus in text", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="לקוח לדוגמה" agorot={350000n} sign="in" source="invoice" href="/transactions/9" />
+          <ListRow variant="transaction" title="ספק לדוגמה" agorot={120000n} sign="out" source="bank" />
+        </>
+      </MemoryRouter>,
+    );
+    const income = screen.getByText("₪3,500");
+    expect(income).toHaveClass("ui-income");
+    expect(income.textContent).not.toContain("+");
+    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500");
+    expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
+    const expense = screen.getByText("−₪1,200");
+    expect(expense).not.toHaveClass("ui-income");
+    expect(expense.closest(".t-amount")).not.toBeNull();
+  });
 });

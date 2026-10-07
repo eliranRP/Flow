@@ -62,7 +62,7 @@ describe("project recent list months", () => {
       txn("d", "2026-08-20", -220_000n, "expense"),
     ])} />);
     fireEvent.click(screen.getByText("תנועות אחרונות"));
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות +₪12,000הוצאות −₪3,500הוצאות −$400");
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000הוצאות −₪3,500הוצאות −$400");
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200");
   });
 
@@ -109,7 +109,7 @@ describe("review list months", () => {
       search=""
       backTo="/review"
     />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250הכנסות +$100");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250הכנסות $100");
   });
 });
 

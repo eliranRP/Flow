@@ -2651,6 +2651,7 @@ export function TransactionScreen({
             presentation="detail"
             currency={txn.currency}
             direction={txn.direction === "income" ? "income" : "expense"}
+            income={txn.direction === "income"}
           />
         </p>
         <p className="t-hint">
@@ -3349,7 +3350,7 @@ export function SplitScreen({
         trailing={example}
       />
       <div className="ui-split-amount">
-        <p className="t-title-1"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
+        <p className="t-display"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
         {meta ? <p className="ui-split-meta t-label">{meta}</p> : null}
       </div>
       <h2 className="ui-split-question t-title-3">איך לחלק?</h2>

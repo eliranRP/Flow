@@ -87,4 +87,41 @@ describe("BigNumber", () => {
       globalThis.ResizeObserver = Observer;
     }
   });
+
+  it("draws income green only when the figure shows no minus (decision 0112)", () => {
+    render(
+      <>
+        <BigNumber agorot={250000n} direction="income" income />
+        <BigNumber agorot={-40000n} income />
+        <BigNumber agorot={90000n} />
+      </>,
+    );
+    expect(screen.getByText("₪2,500")).toHaveClass("ui-income");
+    expect(screen.getByText("₪2,500").textContent).not.toContain("+");
+    const negative = screen.getByText("−₪400");
+    expect(negative).not.toHaveClass("ui-income");
+    expect(screen.getByText("₪900")).not.toHaveClass("ui-income");
+  });
+
+  it("draws detail agorot in a smaller span and keeps the same text", () => {
+    const { container } = render(
+      <>
+        <BigNumber agorot={1200050n} presentation="detail" />
+        <BigNumber agorot={1200050n} />
+        <BigNumber agorot={1200000n} presentation="detail" />
+      </>,
+    );
+    const [detail, summary, whole] = Array.from(container.querySelectorAll("bdi"));
+    expect(detail?.textContent).toBe("₪12,000.50");
+    expect(detail?.querySelector(".ui-num-cents")?.textContent).toBe(".50");
+    expect(summary?.textContent).toBe("₪12,000");
+    expect(summary?.querySelector(".ui-num-cents")).toBeNull();
+    expect(whole?.textContent).toBe("₪12,000");
+    expect(whole?.querySelector(".ui-num-cents")).toBeNull();
+  });
+
+  it("uses the amount style for list figures", () => {
+    render(<BigNumber agorot={150000n} size="list" />);
+    expect(screen.getByText("₪1,500")).toHaveClass("t-amount");
+  });
 });

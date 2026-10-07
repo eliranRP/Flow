@@ -31,21 +31,31 @@
   --type-display-size: 2.25rem; /* 36px */
   --type-display-line: 1.2;
   --type-display-weight: 600;
-  --type-title-1-size: 1.75rem; /* 28px */
-  --type-title-1-line: 1.3;
+  --type-title-1-size: 2rem; /* 32px */
+  --type-title-1-line: 1.25;
   --type-title-1-weight: 600;
+  --type-title-1-tracking: -0.01em;
   --type-title-2-size: 1.375rem; /* 22px */
   --type-title-2-line: 1.35;
   --type-title-2-weight: 600;
+  --type-heading-size: 1.25rem; /* 20px */
+  --type-heading-line: 1.3;
+  --type-heading-weight: 600;
   --type-title-3-size: 1.0625rem; /* 17px */
   --type-title-3-line: 1.45;
   --type-title-3-weight: 600;
+  --type-amount-size: 1.0625rem; /* 17px */
+  --type-amount-line: 1.45;
+  --type-amount-weight: 500;
   --type-body-size: 1rem; /* 16px */
   --type-body-line: 1.5;
   --type-body-weight: 500;
   --type-label-size: 0.9375rem; /* 15px */
   --type-label-line: 1.5;
   --type-label-weight: 500;
+  --type-meta-size: 0.9375rem; /* 15px */
+  --type-meta-line: 1.4;
+  --type-meta-weight: 400;
   --type-hint-size: 0.8125rem; /* 13px */
   --type-hint-line: 1.45;
   --type-hint-weight: 400;
@@ -127,6 +137,7 @@
   --color-band-chip: #FFFFFF;
   --color-band-pill: #FFFFFF;
   --color-good: #15733F;
+  --color-income: #13703D;
   --color-bad: #C3302B;
   --color-warning: #8A5700;
   --color-scrim: rgba(29,23,40,.45);
@@ -182,6 +193,7 @@
     --color-band-chip: #1E1929;
     --color-band-pill: #1E1929;
     --color-good: #62CB8D;
+    --color-income: #62CB8D;
     --color-bad: #FF8A80;
     --color-warning: #EDB866;
     --color-scrim: rgba(5,3,10,.62);
@@ -237,6 +249,7 @@
   --color-band-chip: #1E1929;
   --color-band-pill: #1E1929;
   --color-good: #62CB8D;
+  --color-income: #62CB8D;
   --color-bad: #FF8A80;
   --color-warning: #EDB866;
   --color-scrim: rgba(5,3,10,.62);
@@ -288,9 +301,12 @@
 .t-display { font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
 .t-title-1 { font-size: var(--type-title-1-size); line-height: var(--type-title-1-line); font-weight: var(--type-title-1-weight); }
 .t-title-2 { font-size: var(--type-title-2-size); line-height: var(--type-title-2-line); font-weight: var(--type-title-2-weight); }
+.t-heading { font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
 .t-title-3 { font-size: var(--type-title-3-size); line-height: var(--type-title-3-line); font-weight: var(--type-title-3-weight); }
+.t-amount { font-size: var(--type-amount-size); line-height: var(--type-amount-line); font-weight: var(--type-amount-weight); }
 .t-body { font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: var(--type-body-weight); }
 .t-label { font-size: var(--type-label-size); line-height: var(--type-label-line); font-weight: var(--type-label-weight); }
+.t-meta { font-size: var(--type-meta-size); line-height: var(--type-meta-line); font-weight: var(--type-meta-weight); }
 .t-hint { font-size: var(--type-hint-size); line-height: var(--type-hint-line); font-weight: var(--type-hint-weight); color: var(--color-text-muted); }
 .t-micro { font-size: var(--type-micro-size); line-height: var(--type-micro-line); font-weight: var(--type-micro-weight); }
 .t-wordmark { font-size: var(--type-wordmark-size); line-height: var(--type-wordmark-line); font-weight: var(--type-wordmark-weight); }

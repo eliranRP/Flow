@@ -40,6 +40,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0040](../decisions/0040-tailwind-v4.md) | Tailwind CSS v4. Tokens map into `@theme`. No component kit with its own look. Vaul stays for sheets. |
 | [0041](../decisions/0041-amounts-before-vat.md) | P&L amounts are before VAT. VAT is stored beside the amount and kept out of profit. |
 | [0043](../decisions/0043-assumed-vat-on-expenses.md) | An expense with no VAT split assumes 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt (`net = gross`). A subtle hint may appear on the detail screen. Home has no warning banner. |
+| [0112](../decisions/0112-income-green-type-scale.md) | Money in is `income` green with no plus, only on a figure with no minus and never on the band. Page titles 32, section and month heads `heading` 20, list amounts `amount` 17/500, row secondary lines `meta` 15/400. No hairlines inside month groups; groups 32px apart. Detail agorot small and raised. |
 
 Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md) and [0065](../decisions/0065-review-round5.md) point 40: SUMIT is the source, and there is no Hapoalim import).
 
@@ -56,7 +57,7 @@ From [design-system.md](../../design/system/design-system.md) and guide §1:
 - Calm and airy. White page, lots of space, few numbers, detail on the next screen.
 - One accent, violet. Filled violet at most about twice per screen area (normally the + button and one primary button).
 - The coloured band is only the top of Home and the Project header.
-- Figures use the main text colour. Red and green only together with ▼ / ▲ or a minus sign.
+- Figures use the main text colour. A loss is `bad` with a minus or ▼, a gain in a change pill is `good` with ▲, and money in is `income` green with no plus. Never colour on the band. [0112](../decisions/0112-income-green-type-scale.md)
 - No gradients, no emoji, no heavy shadows. Depth is the violet tint and 1px hairlines. The loading shimmer is the only gradient.
 
 ### 2.2 Colour tokens
@@ -86,6 +87,7 @@ Light and dark. The band is the same violet in both modes. Dark is a violet-tint
 | `on-band-secondary` | `#F0E8FF` | `#F0E8FF` | Labels on the band |
 | `band-chip` / `band-pill` | `#FFFFFF` | `#1E1929` | Pills sitting on the band |
 | `good` | `#15733F` | `#62CB8D` | Positive change, only with ▲ |
+| `income` | `#13703D` | `#62CB8D` | Money in: income rows and totals, Home נכנס, an income detail. No plus, never with a minus, never on the band. [0112](../decisions/0112-income-green-type-scale.md) |
 | `bad` | `#C3302B` | `#FF8A80` | Loss or negative change, only with ▼ or minus |
 | `warning` | `#8A5700` | `#EDB866` | Warning, for example over budget |
 | `error` | `#C3302B` | `#FF8A80` | Input error border and message |
@@ -109,22 +111,25 @@ Theme switching: follow the OS (`prefers-color-scheme`). `data-theme="light"` or
 
 ### 2.3 Type scale
 
-Rubik. Weights mean something: 400 hints, 500 body and labels, 600 titles and amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), guide §5.
+Rubik. Weights mean something: 400 hints and row secondary lines, 500 body, labels and list amounts, 600 titles, heads, hero and display amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), [0112](../decisions/0112-income-green-type-scale.md), guide §5.
 
 | Style | Size | Line | Weight | Use |
 |---|---|---|---|---|
 | hero | 52px | 1.15 | 600 | Home profit only. Letter-spacing −0.02em |
 | display | 36px | 1.2 | 600 | Main amount on inner screens |
-| title-1 | 28px | 1.3 | 600 | Page titles |
+| title-1 | 32px | 1.25 | 600 | Page titles. Letter-spacing −0.01em |
 | title-2 | 22px | 1.35 | 600 | Sheet titles, project name |
-| title-3 | 17px | 1.45 | 600 | Section heads, amounts in lists |
+| heading | 20px | 1.3 | 600 | Section heads, month heads in lists |
+| title-3 | 17px | 1.45 | 600 | Compact transaction title, project row name |
+| amount | 17px | 1.45 | 500 | Amounts in lists, Home נכנס / יצא |
 | body | 16px | 1.5 | 500 | Rows, input values. Inputs stay at least 16px so iOS does not zoom |
-| label | 15px | 1.5 | 500 | Labels, secondary lines |
+| label | 15px | 1.5 | 500 | Labels, subtitles, links |
+| meta | 15px | 1.4 | 400 | Row secondary line, in `text-muted` |
 | hint | 13px | 1.45 | 400 | Dates, helper text, field labels |
 | micro | 11px | 1.3 | 500 | Tab labels and badges only |
 | wordmark | 22px | 1.2 | 700 | "Flow" only. Letter-spacing −0.01em. LTR |
 
-CSS names are `--type-<style>-size`, `--type-<style>-line`, `--type-<style>-weight`, and `--font-family`. Numbers use `tabular-nums` and `lining-nums`. [implementation-tokens.css](../../design/system/implementation-tokens.css), guide §5.
+CSS names are `--type-<style>-size`, `--type-<style>-line`, `--type-<style>-weight`, `--type-title-1-tracking`, and `--font-family`. Numbers use `tabular-nums` and `lining-nums`. [implementation-tokens.css](../../design/system/implementation-tokens.css), guide §5.
 
 ### 2.4 Spacing
 
@@ -195,7 +200,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed | The one tinted block on Home |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
-| Transaction row | amount in `text` with an explicit sign | Grey source icon |
+| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה" | Grey source icon. No hairline inside a month group. [0112](../decisions/0112-income-green-type-scale.md) |
 | Change pill | ▼ / ▲ plus % | On the band it sits in a solid pill |
 | Tab bar | בית, פרויקטים, +, לאישור (neutral badge), הגדרות | Active tab is violet icon and label |
 | Bottom sheet | scrim, grab handle, title, ✕ | ✕, scrim, swipe, and Android back save a valid pending change, then close. An incomplete change stays open and says why, with ביטול השינוי beside that sentence. A second dismiss discards it and closes. A dismiss during a save waits for the save, then closes. Push a history entry. [0075](../decisions/0075-save-on-tap-and-on-leave.md) |

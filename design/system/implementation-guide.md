@@ -262,9 +262,9 @@ From top to bottom:
 
   | Weight | Used for |
   |---|---|
-  | 400 | Hints only |
-  | 500 | Body text and labels (heavier than usual, on purpose) |
-  | 600 | Titles, amounts and the hero figure |
+  | 400 | Hints and row secondary lines (`meta`) |
+  | 500 | Body text, labels and amounts in lists (heavier than usual, on purpose) |
+  | 600 | Titles, section and month heads, the hero and display amounts |
   | 700 | The "Flow" wordmark only |
 
   You **MUST NOT** use 300, 800 or 900, and you **MUST NOT** fake bold.
@@ -274,11 +274,14 @@ From top to bottom:
 |---|---|---|---|
 | `hero` | 52 / 1.15 / 600 | The main profit on **Home only** (letter-spacing −0.02em) | `text` (or `on-band`) |
 | `display` | 36 / 1.2 / 600 | The main amount on detail and inner screens (Project, Transaction, Unpaid, Upload results) | `text` |
-| `title-1` | 28 / 1.3 / 600 | Page titles | `text` |
+| `title-1` | 32 / 1.25 / 600 | Page titles (letter-spacing −0.01em, `--type-title-1-tracking`) | `text` |
 | `title-2` | 22 / 1.35 / 600 | Sheet titles, project name | `text` |
-| `title-3` | 17 / 1.45 / 600 | Section heads, amounts in lists | `text` |
+| `heading` | 20 / 1.3 / 600 | Section heads (`SectionHead`, `Section`), month heads in lists | `text` |
+| `title-3` | 17 / 1.45 / 600 | Compact transaction title, project row name (at weight 500) | `text` |
+| `amount` | 17 / 1.45 / 500 | Amounts in lists, Home נכנס / יצא | `text`; money in `income` |
 | `body` | 16 / 1.5 / 500 | Rows, main text, input values | `text` |
-| `label` | 15 / 1.5 / 500 | Labels, secondary lines, links | `text-secondary` or `accent-text` |
+| `label` | 15 / 1.5 / 500 | Labels, subtitles, links | `text-secondary` or `accent-text` |
+| `meta` | 15 / 1.4 / 400 | Row secondary line | `text-muted` |
 | `hint` | 13 / 1.45 / 400 | Dates, percentages, helper text, field labels | `text-muted` (`text-secondary` for field labels) |
 | `micro` | 11 / 1.3 / 500 | Tab bar labels and badges **only** | per component |
 | `wordmark` | 22 / 1.2 / 700 | The "Flow" logo only (LTR) | `on-band` on the band, otherwise `logo` |
@@ -472,7 +475,8 @@ Chips are 36px high (with a 44px hit area), 14px side padding and 8px gaps, and 
 ### 7.8 Transaction row
 - A **grey source icon** (`text-secondary`) on the start side: `doc` for an invoice, `bank` for a bank line.
 - The title is the vendor or payer (`body`). The hint below shows category and date ("חומרים · 22/09").
-- The **amount** is on the end side in `text`, weight 600, **with its sign** (`+₪150,000`, `−₪12,000`). Transaction amounts **don't** use red or green. The sign carries the meaning.
+- The **amount** is on the end side in `amount` (17, weight 500). An expense is `text` **with its minus** (`−₪12,000`). Money in is `income` green **with no plus** (`₪150,000`), preceded by a visually hidden "הכנסה ", so direction is never colour alone. A figure with a minus is never green. [0112](../../docs/decisions/0112-income-green-type-scale.md)
+- Inside a month group the rows have **no hairline**, and month groups are 32px apart. The month head is `heading` with no rule; its income total is `income` green, no plus.
 - Tapping a row opens **10 Transaction detail**.
 
 ### 7.9 Change pill

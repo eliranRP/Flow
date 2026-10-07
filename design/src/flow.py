@@ -1,6 +1,6 @@
 # Flow hi-fi generator — design system sheets + 14 screens (light + dark). Run: python3 flow.py && bash render.sh
 import json, pathlib
-from tokens import COLOR, TYPE, SPACE, RADIUS, FONT, contrast, CHECKS
+from tokens import COLOR, TYPE, TRACKING, SPACE, RADIUS, FONT, contrast, CHECKS
 OUT = pathlib.Path(__file__).parent
 
 # ---------------- icons (Feather-like, 24 grid) ----------------
@@ -541,7 +541,7 @@ def build():
         cells = "".join(f'<div class="c"><div class="f"><iframe src="{o}-{mode}.html" width="390" height="844" scrolling="no"></iframe></div><div class="cap">{nm}</div></div>' for o, nm in zip(order, names))
         (OUT / f"overview-{mode}.html").write_text(doc("Flow overview", f'<div class="hdr"><span class="wm logo" style="font-size:30px">Flow</span><span class="t2">כל המסכים · {"מצב בהיר" if mode=="light" else "מצב כהה"}</span>{EXTAG}</div><div class="g">{cells}</div>', mode,
             "body{background:var(--tint);padding:28px 36px}.hdr{display:flex;gap:16px;align-items:baseline;margin-bottom:20px}.g{display:grid;grid-template-columns:repeat(7,1fr);gap:22px}.f{width:254px;height:549px;border-radius:30px;overflow:hidden;border:5px solid #1D1728;background:var(--bg)}.f iframe{border:0;transform:scale(.6256);transform-origin:top right;display:block;margin-right:0}.cap{text-align:center;margin-top:8px;font-size:15px}", w=1990), encoding="utf-8")
-    tok = {"font": FONT, "color": COLOR, "type": {k: {"size": s, "lineHeight": lh, "weight": w} for k, (s, lh, w) in TYPE.items()}, "space": SPACE, "radius": RADIUS,
+    tok = {"font": FONT, "color": COLOR, "type": {k: {"size": s, "lineHeight": lh, "weight": w, **({"tracking": TRACKING[k]} if k in TRACKING else {})} for k, (s, lh, w) in TYPE.items()}, "space": SPACE, "radius": RADIUS,
            "contrast": {m: {f"{a} on {b}": round(contrast(COLOR[m][a], COLOR[m][b]), 2) for a, b in CHECKS} for m in COLOR}}
     (OUT / "design-tokens.json").write_text(json.dumps(tok, ensure_ascii=False, indent=2), encoding="utf-8")
 if __name__ == "__main__":

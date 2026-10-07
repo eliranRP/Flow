@@ -141,7 +141,8 @@ describe("transaction status chips", () => {
       customer_name: "לקוח",
       supplier_name: null,
     });
-    expect(screen.getByText("$12.34")).toBeInTheDocument();
+    // The cents sit in their own span, drawn smaller; the figure still reads as one text.
+    expect(screen.getByText((_, node) => node?.tagName === "BDI" && node.textContent === "$12.34")).toBeInTheDocument();
   });
 
   it("draws no status chip when the review and payment are unknown", () => {

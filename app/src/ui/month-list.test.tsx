@@ -68,13 +68,13 @@ function renderList(rows: Row[], complete?: boolean) {
 }
 
 describe("MonthList", () => {
-  it("names each month with a heading and shows + income and − expenses per currency", () => {
+  it("names each month with a heading and shows income with no plus and − expenses per currency", () => {
     expectRtl();
     renderList(NEWEST_FIRST);
     expect(screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent)).toEqual(["ספטמבר 2026", "אוגוסט 2026"]);
     const august = screen.getByRole("group", { name: "אוגוסט 2026" });
     const totals = august.querySelector(".ui-month-totals");
-    expect(totals?.textContent).toBe("הכנסות +₪8,000הוצאות −₪2,200הכנסות +$1,500הוצאות −$400");
+    expect(totals?.textContent).toBe("הכנסות ₪8,000הוצאות −₪2,200הכנסות $1,500הוצאות −$400");
     expect(within(august).getAllByTestId("row").map((node) => node.textContent)).toEqual(["c", "d", "e", "f"]);
     for (const figure of august.querySelectorAll("bdi")) expect(figure.getAttribute("dir")).toBe("ltr");
   });
@@ -88,7 +88,7 @@ describe("MonthList", () => {
 
   it("leaves out a zero expense side too", () => {
     renderList([row("a", "2026-09-01", 50_000n, "income"), row("b", "2026-08-01", 70_000n, "expense")]);
-    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות +₪500");
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות ₪500");
   });
 
   it("totals stored-negative expenses by their size, with one minus", () => {
@@ -112,5 +112,14 @@ describe("MonthList", () => {
     renderList(NEWEST_FIRST.slice(0, 2));
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getAllByTestId("row")).toHaveLength(2);
+  });
+
+  it("uses the heading style for month heads and the income colour for the income total", () => {
+    renderList(NEWEST_FIRST);
+    for (const head of screen.getAllByRole("heading", { level: 2 })) expect(head).toHaveClass("t-heading");
+    const august = screen.getByRole("group", { name: "אוגוסט 2026" });
+    const figures = Array.from(august.querySelectorAll(".ui-month-totals bdi"));
+    expect(figures.filter((node) => node.classList.contains("ui-income")).map((node) => node.textContent)).toEqual(["₪8,000", "$1,500"]);
+    expect(figures.filter((node) => node.textContent.startsWith("−")).every((node) => !node.classList.contains("ui-income"))).toBe(true);
   });
 });

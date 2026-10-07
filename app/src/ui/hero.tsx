@@ -67,7 +67,7 @@ type FlowLinks = {
   period: string;
 };
 
-/** Income and expenses under the hero. Neutral amounts, with room between the rows. With links, each row opens its breakdown (FLOW-301). */
+/** Income and expenses under the hero, below the band. Income is green (decision 0112), expenses neutral, with room between the rows. With links, each row opens its breakdown (FLOW-301). */
 export function FlowLines({
   income,
   expense,
@@ -87,6 +87,7 @@ export function FlowLines({
       <FlowLine
         label="נכנס"
         rows={incomeRows}
+        income
         href={links?.income}
         name={links ? flowLinkName("income", links.period, incomeRows) : undefined}
       />
@@ -105,12 +106,15 @@ function FlowLine({
   label,
   rows,
   expense = false,
+  income = false,
   href,
   name,
 }: {
   label: string;
   rows: { currency: string; agorot: bigint }[];
   expense?: boolean;
+  /** Money in: green unless the figure shows a minus. The flow lines sit below the band, never on it. */
+  income?: boolean;
   href?: string;
   name?: string;
 }) {
@@ -128,6 +132,7 @@ function FlowLine({
               currency={row.currency}
               size="list"
               direction={figure.direction}
+              income={income}
             />
           );
         })}

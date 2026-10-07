@@ -48,7 +48,7 @@ function Totals({ direction, totals }: { direction: BreakdownDirection; totals: 
     <p className="ui-breakdown-total ui-page-pad">
       {totals.map((total) => (
         <span key={total.currency} className="ui-breakdown-total-line">
-          <BigNumber agorot={shown(direction, total.amount_minor)} currency={total.currency} size="display" />
+          <BigNumber agorot={shown(direction, total.amount_minor)} currency={total.currency} size="display" income={direction === "income"} />
         </span>
       ))}
     </p>

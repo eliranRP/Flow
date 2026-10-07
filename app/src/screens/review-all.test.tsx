@@ -927,7 +927,8 @@ describe("review amounts keep their currency", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText("+$100")).toBeInTheDocument();
+    expect(screen.getByText("$100")).toHaveClass("ui-income");
+    expect(screen.queryByText("+$100")).not.toBeInTheDocument();
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });
