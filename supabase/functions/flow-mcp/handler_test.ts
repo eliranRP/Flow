@@ -143,6 +143,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
   const names = (body.result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(names, [
     "list_projects",
+    "get_project",
     "list_categories",
     "list_review",
     "get_expense",
@@ -768,6 +769,101 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
   assertEquals(seen.some((call) => call.name === "get_transaction" && call.sub === userB), false, "token A did not read as user B");
 });
 
+Deno.test("get_project reads only the token company's project", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "mcp-project-kid";
+  jwk.alg = "ES256";
+  const userA = "aaaaaaaa-aaaa-4000-8000-00000000000a";
+  const userB = "bbbbbbbb-bbbb-4000-8000-00000000000b";
+  const companyA = "cccccccc-cccc-4000-8000-00000000000a";
+  const companyB = "dddddddd-dddd-4000-8000-00000000000b";
+  const projectA = "8c1a0b2e-aaaa-4000-8000-00000000000a";
+  const projectB = "8c1a0b2e-bbbb-4000-8000-00000000000b";
+  const owner: Record<string, string> = { [projectA]: userA, [projectB]: userB };
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const tokenA = `flow_mcp_${"a".repeat(43)}`;
+  const tokenB = `flow_mcp_${"b".repeat(43)}`;
+  const hashA = await hmacSecret(tokenA, new TextEncoder().encode(pepperSecret));
+  const hashB = await hmacSecret(tokenB, new TextEncoder().encode(pepperSecret));
+  const seen: { name: string; sub: string; body: Record<string, unknown> | null }[] = [];
+  const kinds: string[] = [];
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      const name = input.split("/").pop() ?? "";
+      if (name === "lookup_mcp_credential") {
+        const user = body?.p_token_hash === hashA ? userA : body?.p_token_hash === hashB ? userB : "";
+        if (!user) return Promise.resolve(new Response(JSON.stringify({ found: false })));
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: user,
+          user_id: user,
+          company_id: user === userA ? companyA : companyB,
+          scope: ["read"],
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") {
+        kinds.push(String(body?.p_kind));
+        return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      }
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      const authorization = headers.get("authorization") ?? "";
+      const payload = decodeJwtPart(authorization.replace(/^Bearer\s+/i, "").split(".")[1] ?? "");
+      const sub = String(payload.sub);
+      seen.push({ name, sub, body });
+      if (name === "get_project") {
+        // Like the RPC under RLS: a project outside the caller's company is null.
+        const id = String(body?.p_id);
+        if (owner[id] !== sub) return Promise.resolve(new Response("null"));
+        return Promise.resolve(new Response(JSON.stringify({
+          id,
+          name: sub === userA ? "Example Alpha" : "Example Beta",
+          by_currency: [],
+          categories_by_currency: [],
+          transactions: [],
+        })));
+      }
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  async function call(token: string, args: Record<string, unknown>) {
+    const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_project", arguments: args } }),
+    }), localDeps);
+    assertEquals(response.status, 200, "a tool result, not an HTTP error");
+    return (await response.json()).result;
+  }
+  const ownA = await call(tokenA, { id: projectA });
+  assertEquals(ownA.isError, false, "user A reads their own project");
+  assertEquals(ownA.structuredContent.data.name, "Example Alpha", "user A project");
+  assertEquals(ownA.structuredContent.data.basis, "cash", "default basis");
+  const ownB = await call(tokenB, { id: projectB, basis: "invoiced" });
+  assertEquals(ownB.isError, false, "user B reads their own project");
+  assertEquals(ownB.structuredContent.data.name, "Example Beta", "user B project");
+
+  const crossed = await call(tokenA, { id: projectB });
+  assertEquals(crossed.isError, true, "the other company's project is refused");
+  assertEquals(crossed.structuredContent.error, { code: "not_found", message: "not found" }, "not found, nothing leaked");
+  assertEquals(crossed.structuredContent.data, undefined, "no data");
+  const crossedCall = seen[seen.length - 1];
+  assertEquals(crossedCall?.sub, userA, "signed as user A, not the project owner");
+  assertEquals(crossedCall?.body, { p_id: projectB, p_basis: "cash" }, "no company argument");
+
+  const before = seen.length;
+  const forged = await call(tokenA, { id: projectB, company_id: companyB });
+  assertEquals(forged.structuredContent.error.code, "validation", "forged company is refused");
+  assertEquals(seen.length, before, "the forged call did not read");
+  assertEquals(kinds.every((kind) => kind === "read"), true, "get_project uses the read bucket");
+  assertEquals(kinds.length, 4, "every call counted");
+});
+
 Deno.test("a write tool counts as a write, and a read-only token cannot call it", async () => {
   const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
@@ -886,7 +982,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 8, "eight reads");
+  assertEquals(readNames.length, 9, "nine reads");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {

@@ -16,6 +16,7 @@ import { parseDecimalHalfEven } from "../../../packages/shared/src/money.ts";
 
 export const READ_TOOL_NAMES = [
   "list_projects",
+  "get_project",
   "list_categories",
   "list_review",
   "get_expense",
@@ -46,6 +47,7 @@ const WRITE_REFUSED = "The write was refused.";
 const TOOL_CODES = new Set(["forbidden", "validation", "not_found", "conflict", "already_closed", "refused", "unavailable"]);
 const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
+  get_project: new Set(["id", "basis"]),
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
@@ -432,6 +434,10 @@ function readTools() {
     toolSpec("list_projects", "Projects and their profit for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD).", {
       from: { type: "string" },
       to: { type: "string" },
+      basis: { type: "string", enum: ["cash", "invoiced"] },
+    }),
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Each transaction carries its currency. A project outside the company is not_found.", {
+      id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
     toolSpec("list_categories", "The company's categories.", {}),
@@ -915,6 +921,19 @@ export async function callTool(
     if (name === "get_totals") return ok(totalsOf(body));
     const projects = Array.isArray(body.projects) ? body.projects as Review[] : [];
     return ok({ projects: projects.map(projectRow) });
+  }
+
+  if (name === "get_project") {
+    const projectId = args.id;
+    if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
+    const basis = args.basis == null ? "cash" : args.basis;
+    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const result = await rpc("get_project", { p_id: projectId, p_basis: basis });
+    if (result.status >= 400) return fail("refused", READ_REFUSED);
+    // The RPC returns null for an unknown id and for another company's project.
+    if (result.json == null) return fail("not_found", "not found");
+    if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+    return ok({ ...(result.json as Review), basis });
   }
 
   if (name === "list_categories") {

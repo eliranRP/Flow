@@ -134,7 +134,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     description: "אלפא",
     direction: "expense",
     reason: "missing_category",
-    supplier_name: "מנופי",
+    supplier_name: "גמא",
     doc_date: "2026-09-15",
   };
   const dashboard = {
@@ -174,7 +174,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
   const reviewPage = await callTool("list_review", {
     direction: "expense",
     reason: "missing_category",
-    supplier: "מנופי",
+    supplier: "גמא",
     query: "אלפא",
     from: "2026-09-01",
     to: "2026-09-30",
@@ -256,6 +256,7 @@ Deno.test("write tools are listed only for a write scope", () => {
   }
   assertEquals(toolsFor(["read", "write"]).map((tool) => tool.name), [
     "list_projects",
+    "get_project",
     "list_categories",
     "list_review",
     "get_expense",
@@ -905,4 +906,163 @@ Deno.test("assign_expenses sends exact p_items and validates batch input", async
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
+});
+
+const PROJECT_FIXTURE = {
+  id: PROJECT,
+  name: "Example Site",
+  status: "active",
+  state_label: null,
+  budget_agorot: null,
+  sumit_budget_section_id: null,
+  after_overhead: false,
+  income_agorot: 0,
+  direct_agorot: 0,
+  shared_agorot: 0,
+  by_currency: [{ currency: "USD", income_minor: 250000, direct_minor: 1250, shared_minor: 0, profit_minor: 248750 }],
+  categories: [],
+  categories_by_currency: [
+    { currency: "USD", id: CATEGORY, name: "Example Supplies", amount_minor: 1250, has_shared_share: false },
+    { currency: "USD", id: null, name: null, amount_minor: 0, has_shared_share: null },
+  ],
+  other_currencies: [{ currency: "USD", income_minor: 250000, expense_minor: -1250, count: 2 }],
+  pending_count: 0,
+  pending_agorot: 0,
+  pending_other_currencies: [],
+  transactions: [
+    {
+      id: INCOME_TXN,
+      description: "Example deposit",
+      doc_date: "2026-09-02",
+      amount_net: 250000,
+      currency: "USD",
+      direction: "income",
+      source: "mercury",
+      doc_kind: "invoice_receipt",
+      category: null,
+    },
+    {
+      id: TXN,
+      description: null,
+      doc_date: "2026-09-01",
+      amount_net: -1250,
+      currency: "USD",
+      direction: "expense",
+      source: "manual",
+      doc_kind: "expense",
+      category: "Example Supplies",
+    },
+  ],
+  profit_agorot: 0,
+  overhead_share_agorot: null,
+  overhead_weighted: false,
+  profit_after_overhead_agorot: 0,
+};
+
+Deno.test("get_project is listed for a read scope only, as a read", () => {
+  const readNames = toolsFor(["read"]).map((tool) => tool.name);
+  assertEquals(readNames.includes("get_project"), true);
+  assertEquals(toolsFor(["write"]).map((tool) => tool.name).includes("get_project"), false);
+  const spec = toolsFor(["read"]).find((tool) => tool.name === "get_project");
+  assertEquals(spec?.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true });
+  assertEquals(spec?.inputSchema, {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      basis: { type: "string", enum: ["cash", "invoiced"] },
+    },
+    additionalProperties: false,
+  });
+  assertEquals(spec?.description.includes("cash"), true);
+});
+
+Deno.test("get_project calls get_project with the id and each basis", async () => {
+  for (const basis of ["cash", "invoiced"]) {
+    const { calls, rpc } = rpcOf((name) => name === "get_project" ? { status: 200, json: PROJECT_FIXTURE } : { status: 500, json: null });
+    const result = await callTool("get_project", { id: PROJECT, basis }, ["read"], rpc);
+    assertEquals(result.isError, false);
+    assertEquals(calls, [{ name: "get_project", body: { p_id: PROJECT, p_basis: basis } }]);
+    if (result.structuredContent.ok) {
+      const data = result.structuredContent.data as typeof PROJECT_FIXTURE & { basis: string };
+      assertEquals(data.basis, basis);
+      assertEquals(data.id, PROJECT);
+      assertEquals(data.by_currency, PROJECT_FIXTURE.by_currency);
+      assertEquals(data.categories_by_currency, PROJECT_FIXTURE.categories_by_currency);
+      assertEquals(data.transactions, PROJECT_FIXTURE.transactions);
+      assertEquals(data.transactions.map((row) => row.currency), ["USD", "USD"]);
+      assertEquals(data.budget_agorot, null);
+      assertEquals(data.overhead_share_agorot, null);
+    }
+  }
+});
+
+Deno.test("get_project defaults to the cash basis, like list_projects and get_totals", async () => {
+  const { calls, rpc } = rpcOf((name) => name === "get_project" || name === "get_dashboard"
+    ? { status: 200, json: name === "get_project" ? PROJECT_FIXTURE : { projects: [], basis: "cash" } }
+    : { status: 500, json: null });
+  const project = await callTool("get_project", { id: PROJECT }, ["read"], rpc);
+  const nullBasis = await callTool("get_project", { id: PROJECT, basis: null }, ["read"], rpc);
+  await callTool("list_projects", {}, ["read"], rpc);
+  assertEquals(project.isError, false);
+  assertEquals(nullBasis.isError, false);
+  assertEquals(calls[0], { name: "get_project", body: { p_id: PROJECT, p_basis: "cash" } });
+  assertEquals(calls[1], { name: "get_project", body: { p_id: PROJECT, p_basis: "cash" } });
+  assertEquals(calls[2]?.body.p_basis, calls[0]?.body.p_basis);
+  if (project.structuredContent.ok) assertEquals((project.structuredContent.data as { basis: string }).basis, "cash");
+});
+
+Deno.test("get_project rejects a bad id, a bad basis, and an extra argument before any read", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: PROJECT_FIXTURE }));
+  const cases = [
+    callTool("get_project", {}, ["read"], rpc),
+    callTool("get_project", { id: "not-a-uuid" }, ["read"], rpc),
+    callTool("get_project", { id: 42 }, ["read"], rpc),
+    callTool("get_project", { id: `${PROJECT}x` }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, basis: "accrual" }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, basis: "CASH" }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, basis: 1 }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, from: "2026-09-01" }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, project_id: PROJECT }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, company_id: "other" }, ["read"], rpc),
+    callTool("get_project", { id: PROJECT, user_id: "other" }, ["read"], rpc),
+    callTool("get_project", [PROJECT], ["read"], rpc),
+    callTool("get_project", "x", ["read"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) {
+      assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
+    }
+  }
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("get_project maps an RPC error to a read refusal and null to not found", async () => {
+  for (const status of [400, 401, 403, 404, 500]) {
+    const result = await callTool("get_project", { id: PROJECT }, ["read"], () => Promise.resolve({ status, json: { message: "permission denied" } }));
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) {
+      assertEquals(result.structuredContent.error, { code: "refused", message: "The read was refused." });
+    }
+  }
+  const missing = await callTool("get_project", { id: PROJECT }, ["read"], () => Promise.resolve({ status: 200, json: null }));
+  assertEquals(missing.isError, true);
+  if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error, { code: "not_found", message: "not found" });
+  for (const json of [[PROJECT_FIXTURE], "x", 1]) {
+    const odd = await callTool("get_project", { id: PROJECT }, ["read"], () => Promise.resolve({ status: 200, json }));
+    assertEquals(odd.isError, true);
+    if (!odd.structuredContent.ok) assertEquals(odd.structuredContent.error.code, "refused");
+  }
+});
+
+Deno.test("get_project needs the read scope", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: PROJECT_FIXTURE }));
+  const result = await callTool("get_project", { id: PROJECT }, ["write"], rpc);
+  assertEquals(result.isError, true);
+  if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "forbidden");
+  const none = await callTool("get_project", { id: PROJECT }, [], rpc);
+  assertEquals(none.isError, true);
+  if (!none.structuredContent.ok) assertEquals(none.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 0);
 });
