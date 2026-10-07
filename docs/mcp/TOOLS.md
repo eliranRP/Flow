@@ -107,7 +107,7 @@ Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transacti
 
 Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, each `{part, amount_minor, in_pnl}`. `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read.
 
-The row also has `in_pnl` (whether the line counts in the P&L), `in_pnl_override` (`false` out, `true` in, `null` follows the category; see [set_line_pnl](#set_line_pnl)) and `category_excluded_from_pnl` ([FLOW-108](../backlog/TASKS.md#flow-108)).
+The row also has `in_pnl` (whether the line counts in the P&L), `in_pnl_override` (`false` out, `true` in, `null` follows the category; see [set_line_pnl](#set_line_pnl)), `category_excluded_from_pnl`, and `pnl_fixed` (a loan line: `set_line_pnl` refuses it) ([FLOW-108](../backlog/TASKS.md#flow-108)).
 
 ### search_expenses
 

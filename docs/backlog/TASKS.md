@@ -146,6 +146,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-124 · One line out of the P&L follow-ups (#105)
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-108 (#105)
 - [ ] Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [ ] A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals

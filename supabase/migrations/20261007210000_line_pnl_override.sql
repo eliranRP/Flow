@@ -14,7 +14,8 @@ comment on column public.transactions.in_pnl_override is
   'Per-line P&L override. false keeps the line out of the P&L, true counts it although its category is kept out, null follows the category. Decision 0112.';
 
 -- Whether one P&L line (or part) counts. A loan category part always follows its category,
--- so a forced-in line never counts loan principal.
+-- either way: a forced-in line never counts loan principal, and an override left on a line
+-- that later became a loan line never takes its interest out.
 create or replace function private.line_in_pnl(
   p_override boolean,
   p_excluded boolean,
@@ -26,8 +27,8 @@ immutable
 set search_path = ''
 as $$
   select case
-    when p_override is false then false
-    when p_override is true and p_loan_part is null then true
+    when p_loan_part is not null then not coalesce(p_excluded, false)
+    when p_override is not null then p_override
     else not coalesce(p_excluded, false)
   end;
 $$;
@@ -75,7 +76,8 @@ select
   s.part,
   case when t.direction = 'expense' then -s.amount_minor else s.amount_minor end as amount_net,
   t.amount_net as line_amount_net,
-  private.line_in_pnl(t.in_pnl_override, c.excluded_from_pnl, c.loan_part) as in_pnl,
+  -- By parts: a loan line, so its parts decide and the override does not apply.
+  private.line_in_pnl(null, c.excluded_from_pnl, c.loan_part) as in_pnl,
   false as loan_split_fallback,
   case
     when coalesce(c.kind::text, t.direction::text) = 'income' then t.project_id is null
@@ -155,7 +157,8 @@ select
   null::public.loan_split_part as part,
   t.amount_net,
   t.amount_net as line_amount_net,
-  private.line_in_pnl(t.in_pnl_override, c.excluded_from_pnl, c.loan_part) as in_pnl,
+  -- A line with a loan split stays fixed, even when it falls back to its own category.
+  private.line_in_pnl(case when sp.transaction_id is null then t.in_pnl_override end, c.excluded_from_pnl, c.loan_part) as in_pnl,
   sp.transaction_id is not null as loan_split_fallback,
   case
     when coalesce(c.kind::text, t.direction::text) = 'income' then t.project_id is null
@@ -581,7 +584,12 @@ as $$
     'customer_name', cu.name,
     'in_pnl_override', t.in_pnl_override,
     'category_excluded_from_pnl', coalesce(c.excluded_from_pnl, false),
-    'in_pnl', private.line_in_pnl(t.in_pnl_override, c.excluded_from_pnl, c.loan_part),
+    'in_pnl', private.line_in_pnl(
+      case when not exists (
+        select 1 from public.loan_splits ls where ls.transaction_id = t.id and ls.company_id = t.company_id
+      ) then t.in_pnl_override end,
+      c.excluded_from_pnl, c.loan_part
+    ),
     'pnl_fixed', c.loan_part is not null
       or exists (select 1 from public.loan_splits ls where ls.transaction_id = t.id and ls.company_id = t.company_id),
     'review_status', (
@@ -761,7 +769,11 @@ begin
         from private.project_category_entries(p.id) e
         left join public.categories cat on cat.id = e.category_id
         join public.transactions lt on lt.id = e.transaction_id
-        where private.line_in_pnl(lt.in_pnl_override, cat.excluded_from_pnl, cat.loan_part)
+        where private.line_in_pnl(
+          case when not exists (select 1 from public.loan_splits ls where ls.transaction_id = lt.id)
+            then lt.in_pnl_override end,
+          cat.excluded_from_pnl, cat.loan_part
+        )
         group by e.category_id
       ) s
       left join public.categories c on c.id = s.category_id
@@ -782,7 +794,11 @@ begin
         from private.project_category_entries_by_currency(p.id) e
         left join public.categories cat on cat.id = e.category_id
         join public.transactions lt on lt.id = e.transaction_id
-        where private.line_in_pnl(lt.in_pnl_override, cat.excluded_from_pnl, cat.loan_part)
+        where private.line_in_pnl(
+          case when not exists (select 1 from public.loan_splits ls where ls.transaction_id = lt.id)
+            then lt.in_pnl_override end,
+          cat.excluded_from_pnl, cat.loan_part
+        )
         group by e.currency, e.category_id
       ) s
       left join public.categories c on c.id = s.category_id
@@ -803,7 +819,11 @@ begin
         from private.project_category_entries_by_currency(p.id) e
         left join public.categories cat on cat.id = e.category_id
         join public.transactions lt on lt.id = e.transaction_id
-        where not private.line_in_pnl(lt.in_pnl_override, cat.excluded_from_pnl, cat.loan_part)
+        where not private.line_in_pnl(
+          case when not exists (select 1 from public.loan_splits ls where ls.transaction_id = lt.id)
+            then lt.in_pnl_override end,
+          cat.excluded_from_pnl, cat.loan_part
+        )
         group by e.currency, e.category_id
       ) s
       left join public.categories c on c.id = s.category_id

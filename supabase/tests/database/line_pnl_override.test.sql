@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(46);
+select plan(50);
 
 do $users$
 begin
@@ -294,6 +294,30 @@ select is(
   'undo_batch undoes both rows'
 );
 select is(pg_temp.pnl('cash', 'income_agorot'), 100000::bigint, 'undo_batch: the rent counts again');
+
+-- An override left on a line that later becomes a loan line never moves the loan part,
+-- because the owner can no longer clear it (loan line is fixed).
+reset role;
+select tests.authenticate_as('lpo_owner');
+select lives_ok(
+  $$select public.set_transaction_pnl(pg_temp.txn('txn_parts'), false)$$,
+  'stale: the owner takes the parts line out'
+);
+select lives_ok(
+  $$select public.set_transaction_category(
+    pg_temp.txn('txn_parts'),
+    (select c.id from public.categories c where c.company_id = pg_temp.txn('co') and c.loan_part = 'interest')
+  )$$,
+  'stale: the line is then filed as loan interest'
+);
+select is(
+  (select l.in_pnl from private.pnl_lines l where l.transaction_id = pg_temp.txn('txn_parts')), true,
+  'stale: loan interest counts by its category, whatever the old override says'
+);
+select is(
+  (public.get_transaction(pg_temp.txn('txn_parts'))->>'in_pnl')::boolean, true,
+  'stale: get_transaction agrees with the P&L'
+);
 
 reset role;
 select * from finish();
