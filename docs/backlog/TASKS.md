@@ -44,7 +44,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
+| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | claimed (UI task B thread, 2026-10-07, claude/project-thread-muza05) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
@@ -154,7 +154,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-117"></a>
 ### FLOW-117 · Reversal section in the category picker
-- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-104 (done, #76)
+- **Type:** SMALL UI · **Status:** claimed (UI task B thread, 2026-10-07, claude/project-thread-muza05); design session counts as the plan · **Depends on:** FLOW-104 (done, #76)
 - **What:** The server accepts the other kind's category since FLOW-104. In the app category picker, list the other kind's categories under a "reversal" section, so a bounced rent payment or a supplier refund can be filed from the app.
 - **Acceptance:** mockup approved; e2e picks a reversal category both ways; design review.
 
