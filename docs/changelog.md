@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Split one bank line across categories (FLOW-311). Migration `20261007190000_line_splits.sql` adds `public.line_splits` (parts with their own category, optional project and exact minor-unit amount), a third branch of `private.pnl_lines` that counts a valid split by part (kept-out parts go to the excluded totals), `public.save_line_split` and `public.get_line_split`, and the MCP write `split_line` with undo kind `line_split`. A line takes a loan split or a split by category, not both. `get_expense` shows `line_split`. The shared share of a part in the project category helper scales by the part. Decision [0104](decisions/0104-line-split-by-category.md). `docs/mcp/TOOLS.md` updated. pgTAP `line_splits_pnl.test.sql` and `mcp_split_line.test.sql`.
+
 CI, fewer runners (FLOW-812). Each pull request now uses 9 jobs instead of 12, so busy hours wait less for GitHub's 20-runner limit. `check (core)` runs the `@flow/app` unit tests too (`check (unit)` is gone), and the main Playwright suite runs in 2 shards instead of 3. Same tests and the same required checks (`lint`, `check`, `e2e`). The deploy smoke retries `/settings` like `build.txt` and the homepage.
 
 Per-user cache on a shared device (FLOW-603). When the signed-in user changes (sign-out, an expired session, another tab, or a switch without reload), the app clears its query cache, remounts its screens, and keeps a saved role only for the signed-in user. A role read that finishes after sign-out saves nothing. Follow-ups are FLOW-605.
