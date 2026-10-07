@@ -224,7 +224,7 @@ begin
       where c.company_id = p_company
         and c.kind::text = direction::text
         and case
-          when line->>'category_hint' like 'loan_part:%'
+          when starts_with(line->>'category_hint', 'loan_part:')
             then c.loan_part::text = substr(line->>'category_hint', length('loan_part:') + 1)
           else c.name = line->>'category_hint'
         end

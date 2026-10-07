@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(7);
+select plan(9);
 
 do $users$
 begin
@@ -70,7 +70,9 @@ select is(
           pg_temp.hint_line('hint-key', 'expense', 'loan_part:principal'),
           pg_temp.hint_line('hint-old-name', 'expense', 'תשלומי הלוואה'),
           pg_temp.hint_line('hint-unknown-key', 'expense', 'loan_part:fees'),
-          pg_temp.hint_line('hint-name', 'income', 'הכנסה אחרת')
+          pg_temp.hint_line('hint-name', 'income', 'הכנסה אחרת'),
+          pg_temp.hint_line('hint-key-income', 'income', 'loan_part:principal'),
+          pg_temp.hint_line('hint-wildcard', 'expense', 'loanXpart:principal')
         ),
         'removed_ids', '[]'::jsonb,
         'complete', false
@@ -79,8 +81,8 @@ select is(
       null
     )
   ).inserted,
-  4,
-  'four hinted lines insert'
+  6,
+  'six hinted lines insert'
 );
 
 select is(
@@ -111,6 +113,23 @@ select is(
    where t.company_id = (select id from hint_co where label = 'co') and t.external_id = 'hint-name'),
   'הכנסה אחרת',
   'a plain hint still matches by name'
+);
+
+select is(
+  (select t.category_id is distinct from (
+     select c.id from public.categories c
+     where c.company_id = (select id from hint_co where label = 'co') and c.loan_part = 'principal')
+   from public.transactions t
+   where t.company_id = (select id from hint_co where label = 'co') and t.external_id = 'hint-key-income'),
+  true,
+  'a loan_part hint on an income line does not file it under the expense principal category'
+);
+
+select is(
+  (select t.category_suggested from public.transactions t
+   where t.company_id = (select id from hint_co where label = 'co') and t.external_id = 'hint-wildcard'),
+  true,
+  'only the exact loan_part: prefix is a key: an underscore is not a wildcard'
 );
 
 select * from finish();
