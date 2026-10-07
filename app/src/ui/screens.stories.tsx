@@ -1233,8 +1233,8 @@ export const CategoriesLongHebrew: Story = {
 const keptOutCategories: Array<CategoryRow & { count?: number }> = [
   { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 42 },
   { id: "c6", name: "פיקדונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: true, count: 3 },
-  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 12 },
-  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, count: 12 },
+  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, loan_part: "interest", count: 12 },
+  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal", count: 12 },
   { id: "c4", name: "עבודה", kind: "expense", hidden: true, is_default: true, excluded_from_pnl: true, count: 1 },
   { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false, count: 3 },
 ];

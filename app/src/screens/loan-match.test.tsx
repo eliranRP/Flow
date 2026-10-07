@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LOAN_PRINCIPAL_CATEGORY } from "@flow/shared";
 import { ToastProvider } from "../ui/toast";
 import { LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 
@@ -38,9 +37,9 @@ const db = vi.hoisted(() => ({
   }],
   balances: [{ loan_id: "loan-1", balance_minor: 10_000_000 }],
   categories: [
-    { id: "cat-i", name: "ריבית משכנתא" },
-    { id: "cat-e", name: "מסים וביטוח" },
-    { id: "cat-p", name: "תשלומי הלוואה" },
+    { id: "cat-i", loan_part: "interest" },
+    { id: "cat-e", loan_part: "escrow" },
+    { id: "cat-p", loan_part: "principal" },
   ],
 }));
 
@@ -135,7 +134,7 @@ vi.mock("../lib/supabase", () => ({
           select: () => ({
             eq: () => ({
               eq: () => ({
-                in: () => {
+                not: () => {
                   const finish = () => ({ data: db.categories, error: null });
                   if (db.readHold) return db.readHold.then(() => finish());
                   return Promise.resolve(finish());
@@ -200,7 +199,7 @@ function renderSplit(props: Partial<ComponentProps<typeof LoanTransactionSplit>>
           <LoanTransactionSplit
             transactionId="txn-1"
             docDate="2026-02-01"
-            categoryName={LOAN_PRINCIPAL_CATEGORY}
+            loanPart="principal"
             direction="expense"
             active
             {...props}
@@ -454,6 +453,30 @@ describe("LoanTransactionSplit", () => {
       expect(screen.getByRole("radio", { name: "הלוואת דוגמה" })).toHaveAttribute("aria-busy", "true");
     });
     act(() => { release(); });
+  });
+
+  it("files each part under the category with that loan_part, whatever its name", async () => {
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    const rows = db.inserts[0] as Array<{ part: string; category_id: string }>;
+    expect(Object.fromEntries(rows.map((row) => [row.part, row.category_id]))).toEqual({
+      interest: "cat-i",
+      escrow: "cat-e",
+      principal: "cat-p",
+    });
+  });
+
+  it("does not offer שיוך on a category that is not the loan principal", async () => {
+    const first = renderSplit({ loanPart: null });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
+    first.unmount();
+    renderSplit({ loanPart: "interest" });
+    await new Promise((r) => { setTimeout(r, 50); });
+    expect(screen.queryByRole("button", { name: MATCH_ROW })).not.toBeInTheDocument();
   });
 
   it("does not offer שיוך while the read is loading", async () => {
