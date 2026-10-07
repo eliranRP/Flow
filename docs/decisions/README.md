@@ -118,3 +118,4 @@ One file per decision: `NNNN-short-kebab-title.md`. Numbers are four digits and 
 | [0095](0095-mcp-first.md) | 2026-10-06 | Accepted | MCP-first: every new feature or user action ships with a flow-mcp tool (and an API where possible) in the same PR |
 | [0096](0096-currency-display.md) | 2026-10-07 | Accepted | Per-currency display in the app; one formatter; expenses always signed |
 | [0097](0097-mercury-income-invoice-receipt.md) | 2026-10-07 | Accepted | Mercury deposits and treasury income import as `invoice_receipt`, so they count on the invoiced basis; stored rows are relabeled |
+| [0099](0099-categories-outside-pnl.md) | 2026-10-07 | Accepted | `excluded_from_pnl` defaults, `private.pnl_lines`, separate excluded totals, API + MCP `set_category_pnl`; UI deferred |
