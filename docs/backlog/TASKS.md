@@ -24,6 +24,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
 | 9b | [FLOW-117](#flow-117) | Kept-out lines: guessed categories and project income | SMALL CYCLE | blocked on FLOW-102, FLOW-104 |
+| 9c | [FLOW-118](#flow-118) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
 | 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 12 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
@@ -79,13 +80,19 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `get_project` doesn't report kept-out project income. Moved to [FLOW-117](#flow-117).
 - [x] Document the change in what `count` means in the P&L outputs. (#81, TOOLS.md)
 - [x] An owner who is also a viewer is refused by `set_category_excluded_from_pnl`. (#81)
-- [x] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag. (#81: `categories.loan_part`)
+- [x] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag. (#81: `categories.loan_part` in the database checks; the app split sheet and the Mercury hint move in [FLOW-118](#flow-118).)
 
 <a id="flow-117"></a>
 ### FLOW-117 · Kept-out lines: guessed categories and project income
 - **Type:** SMALL CYCLE · **Status:** blocked on FLOW-102, FLOW-104 (both rewrite `private.pnl_lines` and `get_project`) · **Depends on:** FLOW-102, FLOW-104
 - **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
 - **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
+
+<a id="flow-118"></a>
+### FLOW-118 · Loan categories by key in the app and the Mercury hint
+- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** FLOW-112 (#81)
+- **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name. Read `categories.loan_part` instead. No visible change.
+- **Acceptance:** app unit test with a renamed loan category; connector test; no design review needed.
 
 <a id="flow-113"></a>
 ### FLOW-113 · Kept-out toggle on the categories screen

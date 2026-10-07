@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(27);
+select plan(31);
 
 do $users$
 begin
@@ -25,6 +25,8 @@ select is(private.non_pnl_category('expense', 'Tax & insurance escrow'), false, 
 select is(private.non_pnl_category('income', 'Owner distribution'), false, 'an expense default name does not match income');
 select is(private.non_pnl_category('expense', 'Materials'), false, 'an ordinary name stays in the P&L');
 select is(private.non_pnl_category('expense', 'ריבית משכנתא'), false, 'a Hebrew name never matches the English list');
+select is(private.non_pnl_category('expense', 'Owner distributions שותף'), false, 'a Hebrew qualifier is part of the name');
+select is(private.non_pnl_category('expense', 'Closing and and acquisition costs'), true, 'repeated "and" words are dropped');
 
 select tests.authenticate_as('ko_owner');
 select lives_ok($$select public.create_company('Example Ventures LLC', true)$$, 'owner creates company');
@@ -140,6 +142,63 @@ select is(
   null,
   'a renamed loan category is never the guessed default'
 );
+
+-- The loan split check matches the loan category by loan_part, not by name. Runs as the admin.
+-- The interest category is now named 'Mortgage interest'; a new category takes its old Hebrew name.
+insert into public.categories (company_id, name, kind, sort_order)
+values ((select id from ko_ref where label = 'co'), 'ריבית משכנתא', 'expense', 50);
+-- The guess test above put the principal category back in the P&L; the split needs it kept out.
+update public.categories set excluded_from_pnl = true
+where company_id = (select id from ko_ref where label = 'co') and loan_part = 'principal';
+
+insert into public.loans (
+  company_id, name, principal_minor, annual_rate_ppm, term_months,
+  start_date, payment_minor, escrow_minor, currency
+)
+values ((select id from ko_ref where label = 'co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 20000, 'USD');
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, description, user_assigned
+)
+select (select id from ko_ref where label = 'co'), 'expense', 'expense', 'shared', 'posted', 'USD',
+  -100000, -100000, 100000, 0, 'source', '2026-06-10', '2026-06-10', 'manual', v.k, v.k, true
+from (values ('ko:loan-key'), ('ko:loan-name')) v(k);
+
+
+create function pg_temp.ko_split(p_ikey text, p_by text) returns void language sql as $f$
+  insert into public.loan_splits (
+    company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
+  )
+  select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
+    case
+      when v.part = 'interest' and p_by = 'name' then
+        (select k.id from public.categories k
+         where k.company_id = t.company_id and k.name = 'ריבית משכנתא' and k.kind = 'expense')
+      else
+        (select k.id from public.categories k
+         where k.company_id = t.company_id and k.loan_part = v.part::public.loan_split_part)
+    end
+  from public.transactions t
+  join public.loans l on l.company_id = t.company_id
+  cross join (values ('interest', 70000), ('escrow', 20000), ('principal', 10000)) v(part, amount)
+  where t.idempotency_key = p_ikey;
+  set constraints all immediate;
+$f$;
+
+select lives_ok(
+  $$select pg_temp.ko_split('ko:loan-key', 'key')$$,
+  'a split onto the renamed interest category passes the check'
+);
+
+select throws_ok(
+  $$select pg_temp.ko_split('ko:loan-name', 'name')$$,
+  '23514',
+  'loan_split_category',
+  'a category that only has the old Hebrew name is refused'
+);
+set constraints all deferred;
 
 -- An owner who is also listed as a viewer of a demo company can set the flag on their own company.
 select tests.authenticate_as('ko_demo');

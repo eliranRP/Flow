@@ -7,7 +7,8 @@ begin;
 
 set local lock_timeout = '5s';
 
--- Lower case, "&" and "and" dropped, punctuation to spaces, apostrophes removed, and a plural "s" dropped from words of 4+ letters.
+-- Lower case, apostrophes removed, other punctuation to spaces (Hebrew letters are kept as part of the name),
+-- "&" and "and" dropped, and a plural "s" dropped from words of 4+ letters.
 create or replace function private.pnl_name_key(p_name text)
 returns text
 language sql
@@ -20,9 +21,9 @@ as $$
       regexp_replace(
         regexp_replace(
           regexp_replace(lower(coalesce(p_name, '')), '[''’]', '', 'g'),
-          '[^a-z0-9]+', ' ', 'g'
+          '[^a-z0-9֐-׿]+', ' ', 'g'
         ),
-        '(^| )and( |$)', ' ', 'g'
+        '(^| )and(?= |$)', '', 'g'
       ),
       '([a-z]{3,})s( |$)', '\1\2', 'g'
     ),
@@ -114,6 +115,7 @@ where not c.excluded_from_pnl
 create or replace function private.categories_default_pnl()
 returns trigger
 language plpgsql
+security definer
 set search_path = ''
 as $$
 begin
