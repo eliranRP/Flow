@@ -732,6 +732,9 @@ isOneToOne: false
 "get_home":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"get_line_meta":
+{ Args: { "p_ids": (string)[] }; Returns: Json
+                           },
 "get_line_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },

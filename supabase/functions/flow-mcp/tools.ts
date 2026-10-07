@@ -301,6 +301,48 @@ function limitOf(value: unknown, fallback: number): number | ToolResult {
   return value;
 }
 
+/** FLOW-304. A line's bank details. Every field is null when the provider gave none. */
+const NO_LINE_META = {
+  method: null,
+  card_last4: null,
+  memo: null,
+  account: null,
+  counterparty: null,
+  bank_description: null,
+} as const;
+
+/**
+ * Bank details for these ledger ids, keyed by id. A failed read fails the tool, so a
+ * row never looks like it has no bank details when the read was refused.
+ */
+async function lineMetaOf(rpc: ToolRpc, ids: string[]): Promise<Map<string, Record<string, unknown>> | ToolResult> {
+  const wanted = [...new Set(ids.filter((id) => UUID.test(id)))];
+  const found = new Map<string, Record<string, unknown>>();
+  if (wanted.length === 0) return found;
+  const result = await rpc("get_line_meta", { p_ids: wanted });
+  if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+  for (const row of result.json as unknown[]) {
+    if (row == null || typeof row !== "object" || Array.isArray(row)) continue;
+    const { transaction_id: id, ...meta } = row as Record<string, unknown>;
+    if (typeof id === "string") found.set(id, { ...NO_LINE_META, ...meta });
+  }
+  return found;
+}
+
+/** Adds meta to each row, read by the row's ledger id. */
+async function withLineMeta<T extends Record<string, unknown>>(
+  rpc: ToolRpc,
+  rows: T[],
+  idOf: (row: T) => unknown,
+): Promise<Array<T & { meta: Record<string, unknown> }> | ToolResult> {
+  const metas = await lineMetaOf(rpc, rows.map(idOf).filter((id): id is string => typeof id === "string"));
+  if (!(metas instanceof Map)) return metas;
+  return rows.map((row) => {
+    const id = idOf(row);
+    return { ...row, meta: (typeof id === "string" ? metas.get(id) : undefined) ?? { ...NO_LINE_META } };
+  });
+}
+
 function offsetOf(value: unknown): number | ToolResult {
   if (value == null) return 0;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) return fail("validation", "validation");
@@ -554,7 +596,7 @@ function readTools() {
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
     toolSpec("list_categories", "The company's categories.", {}),
-    toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id.", {
+    toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense).", {
       direction: { type: "string", enum: ["expense", "income"] },
       reason: { type: "string" },
       supplier: { type: "string" },
@@ -564,10 +606,10 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
-    toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id.", {
+    toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id. meta is the line's bank details (see get_expense).", {
       scope: { type: "string", enum: ["pending", "filed", "all"] },
       query: { type: "string" },
       limit: { type: "integer" },
@@ -1307,10 +1349,13 @@ export async function callTool(
           limit,
           offset,
         });
-        return ok({
-          total: page.total,
-          expenses: page.reviews.map((row) => ({ ...row, id: row.transaction_id })),
-        });
+        const expenses = await withLineMeta(
+          rpc,
+          page.reviews.map((row) => ({ ...row, id: row.transaction_id })),
+          (row) => row.id,
+        );
+        if (!Array.isArray(expenses)) return expenses;
+        return ok({ total: page.total, expenses });
       }
       const found = await rpc("search_transactions", {
         p_query: query,
@@ -1321,7 +1366,11 @@ export async function callTool(
       if (found.status >= 400 || found.json == null || typeof found.json !== "object") {
         return fail("refused", READ_REFUSED);
       }
-      return ok(found.json);
+      const body = found.json as { expenses?: unknown };
+      const rows = Array.isArray(body.expenses) ? (body.expenses as Array<Record<string, unknown>>) : [];
+      const expenses = await withLineMeta(rpc, rows, (row) => row.id);
+      if (!Array.isArray(expenses)) return expenses;
+      return ok({ ...found.json, expenses });
     }
     const direction = textOf(args.direction);
     if (typeof direction !== "string" && direction != null) return direction;
@@ -1338,7 +1387,7 @@ export async function callTool(
     if (typeof to !== "string" && to != null) return to;
     const listed = await rpc("list_review", {});
     if (listed.status >= 400 || !Array.isArray(listed.json)) return fail("refused", "The read was refused.");
-    return ok(filterReviews(listed.json as Review[], {
+    const page = filterReviews(listed.json as Review[], {
       direction,
       reason,
       supplier,
@@ -1347,7 +1396,10 @@ export async function callTool(
       to,
       limit,
       offset,
-    }));
+    });
+    const reviews = await withLineMeta(rpc, page.reviews, (row) => row.transaction_id);
+    if (!Array.isArray(reviews)) return reviews;
+    return ok({ ...page, reviews });
   }
 
   if (name === "list_loans") {
@@ -1382,7 +1434,12 @@ export async function callTool(
   const result = await rpc("get_transaction", { p_id: transactionId });
   if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
-  const row = result.json as Record<string, unknown>;
+  const metas = await lineMetaOf(rpc, [transactionId]);
+  if (!(metas instanceof Map)) return metas;
+  const row: Record<string, unknown> = {
+    ...(result.json as Record<string, unknown>),
+    meta: metas.get(transactionId) ?? { ...NO_LINE_META },
+  };
   // A line split by category shows its parts. A failed parts read fails the whole read, so a
   // split line never looks whole under its own category.
   const split = await rpc("get_line_split", { p_transaction_id: transactionId });

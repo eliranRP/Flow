@@ -154,7 +154,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "incomingInternationalWire",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "wire",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -181,7 +183,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Lodging"
+        "providerCategory": "Lodging",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -208,7 +213,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "c53966eb-504b-4d1c-9222-6cf40d5cc41e"
       }
     },
     {
@@ -235,7 +242,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -262,7 +271,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "checkDeposit",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "check",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -289,7 +300,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -316,7 +329,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -343,7 +358,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -370,7 +388,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -397,7 +417,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -424,7 +446,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -451,7 +475,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -478,7 +504,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "checkDeposit",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "check",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -505,7 +533,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -532,7 +562,9 @@
       "category_hint": "תשלומי הלוואה",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -559,7 +591,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -586,7 +620,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -613,7 +649,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -640,7 +678,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "70bdb4e9-9c10-4447-8a42-555e0f422cb7"
       }
     },
     {
@@ -667,7 +707,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "ProfessionalServices"
+        "providerCategory": "ProfessionalServices",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -694,7 +737,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "70bdb4e9-9c10-4447-8a42-555e0f422cb7"
       }
     },
     {
@@ -721,7 +766,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -748,7 +795,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -775,7 +824,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "incomingDomesticWire",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "wire",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -802,7 +853,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Lodging"
+        "providerCategory": "Lodging",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -829,7 +883,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -856,7 +912,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -883,7 +942,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Software"
+        "providerCategory": "Software",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -910,7 +972,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -937,7 +1001,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "ProfessionalServices"
+        "providerCategory": "ProfessionalServices",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -964,7 +1031,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "ProfessionalServices"
+        "providerCategory": "ProfessionalServices",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -991,7 +1061,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1018,7 +1091,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Software"
+        "providerCategory": "Software",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1045,7 +1121,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Lodging"
+        "providerCategory": "Lodging",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1072,7 +1151,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1099,7 +1180,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1126,7 +1209,9 @@
       "category_hint": "תשלומי הלוואה",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1153,7 +1238,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "incomingInternationalWire",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "wire",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1180,7 +1267,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1207,7 +1296,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1234,7 +1325,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1261,7 +1354,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1288,7 +1383,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1315,7 +1413,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "debitCardTransaction",
-        "providerCategory": "Retail"
+        "providerCategory": "Retail",
+        "method": "card",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1342,7 +1442,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1369,7 +1471,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "ProfessionalServices"
+        "providerCategory": "ProfessionalServices",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1396,7 +1501,9 @@
       "category_hint": "תשלומי הלוואה",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1423,7 +1530,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1450,7 +1560,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "checkDeposit",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "check",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1477,7 +1589,9 @@
       "category_hint": "תשלומי הלוואה",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1504,7 +1618,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1531,7 +1648,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1558,7 +1678,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Retail"
+        "providerCategory": "Retail",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1585,7 +1708,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "wire",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1612,7 +1737,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1639,7 +1766,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardCredit",
-        "providerCategory": "Retail"
+        "providerCategory": "Retail",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1666,7 +1796,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1693,7 +1825,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1720,7 +1854,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "outgoingPayment",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "ach",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1747,7 +1883,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1774,7 +1912,9 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1801,7 +1941,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1828,7 +1971,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1855,7 +2001,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "ProfessionalServices"
+        "providerCategory": "ProfessionalServices",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1882,7 +2031,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1909,7 +2061,9 @@
       "category_hint": "תשלומי הלוואה",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -1936,7 +2090,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1963,7 +2120,10 @@
       "category_hint": null,
       "provider_meta": {
         "kind": "creditCardTransaction",
-        "providerCategory": "Utilities"
+        "providerCategory": "Utilities",
+        "method": "card",
+        "card_last4": "0000",
+        "account_id": "ecc597e1-483c-4dcb-b528-ac1cdc2fda09"
       }
     },
     {
@@ -1990,7 +2150,9 @@
       "category_hint": "הכנסה אחרת",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     },
     {
@@ -2017,7 +2179,9 @@
       "category_hint": "תשלומי הלוואה",
       "provider_meta": {
         "kind": "other",
-        "providerCategory": null
+        "providerCategory": null,
+        "method": "other",
+        "account_id": "4c1c8f02-5ee7-4bc2-9c68-6c4ef45eefd6"
       }
     }
   ]
