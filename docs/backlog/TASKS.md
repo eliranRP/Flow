@@ -31,7 +31,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 15 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
 | 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | blocked on FLOW-101 |
 | 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
-| 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
+| 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first, planning claimed (UI task 4 thread, 2026-10-07, claude/project-thread-uf00mt) |
 | 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
 | 20 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
 | 21 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
@@ -216,7 +216,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** plan-first, planning claimed (UI task 4 thread, 2026-10-07, claude/project-thread-uf00mt) · **Depends on:** —
 - **What:** Tapping נכנס (income) or יצא (expenses) on Home opens every line of that kind for the selected period across all projects, grouped and totaled by category, project or payer, each line tappable to its detail. Same period selector as Home, amounts shown like the rest of the app, kept-out categories respected. MCP: a tool and RPC returning the aggregated lines (direction, period, group_by).
 - **Acceptance:** mockup approved; totals match Home for the same period; MCP test.
 
