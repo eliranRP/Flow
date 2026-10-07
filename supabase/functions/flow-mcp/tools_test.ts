@@ -255,9 +255,13 @@ Deno.test("write tools are listed only for a write scope", () => {
     "attach_loan_payment",
     "undo",
     "undo_batch",
+    "get_sync_status",
   ]);
   for (const tool of toolsFor(["write"])) {
-    assertEquals(tool.annotations, { readOnlyHint: false, destructiveHint: true, idempotentHint: true });
+    const expected = tool.name === "get_sync_status"
+      ? { readOnlyHint: true, destructiveHint: false, idempotentHint: true }
+      : { readOnlyHint: false, destructiveHint: true, idempotentHint: true };
+    assertEquals(tool.annotations, expected);
   }
   assertEquals(toolsFor(["read", "write"]).map((tool) => tool.name), [
     "list_projects",
@@ -269,6 +273,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_totals",
     "list_loans",
     "get_loan_schedule",
+    "get_sync_status",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -682,127 +687,197 @@ Deno.test("undo accepts project and category kinds", async () => {
   assertEquals(calls[1]?.body.p_kind, "category");
 });
 
-Deno.test("sync_bank proceed, replay, errors, and skipped", async () => {
-  const invokeCalls: { fn: string; body: Record<string, unknown> }[] = [];
-  const invoke = (fn: string, body: Record<string, unknown>) => {
-    invokeCalls.push({ fn, body });
-    return Promise.resolve({
-      status: 200,
-      json: { ok: true, lines: 2, inserted: 1, updated: 1, removed: 0, newest_date: "2026-09-15" },
-    });
-  };
-  let beginCount = 0;
+const JOB = "abababab-abab-4000-8000-0000000000ab";
+
+/** begin proceeds with JOB; finish and status are recorded; status echoes the last finish. */
+function syncRpc() {
+  const calls: Rpc[] = [];
+  let finished: Record<string, unknown> | null = null;
   const rpc = (name: string, body: Record<string, unknown>) => {
+    calls.push({ name, body });
     if (name === "mcp_sync_bank_begin") {
-      beginCount += 1;
-      if (beginCount === 1) {
-        return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-      }
-      return Promise.resolve({
-        status: 200,
-        json: { ok: true, data: { added: 1, duplicates: 1, removed: 0, newest_date: "2026-09-15" } },
-      });
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed", job_id: JOB } } });
     }
     if (name === "mcp_sync_bank_finish") {
-      return Promise.resolve({ status: 200, json: null });
+      finished = body.p_response as Record<string, unknown>;
+      return Promise.resolve({ status: 200, json: { ok: true, data: { job_id: JOB, state: "done" } } });
+    }
+    if (name === "mcp_sync_status") {
+      const done = finished as { ok?: boolean; data?: Record<string, unknown>; error?: unknown } | null;
+      const data = done == null
+        ? { job_id: JOB, state: "running" }
+        : done.ok === true
+        ? { job_id: JOB, state: "done", ...done.data }
+        : { job_id: JOB, state: "failed", error: done.error };
+      return Promise.resolve({ status: 200, json: { ok: true, data } });
     }
     return Promise.resolve({ status: 500, json: null });
   };
-  const first = await callTool("sync_bank", { idempotency_key: "sync-1" }, ["write"], rpc, invoke);
-  assertEquals(first.isError, false);
-  if (first.structuredContent.ok) {
-    assertEquals(first.structuredContent.data, {
-      added: 1,
-      duplicates: 1,
-      removed: 0,
-      newest_date: "2026-09-15",
-    });
-  }
-  assertEquals(invokeCalls, [{ fn: "mercury-sync", body: { force: true } }]);
-  invokeCalls.length = 0;
-  const replay = await callTool("sync_bank", { idempotency_key: "sync-1" }, ["write"], rpc, invoke);
-  assertEquals(replay.isError, false);
-  assertEquals(invokeCalls.length, 0);
+  return { calls, rpc, finishedBody: () => calls.find((call) => call.name === "mcp_sync_bank_finish")?.body };
+}
 
-  const noConn = await callTool("sync_bank", { idempotency_key: "sync-2" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({
-        status: 200,
-        json: { ok: false, error: { code: "not_found", message: "bank is not connected" } },
-      });
-    }
-    return Promise.resolve({ status: 200, json: null });
-  }, invoke);
+Deno.test("sync_bank returns the job at once and finishes it in the background", async () => {
+  const { calls, rpc, finishedBody } = syncRpc();
+  let release: (value: { status: number; json: unknown }) => void = () => {};
+  const pull = new Promise<{ status: number; json: unknown }>((resolve) => {
+    release = resolve;
+  });
+  const invokeCalls: { fn: string; body: Record<string, unknown> }[] = [];
+  const invoke = (fn: string, body: Record<string, unknown>) => {
+    invokeCalls.push({ fn, body });
+    return pull;
+  };
+  const deferred: Promise<unknown>[] = [];
+  const first = await callTool("sync_bank", { idempotency_key: "sync-1" }, ["write"], rpc, invoke, (work) => {
+    deferred.push(work);
+  });
+  assertEquals(first.isError, false);
+  assertEquals(first.structuredContent, { ok: true, data: { job_id: JOB, state: "running" } });
+  assertEquals(invokeCalls, [{ fn: "mercury-sync", body: { force: true } }]);
+  assertEquals(deferred.length, 1);
+  assertEquals(finishedBody(), undefined, "nothing stored while the pull runs");
+
+  const running = await callTool("get_sync_status", { job_id: JOB }, ["write"], rpc);
+  assertEquals(running.structuredContent, { ok: true, data: { job_id: JOB, state: "running" } });
+
+  release({ status: 200, json: { ok: true, lines: 2, inserted: 1, updated: 1, removed: 0, newest_date: "2026-09-15" } });
+  await Promise.all(deferred);
+  assertEquals(finishedBody(), {
+    p_job_id: JOB,
+    p_response: { ok: true, data: { added: 1, duplicates: 1, removed: 0, newest_date: "2026-09-15" } },
+  });
+  const done = await callTool("get_sync_status", { job_id: JOB }, ["read"], rpc);
+  assertEquals(done.structuredContent, {
+    ok: true,
+    data: { job_id: JOB, state: "done", added: 1, duplicates: 1, removed: 0, newest_date: "2026-09-15" },
+  });
+  assertEquals(calls.filter((call) => call.name === "mcp_sync_status").map((call) => call.body), [
+    { p_job_id: JOB },
+    { p_job_id: JOB },
+  ]);
+});
+
+Deno.test("sync_bank replay returns the same job without a second pull", async () => {
+  let invoked = 0;
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_sync_bank_begin") return { status: 200, json: { ok: true, data: { state: "replay", job_id: JOB } } };
+    if (name === "mcp_sync_status") return { status: 200, json: { ok: true, data: { job_id: JOB, state: "running" } } };
+    return { status: 500, json: null };
+  });
+  const replay = await callTool("sync_bank", { idempotency_key: "sync-1" }, ["write"], rpc, () => {
+    invoked += 1;
+    return Promise.resolve({ status: 200, json: {} });
+  }, () => {
+    throw new Error("nothing to defer");
+  });
+  assertEquals(replay.structuredContent, { ok: true, data: { job_id: JOB, state: "running" } });
+  assertEquals(invoked, 0);
+  assertEquals(calls.map((call) => call.name), ["mcp_sync_bank_begin", "mcp_sync_status"]);
+
+  const legacy = await callTool("sync_bank", { idempotency_key: "old" }, ["write"], () =>
+    Promise.resolve({
+      status: 200,
+      json: { ok: true, data: { added: 1, duplicates: 0, removed: 0, newest_date: null } },
+    }));
+  assertEquals(legacy.structuredContent, { ok: true, data: { added: 1, duplicates: 0, removed: 0, newest_date: null } });
+});
+
+Deno.test("sync_bank begin errors are returned at once", async () => {
+  const noConn = await callTool("sync_bank", { idempotency_key: "sync-2" }, ["write"], () =>
+    Promise.resolve({
+      status: 200,
+      json: { ok: false, error: { code: "not_found", message: "bank is not connected" } },
+    }));
   assertEquals(noConn.isError, true);
   if (!noConn.structuredContent.ok) {
     assertEquals(noConn.structuredContent.error.code, "not_found");
     assertEquals(noConn.structuredContent.error.message, "bank is not connected");
   }
+  const odd = await callTool("sync_bank", { idempotency_key: "sync-2b" }, ["write"], () =>
+    Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } }));
+  assertEquals(odd.isError, true, "proceed without a job id is refused");
+  const empty = await callTool("sync_bank", { idempotency_key: "sync-2d" }, ["write"], () =>
+    Promise.resolve({ status: 200, json: { ok: true, data: {} } }));
+  assertEquals(empty.isError, true, "an unknown begin shape is refused");
+  const down = await callTool("sync_bank", { idempotency_key: "sync-2c" }, ["write"], () =>
+    Promise.resolve({ status: 503, json: null }));
+  assertEquals(down.isError, true);
+});
 
-  const skipped = await callTool("sync_bank", { idempotency_key: "sync-3" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-    }
-    return Promise.resolve({ status: 200, json: null });
-  }, () => Promise.resolve({ status: 200, json: { ok: true, lines: 0, skipped: true } }));
-  assertEquals(skipped.isError, true);
-  if (!skipped.structuredContent.ok) assertEquals(skipped.structuredContent.error.code, "unavailable");
-
-  const rate = await callTool("sync_bank", { idempotency_key: "sync-4" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-    }
-    return Promise.resolve({ status: 200, json: null });
-  }, () => Promise.resolve({ status: 429, json: { error: "rate_limited" } }));
-  assertEquals(rate.isError, true);
-  if (!rate.structuredContent.ok) assertEquals(rate.structuredContent.error.message, "retry");
-
-  const gone = await callTool("sync_bank", { idempotency_key: "sync-4b" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-    }
-    return Promise.resolve({ status: 200, json: null });
-  }, () => Promise.resolve({ status: 500, json: { error: "Mercury is not connected" } }));
-  assertEquals(gone.isError, true);
-  if (!gone.structuredContent.ok) assertEquals(gone.structuredContent.error.code, "not_found");
-
-  const auth = await callTool("sync_bank", { idempotency_key: "sync-5" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-    }
-    return Promise.resolve({ status: 200, json: null });
-  }, () => Promise.resolve({ status: 500, json: { error: "auth" } }));
-  assertEquals(auth.isError, true);
-  if (!auth.structuredContent.ok) {
-    assertEquals(auth.structuredContent.error.message, "bank key was rejected; reconnect in Settings");
+Deno.test("sync_bank records each pull failure on the job", async () => {
+  const cases: { pull: { status: number; json: unknown } | Error | null; error: { code: string; message: string } }[] = [
+    { pull: { status: 200, json: { ok: true, lines: 0, skipped: true } }, error: { code: "unavailable", message: "retry" } },
+    { pull: { status: 429, json: { error: "rate_limited" } }, error: { code: "unavailable", message: "retry" } },
+    { pull: { status: 500, json: { error: "Mercury is not connected" } }, error: { code: "not_found", message: "bank is not connected" } },
+    {
+      pull: { status: 500, json: { error: "auth" } },
+      error: { code: "refused", message: "bank key was rejected; reconnect in Settings" },
+    },
+    { pull: { status: 401, json: null }, error: { code: "unavailable", message: "unavailable" } },
+    { pull: { status: 500, json: { error: "sync_failed" } }, error: { code: "refused", message: "The bank sync failed." } },
+    { pull: { status: 504, json: null }, error: { code: "refused", message: "The bank sync failed." } },
+    // The finish step validates the shape: bad counts or dates are not stored as a result.
+    {
+      pull: { status: 200, json: { ok: true, inserted: "1", updated: 0, removed: 0, newest_date: null } },
+      error: { code: "refused", message: "The bank sync failed." },
+    },
+    {
+      pull: { status: 200, json: { ok: true, inserted: 1, updated: -1, removed: 0, newest_date: null } },
+      error: { code: "refused", message: "The bank sync failed." },
+    },
+    {
+      pull: { status: 200, json: { ok: true, inserted: 1.5, updated: 0, removed: 0, newest_date: null } },
+      error: { code: "refused", message: "The bank sync failed." },
+    },
+    {
+      pull: { status: 200, json: { ok: true, inserted: 1, updated: 0, removed: 0, newest_date: "15/09/2026" } },
+      error: { code: "refused", message: "The bank sync failed." },
+    },
+    { pull: new Error("boom"), error: { code: "refused", message: "The bank sync failed." } },
+    { pull: null, error: { code: "unavailable", message: "unavailable" } },
+  ];
+  for (const [index, item] of cases.entries()) {
+    const { rpc, finishedBody } = syncRpc();
+    const invoke = item.pull == null
+      ? undefined
+      : () => item.pull instanceof Error ? Promise.reject(item.pull) : Promise.resolve(item.pull as { status: number; json: unknown });
+    // No defer: the pull runs before the call returns and the result is the job state.
+    const result = await callTool("sync_bank", { idempotency_key: `sync-f${index}` }, ["write"], rpc, invoke);
+    assertEquals(finishedBody(), { p_job_id: JOB, p_response: { ok: false, error: item.error } }, `case ${index}`);
+    assertEquals(result.structuredContent, { ok: true, data: { job_id: JOB, state: "failed", error: item.error } }, `case ${index}`);
   }
+});
 
-  const unauthorized = await callTool("sync_bank", { idempotency_key: "sync-6" }, ["write"], (name) => {
+Deno.test("sync_bank survives a finish call that throws", async () => {
+  const deferred: Promise<unknown>[] = [];
+  const result = await callTool("sync_bank", { idempotency_key: "sync-t" }, ["write"], (name) => {
     if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
+      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed", job_id: JOB } } });
     }
-    return Promise.resolve({ status: 200, json: null });
-  }, () => Promise.resolve({ status: 401, json: null }));
-  assertEquals(unauthorized.isError, true);
-  if (!unauthorized.structuredContent.ok) assertEquals(unauthorized.structuredContent.error.code, "unavailable");
-
-  const failed = await callTool("sync_bank", { idempotency_key: "sync-7" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-    }
-    return Promise.resolve({ status: 200, json: null });
-  }, () => Promise.resolve({ status: 500, json: { error: "sync_failed" } }));
-  assertEquals(failed.isError, true);
-  if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.message, "The bank sync failed.");
-
-  const noInvoke = await callTool("sync_bank", { idempotency_key: "sync-8" }, ["write"], (name) => {
-    if (name === "mcp_sync_bank_begin") {
-      return Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } });
-    }
-    return Promise.resolve({ status: 200, json: null });
+    return Promise.reject(new Error("network"));
+  }, () => Promise.resolve({ status: 200, json: { ok: true, inserted: 0, updated: 0, removed: 0, newest_date: null } }), (work) => {
+    deferred.push(work);
   });
-  assertEquals(noInvoke.isError, true);
-  if (!noInvoke.structuredContent.ok) assertEquals(noInvoke.structuredContent.error.code, "unavailable");
+  assertEquals(result.isError, false);
+  await Promise.all(deferred);
+});
+
+Deno.test("get_sync_status checks the id and scope and passes errors through", async () => {
+  const { calls, rpc } = rpcOf((_name, body) => {
+    if (body.p_job_id === JOB) return { status: 200, json: { ok: false, error: { code: "not_found", message: "not found" } } };
+    return { status: 500, json: null };
+  });
+  const bad = await callTool("get_sync_status", { job_id: "nope" }, ["read"], rpc);
+  if (!bad.structuredContent.ok) assertEquals(bad.structuredContent.error.code, "validation");
+  const extra = await callTool("get_sync_status", { job_id: JOB, company_id: "x" }, ["read"], rpc);
+  assertEquals(extra.isError, true);
+  const none = await callTool("get_sync_status", { job_id: JOB }, [], rpc);
+  if (!none.structuredContent.ok) assertEquals(none.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 0);
+  const missing = await callTool("get_sync_status", { job_id: JOB }, ["write"], rpc);
+  if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error.code, "not_found");
+  const refused = await callTool("get_sync_status", { job_id: JOB }, ["read"], () => Promise.resolve({ status: 500, json: null }));
+  if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "The read was refused.");
 });
 
 Deno.test("add_loan sends exact p_* bodies and default payment matches the schedule", async () => {
