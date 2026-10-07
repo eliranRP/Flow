@@ -3,7 +3,7 @@ import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type Categor
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { LoanTransactionSplit } from "./loan-match";
+import { LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
@@ -55,6 +55,7 @@ import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-re
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
+import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { useSyncSettled } from "../use-sync-settled";
@@ -69,7 +70,7 @@ import { RenameCompanySheet } from "./rename-company";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
-import { LoanSettingsSection, type LoanCurrency } from "./loan-setup";
+import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice } from "./loan-setup";
 import { SetupSampleReview } from "../setup/sample-review";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { Banner } from "../ui/banner";
@@ -403,6 +404,14 @@ function ProjectForm({ onClose, projectId }: { onClose: () => void; projectId?: 
   );
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function movesShown(state: unknown): boolean {
+  return isPlainRecord(state) && state.moves === true;
+}
+
 function ReservedMenuSlot() {
   return <span className="ui-menu-slot" aria-hidden="true" />;
 }
@@ -591,10 +600,15 @@ export function ProjectDetailScreen({
   const preview = useHomePreview();
   const blocked = useBlockedPreview();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
-  const [moves, setMoves] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Kept on the history entry, so Back from a card reopens the list at its scroll spot.
+  const [moves, setMoves] = useState(() => movesShown(location.state));
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
   const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
+  const heldIds = heldTransactions.map((txn) => txn.id);
+  const listFrom = `${location.pathname}${location.search}`;
   const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null && moves);
   useEffect(() => {
     if (sample) return;
@@ -703,6 +717,12 @@ export function ProjectDetailScreen({
           <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
         </div>
       ) : null}
+      {(project.loans ?? []).length > 0 ? (
+        <>
+          <SectionHead title="הלוואות" />
+          <ProjectLoanList rows={project.loans ?? []} />
+        </>
+      ) : null}
       <SectionHead title="הוצאות לפי קטגוריה" />
       <ProjectCategories
         project={project}
@@ -715,6 +735,10 @@ export function ProjectDetailScreen({
           tone="accent"
           onClick={() => {
             setMoves(true);
+            void navigate(`${location.pathname}${location.search}${location.hash}`, {
+              replace: true,
+              state: { ...(isPlainRecord(location.state) ? location.state : {}), moves: true },
+            });
           }}
         >
           תנועות אחרונות
@@ -740,6 +764,7 @@ export function ProjectDetailScreen({
                 currency={txn.currency ?? "ILS"}
                 source="invoice"
                 href={`/transactions/${txn.id}${search}`}
+                state={txnListState(heldIds, txn.id, listFrom)}
               />
             )}
           />
@@ -886,6 +911,8 @@ export function FiledTodayScreen({
   const filed = useFiledTodayQuery(shown == null);
   const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
   const rows = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
+  const location = useLocation();
+  const rowIds = rows.map((row) => row.id);
   const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
   return (
     <ScreenState
@@ -907,6 +934,7 @@ export function FiledTodayScreen({
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
             href={rowHref ? rowHref(row) : `/transactions/${row.id}${search}`}
+            state={rowHref ? undefined : txnListState(rowIds, row.id, `${location.pathname}${location.search}`)}
           />
         ))}
       </List>
@@ -1771,6 +1799,7 @@ export function ProjectCategoryScreen({
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId);
+  const location = useLocation();
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
@@ -1788,6 +1817,7 @@ export function ProjectCategoryScreen({
   const projectName = sample?.projectName ?? first?.project_name ?? "";
   const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
+  const rowIds = rows.map((row) => row.id);
   const more = sample?.pageSize != null ? !sampleOpen && allRows.length > sample.pageSize : !sample && category.hasNextPage;
   return (
     <div>
@@ -1810,6 +1840,7 @@ export function ProjectCategoryScreen({
               sign="out"
               source="invoice"
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}
+              state={rowHref ? undefined : txnListState(rowIds, txn.id, `${location.pathname}${location.search}`)}
             />
           )}
         />
@@ -2358,6 +2389,46 @@ function splitProjectLabel(
   return `מפוצל · ${String(rows.length)} פרויקטים`;
 }
 
+/** What a screen reader hears after prev or next: the kind, the party and the amount, with no bare minus. */
+function txnAnnouncement(txn: NonNullable<TransactionDetail>): string {
+  const party = txn.supplier_name ?? txn.customer_name ?? txn.description;
+  const kind = txn.direction === "income" ? "הכנסה" : "הוצאה";
+  const amount = formatAmountText(absAgorot(txn.amount_net), txn.currency ?? "ILS", { detail: true });
+  return `${kind}, ${party}, ${amount}`;
+}
+
+type LinePnlChange = {
+  id: string;
+  party: string;
+  /** The override to write: false out, true in, null follows the category. */
+  override: boolean | null;
+  previous: boolean | null;
+  /** The line is out of the P&L after this write. */
+  out: boolean;
+  undo: boolean;
+};
+
+type LinePnl = { override: boolean | null; categoryOut: boolean; out: boolean; forcedIn: boolean; next: boolean | null };
+
+/** FLOW-108, decision 0112. Going back to the category's own state always clears the override. */
+export function linePnlState(
+  txn: { category_excluded_from_pnl?: boolean },
+  override: boolean | null,
+): LinePnl {
+  const categoryOut = txn.category_excluded_from_pnl === true;
+  const out = override === false || (override == null && categoryOut);
+  const forcedIn = override === true && categoryOut;
+  const next = out ? (categoryOut ? true : null) : (categoryOut ? null : false);
+  return { override, categoryOut, out, forcedIn, next };
+}
+
+function linePnlHint(pnl: LinePnl, categoryName: string): string {
+  if (pnl.out && pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
+  if (pnl.out) return `הקטגוריה ${categoryName} מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.`;
+  if (pnl.forcedIn) return `כמו שאר הקטגוריה ${categoryName}.`;
+  return "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.";
+}
+
 export function TransactionScreen({
   sample,
   sampleProjects,
@@ -2385,22 +2456,28 @@ export function TransactionScreen({
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [docOpen, setDocOpen] = useState(false);
+  const moreRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
   const [changeOpen, setChangeOpen] = useState(false);
   const leaveChange = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
   const lineMeta = useLineMetaQuery(sample ? sample.id : transactionId, sample == null);
+  const nav = useTxnNav(sample?.id ?? transactionId);
+  const goBack = useGoBack();
+  useTxnNavKeys(nav);
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const remove = useWrite({
     failure: "לא הצלחנו למחוק.",
-    keys: ["dashboard", "txn", "unpaid", "review"],
+    // A card opened from a list returns to it, so that list drops the row too.
+    keys: ["dashboard", "txn", "unpaid", "review", "project", "project-category", "filed-today"],
     onSuccess: () => {
       setConfirm(false);
-      void navigate(`/${search}`);
+      // Opened from a list: back to that list, not Home.
+      if (nav) goBack(nav.list.from);
+      else void navigate(`/${search}`);
     },
     run: async () => {
       const supabase = getSupabase();
@@ -2411,6 +2488,37 @@ export function TransactionScreen({
   });
   const txn = sample ?? detail.data;
   const parent = transactionParent(txn?.project_id, search);
+  usePrefetchNeighbours(nav, txn != null);
+  useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
+  // FLOW-108. A sample card keeps its override locally; a live card reads it back from the server.
+  const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
+  const pnlHintId = useId();
+  const pnlLine = useWrite<LinePnlChange>({
+    failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
+    keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
+    onSuccess: (done) => {
+      setMenu(false);
+      toast.show({
+        message: `${done.party} · ${done.out ? KEPT_OUT : "ברווח והפסד"}`,
+        ...(done.undo ? {} : {
+          action: "ביטול",
+          onAction: () => {
+            pnlLine.mutate({ ...done, override: done.previous, previous: done.override, out: !done.out, undo: true });
+          },
+        }),
+      });
+    },
+    run: async (change) => {
+      if (sample) {
+        setSampleOverride(change.override);
+        return;
+      }
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      // null clears the override; the generated types mark every argument non-null.
+      assertNoError(await supabase.rpc("set_transaction_pnl", { p_id: change.id, p_in_pnl: change.override as boolean }));
+    },
+  });
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -2550,10 +2658,22 @@ export function TransactionScreen({
       undoId.current = await collapseSplit(current.id, writeTarget.current.projectId);
     },
   });
+  // While a card loads or fails, ⋯ keeps its slot so ˄ ˅ stay under the finger,
+  // and the long title sits under the bar so it fits at 320.
+  const navEnd = nav ? (
+    <div className="ui-txn-end">
+      <TxnNavButtons nav={nav} />
+      <ReservedMenuSlot />
+    </div>
+  ) : undefined;
   if (phase.kind === "loading" || phase.kind === "error" || phase.kind === "empty") {
-    return <ScreenState title="פרטי תנועה" backTo={parent} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
+    return <ScreenState title="פרטי תנועה" backTo={parent} stacked={nav != null} action={navEnd} phase={phase.kind === "empty" ? { kind: "empty" } : phase} onRetry={() => { void detail.refetch(); }} empty={<p className="ui-page-pad t-hint">אין תנועה להצגה.</p>} />;
   }
-  if (!txn) return <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
+  if (!txn) {
+    return nav
+      ? <ScreenHeader layout="stacked" title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} trailing={navEnd} />
+      : <ScreenHeader title="פרטי תנועה" subtitle="התנועה לא נמצאה." backTo={parent} />;
+  }
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
   const splitRow = collapsedTo == null && serverSplit;
@@ -2643,13 +2763,24 @@ export function TransactionScreen({
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
+  const pnl = linePnlState(txn, sample != null && sampleOverride !== undefined ? sampleOverride : (txn.in_pnl_override ?? null));
+  const pnlPill = pnl.out ? (
+    <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
+  ) : pnl.forcedIn ? <StatusPill>ברווח והפסד</StatusPill> : null;
+  const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
+  const menuButton = holdWrites ? <ReservedMenuSlot /> : <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>;
   return (
     <div>
       <ScreenHeader
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
+        trailing={nav ? (
+          <div className="ui-txn-end">
+            <TxnNavButtons nav={nav} />
+            {menuButton}
+          </div>
+        ) : menuButton}
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
@@ -2665,10 +2796,11 @@ export function TransactionScreen({
           {vatShown ? "לפני מע״מ · " : null}
           <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
         </p>
-        {reviewLabel || paymentLabel ? (
+        {reviewLabel || paymentLabel || pnlPill ? (
           <div className="ui-status-row">
             {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
             {paymentLabel ? <StatusPill>{paymentLabel}</StatusPill> : null}
+            {pnlPill}
           </div>
         ) : null}
       </div>
@@ -2699,20 +2831,7 @@ export function TransactionScreen({
         readOnly={holdWrites}
       />
       <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
-      {vatShown ? (
-        <List>
-          <ListRow
-            variant="button"
-            title="חשבונית ותשלום"
-            hint="מע״מ, מספר חשבונית"
-            icon={<DocumentIcon size={22} />}
-            action={<ChevronDownIcon />}
-            expanded={docOpen}
-            onClick={() => { setDocOpen((open) => !open); }}
-          />
-        </List>
-      ) : null}
-      {docOpen && vatShown ? (
+      {vatShown && txn.vat_amount !== 0n ? (
         <p className="ui-page-pad t-hint">
           מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
           {" · "}
@@ -2764,12 +2883,57 @@ export function TransactionScreen({
           setExtraProjects((list) => [...list, project]);
         }, invalidate)}
       />
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        {txn.source === "manual" ? (
-          <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
-        ) : (
-          <p className="t-hint">תנועה מ־SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
-        )}
+      <Sheet
+        open={menu}
+        onOpenChange={(open) => {
+          // 0075: a dismiss during the P&L write waits for it; success closes the sheet, failure keeps it.
+          if (open) return true;
+          if (pnlLine.isPending) return false;
+          setMenu(false);
+          return true;
+        }}
+        title="עוד"
+        returnFocusRef={moreRef}
+      >
+        <div className="ui-stack">
+          {txn.pnl_fixed === true ? (
+            <p className="ui-cat-fixed">
+              <LockIcon size={18} />
+              תשלום הלוואה · נספר לפי החלוקה
+            </p>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                icon={<KeptOutIcon />}
+                busy={pnlLine.isPending}
+                aria-describedby={pnlHintId}
+                onClick={() => {
+                  if (pnlLine.isPending || (sample == null && blocked())) return;
+                  pnlLine.mutate({
+                    id: txn.id,
+                    party,
+                    override: pnl.next,
+                    previous: pnl.override,
+                    out: !pnl.out,
+                    undo: false,
+                  });
+                }}
+              >
+                {pnlLine.isPending ? "מעדכן…" : pnl.out ? "החזרה לרווח והפסד" : KEPT_OUT}
+              </Button>
+              <p id={pnlHintId} className="t-hint ui-cat-pnl-hint">
+                {linePnlHint(pnl, txn.category_name ?? "")}
+                {pnlSplit ? " כל הפרויקטים בשורה." : null}
+              </p>
+            </>
+          )}
+          {txn.source === "manual" ? (
+            <Button variant="danger" icon={<TrashIcon />} disabled={pnlLine.isPending} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
+          ) : (
+            <p className="t-hint">תנועה מ־SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
+          )}
+        </div>
       </Sheet>
       <ConfirmSheet
         open={confirm}
@@ -3550,6 +3714,8 @@ type SettingsSample = {
   jev?: JevCardState;
   /** Preview only. Live settings read the company's lines. */
   loanCurrency?: LoanCurrency;
+  /** FLOW-119. Projects for the loan's project picker. */
+  loanProjects?: LoanProjectChoice[];
 };
 
 type SumitKind = "loading" | "error" | "reconnect" | "connected" | "disconnected";
@@ -4401,6 +4567,15 @@ export function SettingsScreen({
               companyId={sample != null || preview !== "off" ? null : (dashboard.data?.company_id ?? null)}
               companyCurrency={sample != null || preview !== "off" ? (sample?.loanCurrency ?? "ILS") : undefined}
               blocked={blocked}
+              projects={sample != null || preview !== "off"
+                ? { rows: sample?.loanProjects ?? [] }
+                : {
+                  rows: (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status })),
+                  loading: dashboard.isLoading,
+                  error: dashboard.isError,
+                  retrying: dashboard.isFetching,
+                  onRetry: () => { void dashboard.refetch(); },
+                }}
             />
           )}
         </>
@@ -4443,6 +4618,7 @@ export function SettingsScreen({
 }
 
 const KEPT_OUT = "מחוץ לרווח והפסד";
+const KEPT_OUT_SHORT = "מחוץ לרווח";
 
 /** The three loan categories the server keeps fixed, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {

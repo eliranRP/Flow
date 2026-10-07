@@ -42,7 +42,8 @@ export function ScreenState({
     if (preview === "error" || preview === "error-server") {
       const params = new URLSearchParams(location.search);
       params.set("preview", "1");
-      void navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+      // Keep the entry's state: a card opened from a list keeps its prev and next.
+      void navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true, state: location.state as unknown });
       return;
     }
     onRetry();

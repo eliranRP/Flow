@@ -168,6 +168,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
   ], "read and write tools");
@@ -986,6 +988,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
     "get_sync_status",

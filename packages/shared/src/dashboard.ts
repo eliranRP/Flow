@@ -227,6 +227,13 @@ export const projectDetailSchema = z
         category: z.string().nullable(),
       }),
     ),
+    /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
+    loans: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      currency: z.string(),
+      balance_minor: agorotSchema,
+    })).optional(),
   })
   .nullable();
 
@@ -264,6 +271,12 @@ export const transactionDetailSchema = z
     category_name: z.string().nullable(),
     supplier_name: z.string().nullable(),
     customer_name: z.string().nullable(),
+    /** FLOW-108: false keeps the line out of the P&L, true counts it, null follows the category. */
+    in_pnl_override: z.boolean().nullable().optional(),
+    category_excluded_from_pnl: z.boolean().optional(),
+    in_pnl: z.boolean().optional(),
+    /** A loan line: its parts decide what counts, so the override is refused. */
+    pnl_fixed: z.boolean().optional(),
   })
   .nullable();
 

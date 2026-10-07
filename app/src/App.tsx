@@ -12,6 +12,7 @@ import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { LedgerFocusRefresh } from "./books-focus";
 import { ListHoldRoot } from "./list-hold";
+import { TxnAnnouncer } from "./txn-nav";
 import { BooksProvider } from "./use-books";
 import { useCompanyRole, useHoldWrites, useIsViewer } from "./use-is-viewer";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
@@ -122,6 +123,7 @@ function AppRoutes() {
               <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
               <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
               <Route path="/e2e/filed" element={<DevFiled />} />
+              <Route path="/e2e/txn-list" element={<DevTxnList />} />
               <Route path="/e2e/home" element={<DevHome />} />
               <Route path="/e2e/projects" element={<DevProjects />} />
               <Route path="/e2e/settings" element={<DevSettings />} />
@@ -518,6 +520,10 @@ function DevSettings() {
                 : assistant === "nocompany"
                   ? { state: "no-company" }
                   : { state: "empty" },
+        loanProjects: [
+          { id: "p1", name: "שיפוץ הרצל 12", status: "active" },
+          { id: "p2", name: "פרגולה בית כהן", status: "active" },
+        ],
       }}
       sampleSecret={devAssistantSecret}
     />
@@ -553,14 +559,69 @@ function DevUnpaid() {
 }
 
 function TransactionRoute() {
-  if (import.meta.env.DEV) return <DevTransactionGate />;
-  return <TransactionScreen />;
+  const { transactionId = "" } = useParams();
+  // A new card per id: prev and next keep this route mounted, and the card holds per-row state.
+  return (
+    <TxnAnnouncer>
+      {import.meta.env.DEV ? <DevTransactionGate key={transactionId} /> : <TransactionScreen key={transactionId} />}
+    </TxnAnnouncer>
+  );
 }
 
 function DevTransactionGate() {
-  const { transactionId } = useParams();
+  const { transactionId = "" } = useParams();
   if (transactionId === "t-filed") return <DevTransaction />;
+  const step = /^t-step-(\d+)$/.exec(transactionId);
+  if (step) return <DevStepTransaction n={Number(step[1])} />;
   return <TransactionScreen />;
+}
+
+/** A tall list whose rows open sample cards, for the prev and next e2e. */
+function DevTxnList() {
+  return (
+    <FiledTodayScreen
+      backTo="/e2e/project"
+      sample={Array.from({ length: 24 }, (_, i) => ({
+        id: `t-step-${String(i + 1)}`,
+        description: `תנועה ${String(i + 1)}`,
+        doc_date: "2026-09-29",
+        amount_net: BigInt(-(i + 1) * 10_000),
+        direction: "expense" as const,
+        supplier_name: `ספק ${String(i + 1)}`,
+        project_name: "שיפוץ הרצל 12",
+        category_name: "חומרים",
+      }))}
+    />
+  );
+}
+
+function DevStepTransaction({ n }: { n: number }) {
+  return (
+    <TransactionScreen
+      sample={{
+        id: `t-step-${String(n)}`,
+        description: `תנועה ${String(n)}`,
+        direction: "expense",
+        doc_date: "2026-09-29",
+        amount_gross: BigInt(-n * 11_800),
+        amount_net: BigInt(-n * 10_000),
+        vat_amount: BigInt(-n * 1_800),
+        vat_status: "assumed",
+        source: "manual",
+        project_id: "p1",
+        project_name: "שיפוץ הרצל 12",
+        category_id: "c1",
+        category_name: "חומרים",
+        supplier_name: `ספק ${String(n)}`,
+        customer_name: null,
+        paid: true,
+        open_gross_agorot: null,
+        allocations: [],
+      }}
+      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }]}
+      sampleCategories={[{ id: "c1", name: "חומרים" }]}
+    />
+  );
 }
 
 function DevProjectDetail() {

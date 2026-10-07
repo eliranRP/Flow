@@ -83,6 +83,8 @@ export type LoanInsert = {
   payment_minor: number;
   escrow_minor: number;
   currency: LoanCurrency;
+  /** FLOW-119. Optional project (decision 0105). */
+  project_id?: string | null;
 };
 
 export type LoanPreview =

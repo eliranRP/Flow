@@ -37,8 +37,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | in-progress (#98) |
-| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (#100) |
+| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | in-progress (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
@@ -46,7 +46,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
-| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
+| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
@@ -54,6 +54,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
+| 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
+| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -136,9 +138,17 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** #67 (merged)
+- **Type:** PLAN FIRST · **Status:** in-progress (#105) · **Depends on:** #67 (merged)
+- **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/QPLXZjbEdoy8x2H49EEuYS) (עוד sheet button, ⊘ pill, save on tap with ביטול; loan lines locked), under the owner's standing rule for UI tasks. Decision [0112](../decisions/0112-line-out-of-pnl.md).
 - **What:** Let the user move one expense or income line out of the P&L. It then shows in a visible "out expenses" / "out income" group (not hidden), and can move back anytime. A per-transaction override wins over the category default. MCP: a single tool and a batch tool to take out or restore many lines at once, with idempotency, the write bucket, `undo` and `undo_batch`; plus an API. Icon-based, minimal wording.
 - **Acceptance:** plan and mockup approved by the owner, then: pgTAP for override precedence on both bases, totals moved to the excluded side, batch partial success and batch undo.
+
+<a id="flow-124"></a>
+### FLOW-124 · One line out of the P&L follow-ups (#105)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-108 (#105)
+- [ ] Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [ ] A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
+- [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals
@@ -173,7 +183,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-119"></a>
 ### FLOW-119 · Project picker in the loan sheet
-- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-105
+- **Type:** SMALL UI · **Status:** in-progress (#104; design reviewer's option A, built under the owner's standing UI rule; plan in the PR body) · **Depends on:** FLOW-105
 - **What:** Pick or clear the loan's project in the loan sheet, and show the loan under its project.
 - **Acceptance:** mockup approved; e2e sets and clears the project; design review.
 
@@ -184,6 +194,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead.
 - [ ] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104.
 - [ ] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo.
+- [ ] (#104 design review) Show project codes in the loan project picker once the dashboard projects carry `code`, with the "חיפוש פרויקט או קוד" placeholder.
+- [ ] (#104 design review) Keep the loan sheet's height when it swaps between the form and the project picker; wrap the loan-project stories in a sheet-like decorator.
+- [ ] (#104 design review) CONTROLS.md: note the static loan rows on the project screen.
 - [ ] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column.
 - [ ] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company.
 
@@ -340,9 +353,17 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (#100) · **Depends on:** —
+- **Approval:** 2026-10-07, the design reviewer's option A (˄ ˅ in the card's top bar, ArrowLeft/ArrowRight, replace on move), built under the owner's standing rule for UI tasks. Swipe moved to [FLOW-314](#flow-314).
 - **What:** Swipe (RTL-aware) or tap small arrows in the header to move to the previous or next transaction, in the same list and order the card was opened from (project list, review queue, recent, filtered). Keep the list position on return; prefetch neighbours.
 - **Acceptance:** mockup approved; Back returns to the same scroll spot; keyboard and screen-reader access; design review.
+
+<a id="flow-314"></a>
+### FLOW-314 · Swipe between transactions on the card
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-303 (#100)
+- **What:** Follow-up from FLOW-303. A sideways swipe on the card does what ˄ ˅ do: the finger moving right opens the next card (it enters from the left, like a screen push), left opens the previous one. Touch only; ignore a start within 24px of a screen edge, inside a sheet or a field, or while a sheet is open; decide after 10px and hand mostly vertical moves to the page scroll; the card follows the finger and commits past 30% of the width or a flick; no movement at a list end; reduced motion swaps on release.
+- **Acceptance:** a touch probe on a phone, not only the clip check; CONTROLS row; design review.
+- Also from #100's design session: add the project's waiting list (card rows only) and let ˅ at the last loaded category row load the next page. From #100's code review: the Home breakdown lines (FLOW-301) open a card with no list; pass the list there too.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail

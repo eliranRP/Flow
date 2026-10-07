@@ -364,9 +364,9 @@ test("unpaid explains the mark and then hides the row", async ({ page }) => {
   await expect(page.getByText("לקוח לדוגמה")).toHaveCount(0);
 });
 
-test("a transaction expands, changes, and confirms delete", async ({ page }) => {
+test("a transaction shows its VAT, changes, and confirms delete", async ({ page }) => {
   await page.goto("/e2e/txn?preview=1");
-  await page.getByRole("button", { name: "חשבונית ותשלום" }).click();
+  await expect(page.getByRole("button", { name: "חשבונית ותשלום" })).toHaveCount(0);
   await expect(page.getByText("מע״מ משוער 18%")).toBeVisible();
   await page.getByRole("button", { name: "עוד" }).click();
   await page.getByRole("button", { name: "מחיקה" }).click();

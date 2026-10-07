@@ -1495,6 +1495,109 @@ export const Transaction: Story = {
   ),
 };
 
+export const TransactionOutOfPnl: Story = {
+  name: "Out of the P&L",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "החזר פיקדון",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -120_000n,
+          amount_net: -120_000n,
+          vat_amount: 0n,
+          vat_status: "unknown",
+          doc_kind: "expense",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "ספק לדוגמה עם שם ארוך במיוחד לבדיקה",
+          customer_name: null,
+          review_status: "open",
+          paid: false,
+          open_gross_agorot: null,
+          in_pnl_override: false,
+          category_excluded_from_pnl: false,
+          in_pnl: false,
+          pnl_fixed: false,
+        }}
+        sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-303: opened from a list, so ˄ ˅ sit before ⋯. The middle row has both. */
+export const TransactionInList: Story = {
+  name: "In a list",
+  render: () => (
+    <StoryRoute entry="/transactions/t1" state={{ txnList: { ids: ["t0", "t1", "t2"], from: "/projects/holon" } }}>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "חשבונית חומרים",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -1_003_000n,
+          amount_net: -850_000n,
+          vat_amount: -153_000n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "חומרי בניין השרון בע״מ",
+          customer_name: null,
+          review_status: "approved",
+          paid: true,
+          open_gross_agorot: null,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+/** The last row: ˅ stays in place, marked unavailable. */
+export const TransactionListEnd: Story = {
+  name: "Last in a list",
+  render: () => (
+    <StoryRoute entry="/transactions/t2" state={{ txnList: { ids: ["t0", "t1", "t2"], from: "/projects/holon" } }}>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t2",
+          description: "הובלה",
+          direction: "income",
+          doc_date: "2026-09-22",
+          amount_gross: 12_345_678n,
+          amount_net: 10_462_439n,
+          vat_amount: 1_883_239n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "הכנסות מפרויקט",
+          supplier_name: null,
+          customer_name: "לקוח לדוגמה עם שם ארוך מאוד לבדיקה",
+          review_status: "open",
+          paid: false,
+          open_gross_agorot: 12_345_678n,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const TransactionShared: Story = {
   name: "Shared",
   render: () => (
