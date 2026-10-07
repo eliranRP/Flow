@@ -96,7 +96,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-107"></a>
 ### FLOW-107 · Loan split breakdown on the transaction
-- **Type:** SMALL UI · **Status:** blocked on FLOW-101 · **Depends on:** FLOW-101
+- **Type:** SMALL UI · **Status:** claimed (UI task 2 thread, 2026-10-07, claude/project-thread-onkan2); mockup goes to the owner before any build · **Depends on:** FLOW-101 (merged, #70)
 - **What:** When a bank line is a split loan payment, show its parts (principal, interest, escrow) on the transaction row and in the detail, so the expense makes sense. Icon-based, minimal wording, expenses with a minus. MCP: `get_expense` returns the split parts.
 - **Acceptance:** quick mockup approved; parts add up to the line amount on screen; MCP test; design review.
 
