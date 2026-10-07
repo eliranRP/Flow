@@ -1,10 +1,13 @@
 name: ci
 
+# Pull requests have no GitHub CI: scripts/local-ci.sh runs the same suite from the pre-push hook.
+# main runs the suite and the deploy in batches (see the plan job), and anyone can run it by hand
+# (Actions, ci, Run workflow). A manual run on another branch tests it without deploying.
 on:
-  pull_request:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,7 +17,30 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # Decides whether this run tests and deploys: on the 5th merge since the last good deploy, or on a
+  # manual run. Other pushes to main stop here.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLOW_DEPLOY_BATCH: "5"
+        run: bash scripts/ci-deploy-plan.sh
+
   lint:
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -33,6 +59,8 @@ jobs:
   # on separate runners, so a PR waits for the slowest part instead of the sum of all parts.
   check-core:
     name: check (core)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -87,9 +115,6 @@ jobs:
         run: |
           node scripts/stamp-build.mjs "$GITHUB_SHA"
           pnpm check:bundle
-          rm -rf hosted-dist
-          mkdir -p hosted-dist
-          cp -a app/dist/. hosted-dist/
       - name: Build the reviewers-only dist and check it
         env:
           VITE_REVIEWER_BUILD: "1"
@@ -100,24 +125,12 @@ jobs:
           pnpm build
           pnpm check:reviewer-bundle
           test ! -f app/dist/build.txt
-      - name: Upload hosted dist
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: hosted-dist
-          path: hosted-dist
-          if-no-files-found: error
-      - name: Upload reviewer dist
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: reviewer-dist
-          path: app/dist
-          if-no-files-found: error
 
-  # Storybook tests in the browser, the layout and clip specs, and the storybook-static artifact.
+  # Storybook tests in the browser, the layout and clip specs.
   check-storybook:
     name: check (storybook)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -158,17 +171,12 @@ jobs:
       - run: pnpm build-storybook
       - name: Storybook smoke without the every-story test
         run: pnpm test:storybook:smoke --grep-invert "every static story"
-      - name: Upload storybook-static
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: storybook-static
-          path: app/storybook-static
-          if-no-files-found: error
 
   # The every-story smoke opens each story once. Its 8 tests are split across two runners.
   check-stories:
     name: check (stories ${{ matrix.shard }}/2)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -215,8 +223,8 @@ jobs:
 
   # always(), not !cancelled(): a skipped required check counts as passing, so the gate must run and fail.
   check:
-    needs: [check-core, check-storybook, check-stories]
-    if: always()
+    needs: [plan, check-core, check-storybook, check-stories]
+    if: always() && needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -237,6 +245,8 @@ jobs:
   # Shard 1 also runs the database checks.
   e2e-shard:
     name: e2e (${{ matrix.shard }}/2)
+    needs: [plan]
+    if: needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -328,8 +338,8 @@ jobs:
 
   # always(), not !cancelled(): see the check gate.
   e2e:
-    needs: [e2e-shard]
-    if: always()
+    needs: [plan, e2e-shard]
+    if: always() && needs.plan.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -341,8 +351,8 @@ jobs:
           test "$SHARDS" = success
 
   deploy:
-    needs: [lint, check, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [plan, lint, check, e2e]
+    if: needs.plan.outputs.run == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     concurrency:
