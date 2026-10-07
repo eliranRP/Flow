@@ -134,7 +134,7 @@ Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and
   assertEquals(cashback.length, 7);
   assertEquals(refunds.length, 1);
   assertEquals(loans.every((line) => line.direction === "expense" && line.currency === "USD"), true);
-  assertEquals(cashback.every((line) => line.direction === "income" && line.doc_kind === "receipt"), true);
+  assertEquals(cashback.every((line) => line.direction === "income" && line.doc_kind === "invoice_receipt"), true);
   assertEquals(refunds[0].direction, "expense");
   assertEquals(refunds[0].amount_negated, false);
   assertEquals(refunds[0].vat, { amount: 0, status: "source" });
@@ -270,6 +270,34 @@ Deno.test("treasury yield and dividends import as other income", () => {
       assertEquals(normalized, { ok: false, skip: "treasury_activity" });
     }
   }
+});
+
+Deno.test("a Mercury deposit and treasury interest import as invoice_receipt (decision 0097)", () => {
+  for (const kind of ["checkDeposit", "incomingDomesticWire"] as const) {
+    const base = postedLines.find((row) => row.kind === kind && row.status === "sent" && row.amount > 0);
+    assertEquals(Boolean(base), true, kind);
+    if (!base) return;
+    const deposit = normalizeMercury(base, ctx());
+    assertEquals(deposit.ok, true, kind);
+    if (!deposit.ok) return;
+    assertEquals(deposit.line.direction, "income");
+    assertEquals(deposit.line.doc_kind, "invoice_receipt");
+  }
+
+  const interestRow = treasuryTxns.transactions.find((row) => row.type === "interestPosted");
+  assertEquals(Boolean(interestRow), true);
+  if (!interestRow) return;
+  const interest = normalizeMercury(interestRow, ctx());
+  assertEquals(interest.ok, true);
+  if (!interest.ok) return;
+  assertEquals(interest.line.direction, "income");
+  assertEquals(interest.line.doc_kind, "invoice_receipt");
+
+  const outflow = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(outflow), true);
+  if (!outflow) return;
+  const expense = normalizeMercury(outflow, ctx());
+  assertEquals(expense.ok && expense.line.doc_kind, "expense");
 });
 
 Deno.test("treasury fees, credits, cancels, and reinvestment follow the income rules", () => {
