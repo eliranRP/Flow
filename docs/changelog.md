@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Backlog and agent guide. New `docs/backlog/README.md` (the build cycle, rules, how an agent claims a task through a draft PR, and the team a new coordinator sets up, with copy-paste role charters) and `docs/backlog/TASKS.md` (every open task with a stable `FLOW-` id, type, status, dependencies, and acceptance, plus a priority queue). Linked from the root README. No decision.
+
 MCP assign_expense_split. `flow-mcp` adds the write tool `assign_expense_split` (`transaction_id`, optional `category_id`, `shares[]` of whole percents summing to 100, `idempotency_key`). It wraps `public.save_split` and records undo like `assign_expense`. Migration `20261007130000_mcp_assign_expense_split.sql`. Batch split in `assign_expenses` is a follow-up.
 
 Categories outside the P&L. Migration `20261007120000_category_pnl.sql` backfills English default names, adds `private.pnl_lines`, filters `company_pnl`, `get_home`, `get_project`, and `overhead_share`, returns excluded totals separately, exposes `set_category_excluded_from_pnl` and MCP `set_category_pnl`, and extends `list_categories`. MCP `get_project` passes through the new `excluded_categories_by_currency`. Decision [0099](decisions/0099-categories-outside-pnl.md).
