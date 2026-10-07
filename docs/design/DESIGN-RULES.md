@@ -375,6 +375,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Income empty: [es-07](../../design/states/es-07-categories-income-light.png).
 - Entry: Settings → קטגוריות.
 - Steps: expense and income segments. Rename, reorder, hide (23), merge (22a then 22b). Delete only when the category has no transactions. [0008](../decisions/0008-flat-categories-hide-or-merge.md).
+- Kept out of the P&L: a ⊘ mark in `--color-text-muted` right after the name (`role="img"`, label "מחוץ לרווח והפסד"). The name keeps `--color-text`, so the row does not read as hidden, and only the name truncates. A legend line under the list explains ⊘ when the segment has a kept-out row. The row sheet's third button toggles the flag on tap, with a hint line under it and a ביטול toast. The three loan categories show a locked line instead. [0106](../decisions/0106-kept-out-toggle.md).
 - Back: chevron to Settings.
 - Success: undo toast after hide or merge.
 
@@ -443,7 +444,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Mockups: [14-settings-light.png](../../design/screens/14-settings-light.png), [14-settings-dark.png](../../design/screens/14-settings-dark.png).
 - Entry: tab הגדרות.
 - Steps: the account row, חיבורים, תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
-- With a company, the account area is two rows: the business name, which opens the one-field "שם העסק" sheet for an owner (static for a viewer), and the static Google email. [0106](../decisions/0106-rename-company-row.md).
+- With a company, the account area is two rows: the business name, which opens the one-field "שם העסק" sheet for an owner (static for a viewer), and the static Google email. [0107](../decisions/0107-rename-company-row.md).
 - Back: none. This is a tab root.
 - Logout clears the session. There is no second confirmation in the approved set.
 
