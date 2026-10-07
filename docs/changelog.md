@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Faster CI. The `check` and `e2e` jobs are now gates over jobs that run side by side: `check (core)`, two storybook shards, and two e2e shards. Local Supabase starts in the background while node and Playwright install. The static-story smoke is 8 tests instead of 1. Same tests, same required check names. Runbook: [ci-cd](runbooks/ci-cd.md).
+
 Backlog and agent guide. New `docs/backlog/README.md` (the build cycle, rules, how an agent claims a task through a draft PR, and the team a new coordinator sets up, with copy-paste role charters) and `docs/backlog/TASKS.md` (every open task with a stable `FLOW-` id, type, status, dependencies, and acceptance, plus a priority queue). Linked from the root README. No decision.
 
 MCP assign_expense_split. `flow-mcp` adds the write tool `assign_expense_split` (`transaction_id`, optional `category_id`, `shares[]` of whole percents summing to 100, `idempotency_key`). It wraps `public.save_split` and records undo like `assign_expense`. Migration `20261007130000_mcp_assign_expense_split.sql`. Batch split in `assign_expenses` is a follow-up.
