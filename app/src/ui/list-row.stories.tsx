@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { BigNumber } from "./big-number";
+import { BankIcon } from "./icons";
 import { List, ListRow } from "./list-row";
 import { largeAgorot, longHebrew, padded } from "./story-support";
 
@@ -151,4 +152,53 @@ export const MercuryDark: Story = {
   args: { variant: "transaction", title: "לקוח לדוגמה" },
   globals: { theme: "dark" },
   render: () => <MercuryRows />,
+};
+
+/** FLOW-501: a loan on the Loans page. The meta slot holds the balance with small cents; a waiting loan warns. */
+function LoanRows() {
+  return (
+    <List>
+      <ListRow
+        variant="button"
+        title="משכנתא אלון"
+        icon={<BankIcon />}
+        hint="וילה אלון"
+        meta={<bdi className="ui-num ui-loan-amount" dir="ltr">$200,000<span className="ui-num-cents">.00</span></bdi>}
+        chevron
+        onClick={() => undefined}
+      />
+      <ListRow
+        variant="button"
+        title={longHebrew}
+        icon={<BankIcon />}
+        tone="warning"
+        hint="ממתין לבדיקה · פרויקט גפן"
+        wrapHint
+        meta={<bdi className="ui-num ui-loan-amount" dir="ltr">₪50,000<span className="ui-num-cents">.00</span></bdi>}
+        chevron
+        onClick={() => undefined}
+      />
+      <ListRow
+        variant="static"
+        title="הלוואת ציוד"
+        icon={<BankIcon />}
+        meta={<bdi className="ui-num ui-loan-amount" dir="ltr">₪1,250<span className="ui-num-cents">.50</span></bdi>}
+      />
+    </List>
+  );
+}
+
+export const LoanBalance: Story = {
+  args: { variant: "button", title: "משכנתא אלון" },
+  render: () => <LoanRows />,
+};
+export const LoanBalanceDark: Story = {
+  args: { variant: "button", title: "משכנתא אלון" },
+  globals: { theme: "dark" },
+  render: () => <LoanRows />,
+};
+export const LoanBalance320: Story = {
+  args: { variant: "button", title: "משכנתא אלון" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <LoanRows />,
 };

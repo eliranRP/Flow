@@ -6,7 +6,17 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { CategoriesScreen, SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
+import { CategoriesScreen, ConnectionsScreen, SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
+
+/** FLOW-501 moved the connector rows to their own page. These account tests read both. */
+function SettingsAndConnections(props: Parameters<typeof ConnectionsScreen>[0]) {
+  return (
+    <>
+      <SettingsScreen sample={props?.sample} />
+      <ConnectionsScreen {...props} />
+    </>
+  );
+}
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -490,7 +500,9 @@ describe("settings account", () => {
     for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
       expect(screen.queryByRole("switch", { name })).not.toBeInTheDocument();
     }
-    expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "חיבורים" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "עוד" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עוזר" })).not.toBeInTheDocument();
@@ -510,7 +522,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
           <MemoryRouter>
-            <SettingsScreen
+            <SettingsAndConnections
               sample={{
                 name: null,
                 connected: false,
@@ -559,7 +571,7 @@ describe("settings account", () => {
     expect(within(sumitSheet).queryByLabelText("מפתח API")).not.toBeInTheDocument();
     expect(within(sumitSheet).queryByRole("button", { name: "חיבור" })).not.toBeInTheDocument();
     expect(sumitSheet).toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
-    expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%3Fsheet%3Dsumit");
+    expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dsumit");
     expect(calls.some((name) => name.includes("sumit-connect"))).toBe(false);
     unmount();
 
@@ -568,7 +580,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
           <MemoryRouter initialEntries={["/settings?preview=empty"]}>
-            <SettingsScreen
+            <SettingsAndConnections
               sample={{
                 name: null,
                 connected: false,
@@ -635,7 +647,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings"]}>
               <AuthProvider>
-                <SettingsScreen />
+                <SettingsAndConnections />
               </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
@@ -673,7 +685,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -715,7 +727,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter>
               <Layer />
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -748,7 +760,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings?preview=1"]}>
               <AuthProvider>
-                <SettingsScreen />
+                <SettingsAndConnections />
               </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
@@ -818,7 +830,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings"]}>
               <AuthProvider>
-                <SettingsScreen />
+                <SettingsAndConnections />
               </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
@@ -986,7 +998,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: false,
@@ -1016,7 +1028,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: false,
@@ -1044,7 +1056,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -1091,7 +1103,7 @@ describe("settings account", () => {
           <ToastProvider>
             <BooksProvider>
               <MemoryRouter>
-                <SettingsScreen
+                <ConnectionsScreen
                   sample={{
                     name: "אלפא",
                     connected: true,
@@ -1121,7 +1133,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,

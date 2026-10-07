@@ -594,15 +594,41 @@ describe("LoanSetupForm", () => {
 });
 
 describe("LoanSettingsSection", () => {
-  it("hides a new loan from a viewer", () => {
+  it("hides a new loan from a viewer and keeps the balances readable (FLOW-501, U10)", async () => {
+    db.loans = [{ id: "l1", name: "משכנתא אלון", currency: "ILS", project_id: null }];
     renderSection(
       <ViewerPreview>
         <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
       </ViewerPreview>,
     );
-    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+    expect(await screen.findByText("משכנתא אלון")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /משכנתא אלון/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
+  });
+
+  it("shows the empty state with one primary action, and none for a viewer", async () => {
+    const owner = renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    expect(await screen.findByText("אין הלוואות עדיין")).toBeInTheDocument();
+    expect(screen.getByText("הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "הלוואה חדשה" })).toHaveLength(1);
+    owner.unmount();
+    renderSection(
+      <ViewerPreview>
+        <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
+      </ViewerPreview>,
+    );
+    expect(await screen.findByText("כשיתווספו הלוואות הן יופיעו כאן.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
+  });
+
+  it("returns focus to the empty state's button when the new-loan sheet closes", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    await screen.findByText("אין הלוואות עדיין");
+    const add = screen.getByRole("button", { name: "הלוואה חדשה" });
+    fireEvent.click(add);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "הלוואה" })).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(add).toHaveFocus(); }, { timeout: 2500 });
   });
 
   it("opens the sheet on the company currency", () => {
@@ -615,10 +641,14 @@ describe("LoanSettingsSection", () => {
   it("shows a retry when the balances read fails", async () => {
     db.balanceError = { message: "offline" };
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
-    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: יתרות הלוואות" });
+    expect(await screen.findByText("לא הצלחנו לטעון את ההלוואות")).toBeInTheDocument();
+    // An error is not an empty state with a live primary action (CHECKLIST).
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
+    const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
     db.balanceError = null;
     fireEvent.click(retry);
-    await waitFor(() => { expect(screen.queryByRole("button", { name: "ניסיון חוזר: יתרות הלוואות" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument(); });
+    expect(screen.getByText("אין הלוואות עדיין")).toBeInTheDocument();
   });
 
   it("inserts the allowed columns, in minor units, with the typed rate", async () => {

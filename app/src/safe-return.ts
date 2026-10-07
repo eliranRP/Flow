@@ -1,10 +1,15 @@
 /**
  * Where onboarding may send the owner. Anything else, including a normalised
- * `//host`, goes home. `safeAppPath` accepts two paths; `safeSignInReturn` a
- * short list of screens (FLOW-308).
+ * `//host`, goes home. `safeAppPath` accepts a few Settings paths;
+ * `safeSignInReturn` a short list of screens (FLOW-308).
  */
 const SETTINGS = "/settings";
+/** The pre-FLOW-501 link. Settings redirects it to {@link CONNECTIONS_SUMIT}. */
 const SETTINGS_SUMIT = "/settings?sheet=sumit";
+const CONNECTIONS = "/settings/connections";
+const CONNECTIONS_SUMIT = "/settings/connections?sheet=sumit";
+const LOANS = "/settings/loans";
+const APP_PATHS: ReadonlySet<string> = new Set([SETTINGS, SETTINGS_SUMIT, CONNECTIONS, CONNECTIONS_SUMIT]);
 
 function hasControlChar(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
@@ -33,7 +38,7 @@ function normalisedPath(value: string): string | null {
   return path;
 }
 
-/** `/settings` or `/settings?sheet=sumit`. Every other value is dropped. */
+/** Settings, Connections, or either with the SUMIT sheet open. Every other value is dropped. */
 export function safeAppPath(value: string | null | undefined): string | null {
   if (value == null || value === "") return null;
   if (value !== value.trim() || hasControlChar(value)) return null;
@@ -41,7 +46,7 @@ export function safeAppPath(value: string | null | undefined): string | null {
   if (value.includes("\\") || value.includes("://") || value.includes("@")) return null;
   const path = normalisedPath(value);
   if (path == null || path.startsWith("//") || path.includes("\\")) return null;
-  if (path !== SETTINGS && path !== SETTINGS_SUMIT) return null;
+  if (!APP_PATHS.has(path)) return null;
   return path;
 }
 
@@ -59,6 +64,9 @@ const SIGN_IN_RETURNS: ReadonlyMap<string, string> = new Map([
   [SETTINGS, "להגדרות"],
   ["/settings/categories", "לקטגוריות"],
   [SETTINGS_SUMIT, "להגדרות"],
+  [CONNECTIONS, "לחיבורים"],
+  [CONNECTIONS_SUMIT, "לחיבורים"],
+  [LOANS, "להלוואות"],
 ]);
 
 /** A path from {@link SIGN_IN_RETURNS}, or null. Home is not a return: it is the default. */

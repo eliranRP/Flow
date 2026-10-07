@@ -42,7 +42,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | in-progress (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
@@ -537,9 +537,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-501"></a>
 ### FLOW-501 · Tabs reorg: connectors and loans pages
-- **Type:** PLAN FIRST · **Status:** on-hold (owner's go) · **Depends on:** —
-- **What:** Dedicated pages for connectors (SUMIT, Mercury, Jev, עוזר AI) and for loans, so Settings keeps only the account, display and "more" rows. A plan exists with two layout options for the owner.
-- **Acceptance:** owner picks the option; mockup approved.
+- **Type:** PLAN FIRST · **Status:** in-progress (#111) · **Depends on:** —
+- **What:** Dedicated pages for connectors (SUMIT, Mercury, Jev, עוזר AI) and for loans, so Settings keeps only the account, display and "more" rows. The owner approved option A on 2026-10-07: two rows in Settings (חיבורים, הלוואות) open `/settings/connections` and `/settings/loans`; the tab bar and Home stay as they are; viewers can read loans ([0116](../decisions/0116-settings-connections-and-loans-pages.md)).
+- **Acceptance:** owner picks the option; mockup approved; shared `ConnectorRow`, `PlugIcon`, `LoanIcon` and stories; old `/settings?sheet=` links redirect.
 
 <a id="flow-502"></a>
 ### FLOW-502 · Web push notifications

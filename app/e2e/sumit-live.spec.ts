@@ -271,7 +271,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
 
   const operationsBefore = operationsUsed(await sumit("/website/companies/listquotas/", {}));
 
-  await page.goto("/settings");
+  await page.goto("/settings/connections");
   await page.getByRole("button", { name: "SUMIT" }).click();
   await page.getByLabel("מספר חברה").fill(String(sumitCompanyId));
   await page.getByLabel("מפתח API").fill(sumitKey);
@@ -311,7 +311,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
       });
       createdId = documentId(created);
       await page.waitForTimeout(61_000);
-      await page.goto("/settings");
+      await page.goto("/settings/connections");
       await sync(page);
       await expectProbeListed(page, token, probe);
       await expectSplitSurvived(token, splitId);
@@ -331,7 +331,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
         creditId = documentId(credited);
         await linkCredit(creditId, createdId);
         await page.waitForTimeout(61_000);
-        await page.goto("/settings");
+        await page.goto("/settings/connections");
         await sync(page);
         await showInvoicedAllTime(page);
         await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();
@@ -343,7 +343,7 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   }
 
   await page.waitForTimeout(61_000);
-  await page.goto("/settings");
+  await page.goto("/settings/connections");
   await sync(page);
   await showInvoicedAllTime(page);
   await expect(page.getByRole("heading", { name: /37,700/ })).toBeVisible();

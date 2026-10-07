@@ -451,10 +451,27 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 - Mockups: [14-settings-light.png](../../design/screens/14-settings-light.png), [14-settings-dark.png](../../design/screens/14-settings-dark.png).
 - Entry: tab הגדרות.
-- Steps: the account row, חיבורים, תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
+- Steps: the account row, then one group with no section head (חיבורים and הלוואות, each opening a page), תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0116](../decisions/0116-settings-connections-and-loans-pages.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
 - With a company, the account area is two rows: the business name, which opens the one-field "שם העסק" sheet for an owner (static for a viewer), and the static Google email. [0108](../decisions/0108-rename-company-row.md).
-- Back: none. This is a tab root.
+- The חיבורים hint is "N מתוך M פעילים", or "Mercury: צריך לחבר מחדש" in the warning tone when one connector needs reconnecting, or "2 חיבורים צריכים חיבור מחדש". The הלוואות hint is the count ("2 הלוואות", "הלוואה אחת", "אין הלוואות עדיין"), never a total. Loading is a skeleton hint; a failed read says "לא הצלחנו לטעון" with no retry. הלוואות is hidden with no company. Viewers see and open both rows.
+- Back: none. This is a tab root. Back from either page puts focus on the row that opened it.
 - Logout clears the session. There is no second confirmation in the approved set.
+
+### 14a Connections
+
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/connections`, template A with the tab bar (הגדרות stays current).
+- Header: kicker הגדרות, title חיבורים, Back to `/settings`.
+- Steps: "ספרים ובנק" holds SUMIT and Mercury; "עזרים" holds תיוג חכם (Jev) and עוזר AI. Each row is the shared `ConnectorRow`: the one-word status and its one sheet, unchanged from [0082](../decisions/0082-settings-redesign.md) §3–§8. `?sheet=sumit|mercury|assistant` opens that sheet once; the old `/settings?sheet=` links redirect here.
+- States: loading keeps the real titles over skeleton hints; an error is the row's inline ניסיון חוזר; the page is never empty. With no company the page stays open and SUMIT and Mercury offer פרטי העסק.
+- Viewer: static rows, no chevrons.
+
+### 14b Loans
+
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/loans`, template A with the tab bar. `/settings/loans/:id` is kept for FLOW-110's detail page.
+- Header: kicker הגדרות, title הלוואות, Back to `/settings`. No company goes back to Settings.
+- Steps: each loan's name, its hint (project, or ממתין לבדיקה in the warning tone), and the balance with small cents (".00" included); then the הלוואה חדשה row. A row tap opens the project sheet (FLOW-119).
+- States: two skeleton rows while loading; the error layout "לא הצלחנו לטעון את ההלוואות" with ניסיון חוזר and no new-loan row; the empty state "אין הלוואות עדיין" with one primary הלוואה חדשה.
+- Viewer: the balances as static rows, no chevrons and no הלוואה חדשה; the empty state says "כשיתווספו הלוואות הן יופיעו כאן." with no button.
 
 ### 15 Date picker
 
