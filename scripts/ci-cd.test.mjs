@@ -69,7 +69,7 @@ function installDepsStep(body) {
 function playwrightProblems(text) {
   /** @type {string[]} */
   const problems = [];
-  for (const name of ["check", "e2e"]) {
+  for (const name of ["check-storybook", "e2e-shard"]) {
     const body = jobIn(text, name);
     if (!body.includes(PLAYWRIGHT_KEY)) problems.push(`${name} cache key`);
     if (body.includes("env.ImageOS") || body.includes("env.ImageVersion")) problems.push(`${name} runner image`);
@@ -120,9 +120,15 @@ function checksumProblems(script) {
 test("CI keeps the hosted and reviewer builds apart and skips live writers", () => {
   assert.match(ci, /pull_request:\n {2}push:\n {4}branches:\n {6}- main\n/);
   assert.equal(ci.includes("head.repo.full_name"), false);
-  for (const name of ["lint", "check", "e2e"]) {
+  for (const name of ["lint", "check-core", "check-storybook", "e2e-shard"]) {
     assert.equal(job(name).includes("\n    if:"), false, name);
   }
+  // check and e2e are the required checks. They are gates that run always and pass only on success.
+  assert.match(job("check"), /needs: \[check-core, check-storybook\]\n {4}if: always\(\)\n/);
+  assert.match(job("check"), /test "\$CORE" = success\n/);
+  assert.match(job("check"), /test "\$STORYBOOK" = success\n/);
+  assert.match(job("e2e"), /needs: \[e2e-shard\]\n {4}if: always\(\)\n/);
+  assert.match(job("e2e"), /test "\$SHARDS" = success\n/);
   assert.match(ci, /pnpm check:bundle/);
   assert.match(ci, /pnpm check:reviewer-bundle/);
   assert.match(ci, /hosted-dist/);
@@ -130,18 +136,19 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   assert.match(ci, /storybook-static/);
   assert.match(ci, /supabase start/);
   assert.match(ci, /supabase test db/);
-  assert.match(ci, /pnpm test:e2e\n/);
+  assert.match(ci, /pnpm test:e2e --shard=\$\{\{ matrix\.shard \}\}\/2\n/);
+  assert.match(ci, /pnpm test:storybook:smoke --shard=\$\{\{ matrix\.shard \}\}\/2\n/);
   assert.match(
-    job("check"),
+    job("check-core"),
     /name: Mercury connector tests\n {8}env:\n {10}MERCURY_FIXTURE_DENYLIST: \$\{\{ secrets\.MERCURY_FIXTURE_DENYLIST \}\}/,
   );
-  assert.match(job("check"), /- name: Unit tests\n {8}run: pnpm test:unit\n/);
-  assert.equal((job("check").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);
+  assert.match(job("check-core"), /- name: Unit tests\n {8}run: pnpm test:unit\n/);
+  assert.equal((job("check-core").match(/secrets\.MERCURY_FIXTURE_DENYLIST/g) ?? []).length, 1);
   assert.match(ci, /node scripts\/check-migration-order.mjs/);
   assert.match(ci, /node scripts\/check-migration-transaction.mjs/);
-  assert.match(job("e2e"), /bash scripts\/cd-preflight.sh/);
-  assert.match(job("e2e"), /bash scripts\/cd-dry-run-pending.sh/);
-  assert.match(job("e2e"), /FLOW_CD_PREFLIGHT_LOCAL=1/);
+  assert.match(job("e2e-shard"), /bash scripts\/cd-preflight.sh/);
+  assert.match(job("e2e-shard"), /bash scripts\/cd-dry-run-pending.sh/);
+  assert.match(job("e2e-shard"), /FLOW_CD_PREFLIGHT_LOCAL=1/);
   assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
   assert.equal(ci.includes("test:e2e:live"), false);
   assert.equal(ci.includes("playwright.drain.config.ts"), false);
@@ -172,7 +179,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(deploy, /--env-file/);
   assert.match(deploy, /functions deploy flow-mcp --project-ref sxqpnetmtufkzowutduq/);
   assert.match(deploy, /functions deploy jev-tag --project-ref sxqpnetmtufkzowutduq/);
-  assert.match(job("check"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
+  assert.match(job("check-core"), /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.equal(deploy.includes("FLOW_JWT_LEGACY"), false);
   assert.equal(deploy.includes("FLOW_SECRET_KEY"), false);
   assert.equal(deploy.includes("service_role"), false);
@@ -226,7 +233,7 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   assert.match(push, /db push --db-url/);
   assert.ok(push.indexOf("db push --db-url") < push.indexOf("bash scripts/check-sumit-cron.sh"));
   assert.equal(preflight.includes("check-sumit-cron"), false);
-  const e2e = job("e2e");
+  const e2e = job("e2e-shard");
   assert.match(e2e, /bash scripts\/check-sumit-cron\.sh/);
   assert.ok(e2e.indexOf("supabase test db") < e2e.indexOf("check-sumit-cron.sh"));
   assert.ok(e2e.indexOf("postgresql-client") < e2e.indexOf("check-sumit-cron.sh"));
@@ -269,8 +276,11 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /group: ci-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}/);
   assert.match(ci, /cancel-in-progress: \$\{\{ github\.ref != 'refs\/heads\/main' \}\}/);
   assert.match(job("deploy"), /cancel-in-progress: false/);
-  for (const name of ["lint", "check", "e2e"]) {
+  for (const name of ["lint", "check-core", "check-storybook", "e2e-shard"]) {
     assert.match(job(name), /timeout-minutes: 20\n/, name);
+  }
+  for (const name of ["check", "e2e"]) {
+    assert.match(job(name), /timeout-minutes: 5\n/, name);
   }
   assert.match(job("deploy"), /timeout-minutes: 30\n/);
   const liveSmoke = job("deploy");
@@ -334,7 +344,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.match(ci, /denoland\/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2\.0\.5/);
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
-  for (const name of ["check", "e2e"]) {
+  for (const name of ["check-storybook", "e2e-shard"]) {
     const step = installDepsStep(job(name));
     assert.equal(step.includes(INSTALL_DEPS), true, `${name} install-deps`);
     assert.equal(/\bif:/.test(step), false, `${name} install-deps condition`);
@@ -413,11 +423,11 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
   assert.deepEqual(usesProblems(lintPnpm), [
     `- uses: pnpm/action-setup@${ACTION_SHA["actions/checkout"]} # v6.1.0`,
   ]);
-  assert.equal(jobIn(lintPnpm, "e2e").includes(`pnpm/action-setup@${ACTION_SHA["pnpm/action-setup"]}`), true);
+  assert.equal(jobIn(lintPnpm, "e2e-shard").includes(`pnpm/action-setup@${ACTION_SHA["pnpm/action-setup"]}`), true);
 
   const e2eCli = replaceInJob(
     ci,
-    "e2e",
+    "e2e-shard",
     `uses: supabase/setup-cli@${ACTION_SHA["supabase/setup-cli"]}`,
     `uses: supabase/setup-cli@${ACTION_SHA["actions/setup-node"]}`,
   );
@@ -428,7 +438,7 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
 
   const oneUpload = replaceInJob(
     ci,
-    "check",
+    "check-core",
     `uses: actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`,
     `uses: actions/upload-artifact@${ACTION_SHA["denoland/setup-deno"]}`,
   );
@@ -436,8 +446,8 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
     `uses: actions/upload-artifact@${ACTION_SHA["denoland/setup-deno"]} # v7.0.1`,
   ]);
   assert.equal(
-    jobIn(oneUpload, "check").split(`actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`).length - 1,
-    2,
+    jobIn(oneUpload, "check-core").split(`actions/upload-artifact@${ACTION_SHA["actions/upload-artifact"]}`).length - 1,
+    1,
   );
 
   const swapped = ci.replace(
@@ -448,15 +458,15 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
   assert.deepEqual(usesProblems(ci), []);
   assert.deepEqual(playwrightProblems(ci), []);
 
-  const e2eBody = jobIn(ci, "e2e");
+  const e2eBody = jobIn(ci, "e2e-shard");
   const conditional = e2eBody.replace(
     "      - name: Install Playwright system dependencies\n",
     "      - name: Install Playwright system dependencies\n        if: steps.playwright-cache.outputs.cache-hit != 'true'\n",
   );
   const at = ci.indexOf(e2eBody);
   const withIf = ci.slice(0, at) + conditional + ci.slice(at + e2eBody.length);
-  assert.deepEqual(playwrightProblems(withIf), ["e2e install-deps condition"]);
-  assert.equal(/\bif:/.test(installDepsStep(jobIn(withIf, "check"))), false);
+  assert.deepEqual(playwrightProblems(withIf), ["e2e-shard install-deps condition"]);
+  assert.equal(/\bif:/.test(installDepsStep(jobIn(withIf, "check-storybook"))), false);
 });
 
 test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {

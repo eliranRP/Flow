@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+Faster CI. The `check` and `e2e` jobs are now gates over jobs that run side by side: `check (core)`, two storybook shards, and two e2e shards. Local Supabase starts in the background while node and Playwright install. The static-story smoke is 8 tests instead of 1. Same tests, same required check names. Runbook: [ci-cd](runbooks/ci-cd.md).
+
 Income filed to a project (FLOW-109). Checked that income filed through MCP `assign_expense` or `assign_expenses` counts in that project's `get_project` and `list_projects` income and once in the company total, in ILS and in its own currency, and that `undo` removes it. The null `pnl_role` and missing allocation row on income are by design: the P&L reads income by `project_id`. No code change. New pgTAP `project_income.test.sql`, a flow-mcp test for the income path, and a note under `assign_expense` in `docs/mcp/TOOLS.md`.
 
 Loan payments count by split part. Migration `20261007140000_loan_split_pnl.sql` makes `private.pnl_lines` emit one row per interest, escrow, and principal part for a valid split (interest and escrow in the P&L, principal in the excluded totals), adds the `loan_split_fallback` column, returns `loan_split_fallback_count` per `by_currency` row in `company_pnl`, and points the project category helpers at the view. A flagged split, a VAT line, or parts that no longer sum to the line still count whole. Shared parts round half to even per project (`private.div_half_even`, also in `get_project`), and `count` stays a count of lines. New decision [0100](decisions/0100-loan-split-pnl.md). `docs/mcp/TOOLS.md` updated for `attach_loan_payment` and `get_totals`. pgTAP `loan_split_pnl.test.sql`.

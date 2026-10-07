@@ -87,7 +87,23 @@ function recordProblems(page: Page, problems: string[]) {
   };
 }
 
-test("every static story loads in the manager without console or network errors", async ({ page, context }) => {
+/**
+ * Every story is opened once. The stories are split round-robin into shards so Playwright workers
+ * can open them side by side; together the shards cover the whole index.
+ */
+const STORY_SHARDS = 8;
+
+test.describe("every static story", () => {
+  test.describe.configure({ mode: "parallel" });
+
+  for (let shard = 0; shard < STORY_SHARDS; shard += 1) {
+    test(`loads in the manager without console or network errors (shard ${String(shard + 1)}/${String(STORY_SHARDS)})`, async ({ page, context }) => {
+      await checkStoryShard(page, context, shard);
+    });
+  }
+});
+
+async function checkStoryShard(page: Page, context: BrowserContext, shard: number): Promise<void> {
   test.setTimeout(600_000);
   const port = serverPort(test.info().project.use.baseURL);
   const blocked: BlockedRequest[] = [];
@@ -95,8 +111,10 @@ test("every static story loads in the manager without console or network errors"
   await installStorybookGuard(context, port, () => story, blocked);
 
   const index = (await (await page.request.get("/index.json")).json()) as StoryIndex;
-  const stories = Object.values(index.entries).filter((entry) => entry.type === "story");
-  expect(stories.length).toBeGreaterThan(50);
+  const allStories = Object.values(index.entries).filter((entry) => entry.type === "story");
+  expect(allStories.length).toBeGreaterThan(50);
+  const stories = allStories.filter((_, i) => i % STORY_SHARDS === shard);
+  expect(stories.length).toBeGreaterThan(0);
 
   const failures: string[] = [];
   for (const entry of stories) {
@@ -122,7 +140,7 @@ test("every static story loads in the manager without console or network errors"
 
   for (const hit of blocked) failures.push(`${hit.title} / ${hit.name} [${hit.id}]: ${hit.kind} ${hit.url}`);
   expect(failures, failures.join("\n")).toEqual([]);
-});
+}
 
 test("the network guard aborts a fetch and a websocket outside storybook", async ({ page, context }) => {
   const port = serverPort(test.info().project.use.baseURL);
