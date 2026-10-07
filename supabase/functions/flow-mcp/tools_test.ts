@@ -2248,7 +2248,10 @@ Deno.test("list_review and pending search_expenses pass line_status and source t
     line_status: "pending",
     source: "mercury",
   };
-  const { rpc } = rpcOf((name) => name === "list_review" ? { status: 200, json: [row] } : { status: 500, json: null });
+  // FLOW-304: list_review also reads the lines' bank details; none here.
+  const { rpc } = rpcOf((name) =>
+    name === "list_review" ? { status: 200, json: [row] } : name === "get_line_meta" ? { status: 200, json: [] } : { status: 500, json: null }
+  );
   const listed = await callTool("list_review", {}, ["read"], rpc);
   const pending = await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
   assertEquals(listed.structuredContent.ok, true);
