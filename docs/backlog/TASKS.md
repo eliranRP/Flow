@@ -16,7 +16,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | --- | --- | --- | --- | --- |
 | 1 | [FLOW-101](#flow-101) | Loan payments count by their split parts (PR B) | SMALL CYCLE | in-progress (#70) |
 | 2 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE | ready |
-| 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | ready |
+| 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | in-progress (#74) |
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | ready |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
@@ -60,7 +60,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-109"></a>
 ### FLOW-109 · Income assigned to a project: confirm it counts in that project
-- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **Type:** BUG · **Status:** in-progress (#74) · **Depends on:** —
 - **What:** Income filed to a project through MCP `assign_expense` gets no allocation row and a null `pnl_role`, while expenses filed the same way get a 100% allocation with role `project`. Verify whether that income counts in the project's P&L; if not, fix `assign_expense` (and the batch path) for income.
 - **Acceptance:** pgTAP: income assigned to project A shows in A's `get_project` income and in the company total exactly once; undo removes it; MCP test for the income path.
 
