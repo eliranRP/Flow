@@ -370,12 +370,13 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(job("deploy").includes("FLOW_CD_PREFLIGHT_LOCAL"), false);
 });
 
-test("the homepage retries like build.txt, list reads wait for the session, and a retry-pass stays out of the summary", () => {
+test("the homepage and /settings retry like build.txt, list reads wait for the session, and a retry-pass stays out of the summary", () => {
   const smokeScript = readFileSync(new URL("./cd-smoke.sh", import.meta.url), "utf8");
   assert.match(smokeScript, /attempts=18/);
   assert.match(smokeScript, /SMOKE_RETRY_PAUSE:-10/);
-  assert.equal((smokeScript.match(/seq 1 "\$attempts"/g) ?? []).length, 2);
+  assert.equal((smokeScript.match(/seq 1 "\$attempts"/g) ?? []).length, 3);
   assert.match(smokeScript, /homepage is not \$\{sha\} yet/);
+  assert.match(smokeScript, /\/settings is not \$\{sha\} yet/);
   const homeLoop = smokeScript.slice(
     smokeScript.indexOf("home_matched=0"),
     smokeScript.indexOf('"$home_matched" != 1'),
