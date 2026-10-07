@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { afterSignInMessage, afterSignInPath, signInPathFor, takeSignInReturn } from "./safe-return";
 import { homeSummarySchema, type Dashboard } from "@flow/shared";
 import { thisMonth } from "./period";
 import { AuthProvider, useAuth } from "./auth";
@@ -187,9 +188,10 @@ function AppRoutes() {
 function RequireAuth() {
   const preview = usePreviewMode();
   const { status } = useAuth();
+  const location = useLocation();
   if (preview) return <Outlet />;
   if (status === "loading") return <HomeSkeleton />;
-  if (status !== "authed") return <Navigate to="/sign-in" replace />;
+  if (status !== "authed") return <Navigate to={signInPathFor(`${location.pathname}${location.search}`)} replace />;
   return <Outlet />;
 }
 
@@ -814,6 +816,8 @@ function AuthCallback() {
     }
     cancelled.current = false;
     const stopped = (): boolean => cancelled.current;
+    const stored = takeSignInReturn();
+    const back = stored ? `&return=${encodeURIComponent(stored)}` : "";
     client.auth
       .getSession()
       .then(async ({ data, error }) => {
@@ -822,24 +826,24 @@ function AuthCallback() {
           const params = new URLSearchParams(window.location.search);
           const code = params.get("error") ?? "server_error";
           console.error("Auth callback session error", code);
-          void navigate(`/sign-in?error=${encodeURIComponent(code)}`, { replace: true });
+          void navigate(`/sign-in?error=${encodeURIComponent(code)}${back}`, { replace: true });
           return;
         }
         const home = await client.rpc("get_home");
         if (stopped()) return;
         if (home.error) {
           console.error("Auth callback get_home failed", home.error.message);
-          void navigate("/sign-in?error=server_error", { replace: true });
+          void navigate(`/sign-in?error=server_error${back}`, { replace: true });
           return;
         }
         const summary = homeSummarySchema.parse(home.data);
-        setMessage(summary.company_id ? "נכנסתם. עוברים לבית." : "נכנסתם. ממשיכים לפרטי העסק.");
-        void navigate(summary.company_id ? "/" : "/setup/0", { replace: true });
+        setMessage(afterSignInMessage(Boolean(summary.company_id), stored));
+        void navigate(afterSignInPath(Boolean(summary.company_id), stored), { replace: true });
       })
       .catch((error: unknown) => {
         console.error("Auth callback failed", error);
         if (stopped()) return;
-        void navigate("/sign-in?error=server_error", { replace: true });
+        void navigate(`/sign-in?error=server_error${back}`, { replace: true });
       });
     return () => {
       cancelled.current = true;
