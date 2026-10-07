@@ -1394,3 +1394,18 @@ Deno.test("get_totals and list_projects carry the unassigned bucket and the over
     assertEquals(rows.map((row) => row.is_overhead), [false, true]);
   }
 });
+
+Deno.test("get_totals does not report a missing unassigned bucket as 0", async () => {
+  const { rpc } = rpcOf((name) =>
+    name === "get_dashboard"
+      ? { status: 200, json: { company_id: "company-a", basis: "cash", income_agorot: 1000, expense_agorot: 0, by_currency: [] } }
+      : { status: 500, json: null }
+  );
+  const totals = await callTool("get_totals", {}, ["read"], rpc);
+  assertEquals(totals.isError, false);
+  if (totals.structuredContent.ok) {
+    const data = totals.structuredContent.data as Record<string, unknown>;
+    assertEquals(data.unassigned_income_agorot, undefined);
+    assertEquals(data.unassigned_expense_agorot, undefined);
+  }
+});

@@ -3,6 +3,10 @@
 
 begin;
 
+-- Adding the column and the foreign key locks public.companies and public.projects.
+-- Give up after five seconds rather than queue every read behind the migration.
+set local lock_timeout = '5s';
+
 alter table public.companies
   add column overhead_project_id uuid,
   add constraint companies_overhead_project_fk
@@ -13,7 +17,7 @@ alter table public.companies
 comment on column public.companies.overhead_project_id is
   'A project whose project-filed expense lines count as overhead, not direct cost. Null means none. Decision 0101.';
 
--- pnl_role reads 'overhead' for a project line filed to the overhead project, so
+-- pnl_role reads 'overhead' for a project-role expense line filed to the overhead project, so
 -- every P&L read moves it from direct to overhead. unassigned marks an income line
 -- with no project, and an expense line with no role or a project role and no project.
 
@@ -33,7 +37,8 @@ select
   t.id as transaction_id,
   t.project_id,
   case
-    when t.pnl_role = 'project' and t.project_id is not null and t.project_id = co.overhead_project_id
+    when t.direction = 'expense' and t.pnl_role = 'project' and t.project_id is not null
+      and t.project_id = co.overhead_project_id
       then 'overhead'::public.pnl_role
     else t.pnl_role
   end as pnl_role,
@@ -68,7 +73,8 @@ select
   t.id as transaction_id,
   t.project_id,
   case
-    when t.pnl_role = 'project' and t.project_id is not null and t.project_id = co.overhead_project_id
+    when t.direction = 'expense' and t.pnl_role = 'project' and t.project_id is not null
+      and t.project_id = co.overhead_project_id
       then 'overhead'::public.pnl_role
     else t.pnl_role
   end as pnl_role,
