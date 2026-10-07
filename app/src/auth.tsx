@@ -1,8 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "./lib/supabase";
 import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-review";
+import { forgetCompanyRole } from "./company-role-cache";
 
 export type AuthStatus = "loading" | "anon" | "authed" | "unconfigured";
 
@@ -21,6 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status: supabase ? "loading" : "unconfigured",
     session: null,
   });
+  // Remounts the app when the user changes, so no screen keeps the last user's data or drafts.
+  const [generation, setGeneration] = useState(0);
 
   useEffect(() => {
     if (!supabase) {
@@ -35,8 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       seenUser.current = nextId;
       noteJevAuthUser(nextId);
       if (previous != null && previous !== nextId) {
+        // Sign-out, an expired session, another tab, or a user switch. The
+        // query keys don't name the user, so nothing cached may outlive them.
         dropJevConnectorForAuthChange();
-        queryClient.removeQueries({ queryKey: ["jev-connector"] });
+        forgetCompanyRole(previous);
+        queryClient.clear();
+        setGeneration((count) => count + 1);
       }
       setValue({ status: session ? "authed" : "anon", session });
     });
@@ -46,7 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, queryClient]);
 
   const stable = useMemo(() => value, [value]);
-  return <AuthContext.Provider value={stable}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={stable}>
+      <Fragment key={generation}>{children}</Fragment>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthValue {

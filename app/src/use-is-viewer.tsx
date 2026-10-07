@@ -4,6 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "./auth";
 import { getSupabase } from "./lib/supabase";
 import { usePreviewSearch } from "./preview";
+import { readRoleCache, writeRoleCache, type KnownRole } from "./company-role-cache";
 import { TextLink } from "./ui/text-link";
 
 const ViewerContext = createContext<boolean | null>(null);
@@ -11,53 +12,6 @@ const ViewerNoteContext = createContext<string | null>(null);
 
 /** One quiet line. Settings puts it under the header. Review puts it where the actions were. */
 export const VIEWER_NOTE = "צפייה בלבד · שינויים נעשים על ידי בעל העסק";
-
-/** Last successful role, keyed by user id. The value names the company. */
-const COMPANY_ROLE_CACHE_KEY = "flow-company-role";
-
-type KnownRole = { companyId: string; role: "owner" | "viewer" };
-
-function readRoleCache(userId: string): KnownRole | null {
-  try {
-    const raw = localStorage.getItem(COMPANY_ROLE_CACHE_KEY);
-    if (raw == null) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed == null) return null;
-    const entry = (parsed as Record<string, unknown>)[userId];
-    if (typeof entry !== "object" || entry == null) return null;
-    const companyId = (entry as { companyId?: unknown }).companyId;
-    const role = (entry as { role?: unknown }).role;
-    if (typeof companyId !== "string") return null;
-    if (role !== "owner" && role !== "viewer") return null;
-    return { companyId, role };
-  } catch {
-    return null;
-  }
-}
-
-function writeRoleCache(userId: string, companyId: string, role: "owner" | "viewer") {
-  try {
-    const raw = localStorage.getItem(COMPANY_ROLE_CACHE_KEY);
-    const parsed: Record<string, KnownRole> = {};
-    if (raw != null) {
-      const stored: unknown = JSON.parse(raw);
-      if (typeof stored === "object" && stored != null) {
-        for (const [key, value] of Object.entries(stored)) {
-          if (typeof value !== "object" || value == null) continue;
-          const storedCompany = (value as { companyId?: unknown }).companyId;
-          const storedRole = (value as { role?: unknown }).role;
-          if (typeof storedCompany !== "string") continue;
-          if (storedRole !== "owner" && storedRole !== "viewer") continue;
-          parsed[key] = { companyId: storedCompany, role: storedRole };
-        }
-      }
-    }
-    parsed[userId] = { companyId, role };
-    localStorage.setItem(COMPANY_ROLE_CACHE_KEY, JSON.stringify(parsed));
-  } catch {
-    // This visit still resolves from the read itself.
-  }
-}
 
 /** Pins the viewer role for a story or a test. No session and no companies read. */
 export function ViewerPreview({ children }: { children: ReactNode }) {
