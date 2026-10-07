@@ -1,0 +1,1 @@
+Changelog fragments. A PR no longer edits `docs/changelog.md`. It adds one file, `docs/changelog.d/YYYY-MM-DD-<id>.md`, so two PRs never conflict on the changelog. `node scripts/changelog-fold.mjs` moves the fragments into `docs/changelog.md` under their dates, and `--check` validates them.
