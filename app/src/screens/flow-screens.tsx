@@ -2450,7 +2450,8 @@ export function TransactionScreen({
       }
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
-      assertNoError(await supabase.rpc("set_transaction_pnl", { p_id: change.id, p_in_pnl: change.override }));
+      // null clears the override; the generated types mark every argument non-null.
+      assertNoError(await supabase.rpc("set_transaction_pnl", { p_id: change.id, p_in_pnl: change.override as boolean }));
     },
   });
   const [projectName, setProjectName] = useState("");
