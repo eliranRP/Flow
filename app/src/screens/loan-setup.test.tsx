@@ -17,6 +17,7 @@ const db = vi.hoisted(() => ({
   currencies: [] as string[],
   currencyError: null as { message: string } | null,
   currencyHold: null as Promise<void> | null,
+  currencyLimit: null as number | null,
   offline: false,
   selects: 0,
   balanceError: null as { message: string } | null,
@@ -51,15 +52,22 @@ vi.mock("../lib/supabase", () => ({
         if (table === "transactions") {
           return {
             select: () => ({
-              is: () => {
-                db.selects += 1;
-                const finish = () => ({
-                  data: db.currencyError ? null : db.currencies.map((currency) => ({ currency })),
-                  error: db.currencyError,
-                });
-                if (db.currencyHold) return db.currencyHold.then(() => finish());
-                return Promise.resolve(finish());
-              },
+              is: () => ({
+                order: () => ({
+                  order: () => ({
+                    limit: (count: number) => {
+                      db.selects += 1;
+                      db.currencyLimit = count;
+                      const finish = () => ({
+                        data: db.currencyError ? null : db.currencies.map((currency) => ({ currency })),
+                        error: db.currencyError,
+                      });
+                      if (db.currencyHold) return db.currencyHold.then(() => finish());
+                      return Promise.resolve(finish());
+                    },
+                  }),
+                }),
+              }),
             }),
           };
         }
@@ -85,6 +93,7 @@ beforeEach(() => {
   db.currencies = [];
   db.currencyError = null;
   db.currencyHold = null;
+  db.currencyLimit = null;
   db.offline = false;
   db.selects = 0;
   db.balanceError = null;
@@ -167,6 +176,7 @@ describe("company currency", () => {
     db.currencyError = { message: "down" };
     expect(await readCompanyLoanCurrency()).toBe("ILS");
     expect(db.selects).toBe(4);
+    expect(db.currencyLimit).toBe(1000);
   });
 });
 

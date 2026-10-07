@@ -322,7 +322,14 @@ export function loanErrorText(code: string): string {
 export async function readCompanyLoanCurrency(): Promise<LoanCurrency> {
   const supabase = getSupabase();
   if (!supabase) return "ILS";
-  const lines = await supabase.from("transactions").select("currency").is("removed_at", null);
+  // The newest 1000 open lines. mcp_company_loan_currency reads the same set.
+  const lines = await supabase
+    .from("transactions")
+    .select("currency")
+    .is("removed_at", null)
+    .order("doc_date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1000);
   if (lines.error) return "ILS";
   return companyLoanCurrency(lines.data.map((row) => row.currency));
 }

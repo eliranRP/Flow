@@ -1250,6 +1250,51 @@ Deno.test("attach_loan_payment matches writeSplit parts and schedule paging work
   }
 });
 
+Deno.test("a stored loan whose payment is below the interest is refused, not thrown", async () => {
+  const lowRow = {
+    id: LOAN,
+    name: "Example Bank",
+    currency: "USD",
+    principal_minor: 12000000,
+    annual_rate_ppm: 60000,
+    term_months: 360,
+    start_date: "2026-01-01",
+    payment_minor: 1000,
+    escrow_minor: 0,
+    balance_minor: 12000000,
+  };
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_transaction") {
+      return { status: 200, json: { id: LOAN_TXN, doc_date: "2026-01-01", amount_original: 1000, currency: "USD" } };
+    }
+    if (name === "mcp_list_loans") return { status: 200, json: [lowRow] };
+    return { status: 500, json: null };
+  });
+  const page = await callTool("get_loan_schedule", { loan_id: LOAN }, ["read"], rpc);
+  assertEquals(page.structuredContent, { ok: false, error: { code: "refused", message: "payment below interest" } });
+  const attached = await callTool("attach_loan_payment", {
+    idempotency_key: "split-low",
+    transaction_id: LOAN_TXN,
+    loan_id: LOAN,
+  }, ["write"], rpc);
+  assertEquals(attached.structuredContent, { ok: false, error: { code: "refused", message: "payment below interest" } });
+  assertEquals(calls.some((call) => call.name === "mcp_attach_loan_payment"), false);
+});
+
+Deno.test("update_loan trims the name and rejects explicit nulls before the database", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_update" } } }));
+  const trimmed = await callTool("update_loan", { idempotency_key: "up-trim", loan_id: LOAN, name: "  Example Bank  " }, ["write"], rpc);
+  assertEquals(trimmed.isError, false);
+  assertEquals(calls[0]?.body.p_patch, { name: "Example Bank" });
+  for (const field of ["name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow"]) {
+    const result = await callTool("update_loan", { idempotency_key: `up-null-${field}`, loan_id: LOAN, [field]: null }, ["write"], rpc);
+    assertEquals(result.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+  }
+  const blank = await callTool("update_loan", { idempotency_key: "up-blank", loan_id: LOAN, name: "   " }, ["write"], rpc);
+  assertEquals(blank.isError, true);
+  assertEquals(calls.length, 1);
+});
+
 const BATCH_KEY = "33333333-3333-4000-8000-000000000003";
 
 Deno.test("assign_expenses sends exact p_items and validates batch input", async () => {
