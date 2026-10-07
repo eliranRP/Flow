@@ -125,7 +125,9 @@ $$;
 
 revoke all on function private.breakdown_rows(uuid, text, date, date, text, text) from public, anon, authenticated;
 
-create or replace function private.breakdown_company(p_direction text, p_group_by text)
+-- company_pnl counts nothing when only one date is given, while breakdown_rows would
+-- count all time. A half-open period is refused so the totals never drift from Home.
+create or replace function private.breakdown_company(p_direction text, p_group_by text, p_from date, p_to date)
 returns uuid
 language plpgsql
 stable
@@ -145,12 +147,15 @@ begin
   if p_group_by is null or p_group_by not in ('category', 'project', 'payer') then
     raise exception 'validation';
   end if;
+  if (p_from is null) <> (p_to is null) then
+    raise exception 'validation';
+  end if;
   return cid;
 end;
 $$;
 
-revoke all on function private.breakdown_company(text, text) from public, anon;
-grant execute on function private.breakdown_company(text, text) to authenticated, service_role;
+revoke all on function private.breakdown_company(text, text, date, date) from public, anon;
+grant execute on function private.breakdown_company(text, text, date, date) to authenticated, service_role;
 
 -- Group totals for Home's income or expenses. Totals and groups count only lines in the
 -- P&L; lines in kept-out categories are in excluded and nowhere else.
@@ -172,7 +177,7 @@ declare
   basis text;
   result jsonb;
 begin
-  cid := private.breakdown_company(p_direction, p_group_by);
+  cid := private.breakdown_company(p_direction, p_group_by, p_from, p_to);
   if cid is null then
     return null;
   end if;
@@ -284,7 +289,7 @@ declare
   off integer;
   result jsonb;
 begin
-  cid := private.breakdown_company(p_direction, p_group_by);
+  cid := private.breakdown_company(p_direction, p_group_by, p_from, p_to);
   if cid is null then
     return null;
   end if;
@@ -317,7 +322,9 @@ begin
     join public.transactions t on t.id = r.transaction_id
     left join public.suppliers sup on sup.id = t.supplier_id
     left join public.projects p on p.id = t.project_id
-    left join public.categories c on c.id = t.category_id
+    -- A loan-split part names its own category, not the bank line's.
+    left join public.loan_splits ls on ls.transaction_id = r.transaction_id and ls.part = r.part
+    left join public.categories c on c.id = coalesce(ls.category_id, t.category_id)
   )
   select jsonb_build_object(
     'rows', coalesce((

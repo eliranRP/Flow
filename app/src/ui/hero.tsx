@@ -1,4 +1,7 @@
+import { Link } from "react-router-dom";
+import { flowLinkName } from "../breakdown";
 import { BigNumber } from "./big-number";
+import { ChevronIcon } from "./icons";
 import { BandHero } from "./layout";
 
 type HeroFigure = {
@@ -57,13 +60,43 @@ type FlowCurrencyLine = {
   expense: bigint;
 };
 
-/** Income and expenses under the hero. Neutral amounts, with room between the rows. */
-export function FlowLines({ income, expense, lines }: { income?: bigint; expense?: bigint; lines?: FlowCurrencyLine[] }) {
+type FlowLinks = {
+  income: string;
+  expense: string;
+  /** The period words in the accessible name, e.g. החודש. */
+  period: string;
+};
+
+/** Income and expenses under the hero. Neutral amounts, with room between the rows. With links, each row opens its breakdown (FLOW-301). */
+export function FlowLines({
+  income,
+  expense,
+  lines,
+  links,
+}: {
+  income?: bigint;
+  expense?: bigint;
+  lines?: FlowCurrencyLine[];
+  links?: FlowLinks;
+}) {
   const rows = lines ?? [{ currency: "ILS", income: income ?? 0n, expense: expense ?? 0n }];
+  const incomeRows = rows.map((row) => ({ currency: row.currency, agorot: row.income }));
+  const expenseRows = rows.map((row) => ({ currency: row.currency, agorot: row.expense }));
   return (
     <div className="ui-flow">
-      <FlowLine label="נכנס" rows={rows.map((row) => ({ currency: row.currency, agorot: row.income }))} />
-      <FlowLine label="יצא" rows={rows.map((row) => ({ currency: row.currency, agorot: row.expense }))} expense />
+      <FlowLine
+        label="נכנס"
+        rows={incomeRows}
+        href={links?.income}
+        name={links ? flowLinkName("income", links.period, incomeRows) : undefined}
+      />
+      <FlowLine
+        label="יצא"
+        rows={expenseRows}
+        expense
+        href={links?.expense}
+        name={links ? flowLinkName("expense", links.period, expenseRows) : undefined}
+      />
     </div>
   );
 }
@@ -72,13 +105,17 @@ function FlowLine({
   label,
   rows,
   expense = false,
+  href,
+  name,
 }: {
   label: string;
   rows: { currency: string; agorot: bigint }[];
   expense?: boolean;
+  href?: string;
+  name?: string;
 }) {
-  return (
-    <p className="ui-flow-line">
+  const body = (
+    <>
       <span className="ui-flow-label t-body">{label}</span>
       <span className="ui-flow-amounts">
         {rows.map((row) => (
@@ -91,6 +128,17 @@ function FlowLine({
           />
         ))}
       </span>
-    </p>
+    </>
   );
+  if (href) {
+    return (
+      <Link to={href} className="ui-flow-line ui-flow-link ui-hit" aria-label={name}>
+        {body}
+        <span className="ui-flow-chevron" aria-hidden="true">
+          <ChevronIcon />
+        </span>
+      </Link>
+    );
+  }
+  return <p className="ui-flow-line">{body}</p>;
 }

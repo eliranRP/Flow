@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(30);
+select plan(49);
 
 do $users$
 begin
@@ -147,11 +147,77 @@ join (values
 ) as v(part, amount, cat) on true
 where t.idempotency_key = 'fb:loan';
 
+-- A EUR shared loan payment of 1000.00 split 700.03 / 199.97 / 100.00, half to Alpha and
+-- half to Beta. Each part's share rounds half to even: 350.015 to 350.02, 99.985 to 99.98.
+insert into public.loans (
+  company_id, name, principal_minor, annual_rate_ppm, term_months,
+  start_date, payment_minor, escrow_minor, currency
+)
+values ((select id from fb_ref where label = 'co'), 'Example EUR loan', 12000000, 60000, 360, '2026-01-01', 100000, 20000, 'EUR');
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, category_id, description, user_assigned
+)
+values (
+  (select id from fb_ref where label = 'co'), 'expense', 'expense', 'shared', 'posted', 'EUR',
+  -100000, -100000, 100000, 0, 'source', '2026-06-14', '2026-06-14', 'manual', 'fb:eur-loan',
+  (select id from fb_ref where label = 'materials'), 'fb:eur-loan', true
+);
+
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select t.company_id, t.id, (select id from fb_ref where label = s.proj), 5000, -50000
+from public.transactions t
+join (values ('alpha'), ('beta')) as s(proj) on true
+where t.idempotency_key = 'fb:eur-loan';
+
+insert into public.loan_splits (
+  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
+)
+select
+  t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
+  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense'),
+  false
+from public.transactions t
+join public.loans l on l.company_id = t.company_id and l.name = 'Example EUR loan'
+join (values
+  ('interest',  70003, 'ריבית משכנתא'),
+  ('escrow',    19997, 'מסים וביטוח'),
+  ('principal', 10000, 'תשלומי הלוואה')
+) as v(part, amount, cat) on true
+where t.idempotency_key = 'fb:eur-loan';
+
+-- A EUR receipt dated 28 May and paid on 2 June counts in June on the cash basis.
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, project_id, description, user_assigned
+)
+values (
+  (select id from fb_ref where label = 'co'), 'income', 'receipt', null, 'posted', 'EUR',
+  5000, 5000, 5000, 0, 'source', '2026-05-28', '2026-06-02', 'manual', 'fb:eur-in',
+  (select id from fb_ref where label = 'alpha'), 'fb:eur-in', true
+);
+
+-- One open expense review, one open income review, and one closed expense review.
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select t.company_id, t.id, v.status::public.review_status, 'example'
+from public.transactions t
+join (values
+  ('fb:ILS:ex-alpha', 'open'),
+  ('fb:ILS:in-alpha', 'open'),
+  ('fb:ILS:ex-office', 'approved')
+) as v(ikey, status) on v.ikey = t.idempotency_key;
+
 select tests.authenticate_as('fb_owner');
 
 insert into fb_out (label, body) values
   ('dash:cash', public.get_dashboard(null, null, 'cash')),
   ('dash:invoiced', public.get_dashboard(null, null, 'invoiced')),
+  ('dash:june', public.get_dashboard('2026-06-01', '2026-06-30', 'cash')),
+  ('in:june', public.get_breakdown('income', '2026-06-01', '2026-06-30', 'project', 'cash')),
+  ('in:all', public.get_breakdown('income', null, null, 'category', 'cash')),
   ('ex:category', public.get_breakdown('expense', null, null, 'category', 'cash')),
   ('ex:project', public.get_breakdown('expense', null, null, 'project', 'cash')),
   ('ex:payer', public.get_breakdown('expense', null, null, 'payer', 'cash')),
@@ -161,7 +227,10 @@ insert into fb_out (label, body) values
   ('ex:july', public.get_breakdown('expense', '2026-07-01', '2026-07-31', 'category', 'cash')),
   ('lines:alpha', public.get_breakdown_lines('expense', 'project', (select id::text from fb_ref where label = 'alpha'), 'ILS')),
   ('lines:excluded', public.get_breakdown_lines('expense', 'category', null, 'ILS', null, null, 'cash', true)),
-  ('lines:page', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 0));
+  ('lines:page', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 0)),
+  ('lines:page2', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 1)),
+  ('lines:last', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 2)),
+  ('lines:unassigned', public.get_breakdown_lines('expense', 'project', 'unassigned', 'ILS'));
 
 -- Totals match Home.
 select is(pg_temp.total(pg_temp.out_of('ex:category'), 'ILS'), (pg_temp.out_of('dash:cash') ->> 'expense_agorot')::bigint,
@@ -228,6 +297,54 @@ select is((pg_temp.out_of('lines:page') ->> 'has_more')::boolean, true, 'a page 
 select throws_ok(
   $$ select public.get_breakdown('expense', null, null, 'week', 'cash') $$,
   'validation', 'an unknown grouping is refused'
+);
+
+-- Shared loan-split parts round half to even, like company_pnl.
+select is((pg_temp.grp(pg_temp.out_of('ex:project'), 'EUR', (select id::text from fb_ref where label = 'alpha')) ->> 'amount_minor')::bigint,
+  45000::bigint, 'Alpha''s EUR share is 35002 + 9998, each part rounded half to even');
+select is(pg_temp.total(pg_temp.out_of('ex:category'), 'EUR'), (pg_temp.cur(pg_temp.out_of('dash:cash'), 'EUR') ->> 'expense_minor')::bigint,
+  'expense total matches Home (EUR)');
+
+-- Cash income counts by the cash date.
+select is(pg_temp.total(pg_temp.out_of('in:june'), 'EUR'), 5000::bigint, 'a receipt paid in June counts in June');
+select is(pg_temp.total(pg_temp.out_of('in:june'), 'EUR'), (pg_temp.cur(pg_temp.out_of('dash:june'), 'EUR') ->> 'income_minor')::bigint,
+  'June cash income matches Home (EUR)');
+
+-- Open reviews of the direction and period.
+select is((pg_temp.out_of('ex:category') ->> 'review_count')::integer, 1, 'one open expense review');
+select is((pg_temp.out_of('in:all') ->> 'review_count')::integer, 1, 'one open income review');
+select is((pg_temp.out_of('ex:july') ->> 'review_count')::integer, 0, 'no open review in July');
+
+-- Paging.
+select isnt(pg_temp.out_of('lines:page2') -> 'rows' -> 0 ->> 'transaction_id', pg_temp.out_of('lines:page') -> 'rows' -> 0 ->> 'transaction_id',
+  'the second page starts after the first');
+select is((pg_temp.out_of('lines:last') ->> 'has_more')::boolean, false, 'the last page says there is no more');
+select is(jsonb_array_length(pg_temp.out_of('lines:last') -> 'rows'), 1, 'the last page holds the last line');
+
+-- A split part names its own category, newest first.
+select is((select x ->> 'category_name' from jsonb_array_elements(pg_temp.out_of('lines:unassigned') -> 'rows') x where x ->> 'part' = 'interest'),
+  'ריבית משכנתא', 'the interest part names the interest category, not the bank line''s');
+select is(pg_temp.out_of('lines:unassigned') -> 'rows' -> 0 ->> 'doc_date', '2026-06-12', 'the newest line comes first');
+
+-- Group order, counts, and names.
+select is(pg_temp.out_of('ex:project') -> 'groups' -> 0 ->> 'key', 'unassigned', 'the largest group comes first');
+select is((pg_temp.grp(pg_temp.out_of('ex:project'), 'ILS', 'unassigned') ->> 'count')::integer, 2,
+  'a split loan payment counts once in its group');
+select ok(pg_temp.grp(pg_temp.out_of('ex:project'), 'ILS', 'overhead') ->> 'name' is null, 'overhead has no name');
+select is((pg_temp.grp(pg_temp.out_of('ex:payer'), 'ILS', 'none') ->> 'amount_minor')::bigint, 127000::bigint,
+  'lines with no supplier are under none');
+
+select throws_ok(
+  $$ select public.get_breakdown('both', null, null, 'category', 'cash') $$,
+  'validation', 'an unknown direction is refused'
+);
+select throws_ok(
+  $$ select public.get_breakdown('expense', '2026-06-01', null, 'category', 'cash') $$,
+  'validation', 'a period with one date is refused'
+);
+select throws_ok(
+  $$ select public.get_breakdown_lines('expense', 'category', 'none', 'ILS', null, '2026-06-30') $$,
+  'validation', 'a lines period with one date is refused'
 );
 
 -- Another company sees none of these lines.

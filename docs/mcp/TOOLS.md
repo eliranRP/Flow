@@ -108,11 +108,11 @@ Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 
 ### get_breakdown
 
-`get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. `basis` defaults to `cash`. Omit both dates for all time.
+`get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. `basis` defaults to `cash`. Omit both dates for all time; one date alone is `validation`.
 
 Without `group`: output `data` is `direction`, `basis`, `group_by`, `from`, `to`, `totals[]` (`currency`, `amount_minor`, `count`), `groups[]` (`key`, `name`, `currency`, `amount_minor`, `count`, `shared`), `excluded[]` (kept-out lines, not in the totals), and `review_count`. `totals` equal `get_totals`' `income_minor` / `expense_minor`. Under `project`, `key` is a project id, `overhead`, or `unassigned`; a shared cost is split by its allocations and the project's row has `shared: true`. A null `name` means no category, payer, or project (key `none` or `unassigned`). Passing `currency`, `limit`, or `offset` here is `validation`.
 
-With `group` (a `key` from `groups`) and `currency` (default `ILS`), or with `excluded: true`: output `data.rows[]` (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `currency`, `amount_minor`, `shared`) newest first, and `has_more`. `limit` defaults to 40, at most 100.
+With `group` (a `key` from `groups`) and `currency` (default `ILS`), or with `excluded: true` (not both): output `data.rows[]` (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `currency`, `amount_minor`, `shared`) newest first, and `has_more`. `limit` defaults to 40, at most 100.
 
 `amount_minor` is positive for income and for a normal expense. A loan payment with a valid split counts by part, so its rows carry `part`.
 

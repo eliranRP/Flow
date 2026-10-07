@@ -1072,9 +1072,13 @@ export async function callTool(
     if (typeof from !== "string" && from != null) return from;
     const to = dateOf(args.to);
     if (typeof to !== "string" && to != null) return to;
+    // get_totals counts nothing for a period with one date; refuse it so totals stay equal.
+    if ((from == null) !== (to == null)) return fail("validation", "validation");
     const range = { p_direction: direction, p_from: from, p_to: to, p_group_by: groupBy, p_basis: basis };
     const excluded = args.excluded == null ? false : args.excluded;
     if (typeof excluded !== "boolean") return fail("validation", "validation");
+    // The kept-out list has no group; a group with excluded would be silently ignored.
+    if (excluded && args.group != null) return fail("validation", "validation");
     if (args.group == null && !excluded) {
       if (args.currency != null || args.limit != null || args.offset != null) return fail("validation", "validation");
       const result = await rpc("get_breakdown", range);

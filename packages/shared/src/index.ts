@@ -36,6 +36,10 @@ export { expenseRole, normalizeSumitDocument } from "./pnl.ts";
 export type { CompanyPnl, NormalizedLine, ProjectPnl } from "./pnl.ts";
 export {
   basisSchema,
+  breakdownDirectionSchema,
+  breakdownGroupBySchema,
+  breakdownLinesSchema,
+  breakdownSchema,
   categoryRowSchema,
   dashboardSchema,
   projectCategorySchema,
@@ -51,6 +55,10 @@ export {
 } from "./dashboard.ts";
 export type {
   Basis,
+  Breakdown,
+  BreakdownDirection,
+  BreakdownGroupBy,
+  BreakdownLinesPage,
   CategoryRow,
   Dashboard,
   ProjectCategoryPage,

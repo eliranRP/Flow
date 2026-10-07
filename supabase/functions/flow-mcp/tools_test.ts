@@ -1596,6 +1596,9 @@ Deno.test("get_breakdown calls the group totals, then a group's lines, and check
     { direction: "expense", group: "x", currency: "usd" },
     { direction: "expense", group: "x", limit: 500 },
     { direction: "expense", excluded: "yes" },
+    { direction: "expense", from: "2026-06-01" },
+    { direction: "expense", to: "2026-06-30" },
+    { direction: "expense", excluded: true, group: "x" },
     { direction: "expense", company_id: "x" },
   ]) {
     const result = await callTool("get_breakdown", bad, ["read"], rpc);
