@@ -248,6 +248,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "sync_bank",
     "hide_category",
     "set_category_pnl",
+    "rename_company",
     "add_loan",
     "update_loan",
     "attach_loan_payment",
@@ -276,6 +277,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "sync_bank",
     "hide_category",
     "set_category_pnl",
+    "rename_company",
     "add_loan",
     "update_loan",
     "attach_loan_payment",
@@ -1153,6 +1155,44 @@ Deno.test("set_category_pnl forwards excluded false, rejects bad input, and refu
   assertEquals(denied.isError, true);
   if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
   assertEquals(calls.length, 1);
+});
+
+Deno.test("rename_company trims, forwards p_* args, validates, refuses a read token, and undo accepts company", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: PROJECT, name: "Example North", prior_name: "Example Co", undo_kind: "company" } },
+  }));
+  const renamed = await callTool("rename_company", {
+    idempotency_key: "rename-1",
+    name: "  Example North  ",
+  }, ["write"], rpc);
+  assertEquals(renamed.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_rename_company",
+    body: { p_idempotency_key: "rename-1", p_name: "Example North" },
+  });
+  const cases = [
+    callTool("rename_company", { name: "Example North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: " x " }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "a".repeat(101) }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: 42 }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example North", company_id: PROJECT }, ["write"], rpc),
+  ];
+  for (const result of await Promise.all(cases)) {
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("rename_company", { idempotency_key: "rename-read", name: "Example North" }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 1);
+  const undo = await callTool("undo", { idempotency_key: "rename-undo", kind: "company", id: PROJECT }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_undo",
+    body: { p_idempotency_key: "rename-undo", p_kind: "company", p_id: PROJECT },
+  });
 });
 
 const PROJECT_FIXTURE = {
