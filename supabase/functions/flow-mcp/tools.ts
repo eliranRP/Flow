@@ -28,6 +28,7 @@ export const READ_TOOL_NAMES = [
 
 export const WRITE_TOOL_NAMES = [
   "assign_expense",
+  "assign_expense_split",
   "assign_expenses",
   "set_expense_category",
   "create_project",
@@ -57,6 +58,7 @@ const ALLOWED: Record<string, Set<string>> = {
   list_loans: new Set([]),
   get_loan_schedule: new Set(["loan_id", "from", "limit"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
+  assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   create_project: new Set(["idempotency_key", "name", "status"]),
@@ -86,6 +88,30 @@ const assignSchema = z.object({
   category_id: UUID_TEXT,
   remember: z.boolean().optional(),
 }).strict();
+const splitShareSchema = z.object({
+  project_id: UUID_TEXT,
+  share: z.number().int().min(1).max(100),
+}).strict();
+const assignExpenseSplitSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  category_id: UUID_TEXT.optional(),
+  shares: z.array(splitShareSchema).min(2).max(50),
+}).strict().superRefine((body, ctx) => {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const item of body.shares) {
+    if (seen.has(item.project_id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      return;
+    }
+    seen.add(item.project_id);
+    total += item.share;
+  }
+  if (total !== 100) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+});
 const categorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
@@ -492,6 +518,23 @@ function writeTools() {
       category_id: { type: "string" },
       remember: { type: "boolean" },
     }, true),
+    toolSpec("assign_expense_split", "Split one expense across projects. Each share is a whole percent; shares must sum to 100. Optional category_id sets the category like assign_expense.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      category_id: { type: "string" },
+      shares: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            project_id: { type: "string" },
+            share: { type: "integer" },
+          },
+          required: ["project_id", "share"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed.", {
       idempotency_key: { type: "string" },
       items: {
@@ -835,6 +878,16 @@ async function callWrite(
       p_project_id: parsed.data.project_id,
       p_category_id: parsed.data.category_id,
       p_remember: parsed.data.remember ?? false,
+    };
+  } else if (name === "assign_expense_split") {
+    const parsed = assignExpenseSplitSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_assign_expense_split";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_shares: parsed.data.shares,
+      ...(parsed.data.category_id == null ? {} : { p_category_id: parsed.data.category_id }),
     };
   } else if (name === "set_expense_category") {
     const parsed = categorySchema.safeParse(args);

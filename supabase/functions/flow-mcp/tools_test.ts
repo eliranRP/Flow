@@ -17,6 +17,7 @@ const CATEGORY = "c0ffee00-1111-4000-8000-0000000000a1";
 const INCOME_CATEGORY = "d1ffee00-1111-4000-8000-0000000000b2";
 const REVIEW = "11111111-1111-4000-8000-000000000010";
 const INCOME_TXN = "33333333-3333-4000-8000-000000000030";
+const PROJECT_B = "8c1a0b2e-1111-4000-8000-000000000002";
 
 type Rpc = { name: string; body: Record<string, unknown> };
 
@@ -239,6 +240,7 @@ Deno.test("write tools are listed only for a write scope", () => {
   assertEquals(toolsFor(["read"]).map((tool) => tool.name).includes("assign_expense"), false);
   assertEquals(toolsFor(["write"]).map((tool) => tool.name), [
     "assign_expense",
+    "assign_expense_split",
     "assign_expenses",
     "set_expense_category",
     "create_project",
@@ -266,6 +268,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "list_loans",
     "get_loan_schedule",
     "assign_expense",
+    "assign_expense_split",
     "assign_expenses",
     "set_expense_category",
     "create_project",
@@ -280,6 +283,108 @@ Deno.test("write tools are listed only for a write scope", () => {
     "undo_batch",
   ]);
   assertEquals(toolsFor([]), []);
+});
+
+Deno.test("assign_expense_split forwards shares and optional category", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { undo_kind: "reassign", id: REVIEW, closed_review: false } },
+  }));
+  const split = await callTool("assign_expense_split", {
+    idempotency_key: "split-1",
+    transaction_id: TXN,
+    category_id: CATEGORY,
+    shares: [
+      { project_id: PROJECT, share: 50 },
+      { project_id: PROJECT_B, share: 50 },
+    ],
+  }, ["write"], rpc);
+  assertEquals(split.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_assign_expense_split",
+    body: {
+      p_idempotency_key: "split-1",
+      p_transaction_id: TXN,
+      p_category_id: CATEGORY,
+      p_shares: [
+        { project_id: PROJECT, share: 50 },
+        { project_id: PROJECT_B, share: 50 },
+      ],
+    },
+  });
+  const replay = await callTool("assign_expense_split", {
+    idempotency_key: "split-2",
+    transaction_id: TXN,
+    shares: [
+      { project_id: PROJECT, share: 60 },
+      { project_id: PROJECT_B, share: 40 },
+    ],
+  }, ["write"], rpc);
+  assertEquals(replay.isError, false);
+  assertEquals(calls[1]?.body.p_category_id, undefined);
+});
+
+Deno.test("assign_expense_split validates shares and refuses read tokens", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const denied = await callTool("assign_expense_split", {
+    idempotency_key: "split-1",
+    transaction_id: TXN,
+    shares: [{ project_id: PROJECT, share: 50 }, { project_id: PROJECT_B, share: 50 }],
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const cases = [
+    callTool("assign_expense_split", { idempotency_key: "k", transaction_id: TXN, shares: [] }, ["write"], rpc),
+    callTool("assign_expense_split", {
+      idempotency_key: "k",
+      transaction_id: TXN,
+      shares: [{ project_id: PROJECT, share: 100 }],
+    }, ["write"], rpc),
+    callTool("assign_expense_split", {
+      idempotency_key: "k",
+      transaction_id: TXN,
+      shares: [
+        { project_id: PROJECT, share: 50 },
+        { project_id: PROJECT, share: 50 },
+      ],
+    }, ["write"], rpc),
+    callTool("assign_expense_split", {
+      idempotency_key: "k",
+      transaction_id: TXN,
+      shares: [
+        { project_id: PROJECT, share: 40 },
+        { project_id: PROJECT_B, share: 40 },
+      ],
+    }, ["write"], rpc),
+    callTool("assign_expense_split", {
+      idempotency_key: "k",
+      transaction_id: TXN,
+      shares: [
+        { project_id: PROJECT, share: 50 },
+        { project_id: PROJECT_B, share: 50 },
+      ],
+      mcp_tid: TXN,
+    }, ["write"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const refused = await callTool("assign_expense_split", {
+    idempotency_key: "split-foreign",
+    transaction_id: TXN,
+    shares: [{ project_id: PROJECT, share: 50 }, { project_id: PROJECT_B, share: 50 }],
+  }, ["write"], () => Promise.resolve({
+    status: 200,
+    json: { ok: false, error: { code: "refused", message: "transaction not found" } },
+  }));
+  assertEquals(refused.isError, true);
+  if (!refused.structuredContent.ok) {
+    assertEquals(refused.structuredContent.error.code, "refused");
+    assertEquals(refused.structuredContent.error.message, "transaction not found");
+  }
+  assertEquals(calls.length, 0);
 });
 
 Deno.test("assign_expense forwards project and category for an income review line", async () => {
@@ -387,7 +492,7 @@ Deno.test("a read token cannot write and a write argument is validated", async (
     callTool("set_expense_category", { idempotency_key: "k", transaction_id: TXN }, ["write"], rpc),
     callTool("undo", { idempotency_key: "k", kind: "batch", id: REVIEW }, ["write"], rpc),
     callTool("undo", { idempotency_key: "k", kind: "review", id: "not-a-uuid" }, ["write"], rpc),
-    callTool("split_expense", { idempotency_key: "k" }, ["write"], rpc),
+    callTool("assign_expense_split", { idempotency_key: "k" }, ["write"], rpc),
   ];
   for (const pending of cases) {
     const result = await pending;
