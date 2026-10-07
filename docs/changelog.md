@@ -60,8 +60,6 @@ CI no longer hangs on a stalled Ubuntu mirror. Before Playwright installs its sy
 
 Kept-out categories follow-ups (FLOW-112). Default kept-out names now match near variants (case, punctuation, `&` or `and`, plural `s`), and a category renamed into a default name starts kept out; a rename never clears the owner's flag. The three loan categories get a stable key, `categories.loan_part`, used by the loan split check, the default category guess, `set_category_excluded_from_pnl`, and `attach_loan_payment` instead of their Hebrew names; `list_categories` returns it. An owner who is also listed as a viewer can set the P&L flag on their own company. TOOLS.md says what `count` means since 0099. Migration `20261007201000_kept_out_followups.sql`. pgTAP `kept_out_followups.test.sql`. Updates decision [0099](decisions/0099-categories-outside-pnl.md). The suggested-category and project-income items moved to FLOW-121.
 
-One tap out of the Home setup card (FLOW-511, design reviewer's option A under the owner's standing rule for UI tasks). The quiet הסתרה link is now a 44 px ✕ "סגירת ההגדרה" in the card head. Closing the card also stops the one automatic resume, so the next launch no longer opens a setup step. The toast says "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות." with ביטול, which brings both back. Settings › עוד › הגדרה ראשונה stays the way back. No migration and no MCP change (the setup flags are device-local). Decision [0111](decisions/0111-setup-card-close.md).
-
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).
