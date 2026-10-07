@@ -14,7 +14,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 
 | # | Id | Title | Type | Status |
 | --- | --- | --- | --- | --- |
-| 1 | [FLOW-101](#flow-101) | Loan payments count by their split parts (PR B) | SMALL CYCLE | ready (waits only on builder capacity) |
+| 1 | [FLOW-101](#flow-101) | Loan payments count by their split parts (PR B) | SMALL CYCLE | in-progress (#70) |
 | 2 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE | ready |
 | 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | ready |
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
@@ -47,7 +47,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-101"></a>
 ### FLOW-101 · Loan payments count by their split parts (PR B)
-- **Type:** SMALL CYCLE · **Status:** ready (waits only on builder capacity) · **Depends on:** #67 (merged)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#70) · **Depends on:** #67 (merged)
 - **What:** Today a loan payment counts in full under the bank line's category, so interest is overstated and principal counts as an expense. `private.pnl_lines` (added in #67) emits one row per split part for a line with a valid 3-part split (no part `needs_review`, no VAT): interest under `ריבית משכנתא`, escrow under `מסים וביטוח` (both stay in the P&L, per [0088](../decisions/0088-loans.md) and the owner's call), principal under `תשלומי הלוואה` (kept out, so it shows in the `excluded_*` totals). A flagged split or a VAT-bearing line falls back to the whole line, counted in a new `loan_split_fallback_count` per `by_currency` row. Shared allocations per part round half to even. No function body other than the view should need to change. No new MCP tool; update the `attach_loan_payment` and `get_totals` notes in TOOLS.md.
 - **Acceptance:** pgTAP with an invented USD loan and one 1000.00 payment split 700/200/100: direct, expense and net count 900, `excluded_expense_minor` is 100, and the line's own category gets 0; same in `get_home` and `get_project` (part categories in `categories_by_currency`, principal in `excluded_categories_by_currency`); flagged split and VAT line fall back and bump the count; a removed or unposted line counts nowhere; shared allocations sum within 1 minor unit each and the zero-amount guard from #67 stays (a zero-amount shared line must not crash the P&L); deleting the split restores the whole line; `loan_balances` unchanged. Mutation: emitting the line instead of the parts fails a test. New decision, changelog, unique migration timestamp.
 
