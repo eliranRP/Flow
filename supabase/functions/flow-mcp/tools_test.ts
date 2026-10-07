@@ -418,6 +418,43 @@ Deno.test("assign_expense forwards project and category for an income review lin
   }
 });
 
+Deno.test("income assign forwards the project, single and batch, and get_project passes income through", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_project") {
+      return {
+        status: 200,
+        json: { id: PROJECT, income_agorot: 50000, by_currency: [{ currency: "ILS", income_minor: 50000 }] },
+      };
+    }
+    if (name === "mcp_assign_expenses") {
+      return {
+        status: 200,
+        json: { ok: true, data: { batch_key: BATCH_KEY, ok_count: 1, error_count: 0, results: [] } },
+      };
+    }
+    return { status: 200, json: { ok: true, data: { undo_kind: "reassign", id: REVIEW, closed_review: false } } };
+  });
+  const single = await callTool("assign_expense", {
+    idempotency_key: "assign-income-plain",
+    transaction_id: INCOME_TXN,
+    project_id: PROJECT,
+    category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(single.isError, false);
+  assertEquals(calls[0]?.body.p_project_id, PROJECT);
+  const batch = await callTool("assign_expenses", {
+    idempotency_key: "assign-income-batch",
+    items: [{ transaction_id: INCOME_TXN, project_id: PROJECT, category_id: INCOME_CATEGORY }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[1]?.body.p_items, [{ transaction_id: INCOME_TXN, project_id: PROJECT, category_id: INCOME_CATEGORY }]);
+  const read = await callTool("get_project", { id: PROJECT }, ["read"], rpc);
+  assertEquals(read.isError, false);
+  if (read.structuredContent.ok) {
+    assertEquals((read.structuredContent.data as { income_agorot: number }).income_agorot, 50000);
+  }
+});
+
 Deno.test("assign, set category, and undo call their wrappers", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,
@@ -1015,6 +1052,95 @@ Deno.test("assign_expenses sends exact p_items and validates batch input", async
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
+});
+
+Deno.test("assign_expenses forwards split rows next to plain rows and validates them", async () => {
+  const TXN_B = "22222222-2222-4000-8000-000000000021";
+  const shares = [{ project_id: PROJECT, share: 50 }, { project_id: PROJECT_B, share: 50 }];
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: BATCH_KEY,
+        ok_count: 1,
+        error_count: 1,
+        results: [
+          { transaction_id: TXN, ok: true, undo_kind: "review", closed_review: true },
+          { transaction_id: TXN_B, ok: false, code: "refused" },
+        ],
+      },
+    },
+  }));
+  const items = [
+    { transaction_id: TXN, category_id: CATEGORY, shares },
+    { transaction_id: TXN_B, project_id: PROJECT, category_id: CATEGORY },
+  ];
+  const batch = await callTool("assign_expenses", { idempotency_key: "batch-split-1", items }, ["write"], rpc);
+  assertEquals(batch.isError, false, "partial success is still a tool success");
+  assertEquals(calls[0], {
+    name: "mcp_assign_expenses",
+    body: { p_idempotency_key: "batch-split-1", p_items: items },
+  });
+  assertEquals(batch.structuredContent.ok, true);
+  if (batch.structuredContent.ok) {
+    const data = batch.structuredContent.data as { results: { closed_review?: boolean; code?: string }[] };
+    assertEquals(data.results.map((row) => row.closed_review), [true, undefined]);
+    assertEquals(data.results[1].code, "refused");
+  }
+  const splitOnly = await callTool("assign_expenses", {
+    idempotency_key: "batch-split-2",
+    items: [{ transaction_id: TXN, shares }],
+  }, ["write"], rpc);
+  assertEquals(splitOnly.isError, false, "a split row needs no category_id");
+
+  const { calls: deniedCalls, rpc: deniedRpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const readDenied = await callTool("assign_expenses", {
+    idempotency_key: "batch-split-1",
+    items: [{ transaction_id: TXN, shares }],
+  }, ["read"], deniedRpc);
+  assertEquals(readDenied.isError, true);
+  if (!readDenied.structuredContent.ok) assertEquals(readDenied.structuredContent.error.code, "forbidden");
+  assertEquals(deniedCalls.length, 0);
+
+  const bad = [
+    { transaction_id: TXN, shares: [{ project_id: PROJECT, share: 100 }] },
+    { transaction_id: TXN, shares: [{ project_id: PROJECT, share: 40 }, { project_id: PROJECT_B, share: 50 }] },
+    { transaction_id: TXN, shares: [{ project_id: PROJECT, share: 50 }, { project_id: PROJECT, share: 50 }] },
+    { transaction_id: TXN, shares: [{ project_id: PROJECT, share: 50.5 }, { project_id: PROJECT_B, share: 49.5 }] },
+    { transaction_id: TXN, shares: [{ project_id: PROJECT, share: 0 }, { project_id: PROJECT_B, share: 100 }] },
+    { transaction_id: TXN, shares: [{ project_id: PROJECT, share: 50, extra: 1 }, { project_id: PROJECT_B, share: 50 }] },
+    { transaction_id: TXN, shares: { project_id: PROJECT, share: 100 } },
+    { transaction_id: TXN, project_id: PROJECT, category_id: CATEGORY, shares },
+    { transaction_id: TXN, remember: false, shares },
+  ];
+  const before = calls.length;
+  for (const item of bad) {
+    const result = await callTool("assign_expenses", { idempotency_key: "k", items: [item] }, ["write"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(item));
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before, "a bad split row never reaches the database");
+});
+
+Deno.test("assign_expenses lists shares[] on its items like assign_expense_split", () => {
+  const tools = toolsFor(["write"]);
+  const batch = tools.find((tool) => tool.name === "assign_expenses");
+  const single = tools.find((tool) => tool.name === "assign_expense_split");
+  const props = batch?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
+  const itemProps = props.items.items?.properties ?? {};
+  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "shares"]);
+  assertEquals(itemProps.shares, (single?.inputSchema.properties as Record<string, unknown>).shares);
+  assertEquals(itemProps.shares, {
+    type: "array",
+    items: {
+      type: "object",
+      properties: { project_id: { type: "string" }, share: { type: "integer" } },
+      required: ["project_id", "share"],
+      additionalProperties: false,
+    },
+  });
+  assertEquals(batch?.description.includes("shares[]"), true);
 });
 
 Deno.test("set_category_pnl validates, forwards p_* args, and undo accepts category_pnl", async () => {

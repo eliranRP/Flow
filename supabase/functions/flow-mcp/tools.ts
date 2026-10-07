@@ -94,23 +94,25 @@ const splitShareSchema = z.object({
   project_id: UUID_TEXT,
   share: z.number().int().min(1).max(100),
 }).strict();
+const SPLIT_SHARES = z.array(splitShareSchema).min(2).max(50);
+// Projects are unique and the whole percents sum to 100.
+function sharesAreValid(shares: { project_id: string; share: number }[]): boolean {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const item of shares) {
+    if (seen.has(item.project_id)) return false;
+    seen.add(item.project_id);
+    total += item.share;
+  }
+  return total === 100;
+}
 const assignExpenseSplitSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   category_id: UUID_TEXT.optional(),
-  shares: z.array(splitShareSchema).min(2).max(50),
+  shares: SPLIT_SHARES,
 }).strict().superRefine((body, ctx) => {
-  const seen = new Set<string>();
-  let total = 0;
-  for (const item of body.shares) {
-    if (seen.has(item.project_id)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom });
-      return;
-    }
-    seen.add(item.project_id);
-    total += item.share;
-  }
-  if (total !== 100) {
+  if (!sharesAreValid(body.shares)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
@@ -184,7 +186,15 @@ const batchItemSchema = z.object({
   project_id: UUID_TEXT.optional(),
   category_id: UUID_TEXT.optional(),
   remember: z.boolean().optional(),
+  shares: SPLIT_SHARES.optional(),
 }).strict().superRefine((item, ctx) => {
+  if (item.shares != null) {
+    // A split row names its projects in shares[]; category_id is optional like assign_expense_split.
+    if (item.project_id != null || item.remember != null || !sharesAreValid(item.shares)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+    }
+    return;
+  }
   if (item.project_id == null && item.category_id == null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
@@ -519,6 +529,19 @@ function readTools() {
   ];
 }
 
+const SHARES_SPEC = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      project_id: { type: "string" },
+      share: { type: "integer" },
+    },
+    required: ["project_id", "share"],
+    additionalProperties: false,
+  },
+};
+
 function writeTools() {
   return [
     toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L.", {
@@ -532,20 +555,9 @@ function writeTools() {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },
-      shares: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            project_id: { type: "string" },
-            share: { type: "integer" },
-          },
-          required: ["project_id", "share"],
-          additionalProperties: false,
-        },
-      },
+      shares: SHARES_SPEC,
     }, true),
-    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed.", {
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split.", {
       idempotency_key: { type: "string" },
       items: {
         type: "array",
@@ -556,6 +568,7 @@ function writeTools() {
             project_id: { type: "string" },
             category_id: { type: "string" },
             remember: { type: "boolean" },
+            shares: SHARES_SPEC,
           },
           required: ["transaction_id"],
           additionalProperties: false,

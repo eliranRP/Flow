@@ -16,9 +16,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | --- | --- | --- | --- | --- |
 | 1 | [FLOW-101](#flow-101) | Loan payments count by their split parts (PR B) | SMALL CYCLE | in-progress (#70) |
 | 2 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE | in-progress (#71) |
-| 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | ready |
+| 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | in-progress (#74) |
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
-| 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | ready |
+| 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
@@ -61,7 +61,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-109"></a>
 ### FLOW-109 · Income assigned to a project: confirm it counts in that project
-- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **Type:** BUG · **Status:** in-progress (#74) · **Depends on:** —
 - **What:** Income filed to a project through MCP `assign_expense` gets no allocation row and a null `pnl_role`, while expenses filed the same way get a 100% allocation with role `project`. Verify whether that income counts in the project's P&L; if not, fix `assign_expense` (and the batch path) for income.
 - **Acceptance:** pgTAP: income assigned to project A shows in A's `get_project` income and in the company total exactly once; undo removes it; MCP test for the income path.
 
@@ -162,7 +162,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-201"></a>
 ### FLOW-201 · Split rows inside the assign_expenses batch
-- **Type:** MCP · **Status:** ready · **Depends on:** #68 (merged)
+- **Type:** MCP · **Status:** in-progress (#73) · **Depends on:** #68 (merged)
 - **What:** `assign_expense_split` files one line at a time. Allow split rows (`category_id`, `shares[]`) inside `assign_expenses`, counted as one write hit, with per-row results and `undo_batch` restoring the pre-split state (including lines that were in review).
 - **Acceptance:** pgTAP and Deno tests for a mixed batch, partial success, replay, and batch undo of a split that closed a review.
 
@@ -565,6 +565,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Smoke: a failure message on the sheet-stack scrim check; anchor the auth allowlist to the Supabase host; a unit test for the reporter.
 - [ ] Add `supabase migration repair` to the CI/CD runbook.
 - [ ] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR.
+
+<a id="flow-812"></a>
+### FLOW-812 · Faster CI
+- **Type:** SMALL CYCLE · **Status:** claimed (CI agent, 2026-10-07, claude/project-thread-uiob2d) · **Depends on:** —
+- **What:** A PR waits about 11 minutes for CI because one runner does every storybook step after the unit tests, and the static-story smoke opens every story in one serial test (about 6 minutes). Run the storybook smoke and the main Playwright suite as shards on parallel runners behind the `check` and `e2e` gate jobs. Start local Supabase while dependencies install.
+- **Acceptance:** Same tests run; the required check names stay `lint`, `check`, `e2e`; PR CI wall time drops by at least a third.
 
 ## Data hygiene (public repo)
 
