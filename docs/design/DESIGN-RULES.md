@@ -408,6 +408,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Mockups: [10-transaction-detail-light.png](../../design/screens/10-transaction-detail-light.png), [10-transaction-detail-dark.png](../../design/screens/10-transaction-detail-dark.png).
 - Entry: a transaction row.
 - Steps: amount before VAT, VAT beside it, source, links. [0041](../decisions/0041-amounts-before-vat.md). Assumed VAT may show a subtle hint. [0043](../decisions/0043-assumed-vat-on-expenses.md).
+- Loan split: "חלוקת התשלום" lists ריבית, מסים וביטוח, קרן with a 24px icon each, amounts with a minus in the text colour, and a "סה״כ" row equal to the line. When the P&L counts by parts: "נספר ברווח <amount>" under the heading and "מחוץ לרווח" with an eye-off icon on a kept-out part. Transaction rows add "3 חלקים", or "ממתין לבדיקה" in the warning tone. [0107](../decisions/0107-loan-split-on-the-transaction.md). Mockup: [Loan split breakdown](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) option A.
 - Back: chevron. Delete opens 20. What delete removes is still an open question. [0030](../decisions/0030-confirmation-sheets.md).
 - Error: save toast `er-05`.
 

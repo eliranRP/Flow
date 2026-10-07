@@ -71,6 +71,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: "11111111-1111-4000-8000-000000000001", description: "אלפא" }] };
     if (name === "get_transaction") return { status: 200, json: { id: "11111111-1111-4000-8000-000000000001", description: "אלפא" } };
     if (name === "get_line_split") return { status: 200, json: null };
+    if (name === "get_loan_split") return { status: 200, json: null };
     if (name === "mcp_list_loans") {
       return { status: 200, json: [{
         id: LOAN,
@@ -113,6 +114,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     "list_review",
     "get_transaction",
     "get_line_split",
+    "get_loan_split",
     "list_review",
     "get_dashboard",
     "mcp_list_loans",
@@ -169,6 +171,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "list_review") return { status: 200, json: [review] };
     if (name === "get_transaction") return { status: 200, json: { id: review.transaction_id, description: "אלפא" } };
     if (name === "get_line_split") return { status: 200, json: null };
+    if (name === "get_loan_split") return { status: 200, json: null };
     if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
     return { status: 500, json: null };
   });
@@ -238,6 +241,59 @@ Deno.test("get_expense reports not found, and a read error stays a read error", 
   const refused = await callTool("search_expenses", { scope: "filed" }, ["read"], () => Promise.resolve({ status: 500, json: null }));
   assertEquals(refused.isError, true);
   if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "The read was refused.");
+});
+
+Deno.test("get_expense returns the loan split parts, and skips the read for income", async () => {
+  const id = "11111111-1111-4000-8000-000000000001";
+  const split = {
+    loan_id: "22222222-2222-4000-8000-000000000002",
+    loan_name: "Example Bank",
+    needs_review: false,
+    by_parts: true,
+    parts: [
+      { part: "interest", amount_minor: 70000, in_pnl: true },
+      { part: "escrow", amount_minor: 20000, in_pnl: true },
+      { part: "principal", amount_minor: 10000, in_pnl: false },
+    ],
+  };
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id, direction: "expense", amount_net: -100000 } };
+    if (name === "get_loan_split") return { status: 200, json: split };
+    if (name === "get_line_split") return { status: 200, json: null };
+    return { status: 500, json: null };
+  });
+  const expense = await callTool("get_expense", { transaction_id: id }, ["read"], rpc);
+  assertEquals(expense.isError, false);
+  if (expense.structuredContent.ok) {
+    const data = expense.structuredContent.data as { id: string; loan_split: typeof split };
+    assertEquals(data.id, id);
+    assertEquals(data.loan_split, split);
+    const sum = data.loan_split.parts.reduce((total, part) => total + part.amount_minor, 0);
+    assertEquals(sum, 100000);
+  }
+  assertEquals(calls.find((call) => call.name === "get_loan_split")?.body, { p_transaction_id: id });
+
+  const plain = await callTool("get_expense", { transaction_id: id }, ["read"], rpcOf((name) => (
+    name === "get_transaction" ? { status: 200, json: { id, direction: "expense" } } : { status: 200, json: null }
+  )).rpc);
+  if (plain.structuredContent.ok) assertEquals((plain.structuredContent.data as { loan_split: unknown }).loan_split, null);
+
+  const income = rpcOf((name) => (
+    name === "get_transaction"
+      ? { status: 200, json: { id, direction: "income" } }
+      : name === "get_line_split" ? { status: 200, json: null } : { status: 500, json: null }
+  ));
+  const incomeRow = await callTool("get_expense", { transaction_id: id }, ["read"], income.rpc);
+  assertEquals(incomeRow.isError, false);
+  assertEquals(income.calls.map((call) => call.name), ["get_transaction", "get_line_split"]);
+
+  const failed = await callTool("get_expense", { transaction_id: id }, ["read"], rpcOf((name) => (
+    name === "get_transaction"
+      ? { status: 200, json: { id, direction: "expense" } }
+      : name === "get_line_split" ? { status: 200, json: null } : { status: 500, json: null }
+  )).rpc);
+  assertEquals(failed.isError, true);
+  if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.message, "The read was refused.");
 });
 
 Deno.test("a token without read scope is forbidden", async () => {
@@ -419,6 +475,7 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
     if (name === "get_line_split") {
       return { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 300, parts, parts_match: false } };
     }
+    if (name === "get_loan_split") return { status: 200, json: null };
     return { status: 500, json: null };
   });
   const split = await callTool("get_expense", { transaction_id: TXN }, ["read"], rpc);
@@ -428,15 +485,16 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
       id: TXN,
       amount_net: -300,
       line_split: { currency: "USD", line_minor: 300, parts, parts_match: false },
+      loan_split: null,
     });
   }
   assertEquals(calls[1], { name: "get_line_split", body: { p_transaction_id: TXN } });
   const whole = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction"
       ? { status: 200, json: { id: TXN } }
-      : { status: 200, json: { transaction_id: TXN, parts: [] } }));
+      : name === "get_loan_split" ? { status: 200, json: null } : { status: 200, json: { transaction_id: TXN, parts: [] } }));
   assertEquals(whole.isError, false);
-  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN });
+  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN, loan_split: null });
   const failed = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction" ? { status: 200, json: { id: TXN } } : { status: 500, json: null }));
   assertEquals(failed.isError, true);

@@ -755,6 +755,7 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
         return Promise.resolve(new Response(JSON.stringify({ id, description: sub === userA ? "אלפא" : "ביתא" })));
       }
       if (name === "get_line_split") return Promise.resolve(new Response("null"));
+      if (name === "get_loan_split") return Promise.resolve(new Response("null"));
       return Promise.resolve(new Response("{}", { status: 500 }));
     },
   };
@@ -774,6 +775,7 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
   assertEquals(expense.result.structuredContent.data.description, "אלפא", "user A expense ignores the other id's company");
   assertEquals(expense.result.structuredContent.data.id, expenseA, "user A expense id");
   assertEquals(seen.some((call) => call.name === "get_transaction" && call.sub === userB), false, "token A did not read as user B");
+  assertEquals(seen.some((call) => call.name === "get_loan_split" && call.sub === userB), false, "token A did not read a loan split as user B");
 });
 
 Deno.test("get_project reads only the token company's project", async () => {
