@@ -316,7 +316,7 @@ a.ui-row,
 
 /* Detail amounts draw agorot smaller and raised; the dot and digits stay real text. */
 .ui-num-cents {
-  font-size: 0.58em;
+  font-size: 0.6em;
   vertical-align: 0.62em;
 }
 

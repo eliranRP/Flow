@@ -6,6 +6,7 @@ import { thisMonth } from "./period";
 import { AuthProvider, useAuth } from "./auth";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
+import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { getSupabase } from "./lib/supabase";
@@ -872,9 +873,5 @@ function AuthCallback() {
     };
   }, [navigate]);
 
-  return (
-    <main className="flex min-h-dvh items-center justify-center px-side">
-      <p className="t-title-3">{message}</p>
-    </main>
-  );
+  return <AuthCallbackView message={message} />;
 }
