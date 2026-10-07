@@ -2830,11 +2830,6 @@ export function TransactionScreen({
         active={sample == null}
         readOnly={holdWrites}
       />
-      {lineMeta.isError && lineMeta.data == null ? (
-        <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
-      ) : (
-        <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
-      )}
       {vatShown && txn.vat_amount !== 0n ? (
         <p className="ui-page-pad t-hint">
           מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
@@ -2842,6 +2837,11 @@ export function TransactionScreen({
           {vatStatusLabel(txn.vat_status)}
         </p>
       ) : null}
+      {lineMeta.isError && lineMeta.data == null ? (
+        <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
+      ) : (
+        <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
+      )}
       {holdWrites ? null : (
       <div className="ui-stack ui-page-pad">
         {onOpenSplit ? (

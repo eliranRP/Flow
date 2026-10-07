@@ -76,7 +76,7 @@ export function BankDetails({
             variant="static"
             eyebrow={direction === "income" ? "משלם" : "נמען"}
             icon={<BuildingIcon />}
-            title={<bdi dir="auto">{counterparty}</bdi>}
+            title={<bdi className="ui-bank-line" dir="auto" data-clip-ok="">{counterparty}</bdi>}
           />
         ) : null}
         {meta.memo ? <MemoRow memo={meta.memo} /> : null}
