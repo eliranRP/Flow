@@ -149,7 +149,9 @@ select is(
   'the company total counts the filed income once'
 );
 select is(
-  (public.get_dashboard(null, null, 'invoiced')->'projects'->0->>'income_agorot')::bigint,
+  (select (r->>'income_agorot')::bigint
+   from jsonb_array_elements(public.get_dashboard(null, null, 'invoiced')->'projects') r
+   where (r->>'id')::uuid = (select id from projinc where label = 'north')),
   50000::bigint,
   'north shows it on the invoiced basis too'
 );

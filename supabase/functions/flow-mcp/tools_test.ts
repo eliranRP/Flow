@@ -416,7 +416,7 @@ Deno.test("assign_expense forwards project and category for an income review lin
   }
 });
 
-Deno.test("income filed to a project reads back in get_project, single and batch", async () => {
+Deno.test("income assign forwards the project, single and batch, and get_project passes income through", async () => {
   const { calls, rpc } = rpcOf((name) => {
     if (name === "get_project") {
       return {
