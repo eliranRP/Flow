@@ -114,19 +114,20 @@ describe("setup home card", () => {
     gate.review = false;
   });
 
-  it("hides after הסתרה, focuses ביטול, and restores the card on undo", async () => {
+  it("closes with one tap, focuses ביטול, and restores the card on undo", async () => {
     writeSetupStore(userId, companyId, { ...emptySetupStore(), run_started_at: "2026-10-04T00:00:00.000Z" });
     renderHome();
-    fireEvent.click(await screen.findByRole("button", { name: "הסתרה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "סגירת ההגדרה" }));
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "הסתרה" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "סגירת ההגדרה" })).not.toBeInTheDocument();
     });
+    expect(await screen.findByText("ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות.")).toBeInTheDocument();
     const undo = await screen.findByRole("button", { name: "ביטול" });
     await waitFor(() => {
       expect(undo).toHaveFocus();
     });
     fireEvent.click(undo);
-    expect(await screen.findByRole("button", { name: "הסתרה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
     expect(readSetupStore(userId, companyId).card_dismissed_at).toBeNull();
   });
 
@@ -140,7 +141,7 @@ describe("setup home card", () => {
     await waitFor(() => {
       expect(readSetupStore(userId, companyId).card_dismissed_at).not.toBeNull();
     });
-    expect(screen.queryByRole("button", { name: "הסתרה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "סגירת ההגדרה" })).not.toBeInTheDocument();
   });
 
   it("shows the completed toast once", async () => {

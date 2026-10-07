@@ -140,11 +140,19 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4) 0;
+  padding: var(--space-1) var(--space-4) 0;
+  padding-inline-end: var(--space-1);
+}
+
+.ui-setup-card-head .ui-setup-card-close {
+  flex: none;
+  color: var(--color-text-secondary);
 }
 
 .ui-setup-card-head h2 {
+  min-inline-size: 0;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .ui-setup-card-meter {

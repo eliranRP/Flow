@@ -89,6 +89,20 @@ describe("setup step model", () => {
     expect(decideEntry({ ...started(), run_resumed_at: at }, open, false, at)).toEqual({ kind: "stay" });
   });
 
+  it("stops the one resume once the Home card is closed, and brings it back on undo", () => {
+    const open = facts({ sumitConnected: true });
+    const closed = { ...skipPatch(started(), 2, at), card_dismissed_at: at };
+    expect(decideEntry(closed, open, false, at)).toEqual({ kind: "stay" });
+    expect(cardVisible(closed, open, false)).toBe(false);
+    expect(settingsEntryVisible(closed, open)).toBe(true);
+    expect(decideEntry({ ...closed, card_dismissed_at: null }, open, false, at)).toEqual({
+      kind: "redirect",
+      to: "/setup/3",
+      patch: { run_resumed_at: at },
+      markSession: true,
+    });
+  });
+
   it("sends card and finish actions home, and step 1 back only after this run created the company", () => {
     expect(backPath(0, false, true)).toBeNull();
     expect(backPath(1, false, false)).toBeNull();
