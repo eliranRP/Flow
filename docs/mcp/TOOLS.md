@@ -112,6 +112,8 @@ An open review is closed by `approve_review_item`. The card leaves לאישור.
 
 Passes the project and category into `approve_review_item` when a review is open. Otherwise `reassign_transaction`. A finished project is allowed, because `reassign_transaction` allows it.
 
+Income works the same way. A filed income line keeps `pnl_role` null and gets no allocation row; the P&L reads its `project_id`, so it shows in that project's `get_project` income and `list_projects` row, and once in the company total (FLOW-109). Expenses get `pnl_role` `project` and one 100% allocation.
+
 ```json
 {
   "idempotency_key": "assign-20",
