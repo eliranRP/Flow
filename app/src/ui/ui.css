@@ -500,6 +500,19 @@ a.ui-row,
   cursor: not-allowed;
 }
 
+/* FLOW-119. The loan's project: one line, the empty value muted. */
+.ui-pick-value {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-pick-value[data-empty="true"] {
+  color: var(--color-text-muted);
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
@@ -4057,6 +4070,21 @@ div.ui-check-row {
   margin-inline: auto;
   border-radius: 999px;
   background: var(--color-text);
+}
+
+/* FLOW-303: prev and next on the transaction card, before ⋯ in the top bar. */
+.ui-txn-end,
+.ui-txn-nav {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* An icon button that stays focusable at a list end. The cursor comes from the shared disabled rule. */
+.ui-icon-btn[aria-disabled="true"],
+.ui-icon-btn[aria-disabled="true"]:active {
+  background: transparent;
+  color: var(--color-disabled-text);
 }
 
 /* FLOW-117: the other kind's categories under the category picker. */

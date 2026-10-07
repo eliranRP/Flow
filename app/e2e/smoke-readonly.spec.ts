@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page, type Request, type Response } from "@playwright/test";
 
 // List screens only. Detail RPCs stay on the owner and are not called.
-const readRpcs = new Set(["get_dashboard", "list_review", "list_unpaid", "sumit_status"]);
+const readRpcs = new Set(["get_dashboard", "list_categories", "list_review", "list_unpaid", "sumit_status"]);
 
 const email = process.env.SMOKE_EMAIL ?? "";
 const password = process.env.SMOKE_PASSWORD ?? "";

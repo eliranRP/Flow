@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LOAN_PRINCIPAL_CATEGORY } from "@flow/shared";
 import { ToastProvider } from "../ui/toast";
-import { LoanBalanceList, LoanSplitPanel, LoanTransactionSplit } from "./loan-match";
+import { LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -363,6 +363,37 @@ describe("LoanBalanceList", () => {
     expect(screen.getByText("הלוואת דוגמה")).toBeInTheDocument();
     expect(screen.getByText("₪117,000")).toBeInTheDocument();
     expect(screen.getByText("ממתין לבדיקה")).toBeInTheDocument();
+  });
+
+  it("joins the waiting hint and the project, and names the project on the owner's button", () => {
+    render(
+      <LoanBalanceList
+        rows={[
+          { id: "loan-1", name: "הלוואת דוגמה", currency: "ILS", balanceMinor: 100n, flaggedParts: 1, projectId: "p-a", projectName: "פרויקט א" },
+          { id: "loan-2", name: "הלוואה שנייה", currency: "ILS", balanceMinor: 100n, flaggedParts: 0, projectId: null, projectName: null },
+        ]}
+        onOpen={() => undefined}
+      />,
+    );
+    expect(screen.getByText("ממתין לבדיקה · פרויקט א")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^הלוואת דוגמה, .*פרויקט: פרויקט א$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^הלוואה שנייה, .*פרויקט: ללא פרויקט$/ })).toBeInTheDocument();
+  });
+});
+
+describe("ProjectLoanList", () => {
+  it("shows each loan's balance and marks a paid-off loan", () => {
+    render(
+      <ProjectLoanList
+        rows={[
+          { id: "loan-1", name: "הלוואת דוגמה", currency: "ILS", balance_minor: 11_700_000n },
+          { id: "loan-2", name: "הלוואה שנפרעה", currency: "ILS", balance_minor: 0n },
+        ]}
+      />,
+    );
+    expect(screen.getByText("₪117,000")).toBeInTheDocument();
+    expect(screen.getAllByText("נפרעה")).toHaveLength(1);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
 

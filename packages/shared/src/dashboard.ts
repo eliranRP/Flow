@@ -227,6 +227,13 @@ export const projectDetailSchema = z
         category: z.string().nullable(),
       }),
     ),
+    /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
+    loans: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      currency: z.string(),
+      balance_minor: agorotSchema,
+    })).optional(),
   })
   .nullable();
 
