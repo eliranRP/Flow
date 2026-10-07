@@ -212,7 +212,18 @@ export interface ProviderMeta {
   providerCategory?: string | null;
   /** ISO time of the last status recheck. Normalize does not set it. */
   checked_at?: string | null;
+  /** How the money moved (FLOW-304). */
+  method?: PaymentMethod | null;
+  /** The card's last 4 digits only. Never a full card or account number. */
+  card_last4?: string | null;
+  /** The provider's memo or note on the line, redacted. */
+  memo?: string | null;
+  /** Provider account id, resolved to its label at read time. Never an account number. */
+  account_id?: string | null;
 }
+
+export const PAYMENT_METHODS = ["card", "ach", "wire", "check", "transfer", "other"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /**
  * One provider line. amount_original is the gross amount in minor units of
@@ -274,6 +285,10 @@ export const providerMetaSchema = z.strictObject({
   providerCategory: z.string().max(TEXT_LIMITS.hint).nullable().optional(),
   /** ISO time of the last status recheck. The engine writes it. Normalize leaves it unset. */
   checked_at: z.string().min(1).max(40).nullable().optional(),
+  method: z.enum(PAYMENT_METHODS).nullable().optional(),
+  card_last4: z.string().regex(/^[0-9]{4}$/).nullable().optional(),
+  memo: z.string().min(1).max(TEXT_LIMITS.hint).nullable().optional(),
+  account_id: boundedId.nullable().optional(),
 });
 
 const namedParty = z.strictObject({

@@ -759,6 +759,7 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
       }
       if (name === "get_line_split") return Promise.resolve(new Response("null"));
       if (name === "get_loan_split") return Promise.resolve(new Response("null"));
+      if (name === "get_line_meta") return Promise.resolve(new Response("[]"));
       return Promise.resolve(new Response("{}", { status: 500 }));
     },
   };

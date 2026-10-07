@@ -3,9 +3,6 @@ import { useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
-  LOAN_ESCROW_CATEGORY,
-  LOAN_INTEREST_CATEGORY,
-  LOAN_PRINCIPAL_CATEGORY,
   scheduleRowForDate,
   type LoanSplitPart,
 } from "@flow/shared";
@@ -32,12 +29,6 @@ const PART_ICON: Record<LoanSplitPart, () => ReactNode> = {
   interest: () => <PercentIcon />,
   escrow: () => <HomeIcon />,
   principal: () => <BankIcon />,
-};
-
-const PART_CATEGORY: Record<LoanSplitPart, string> = {
-  interest: LOAN_INTEREST_CATEGORY,
-  escrow: LOAN_ESCROW_CATEGORY,
-  principal: LOAN_PRINCIPAL_CATEGORY,
 };
 
 type SplitRow = {
@@ -353,14 +344,15 @@ function correctFailureText(error: Error): string {
 export function LoanTransactionSplit({
   transactionId,
   docDate,
-  categoryName,
+  loanPart,
   direction,
   active,
   readOnly = false,
 }: {
   transactionId: string;
   docDate: string;
-  categoryName: string;
+  /** `categories.loan_part` of the line's category; null for any other category. */
+  loanPart: string | null;
   direction: string;
   active: boolean;
   /** From the transaction screen. A viewer, and a role that is still loading, pass true. */
@@ -369,7 +361,7 @@ export function LoanTransactionSplit({
   const queryClient = useQueryClient();
   const holdWrites = useHoldWrites();
   const writesHeld = readOnly || holdWrites;
-  const offerMatch = direction !== "income" && categoryName === LOAN_PRINCIPAL_CATEGORY;
+  const offerMatch = direction !== "income" && loanPart === "principal";
   const [sheetOpen, setSheetOpen] = useState(false);
   const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
   const splitSectionRef = useRef<HTMLHeadingElement>(null);
@@ -561,10 +553,10 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .eq("company_id", companyId),
     supabase
       .from("categories")
-      .select("id, name")
+      .select("id, loan_part")
       .eq("company_id", companyId)
       .eq("kind", "expense")
-      .in("name", [LOAN_INTEREST_CATEGORY, LOAN_ESCROW_CATEGORY, LOAN_PRINCIPAL_CATEGORY]),
+      .not("loan_part", "is", null),
     supabase
       .from("loan_balances")
       .select("loan_id, balance_minor")
@@ -580,8 +572,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
   const balanceByLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, BigInt(row.balance_minor ?? 0)]));
   const categoryIds: Partial<Record<LoanSplitPart, string>> = {};
   for (const category of categories.data ?? []) {
-    const part = (Object.keys(PART_CATEGORY) as LoanSplitPart[]).find((key) => PART_CATEGORY[key] === category.name);
-    if (part) categoryIds[part] = category.id;
+    if (category.loan_part) categoryIds[category.loan_part] = category.id;
   }
   return {
     companyId,

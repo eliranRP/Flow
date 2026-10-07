@@ -17,7 +17,15 @@ import { MERCURY_SKIP_REASONS } from "../../../functions/_shared/connectors/merc
 import { jerusalemDate } from "../../../functions/_shared/connectors/mercury/dates.ts";
 import { dollarsToCents } from "../../../functions/_shared/connectors/mercury/money.ts";
 import { classifyMercuryError, httpStatusVoids } from "../../../functions/_shared/connectors/mercury/client.ts";
-import { MercuryCardAccountError, normalizeMercury, settlementPlan, treasuryVoidIds } from "../../../functions/_shared/connectors/mercury/normalize.ts";
+import {
+  MercuryCardAccountError,
+  mercuryCardLast4,
+  mercuryMemo,
+  mercuryPaymentMethod,
+  normalizeMercury,
+  settlementPlan,
+  treasuryVoidIds,
+} from "../../../functions/_shared/connectors/mercury/normalize.ts";
 import { postedSnapshot } from "./replay_fixture.ts";
 import { redactMercury } from "../../../functions/_shared/connectors/mercury/redact.ts";
 import { openConnector } from "../../../functions/_shared/connectors/registry.ts";
@@ -127,7 +135,7 @@ Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and
     assertEquals(MERCURY_SKIP_REASONS.includes(reason as typeof MERCURY_SKIP_REASONS[number]), true);
   }
 
-  const loans = imported.filter((line) => line.category_hint === "תשלומי הלוואה");
+  const loans = imported.filter((line) => line.category_hint === "loan_part:principal");
   const cashback = imported.filter((line) => line.category_hint === "הכנסה אחרת");
   const refunds = imported.filter((line) => line.doc_kind === "credit");
   assertEquals(loans.length, 6);
@@ -178,12 +186,12 @@ Deno.test("the canonical snapshot has no token and no forbidden field", () => {
 Deno.test("a card refund, a loan prefix, and cashback keep their hints", () => {
   const { imported } = replay(postedLines);
   const loan = imported.find((line) => line.counterparty.name === "Lakeview Loan Servicing");
-  assertEquals(loan?.category_hint, "תשלומי הלוואה");
+  assertEquals(loan?.category_hint, "loan_part:principal");
   assertEquals(dollarsToCents(-2600), -260000);
   assertEquals(loan?.amount_original, 260000);
   const servease = imported.filter((line) => line.counterparty.name === "Servease");
   assertEquals(servease.length, 2);
-  assertEquals(servease.every((line) => line.category_hint === "תשלומי הלוואה"), true);
+  assertEquals(servease.every((line) => line.category_hint === "loan_part:principal"), true);
   const cashback = imported.find((line) => line.counterparty.name === "Mercury IO Cashback" && line.amount_original === 275);
   assertEquals(cashback?.category_hint, "הכנסה אחרת");
   assertEquals(cashback?.amount_negated, false);
@@ -644,7 +652,58 @@ Deno.test("a Jerusalem instant is not the UTC date, and providerCategory is kept
   assertEquals(line.line.doc_date, "2026-10-04");
   assertEquals(line.line.cash_date, "2026-10-04");
   assertEquals(jerusalemDate("2026-10-03T21:30:00Z"), "2026-10-04");
-  assertEquals(line.line.provider_meta, { kind: "outgoingPayment", providerCategory: "Software" });
+  assertEquals(line.line.provider_meta.kind, "outgoingPayment");
+  assertEquals(line.line.provider_meta.providerCategory, "Software");
+});
+
+Deno.test("FLOW-304: the method, the card's last 4, the memo and the account are kept, and nothing else", () => {
+  const card = postedLines.find((row) => row.kind === "creditCardTransaction" && row.status === "sent");
+  const ach = postedLines.find((row) => row.kind === "outgoingPayment" && row.status === "sent");
+  assertEquals(Boolean(card && ach), true);
+  if (!card || !ach) return;
+  const cardLine = normalizeMercury({
+    ...card,
+    details: { creditCardInfo: { id: "card-1", email: "name@example.com", paymentMethod: "Credit Card ••4242" } },
+    externalMemo: "Order 123456789 for unit 2",
+  }, ctx());
+  assertEquals(cardLine.ok, true);
+  if (!cardLine.ok) return;
+  assertEquals(cardLine.line.provider_meta.method, "card");
+  assertEquals(cardLine.line.provider_meta.card_last4, "4242");
+  assertEquals(cardLine.line.provider_meta.memo, "Order **** for unit 2");
+  assertEquals(cardLine.line.provider_meta.account_id, card.accountId);
+  const text = JSON.stringify(cardLine.line.provider_meta);
+  for (const needle of ["name@example.com", "card-1", "123456789"]) assertEquals(text.includes(needle), false, needle);
+
+  const achLine = normalizeMercury({
+    ...ach,
+    details: { electronicRoutingInfo: { accountNumber: "000123456789", routingNumber: "000000000", bankName: "EXAMPLE BANK" } },
+    note: "Rent for unit 1",
+  }, ctx());
+  assertEquals(achLine.ok, true);
+  if (!achLine.ok) return;
+  assertEquals(achLine.line.provider_meta.method, "ach");
+  assertEquals(achLine.line.provider_meta.card_last4, undefined);
+  assertEquals(achLine.line.provider_meta.memo, "Rent for unit 1");
+  assertEquals(JSON.stringify(achLine.line).includes("000123456789"), false);
+  assertEquals(JSON.stringify(achLine.line).includes("EXAMPLE BANK"), false);
+});
+
+Deno.test("FLOW-304: the payment method follows the kind and the routing block", () => {
+  assertEquals(mercuryPaymentMethod("debitCardTransaction", {}), "card");
+  assertEquals(mercuryPaymentMethod("cardInternationalTransactionFee", {}), "card");
+  assertEquals(mercuryPaymentMethod("incomingDomesticWire", {}), "wire");
+  assertEquals(mercuryPaymentMethod("outgoingPayment", { details: { domesticWireRoutingInfo: {} } }), "wire");
+  assertEquals(mercuryPaymentMethod("outgoingPayment", { details: { electronicRoutingInfo: {} } }), "ach");
+  assertEquals(mercuryPaymentMethod("outgoingPayment", { checkNumber: "1001" }), "check");
+  assertEquals(mercuryPaymentMethod("checkDeposit", {}), "check");
+  assertEquals(mercuryPaymentMethod("internalTransfer", {}), "transfer");
+  assertEquals(mercuryPaymentMethod("other", {}), "other");
+  assertEquals(mercuryCardLast4({ details: { debitCardInfo: { paymentMethod: "Debit Card ••1234" } } }), "1234");
+  assertEquals(mercuryCardLast4({ details: { creditCardInfo: { paymentMethod: "Credit Card 4242424242424242" } } }), null);
+  assertEquals(mercuryCardLast4({ details: {} }), null);
+  assertEquals(mercuryMemo({ externalMemo: "   " }), null);
+  assertEquals(mercuryMemo({ externalMemo: "x".repeat(500) })?.length, 200);
 });
 
 Deno.test("a non-USD line is refused and a bad amount is not not_a_line", () => {

@@ -1679,6 +1679,74 @@ a.ui-row,
   color: var(--color-text-secondary);
 }
 
+/* FLOW-304. The payment method under the source line: icon and a few words, one line. */
+.ui-review-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.ui-method-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* The memo: one line with an ellipsis; a button only when clipped. */
+.ui-review-memo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  text-align: start;
+}
+
+.ui-review-memo-icon,
+.ui-review-memo-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-review-memo-text {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 44px hit area; the negative block margin keeps the line its hint height. */
+.ui-review-memo-button {
+  min-block-size: var(--touch-min);
+  margin-block: calc((var(--type-hint-size) * var(--type-hint-line) - var(--touch-min)) / 2);
+}
+
+.ui-review-memo-button[data-open] {
+  align-items: flex-start;
+  margin-block: 0;
+}
+
+.ui-review-memo-button[data-open] .ui-review-memo-text {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ui-review-memo-button[data-open] .ui-review-memo-chevron {
+  transform: rotate(180deg);
+}
+
 .ui-review-tile {
   display: grid;
   place-items: center;
@@ -4191,4 +4259,63 @@ div.ui-check-row {
 /* FLOW-501: the Settings rows that open a page. The wrapper only marks the row for focus return. */
 .ui-settings-page-row {
   display: contents;
+}
+
+/* FLOW-304. "פרטי הבנק" on the transaction screen. Static rows; text stays selectable. */
+.ui-bank .ui-row {
+  user-select: text;
+}
+
+.ui-bank-account {
+  display: inline-flex;
+  max-inline-size: 100%;
+  gap: var(--space-1);
+  vertical-align: bottom;
+}
+
+.ui-bank-account-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bank-last4 {
+  flex: none;
+}
+
+/* The clipping box takes the name's own direction, so a Latin name loses its end, not its start. */
+.ui-bank-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bank-wrap .ui-row-title {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.ui-bank-memo {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.ui-bank-memo[data-open] {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+.ui-bank-text {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-hint-weight);
 }

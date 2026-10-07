@@ -38,6 +38,8 @@ import {
   NotificationsLockFrame,
 } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
+import { SeedLineMeta, storyMeta } from "./story-support";
+import type { TxnMeta } from "../txn-meta";
 import { TabBar } from "./tab-bar";
 import { ViewerPreview } from "../use-is-viewer";
 
@@ -1485,8 +1487,8 @@ export const CategoriesLongHebrew: Story = {
 const keptOutCategories: Array<CategoryRow & { count?: number }> = [
   { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 42 },
   { id: "c6", name: "פיקדונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: true, count: 3 },
-  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 12 },
-  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, count: 12 },
+  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, loan_part: "interest", count: 12 },
+  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal", count: 12 },
   { id: "c4", name: "עבודה", kind: "expense", hidden: true, is_default: true, excluded_from_pnl: true, count: 1 },
   { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false, count: 3 },
 ];
@@ -2551,6 +2553,165 @@ export const TransactionLargestUsdIncome: Story = {
           customer_name: "Sample customer",
         }}
       />
+    </StoryRoute>
+  ),
+};
+
+/* FLOW-304. Bank details on the transaction screen and the review card. Invented data only. */
+function MercuryTransaction({ meta, income = false }: { meta: TxnMeta; income?: boolean }) {
+  return (
+    <StoryRoute entry="/transactions/t-meta" tabs>
+      <SeedLineMeta meta={[meta]} />
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-meta",
+          description: "EXAMPLE OFFICE SUITE",
+          direction: income ? "income" : "expense",
+          doc_date: "2026-09-10",
+          amount_gross: income ? 480_000n : -125_000n,
+          amount_net: income ? 480_000n : -125_000n,
+          vat_amount: 0n,
+          currency: "USD",
+          vat_status: "source",
+          source: "mercury",
+          project_name: "Cedar Lot",
+          category_name: income ? "Rent" : "Office",
+          supplier_name: income ? null : "Example Office Suite",
+          customer_name: income ? "Sample Tenant LLC" : null,
+        }}
+      />
+    </StoryRoute>
+  );
+}
+
+export const TransactionMetaNone: Story = {
+  name: "Transaction bank details: none",
+  render: () => <MercuryTransaction meta={storyMeta("t-meta", {})} />,
+};
+
+export const TransactionMetaCard: Story = {
+  name: "Transaction bank details: card",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "card",
+        card_last4: "4242",
+        account: "Mercury Checking (1)",
+        counterparty: "Example Office Suite",
+        bank_description: "EXAMPLE OFFICE SUITE ••6789",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaAchMemo: Story = {
+  name: "Transaction bank details: ACH and memo",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "ach",
+        account: "Mercury Checking ••1234",
+        counterparty: "Example Office Suite Holdings",
+        memo: "Invoice 1042 for the September office lease, parking, and storage",
+        bank_description: "ACH EXAMPLE OFFICE SUITE HOLDINGS PPD",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaLongMemoOpen: Story = {
+  name: "Transaction bank details: long memo, open",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "ach",
+        memo: "Invoice 1042 for the September office lease, parking for two cars, storage unit B, after-hours cleaning, the shared kitchen supplies, the lobby badge reissue, and the late fee that was waived by the landlord in August after the elevator repair",
+      })}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const toggle = await within(canvasElement).findByRole("button", { name: /הערה/ });
+    await userEvent.click(toggle);
+    // Route stories open with the title focused (storybook-layout's focus check); the click moved it.
+    canvasElement.querySelector<HTMLElement>(".ui-focus-title")?.focus();
+  },
+};
+
+export const TransactionMetaWire: Story = {
+  name: "Transaction bank details: wire income",
+  render: () => (
+    <MercuryTransaction
+      income
+      meta={storyMeta("t-meta", {
+        method: "wire",
+        account: "Mercury Savings ••5678",
+        counterparty: "Sample Tenant Holdings LLC",
+        bank_description: "WIRE FROM SAMPLE TENANT HOLDINGS ••4321",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaHebrewMemo: Story = {
+  name: "Transaction bank details: Hebrew memo",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "transfer",
+        account: "Mercury Checking ••1234",
+        memo: "העברה לחשבון החיסכון לפני תשלום המע״מ של חודש ספטמבר",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaLongAccount: Story = {
+  name: "Transaction bank details: long account name",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "check",
+        account: "Mercury Operating Reserve for Cedar Lot Construction ••1234",
+        counterparty: "Example Construction Supply and Equipment Rental Company",
+      })}
+    />
+  ),
+};
+
+const metaReviewRow: ReviewRow = {
+  ...sampleReview,
+  id: "q-meta",
+  transaction_id: "t-meta",
+  description: "EXAMPLE OFFICE SUITE",
+  supplier_name: "Example Office Suite Holdings",
+  amount_net: -125_000n,
+  vat_agorot: 0n,
+  currency: "USD",
+  project_name: "Cedar Lot",
+  category_name: "Office",
+};
+
+export const ReviewMetaFold: Story = {
+  name: "Review bank details: fold with memo",
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={15}>
+      <SeedLineMeta
+        meta={[storyMeta("t-meta", { method: "wire", memo: "Invoice 1042 for the September office lease, parking, and storage" })]}
+      />
+      <ExampleBar />
+      <ReviewQueue rows={[metaReviewRow]} search="" sample listPlace={{ index: 14, total: 15 }} />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewMetaCard: Story = {
+  name: "Review bank details: card",
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={15}>
+      <SeedLineMeta meta={[storyMeta("t-meta", { method: "card", card_last4: "4242" })]} />
+      <ExampleBar />
+      <ReviewQueue rows={[metaReviewRow]} search="" sample />
     </StoryRoute>
   ),
 };

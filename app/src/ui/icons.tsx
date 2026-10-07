@@ -459,3 +459,37 @@ export function LoanIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** FLOW-304. A payment card. */
+export function CardIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M7 14.5h3" />
+    </Svg>
+  );
+}
+
+/** FLOW-304. ACH, wire, or an internal transfer. The pair reads the same both ways, so it is not mirrored. */
+export function TransferIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 8.5h15" />
+      <path d="m15.5 5 3.5 3.5-3.5 3.5" />
+      <path d="M20 15.5H5" />
+      <path d="M8.5 12 5 15.5 8.5 19" />
+    </Svg>
+  );
+}
+
+/** FLOW-304. A memo on a bank line. */
+export function NoteIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5v10L14 20H6.5A1.5 1.5 0 0 1 5 18.5z" />
+      <path d="M19 14.5h-3.5A1.5 1.5 0 0 0 14 16v4" />
+      <path d="M8.5 8h7M8.5 11.5h5" />
+    </Svg>
+  );
+}

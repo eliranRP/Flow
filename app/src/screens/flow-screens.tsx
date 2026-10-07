@@ -3,7 +3,7 @@ import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type Categor
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from "react-router-dom";
-import { LoanTransactionSplit, ProjectLoanList, useLoanBalances, type LoanBalanceRow } from "./loan-match";
+import { LoanReadError, LoanTransactionSplit, ProjectLoanList, useLoanBalances, type LoanBalanceRow } from "./loan-match";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
@@ -47,6 +47,7 @@ import {
   useReviewQuery,
   useMercuryStatusQuery,
   useSumitStatusQuery,
+  useLineMetaQuery,
   useTransactionQuery,
   useUnpaidQuery,
 } from "../use-books";
@@ -96,6 +97,7 @@ import { ConnectorRow } from "../ui/connector-row";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { RadioRow } from "../ui/radio-row";
 import { ReviewCard } from "../ui/review-card";
+import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SearchField } from "../ui/search-field";
@@ -1359,6 +1361,10 @@ export function ReviewQueue({
   );
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
+  const metaLive = !sample && previewWrite == null;
+  const lineMeta = useLineMetaQuery(shownId, metaLive);
+  // Warm the next card's bank details so its meta line paints with the card.
+  useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
   const jev = jevQueue.stateFor(shownId);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
@@ -1623,6 +1629,7 @@ export function ReviewQueue({
           categoryButtonRef={reviewLineFocus.category}
           onProject={holdWrites ? undefined : openProject}
           onCategory={holdWrites ? undefined : openCategory}
+          meta={lineMeta.data}
         />
       </div>
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
@@ -2468,6 +2475,7 @@ export function TransactionScreen({
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
+  const lineMeta = useLineMetaQuery(sample ? sample.id : transactionId, sample == null);
   const nav = useTxnNav(sample?.id ?? transactionId);
   const goBack = useGoBack();
   useTxnNavKeys(nav);
@@ -2684,6 +2692,8 @@ export function TransactionScreen({
   const splitRow = collapsedTo == null && serverSplit;
   const shownProject = collapsedTo?.name || splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
+  const shownCategoryId = categoryId || txn.category_id || "";
+  const shownLoanPart = categories.data?.find((category) => category.id === shownCategoryId)?.loan_part ?? null;
   function openSplit() {
     if (onOpenSplit) {
       onOpenSplit();
@@ -2832,7 +2842,7 @@ export function TransactionScreen({
       <LoanTransactionSplit
         transactionId={txn.id}
         docDate={txn.doc_date}
-        categoryName={shownCategory}
+        loanPart={shownLoanPart}
         direction={txn.direction}
         active={sample == null}
         readOnly={holdWrites}
@@ -2844,6 +2854,11 @@ export function TransactionScreen({
           {vatStatusLabel(txn.vat_status)}
         </p>
       ) : null}
+      {lineMeta.isError && lineMeta.data == null ? (
+        <LoanReadError label="פרטי הבנק" busy={lineMeta.isFetching} onRetry={() => { void lineMeta.refetch(); }} />
+      ) : (
+        <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
+      )}
       {holdWrites ? null : (
       <div className="ui-stack ui-page-pad">
         {onOpenSplit ? (
@@ -4880,15 +4895,15 @@ export function ConnectionsScreen({
 const KEPT_OUT = "מחוץ לרווח והפסד";
 const KEPT_OUT_SHORT = "מחוץ לרווח";
 
-/** The three loan categories the server keeps fixed, and whether each counts in the P&L (decision 0099). */
+/** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {
-  "ריבית משכנתא": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
-  "מסים וביטוח": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
-  "תשלומי הלוואה": "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
+  interest: "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  escrow: "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  principal: "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
 };
 
 function loanCategoryLine(category: CategoryRow): string | null {
-  return category.kind === "expense" ? (LOAN_CATEGORY_LINES[category.name] ?? null) : null;
+  return category.loan_part ? (LOAN_CATEGORY_LINES[category.loan_part] ?? null) : null;
 }
 
 type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
