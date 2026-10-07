@@ -104,6 +104,8 @@ import { useToast } from "../ui/toast";
 import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
+import { isReversal, reversalChoices } from "../reversal";
+import { ReversalTag } from "../ui/suggest-tag";
 
 function blockedPreview(preview: HomePreview, tell: (message: string) => void): boolean {
   if (preview === "off") return false;
@@ -1292,6 +1294,7 @@ export function ReviewQueue({
   const blocked = useBlockedPreview();
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
+  const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
   const rows = useHeldOrder(incoming, (item) => item.id);
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(incoming[0] ?? null);
@@ -1496,7 +1499,7 @@ export function ReviewQueue({
   }
   const auto = card.auto_approved_today ?? 0;
   const view = withJev(card, jev);
-  const suggestion = reviewSuggestion(view);
+  const suggestion = reviewSuggestion(view, isReversal(kindRows ?? [], view.category_id, view.direction === "income" ? "income" : "expense"));
   const place = visitPlace(visit.current, openIds);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
@@ -1659,7 +1662,7 @@ function vatStatusLabel(status: string): string {
   return "לא ידוע";
 }
 
-function reviewSuggestion(row: ReviewRow) {
+function reviewSuggestion(row: ReviewRow, reversal = false) {
   const split = reviewIsSplit(row);
   const project = split ? reviewSplitTitle(row) : row.project_name || undefined;
   const category = row.category_name || undefined;
@@ -1671,6 +1674,7 @@ function reviewSuggestion(row: ReviewRow) {
     ...(category ? { category } : {}),
     ...(projectSuggested ? { projectSuggested: true } : {}),
     ...(categorySuggested ? { categorySuggested: true } : {}),
+    ...(reversal && category ? { categoryReversal: true } : {}),
   };
 }
 
@@ -1935,12 +1939,14 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     projectId,
     row?.project_name,
   );
+  const reversalOptions = splitReview ? [] : reversalChoices(sample?.categories ?? categories.data ?? [], income ? "income" : "expense");
+  const isReversalId = (id: string) => reversalOptions.some((option) => option.id === id);
   const categoryOptions = withChoice(
     (sample?.categories ?? categories.data ?? []).filter((category) => {
       if (category.hidden) return false;
       return income ? category.kind === "income" : category.kind !== "income";
     }).map((category) => ({ id: category.id, name: category.name })),
-    categoryId,
+    isReversalId(categoryId) ? "" : categoryId,
     row?.category_name,
   );
   const save = useWrite({
@@ -2102,6 +2108,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       direction={income ? "income" : "expense"}
       projects={projectOptions}
       categories={categoryOptions}
+      reversals={reversalOptions}
       projectId={projectId}
       categoryId={categoryId}
       suggestionProjectId={suggestionProjectId}
@@ -2129,7 +2136,8 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         if (blocked()) throw new Error("preview");
         const nextProject = kind === "project" ? id : projectId;
         const nextCategory = kind === "category" ? id : categoryId;
-        picked.current = { projectId: nextProject, categoryId: nextCategory, remember };
+        // A supplier rule never learns a reversal: the next line from this supplier is the usual kind.
+        picked.current = { projectId: nextProject, categoryId: nextCategory, remember: remember && !isReversalId(nextCategory) };
         const fromLine = params.get("from") === "line";
         if (splitReview) {
           if (kind === "project") {
@@ -2178,7 +2186,7 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
         if (sample || holdWrites) return;
         if (blocked()) throw new Error("preview");
         setHold("");
-        picked.current = { projectId, categoryId, remember };
+        picked.current = { projectId, categoryId, remember: remember && !isReversalId(categoryId) };
         await save.mutateAsync();
       }}
       onSplit={() => {
@@ -2593,14 +2601,17 @@ export function TransactionScreen({
     projectId,
     txn.project_name,
   );
+  const txnDirection = txn.direction === "income" ? "income" : "expense";
+  const changeReversals = sample || splitRow ? [] : reversalChoices(categories.data ?? [], txnDirection);
   const changeCategories = withChoice(
     (sample
       ? (sampleCategories ?? [])
       : (categories.data ?? []).filter((category) => !category.hidden && (txn.direction === "income" ? category.kind === "income" : category.kind !== "income"))
     ).map((category) => ({ id: category.id, name: category.name })),
-    categoryId,
+    changeReversals.some((option) => option.id === categoryId) ? "" : categoryId,
     txn.category_name,
   );
+  const shownReversal = sample == null && isReversal(categories.data ?? [], categoryId || txn.category_id, txnDirection);
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
@@ -2646,9 +2657,9 @@ export function TransactionScreen({
           }} />
         )}
         {holdWrites ? (
-          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} />
+          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} />
         ) : (
-          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} chevron onClick={() => { setChangeSheet(true); }} />
+          <ListRow variant="button" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} chevron onClick={() => { setChangeSheet(true); }} />
         )}
       </List>
       <LoanTransactionSplit
@@ -2700,6 +2711,7 @@ export function TransactionScreen({
         direction={txn.direction === "income" ? "income" : "expense"}
         projects={changeProjects}
         categories={changeCategories}
+        reversals={changeReversals}
         projectId={projectId}
         categoryId={categoryId}
         onProjectId={setProjectId}

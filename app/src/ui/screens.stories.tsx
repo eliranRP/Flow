@@ -1784,6 +1784,30 @@ export const ChangeCategoryPicker: Story = {
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
 };
 
+const reversalCategories = [
+  ...changeCategories,
+  { id: "i1", name: "שכירות", hidden: false, kind: "income" },
+  { id: "i2", name: "דמי ניהול", hidden: false, kind: "income" },
+];
+
+export const ChangeReversalPicker: Story = {
+  name: "Category picker with reversals",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} />,
+};
+
+export const ChangeReversalPicked: Story = {
+  name: "Reversal picked, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
+};
+
+export const ChangeReversalSummary: Story = {
+  name: "Reversal on the summary, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
+};
+
 export const ChangeSaveError: Story = {
   name: "Save error",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
