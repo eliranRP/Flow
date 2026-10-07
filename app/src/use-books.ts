@@ -28,7 +28,7 @@ import {
   type TransactionDetail,
   type UnpaidRow,
 } from "@flow/shared";
-import { useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createContext, createElement, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { getSupabase } from "./lib/supabase";
 import { waitForAccessToken } from "./wait-for-session";
@@ -371,6 +371,8 @@ export function useBreakdownQuery(direction: BreakdownDirection, groupBy: Breakd
   return useQuery({
     queryKey: ["breakdown", preview, period, direction, groupBy],
     enabled: active && preview === "off",
+    // A regroup or a new period keeps the screen and its controls; rows follow the data's own group_by.
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<Breakdown> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");

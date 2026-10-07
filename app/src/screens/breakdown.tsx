@@ -8,6 +8,7 @@ import {
   groupByOptions,
   groupLinesPath,
   groupTitle,
+  isBucketKey,
   isDirection,
   isGroupBy,
   lineCountHint,
@@ -113,6 +114,8 @@ function BreakdownBody({
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, query);
   const data = sample ?? (phase.kind === "ready" ? query.data ?? null : null);
   const groups = useHeldOrder(data?.groups ?? [], (group) => `${group.currency}:${group.key}`);
+  // While a regroup loads, the previous groups stay and keep their own grouping's names and links.
+  const shownBy = data?.group_by ?? groupBy;
   const [sheet, setSheet] = useState(false);
   const title = directionLabel(direction);
   const back = `/${search}`;
@@ -162,18 +165,18 @@ function BreakdownBody({
               }}
             />
           </div>
-          <List>
+          <List className={query.isPlaceholderData ? "ui-breakdown-stale" : undefined}>
             {groups.map((group) => (
               <ListRow
                 key={`${group.currency}:${group.key}`}
                 variant="project"
-                title={groupTitle(direction, groupBy, group.key, group.name)}
+                title={groupTitle(direction, shownBy, group.key, group.name)}
                 hint={lineCountHint(group.count, group.shared)}
                 agorot={shown(direction, group.amount_minor)}
                 currency={group.currency}
                 loss={false}
                 chevron
-                href={groupLinesPath(direction, groupBy, group.currency, group.key, search)}
+                href={groupLinesPath(direction, shownBy, group.currency, group.key, search)}
               />
             ))}
           </List>
@@ -266,7 +269,12 @@ function LinesBody({
   const breakdown = sample?.breakdown ?? summary.data ?? null;
   const group = excluded ? undefined : breakdown?.groups.find((g) => g.key === groupKey && g.currency === currency);
   const sum = excluded ? breakdown?.excluded.find((e) => e.currency === currency) : group;
-  const title = excluded ? "מחוץ לרווח" : groupTitle(direction, groupBy, groupKey, group?.name);
+  // Only the server's buckets have no name. Until the summary names a real group, the title is the side.
+  const title = excluded
+    ? "מחוץ לרווח"
+    : group != null || isBucketKey(groupBy, groupKey)
+      ? groupTitle(direction, groupBy, groupKey, group?.name)
+      : directionLabel(direction);
   const back = `/flow/${direction}${search}`;
 
   if (phase.kind === "loading" || phase.kind === "error") {

@@ -67,7 +67,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Breakdown | period pill | Opens the period sheet. Tint pill. The period is Home's, so a change here changes Home. | never | no | sheet with the four periods | none | unit |
 | Breakdown | לפי (קטגוריה · פרויקט · ספק / לקוח) | Regroups with `get_breakdown`. The device remembers the last choice. | never | no | the groups change | the shared error state | unit |
 | Breakdown | a group row | Opens that group's lines in its currency. A missing name reads בלי קטגוריה, בלי ספק, בלי לקוח, בלי פרויקט, or הוצאות כלליות. | never | no | route `/flow/:direction/:groupBy/:currency/:groupKey` | none | unit |
-| Breakdown | N ממתינים לאישור | Opens Review. No amount: the total already includes these lines. Shown only when some are open. | never | no | route `/review` | none | unit |
+| Breakdown | N ממתינים לאישור | Opens Review. No amount: it counts only open reviews of posted lines, which the total already includes; a pending line's review is not counted. Shown only when some are open. | never | no | route `/review` | none | unit |
 | Breakdown | מחוץ לרווח | Under "לא נכלל בסכום". Opens the kept-out lines of that currency. | never | no | route `/flow/:direction/excluded/:currency` | none | unit |
 | Breakdown | בחירת תקופה (empty) | Opens the period sheet. Empty state "אין הוצאות בתקופה הזו" / "אין הכנסות בתקופה הזו". | never | no | sheet with the four periods | none | unit |
 | Breakdown lines | a line | Opens the transaction. | never | no | route `/transactions/:id` | none | unit |

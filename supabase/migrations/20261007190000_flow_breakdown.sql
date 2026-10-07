@@ -249,10 +249,14 @@ begin
       select count(*)::integer
       from public.review_queue q
       join public.transactions t on t.id = q.transaction_id
+      -- The side follows the category kind, like the totals (decision 0103).
+      left join public.categories c on c.id = t.category_id
       where q.company_id = cid
         and q.status = 'open'
         and t.removed_at is null
-        and t.direction::text = p_direction
+        -- Only lines already in the totals: a pending bank line waiting in Review is not counted yet.
+        and t.line_status = 'posted'
+        and coalesce(c.kind::text, t.direction::text) = p_direction
         and (p_from is null or p_to is null or t.doc_date between p_from and p_to)
     )
   ) into result;

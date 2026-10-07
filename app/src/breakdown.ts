@@ -42,6 +42,11 @@ export function writeGroupBy(value: BreakdownGroupBy): void {
   }
 }
 
+/** The keys the server adds for lines with no category, payer, or project, and for overhead. */
+export function isBucketKey(groupBy: BreakdownGroupBy, key: string): boolean {
+  return groupBy === "project" ? key === "unassigned" || key === "overhead" : key === "none";
+}
+
 /** A group's name. Keys with no name are the buckets the server adds. */
 export function groupTitle(
   direction: BreakdownDirection,

@@ -1906,6 +1906,11 @@ a.ui-row,
   font-weight: var(--type-body-weight);
 }
 
+/* Groups from the previous grouping or period while the new ones load. */
+.ui-breakdown-stale {
+  opacity: 0.6;
+}
+
 .ui-breakdown-hint {
   margin: var(--space-1) 0 0;
   color: var(--color-text-secondary);

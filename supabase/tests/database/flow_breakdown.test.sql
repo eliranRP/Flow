@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(53);
+select plan(56);
 
 do $users$
 begin
@@ -218,7 +218,9 @@ select
   v.pnl_role::public.pnl_role,
   'posted', 'GBP',
   v.amount, v.amount, abs(v.amount), 0, 'source',
-  '2026-06-12', case when v.direction = 'income' then '2026-06-12'::date end,
+  '2026-06-12',
+  -- The rent taken back clears in July: cash income counts it by that date, not the June document.
+  case when v.ikey = 'gbp-sale-refund' then '2026-07-02'::date when v.direction = 'income' then '2026-06-12'::date end,
   'manual', 'fb:GBP:' || v.ikey,
   (select id from fb_ref where label = 'alpha'),
   (select id from fb_ref where label = v.cat),
@@ -231,14 +233,18 @@ from (values
   ('income',  'receipt', 'project',   3000, 'materials', 'gbp-cost-refund')
 ) as v(direction, doc_kind, pnl_role, amount, cat, ikey);
 
--- One open expense review, one open income review, and one closed expense review.
+-- One open expense review, one open income review, one closed expense review, an open
+-- review on the GBP outflow under an income category (it counts as income), and an open
+-- review on a pending line, which is not in the totals and so not in the count.
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select t.company_id, t.id, v.status::public.review_status, 'example'
 from public.transactions t
 join (values
   ('fb:ILS:ex-alpha', 'open'),
   ('fb:ILS:in-alpha', 'open'),
-  ('fb:ILS:ex-office', 'approved')
+  ('fb:ILS:ex-office', 'approved'),
+  ('fb:GBP:gbp-sale-refund', 'open'),
+  ('fb:ILS:ex-pending', 'open')
 ) as v(ikey, status) on v.ikey = t.idempotency_key;
 
 select tests.authenticate_as('fb_owner');
@@ -247,6 +253,8 @@ insert into fb_out (label, body) values
   ('dash:cash', public.get_dashboard(null, null, 'cash')),
   ('dash:invoiced', public.get_dashboard(null, null, 'invoiced')),
   ('dash:june', public.get_dashboard('2026-06-01', '2026-06-30', 'cash')),
+  ('dash:july', public.get_dashboard('2026-07-01', '2026-07-31', 'cash')),
+  ('in:july', public.get_breakdown('income', '2026-07-01', '2026-07-31', 'category', 'cash')),
   ('in:june', public.get_breakdown('income', '2026-06-01', '2026-06-30', 'project', 'cash')),
   ('in:all', public.get_breakdown('income', null, null, 'category', 'cash')),
   ('ex:category', public.get_breakdown('expense', null, null, 'category', 'cash')),
@@ -272,6 +280,10 @@ select is(pg_temp.total(pg_temp.out_of('in:project:cash'), 'GBP'), (pg_temp.cur(
   'cash income counts the reversal whatever its document kind (GBP)');
 select is(pg_temp.total(pg_temp.out_of('ex:category'), 'GBP'), 5000::bigint,
   'an inflow under an expense category is negative expense: 8000 - 3000');
+select is(pg_temp.total(pg_temp.out_of('in:july'), 'GBP'), -5000::bigint,
+  'cash income counts the reversal by its cash date (July), not its June document');
+select is(pg_temp.total(pg_temp.out_of('in:july'), 'GBP'), (pg_temp.cur(pg_temp.out_of('dash:july'), 'GBP') ->> 'income_minor')::bigint,
+  'July cash income with a reversal matches Home (GBP)');
 
 -- Totals match Home.
 select is(pg_temp.total(pg_temp.out_of('ex:category'), 'ILS'), (pg_temp.out_of('dash:cash') ->> 'expense_agorot')::bigint,
@@ -351,9 +363,11 @@ select is(pg_temp.total(pg_temp.out_of('in:june'), 'EUR'), 5000::bigint, 'a rece
 select is(pg_temp.total(pg_temp.out_of('in:june'), 'EUR'), (pg_temp.cur(pg_temp.out_of('dash:june'), 'EUR') ->> 'income_minor')::bigint,
   'June cash income matches Home (EUR)');
 
--- Open reviews of the direction and period.
-select is((pg_temp.out_of('ex:category') ->> 'review_count')::integer, 1, 'one open expense review');
-select is((pg_temp.out_of('in:all') ->> 'review_count')::integer, 1, 'one open income review');
+-- Open reviews of the side (the category kind) and period.
+select is((pg_temp.out_of('ex:category') ->> 'review_count')::integer, 1, 'one open expense review; the pending line''s review is not in the sum');
+select is((pg_temp.out_of('in:all') ->> 'review_count')::integer, 2,
+  'one open income review, plus the open outflow under an income category');
+select is((pg_temp.out_of('in:june') ->> 'review_count')::integer, 2, 'both income reviews are dated June');
 select is((pg_temp.out_of('ex:july') ->> 'review_count')::integer, 0, 'no open review in July');
 
 -- Paging.

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GROUP_BY_KEY } from "../breakdown";
+import { allTime, periodLabel, thisMonth } from "../period";
 import { BooksProvider } from "../use-books";
 import { BreakdownLinesScreen, BreakdownScreen } from "./breakdown";
 
@@ -142,6 +143,50 @@ describe("Breakdown screen", () => {
     expect(screen.getByRole("button", { name: "בחירת תקופה" })).toBeInTheDocument();
   });
 
+  it("reads a remembered grouping, and falls back to category for an unknown one", async () => {
+    window.localStorage.setItem(GROUP_BY_KEY, "project");
+    const first = wrap("/flow/expense");
+    await waitFor(() => {
+      expect(rpc.calls.find((c) => c.name === "get_breakdown")?.args).toMatchObject({ p_group_by: "project" });
+    });
+    first.unmount();
+    rpc.calls = [];
+    window.localStorage.setItem(GROUP_BY_KEY, "week");
+    wrap("/flow/expense");
+    await waitFor(() => {
+      expect(rpc.calls.find((c) => c.name === "get_breakdown")?.args).toMatchObject({ p_group_by: "category" });
+    });
+  });
+
+  it("keeps the control and the previous groups while a regroup loads", async () => {
+    wrap("/flow/expense");
+    await screen.findByText("חומרי בנייה לדוגמה");
+    const base = rpc.impl;
+    rpc.impl = (name, args) =>
+      name === "get_breakdown" && (args as { p_group_by: string }).p_group_by === "payer"
+        ? new Promise(() => undefined)
+        : base(name, args);
+    fireEvent.click(screen.getByRole("radio", { name: "ספק" }));
+    await waitFor(() => {
+      expect(rpc.calls.some((c) => c.name === "get_breakdown" && (c.args as { p_group_by: string }).p_group_by === "payer")).toBe(true);
+    });
+    expect(screen.getByRole("radio", { name: "ספק" })).toBeChecked();
+    // The rows still open the grouping they were built from.
+    expect(screen.getByRole("link", { name: /חומרי בנייה לדוגמה/ })).toHaveAttribute("href", "/flow/expense/category/ILS/c1");
+  });
+
+  it("changes the shared period from the pill", async () => {
+    wrap("/flow/expense");
+    await screen.findByText("חומרי בנייה לדוגמה");
+    expect(rpc.calls.find((c) => c.name === "get_breakdown")?.args).toHaveProperty("p_from");
+    fireEvent.click(screen.getByRole("button", { name: periodLabel(thisMonth()) }));
+    fireEvent.click(screen.getByRole("radio", { name: new RegExp(`^${periodLabel(allTime())}`) }));
+    await waitFor(() => {
+      expect(rpc.calls.some((c) => c.name === "get_breakdown" && !("p_from" in (c.args as object)))).toBe(true);
+    });
+    expect(screen.getByRole("button", { name: periodLabel(allTime()) })).toBeInTheDocument();
+  });
+
   it("sends an unknown direction back to Home", () => {
     wrap("/flow/sideways");
     expect(screen.getByText("בית")).toBeInTheDocument();
@@ -172,6 +217,38 @@ describe("Breakdown lines screen", () => {
   it("titles a supplier group's lines by their description, not the supplier again", async () => {
     wrap("/flow/expense/payer/ILS/s1");
     expect(await screen.findByRole("link", { name: /חשבונית 101/ })).toHaveAttribute("href", "/transactions/t1");
+  });
+
+  it("does not call a named group בלי קטגוריה before the summary names it", async () => {
+    rpc.impl = (name) =>
+      name === "get_breakdown_lines" ? Promise.resolve({ data: lines, error: null }) : new Promise(() => undefined);
+    wrap("/flow/expense/category/ILS/c1");
+    await screen.findByText("ספק לדוגמה");
+    expect(screen.getByRole("heading", { name: "יצא" })).toBeInTheDocument();
+    expect(screen.queryByText("בלי קטגוריה")).not.toBeInTheDocument();
+  });
+
+  it("names the overhead bucket without the summary", async () => {
+    rpc.impl = (name) =>
+      name === "get_breakdown_lines" ? Promise.resolve({ data: lines, error: null }) : new Promise(() => undefined);
+    wrap("/flow/expense/project/ILS/overhead");
+    expect(await screen.findByRole("heading", { name: "הוצאות כלליות" })).toBeInTheDocument();
+  });
+
+  it("shows a refund inside the expenses as money in", async () => {
+    rpc.impl = (name, args) => {
+      if (name === "get_breakdown_lines") {
+        return Promise.resolve({
+          data: { rows: [{ ...lines.rows[0], supplier_name: null, description: "זיכוי 12", amount_minor: -19_400 }], has_more: false },
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: { ...expenses, group_by: (args as { p_group_by: string }).p_group_by }, error: null });
+    };
+    wrap("/flow/expense/category/ILS/c1");
+    const row = await screen.findByRole("link", { name: /זיכוי 12/ });
+    expect(row).toHaveTextContent("+₪194");
+    expect(screen.queryByRole("button", { name: "עוד תנועות" })).not.toBeInTheDocument();
   });
 
   it("asks for the kept-out lines", async () => {

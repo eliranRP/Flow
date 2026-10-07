@@ -11,6 +11,8 @@ export const LEDGER_FOCUS_KEYS = [
   "project-waiting",
   "filed-today",
   "txn",
+  "breakdown",
+  "breakdown-lines",
 ] as const;
 
 export function refreshLedger(client: { invalidateQueries: (filters: { queryKey: readonly string[] }) => Promise<unknown> }): void {
