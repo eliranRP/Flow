@@ -22,8 +22,8 @@ const ACTION_SHA = {
 };
 const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
 const PLAYWRIGHT_KEY = `key: \${{ runner.os }}-playwright-${playwrightVersion}`;
-const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}`;
-const INSTALL_DEPS = "run: pnpm --filter @flow/app exec playwright install-deps chromium";
+const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\${{ github.run_id }}\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\n`;
+const INSTALL_DEPS = "run: bash scripts/ci-apt-cache.sh install";
 const APT_RESTORE = "run: bash scripts/ci-apt-cache.sh restore";
 const APT_SAVE = "run: bash scripts/ci-apt-cache.sh save";
 const DENO_SHA256_X64 = "c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490";
@@ -361,7 +361,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(ci.includes("--with-deps"), false);
   assert.equal(ci.includes("env.ImageOS"), false);
   assert.equal(ci.includes("env.ImageVersion"), false);
-  assert.match(ci, /timeout-minutes: 8\n\s+run: pnpm --filter @flow\/app exec playwright install-deps chromium/);
+  assert.match(ci, /timeout-minutes: 8\n\s+run: bash scripts\/ci-apt-cache\.sh install\n/);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
   assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);
@@ -498,7 +498,7 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
 test("every Playwright job restores the apt cache before install-deps and saves it after", () => {
   const noSave = replaceInJob(ci, "check-stories", "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n", "");
   assert.deepEqual(playwrightProblems(noSave), ["check-stories apt cache order"]);
-  const wrongKey = replaceInJob(ci, "e2e-shard", PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0");
+  const wrongKey = replaceInJob(ci, "e2e-shard", PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0\n");
   assert.deepEqual(playwrightProblems(wrongKey), ["e2e-shard apt cache key"]);
 });
 
