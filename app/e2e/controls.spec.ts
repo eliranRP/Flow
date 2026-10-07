@@ -1,6 +1,9 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 } });
+// Each test opens its own page in preview mode, so the tests can run side by side and CI can
+// split this file across e2e shards.
+test.describe.configure({ mode: "parallel" });
 
 const previewToast = "במצב תצוגה זה לא נשמר.";
 

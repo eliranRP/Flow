@@ -57,7 +57,7 @@ alter table private.mcp_writes
   add constraint mcp_writes_kind_check check (
     kind in (
       'review', 'reassign', 'project', 'category', 'category_hidden', 'category_pnl',
-      'loan', 'loan_update', 'loan_split', 'company'
+      'loan', 'loan_update', 'loan_split', 'overhead_project', 'company'
     )
   );
 
@@ -71,6 +71,7 @@ alter table private.mcp_writes add constraint mcp_writes_target check (
   or (kind = 'loan' and loan_id is not null)
   or (kind = 'loan_update' and loan_id is not null and prior is not null)
   or (kind = 'loan_split' and loan_id is not null and transaction_id is not null)
+  or (kind = 'overhead_project' and prior ? 'company_id')
   or (kind = 'company' and company_id is not null and prior is not null)
 );
 
@@ -181,6 +182,7 @@ declare
   cur_loan record;
   written jsonb;
   before jsonb;
+  cur_overhead uuid;
   cur_name text;
 begin
   if p_idempotency_key is null
@@ -190,7 +192,7 @@ begin
     or p_kind is null
     or p_kind not in (
       'review', 'reassign', 'project', 'category', 'category_hidden', 'category_pnl',
-      'loan', 'loan_update', 'loan_split', 'company'
+      'loan', 'loan_update', 'loan_split', 'overhead_project', 'company'
     )
   then
     return private.mcp_error('validation', 'validation');
@@ -225,6 +227,7 @@ begin
         or (p_kind = 'loan' and w.kind = 'loan' and w.loan_id = p_id)
         or (p_kind = 'loan_update' and w.kind = 'loan_update' and w.loan_id = p_id)
         or (p_kind = 'loan_split' and w.kind = 'loan_split' and w.transaction_id = p_id)
+        or (p_kind = 'overhead_project' and w.kind = 'overhead_project' and w.prior->>'company_id' = p_id::text)
         or (p_kind = 'company' and w.kind = 'company' and w.company_id = p_id)
       )
     order by w.created_at desc
@@ -246,6 +249,25 @@ begin
         update public.companies c
         set name = rec.prior->>'before'
         where c.id = p_id and c.id = cid;
+        update private.mcp_writes
+        set undone_at = clock_timestamp()
+        where id = rec.id and user_id = auth.uid() and undone_at is null;
+        response := jsonb_build_object(
+          'ok', true,
+          'data', jsonb_build_object('kind', p_kind, 'id', p_id)
+        );
+      end if;
+    elsif p_kind = 'overhead_project' then
+      select c.overhead_project_id into cur_overhead
+      from public.companies c
+      where c.id = p_id and c.id = cid
+      for update;
+      if not found then
+        response := private.mcp_error('not_found', 'not found');
+      elsif cur_overhead::text is distinct from rec.prior->>'written' then
+        response := private.mcp_error('conflict', 'conflict');
+      else
+        perform public.set_overhead_project((rec.prior->>'before')::uuid);
         update private.mcp_writes
         set undone_at = clock_timestamp()
         where id = rec.id and user_id = auth.uid() and undone_at is null;

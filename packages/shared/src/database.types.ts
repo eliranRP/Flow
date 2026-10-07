@@ -76,16 +76,22 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "after_overhead": boolean,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
+                    "after_overhead": boolean,"created_at": string,"id": string,"is_demo": boolean,"last_sumit_company_id": number | null,"name": string,"overhead_project_id": string | null,"owner_id": string,"tax_id": string | null,"updated_at": string,"vat_rate_bp": number,"vat_registered": boolean
                   }
                   Insert: {
-                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name": string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Update: {
-                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
+                    "after_overhead"?: boolean,"created_at"?: string,"id"?: string,"is_demo"?: boolean,"last_sumit_company_id"?: number | null,"name"?: string,"overhead_project_id"?: string | null,"owner_id"?: string,"tax_id"?: string | null,"updated_at"?: string,"vat_rate_bp"?: number,"vat_registered"?: boolean
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "companies_overhead_project_fk"
+      columns: ["id","overhead_project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    }
                   ]
                 },"company_integrations": {
                   Row: {
@@ -758,11 +764,17 @@ isOneToOne: false
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_overhead_project":
+{ Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
+                           },
 "mcp_sync_bank_begin":
 { Args: { "p_idempotency_key": string }; Returns: Json
                            },
 "mcp_sync_bank_finish":
-{ Args: { "p_idempotency_key": string,"p_response": Json }; Returns: undefined
+{ Args: { "p_job_id": string,"p_response": Json }; Returns: Json
+                           },
+"mcp_sync_status":
+{ Args: { "p_job_id": string }; Returns: Json
                            },
 "mcp_undo":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
@@ -841,6 +853,9 @@ isOneToOne: false
                            },
 "set_import_from":
 { Args: { "p_from": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
+                           },
+"set_overhead_project":
+{ Args: { "p_project_id": string }; Returns: undefined
                            },
 "set_supplier_settings":
 { Args: { "p_id": string,"p_vat_exempt": boolean }; Returns: undefined
