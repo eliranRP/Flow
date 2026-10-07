@@ -1,5 +1,5 @@
 -- FLOW-202: sync_bank jobs. begin starts a job, finish validates and stores it,
--- mcp_sync_status reads it. Decision 0101. Emails use @example.com.
+-- mcp_sync_status reads it. Decision 0102. Emails use @example.com.
 
 begin;
 

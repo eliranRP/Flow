@@ -350,7 +350,7 @@ select 'sync_job', (public.mcp_sync_bank_begin('sync-1')->'data'->>'job_id')::uu
 select isnt(
   (select id from mcp4 where label = 'sync_job'),
   null,
-  'sync begin proceeds with a job (decision 0101)'
+  'sync begin proceeds with a job (decision 0102)'
 );
 select public.mcp_sync_bank_finish(
   (select id from mcp4 where label = 'sync_job'),

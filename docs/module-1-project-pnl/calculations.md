@@ -103,6 +103,12 @@ Color is whether the change helps: income up and profit up are green; income dow
 
 Overhead (`הוצאות כלליות`) is a bucket, not a project the owner creates or deletes. Stored company figures are the sum of every project plus overhead. A stored project figure does not include overhead. [0021](../decisions/0021-shared-costs-and-overhead.md) does not move overhead onto projects. It adds a view, defined under [Overhead share](#overhead-share).
 
+A company can name one of its projects as its overhead project ([0101](../decisions/0101-unassigned-and-overhead-project.md)). Expense lines filed to that project count as overhead, not as that project's direct cost. Its income and shared shares stay on the project.
+
+Lines that belong to no bucket are **unassigned**: income with no project, and cost with no role, a project role and no project, or a shared role and no split. Company figures are the sum of every project, overhead, and unassigned. Expenses are direct + shared + overhead + unassigned cost.
+
+On the invoiced basis, only income changes. An expense line counts by its document date on both bases, so a supplier invoice that is not paid yet counts on the invoiced basis. A bank line that has not settled (`pending`) counts on neither basis until it posts.
+
 Home always paints overhead as its own row under the projects, including when the top 5 are sorted by losses. Overhead is not eligible for the top 5. If overhead's profit for the period is 0 and the company has no projects and no transactions, Home uses the empty state and hides the row.
 
 Hiding a project from the top 5 does not remove it from the company tiles. The collapsed row's profit is the sum of counting lines on projects that are not in the top 5.

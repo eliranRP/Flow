@@ -1,5 +1,5 @@
 -- FLOW-202. sync_bank starts a job and returns its id; get_sync_status reads it.
--- Decision 0101. Amends the begin/finish pair from 0090.
+-- Decision 0102. Amends the begin/finish pair from 0090.
 
 begin;
 
@@ -21,7 +21,7 @@ create table private.mcp_sync_jobs (
 );
 
 comment on table private.mcp_sync_jobs is
-  'One row per sync_bank pull started through flow-mcp. Written by the definer, not PostgREST. Decision 0101.';
+  'One row per sync_bank pull started through flow-mcp. Written by the definer, not PostgREST. Decision 0102.';
 
 alter table private.mcp_sync_jobs enable row level security;
 
