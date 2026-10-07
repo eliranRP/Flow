@@ -36,7 +36,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
-| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | claimed (thread 8tv896, 2026-10-07, claude/project-thread-8tv896) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
@@ -310,7 +310,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-302"></a>
 ### FLOW-302 · Month dividers in every transaction list
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** —
+- **Type:** SMALL UI · **Status:** claimed (thread 8tv896, 2026-10-07, claude/project-thread-8tv896; design session is the plan) · **Depends on:** —
 - **What:** One list, no new page: a sticky month header (for example "יולי 2026") between months, with that month's income and expenses (expenses with a minus, `$` for USD). Built once in the shared list component so every list gets it (project lists, recent transactions, review lists).
 - **Acceptance:** mockup approved; subtotals match the rows; RTL and 320px checks; design review.
 
