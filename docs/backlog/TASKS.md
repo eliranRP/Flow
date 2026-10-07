@@ -25,7 +25,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
-| 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
+| 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | claimed (FLOW-203 thread, 2026-10-07, claude/project-thread-bjb30w) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
@@ -169,7 +169,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-203"></a>
 ### FLOW-203 · get_project docs and list_projects basis echo (#66 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** claimed (FLOW-203 thread, 2026-10-07, claude/project-thread-bjb30w) · **Depends on:** —
 - [ ] TOOLS.md: `get_project` is all-time (matches `list_projects` only without dates); `transactions[]` includes pending lines and shows shared lines at full amount; the Mercury both-bases note; `other_currencies` sub-fields with negative expenses.
 - [ ] `list_projects` should echo `basis`.
 - [ ] The `get_project` transaction sort needs an id tiebreaker (equal dates sort non-deterministically).
