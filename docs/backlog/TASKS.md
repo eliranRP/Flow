@@ -20,7 +20,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 4 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
 | 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | in-progress (#89) |
-| 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
+| 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | in-progress (#87) |
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
@@ -253,6 +253,23 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Transactions and app UX
 
+<a id="flow-311"></a>
+### FLOW-311 · Split one bank line across several categories
+- **Type:** MCP · **Status:** in-progress (#87) · **Depends on:** — · **Owner's go:** 2026-10-07 (bookkeeping requests first: FLOW-104, FLOW-311, FLOW-105, FLOW-106)
+- **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units), category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income categories); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
+- **MCP:** a write tool (idempotency key, write rate limit, `undo`) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
+- **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income categories on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
+
+<a id="flow-312"></a>
+### FLOW-312 · Split-by-category follow-ups (FLOW-311)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-311
+- [ ] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part.
+- [ ] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead.
+- [ ] After FLOW-104: let a part take the other kind as a reversal, like a whole line.
+- [ ] App screen to view and edit the parts (SMALL UI, plan with a mockup first).
+- [ ] `split_line` inside the `assign_expenses` batch, with `undo_batch`.
+- [ ] `get_home.other_currencies[].count` (`count(*)`) and `get_project.other_currencies[].count` (one per row) count each part of a split line, and each loan split part, as a line. Count `distinct transaction_id`, as `company_pnl` does.
+
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
@@ -327,13 +344,6 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
-
-<a id="flow-311"></a>
-### FLOW-311 · Split one bank line across several categories
-- **Type:** MCP · **Status:** ready · **Depends on:** — · **Owner's go:** 2026-10-07, after FLOW-104
-- **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units) or percent, category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income kinds); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
-- **MCP:** a write tool (idempotency key, write rate limit, `undo`; `undo_batch` if it takes several lines) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
-- **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income kinds on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
 
 ## Projects and reports
 

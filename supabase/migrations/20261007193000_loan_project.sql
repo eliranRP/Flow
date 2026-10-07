@@ -880,7 +880,7 @@ begin
     or p_kind is null
     or p_kind not in (
       'review', 'reassign', 'project', 'category', 'category_hidden', 'category_pnl',
-      'loan', 'loan_update', 'loan_split', 'overhead_project', 'company'
+      'loan', 'loan_update', 'loan_split', 'overhead_project', 'company', 'line_split'
     )
   then
     return private.mcp_error('validation', 'validation');
@@ -917,6 +917,7 @@ begin
         or (p_kind = 'loan_split' and w.kind = 'loan_split' and w.transaction_id = p_id)
         or (p_kind = 'overhead_project' and w.kind = 'overhead_project' and w.prior->>'company_id' = p_id::text)
         or (p_kind = 'company' and w.kind = 'company' and w.company_id = p_id)
+        or (p_kind = 'line_split' and w.kind = 'line_split' and w.transaction_id = p_id)
       )
     order by w.created_at desc
     limit 1
@@ -956,6 +957,32 @@ begin
         response := private.mcp_error('conflict', 'conflict');
       else
         perform public.set_overhead_project((rec.prior->>'before')::uuid);
+        update private.mcp_writes
+        set undone_at = clock_timestamp()
+        where id = rec.id and user_id = auth.uid() and undone_at is null;
+        response := jsonb_build_object(
+          'ok', true,
+          'data', jsonb_build_object('kind', p_kind, 'id', p_id)
+        );
+      end if;
+    elsif p_kind = 'line_split' then
+      perform 1 from public.transactions t
+      where t.id = p_id and t.company_id = cid and t.removed_at is null
+      for update;
+      if not found then
+        response := private.mcp_error('not_found', 'not found');
+      elsif private.line_split_parts(p_id) is distinct from rec.prior->'written' then
+        response := private.mcp_error('conflict', 'conflict');
+      else
+        delete from public.line_splits where transaction_id = p_id and company_id = cid;
+        insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+        select cid, p_id, b.ord::smallint, (b.part->>'category_id')::uuid, (b.part->>'project_id')::uuid,
+          (b.part->>'amount_minor')::bigint
+        from jsonb_array_elements(rec.prior->'before') with ordinality as b(part, ord);
+        update public.transactions
+        set user_assigned = (rec.prior->>'user_assigned')::boolean,
+            category_suggested = (rec.prior->>'category_suggested')::boolean
+        where id = p_id and company_id = cid;
         update private.mcp_writes
         set undone_at = clock_timestamp()
         where id = rec.id and user_id = auth.uid() and undone_at is null;
@@ -1110,6 +1137,9 @@ begin
         select 1 from public.split_rule_targets s
         where s.company_id = cid and s.project_id = p_id
       ) or exists (
+        select 1 from public.line_splits lsp
+        where lsp.company_id = cid and lsp.project_id = p_id
+      ) or exists (
         select 1 from public.suppliers sup
         where sup.company_id = cid and sup.remembered_project_id = p_id
       ) or exists (
@@ -1145,6 +1175,9 @@ begin
       ) or exists (
         select 1 from public.loan_splits ls
         where ls.company_id = cid and ls.category_id = p_id
+      ) or exists (
+        select 1 from public.line_splits lsp
+        where lsp.company_id = cid and lsp.category_id = p_id
       ) or exists (
         select 1 from public.review_queue q
         where q.company_id = cid

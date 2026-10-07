@@ -46,6 +46,7 @@ export const WRITE_TOOL_NAMES = [
   "add_loan",
   "update_loan",
   "attach_loan_payment",
+  "split_line",
   "undo",
   "undo_batch",
 ] as const;
@@ -82,6 +83,7 @@ const ALLOWED: Record<string, Set<string>> = {
   ]),
   update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
+  split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -124,6 +126,28 @@ const assignExpenseSplitSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
+const linePartSchema = z.object({
+  category_id: UUID_TEXT,
+  project_id: UUID_TEXT.nullable().optional(),
+  amount_minor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+}).strict();
+// Two to 50 parts, or none to clear the split. A category and project pair appears once.
+// The database checks that the parts sum to the line.
+const splitLineSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  parts: z.array(linePartSchema).max(50).refine((parts) => parts.length !== 1),
+}).strict().superRefine((body, ctx) => {
+  const seen = new Set<string>();
+  for (const part of body.parts) {
+    const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
+    if (seen.has(pair)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      return;
+    }
+    seen.add(pair);
+  }
+});
 const categorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
@@ -131,7 +155,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split"]),
   id: UUID_TEXT,
 }).strict();
 const renameCompanySchema = z.object({
@@ -525,7 +549,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations. transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations and, for a split line, line_split.parts. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id.", {
@@ -673,9 +697,26 @@ function writeTools() {
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
     }, true),
+    toolSpec("split_line", "Split one bank line into parts, each with its own category, optional project, and exact amount in minor units (cents). Parts must sum to the line. A part without project_id keeps the line's project. parts [] clears the split. Undo is kind line_split with the transaction id.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      parts: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            category_id: { type: "string" },
+            project_id: { type: ["string", "null"] },
+            amount_minor: { type: "integer" },
+          },
+          required: ["category_id", "amount_minor"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -1069,6 +1110,19 @@ async function callWrite(
     return updateLoanWrite(args, rpc);
   } else if (name === "attach_loan_payment") {
     return attachLoanWrite(args, rpc);
+  } else if (name === "split_line") {
+    const parsed = splitLineSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_split_line";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_parts: parsed.data.parts.map((part) => ({
+        category_id: part.category_id,
+        project_id: part.project_id ?? null,
+        amount_minor: part.amount_minor,
+      })),
+    };
   } else if (name === "assign_expenses") {
     const parsed = assignExpensesSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -1251,5 +1305,17 @@ export async function callTool(
   const result = await rpc("get_transaction", { p_id: transactionId });
   if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
+  // A line split by category shows its parts. A failed parts read fails the whole read, so a
+  // split line never looks whole under its own category.
+  const split = await rpc("get_line_split", { p_transaction_id: transactionId });
+  if (split.status >= 400) return fail("refused", "The read was refused.");
+  const parts = (split.json as { parts?: unknown } | null)?.parts;
+  if (
+    Array.isArray(parts) && parts.length > 0 &&
+    typeof result.json === "object" && !Array.isArray(result.json)
+  ) {
+    const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
+    return ok({ ...(result.json as Record<string, unknown>), line_split: lineSplit });
+  }
   return ok(result.json);
 }

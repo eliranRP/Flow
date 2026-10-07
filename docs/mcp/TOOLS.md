@@ -11,13 +11,13 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `undo` | false | true | true |
 
 ## Which id
 
 | Tool | Argument | Kind |
 | --- | --- | --- |
-| `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
+| `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category`, `split_line` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
 | `undo` `kind: "project"` | `id` | the project id `create_project` returned |
@@ -29,6 +29,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "loan_update"` | `id` | the loan id |
 | `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
 | `undo` `kind: "overhead_project"` | `id` | the company id `set_overhead_project` returned |
+| `undo` `kind: "line_split"` | `id` | the transaction id `split_line` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -40,7 +41,7 @@ Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" 
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found` and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`. A row that is missing or belongs to another company is answered the same way on every tool: write tools return `refused` with a `... not found` message, and read tools and `undo` return `not_found`. Neither says whether the id exists in another company.
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found`, `parts must sum to the line`, `line has a loan split`, `line has a split by category`, `line has an open review`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`. A row that is missing or belongs to another company is answered the same way on every tool: write tools return `refused` with a `... not found` message, and read tools and `undo` return `not_found`. Neither says whether the id exists in another company.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -95,7 +96,7 @@ Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transacti
 
 ### get_expense
 
-`get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`.
+`get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
 
 ### search_expenses
 
@@ -300,7 +301,7 @@ Patch fields: `name`, `principal`, `annual_rate_percent`, `term_months`, `start_
 
 The handler loads the line, picks the schedule row for `doc_date`, and splits like the app. Output includes `parts[]` and `undo_kind`: `"loan_split"`. Undo `kind: "loan_split"` takes the **transaction** id. Once attached, the payment counts by its parts in `get_totals`, `get_project` and `list_project_category`: interest and escrow stay in the P&L under `ריבית משכנתא` and `מסים וביטוח`, and the principal counts under `תשלומי הלוואה`, which is kept out and shows in the excluded totals. The line's own category gets nothing. A split that needs review, or a line that carries VAT, counts whole instead ([0100](../decisions/0100-loan-split-pnl.md)). Deleting the split (undo) puts the whole line back.
 
-When the loan has a project and the line has no project, no shares and no role (and a category), the line is filed as a direct cost on that project, the same rule `assign_expense` uses, so the parts count there: interest and escrow as direct cost, principal in the excluded totals (FLOW-105, [0104](../decisions/0104-loan-project.md)). Output `project_inherited` (true or false), `project_id` (when inherited) and `project_inherited_reason` when false: `loan has no project`, `line already has a project`, `line has shares`, `line has a role` or `line has no category`. The line is then left exactly as it was. Undo of `loan_split` restores the line's previous project when nothing changed it since (`project_restored` true); a line changed after the attach keeps its new project (`project_restored` false).
+When the loan has a project and the line has no project, no shares and no role (and a category), the line is filed as a direct cost on that project, the same rule `assign_expense` uses, so the parts count there: interest and escrow as direct cost, principal in the excluded totals (FLOW-105, [0105](../decisions/0105-loan-project.md)). Output `project_inherited` (true or false), `project_id` (when inherited) and `project_inherited_reason` when false: `loan has no project`, `line already has a project`, `line has shares`, `line has a role` or `line has no category`. The line is then left exactly as it was. Undo of `loan_split` restores the line's previous project when nothing changed it since (`project_restored` true); a line changed after the attach keeps its new project (`project_restored` false).
 
 ### undo (loan kinds)
 
@@ -311,6 +312,37 @@ When the loan has a project and the line has no project, no shares and no role (
 | `loan_split` | transaction id |
 
 Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, `invalid loan terms`, and `project not found`.
+
+## Line splits · FLOW-311
+
+### split_line
+
+Splits one bank line into parts, each with its own category, optional project, and exact amount in minor units of the line's currency (cents for USD, agorot for ILS). Decision [0104](../decisions/0104-line-split-by-category.md).
+
+```json
+{
+  "idempotency_key": "wire-1",
+  "transaction_id": "22222222-2222-4000-8000-000000000020",
+  "parts": [
+    { "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "amount_minor": 25000 },
+    { "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "project_id": "8c1a0b2e-1111-4000-8000-000000000002", "amount_minor": 292000 }
+  ]
+}
+```
+
+- Two to 50 parts. `amount_minor` is a whole number above zero. The parts must sum exactly to the line's net amount, or the write is `refused` with `parts must sum to the line`.
+- Each category must be of the line's kind (an expense category on an outflow, an income category on an inflow). A category and project pair appears once.
+- `project_id` is optional. A part without it keeps the line's project and P&L role; on a shared line it is shared by the line's allocations in proportion. A part with a project counts as that project's direct cost (or overhead, for the overhead project).
+- `parts: []` clears the split, and the line counts whole again.
+- Refused: `transaction not found`, `category not found`, `project not found`, `category kind must match the direction`, `parts must sum to the line`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first).
+- VAT stays on the line. The parts split the net amount.
+- While a split is in place, `set_expense_category` and `assign_expense` change only the line's own category and project, which the P&L does not read for a split line. Clear the split with `parts: []` first, or send new parts.
+
+Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "amount_minor" }], "undo_kind": "line_split", "id" }`. Undo `kind: "line_split"` with the transaction id puts back the parts from before this write (none, or an earlier split) and the line's assignment flags. If the parts changed since, undo is `conflict`.
+
+Once split, the line counts by part in `get_totals`, `list_projects`, `get_project` and `list_project_category`: each part under its own category and project, a part in a kept-out category in the `excluded_*` totals, and the line's own category gets nothing. `count` still counts the line once. If a bank re-sync changes the line amount so the parts no longer sum, the line counts whole until it is split again; `get_expense` shows `line_split.parts_match: false`.
+
+`get_expense` on a split line adds `line_split`: `{ "currency", "line_minor", "parts": [{ "category_id", "category_name", "project_id", "project_name", "amount_minor" }], "parts_match" }`.
 
 ## Batch · cycle 6
 
