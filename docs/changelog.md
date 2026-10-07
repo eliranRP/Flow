@@ -2,6 +2,8 @@
 
 ## 2026-10-07
 
+CI, fewer runners (FLOW-812). Each pull request now uses 9 jobs instead of 12, so busy hours wait less for GitHub's 20-runner limit. `check (core)` runs the `@flow/app` unit tests too (`check (unit)` is gone), and the main Playwright suite runs in 2 shards instead of 3. Same tests and the same required checks (`lint`, `check`, `e2e`). The deploy smoke retries `/settings` like `build.txt` and the homepage.
+
 Kept-out toggle on the categories screen (FLOW-113). Kept-out categories show a ⊘ mark after the name, with a legend line under the list. The row's עוד sheet gets a third button, "מחוץ לרווח והפסד" or "החזרה לרווח והפסד", which calls `set_category_excluded_from_pnl` on tap and shows a toast with ביטול. The three loan categories show a locked line instead of the button. The row sheet now returns focus to its עוד button. No migration and no MCP change. Decision [0104](decisions/0104-kept-out-toggle.md).
 
 Per-user cache on a shared device (FLOW-603). When the signed-in user changes (sign-out, an expired session, another tab, or a switch without reload), the app clears its query cache, remounts its screens, and keeps a saved role only for the signed-in user. A role read that finishes after sign-out saves nothing. Follow-ups are FLOW-605.
