@@ -126,15 +126,13 @@ select is(
   'undo puts the same two shares back'
 );
 
-select throws_ok(
+select lives_ok(
   format(
-    'select public.set_transaction_category(%L::uuid, %L::uuid)',
+    'select public.undo_reassign(public.set_transaction_category(%L::uuid, %L::uuid))',
     (select id from r8 where label = 'shared'),
     (select id from r8 where label = 'income_cat')
   ),
-  'P0001',
-  'category kind must match the direction',
-  'an income category cannot label an expense'
+  'an income category can label an expense, and undo puts it back (FLOW-104: a reversal)'
 );
 select throws_ok(
   format(
