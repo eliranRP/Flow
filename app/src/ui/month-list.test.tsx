@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { dayTitle, groupByDay, groupByMonth, type MonthAmount } from "./month-groups";
 import { MonthList } from "./month-list";
 import { expectRtl } from "./test-support";
@@ -151,6 +151,12 @@ describe("day heads (FLOW-305)", () => {
   });
 
   it("draws day heads as h3 under each month's h2, and in a one-month list", () => {
+    // Pin the clock: a day in another year adds "/2026" to the head.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-07T09:00:00Z"));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const { unmount } = render(
       <MonthList rows={NEWEST_FIRST} keyOf={(r) => r.id} dateOf={dateOf} amountOf={amountOf} days renderRow={(r) => <p>{r.id}</p>} />,
     );
