@@ -47,6 +47,7 @@ import {
   useReviewQuery,
   useMercuryStatusQuery,
   useSumitStatusQuery,
+  useLineMetaPageQuery,
   useLineMetaQuery,
   useTransactionQuery,
   useUnpaidQuery,
@@ -1207,6 +1208,9 @@ export function ReviewAllList({
     return () => { window.clearTimeout(timer); };
   }, [search, rows]);
   const ordered = useHeldOrder(rows, (row) => row.id);
+  // FLOW-305: one bank-details read for the bank lines on this page. A failed read keeps "בנק".
+  const bankIds = useMemo(() => rows.filter((row) => row.source === "mercury").map((row) => row.transaction_id), [rows]);
+  const lineMeta = useLineMetaPageQuery(bankIds);
   return (
     <div>
       <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} />
@@ -1222,7 +1226,7 @@ export function ReviewAllList({
             variant="statement"
             title={row.supplier_name ?? row.description}
             fallback={row.source === "mercury" ? "bank" : "invoice"}
-            method={statementMethodOf(row.source, row.doc_kind)}
+            method={statementMethodOf(row.source, row.doc_kind, lineMeta.data?.get(row.transaction_id))}
             suggestion={statementSuggestion(row)}
             pending={row.line_status === "pending"}
             agorot={row.amount_net}

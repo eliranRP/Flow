@@ -908,7 +908,8 @@ describe("review queue list", () => {
 describe("review amounts keep their currency", () => {
   it("shows a dollar review row as dollars", () => {
     render(
-      <MemoryRouter>
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
         <ReviewAllList
           rows={[{
             id: "r-usd",
@@ -926,7 +927,8 @@ describe("review amounts keep their currency", () => {
           search=""
           backTo="/review"
         />
-      </MemoryRouter>,
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     expect(screen.getByText("$100")).toHaveClass("ui-income");
     expect(screen.queryByText("+$100")).not.toBeInTheDocument();

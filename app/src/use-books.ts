@@ -493,6 +493,52 @@ export function useLineMetaQuery(transactionId: string | null | undefined, enabl
   });
 }
 
+/**
+ * FLOW-305. Bank details for a page of review rows, in one `get_line_meta` read. Ids already in
+ * the per-line cache are not read again, and each result fills that cache so the card reuses it.
+ * Supplementary: a failed read leaves `data` undefined and the rows keep their fallback.
+ */
+export function useLineMetaPageQuery(transactionIds: readonly string[], enabled = true) {
+  const preview = useHomePreview();
+  const client = useQueryClient();
+  const ids = useMemo(() => [...new Set(transactionIds.filter((id) => id !== ""))].sort(), [transactionIds]);
+  return useQuery({
+    queryKey: lineMetaPageQueryKey(preview, ids),
+    enabled: enabled && preview === "off" && ids.length > 0,
+    staleTime: 5 * 60_000,
+    retry: 1,
+    queryFn: () => readLineMetaPage(client, preview, ids),
+  });
+}
+
+export function lineMetaPageQueryKey(preview: string, ids: readonly string[]) {
+  return ["line-meta", preview, "page", ids.join(",")] as const;
+}
+
+export async function readLineMetaPage(client: QueryClient, preview: string, ids: readonly string[]): Promise<Map<string, TxnMeta>> {
+  const out = new Map<string, TxnMeta>();
+  const missing: string[] = [];
+  for (const id of ids) {
+    const state = client.getQueryState<TxnMeta | null>(lineMetaQueryKey(preview, id));
+    if (state?.data !== undefined && !state.isInvalidated) {
+      if (state.data) out.set(id, state.data);
+    } else {
+      missing.push(id);
+    }
+  }
+  if (missing.length === 0) return out;
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  await waitForAccessToken(supabase);
+  const { data, error } = await supabase.rpc("get_line_meta", { p_ids: missing });
+  if (error) throw error;
+  const asked = new Set(missing);
+  const rows = parseTxnMetaList(data).filter((row) => asked.has(row.transaction_id));
+  for (const row of rows) out.set(row.transaction_id, row);
+  for (const id of missing) client.setQueryData(lineMetaQueryKey(preview, id), out.get(id) ?? null);
+  return out;
+}
+
 export function useInvalidateBooks() {
   const client = useQueryClient();
   return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta"]) => {

@@ -335,9 +335,18 @@ const statementReviews: ReviewRow[] = [
   { ...sampleReview, id: "s6", transaction_id: "ts6", doc_date: reviewDay(41), supplier_name: null, description: "4242-1234", amount_net: -10_000n, source: "mercury", project_name: null, category_name: null },
 ];
 
+/** FLOW-304 bank details for the bank lines above, seeded so the rows show card, ACH, wire and no method. */
+const statementMeta: TxnMeta[] = [
+  storyMeta("ts1", { method: "card", card_last4: "4242" }),
+  storyMeta("ts2", { method: "ach" }),
+  storyMeta("ts5", { method: "wire" }),
+  storyMeta("ts6", {}),
+];
+
 function ReviewStatement() {
   return (
     <StoryRoute entry="/review/all" tabs reviewCount={statementReviews.length}>
+      <SeedLineMeta meta={statementMeta} />
       <ExampleBar />
       <ReviewAllList backTo="/review" search="" rows={statementReviews} />
     </StoryRoute>

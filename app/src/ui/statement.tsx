@@ -1,7 +1,8 @@
 import { formatAmountText } from "@flow/shared";
 import type { ReactNode } from "react";
 import { withCents } from "./big-number";
-import { BankIcon, CameraIcon, DocumentIcon } from "./icons";
+import { methodLabel, type TxnMeta } from "../txn-meta";
+import { BankIcon, CameraIcon, CardIcon, DocumentIcon, TransferIcon } from "./icons";
 
 /**
  * The method slot under a statement row's amount (FLOW-305): a 16px icon and a short label,
@@ -13,16 +14,40 @@ export type StatementMethod = { icon: ReactNode; text: string; spoken?: string; 
 export type StatementSource = "sumit" | "mercury" | "manual" | "photo";
 
 /**
- * The method a review row can show today, from its source and document kind. A bank line says
- * "בנק"; a SUMIT document says its kind ("חשבונית", "קבלה"), so every row keeps one height.
- * Card, ACH and wire labels need the bank line's meta (FLOW-304) and are not drawn here yet.
+ * The method a review row shows, from its source and document kind. A bank line with FLOW-304
+ * bank details says how the money moved (••4242, ACH, העברה בנקאית, צ׳ק); one without says "בנק".
+ * A SUMIT document says its kind ("חשבונית", "קבלה"), so every row keeps one height.
  */
-export function statementMethodOf(source: StatementSource | undefined, docKind: string | undefined): StatementMethod | null {
+export function statementMethodOf(
+  source: StatementSource | undefined,
+  docKind: string | undefined,
+  meta?: Pick<TxnMeta, "method" | "card_last4"> | null,
+): StatementMethod | null {
+  const fromMeta = source === "mercury" ? statementMethodFromMeta(meta) : null;
+  if (fromMeta) return fromMeta;
   if (source === "mercury") return { icon: <BankIcon size={16} />, text: "בנק" };
   if (source === "photo") return { icon: <CameraIcon size={16} />, text: "צילום" };
   if (source === "manual") return { icon: <DocumentIcon size={16} stroke={1.9} />, text: "ידני" };
   if (source === "sumit" || docKind != null) return { icon: <DocumentIcon size={16} stroke={1.9} />, text: docKindShort(docKind) };
   return null;
+}
+
+/**
+ * FLOW-304's short method label as a statement method. Null for no meta or `other`, so the
+ * caller keeps "בנק". Only the last 4 card digits ever reach the label (`methodLabel`).
+ */
+export function statementMethodFromMeta(meta: Pick<TxnMeta, "method" | "card_last4"> | null | undefined): StatementMethod | null {
+  const label = methodLabel(meta);
+  if (label == null) return null;
+  const icon =
+    label.icon === "card" ? <CardIcon size={16} /> : label.icon === "transfer" ? <TransferIcon size={16} /> : <DocumentIcon size={16} stroke={1.9} />;
+  const ltr = !/[\u0590-\u05FF]/u.test(label.short);
+  return {
+    icon,
+    text: label.short,
+    ...(label.spoken !== label.short ? { spoken: label.spoken } : {}),
+    ...(ltr ? { ltr: true } : {}),
+  };
 }
 
 /** Short document kind for the method slot (≤ 70px at 15px). */

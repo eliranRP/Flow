@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ReactElement } from "react";
 import { BigNumber } from "./big-number";
 import { BankIcon } from "./icons";
 import { List, ListRow } from "./list-row";
 import { statementMethodOf } from "./statement";
-import { largeAgorot, longHebrew, padded } from "./story-support";
+import { largeAgorot, longHebrew, padded, storyMeta } from "./story-support";
 
 /** Agorot is a decimal string so story args stay JSON-serializable. */
 type RowArgs = {
@@ -161,7 +162,26 @@ export const MercuryDark: Story = {
  */
 const bankMethod = statementMethodOf("mercury", undefined);
 const invoiceMethod = statementMethodOf("sumit", "invoice");
-const cardMethod = { icon: <BankIcon size={16} />, text: "••4242", spoken: "כרטיס שמסתיים ב־4242", ltr: true };
+// FLOW-305 with FLOW-304 bank details: the method comes from the line's meta. Invented card digits.
+const cardMethod = statementMethodOf("mercury", undefined, storyMeta("t-card", { method: "card", card_last4: "4242" }));
+const achMethod = statementMethodOf("mercury", undefined, storyMeta("t-ach", { method: "ach" }));
+const wireMethod = statementMethodOf("mercury", undefined, storyMeta("t-wire", { method: "wire" }));
+const checkMethod = statementMethodOf("mercury", undefined, storyMeta("t-check", { method: "check" }));
+const noMetaMethod = statementMethodOf("mercury", undefined, null);
+
+type BankKind = "card" | "ach" | "wire" | "check" | "none";
+
+/** One bank line per payment method, and one with no bank details ("בנק"). */
+function StatementBankRows({ only }: { only?: BankKind }) {
+  const rows: Record<BankKind, ReactElement> = {
+    card: <ListRow key="card" variant="statement" title="Northwind Traders" fallback="bank" method={cardMethod} agorot={-4_299n} currency="USD" sign="out" href="/review/all?item=11" />,
+    ach: <ListRow key="ach" variant="statement" title="Fabrikam Supply Co" fallback="bank" method={achMethod} suggestion="וילה לדוגמה · חומרים" agorot={-245_000n} currency="USD" sign="out" href="/review/all?item=12" />,
+    wire: <ListRow key="wire" variant="statement" title="לקוח לדוגמה" fallback="bank" method={wireMethod} agorot={1_500_000n} currency="USD" sign="in" href="/review/all?item=13" />,
+    check: <ListRow key="check" variant="statement" title="קבלן לדוגמה" fallback="bank" method={checkMethod} pending agorot={-80_000n} currency="USD" sign="out" href="/review/all?item=14" />,
+    none: <ListRow key="none" variant="statement" title="חשמל השרון בע״מ" fallback="bank" method={noMetaMethod} agorot={-120_050n} sign="out" href="/review/all?item=15" />,
+  };
+  return <List>{only ? rows[only] : Object.values(rows)}</List>;
+}
 
 function StatementSample({ kind }: { kind: "income" | "expense" | "pending" | "suggestion" | "long" | "fallback" | "all" }) {
   const rows = {
@@ -210,6 +230,19 @@ export const StatementAll390: Story = { args: statementArgs, render: () => <Stat
 export const StatementAll390Dark: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow390", "dark") };
 export const StatementAll320: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow320", "light") };
 export const StatementAll320Dark: Story = { args: statementArgs, render: () => <StatementSample kind="all" />, ...statementFrame("flow320", "dark") };
+
+export const StatementCard: Story = { args: statementArgs, render: () => <StatementBankRows only="card" /> };
+export const StatementCardDark: Story = { args: statementArgs, render: () => <StatementBankRows only="card" />, globals: { theme: "dark" } };
+export const StatementAch: Story = { args: statementArgs, render: () => <StatementBankRows only="ach" /> };
+export const StatementAchDark: Story = { args: statementArgs, render: () => <StatementBankRows only="ach" />, globals: { theme: "dark" } };
+export const StatementWire: Story = { args: statementArgs, render: () => <StatementBankRows only="wire" /> };
+export const StatementWireDark: Story = { args: statementArgs, render: () => <StatementBankRows only="wire" />, globals: { theme: "dark" } };
+export const StatementCheck: Story = { args: statementArgs, render: () => <StatementBankRows only="check" /> };
+export const StatementCheckDark: Story = { args: statementArgs, render: () => <StatementBankRows only="check" />, globals: { theme: "dark" } };
+export const StatementNoBankDetails: Story = { args: statementArgs, render: () => <StatementBankRows only="none" /> };
+export const StatementNoBankDetailsDark: Story = { args: statementArgs, render: () => <StatementBankRows only="none" />, globals: { theme: "dark" } };
+export const StatementMethods320: Story = { args: statementArgs, render: () => <StatementBankRows />, ...statementFrame("flow320", "light") };
+export const StatementMethods320Dark: Story = { args: statementArgs, render: () => <StatementBankRows />, ...statementFrame("flow320", "dark") };
 
 /** FLOW-501: a loan on the Loans page. The meta slot holds the balance with small cents; a waiting loan warns. */
 function LoanRows() {
