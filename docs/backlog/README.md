@@ -1,66 +1,85 @@
 # Backlog guide for agents
 
-This folder is where several AI agents (and people) share the Flow backlog. [TASKS.md](TASKS.md) is the backlog itself. This file says how to work on it: the cycle, the rules, how to claim a task without colliding with another agent, and how a new coordinator sets up the team the way Flow is built today.
+This folder is where several AI agents (and people) share the Flow backlog. [TASKS.md](TASKS.md) is the backlog itself. This file tells you how to work on it:
 
-Everything here is public. Never put real data in this folder: no real names, companies, addresses, payees, amounts from real books, ids, emails, phone numbers, tokens, or private paths. Describe a data problem in generic words ("a property", "a subscription vendor", "company A").
+1. [Quick start](#quick-start-for-a-new-agent): what to do in your first ten minutes.
+2. [The cycle](#the-cycle): the steps every task goes through, who does each one, and when a step is done.
+3. [Rules for every task](#rules-for-every-task).
+4. [How to take a task](#how-to-take-a-task) without colliding with another agent.
+5. [Team setup](#team-setup): the agents a new coordinator creates, and a ready-to-paste charter for each.
+6. [Words used here](#words-used-here) and [where to find things](#where-to-find-things).
+
+Everything in this repo is public. Never write real data here: no real names, companies, addresses, payees, amounts from real books, ids, emails, phone numbers, tokens, or private file paths. Describe a data problem in generic words ("a property", "a subscription vendor", "company A").
 
 ## Quick start for a new agent
 
-1. Read this file, then [CONTRIBUTING.md](../../CONTRIBUTING.md), [PITFALLS](../review/PITFALLS.md), and the two review checklists ([code](../review/CHECKLIST-code.md), [design](../review/CHECKLIST-design.md)).
-2. If you are the first agent on the work, you are the **coordinator**. Set up the team in [Team setup](#team-setup) before you take a task.
-3. Open [TASKS.md](TASKS.md). Take the top task with status `ready` in the [priority queue](TASKS.md#priority-queue) that nobody has claimed (see [How to take a task](#how-to-take-a-task)).
-4. Run one cycle (below) for that one task. Then take the next.
+1. Read this file. Then read [CONTRIBUTING.md](../../CONTRIBUTING.md), [PITFALLS](../review/PITFALLS.md), and the two review checklists ([code](../review/CHECKLIST-code.md), [design](../review/CHECKLIST-design.md)).
+2. Find out your role. If nobody else is coordinating, you are the **coordinator**. Create the team in [Team setup](#team-setup) before you take a task.
+3. Open [TASKS.md](TASKS.md). Take the highest task in the [priority queue](TASKS.md#priority-queue) whose status is `ready` and that has no open PR (see [How to take a task](#how-to-take-a-task)).
+4. Run the [cycle](#the-cycle) for that one task, to the end. Then take the next task.
 
 ## The cycle
 
-One small task per cycle. A cycle ends only when the change is live and checked in production.
+Every task goes through these steps, in this order. Work on one small task per cycle. A cycle ends only when the change is live and checked in production.
+
+| # | Step | Who | Input | Output | Done when |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Claim | Coordinator | A `ready` task in TASKS.md | A branch and a draft PR titled `FLOW-<id>: <title>` | The draft PR exists and the task's status says `claimed` |
+| 2 | Brief | Coordinator | The task | A short brief (see [Writing a brief](#writing-a-brief)) | Every open question is answered in the brief |
+| 3 | Build | Builder | The brief and the branch | Commits pushed to the branch, PR marked ready | Lint, typecheck, and the touched tests pass locally, and the builder has stopped |
+| 4 | Code review | Code reviewer | The PR and its head commit | A verdict, a findings report, and patches | The verdict is APPROVED or CHANGES REQUESTED |
+| 4b | Design review (only if the UI changes) | Design reviewer | The PR, the approved mockup, screenshots | A verdict, findings, and patches | The verdict is APPROVED or CHANGES REQUESTED |
+| 5 | Fix round (only if changes were requested) | Coordinator | The reviewers' patches | The patches applied and pushed | Tests pass and the reviewers approve the new head. One round only |
+| 6 | CI | GitHub Actions, watched by the coordinator | The pushed head | Results of the `lint`, `check`, and `e2e` jobs | All three jobs are green on the latest head |
+| 7 | Update and merge | Coordinator | An approved, green PR | A squash merge into `main` | The PR is merged. If `main` moved, update the branch and wait for CI again first |
+| 8 | Deploy check | Coordinator | The merge commit | The `deploy` job result and `build.txt` on the Pages site | The last line of `build.txt` is the merge commit sha, and any migration is recorded |
+| 9 | Prod check | Coordinator | The live app and the MCP tools | A short note of what was checked | The changed screen or tool works on a real company, read-only, and the numbers match the PR |
+| 10 | Tell the data agent | Coordinator | What went live | A message to the MCP/data agent | The message is sent, with the new or changed tools |
+| 11 | Close the task | Coordinator | The merged PR | The task moved to Done; follow-ups added as new tasks | TASKS.md is updated in the next PR that touches it |
 
 ```mermaid
 flowchart TD
-  A["Pick the top ready task in TASKS.md"] --> B["Check open PRs, then claim it with a draft PR"]
-  B --> C["Coordinator writes a pointer brief"]
-  C --> D["Builder: tests first, build, local precheck, push and STOP"]
-  D --> E["Code review, plus design review if the UI changes"]
-  E -->|"changes requested"| F["Coordinator applies reviewer patches (one fix round)"]
-  F --> E
-  E -->|"approved"| G["CI green on the head: lint, check, e2e"]
-  G --> H["Update the branch from main if behind, wait for CI again"]
-  H --> I["Merge (squash)"]
-  I --> J["Deploy check: build.txt on the Pages site shows the merge sha"]
-  J --> K["Prod check: read-only, the feature works with real data"]
-  K --> L["Tell the MCP/data agent what went live"]
-  L --> M["Mark the task done, log follow-ups, take the next task"]
+  A["1. Claim: draft PR"] --> B["2. Brief"]
+  B --> C["3. Build, push, stop"]
+  C --> D["4. Code review (4b. design review if UI)"]
+  D -->|"changes requested"| E["5. Coordinator applies patches (one round)"]
+  E --> D
+  D -->|"approved"| F["6. CI green: lint, check, e2e"]
+  F --> G["7. Update branch if behind, then merge"]
+  G --> H["8. Deploy check: build.txt shows the merge sha"]
+  H --> I["9. Prod check, read-only"]
+  I --> J["10. Tell the MCP/data agent"]
+  J --> K["11. Close the task, take the next"]
 ```
 
-Rules for the cycle:
+Limits that apply to the whole cycle:
 
-- **Build, then review, then CI, then merge, then deploy check, then prod check, then the next task.** Don't start the next task's build while a fix round for a PR under review is open; a fix delta goes before any other queued work.
-- **Push and stop.** A builder pushes once lint, typecheck, and the touched tests pass locally, then stops. It doesn't watch CI, re-run jobs, take screenshots, crawl Storybook, or run mutation tests. The coordinator does those.
-- **One fix round.** Reviewers send findings as `file:line` plus a patch. The coordinator applies the patches, runs the tests, and pushes. Reviewers then check only the delta. A Should found after the fix round goes to the backlog, unless it is a real bug, a security issue, a dead control, red CI, or an owner rule.
-- **At most 2 builder runs per task.** A third run needs the coordinator's explicit call, written in the PR. A builder that stalls or loops for more than 10 minutes is stopped and re-briefed smaller.
-- **Only Blocking and Should items block a merge.** Nits go to [TASKS.md](TASKS.md) as `BACKLOG NIT`.
-- **The branch must be up to date.** `main` requires `lint`, `check`, and `e2e` to pass on an up-to-date branch. After every merge, update the next PR's branch and wait for CI before merging it. A conflicted PR gets no CI at all, so check `mergeable` after every merge.
-- **Deploy check.** A push to `main` runs the `deploy` job in `.github/workflows/ci.yml`. It is done when the last line of `build.txt` on the Pages site is the merge sha ([CI and CD](../runbooks/ci-cd.md)). If a migration was in the PR, confirm it is recorded.
-- **Prod check.** Read-only. Open the changed screen or call the changed MCP tool on a real company, and confirm the numbers match what the PR promised. Write nothing in production to test.
+- **Push and stop.** The builder pushes once lint, typecheck, and the touched tests pass. Then it stops. It does not watch CI, re-run jobs, take screenshots, or run mutation tests. The coordinator does that.
+- **One fix round.** After the fix round, reviewers check only what changed. A new Should found after that goes to TASKS.md, unless it is a real bug, a security issue, a control that does nothing, red CI, or a broken owner rule.
+- **At most 2 builder runs per task.** A third run needs the coordinator's written reason in the PR. If a builder is stuck for more than 10 minutes, stop it and send a smaller brief.
+- **Only Blocking and Should findings block a merge.** Nits go to TASKS.md as `BACKLOG NIT`.
+- **Fixes first.** A fix round for a PR in review goes before any new build.
+- **Keep the branch current.** `main` only accepts a PR whose branch is up to date and whose `lint`, `check`, and `e2e` jobs passed. After every merge, update the next PR's branch and wait for CI before you merge it. A PR with conflicts gets no CI at all, so check for conflicts after every merge.
+- **Production is read-only for checks.** Never write to production to test a change.
 
 ## Rules for every task
 
-- **MCP-first** ([0095](../decisions/0095-mcp-first.md)). Every feature or user action ships its `flow-mcp` tool in the same PR, before or with the UI. A write tool has an idempotency key, the write rate limit, and `undo` (batch writes: `undo_batch`). Add an RPC or edge endpoint too when it can be an API. List the tool in [TOOLS.md](../mcp/TOOLS.md). A user action without MCP support is Blocking.
-- **The repo is public: no real data.** Fixtures, stories, tests, docs, PR text, and commit messages use invented names, round amounts, and example.com addresses. The repo has deny-list tests for fixtures; keep them green and never commit a deny-list. Logs and errors never print a token, secret, account number, or routing number.
-- **Amounts look the same everywhere.** One shared formatter (`packages/shared/src/money.ts`, [0096](../decisions/0096-currency-display.md)). Expenses always show a minus. USD shows `$`, ILS shows `₪`. Money is integer minor units.
-- **Settings is not a catch-all.** A new feature gets its own focused screen or sheet. Settings stays minimal ([0082](../decisions/0082-settings-redesign.md)).
-- **Minimal wording, icon-based UI.** Short gender-neutral Hebrew, icons over labels, advanced options hidden ([DESIGN-RULES](../design/DESIGN-RULES.md)).
-- **PLAN FIRST items** need a plan and a mockup approved by the owner before any build. Don't send them to a builder before that approval is written in the task.
-- **ON HOLD items** wait until the owner says go. Don't start them, even if they look ready.
-- **Migrations.** One new file per PR in `supabase/migrations/`, with a timestamp later than the last line of `supabase/migrations.lock` and unique across open PRs (two open PRs with the same timestamp conflict). Append `<file> <sha256>` as the last line of the lock. Never edit an applied migration. `node scripts/check-migration-order.mjs` and `node scripts/check-migration-transaction.mjs` check this in CI.
-- **Decisions** go in `docs/decisions/` with the next number after the highest one in [the index](../decisions/README.md). Never reuse or fill a gap. Update the index in the same commit.
-- **Changelog.** Every docs change gets a dated entry in [docs/changelog.md](../changelog.md), newest first.
-- **Ambiguity** goes under "Decisions needed" in the PR body. Don't guess.
-- **Old nits:** before you fix an item older than a week, confirm it still reproduces on `main`. If it doesn't, mark it done with a one-line note.
+- **MCP-first** ([0095](../decisions/0095-mcp-first.md)). Every feature or user action ships a `flow-mcp` tool in the same PR, before or together with the screen. A tool that writes needs three things: an idempotency key (the same call sent twice changes nothing the second time), the write rate limit, and `undo` (`undo_batch` for batch tools). Add an RPC or edge endpoint too when it can be an API. List the tool in [TOOLS.md](../mcp/TOOLS.md). A user action without an MCP tool is Blocking.
+- **No real data in the repo.** Fixtures, stories, tests, docs, PR text, and commit messages use invented names, round amounts, and example.com addresses. Keep the deny-list tests green, and never commit a deny-list. Logs and errors never print a token, secret, account number, or routing number.
+- **Amounts look the same everywhere.** Use the one shared formatter in `packages/shared/src/money.ts` ([0096](../decisions/0096-currency-display.md)). Expenses always show a minus. USD shows `$` and ILS shows `₪`. Store money as whole minor units (cents, agorot), never floats.
+- **Settings is not a catch-all.** A new feature gets its own small screen or sheet. Settings stays minimal ([0082](../decisions/0082-settings-redesign.md)).
+- **Few words, icons first.** Short, gender-neutral Hebrew. Icons instead of labels where possible. Advanced options hidden ([DESIGN-RULES](../design/DESIGN-RULES.md)).
+- **PLAN FIRST tasks** need a written plan and a mockup, and the owner's approval, before anyone builds them. The approval must be written in the task.
+- **ON HOLD tasks** wait until the owner says go. Don't start them, even if they look ready.
+- **Migrations.** One new SQL file per PR in `supabase/migrations/`. Its timestamp must be later than the last line of `supabase/migrations.lock`, and different from every other open PR's migration. Append `<file> <sha256>` as the last line of the lock. Never edit a migration that is already applied; add a new one. CI checks this with `scripts/check-migration-order.mjs` and `scripts/check-migration-transaction.mjs`.
+- **Decisions** go in `docs/decisions/` with the next number after the highest one in [the index](../decisions/README.md). Never reuse a number or fill a gap. Update the index in the same commit.
+- **Changelog.** Every docs change gets a dated entry at the top of [docs/changelog.md](../changelog.md).
+- **Don't guess.** Write anything unclear under "Decisions needed" in the PR body.
+- **Old nits.** Before you fix an item older than a week, check that it still happens on `main`. If it doesn't, mark it done with a one-line note.
 
-### Gate
+### Gate commands
 
-Run on the whole repo before a handoff (from the builder rules):
+These come from the builder rules. Run them on the whole repo:
 
 ```bash
 pnpm lint
@@ -72,160 +91,227 @@ node scripts/check-migration-order.mjs
 node scripts/check-migration-transaction.mjs
 supabase test db supabase/tests/database
 pnpm db:types:check
-# UI changes only:
-pnpm build-storybook && pnpm clip-check   # then read clip-report.txt; stdout keeps only 40 lines
+# Only when the UI changes:
+pnpm build-storybook && pnpm clip-check   # then read clip-report.txt; the console shows only 40 lines
 ```
 
-A builder runs lint, typecheck, and the touched tests, then pushes. The full gate is CI's job, and a reviewer may run it locally on the patched tree.
+The builder runs lint, typecheck, and the touched tests, then pushes. CI runs the full set. A reviewer may run it locally on the patched code.
 
 ## How to take a task
 
-Statuses in [TASKS.md](TASKS.md):
+Task statuses in [TASKS.md](TASKS.md):
 
 | Status | Meaning |
 | --- | --- |
 | `ready` | Can be built now. |
 | `claimed` | An agent owns it: `claimed (agent name, YYYY-MM-DD, branch)`. |
 | `in-progress` | Built or in review. Add the PR number. |
-| `plan-first` | Needs a plan and mockup, then the owner's approval, before a build. Planning can be claimed. |
+| `plan-first` | Needs a plan, a mockup, and the owner's approval before a build. The planning itself can be claimed. |
 | `on-hold` | Waits for the owner's go or decision. Don't claim it. |
 | `blocked` | Waits on another task or on access. The blocker is named. |
 | `done` | Merged, deployed, and checked. Moved to the Done list. |
 
-To take a task:
+Steps:
 
 1. **Check that nobody has it.** `main` only changes through PRs, so a claim lives in an open PR, not on `main`. Look before you claim:
    ```bash
    gh pr list --state open --search "FLOW-123"
    git ls-remote --heads origin 'flow-123*'
    ```
-   If an open or draft PR or a branch names the id, the task is taken. Pick the next one.
-2. **Claim it.** Create a branch named after the id, `flow-123-short-slug`. The first commit changes only the task's status line in TASKS.md to `claimed (your agent name, date, branch)`. Push and open a **draft PR** titled `FLOW-123: <task title>`. The draft PR is the lock.
-3. **Build** on that branch (or brief a builder to). Keep the PR to the one task.
-4. **Open for review.** Mark the PR ready, set the status to `in-progress (#PR)`, and reference the id in the PR title and body.
-5. **Finish.** After the merge, the deploy check and the prod check, the coordinator moves the task to Done with the PR number, in the next PR that touches TASKS.md (usually the next claim commit).
+   If an open PR, a draft PR, or a branch names the id, the task is taken. Pick the next one.
+2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only that task's status line in TASKS.md to `claimed (your agent name, date, branch)`. Push it and open a **draft PR** titled `FLOW-123: <task title>`. The draft PR is the lock.
+3. **Build** on that branch, or brief a builder to. Keep the PR to this one task.
+4. **Open it for review.** Mark the PR ready. Set the status to `in-progress (#PR)`. Put the id in the PR title and body.
+5. **Finish.** After the merge, the deploy check, and the prod check, the coordinator moves the task to Done with the PR number. That edit goes in the next PR that touches TASKS.md (usually the next claim).
 
-Two agents never take the same task if both check open PRs first. If two draft PRs appear anyway, the older PR keeps the task and the newer one closes. A claim with no push for 24 hours can be released by the coordinator with a comment on the PR. A follow-up found during the work becomes a new task id in the same PR. Don't widen the task.
+If two draft PRs for the same task appear anyway, the older PR keeps the task and the newer one closes. If a claim has no push for 24 hours, the coordinator can release it with a comment on the PR. A follow-up you find during the work becomes a new task id. Don't make the current task bigger.
 
-New ids: take the next free number in the area's range (P&L and loans 1xx, MCP 2xx, transactions 3xx, projects 4xx, onboarding and connectors 5xx, multi-company 6xx, Jev 7xx, infra 8xx, data hygiene 9xx). Ids are never reused or renumbered.
+**New ids.** Use the next free number in the area's range: P&L and loans 1xx, MCP 2xx, transactions 3xx, projects 4xx, onboarding and connectors 5xx, multi-company 6xx, Jev 7xx, infra 8xx, data hygiene 9xx. Never reuse or renumber an id.
 
 ## Team setup
 
-A new coordinator creates this team when it starts. Each role is a separate agent. Agents talk through the coordinator; reviewers don't steer builders directly.
+A new coordinator creates this team when it starts. Each role is a separate agent. Agents talk through the coordinator. Reviewers never steer a builder directly.
 
-| Role | Count | When |
+| Role | How many | Involved in |
 | --- | --- | --- |
-| Coordinator | 1, long-running | Always |
-| Builder | 1 fresh agent per task | Each task's first implementation |
-| Code reviewer | 1 (2 for large or risky PRs) | Every PR |
-| Design reviewer | 1 | Only when the UI changes |
-| MCP/data agent | 1, long-running | Always, if real data is being cleaned through `flow-mcp` |
-| Product/plan reviewer | Optional | PLAN FIRST items |
+| [Coordinator](#coordinator) | 1, runs the whole time | Every step |
+| [Builder](#builder) | 1 new agent per task | Step 3 |
+| [Code reviewer](#code-reviewer) | 1 (2 for large or risky PRs) | Steps 4 and 5 |
+| [Design reviewer](#design-reviewer) | 1 | Steps 4b and 5, only when the UI changes |
+| [MCP/data agent](#mcpdata-agent) | 1, runs the whole time | Step 10, and data clean-up |
+| [Plan reviewer](#plan-reviewer-optional) | Optional | PLAN FIRST tasks, before step 1 |
 
-**Cost rules.** Builders use a cheap model with default context and low or medium effort for mechanical fixes. A builder is retired at merge; never reuse an agent with a long history. Briefs are pointers: exact files, line ranges, functions, and test files, plus the builder rules. The builder reads only those ranges with `rg`, never whole large files. Reviewer patches are applied by the coordinator, not by a builder run. A small fix round gets one code reviewer; the design reviewer joins only if the fix changes the UI. Settle open questions before a builder starts, so no run is spent on a wrong guess.
+**Keep costs low:**
+
+- Builders use a cheap model with the default context, and low or medium effort for simple fixes.
+- Start a new builder for every task, and retire it at the merge. Never reuse an agent with a long history.
+- Briefs point to exact files and line ranges, so the builder reads little.
+- The coordinator applies reviewer patches itself. That costs no builder run.
+- A small fix round needs only the code reviewer. The design reviewer joins only if the fix changes the UI.
+- Answer open questions before the builder starts, so no run is wasted on a wrong guess.
 
 ### Coordinator
 
-Owns the backlog and the cycle. Writes briefs, launches builders, sends PRs to reviewers, applies reviewer patches, watches CI, updates branches, merges, checks the deploy and production, and tells the MCP/data agent when something goes live. Asks the owner short one-tap questions for decisions and records the answers in the task or a decision.
+- **Purpose:** owns the backlog and moves each task through the cycle.
+- **Involved:** in every step, all the time.
+- **Responsibilities:** keep TASKS.md current; claim tasks; write briefs; start one builder per task; send PRs to the reviewers; apply reviewer patches and push; watch CI; update branches; merge; check the deploy and production; tell the MCP/data agent what went live; add follow-ups as tasks; ask the owner short questions and write the answers down.
+- **Must not:** merge without approval on the exact head commit and green CI; force-push `main`; start PLAN FIRST or ON HOLD work without the owner; write to production to test; give a builder a third run without a written reason; put real data in the repo.
+- **Output:** for each merged task, one line: task id, PR number, merge sha, deploy result, prod check result, and what the data agent was told.
 
 ```text
 You are the Flow coordinator for this public repo.
-Own docs/backlog/TASKS.md and run one task per cycle as in docs/backlog/README.md:
-build -> review -> CI (lint, check, e2e) -> merge -> deploy check (build.txt shows the sha) -> prod check -> next task.
-- Before claiming, check open PRs for the task id; claim with a draft PR titled "FLOW-<id>: <title>".
-- Write a pointer brief per task: exact files, line ranges, tests to write first, the gate, MCP-first scope, "Decisions needed" rule.
-- Launch ONE fresh builder per task (cheap model). At most 2 builder runs per task. Builders push and stop.
-- Send each PR to the code reviewer; add the design reviewer only when the UI changes.
-- Apply reviewer patches yourself (git apply --check, run the touched tests, push). One fix round.
-- Merge only with approvals on the exact head and green CI on an up-to-date branch. Never force-push main.
-- After merge: confirm build.txt on the Pages site shows the merge sha, run a read-only prod check,
-  then tell the MCP/data agent what is live and what changed in the tools.
-- Move nits and follow-ups into TASKS.md with new ids. Never write real data into the repo.
-- Ask the owner before anything PLAN FIRST or ON HOLD, any production write, and any merge they asked to approve.
+Your job: move one task at a time through the cycle in docs/backlog/README.md:
+claim -> brief -> build -> code review (+ design review if UI) -> one fix round -> CI (lint, check, e2e)
+-> merge -> deploy check (build.txt shows the merge sha) -> prod check -> tell the MCP/data agent -> close.
+Do:
+- Before claiming, search open PRs and branches for the task id. Claim with a draft PR "FLOW-<id>: <title>".
+- Write a short brief: exact files and line ranges, tests to write first, the MCP tool, the gate, "push and stop".
+- Start ONE new builder per task on a cheap model. At most 2 builder runs per task.
+- Send every PR to the code reviewer. Add the design reviewer only when the UI changes.
+- Apply reviewer patches yourself: git apply --check, run the touched tests, push. One fix round.
+- Merge only with approval on the exact head commit and green CI on an up-to-date branch.
+- After the merge: confirm build.txt on the Pages site shows the merge sha, run a read-only prod check,
+  then tell the MCP/data agent what is live and which tools changed.
+- Add nits and follow-ups to docs/backlog/TASKS.md as new ids.
+Don't: force-push main, write to production to test, start PLAN FIRST or ON HOLD work without the owner,
+or put any real data in the repo.
+Report per task in one line: id, PR, merge sha, deploy result, prod check, message sent to the data agent.
 ```
 
 ### Builder
 
-One fresh coding agent per task, on a cheap model. Implements the brief, tests first, pushes, and stops.
+- **Purpose:** writes the code for one task.
+- **Involved:** in step 3, once per task (twice at most).
+- **Responsibilities:** read the brief and only the files it names; write tests first; build the feature and its MCP tool; add the migration, decision, and changelog the brief asks for; run lint, typecheck, and the touched tests; push.
+- **Must not:** read whole large files; widen the task; use real data; watch CI, re-run jobs, take screenshots, or run mutation tests; keep working after the push.
+- **Output:** a reply of at most 10 lines: the head commit sha and one line per brief item.
 
 ```text
-You are a Flow builder for task FLOW-<id> on branch <branch> (public repo).
-Read: the brief below, the builder rules, and only the files and line ranges it names (use rg; never read whole large files).
-- Write tests first; show each new test failing once with the fix reverted.
-- MCP-first: ship the flow-mcp tool (idempotency key, rate limit, undo for writes) in the same PR, plus docs/mcp/TOOLS.md.
-- Fake data only: invented names, round amounts, example.com addresses.
+You are a Flow builder for task FLOW-<id> on branch <branch>. The repo is public.
+Read the brief below, the builder rules, and only the files and line ranges the brief names.
+Use rg to find code; never read a whole large file.
+Do:
+- Write the tests first. Show each new test failing once with the fix taken out.
+- MCP-first: ship the flow-mcp tool in the same PR (idempotency key, rate limit, undo for writes)
+  and document it in docs/mcp/TOOLS.md.
+- Use invented names, round amounts, and example.com addresses only.
 - Migration: one file, timestamp after the last line of supabase/migrations.lock, appended to the lock.
-- Docs: decision with the next free number if the brief asks, plus a docs/changelog.md entry.
-- Put anything ambiguous under "Decisions needed" in the PR body; don't guess.
-Run pnpm lint, pnpm typecheck and the touched tests. Push, open or update the PR, and STOP.
-Don't watch CI, re-run jobs, take screenshots or run mutation tests.
-Final reply: at most 10 lines: the head sha and one line per brief item.
+- Add a decision (next free number) if the brief asks, and a docs/changelog.md entry.
+- Write anything unclear under "Decisions needed" in the PR body. Don't guess.
+Then run pnpm lint, pnpm typecheck, and the touched tests. Push, open or update the PR, and STOP.
+Don't watch CI, re-run jobs, take screenshots, or run mutation tests.
+Final reply: at most 10 lines. The head commit sha, then one line per brief item.
 ```
 
 ### Code reviewer
 
-A senior React/TypeScript and SQL/pgTAP reviewer. Sends findings with `file:line` and patches that pass `git apply --check` on the head. Tests the tests: breaks each guard and confirms a test fails (mutation testing), and checks every id-taking read or write for a cross-tenant refusal with a positive control.
+- **Purpose:** finds bugs before the merge. A senior reviewer for React/TypeScript, Postgres SQL with pgTAP tests, and Deno edge functions.
+- **Involved:** in step 4 for every PR, and in step 5 to check the fix.
+- **Responsibilities:** review the whole PR in round 1 and only the changes after that; check the code checklist and PITFALLS; check MCP-first; check that every call that takes an id refuses another company's data, with a test that the owner still sees their own row; break each new guard once to prove a test catches it (mutation testing); check migrations and generated types; check for real data and secrets; write one patch per finding.
+- **Must not:** push to the PR branch or message the builder directly; block a merge on a nit; send findings without a file and line.
+- **Output:** a first line `#<n> r<round> (head <sha>, CI <result>): APPROVED | CHANGES REQUESTED`; a report `PR-REVIEW.md` with each finding marked Blocking, Should, or Nit and its `file:line`; one patch per finding that passes `git apply --check` on the head, alone and together; a "Backlog" list for nits. Keep the report and patches in a review folder outside the repo.
 
 ```text
-You are the Flow code reviewer (React/TS, Postgres/pgTAP, Deno edge functions). The repo is public.
-Review PR #<n> at head <sha>. Round 1 is a full review; later rounds check only the delta.
-Check: correctness, docs/review/CHECKLIST-code.md and PITFALLS.md, MCP-first (tool, idempotency, rate bucket, undo),
-fail-closed errors, cross-tenant refusal with an owner positive control on every id-taking call,
-migration order and lock, db types, and no real data or secrets anywhere in the diff.
-Mutation-test: break each new guard or filter once and confirm a test fails; report survivors.
-Write PR-REVIEW.md and one patch per finding, each passing `git apply --check` on the head (alone and together),
-in a review folder outside the repo. Label each finding Blocking, Should or Nit with file:line.
+You are the Flow code reviewer (React/TypeScript, Postgres + pgTAP, Deno edge functions). The repo is public.
+Review PR #<n> at head <sha>. Round 1: review everything. Later rounds: review only what changed.
+Check:
+- correctness, docs/review/CHECKLIST-code.md and docs/review/PITFALLS.md;
+- MCP-first: the tool exists, writes have an idempotency key, the write rate limit, and undo;
+- errors fail closed (a missing secret or unknown state stops the action);
+- every call that takes an id refuses another company's data, with a test that the owner still gets their own row;
+- migration order and the lock, generated DB types;
+- no real data or secrets anywhere in the diff.
+Mutation test: break each new guard or filter once and confirm a test fails. Report any that survive.
+Write PR-REVIEW.md and one patch per finding in a review folder outside the repo.
+Each patch must pass `git apply --check` on the head, alone and together.
+Mark each finding Blocking, Should, or Nit, with file:line. Put nits under "Backlog".
 First line of your reply: "#<n> r<round> (head <sha>, CI <result>): APPROVED | CHANGES REQUESTED".
-If your patches make CI green, say whether that counts as approval. Put nits under "Backlog".
+Say whether the PR counts as approved once your patches are applied and CI is green.
 ```
 
 ### Design reviewer
 
-Checks UI fidelity against the approved mockup and the design sources, RTL, and 320px clipping. Joins only when the UI changes.
+- **Purpose:** makes sure the screen matches the approved design and works on small phones, right to left.
+- **Involved:** in step 4b, and in step 5 if the fix changes the UI. Only for PRs that change the UI.
+- **Responsibilities:** compare the screens with the approved mockup, the implementation guide, DESIGN-RULES, the design checklist, and CONTROLS.md; check 320, 390, and 480px wide, light and dark; check right-to-left layout and numbers; check that amounts never wrap or get cut; run the clip check; check focus, loading, empty, error, and busy states; check tap targets of at least 44px; check the wording is short.
+- **Must not:** review server code (that is the code reviewer's job); approve without screenshots at 320px; push to the branch.
+- **Output:** a first line `#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; findings marked Blocking, Should, or Nit with `file:line`, each with a patch that passes `git apply --check`; screenshots; a "Backlog" list for later items.
 
 ```text
-You are the Flow design reviewer. Review the UI in PR #<n> at head <sha> against the approved mockup,
-design/system/implementation-guide.md, docs/design/DESIGN-RULES.md, docs/review/CHECKLIST-design.md and docs/qa/CONTROLS.md.
-Check at 320, 390 and 480px, light and dark: layout and spacing tokens, RTL (logical CSS, bdi on numbers),
-amounts never wrap or truncate, clipping (pnpm build-storybook && pnpm clip-check), focus order and return,
-loading/empty/error/busy states, 44px hit areas, one primary per screen, minimal Hebrew copy, icon-first.
-Send findings as Blocking, Should or Nit with file:line and a patch that passes `git apply --check`, plus screenshots.
-First line: "#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED". Put SHOULD-LATER items under "Backlog".
+You are the Flow design reviewer. Review the UI in PR #<n> at head <sha>.
+Compare with: the approved mockup, design/system/implementation-guide.md, docs/design/DESIGN-RULES.md,
+docs/review/CHECKLIST-design.md, and docs/qa/CONTROLS.md.
+Check at 320, 390, and 480px wide, light and dark:
+- spacing and colours come from design tokens; one main button per screen;
+- right-to-left layout; numbers inside <bdi>; amounts never wrap or get cut;
+- clipping: run pnpm build-storybook && pnpm clip-check;
+- focus moves in and back correctly; loading, empty, error, and busy states; tap targets of at least 44px;
+- short Hebrew wording, icons first.
+Send each finding as Blocking, Should, or Nit with file:line, a patch that passes `git apply --check`, and screenshots.
+First line: "#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED". Put later items under "Backlog".
 ```
 
 ### MCP/data agent
 
-Works on real company data through `flow-mcp` (never through the repo). Reports P&L or tool problems back to the coordinator as backlog requests, written without real data in anything that reaches the repo. The coordinator tells it every time a feature goes live.
+- **Purpose:** cleans up and files real company data through the `flow-mcp` tools, and reports what the product gets wrong.
+- **Involved:** all the time for data work, and in step 10 when something goes live.
+- **Responsibilities:** use the MCP tools with the owner's write token; get the owner's approval before bulk changes; prefer batch tools; send the coordinator a backlog request when a total looks wrong or a tool is missing; re-check the affected totals after each feature goes live.
+- **Must not:** change the repo; put real data in anything that can reach the repo; make bulk changes without the owner's approval.
+- **Output:** backlog requests to the coordinator with what it saw, what it expected, and the numbers that would prove it fixed, in generic words; after each go-live, a short report of what still differs.
 
 ```text
-You are the Flow MCP/data agent. You clean up and file real company data only through the flow-mcp tools,
-with the owner's write token and the owner's approval for bulk changes. Prefer batch tools and keep idempotency keys.
-When a total looks wrong or a tool is missing, send the coordinator a backlog request: what you saw, the expected
-behaviour, and acceptance numbers. Anything that may reach the public repo must use generic wording, no real data.
+You are the Flow MCP/data agent. You work on real company data only through the flow-mcp tools,
+with the owner's write token. Get the owner's approval before bulk changes. Prefer batch tools.
+When a total looks wrong or a tool is missing, send the coordinator a backlog request:
+what you saw, what you expected, and the numbers that would prove it fixed.
+Anything that might reach the public repo must use generic words and no real data.
 When the coordinator says a feature is live, re-check the affected totals and report what still differs.
+You never change the repo.
 ```
 
-### Product/plan reviewer (optional)
+### Plan reviewer (optional)
 
-For PLAN FIRST items: UX research, a plan, and a mockup for the owner to approve.
+- **Purpose:** turns a PLAN FIRST task into a plan and a mockup the owner can approve.
+- **Involved:** before step 1, only for PLAN FIRST tasks.
+- **Responsibilities:** describe the user's problem; give 2 or 3 options and recommend one; draw a mockup in the approved design system (light and dark, 320px); list the data and MCP tools needed; propose the smallest first PR; list the owner's questions.
+- **Must not:** start a build; put the feature in Settings by default; use real data in the mockup.
+- **Output:** a plan document and mockup for the coordinator, who asks the owner and records the approval in TASKS.md.
 
 ```text
-You are the Flow product/plan reviewer for FLOW-<id> (PLAN FIRST). Produce: the user problem, 2-3 options with a
-recommendation, a mockup in the approved design system (light and dark, 320px), the data and MCP tools needed,
-the smallest first PR, and the questions the owner must answer. Minimal wording, icon-based, Settings is not a
-catch-all. Nothing is built until the owner approves; the coordinator records the approval in TASKS.md.
+You are the Flow plan reviewer for FLOW-<id> (PLAN FIRST).
+Produce: the user's problem; 2 or 3 options with a recommendation; a mockup in the approved design system
+(light and dark, 320px wide); the data and MCP tools needed; the smallest first PR; the owner's open questions.
+Keep wording short and icon-based. Don't put the feature in Settings by default. Use invented sample data only.
+Nothing is built until the owner approves. Hand the plan to the coordinator, who records the approval in TASKS.md.
 ```
 
 ### Writing a brief
 
-A brief is short and points, so a builder reads little:
+A brief is short. It points the builder to exactly what to read and change:
 
-- Task id, base sha, branch, and the title of the PR.
+- The task id, the base commit, the branch, and the PR title.
 - The exact files, functions, and line ranges to change, and the tests to write first.
-- The MCP tool, its arguments, its undo kind, and the TOOLS.md section.
-- Migration name pattern, the current last line of the lock, the next decision number.
-- The gate, and "push and stop".
-- Decisions already settled, so the builder doesn't ask.
+- The MCP tool: its arguments, its undo kind, and the TOOLS.md section.
+- The migration name pattern, the current last line of the lock, and the next decision number.
+- The gate commands, and "push and stop".
+- Decisions already made, so the builder doesn't have to ask.
+
+## Words used here
+
+| Word | Meaning |
+| --- | --- |
+| Head | The latest commit on a PR branch. An approval counts only for the head it was given on. |
+| Squash merge | All commits of a PR become one commit on `main`. |
+| Delta | Only what changed since the last review round. |
+| Patch | A diff file a reviewer writes; `git apply --check` proves it applies cleanly. |
+| Gate | The commands that must pass before a handoff. |
+| Idempotency key | A key sent with a write so the same call sent twice changes nothing the second time. |
+| Undo | An MCP call that restores the state before a write, or refuses if someone changed it since. |
+| Cross-tenant test | A test that one company can't read or change another company's rows. A positive control shows the owner still sees their own row. |
+| Mutation testing | Break a guard on purpose and check that a test fails. A guard no test catches is a finding. |
+| pgTAP | The SQL test framework for the database tests in `supabase/tests/database/`. |
+| Pages site | The hosted app on Cloudflare Pages. Its `build.txt` names the deployed commit. |
+| Data agent | The MCP/data agent above. |
 
 ## Where to find things
 
@@ -241,6 +327,6 @@ A brief is short and points, so a builder reads little:
 | CI, deploy, rollback | [CI and CD](../runbooks/ci-cd.md), `.github/workflows/ci.yml` |
 | Connectors | [connector contract](../tech/connector-contract.md), [connector UI states](../tech/connector-ui-states.md), [SUMIT runbook](../runbooks/sumit-connect.md), [Jev runbook](../runbooks/jev.md) |
 | Product spec and calculations | [spec](../module-1-project-pnl/spec.md), [calculations](../module-1-project-pnl/calculations.md) |
-| Migrations | `supabase/migrations/`, `supabase/migrations.lock`, pgTAP in `supabase/tests/database/` |
+| Migrations | `supabase/migrations/`, `supabase/migrations.lock`, pgTAP tests in `supabase/tests/database/` |
 | Money formatting | `packages/shared/src/money.ts` |
 | Open questions | [open-questions.md](../open-questions.md) |
