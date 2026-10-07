@@ -65,14 +65,14 @@ jobs:
       - name: Deno tests for flow-mcp
         run: deno test --allow-env --config supabase/functions/flow-mcp/deno.json supabase/functions/flow-mcp
       - run: pnpm typecheck
-      # `pnpm test:unit` without the @flow/app suite, which runs in `check (unit)`. '!flow' keeps the root
-      # package's own `test` script (test:unit and test:connectors) from running again here.
+      # `pnpm test:unit`, including the @flow/app suite. '!flow' keeps the root package's own `test`
+      # script (test:unit and test:connectors) from running again here.
       # scripts/ci-cd.test.mjs pins the test:unit script, so a new part there must be added here too.
       - name: Unit tests
         run: |
           set -euo pipefail
           node --test scripts/*.test.mjs
-          pnpm -r --if-present --filter '!@flow/app' --filter '!flow' test
+          pnpm -r --if-present --filter '!flow' test
           deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared
           deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors
       # The Mercury fixture deny-list is an Actions secret. Fork PRs do not receive it.
@@ -114,23 +114,6 @@ jobs:
           name: reviewer-dist
           path: app/dist
           if-no-files-found: error
-
-  check-unit:
-    name: check (unit)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10.33.3
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: App unit tests
-        run: pnpm --filter @flow/app test
 
   # Storybook tests in the browser, the layout and clip specs, and the storybook-static artifact.
   check-storybook:
@@ -208,7 +191,7 @@ jobs:
 
   # always(), not !cancelled(): a skipped required check counts as passing, so the gate must run and fail.
   check:
-    needs: [check-core, check-unit, check-storybook, check-stories]
+    needs: [check-core, check-storybook, check-stories]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -216,29 +199,26 @@ jobs:
       - name: Every check job passed
         env:
           CORE: ${{ needs.check-core.result }}
-          UNIT: ${{ needs.check-unit.result }}
           STORYBOOK: ${{ needs.check-storybook.result }}
           STORIES: ${{ needs.check-stories.result }}
         run: |
           echo "check (core): $CORE"
-          echo "check (unit): $UNIT"
           echo "check (storybook): $STORYBOOK"
           echo "check (stories): $STORIES"
           test "$CORE" = success
-          test "$UNIT" = success
           test "$STORYBOOK" = success
           test "$STORIES" = success
 
-  # The main Playwright suite is split across three runners. Each starts its own local Supabase.
+  # The main Playwright suite is split across two runners. Each starts its own local Supabase.
   # Shard 1 also runs the database checks.
   e2e-shard:
-    name: e2e (${{ matrix.shard }}/3)
+    name: e2e (${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
@@ -303,11 +283,11 @@ jobs:
           set -euo pipefail
           db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | head -n 1 | tr -d '"')"
           SUPABASE_DB_URL="$db_url" bash scripts/check-sumit-cron.sh
-      - name: Main Playwright suite against local Supabase (shard ${{ matrix.shard }}/3)
+      - name: Main Playwright suite against local Supabase (shard ${{ matrix.shard }}/2)
         run: |
           set -euo pipefail
           eval "$(bash scripts/ci-local-supabase-env.sh)"
-          pnpm test:e2e --shard=${{ matrix.shard }}/3
+          pnpm test:e2e --shard=${{ matrix.shard }}/2
 
   # always(), not !cancelled(): see the check gate.
   e2e:
