@@ -111,6 +111,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     "list_categories",
     "list_review",
     "get_transaction",
+    "get_line_split",
     "list_review",
     "get_dashboard",
     "mcp_list_loans",
@@ -252,6 +253,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "split_line",
     "undo",
     "undo_batch",
   ]);
@@ -281,6 +283,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "split_line",
     "undo",
     "undo_batch",
   ]);
@@ -324,6 +327,100 @@ Deno.test("assign_expense_split forwards shares and optional category", async ()
   }, ["write"], rpc);
   assertEquals(replay.isError, false);
   assertEquals(calls[1]?.body.p_category_id, undefined);
+});
+
+Deno.test("split_line forwards parts in order with null projects", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, parts: [], undo_kind: "line_split", id: TXN } },
+  }));
+  const split = await callTool("split_line", {
+    idempotency_key: "line-1",
+    transaction_id: TXN,
+    parts: [
+      { category_id: CATEGORY, project_id: PROJECT, amount_minor: 25000 },
+      { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 292000 },
+      { category_id: INCOME_CATEGORY, amount_minor: 1 },
+    ],
+  }, ["write"], rpc);
+  assertEquals(split.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_split_line",
+    body: {
+      p_idempotency_key: "line-1",
+      p_transaction_id: TXN,
+      p_parts: [
+        { category_id: CATEGORY, project_id: PROJECT, amount_minor: 25000 },
+        { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 292000 },
+        { category_id: INCOME_CATEGORY, project_id: null, amount_minor: 1 },
+      ],
+    },
+  });
+  const cleared = await callTool("split_line", { idempotency_key: "line-2", transaction_id: TXN, parts: [] }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1]?.body.p_parts, []);
+  const undo = await callTool("undo", { idempotency_key: "u-1", kind: "line_split", id: TXN }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_split", p_id: TXN } });
+});
+
+Deno.test("split_line validates parts and refuses read tokens", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const two = [
+    { category_id: CATEGORY, amount_minor: 100 },
+    { category_id: INCOME_CATEGORY, amount_minor: 200 },
+  ];
+  const denied = await callTool("split_line", { idempotency_key: "k", transaction_id: TXN, parts: two }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const bad: unknown[] = [
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0]] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[0], amount_minor: 5 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], amount_minor: 0 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], amount_minor: 1.5 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], amount_minor: "200" }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], share: 50 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], project_id: "nope" }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, amount_minor: i + 1 })) },
+    { idempotency_key: "k", transaction_id: "not-a-uuid", parts: two },
+    { idempotency_key: "", transaction_id: TXN, parts: two },
+    { idempotency_key: "k", transaction_id: TXN, parts: two, company_id: TXN },
+  ];
+  for (const input of bad) {
+    const result = await callTool("split_line", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("get_expense adds line_split parts only when the line is split", async () => {
+  const parts = [{ category_id: CATEGORY, project_id: null, amount_minor: 100 }];
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id: TXN, amount_net: -300 } };
+    if (name === "get_line_split") {
+      return { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 300, parts, parts_match: false } };
+    }
+    return { status: 500, json: null };
+  });
+  const split = await callTool("get_expense", { transaction_id: TXN }, ["read"], rpc);
+  assertEquals(split.isError, false);
+  if (split.structuredContent.ok) {
+    assertEquals(split.structuredContent.data, {
+      id: TXN,
+      amount_net: -300,
+      line_split: { currency: "USD", line_minor: 300, parts, parts_match: false },
+    });
+  }
+  assertEquals(calls[1], { name: "get_line_split", body: { p_transaction_id: TXN } });
+  const whole = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
+    Promise.resolve(name === "get_transaction"
+      ? { status: 200, json: { id: TXN } }
+      : { status: 200, json: { transaction_id: TXN, parts: [] } }));
+  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN });
+  const failed = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
+    Promise.resolve(name === "get_transaction" ? { status: 200, json: { id: TXN } } : { status: 500, json: null }));
+  if (failed.structuredContent.ok) assertEquals(failed.structuredContent.data, { id: TXN });
 });
 
 Deno.test("assign_expense_split validates shares and refuses read tokens", async () => {
