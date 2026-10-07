@@ -10,9 +10,14 @@ import {
 } from "./safe-return";
 
 describe("safeAppPath", () => {
-  it("accepts only the two settings paths", () => {
+  it("accepts only the settings and connections paths", () => {
     expect(safeAppPath("/settings")).toBe("/settings");
     expect(safeAppPath("/settings?sheet=sumit")).toBe("/settings?sheet=sumit");
+    expect(safeAppPath("/settings/connections")).toBe("/settings/connections");
+    expect(safeAppPath("/settings/connections?sheet=sumit")).toBe("/settings/connections?sheet=sumit");
+    expect(safeAppPath("/settings/connections?sheet=mercury")).toBeNull();
+    expect(safeAppPath("/settings/connections/")).toBeNull();
+    expect(safeAppPath("/settings/loans")).toBeNull();
   });
 
   it("drops dot-segment, scheme, and encoded open redirects", () => {
@@ -60,9 +65,11 @@ describe("safeAppPath", () => {
 
 describe("safeSignInReturn", () => {
   it("accepts only listed screens, exactly", () => {
-    for (const path of ["/review", "/review/filed", "/unpaid", "/projects", "/settings", "/settings/categories", "/settings?sheet=sumit"]) {
+    for (const path of ["/review", "/review/filed", "/unpaid", "/projects", "/settings", "/settings/categories", "/settings?sheet=sumit", "/settings/connections", "/settings/connections?sheet=sumit", "/settings/loans"]) {
       expect(safeSignInReturn(path)).toBe(path);
     }
+    expect(afterSignInMessage(true, "/settings/loans")).toBe("נכנסתם. עוברים להלוואות.");
+    expect(afterSignInMessage(true, "/settings/connections")).toBe("נכנסתם. עוברים לחיבורים.");
   });
 
   it("drops home, off-list routes, and open redirects", () => {

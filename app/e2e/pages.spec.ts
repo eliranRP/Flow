@@ -9,6 +9,8 @@ const pages: Array<[string, string]> = [
   ["/unpaid", "חשבוניות שלא שולמו"],
   ["/settings", "הגדרות"],
   ["/settings/categories", "קטגוריות"],
+  ["/settings/connections", "חיבורים"],
+  ["/settings/loans", "הלוואות"],
   ["/onboarding", "פרטי העסק"],
   ["/install", "התקנת Flow"],
   ["/notifications", "התראות"],

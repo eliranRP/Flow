@@ -2,9 +2,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type Ref } from "react";
 import { getSupabase } from "../lib/supabase";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
-import { AlertIcon, ChevronDownIcon, TagIcon } from "../ui/icons";
-import { List, ListRow } from "../ui/list-row";
-import { Skeleton } from "../ui/skeleton";
+import { ConnectorRow } from "../ui/connector-row";
+import { ChevronDownIcon, TagIcon } from "../ui/icons";
+import { List } from "../ui/list-row";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
@@ -92,6 +92,16 @@ export async function readJevIntegration(): Promise<StoredJev> {
   return stored;
 }
 
+/** The stored Jev row, shared by the Connections page and the Settings חיבורים hint (FLOW-501). */
+export function useJevIntegrationQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: ["jev-integration"],
+    enabled,
+    retry: false,
+    queryFn: readJevIntegration,
+  });
+}
+
 export async function saveJevIntegration(input: StoredJev): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
@@ -145,29 +155,12 @@ export function JevSettingsCard({
     setDraftError(false);
   }, [state.threshold]);
 
-  const row = state.status === "loading" ? (
-    <ListRow variant="static" title={TITLE} icon={<TagIcon size={24} />} hint={<Skeleton width="sm" />} skelHint busy />
-  ) : state.status === "error" ? (
-    <ListRow
-      variant="static"
+  const row = state.status === "loading" || state.status === "error" ? (
+    <ConnectorRow
       title={TITLE}
-      icon={<AlertIcon size={24} />}
-      tone="muted"
-      describeHint
-      hintStatus
-      hint="שגיאה"
-      action={onRetry ? (
-        <TextLink
-          size="label"
-          chevron={false}
-          label="ניסיון חוזר: תיוג חכם"
-          busy={retryBusy}
-          buttonRef={retryRef}
-          onClick={onRetry}
-        >
-          ניסיון חוזר
-        </TextLink>
-      ) : undefined}
+      icon={<TagIcon size={24} />}
+      state={state.status}
+      retry={{ hint: "שגיאה", label: "ניסיון חוזר: תיוג חכם", busy: retryBusy, retryRef, onRetry }}
     />
   ) : (
     <Toggle
@@ -283,11 +276,7 @@ function JevSettingsSample({ sample, showThreshold, readOnly }: { sample: JevCar
 
 function JevSettingsLive({ blocked, showThreshold, readOnly }: { blocked?: () => boolean; showThreshold: boolean; readOnly: boolean }) {
   const client = useQueryClient();
-  const query = useQuery({
-    queryKey: ["jev-integration"],
-    retry: false,
-    queryFn: readJevIntegration,
-  });
+  const query = useJevIntegrationQuery(true);
   const save = useWrite<StoredJev>({
     failure: "לא הצלחנו לשמור.",
     keys: ["jev-integration"],

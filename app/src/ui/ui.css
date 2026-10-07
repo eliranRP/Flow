@@ -4187,3 +4187,8 @@ div.ui-check-row {
 .ui-reversal-hint {
   margin: 0 0 var(--space-2);
 }
+
+/* FLOW-501: the Settings rows that open a page. The wrapper only marks the row for focus return. */
+.ui-settings-page-row {
+  display: contents;
+}

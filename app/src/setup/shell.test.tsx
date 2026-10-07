@@ -53,7 +53,7 @@ describe("setup step chrome", () => {
     expect(screen.getByRole("link", { name: "תיוג חכם" })).toHaveAttribute("href", "/setup/2?from=card");
     expect(screen.getByRole("link", { name: "התקנה" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "חיבור SUMIT" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "מתקדם · עוזר AI" })).toHaveAttribute("href", "/settings?sheet=assistant");
+    expect(screen.getByRole("link", { name: "מתקדם · עוזר AI" })).toHaveAttribute("href", "/settings/connections?sheet=assistant");
     expect(screen.getByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
     render(<SumitFailureNote />);
     expect(screen.getByText("SUMIT עוד לא מחובר.")).toBeInTheDocument();

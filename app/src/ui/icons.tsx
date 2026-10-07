@@ -437,3 +437,25 @@ export function EyeOffIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** FLOW-501. The Settings חיבורים row. */
+export function PlugIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M9 3v5M15 3v5" />
+      <path d="M6 8h12v3a6 6 0 0 1-12 0z" />
+      <path d="M12 17v4" />
+    </Svg>
+  );
+}
+
+/** FLOW-501. The Settings הלוואות row. */
+export function LoanIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="6" width="18" height="13" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M7 15h4" />
+    </Svg>
+  );
+}

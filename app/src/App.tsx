@@ -33,6 +33,8 @@ import {
   AddForm,
   CategoriesScreen,
   ChangeForm,
+  ConnectionsScreen,
+  LoansScreen,
   NotificationsScreen,
   ReviewQueue,
   OnboardingScreen,
@@ -128,6 +130,8 @@ function AppRoutes() {
               <Route path="/e2e/home" element={<DevHome />} />
               <Route path="/e2e/projects" element={<DevProjects />} />
               <Route path="/e2e/settings" element={<DevSettings />} />
+              <Route path="/e2e/connections" element={<DevConnections />} />
+              <Route path="/e2e/loans" element={<DevLoans />} />
               <Route path="/e2e/categories" element={<DevCategories />} />
               <Route path="/e2e/unpaid" element={<DevUnpaid />} />
               <Route path="/e2e/txn" element={<DevTransaction />} />
@@ -172,6 +176,9 @@ function AppRoutes() {
               <Route path="notifications" element={<NotificationsScreen />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="settings/categories" element={<CategoriesScreen />} />
+              <Route path="settings/connections" element={<ConnectionsScreen />} />
+              {/* FLOW-110 adds settings/loans/:loanId, a loan's detail page. */}
+              <Route path="settings/loans" element={<LoansScreen />} />
             </Route>
           </Route>
         </Routes>
@@ -234,6 +241,8 @@ const devLinks: Array<[string, string]> = [
   ["/transactions/1?preview=1", "תנועה לדוגמה"],
   ["/transactions/1/split?preview=1", "פיצול לדוגמה"],
   ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
+  ["/settings/connections?preview=1", "חיבורים לדוגמה"],
+  ["/settings/loans?preview=1", "הלוואות לדוגמה"],
   ["/notifications?preview=1", "התראות לדוגמה"],
   ["/unpaid?preview=1", "חשבוניות לדוגמה"],
   ["/onboarding?preview=1", "הצטרפות לדוגמה"],
@@ -489,6 +498,19 @@ function DevProjects() {
 const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
 
 function DevSettings() {
+  return <SettingsScreen sample={useDevSettingsSample()} />;
+}
+
+function DevConnections() {
+  return <ConnectionsScreen sample={useDevSettingsSample()} sampleSecret={devAssistantSecret} />;
+}
+
+function DevLoans() {
+  return <LoansScreen sample={useDevSettingsSample()} />;
+}
+
+/** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`. */
+function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0]>["sample"] {
   const [params] = useSearchParams();
   const mode = params.get("connected");
   const connected = mode === "1" || mode === "auth";
@@ -500,9 +522,7 @@ function DevSettings() {
     : emailParam === "long"
       ? "owner.with.a.very.long.mailbox.name@example.com"
       : "owner@example.com";
-  return (
-    <SettingsScreen
-      sample={{
+  return {
         name: noCompany ? null : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
@@ -526,10 +546,11 @@ function DevSettings() {
           { id: "p1", name: "שיפוץ הרצל 12", status: "active" },
           { id: "p2", name: "פרגולה בית כהן", status: "active" },
         ],
-      }}
-      sampleSecret={devAssistantSecret}
-    />
-  );
+        loans: params.get("loans") === "none" ? [] : [
+          { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "שיפוץ הרצל 12" },
+          { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: null, projectName: null },
+        ],
+  };
 }
 
 function DevCategories() {
