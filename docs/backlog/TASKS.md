@@ -19,13 +19,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 3 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 4 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
-| 6 | [FLOW-104](#flow-104) | Reversals across directions (negative income, negative expense) | SMALL CYCLE | in-progress (#76) |
-| 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
+| 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | in-progress (#89) |
+| 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | in-progress (#87) |
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
-| 10b | [FLOW-117](#flow-117) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
-| 10c | [FLOW-118](#flow-118) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
+| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
+| 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
@@ -39,13 +39,16 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 21 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
 | 22 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
 | 23 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 24 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
-| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
-| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 29 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
-| 30 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
+| 24 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
+| 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 28 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
+| 29 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
+| 30 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
+| 31 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
+| 32 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
+| 33 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -74,20 +77,20 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
 - **Type:** BACKLOG NIT · **Status:** in-progress (#81) · **Depends on:** —
 - [x] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default. (#81: `private.pnl_name_key`; the trigger also runs on a rename into a default name.)
-- [ ] A merely suggested kept-out category already removes the line from the P&L. Moved to [FLOW-117](#flow-117).
-- [ ] `get_project` doesn't report kept-out project income. Moved to [FLOW-117](#flow-117).
+- [ ] A merely suggested kept-out category already removes the line from the P&L. Moved to [FLOW-121](#flow-121).
+- [ ] `get_project` doesn't report kept-out project income. Moved to [FLOW-121](#flow-121).
 - [x] Document the change in what `count` means in the P&L outputs. (#81, TOOLS.md)
 - [x] An owner who is also a viewer is refused by `set_category_excluded_from_pnl`. (#81)
-- [x] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag. (#81: `categories.loan_part` in the database checks; the app split sheet and the Mercury hint move in [FLOW-118](#flow-118).)
+- [x] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag. (#81: `categories.loan_part` in the database checks; the app split sheet and the Mercury hint move in [FLOW-122](#flow-122).)
 
-<a id="flow-117"></a>
-### FLOW-117 · Kept-out lines: guessed categories and project income
+<a id="flow-121"></a>
+### FLOW-121 · Kept-out lines: guessed categories and project income
 - **Type:** SMALL CYCLE · **Status:** ready (item a waits on the owner's answer) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
 - **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
 - **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
 
-<a id="flow-118"></a>
-### FLOW-118 · Loan categories by key in the app and the Mercury hint
+<a id="flow-122"></a>
+### FLOW-122 · Loan categories by key in the app and the Mercury hint
 - **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** FLOW-112 (#81)
 - **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name. Read `categories.loan_part` instead. No visible change.
 - **Acceptance:** app unit test with a renamed loan category; connector test; no design review needed.
@@ -123,18 +126,41 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** The app shows the invoiced basis ([0060](../decisions/0060-library-review-calls.md)) while MCP `get_totals`, `list_projects` and `get_project` default to cash. Proposal: move all three to invoiced together, so the tools never disagree with each other. It changes behaviour for existing MCP clients. Also decide what to do with `get_home` (cash, only used at sign-in): align it or remove it.
 - **Acceptance:** owner decision recorded; one PR switches the defaults together, tools echo the basis, TOOLS.md updated.
 
-<a id="flow-104"></a>
-### FLOW-104 · Reversals across directions (negative income, negative expense)
-- **Type:** SMALL CYCLE · **Status:** in-progress (#76) · **Depends on:** —
-- **Owner's go:** 2026-10-07, in the project thread (taken off hold).
-- **What:** Allow an outflow to take an income category, counted as negative income (for example rent that bounced and was taken back), and an inflow to take an expense category, counted as negative expense (a supplier refund). Touch the direction/category-kind rule in the assign, set-category and approve RPCs, `company_pnl` and `get_project` sign handling (including `by_currency`), the MCP `assign_expense` / `set_expense_category` descriptions, and the app category picker (the other kind under a "reversal" section).
-- **Acceptance:** pgTAP both ways on both bases; MCP tests; tell the MCP/data agent when it ships so it can refile affected rows.
-
 <a id="flow-105"></a>
 ### FLOW-105 · Link a loan to a project
-- **Type:** SMALL CYCLE · **Status:** on-hold (owner's go) · **Depends on:** —
-- **What:** Optional `loans.project_id` (FK, RLS, migration), settable in MCP `add_loan` / `update_loan` (idempotency, undo, RPC) and with a project picker in the loan sheet. Show the loan under its project; attached payment splits inherit the loan's project.
+- **Type:** SMALL CYCLE · **Status:** in-progress (#89, server and MCP); the loan sheet picker is [FLOW-119](#flow-119) · **Depends on:** —
+- **Owner's go:** 2026-10-07, in the project thread (taken off hold).
+- **What:** Optional `loans.project_id` (FK, RLS, migration), settable in MCP `add_loan` / `update_loan` (idempotency, undo, RPC). Show the loan under its project; attached payment splits inherit the loan's project.
 - **Acceptance:** cross-tenant project refusal with a positive control; split inheritance tested; undo restores.
+
+<a id="flow-117"></a>
+### FLOW-117 · Reversal section in the category picker
+- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-104 (done, #76)
+- **What:** The server accepts the other kind's category since FLOW-104. In the app category picker, list the other kind's categories under a "reversal" section, so a bounced rent payment or a supplier refund can be filed from the app.
+- **Acceptance:** mockup approved; e2e picks a reversal category both ways; design review.
+
+<a id="flow-118"></a>
+### FLOW-118 · Reversals follow-ups (#76 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-104
+- [ ] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message.
+- [ ] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited.
+- [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
+
+<a id="flow-119"></a>
+### FLOW-119 · Project picker in the loan sheet
+- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-105
+- **What:** Pick or clear the loan's project in the loan sheet, and show the loan under its project.
+- **Acceptance:** mockup approved; e2e sets and clears the project; design review.
+
+<a id="flow-120"></a>
+### FLOW-120 · Loan project follow-ups (#89 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-105
+- [ ] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag.
+- [ ] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead.
+- [ ] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104.
+- [ ] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo.
+- [ ] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column.
+- [ ] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
@@ -241,6 +267,23 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Transactions and app UX
 
+<a id="flow-311"></a>
+### FLOW-311 · Split one bank line across several categories
+- **Type:** MCP · **Status:** in-progress (#87) · **Depends on:** — · **Owner's go:** 2026-10-07 (bookkeeping requests first: FLOW-104, FLOW-311, FLOW-105, FLOW-106)
+- **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units), category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income categories); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
+- **MCP:** a write tool (idempotency key, write rate limit, `undo`) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
+- **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income categories on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
+
+<a id="flow-312"></a>
+### FLOW-312 · Split-by-category follow-ups (FLOW-311)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-311
+- [ ] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part.
+- [ ] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead.
+- [ ] After FLOW-104: let a part take the other kind as a reversal, like a whole line.
+- [ ] App screen to view and edit the parts (SMALL UI, plan with a mockup first).
+- [ ] `split_line` inside the `assign_expenses` batch, with `undo_batch`.
+- [ ] `get_home.other_currencies[].count` (`count(*)`) and `get_project.other_currencies[].count` (one per row) count each part of a split line, and each loan split part, as a line. Count `distinct transaction_id`, as `company_pnl` does.
+
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
@@ -315,13 +358,6 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `ListRow` nests a `div` inside `button` and `a`; limit the heading markup to the static row.
 - [ ] Toast: a tall-sheet fallback that respects the safe area; the toast may cover an open sheet's ✕ for a moment.
 - [ ] Ellipsis truncation on chip, pill, segment and switch labels and sheet titles is whitelisted in the clip check; review it.
-
-<a id="flow-311"></a>
-### FLOW-311 · Split one bank line across several categories
-- **Type:** MCP · **Status:** ready · **Depends on:** — · **Owner's go:** 2026-10-07, after FLOW-104
-- **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units) or percent, category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income kinds); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
-- **MCP:** a write tool (idempotency key, write rate limit, `undo`; `undo_batch` if it takes several lines) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
-- **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income kinds on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
 
 ## Projects and reports
 
@@ -673,6 +709,7 @@ Recently finished tasks move here with their PR, so the history stays readable. 
 
 | Id | Title | PR |
 | --- | --- | --- |
+| FLOW-104 | Reversals across directions | #76 |
 | FLOW-101 | Loan payments count by their split parts | #70 |
 | — | Categories kept out of the P&L, `set_category_pnl` | #67 |
 | — | MCP `get_project` with a basis parameter | #66 |

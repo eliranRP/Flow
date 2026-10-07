@@ -70,6 +70,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     if (name === "list_categories") return { status: 200, json: [{ id: "c1" }] };
     if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: "11111111-1111-4000-8000-000000000001", description: "אלפא" }] };
     if (name === "get_transaction") return { status: 200, json: { id: "11111111-1111-4000-8000-000000000001", description: "אלפא" } };
+    if (name === "get_line_split") return { status: 200, json: null };
     if (name === "mcp_list_loans") {
       return { status: 200, json: [{
         id: LOAN,
@@ -111,6 +112,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     "list_categories",
     "list_review",
     "get_transaction",
+    "get_line_split",
     "list_review",
     "get_dashboard",
     "mcp_list_loans",
@@ -166,6 +168,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "list_categories") return { status: 200, json: [{ id: "c1" }] };
     if (name === "list_review") return { status: 200, json: [review] };
     if (name === "get_transaction") return { status: 200, json: { id: review.transaction_id, description: "אלפא" } };
+    if (name === "get_line_split") return { status: 200, json: null };
     if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
     return { status: 500, json: null };
   });
@@ -253,6 +256,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "split_line",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -288,6 +292,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "split_line",
     "undo",
     "undo_batch",
   ]);
@@ -331,6 +336,102 @@ Deno.test("assign_expense_split forwards shares and optional category", async ()
   }, ["write"], rpc);
   assertEquals(replay.isError, false);
   assertEquals(calls[1]?.body.p_category_id, undefined);
+});
+
+Deno.test("split_line forwards parts in order with null projects", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, parts: [], undo_kind: "line_split", id: TXN } },
+  }));
+  const split = await callTool("split_line", {
+    idempotency_key: "line-1",
+    transaction_id: TXN,
+    parts: [
+      { category_id: CATEGORY, project_id: PROJECT, amount_minor: 25000 },
+      { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 292000 },
+      { category_id: INCOME_CATEGORY, amount_minor: 1 },
+    ],
+  }, ["write"], rpc);
+  assertEquals(split.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_split_line",
+    body: {
+      p_idempotency_key: "line-1",
+      p_transaction_id: TXN,
+      p_parts: [
+        { category_id: CATEGORY, project_id: PROJECT, amount_minor: 25000 },
+        { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 292000 },
+        { category_id: INCOME_CATEGORY, project_id: null, amount_minor: 1 },
+      ],
+    },
+  });
+  const cleared = await callTool("split_line", { idempotency_key: "line-2", transaction_id: TXN, parts: [] }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1]?.body.p_parts, []);
+  const undo = await callTool("undo", { idempotency_key: "u-1", kind: "line_split", id: TXN }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_split", p_id: TXN } });
+});
+
+Deno.test("split_line validates parts and refuses read tokens", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const two = [
+    { category_id: CATEGORY, amount_minor: 100 },
+    { category_id: INCOME_CATEGORY, amount_minor: 200 },
+  ];
+  const denied = await callTool("split_line", { idempotency_key: "k", transaction_id: TXN, parts: two }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const bad: unknown[] = [
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0]] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[0], amount_minor: 5 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], amount_minor: 0 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], amount_minor: 1.5 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], amount_minor: "200" }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], share: 50 }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], project_id: "nope" }] },
+    { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, amount_minor: i + 1 })) },
+    { idempotency_key: "k", transaction_id: "not-a-uuid", parts: two },
+    { idempotency_key: "", transaction_id: TXN, parts: two },
+    { idempotency_key: "k", transaction_id: TXN, parts: two, company_id: TXN },
+  ];
+  for (const input of bad) {
+    const result = await callTool("split_line", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("get_expense adds line_split parts only when the line is split", async () => {
+  const parts = [{ category_id: CATEGORY, project_id: null, amount_minor: 100 }];
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id: TXN, amount_net: -300 } };
+    if (name === "get_line_split") {
+      return { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 300, parts, parts_match: false } };
+    }
+    return { status: 500, json: null };
+  });
+  const split = await callTool("get_expense", { transaction_id: TXN }, ["read"], rpc);
+  assertEquals(split.isError, false);
+  if (split.structuredContent.ok) {
+    assertEquals(split.structuredContent.data, {
+      id: TXN,
+      amount_net: -300,
+      line_split: { currency: "USD", line_minor: 300, parts, parts_match: false },
+    });
+  }
+  assertEquals(calls[1], { name: "get_line_split", body: { p_transaction_id: TXN } });
+  const whole = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
+    Promise.resolve(name === "get_transaction"
+      ? { status: 200, json: { id: TXN } }
+      : { status: 200, json: { transaction_id: TXN, parts: [] } }));
+  assertEquals(whole.isError, false);
+  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN });
+  const failed = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
+    Promise.resolve(name === "get_transaction" ? { status: 200, json: { id: TXN } } : { status: 500, json: null }));
+  assertEquals(failed.isError, true);
+  if (!failed.structuredContent.ok) assertEquals(failed.structuredContent.error.code, "refused");
 });
 
 Deno.test("assign_expense_split validates shares and refuses read tokens", async () => {
@@ -1696,5 +1797,167 @@ Deno.test("get_totals does not report a missing unassigned bucket as 0", async (
     const data = totals.structuredContent.data as Record<string, unknown>;
     assertEquals(data.unassigned_income_agorot, undefined);
     assertEquals(data.unassigned_expense_agorot, undefined);
+  }
+});
+
+Deno.test("add_loan forwards project_id only when given and rejects a bad one", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_add_loan") return { status: 200, json: { ok: true, data: { id: LOAN, project_id: PROJECT, undo_kind: "loan" } } };
+    return { status: 500, json: null };
+  });
+  const base = {
+    name: "Example Bank",
+    principal: "100000.00",
+    annual_rate_percent: 6,
+    term_months: 120,
+    start_date: "2026-01-01",
+    payment: "2000.00",
+    currency: "USD",
+  };
+  const withProject = await callTool("add_loan", { ...base, idempotency_key: "lp-1", project_id: PROJECT }, ["write"], rpc);
+  assertEquals(withProject.isError, false);
+  assertEquals(calls[0]?.name, "mcp_add_loan");
+  assertEquals(calls[0]?.body.p_project_id, PROJECT);
+  if (withProject.structuredContent.ok) {
+    assertEquals((withProject.structuredContent.data as { project_id: string }).project_id, PROJECT);
+  }
+  const without = await callTool("add_loan", { ...base, idempotency_key: "lp-2" }, ["write"], rpc);
+  assertEquals(without.isError, false);
+  assertEquals("p_project_id" in (calls[1]?.body ?? {}), false);
+  for (const bad of ["not-a-uuid", 5, null, `${PROJECT}x`]) {
+    const out = await callTool("add_loan", { ...base, idempotency_key: "lp-3", project_id: bad }, ["write"], rpc);
+    assertEquals(out.isError, true);
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 2);
+});
+
+Deno.test("update_loan sends project_id as a uuid, as null, or not at all", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_update_loan") return { status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_update" } } };
+    return { status: 500, json: null };
+  });
+  const set = await callTool("update_loan", { idempotency_key: "lp-u1", loan_id: LOAN, project_id: PROJECT }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls[0]?.body.p_patch, { project_id: PROJECT });
+  const cleared = await callTool("update_loan", { idempotency_key: "lp-u2", loan_id: LOAN, project_id: null }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1]?.body.p_patch, { project_id: null });
+  assertEquals("project_id" in (calls[1]?.body.p_patch as Record<string, unknown>), true);
+  const left = await callTool("update_loan", { idempotency_key: "lp-u3", loan_id: LOAN, name: "Renamed" }, ["write"], rpc);
+  assertEquals(left.isError, false);
+  assertEquals(calls[2]?.body.p_patch, { name: "Renamed" });
+  assertEquals("project_id" in (calls[2]?.body.p_patch as Record<string, unknown>), false);
+  const empty = await callTool("update_loan", { idempotency_key: "lp-u4", loan_id: LOAN }, ["write"], rpc);
+  assertEquals(empty.isError, true);
+  for (const bad of ["not-a-uuid", 5, true]) {
+    const out = await callTool("update_loan", { idempotency_key: "lp-u5", loan_id: LOAN, project_id: bad }, ["write"], rpc);
+    assertEquals(out.isError, true);
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("update_loan", { idempotency_key: "lp-u6", loan_id: LOAN, project_id: PROJECT }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 3);
+});
+
+Deno.test("a database refusal of a project is a tool error with its message", async () => {
+  const { rpc } = rpcOf((name) => {
+    if (name === "mcp_update_loan") {
+      return { status: 200, json: { ok: false, error: { code: "refused", message: "project not found" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const out = await callTool("update_loan", { idempotency_key: "lp-r1", loan_id: LOAN, project_id: PROJECT_B }, ["write"], rpc);
+  assertEquals(out.isError, true);
+  if (!out.structuredContent.ok) {
+    assertEquals(out.structuredContent.error.code, "refused");
+    assertEquals(out.structuredContent.error.message, "project not found");
+  }
+});
+
+Deno.test("the loan and project tool descriptions and schemas name project_id", () => {
+  const write = toolsFor(["write"]);
+  const read = toolsFor(["read"]);
+  const spec = (list: ReturnType<typeof toolsFor>, name: string) => list.find((tool) => tool.name === name);
+  const add = spec(write, "add_loan");
+  const update = spec(write, "update_loan");
+  const attach = spec(write, "attach_loan_payment");
+  assertEquals(add?.inputSchema.properties.project_id, { type: "string" });
+  assertEquals(update?.inputSchema.properties.project_id, { type: ["string", "null"] });
+  assertEquals(add?.description.includes("project_id"), true);
+  assertEquals(update?.description.includes("null clears it"), true);
+  assertEquals(update?.description.includes("Undo restores the previous project"), true);
+  assertEquals(attach?.description.includes("project_inherited"), true);
+  assertEquals(attach?.description.includes("principal is kept out of the P&L"), true);
+  assertEquals(spec(read, "list_loans")?.description.includes("project_name"), true);
+  assertEquals(spec(read, "get_project")?.description.includes("loans lists the loans filed under this project"), true);
+});
+
+Deno.test("list_loans passes the project through, and attach reports whether the line inherited it", async () => {
+  const loanRow = {
+    id: LOAN,
+    name: "Example Bank",
+    currency: "USD",
+    principal_minor: 12000000,
+    annual_rate_ppm: 68750,
+    term_months: 360,
+    start_date: "2026-01-01",
+    payment_minor: 100000,
+    escrow_minor: 10000,
+    balance_minor: 12000000,
+    project_id: PROJECT,
+    project_name: "Site One",
+  };
+  const attachData = (inherited: boolean) => ({
+    ok: true,
+    data: {
+      loan_id: LOAN,
+      transaction_id: LOAN_TXN,
+      project_inherited: inherited,
+      project_id: inherited ? PROJECT : null,
+      project_inherited_reason: inherited ? null : "line already has a project",
+      undo_kind: "loan_split",
+    },
+  });
+  for (const inherited of [true, false]) {
+    const { rpc } = rpcOf((name) => {
+      if (name === "get_transaction") {
+        return { status: 200, json: { id: LOAN_TXN, doc_date: "2026-01-01", amount_original: 100000, currency: "USD" } };
+      }
+      if (name === "mcp_list_loans") return { status: 200, json: [loanRow] };
+      if (name === "mcp_attach_loan_payment") return { status: 200, json: attachData(inherited) };
+      return { status: 500, json: null };
+    });
+    const listed = await callTool("list_loans", {}, ["read"], rpc);
+    if (listed.structuredContent.ok) {
+      const loans = (listed.structuredContent.data as { loans: typeof loanRow[] }).loans;
+      assertEquals(loans[0]?.project_id, PROJECT);
+      assertEquals(loans[0]?.project_name, "Site One");
+    } else {
+      throw new Error("list_loans failed");
+    }
+    const attached = await callTool("attach_loan_payment", { idempotency_key: `lp-a-${inherited}`, transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rpc);
+    assertEquals(attached.isError, false);
+    if (attached.structuredContent.ok) {
+      const data = attached.structuredContent.data as { project_inherited: boolean; project_inherited_reason: string | null };
+      assertEquals(data.project_inherited, inherited);
+      assertEquals(data.project_inherited_reason, inherited ? null : "line already has a project");
+    }
+  }
+});
+
+Deno.test("get_project passes the loans of the project through next to the P&L", async () => {
+  const loans = [{ id: LOAN, name: "Example Bank", currency: "USD", balance_minor: 12000000 }];
+  const { calls, rpc } = rpcOf((name) => name === "get_project"
+    ? { status: 200, json: { ...PROJECT_FIXTURE, loans } }
+    : { status: 500, json: null });
+  const result = await callTool("get_project", { id: PROJECT }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls.length, 1);
+  if (result.structuredContent.ok) {
+    const data = result.structuredContent.data as typeof PROJECT_FIXTURE & { loans: typeof loans };
+    assertEquals(data.loans, loans);
+    assertEquals(data.by_currency, PROJECT_FIXTURE.by_currency);
   }
 });

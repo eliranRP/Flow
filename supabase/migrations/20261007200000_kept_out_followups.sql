@@ -324,7 +324,8 @@ begin
 end;
 $$;
 
--- Based on the FLOW-111 versions (20261007190111_loan_payment_checks.sql); only the category match changes.
+-- Based on the current versions (loan_splits_check: 20261004055306_loans_l1.sql;
+-- mcp_attach_loan_payment: 20261007193000_loan_project.sql). Only the category match changes.
 create or replace function private.loan_splits_check(txn uuid)
 returns void
 language plpgsql
@@ -418,31 +419,9 @@ begin
   if actual is distinct from expected then
     raise exception 'loan_split_sum' using errcode = '23514';
   end if;
-
-  -- Same rule as public.loan_balances: posted principal still on the books,
-  -- not waiting for review, may not pass the loan's principal.
-  if exists (
-    select 1
-    from public.loans l
-    where l.id = (select s.loan_id from public.loan_splits s where s.transaction_id = txn limit 1)
-      and l.principal_minor < (
-        select coalesce(sum(s.amount_minor), 0)
-        from public.loan_splits s
-        join public.transactions t
-          on t.company_id = s.company_id
-         and t.id = s.transaction_id
-        where s.company_id = l.company_id
-          and s.loan_id = l.id
-          and s.part = 'principal'::public.loan_split_part
-          and t.line_status = 'posted'::public.line_status
-          and t.removed_at is null
-          and s.needs_review is not true
-      )
-  ) then
-    raise exception 'loan_split_balance' using errcode = '23514';
-  end if;
 end;
 $$;
+
 
 revoke all on function private.loan_splits_check(uuid) from public, anon, authenticated;
 
@@ -470,11 +449,14 @@ declare
   part jsonb;
   part_sum bigint := 0;
   principal_amt bigint := 0;
-  parts_ok boolean;
-  written jsonb;
   cat_interest uuid;
   cat_escrow uuid;
   cat_principal uuid;
+  line record;
+  inherited boolean := false;
+  inherit_reason text;
+  reassign_id uuid;
+  write_prior jsonb;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -526,7 +508,7 @@ begin
     ) then
       response := private.mcp_refused('loan already attached');
     else
-      select l.currency
+      select l.currency, l.project_id
       into loan
       from public.loans l
       where l.id = p_loan_id
@@ -545,34 +527,16 @@ begin
         if coalesce(balance, 0) <= 0 then
           response := private.mcp_refused('loan balance exceeded');
         else
-          -- Exactly interest, escrow and principal, once each, as whole non-negative minor units.
-          select count(*) = 3
-             and count(distinct e.value->>'part') = 3
-             -- coalesce: a missing key is null, and bool_and would skip it.
-             and bool_and(coalesce(
-               jsonb_typeof(e.value) = 'object'
-               and e.value->>'part' in ('interest', 'escrow', 'principal')
-               and jsonb_typeof(e.value->'amount_minor') = 'number'
-               and jsonb_typeof(e.value->'scheduled_minor') = 'number'
-               and (e.value->>'amount_minor') ~ '^[0-9]{1,18}$'
-               and (e.value->>'scheduled_minor') ~ '^[0-9]{1,18}$',
-               false
-             ))
-          into parts_ok
-          from jsonb_array_elements(p_parts) e;
+          for part in select value from jsonb_array_elements(p_parts)
+          loop
+            part_sum := part_sum + coalesce((part->>'amount_minor')::bigint, 0);
+            if part->>'part' = 'principal' then
+              principal_amt := coalesce((part->>'amount_minor')::bigint, 0);
+            end if;
+          end loop;
 
-          if coalesce(parts_ok, false) then
-            for part in select value from jsonb_array_elements(p_parts)
-            loop
-              part_sum := part_sum + (part->>'amount_minor')::bigint;
-              if part->>'part' = 'principal' then
-                principal_amt := (part->>'amount_minor')::bigint;
-              end if;
-            end loop;
-          end if;
-
-          if not coalesce(parts_ok, false) or part_sum is distinct from txn.amount_original then
-            response := private.mcp_refused('invalid loan parts');
+          if part_sum is distinct from txn.amount_original then
+            response := private.mcp_refused('The write was refused.');
           elsif principal_amt > balance then
             response := private.mcp_refused('loan balance exceeded');
           else
@@ -612,24 +576,57 @@ begin
 
               perform private.loan_splits_check(p_transaction_id);
 
-              -- Kept so undo can tell whether the app corrected the split afterwards.
-              select jsonb_agg(jsonb_build_object(
-                'part', s.part,
-                'amount_minor', s.amount_minor,
-                'category_id', s.category_id
-              ) order by s.part)
-              into written
-              from public.loan_splits s
-              where s.transaction_id = p_transaction_id;
+              -- The split parts count under the loan's project through the line's
+              -- own project. Only a line with no project, no shares and no role
+              -- inherits it. Anything the owner already set is left alone.
+              select t.project_id, t.pnl_role, t.category_id
+              into line
+              from public.transactions t
+              where t.id = p_transaction_id
+                and t.company_id = cid;
+
+              if loan.project_id is null then
+                inherit_reason := 'loan has no project';
+              elsif line.project_id is not null then
+                inherit_reason := 'line already has a project';
+              elsif line.pnl_role is not distinct from 'shared'::public.pnl_role
+                or exists (
+                  select 1 from public.allocations a
+                  where a.transaction_id = p_transaction_id and a.company_id = cid
+                )
+              then
+                inherit_reason := 'line has shares';
+              elsif line.pnl_role is not null then
+                inherit_reason := 'line has a role';
+              elsif line.category_id is null then
+                inherit_reason := 'line has no category';
+              else
+                -- The same rule as assign_expense: a direct cost on the project.
+                reassign_id := public.reassign_transaction(
+                  p_transaction_id, loan.project_id, line.category_id
+                );
+                inherited := true;
+              end if;
+
+              if inherited then
+                write_prior := jsonb_build_object(
+                  'reassign_id', reassign_id,
+                  'project_id', loan.project_id,
+                  'category_id', line.category_id
+                );
+              end if;
 
               insert into private.mcp_writes (token_id, user_id, kind, loan_id, transaction_id, prior)
-              values (token, auth.uid(), 'loan_split', p_loan_id, p_transaction_id, written);
+              values (token, auth.uid(), 'loan_split', p_loan_id, p_transaction_id, write_prior);
 
               response := jsonb_build_object(
                 'ok', true,
                 'data', jsonb_build_object(
                   'loan_id', p_loan_id,
                   'transaction_id', p_transaction_id,
+                  'project_inherited', inherited,
+                  'project_id', case when inherited then loan.project_id end,
+                  'project_inherited_reason', inherit_reason,
                   'undo_kind', 'loan_split'
                 )
               );
@@ -639,12 +636,6 @@ begin
       end if;
     end if;
   exception
-    when check_violation then
-      if sqlerrm = 'loan_split_balance' then
-        response := private.mcp_refused('loan balance exceeded');
-      else
-        response := private.mcp_refused(sqlerrm);
-      end if;
     when deadlock_detected or serialization_failure then
       return private.mcp_error('unavailable', 'retry');
     when others then
@@ -655,6 +646,7 @@ begin
   return response;
 end;
 $$;
+
 
 revoke all on function public.mcp_attach_loan_payment(text, uuid, uuid, jsonb)
   from public, anon, authenticated, service_role;
