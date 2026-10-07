@@ -3574,7 +3574,6 @@ export function SettingsScreen({
   const [mercuryStatusOpen, setMercuryStatusOpen] = useState(false);
   const [mercuryDisconnectOpen, setMercuryDisconnectOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
-  const toast = useToast();
   const businessRowRef = useRef<HTMLButtonElement>(null);
   const adoptSheet = useRef(false);
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
@@ -3588,6 +3587,7 @@ export function SettingsScreen({
   const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
   const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
   const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
+  const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
@@ -3970,7 +3970,7 @@ export function SettingsScreen({
               icon={<BuildingIcon />}
               chevron
               buttonRef={businessRowRef}
-              onClick={() => { setRenameOpen(true); }}
+              onClick={() => { setRenameSheet(true); }}
             />
           )}
           {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
@@ -3979,10 +3979,10 @@ export function SettingsScreen({
       {!noCompany && !holdWrites && namedBusiness !== "" ? (
         <RenameCompanySheet
           open={renameOpen}
-          onOpenChange={setRenameOpen}
+          onOpenChange={(next) => { setRenameSheet(next); }}
           companyId={sample || previewSample ? null : dashboard.data?.company_id ?? null}
           currentName={namedBusiness}
-          blocked={() => (sample != null ? blockedPreview("empty", (message) => { toast.show({ tone: "info", message }); }) : blocked())}
+          blocked={() => blocked(sample != null ? "empty" : undefined)}
           returnFocusRef={businessRowRef}
         />
       ) : null}

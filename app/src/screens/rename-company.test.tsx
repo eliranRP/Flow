@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { useState, type ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { useRef, useState, type ReactNode } from "react";
+import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as supabaseModule from "../lib/supabase";
 import { BooksProvider } from "../use-books";
@@ -55,6 +55,17 @@ function Harness({ blocked = () => false }: { blocked?: () => boolean }) {
   );
 }
 
+function FocusHarness() {
+  const [open, setOpen] = useState(false);
+  const row = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <button type="button" ref={row} onClick={() => { setOpen(true); }}>row</button>
+      <RenameCompanySheet open={open} onOpenChange={setOpen} companyId="company-1" currentName="אלפא" blocked={() => false} returnFocusRef={row} />
+    </>
+  );
+}
+
 function field(): HTMLInputElement {
   return within(screen.getByRole("dialog", { name: "שם העסק" })).getByLabelText("שם");
 }
@@ -69,6 +80,7 @@ describe("company name rules", () => {
     expect(companyNameError("אב")).toBeUndefined();
     expect(companyNameError("א".repeat(100))).toBeUndefined();
     expect(companyNameError("א".repeat(101))).toBe(RENAME_TOO_LONG);
+    expect(companyNameError("א".repeat(99) + "😀")).toBeUndefined();
   });
 });
 
@@ -88,6 +100,16 @@ describe("rename company sheet", () => {
     });
     expect(calls[1]).toEqual({ name: "rename_company", args: { p_company_id: "company-1", p_name: "אלפא" } });
     expect(await screen.findByText(RENAME_UNDONE)).toBeInTheDocument();
+  });
+
+  it("returns focus to the row after a save", async () => {
+    mockRpc(() => ({ error: null }));
+    wrap(<FocusHarness />);
+    fireEvent.click(screen.getByRole("button", { name: "row" }));
+    fireEvent.change(field(), { target: { value: "בטא" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await screen.findByText(RENAME_SAVED);
+    await waitFor(() => { expect(screen.getByRole("button", { name: "row", hidden: true })).toHaveFocus(); });
   });
 
   it("refuses a too-short name on save and on blur, without calling the RPC", async () => {
@@ -132,7 +154,7 @@ describe("rename company sheet", () => {
     fireEvent.change(field(), { target: { value: "בטא" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     expect(await screen.findByText(RENAME_REFUSED)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ניסיון חוזר", hidden: true })).not.toBeInTheDocument();
   });
 
   it("does not write when preview mode blocks the save", async () => {
@@ -172,6 +194,27 @@ describe("settings business row", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("closes the rename sheet on browser Back and stays on Settings", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router = createMemoryRouter([{ path: "*", element: <SettingsScreen sample={sample} /> }], { initialEntries: ["/", "/settings"], initialIndex: 1 });
+    render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <BooksProvider>
+            <RouterProvider router={router} />
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "שם העסק: אלפא" }));
+    expect(screen.getByRole("dialog", { name: "שם העסק" })).toBeInTheDocument();
+    await waitFor(() => { expect(router.state.location.state).not.toBeNull(); });
+    await act(async () => { await router.navigate(-1); });
+    act(() => { window.dispatchEvent(new PopStateEvent("popstate")); });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שם העסק" })).not.toBeInTheDocument(); });
+    expect(router.state.location.pathname).toBe("/settings");
+  });
+
   it("keeps the business row static for a viewer", () => {
     wrap(
       <ViewerPreview>
@@ -187,5 +230,80 @@ describe("settings business row", () => {
     wrap(<SettingsScreen sample={{ ...sample, name: null, noCompany: true }} />);
     expect(screen.queryByRole("button", { name: /שם העסק/ })).not.toBeInTheDocument();
     expect(screen.getByText("owner@example.com")).toBeInTheDocument();
+  });
+});
+
+type Answer = { error: { message: string; code?: string } | null };
+
+function ReopenHarness() {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <p>{open ? "open" : "closed"}</p>
+      <button type="button" onClick={() => { setOpen(true); }}>reopen</button>
+      <RenameCompanySheet open={open} onOpenChange={setOpen} companyId="company-1" currentName="אלפא" blocked={() => false} />
+    </>
+  );
+}
+
+function wrapReopen() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <BooksProvider>
+          <MemoryRouter><ReopenHarness /></MemoryRouter>
+        </BooksProvider>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function mockPending(next: () => Promise<Answer>) {
+  const calls: unknown[] = [];
+  vi.spyOn(supabaseModule, "getSupabase").mockReturnValue({
+    rpc: (_name: string, args: unknown) => {
+      calls.push(args);
+      return next().then((answer) => ({ data: null, ...answer }));
+    },
+  } as never);
+  return calls;
+}
+
+describe("rename company sheet, busy, reopen and retry", () => {
+  it("stays open on Escape while saving", async () => {
+    let resolve: (answer: Answer) => void = () => undefined;
+    mockPending(() => new Promise<Answer>((r) => { resolve = r; }));
+    wrapReopen();
+    fireEvent.change(field(), { target: { value: "בטא" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(field()).toBeDisabled(); });
+    fireEvent.keyDown(field(), { key: "Escape" });
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(screen.getByText("open")).toBeInTheDocument();
+    await act(async () => { resolve({ error: null }); await Promise.resolve(); });
+    await screen.findByText("closed");
+  });
+
+  it("refills the current name when reopened after a discarded edit", async () => {
+    mockPending(() => Promise.resolve({ error: null }));
+    wrapReopen();
+    fireEvent.change(field(), { target: { value: "בטא" } });
+    fireEvent.keyDown(field(), { key: "Escape" });
+    await screen.findByText("closed");
+    fireEvent.click(screen.getByRole("button", { name: "reopen" }));
+    await waitFor(() => { expect(field()).toHaveValue("אלפא"); });
+  });
+
+  it("closes and offers undo after ניסיון חוזר succeeds", async () => {
+    const answers: Answer[] = [{ error: { message: "Failed to fetch" } }, { error: null }];
+    const calls = mockPending(() => Promise.resolve(answers.shift() ?? { error: null }));
+    wrapReopen();
+    fireEvent.change(field(), { target: { value: "בטא" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    fireEvent.click(await screen.findByRole("button", { name: "ניסיון חוזר", hidden: true }));
+    await screen.findByText("closed");
+    expect(await screen.findByText(RENAME_SAVED)).toBeInTheDocument();
+    expect(calls).toEqual([{ p_company_id: "company-1", p_name: "בטא" }, { p_company_id: "company-1", p_name: "בטא" }]);
   });
 });

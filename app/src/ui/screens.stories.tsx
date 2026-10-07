@@ -1,7 +1,7 @@
 import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from "@flow/shared";
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import { expect, userEvent, within } from "@storybook/test";
 import { Route, Routes } from "react-router-dom";
 import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { AssistantSettings } from "../screens/assistant-settings";
@@ -777,6 +777,8 @@ export const SettingsRenameTooShort: Story = {
     await userEvent.clear(field);
     await userEvent.type(field, "א");
     await userEvent.tab();
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await within(sheet).findByText("שם קצר מדי – לפחות 2 תווים");
   },
 };
 

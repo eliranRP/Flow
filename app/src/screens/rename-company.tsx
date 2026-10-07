@@ -18,9 +18,10 @@ export const RENAME_TOO_SHORT = `שם קצר מדי – לפחות ${String(COMP
 export const RENAME_TOO_LONG = `שם ארוך מדי – עד ${String(COMPANY_NAME_MAX)} תווים`;
 
 export function companyNameError(value: string): string | undefined {
-  const clean = value.trim();
-  if (clean.length < COMPANY_NAME_MIN) return RENAME_TOO_SHORT;
-  if (clean.length > COMPANY_NAME_MAX) return RENAME_TOO_LONG;
+  // Code points, like char_length in the RPC, so an emoji counts once.
+  const length = Array.from(value.trim()).length;
+  if (length < COMPANY_NAME_MIN) return RENAME_TOO_SHORT;
+  if (length > COMPANY_NAME_MAX) return RENAME_TOO_LONG;
   return undefined;
 }
 
@@ -63,6 +64,7 @@ export function RenameCompanySheet({
   const [name, setName] = useState(currentName);
   const [error, setError] = useState<string | undefined>(undefined);
   const wasOpen = useRef(false);
+  const fieldRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -102,6 +104,12 @@ export function RenameCompanySheet({
     },
   });
 
+  // The field is disabled while saving, so a failed save hands focus back to it.
+  const failed = save.isError;
+  useEffect(() => {
+    if (failed && open) fieldRef.current?.focus();
+  }, [failed, open]);
+
   const submit = () => {
     if (save.isPending) return;
     const problem = companyNameError(name);
@@ -140,6 +148,7 @@ export function RenameCompanySheet({
         }}
       >
         <TextField
+          ref={fieldRef}
           label="שם"
           value={name}
           maxLength={COMPANY_NAME_MAX + 20}
