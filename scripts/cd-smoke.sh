@@ -96,13 +96,24 @@ if [[ "$home_matched" != 1 ]]; then
   exit 1
 fi
 
-fetch "${origin}/settings?preview=1&${bust}" "$settings_body" "$settings_headers"
-settings_code="$FETCH_CODE"
-if [[ "$settings_code" != "200" ]] || ! grep -Eiq '^content-type:[[:space:]]*text/html' "$settings_headers"; then
-  echo "Smoke failed. /settings returned ${settings_code}, not 200 HTML."
-  exit 2
-fi
-if ! grep -Fq "name=\"flow-build\" content=\"${sha}\"" "$settings_body"; then
+# The deep-link fallback can lag the homepage at the edge, so the stamp check retries.
+settings_matched=0
+for attempt in $(seq 1 "$attempts"); do
+  fetch "${origin}/settings?preview=1&${bust}-${attempt}" "$settings_body" "$settings_headers"
+  settings_code="$FETCH_CODE"
+  if [[ "$settings_code" != "200" ]] || ! grep -Eiq '^content-type:[[:space:]]*text/html' "$settings_headers"; then
+    echo "Smoke failed. /settings returned ${settings_code}, not 200 HTML."
+    exit 2
+  fi
+  if grep -Fq "name=\"flow-build\" content=\"${sha}\"" "$settings_body"; then
+    settings_matched=1
+    break
+  fi
+  echo "Smoke: /settings is not ${sha} yet (attempt ${attempt})."
+  sleep "$pause"
+done
+
+if [[ "$settings_matched" != 1 ]]; then
   echo "Smoke failed. /settings did not include build ${sha}."
   exit 1
 fi

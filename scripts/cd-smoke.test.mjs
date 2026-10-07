@@ -46,6 +46,14 @@ case "\$url" in
   *settings*)
     if [[ "\$mode" == "settings" ]]; then code=404; type="text/plain"; body="no"; fi
     if [[ "\$mode" == "settings-body" ]]; then body="<html>no stamp</html>"; fi
+    if [[ "\$mode" == "settings-late" ]]; then
+      count=${JSON.stringify(join(dir, "settings-n"))}
+      n=0
+      if [[ -f "\$count" ]]; then n=\$(cat "\$count"); fi
+      n=\$((n + 1))
+      printf '%s' "\$n" > "\$count"
+      if [[ "\$n" -lt 2 ]]; then body="<html>no stamp</html>"; fi
+    fi
     ;;
   *no-such-file*)
     if [[ "\$mode" == "asset" ]]; then code=200; body="present"; type="text/html";
@@ -117,6 +125,12 @@ test("smoke exits match the Pages outcomes", () => {
   const settingsBody = runSmoke("settings-body");
   assert.equal(settingsBody.status, 1);
   assert.match(settingsBody.stdout, /\/settings did not include build/);
+  assert.match(settingsBody.args, new RegExp(`/settings\\?preview=1&n=${sha}-18`));
+
+  const settingsLate = runSmoke("settings-late");
+  assert.equal(settingsLate.status, 0, settingsLate.stderr + settingsLate.stdout);
+  assert.match(settingsLate.stdout, /\/settings is not/);
+  assert.equal(settingsLate.args.includes(`/settings?preview=1&n=${sha}-3`), false);
 
   const asset = runSmoke("asset");
   assert.equal(asset.status, 3);
