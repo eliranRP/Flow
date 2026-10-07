@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(61);
+select plan(62);
 
 do $users$
 begin
@@ -421,7 +421,6 @@ select throws_ok(
   'validation', 'a lines period with one date is refused'
 );
 
--- Another company sees none of these lines.
 -- A line split by category counts each part under its own project, and lists once in its category.
 select is(pg_temp.total(pg_temp.out_of('ex:category'), 'CAD'), (pg_temp.cur(pg_temp.out_of('dash:cash'), 'CAD') ->> 'expense_minor')::bigint,
   'a split line''s total matches Home (CAD)');
@@ -430,8 +429,10 @@ select is((pg_temp.grp(pg_temp.out_of('ex:project'), 'CAD', (select id::text fro
 select is((pg_temp.grp(pg_temp.out_of('ex:project'), 'CAD', (select id::text from fb_ref where label = 'alpha')) ->> 'amount_minor')::bigint, 4000::bigint,
   'the part with no project keeps the line''s Site Alpha');
 select is(jsonb_array_length(pg_temp.out_of('lines:cad') -> 'rows'), 1, 'two parts in one category list as one row');
+select ok(pg_temp.out_of('lines:cad') -> 'rows' -> 0 ->> 'project_name' is null, 'parts in two projects name no single project');
 select is(pg_temp.out_of('lines:cad:beta') -> 'rows' -> 0 ->> 'project_name', 'Site Beta', 'a part names its own project');
 
+-- Another company sees none of these lines.
 select tests.authenticate_as('fb_other');
 select is(jsonb_array_length(public.get_breakdown('expense', null, null, 'category', 'cash') -> 'totals'), 0,
   'another company''s breakdown is empty');

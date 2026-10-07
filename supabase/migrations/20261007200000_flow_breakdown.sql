@@ -323,8 +323,8 @@ begin
       r.shared,
       max(r.doc_date) as doc_date,
       sum(r.amount_minor)::bigint as amount_minor,
-      case when count(distinct r.category_id) = 1 then (array_agg(r.category_id))[1] end as category_id,
-      case when count(distinct r.project_id) = 1 then (array_agg(r.project_id))[1] end as project_id
+      case when count(distinct r.category_id) = 1 and count(r.category_id) = count(*) then min(r.category_id::text)::uuid end as category_id,
+      case when count(distinct r.project_id) = 1 and count(r.project_id) = count(*) then min(r.project_id::text)::uuid end as project_id
     from r
     group by r.transaction_id, r.part, r.shared
   ),
