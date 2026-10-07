@@ -143,7 +143,7 @@ jobs:
           path: ~/.cache/flow-apt
           # A new entry each run, so a package the mirror updated is cached on the next run.
           key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0-
+          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -198,7 +198,7 @@ jobs:
           path: ~/.cache/flow-apt
           # A new entry each run, so a package the mirror updated is cached on the next run.
           key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0-
+          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -275,7 +275,7 @@ jobs:
           path: ~/.cache/flow-apt
           # A new entry each run, so a package the mirror updated is cached on the next run.
           key: ${{ runner.os }}-playwright-apt-1.63.0-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0-
+          restore-keys: ${{ runner.os }}-playwright-apt-1.63.0
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
@@ -288,7 +288,8 @@ jobs:
         run: pnpm --filter @flow/app exec playwright install chromium
       - name: Install psql
         if: matrix.shard == 1
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+        timeout-minutes: 5
+        run: bash scripts/ci-apt-cache.sh psql
       - name: Wait for local Supabase
         timeout-minutes: 8
         run: |
@@ -376,7 +377,8 @@ jobs:
           version: 2.118.0
 
       - name: Install psql
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+        timeout-minutes: 5
+        run: bash scripts/ci-apt-cache.sh psql
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

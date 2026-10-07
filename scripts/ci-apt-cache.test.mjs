@@ -70,16 +70,19 @@ test("restore makes apt give up on a stalled mirror and retry", () => {
 });
 
 /**
- * Runs `install` with a fake playwright and apt-get. The fake dry run reports the packages in
- * `missing` until the fake apt-get installs them, and apt-get fails when `aptFails` is set.
- * @param {{ missing: string, aptFails?: boolean }} options
+ * Runs a mode with a fake playwright and apt-get. The fake dry run reports the packages in
+ * `missing` until the fake apt-get installs them. `failing` lists apt-get argument patterns that fail.
+ * `stalling` lists patterns that hang for 5 seconds instead.
+ * @param {{ mode?: string, missing: string, failing?: RegExp[], stalling?: RegExp[], env?: Record<string, string> }} options
  */
-function install({ missing, aptFails = false }) {
+function runFake({ mode = "install", missing, failing = [], stalling = [], env = {} }) {
   const dir = mkdtempSync(join(tmpdir(), "ci-apt-install-"));
   const log = join(dir, "log");
   const state = join(dir, "missing");
+  const sources = join(dir, "ubuntu.sources");
   writeFileSync(state, missing);
   writeFileSync(log, "");
+  writeFileSync(sources, "URIs: http://azure.archive.ubuntu.com/ubuntu/\n");
   const playwright = join(dir, "playwright");
   writeFileSync(
     playwright,
@@ -94,27 +97,42 @@ fi
 echo "All system dependencies are installed."
 `,
   );
+  const fails = [
+    ...failing.map((pattern) => `[[ "$*" =~ ${pattern.source} ]] && exit 100`),
+    ...stalling.map((pattern) => `[[ "$*" =~ ${pattern.source} ]] && sleep 5`),
+  ].join("\n");
   const aptGet = join(dir, "apt-get");
-  writeFileSync(aptGet, `#!/usr/bin/env bash\necho "apt-get $*" >> "${log}"\n${aptFails ? "exit 100" : `: > "${state}"`}\n`);
+  writeFileSync(
+    aptGet,
+    `#!/usr/bin/env bash\necho "apt-get $*" >> "${log}"\n${fails}\n[[ "$1" == install ]] && : > "${state}"\nexit 0\n`,
+  );
   chmodSync(playwright, 0o755);
   chmodSync(aptGet, 0o755);
-  const result = spawnSync("bash", [script, "install"], {
+  const result = spawnSync("bash", [script, mode], {
     encoding: "utf8",
-    env: { ...process.env, FLOW_PLAYWRIGHT: playwright, FLOW_APT_GET: aptGet, FLOW_APT_SUDO: "" },
+    env: {
+      ...process.env,
+      FLOW_PLAYWRIGHT: playwright,
+      FLOW_APT_GET: aptGet,
+      FLOW_APT_SUDO: "",
+      FLOW_APT_SOURCES: sources,
+      ...env,
+    },
   });
   const calls = readFileSync(log, "utf8").trim().split("\n").filter(Boolean);
+  const mirror = readFileSync(sources, "utf8");
   rmSync(dir, { recursive: true, force: true });
-  return { result, calls };
+  return { result, calls, mirror };
 }
 
 test("install does nothing when every package is already there", () => {
-  const { result, calls } = install({ missing: "" });
+  const { result, calls } = runFake({ missing: "" });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(calls, ["playwright install-deps --dry-run chromium"]);
 });
 
 test("install takes the missing packages from the cache, with no apt-get update", () => {
-  const { result, calls } = install({ missing: "fonts-liberation" });
+  const { result, calls, mirror } = runFake({ missing: "fonts-liberation" });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(calls, [
     "playwright install-deps --dry-run chromium",
@@ -122,10 +140,46 @@ test("install takes the missing packages from the cache, with no apt-get update"
     "playwright install-deps --dry-run chromium",
   ]);
   assert.match(result.stdout, /from the cache/);
+  assert.match(mirror, /azure\.archive/);
 });
 
-test("install falls back to install-deps when the cache does not cover a package", () => {
-  const { result, calls } = install({ missing: "fonts-liberation", aptFails: true });
+test("install downloads what the cache does not cover", () => {
+  const { result, calls, mirror } = runFake({ missing: "fonts-liberation", failing: [/--no-download/] });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(calls.at(-1), "playwright install-deps chromium");
+  assert.deepEqual(calls.slice(2), [
+    "apt-get update",
+    "playwright install-deps --dry-run chromium",
+    "apt-get install -y --no-install-recommends fonts-liberation",
+    "playwright install-deps --dry-run chromium",
+  ]);
+  assert.match(mirror, /azure\.archive/);
+});
+
+test("a failed apt-get update switches to archive.ubuntu.com and tries once more", () => {
+  const { result, calls, mirror } = runFake({ missing: "fonts-liberation", failing: [/--no-download/, /^update$/] });
+  assert.notEqual(result.status, 0);
+  assert.deepEqual(calls.slice(2), ["apt-get update", "apt-get update"]);
+  assert.match(result.stdout, /switching to archive\.ubuntu\.com/);
+  assert.equal(mirror, "URIs: http://archive.ubuntu.com/ubuntu/\n");
+});
+
+test("a stalled apt-get is cut off by the time limit", () => {
+  const { result, calls } = runFake({
+    missing: "fonts-liberation",
+    failing: [/--no-download/],
+    stalling: [/^update$/],
+    env: { FLOW_APT_TIMEOUT: "1" },
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout, /switching to archive\.ubuntu\.com/);
+  assert.deepEqual(calls.slice(2), ["apt-get update", "apt-get update"]);
+});
+
+test("psql is left alone when the runner has it, and installed when it does not", () => {
+  let { result, calls } = runFake({ mode: "psql", missing: "", env: { FLOW_PSQL: "bash" } });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(calls, []);
+  ({ result, calls } = runFake({ mode: "psql", missing: "", env: { FLOW_PSQL: "no-such-psql" } }));
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(calls, ["apt-get update", "apt-get install -y --no-install-recommends postgresql-client"]);
 });

@@ -22,7 +22,7 @@ const ACTION_SHA = {
 };
 const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
 const PLAYWRIGHT_KEY = `key: \${{ runner.os }}-playwright-${playwrightVersion}`;
-const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\${{ github.run_id }}\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\n`;
+const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}-\${{ github.run_id }}\n          restore-keys: \${{ runner.os }}-playwright-apt-${playwrightVersion}\n`;
 const INSTALL_DEPS = "run: bash scripts/ci-apt-cache.sh install";
 const APT_RESTORE = "run: bash scripts/ci-apt-cache.sh restore";
 const APT_SAVE = "run: bash scripts/ci-apt-cache.sh save";
@@ -261,7 +261,11 @@ test("deploy runs only after CI on a push to main, and the bundle is checked bef
   const e2e = job("e2e-shard");
   assert.match(e2e, /bash scripts\/check-sumit-cron\.sh/);
   assert.ok(e2e.indexOf("supabase test db") < e2e.indexOf("check-sumit-cron.sh"));
-  assert.ok(e2e.indexOf("postgresql-client") < e2e.indexOf("check-sumit-cron.sh"));
+  const psql = "run: bash scripts/ci-apt-cache.sh psql";
+  assert.ok(e2e.includes(psql) && e2e.indexOf(psql) < e2e.indexOf("check-sumit-cron.sh"));
+  assert.ok(job("deploy").includes(psql));
+  // Every apt-get that reaches the mirror goes through scripts/ci-apt-cache.sh, with its time limit.
+  assert.equal(/apt-get (update|install)/.test(ci), false);
   assert.equal(push.includes("--include-seed"), false);
   assert.equal(push.includes("db reset"), false);
   assert.match(preflight, /SET TRANSACTION READ ONLY/);
