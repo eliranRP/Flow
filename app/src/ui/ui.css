@@ -2937,6 +2937,42 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   margin-inline-start: auto;
 }
 
+/* A kept-out category: the mark sits right after the name and never truncates. */
+.ui-cat-list .ui-row-title-with-tag .ui-row-title-text {
+  flex: 0 1 auto;
+}
+
+.ui-cat-out {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.ui-cat-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.ui-cat-pnl-hint {
+  margin: calc(var(--space-1) * -1) 0 0;
+  text-align: center;
+}
+
+.ui-cat-fixed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  text-wrap: balance;
+}
+
 .ui-section-head {
   display: flex;
   justify-content: space-between;
