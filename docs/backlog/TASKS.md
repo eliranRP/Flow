@@ -43,6 +43,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 27 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
 | 28 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 29 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
+| 30 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
 | 30 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
@@ -134,6 +135,16 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-105
 - **What:** Pick or clear the loan's project in the loan sheet, and show the loan under its project.
 - **Acceptance:** mockup approved; e2e sets and clears the project; design review.
+
+<a id="flow-120"></a>
+### FLOW-120 · Loan project follow-ups (#89 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-105
+- [ ] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag.
+- [ ] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead.
+- [ ] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104.
+- [ ] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo.
+- [ ] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column.
+- [ ] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields

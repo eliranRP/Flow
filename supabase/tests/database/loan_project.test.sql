@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(74);
+select plan(89);
 
 do $users$
 begin
@@ -678,6 +678,161 @@ select is(
   public.mcp_undo('lp-undo-8', 'project', (select id from lp where label = 'pnew'))->'error'->>'code',
   'conflict',
   'undo of the project is a conflict while a loan uses it'
+);
+
+-- The other branches decision 0104 promises. t6 is overhead with no project,
+-- t7 has no category (marked as the owner's, so none is suggested), and t8 has
+-- an open review item that the attach closes and its undo reopens.
+reset role;
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, project_id, category_id, description, user_assigned
+)
+select
+  (select id from lp where label = 'co'), 'expense', 'expense',
+  v.role::public.pnl_role, 'posted', 'USD',
+  -100000, -100000, 100000, 0, 'source',
+  '2026-06-10', '2026-06-10', 'manual', v.ikey, null,
+  case when v.categorised then (select k.id from public.categories k
+   where k.company_id = (select id from lp where label = 'co')
+     and k.name = 'Mortgage servicer' and k.kind = 'expense') end,
+  v.ikey, not v.categorised
+from (values
+  ('t6', 'overhead', true),
+  ('t7', null, false),
+  ('t8', null, true)
+) as v(ikey, role, categorised);
+insert into lp (label, id)
+select idempotency_key, id from public.transactions where idempotency_key in ('t6', 't7', 't8');
+insert into public.review_queue (company_id, transaction_id, status, reason)
+select (select id from lp where label = 'co'), (select id from lp where label = 't8'), 'open', 'missing_project';
+
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_attach_loan_payment(
+    'lp-att-6', (select id from lp where label = 't6'), (select id from lp where label = 'la'),
+    jsonb_build_array(
+      jsonb_build_object('part', 'interest', 'amount_minor', 70000, 'scheduled_minor', 70000),
+      jsonb_build_object('part', 'escrow', 'amount_minor', 20000, 'scheduled_minor', 20000),
+      jsonb_build_object('part', 'principal', 'amount_minor', 10000, 'scheduled_minor', 10000)
+    )
+  )->'data'->>'project_inherited_reason',
+  'line has a role',
+  'an overhead line is not given the loan''s project'
+);
+select is(
+  (select count(*)::int from public.transactions t
+   where t.id = (select id from lp where label = 't6') and t.project_id is null and t.pnl_role = 'overhead'),
+  1,
+  'the overhead line keeps its role and no project'
+);
+select is(
+  public.mcp_attach_loan_payment(
+    'lp-att-7', (select id from lp where label = 't7'), (select id from lp where label = 'la'),
+    jsonb_build_array(
+      jsonb_build_object('part', 'interest', 'amount_minor', 70000, 'scheduled_minor', 70000),
+      jsonb_build_object('part', 'escrow', 'amount_minor', 20000, 'scheduled_minor', 20000),
+      jsonb_build_object('part', 'principal', 'amount_minor', 10000, 'scheduled_minor', 10000)
+    )
+  )->'data'->>'project_inherited_reason',
+  'line has no category',
+  'a line with no category is not given the loan''s project'
+);
+select is(
+  (select count(*)::int from public.transactions t
+   where t.id = (select id from lp where label = 't7')
+     and t.project_id is null and t.pnl_role is null and t.category_id is null),
+  1,
+  'the uncategorised line stays unassigned'
+);
+
+-- The attach closes the line's open review item; undo of the attach reopens it.
+select is(
+  public.mcp_attach_loan_payment(
+    'lp-att-8', (select id from lp where label = 't8'), (select id from lp where label = 'la'),
+    jsonb_build_array(
+      jsonb_build_object('part', 'interest', 'amount_minor', 70000, 'scheduled_minor', 70000),
+      jsonb_build_object('part', 'escrow', 'amount_minor', 20000, 'scheduled_minor', 20000),
+      jsonb_build_object('part', 'principal', 'amount_minor', 10000, 'scheduled_minor', 10000)
+    )
+  )->'data'->>'project_inherited',
+  'true',
+  'a line with an open review item inherits the project'
+);
+select is(
+  (select status::text from public.review_queue where transaction_id = (select id from lp where label = 't8')),
+  'changed',
+  'the attach closes the review item'
+);
+select is(
+  public.mcp_undo('lp-undo-9', 'loan_split', (select id from lp where label = 't8'))->'data'->>'project_restored',
+  'true',
+  'undo of that attach restores the line'
+);
+select is(
+  (select status::text from public.review_queue where transaction_id = (select id from lp where label = 't8')),
+  'open',
+  'undo of the attach reopens the review item'
+);
+select is(
+  (select count(*)::int from public.transactions t
+   where t.id = (select id from lp where label = 't8') and t.project_id is null and t.pnl_role is null),
+  1,
+  'the line is unassigned again'
+);
+
+-- Undo of update_loan when the previous project was deleted since: refused, nothing changes.
+select is(
+  public.mcp_update_loan('lp-up-8', (select id from lp where label = 'lb'),
+    jsonb_build_object('project_id', (select id from lp where label = 'p1')))->'ok',
+  'true'::jsonb,
+  'the loan moves from the new project to the first one'
+);
+reset role;
+delete from public.projects where id = (select id from lp where label = 'pnew');
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('lp-undo-10', 'loan_update', (select id from lp where label = 'lb'))->'error'->>'message',
+  'project not found',
+  'undo is refused when the previous project was deleted since'
+);
+select is(
+  (select project_id from public.loans where id = (select id from lp where label = 'lb')),
+  (select id from lp where label = 'p1'),
+  'the refused undo leaves the loan where it is'
+);
+
+-- An edit stored before FLOW-105 has no project_id in its snapshot: undo restores
+-- the other fields and leaves the project.
+select is(
+  public.mcp_update_loan('lp-up-9', (select id from lp where label = 'la'),
+    jsonb_build_object('name', 'Example Mortgage A2'))->'ok',
+  'true'::jsonb,
+  'a name edit on the loan with a project'
+);
+reset role;
+update private.mcp_writes w
+set prior = jsonb_build_object(
+  'before', (w.prior->'before') - 'project_id',
+  'after', (w.prior->'after') - 'project_id'
+)
+where w.id = (
+  select w2.id from private.mcp_writes w2
+  where w2.kind = 'loan_update' and w2.loan_id = (select id from lp where label = 'la')
+    and w2.undone_at is null
+  order by w2.created_at desc limit 1
+);
+select pg_temp.as_mcp('write');
+select is(
+  public.mcp_undo('lp-undo-11', 'loan_update', (select id from lp where label = 'la'))->'ok',
+  'true'::jsonb,
+  'undo of a snapshot without project_id succeeds'
+);
+select is(
+  (select name || '|' || project_id::text from public.loans where id = (select id from lp where label = 'la')),
+  'Example Mortgage A|' || (select id::text from lp where label = 'p1'),
+  'it restores the name and leaves the project'
 );
 
 select * from finish();
