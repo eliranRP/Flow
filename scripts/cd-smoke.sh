@@ -11,7 +11,7 @@ fi
 origin="https://flow-app-dx5.pages.dev"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 bust="n=${sha}"
-# build.txt and the homepage share this pause. Tests set SMOKE_RETRY_PAUSE=0.
+# build.txt, the homepage and /settings share this pause. Tests set SMOKE_RETRY_PAUSE=0.
 pause="${SMOKE_RETRY_PAUSE:-10}"
 if ! [[ "$pause" =~ ^[0-9]+$ ]]; then
   pause=10
