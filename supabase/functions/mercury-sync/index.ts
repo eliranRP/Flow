@@ -299,7 +299,8 @@ async function syncCompany(
           .update({ next_attempt_at: backoffUntil(plan.rateLimited.retryAfter, new Date()) })
           .eq("company_id", companyId)
           .eq("provider", "mercury");
-        if (backoff.error) logFailure("mercury sync backoff", backoff.error, apiKey);
+        // Fail closed: if the hold cannot be written, note_connector_failure still holds 15 minutes.
+        if (backoff.error) await noteOnce("rate_limited");
       }
       const counts = saved.data as { inserted?: number; updated?: number; removed?: number } | null;
       let newestDate: string | null = null;

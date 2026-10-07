@@ -190,8 +190,7 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     const checkedAt = input.now().toISOString();
     let index = 0;
     for (; index < candidates.length && index < CONNECTOR_RECHECK_LIMIT; index += 1) {
-      const stored = candidates[index];
-      if (!stored) continue;
+      const stored = candidates[index]!;
       let confirmed: ConfirmResult;
       try {
         confirmed = await input.confirmLine(stored);

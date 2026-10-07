@@ -60,6 +60,16 @@ Deno.serve(async (req) => {
     const accountsChanged = previous.data != null &&
       mercuryAccountsChanged(previous.data.account_labels, validated.accounts);
 
+    if (accountsChanged) {
+      // Clear before the new key is stored, so no sync can pair it with the old cursor.
+      const cleared = await admin
+        .from("connector_connections")
+        .update({ sync_cursor: null })
+        .eq("company_id", company.data.id)
+        .eq("provider", "mercury");
+      if (cleared.error) return json({ error: "could not store the connection" }, 500);
+    }
+
     const kekVersion = Deno.env.get("MERCURY_KEK_VERSION") || "1";
     const sealed = await sealApiKey(apiKey, decodeKek(kekSecret), kekVersion, company.data.id, "3", "mercury");
     const saved = await admin.rpc("replace_connector_connection", {
@@ -78,7 +88,7 @@ Deno.serve(async (req) => {
 
     const labeled = await admin
       .from("connector_connections")
-      .update({ account_labels: validated.accounts, ...(accountsChanged ? { sync_cursor: null } : {}) })
+      .update({ account_labels: validated.accounts })
       .eq("company_id", company.data.id)
       .eq("provider", "mercury");
     if (labeled.error) return json({ error: "could not store the connection" }, 500);

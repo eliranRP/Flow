@@ -534,3 +534,44 @@ Deno.test("a cancel that arrives in a later sync still voids the stored yield", 
   assertEquals(plan.removedIds.includes(interestId), true);
   assertEquals(plan.removedIds.filter((id) => id === interestId).length, 1);
 });
+
+Deno.test("pending lines past the recheck cap keep their missing clock", async () => {
+  const built = port({
+    accounts,
+    fetched: { lines: [], removedIds: [], nextCursor: NOW.toISOString(), complete: true, windowStart: "2026-09-04" },
+  });
+  const stored: StoredLine[] = [];
+  for (let index = 0; index < CONNECTOR_RECHECK_LIMIT + 2; index += 1) {
+    stored.push({
+      externalId: `pending-${String(index).padStart(2, "0")}`,
+      lineStatus: "pending",
+      docDate: "2026-09-20",
+      missingSince: "2026-10-01T00:00:00.000Z",
+    });
+  }
+  let calls = 0;
+  const plan = await planConnectorSync({
+    port: built.port,
+    session: session(),
+    cursor: null,
+    importFrom: null,
+    lookbackDays: 30,
+    ownCounterpartyIds: [],
+    vatRateBp: 0,
+    exemptSupplierNames: [],
+    exemptSupplierIds: [],
+    stored,
+    now: () => NOW,
+    confirmLine(line) {
+      calls += 1;
+      return Promise.resolve({ action: "keep", missingSince: line.missingSince ?? NOW.toISOString() });
+    },
+  });
+  assertEquals(plan.ok, true);
+  if (!plan.ok) return;
+  assertEquals(calls, CONNECTOR_RECHECK_LIMIT);
+  assertEquals(plan.pendingMissing.length, CONNECTOR_RECHECK_LIMIT + 2);
+  const last = plan.pendingMissing.find((item) => item.externalId === `pending-${CONNECTOR_RECHECK_LIMIT + 1}`);
+  assertEquals(last?.missingSince, "2026-10-01T00:00:00.000Z");
+  assertEquals(plan.rateLimited, null);
+});
