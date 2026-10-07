@@ -416,6 +416,43 @@ Deno.test("assign_expense forwards project and category for an income review lin
   }
 });
 
+Deno.test("income filed to a project reads back in get_project, single and batch", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "get_project") {
+      return {
+        status: 200,
+        json: { id: PROJECT, income_agorot: 50000, by_currency: [{ currency: "ILS", income_minor: 50000 }] },
+      };
+    }
+    if (name === "mcp_assign_expenses") {
+      return {
+        status: 200,
+        json: { ok: true, data: { batch_key: BATCH_KEY, ok_count: 1, error_count: 0, results: [] } },
+      };
+    }
+    return { status: 200, json: { ok: true, data: { undo_kind: "reassign", id: REVIEW, closed_review: false } } };
+  });
+  const single = await callTool("assign_expense", {
+    idempotency_key: "assign-income-plain",
+    transaction_id: INCOME_TXN,
+    project_id: PROJECT,
+    category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(single.isError, false);
+  assertEquals(calls[0]?.body.p_project_id, PROJECT);
+  const batch = await callTool("assign_expenses", {
+    idempotency_key: "assign-income-batch",
+    items: [{ transaction_id: INCOME_TXN, project_id: PROJECT, category_id: INCOME_CATEGORY }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[1]?.body.p_items, [{ transaction_id: INCOME_TXN, project_id: PROJECT, category_id: INCOME_CATEGORY }]);
+  const read = await callTool("get_project", { id: PROJECT }, ["read"], rpc);
+  assertEquals(read.isError, false);
+  if (read.structuredContent.ok) {
+    assertEquals((read.structuredContent.data as { income_agorot: number }).income_agorot, 50000);
+  }
+});
+
 Deno.test("assign, set category, and undo call their wrappers", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,
