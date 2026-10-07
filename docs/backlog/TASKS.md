@@ -18,7 +18,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 2 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE | ready |
 | 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | in-progress (#74) |
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
-| 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | ready |
+| 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
@@ -154,7 +154,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-201"></a>
 ### FLOW-201 · Split rows inside the assign_expenses batch
-- **Type:** MCP · **Status:** ready · **Depends on:** #68 (merged)
+- **Type:** MCP · **Status:** in-progress (#73) · **Depends on:** #68 (merged)
 - **What:** `assign_expense_split` files one line at a time. Allow split rows (`category_id`, `shares[]`) inside `assign_expenses`, counted as one write hit, with per-row results and `undo_batch` restoring the pre-split state (including lines that were in review).
 - **Acceptance:** pgTAP and Deno tests for a mixed batch, partial success, replay, and batch undo of a split that closed a review.
 
