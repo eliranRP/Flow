@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { BigNumber, formatAmount, heroTypeClass } from "./big-number";
+import { BigNumber, formatAmount, heroStepClass, heroTypeClass } from "./big-number";
 import { expectRtl } from "./test-support";
 
 describe("BigNumber", () => {
@@ -19,6 +19,10 @@ describe("BigNumber", () => {
   it("steps a hero figure down from state, without writing the class onto the node first", () => {
     expect(heroTypeClass("hero", false)).toBe("t-hero");
     expect(heroTypeClass("hero", true)).toBe("t-display");
+    expect(heroStepClass("display", 0)).toBe("t-display");
+    expect(heroStepClass("display", 2)).toBe("t-title-2");
+    expect(heroStepClass("display", 9)).toBe("t-title-3");
+    expect(heroStepClass("list", 3)).toBe("t-title-3");
     const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
     if (!rect) throw new Error("getBoundingClientRect is missing");
     const original = rect.value as (this: Element) => DOMRect;
@@ -40,6 +44,47 @@ describe("BigNumber", () => {
       const shown = screen.getByText("₪12,345,678", { selector: "bdi[dir=ltr]" });
       expect(shown).toHaveClass("t-display");
       expect(shown).not.toHaveClass("t-hero");
+    } finally {
+      Object.defineProperty(Element.prototype, "getBoundingClientRect", rect);
+      if (client) Object.defineProperty(Element.prototype, "clientWidth", client);
+      else Reflect.deleteProperty(Element.prototype, "clientWidth");
+    }
+  });
+
+  it("steps a detail figure down from display to the largest size that fits the padded block", () => {
+    const rect = Object.getOwnPropertyDescriptor(Element.prototype, "getBoundingClientRect");
+    if (!rect) throw new Error("getBoundingClientRect is missing");
+    const original = rect.value as (this: Element) => DOMRect;
+    const client = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth");
+    const widths: Record<string, number> = { "t-hero": 400, "t-display": 300, "t-title-1": 240, "t-title-2": 190, "t-title-3": 170 };
+    const probed: string[] = [];
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (this.getAttribute("aria-hidden") === "true") {
+        const type = this.className.split(" ").find((name) => name in widths) ?? "t-hero";
+        probed.push(type);
+        return DOMRect.fromRect({ width: widths[type] ?? 0, height: 40 });
+      }
+      return original.call(this);
+    };
+    // The flex line around the figure is as narrow as the figure; the padded block is what counts.
+    Object.defineProperty(Element.prototype, "clientWidth", {
+      configurable: true,
+      get(this: Element) {
+        return this.classList.contains("ui-line") ? 10 : 200;
+      },
+    });
+    try {
+      render(
+        <div className="ui-page-pad">
+          <span className="ui-line">
+            <BigNumber agorot={-9_999_999_999n} presentation="detail" direction="expense" size="display" />
+          </span>
+        </div>,
+      );
+      const shown = screen.getByText("−₪99,999,999.99", { selector: "bdi[dir=ltr]" });
+      expect(shown).toHaveClass("t-title-2");
+      expect(shown).not.toHaveClass("t-display");
+      expect(probed).not.toContain("t-hero");
     } finally {
       Object.defineProperty(Element.prototype, "getBoundingClientRect", rect);
       if (client) Object.defineProperty(Element.prototype, "clientWidth", client);

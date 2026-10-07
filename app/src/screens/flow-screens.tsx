@@ -2715,6 +2715,7 @@ export function TransactionScreen({
             presentation="detail"
             currency={txn.currency}
             direction={txn.direction === "income" ? "income" : "expense"}
+            size="display"
           />
         </p>
         <p className="t-hint">

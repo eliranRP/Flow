@@ -127,6 +127,18 @@ const long = quadrant(breakdownStory(longNames));
 export const LongNamesAndUsd: Story = long.base;
 export const LongNamesAndUsd320: Story = long.narrow;
 
+/** FLOW-307: the largest totals step down from display until they fit, each line on its own. */
+const hugeTotals: NonNullable<Breakdown> = {
+  ...longNames,
+  totals: [
+    { currency: "ILS", amount_minor: 9_999_999_999n, count: 205 },
+    { currency: "USD", amount_minor: 9_999_999_999n, count: 3 },
+  ],
+};
+const huge = quadrant(breakdownStory(hugeTotals));
+export const LargestTotals: Story = huge.base;
+export const LargestTotalsDark320: Story = huge.darkNarrow;
+
 const incomeStory = quadrant(breakdownStory(income, "/flow/income"));
 export const IncomeByCustomer: Story = incomeStory.base;
 export const IncomeByCustomerDark: Story = incomeStory.dark;

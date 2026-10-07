@@ -40,9 +40,17 @@ const sizeClass = {
 
 const heroSteps = ["t-hero", "t-display", "t-title-1", "t-title-2", "t-title-3"] as const;
 
+/** Where a fitted size starts on the step list. Hero and display step down until the figure fits; list never does. */
+function firstStep(size: "hero" | "display" | "list" | undefined): number | null {
+  if (size === "hero") return 0;
+  if (size === "display") return 1;
+  return null;
+}
+
 export function heroStepClass(size: "hero" | "display" | "list" | undefined, step: number): string {
-  if (size !== "hero") return size ? sizeClass[size] : "";
-  return heroSteps[Math.min(Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
+  const first = firstStep(size);
+  if (first == null) return size ? sizeClass[size] : "";
+  return heroSteps[Math.min(first + Math.max(step, 0), heroSteps.length - 1)] ?? "t-title-3";
 }
 
 export function heroTypeClass(size: "hero" | "display" | "list" | undefined, stepDown: boolean): string {
@@ -62,13 +70,15 @@ export function BigNumber({
   const [step, setStep] = useState(0);
   const text = formatAmount(agorot, presentation, currency, direction, plus);
   useLayoutEffect(() => {
-    if (size !== "hero") return;
+    const first = firstStep(size);
+    if (first == null) return;
     const node = ref.current;
     if (!node) return;
-    const column = node.closest(".ui-band-hero") ?? node.parentElement;
+    // A flex item shrinks to the figure, so measure against the padded block that holds it.
+    const column = node.closest(".ui-band-hero, .ui-page-pad") ?? node.parentElement;
     if (!(column instanceof HTMLElement)) return;
     const probe = document.createElement("bdi");
-    probe.className = "ui-num t-hero";
+    probe.className = `ui-num ${heroSteps[first] ?? "t-hero"}`;
     probe.textContent = text;
     probe.setAttribute("aria-hidden", "true");
     probe.style.whiteSpace = "nowrap";
@@ -82,7 +92,6 @@ export function BigNumber({
     host.style.overflow = "hidden";
     host.style.visibility = "hidden";
     host.appendChild(probe);
-    document.body.appendChild(host);
     const pads = new Map<HTMLElement, number>();
     const readPad = (el: HTMLElement) => {
       const style = getComputedStyle(el);
@@ -108,15 +117,18 @@ export function BigNumber({
         probe.className = `ui-num ${typeClass}`;
         return probe.getBoundingClientRect().width;
       };
+      // The probe is in the page only while it is measured, so a text search never finds a second figure.
+      document.body.appendChild(host);
       let next = heroSteps.length - 1;
-      for (let index = 0; index < heroSteps.length; index += 1) {
+      for (let index = first; index < heroSteps.length; index += 1) {
         const typeClass = heroSteps[index];
         if (typeClass != null && widthOf(typeClass) <= content) {
           next = index;
           break;
         }
       }
-      setStep(next);
+      host.remove();
+      setStep(next - first);
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -126,13 +138,12 @@ export function BigNumber({
     const fonts = document.fonts as FontFaceSet | undefined;
     if (fonts != null) {
       void fonts.ready.then(() => {
-        if (!cancelled && host.isConnected) measure();
+        if (!cancelled) measure();
       });
     }
     return () => {
       cancelled = true;
       observer.disconnect();
-      host.remove();
     };
   }, [size, text]);
   return (

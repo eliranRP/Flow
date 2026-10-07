@@ -2210,3 +2210,56 @@ export const TransactionUsdExpense: Story = {
     </StoryRoute>
   ),
 };
+
+/** FLOW-307: the largest detail amounts step down from 36px until they fit the side padding. */
+export const TransactionLargestExpense: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t-large">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-large",
+          description: "חשבונית חומרים",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -9_999_999_999n,
+          amount_net: -9_999_999_999n,
+          vat_amount: 0n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_name: "בניין מגורים חולון",
+          category_name: "חומרים",
+          supplier_name: "חומרי בניין השרון בע״מ",
+          customer_name: null,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const TransactionLargestUsdIncome: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t-large-usd">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-large-usd",
+          description: "Sample customer",
+          direction: "income",
+          doc_date: "2026-09-10",
+          amount_gross: 9_999_999_999n,
+          amount_net: 9_999_999_999n,
+          vat_amount: 0n,
+          currency: "USD",
+          vat_status: "source",
+          source: "mercury",
+          project_name: "Cedar Lot",
+          category_name: "Rent",
+          supplier_name: null,
+          customer_name: "Sample customer",
+        }}
+      />
+    </StoryRoute>
+  ),
+};
