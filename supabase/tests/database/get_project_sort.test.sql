@@ -67,7 +67,9 @@ select ok(
     select 1
     from jsonb_array_elements(public.get_project((select id from gps_ref), 'cash')->'transactions') x
     where (x->>'id')::uuid = (
-      select min(t.id) from public.transactions t where t.project_id = (select id from gps_ref)
+      select t.id from public.transactions t where t.project_id = (select id from gps_ref)
+      order by t.id
+      limit 1
     )
   ),
   'the lowest id is the line left out'
