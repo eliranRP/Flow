@@ -149,7 +149,10 @@ test("CI keeps the hosted and reviewer builds apart and skips live writers", () 
   );
   // check-core runs test:unit without @flow/app, and check-unit runs @flow/app. A new part of
   // test:unit fails this pin until CI runs it too.
-  const rootScripts = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).scripts;
+  const rootPackage = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  // check-core excludes the root package by name ('!flow'), so its own test script does not run there.
+  assert.equal(rootPackage.name, "flow");
+  const rootScripts = rootPackage.scripts;
   const deno1 = "deno test --no-prompt --no-lock --node-modules-dir=none --ignore=supabase/functions/_shared/connectors supabase/functions/_shared";
   const deno2 = "deno test --no-prompt --node-modules-dir=none --config supabase/functions/_shared/connectors/deno.json supabase/functions/_shared/connectors";
   assert.equal(rootScripts["test:unit"], `node --test scripts/*.test.mjs && pnpm -r --if-present test && ${deno1} && ${deno2}`);
