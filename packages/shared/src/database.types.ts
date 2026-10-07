@@ -729,6 +729,9 @@ isOneToOne: false
 "get_line_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
+"get_loan_split":
+{ Args: { "p_transaction_id": string }; Returns: Json
+                           },
 "get_project":
 { Args: { "p_id": string }; Returns: Json
                            } |

@@ -549,7 +549,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations and, for a split line, line_split.parts. transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id.", {
@@ -1305,17 +1305,19 @@ export async function callTool(
   const result = await rpc("get_transaction", { p_id: transactionId });
   if (result.status >= 400) return fail("refused", "The read was refused.");
   if (result.json == null) return fail("not_found", "not found");
+  const row = result.json as Record<string, unknown>;
   // A line split by category shows its parts. A failed parts read fails the whole read, so a
   // split line never looks whole under its own category.
   const split = await rpc("get_line_split", { p_transaction_id: transactionId });
   if (split.status >= 400) return fail("refused", "The read was refused.");
   const parts = (split.json as { parts?: unknown } | null)?.parts;
-  if (
-    Array.isArray(parts) && parts.length > 0 &&
-    typeof result.json === "object" && !Array.isArray(result.json)
-  ) {
+  let out: Record<string, unknown> = row;
+  if (Array.isArray(parts) && parts.length > 0 && typeof row === "object" && !Array.isArray(row)) {
     const { transaction_id: _id, ...lineSplit } = split.json as Record<string, unknown>;
-    return ok({ ...(result.json as Record<string, unknown>), line_split: lineSplit });
+    out = { ...row, line_split: lineSplit };
   }
-  return ok(result.json);
+  if (row.direction === "income") return ok({ ...out, loan_split: null });
+  const loanSplit = await rpc("get_loan_split", { p_transaction_id: transactionId });
+  if (loanSplit.status >= 400) return fail("refused", "The read was refused.");
+  return ok({ ...out, loan_split: loanSplit.json ?? null });
 }
