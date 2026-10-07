@@ -20,7 +20,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | ready |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
-| 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
+| 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | claimed |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
@@ -440,7 +440,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-602"></a>
 ### FLOW-602 · Rename a company
-- **Type:** SMALL CYCLE · **Status:** ready (RPC and MCP); the screen is plan-first · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** claimed (Claude, 2026-10-07, claude/project-thread-udib01) for the RPC and MCP; the screen is plan-first · **Depends on:** —
 - **What:** An owner-only RPC and MCP tool `rename_company` (idempotency key, write bucket, undo). The in-app place is a small focused screen or sheet, not a Settings catch-all; it needs a quick mockup and can ship in a second PR.
 - **Acceptance:** viewer refused, other company refused with a positive control, undo restores, TOOLS.md.
 
