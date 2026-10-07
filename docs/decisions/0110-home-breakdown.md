@@ -24,3 +24,5 @@ Home shows נכנס and יצא for the period, but nothing behind them. To see w
 ## Consequences
 
 The screens (Home rows that open the breakdown, the group screen, the lines screen) ship in the same PR. Supplier is the only payer field, so income with no supplier groups under `none`.
+
+Follow-up (2026-10-07, owner's choice "Match breakdown"): Home's יצא shows a month where refunds beat costs as a positive amount with no minus, the way the breakdown shows it. A cost keeps its minus.

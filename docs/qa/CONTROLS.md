@@ -63,7 +63,7 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Home | pending or unpaid banner | Opens review when items are waiting, otherwise unpaid. | never | no | route `/review` or `/unpaid` | none | pass |
 | Home | a leading project | Opens that project. | never | no | route `/projects/:id` | none | pass |
 | Home | לכל הפרויקטים | Opens the project list. | never | no | route `/projects` | none | pass |
-| Home | נכנס / יצא | The whole row opens that side's breakdown for Home's period. Name "יצא החודש ₪x – פירוט", reading every currency. The change pill stays outside the link. | never | no | route `/flow/income` or `/flow/expense` | none | unit |
+| Home | נכנס / יצא | The whole row opens that side's breakdown for Home's period. Name "יצא החודש −₪x – פירוט", reading every currency; a month where refunds beat costs reads "₪x" with no minus, like its breakdown. The change pill stays outside the link. | never | no | route `/flow/income` or `/flow/expense` | none | unit |
 | Breakdown | period pill | Opens the period sheet. Tint pill. The period is Home's, so a change here changes Home. | never | no | sheet with the four periods | none | unit |
 | Breakdown | לפי (קטגוריה · פרויקט · ספק / לקוח) | Regroups with `get_breakdown`. The device remembers the last choice. | never | no | the groups change | the shared error state | unit |
 | Breakdown | a group row | Opens that group's lines in its currency. A missing name reads בלי קטגוריה, בלי ספק, בלי לקוח, בלי פרויקט, or הוצאות כלליות. | never | no | route `/flow/:direction/:groupBy/:currency/:groupKey` | none | unit |
