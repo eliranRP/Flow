@@ -361,7 +361,7 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(ci.includes("--with-deps"), false);
   assert.equal(ci.includes("env.ImageOS"), false);
   assert.equal(ci.includes("env.ImageVersion"), false);
-  assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install-deps chromium/);
+  assert.match(ci, /timeout-minutes: 8\n\s+run: pnpm --filter @flow\/app exec playwright install-deps chromium/);
   assert.match(ci, /timeout-minutes: 5\n\s+run: pnpm --filter @flow\/app exec playwright install chromium\n/);
   assert.match(ci, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\.0\.0/);
   assert.match(ci, /actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/);

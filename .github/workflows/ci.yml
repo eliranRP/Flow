@@ -145,7 +145,7 @@ jobs:
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: pnpm --filter @flow/app exec playwright install-deps chromium
       - name: Keep Playwright system packages for the next run
         run: bash scripts/ci-apt-cache.sh save
@@ -198,7 +198,7 @@ jobs:
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: pnpm --filter @flow/app exec playwright install-deps chromium
       - name: Keep Playwright system packages for the next run
         run: bash scripts/ci-apt-cache.sh save
@@ -273,7 +273,7 @@ jobs:
       - name: Restore Playwright system packages
         run: bash scripts/ci-apt-cache.sh restore
       - name: Install Playwright system dependencies
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: pnpm --filter @flow/app exec playwright install-deps chromium
       - name: Keep Playwright system packages for the next run
         run: bash scripts/ci-apt-cache.sh save
