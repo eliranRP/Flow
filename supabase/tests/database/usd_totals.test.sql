@@ -113,7 +113,7 @@ reset role;
 -- A: USD-only company gets a full, non-zero USD P&L (pending, void and removed lines stay out)
 select is(
   pg_temp.cur(pg_temp.out_of('a_sep_cash') -> 'by_currency', 'USD'),
-  '{"currency": "USD", "income_minor": 105000, "direct_minor": 30000, "shared_minor": 50000, "overhead_minor": 20000, "expense_minor": 100000, "net_profit_minor": 5000, "count": 5}'::jsonb,
+  '{"currency": "USD", "income_minor": 105000, "direct_minor": 30000, "shared_minor": 50000, "overhead_minor": 20000, "expense_minor": 100000, "net_profit_minor": 5000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 5}'::jsonb,
   'usd-only company: September cash USD row (cash date, posted only, not removed)'
 );
 
@@ -143,19 +143,19 @@ select is(
 
 select is(
   pg_temp.cur(pg_temp.out_of('a_sep_inv') -> 'by_currency', 'USD'),
-  '{"currency": "USD", "income_minor": 9000, "direct_minor": 30000, "shared_minor": 50000, "overhead_minor": 20000, "expense_minor": 100000, "net_profit_minor": -91000, "count": 4}'::jsonb,
+  '{"currency": "USD", "income_minor": 9000, "direct_minor": 30000, "shared_minor": 50000, "overhead_minor": 20000, "expense_minor": 100000, "net_profit_minor": -91000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 4}'::jsonb,
   'invoiced basis counts the invoice and not the receipts'
 );
 
 select is(
   pg_temp.cur(pg_temp.out_of('a_aug_cash') -> 'by_currency', 'USD'),
-  '{"currency": "USD", "income_minor": 0, "direct_minor": 0, "shared_minor": 0, "overhead_minor": 1000, "expense_minor": 1000, "net_profit_minor": -1000, "count": 1}'::jsonb,
+  '{"currency": "USD", "income_minor": 0, "direct_minor": 0, "shared_minor": 0, "overhead_minor": 1000, "expense_minor": 1000, "net_profit_minor": -1000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 1}'::jsonb,
   'expenses use doc_date and income uses the cash date'
 );
 
 select is(
   pg_temp.cur(pg_temp.out_of('a_all_cash') -> 'by_currency', 'USD'),
-  '{"currency": "USD", "income_minor": 105000, "direct_minor": 30000, "shared_minor": 50000, "overhead_minor": 21000, "expense_minor": 101000, "net_profit_minor": 4000, "count": 6}'::jsonb,
+  '{"currency": "USD", "income_minor": 105000, "direct_minor": 30000, "shared_minor": 50000, "overhead_minor": 21000, "expense_minor": 101000, "net_profit_minor": 4000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 6}'::jsonb,
   'all time USD row'
 );
 
@@ -177,6 +177,9 @@ select is(
       'overhead_minor', b -> 'overhead_agorot',
       'expense_minor', b -> 'expense_agorot',
       'net_profit_minor', b -> 'net_profit_agorot',
+      'excluded_income_minor', b -> 'excluded_income_agorot',
+      'excluded_expense_minor', b -> 'excluded_expense_agorot',
+      'excluded_count', 0,
       'count', 4
     )
     from (select pg_temp.out_of('m_sep_cash') b) s
@@ -186,7 +189,7 @@ select is(
 
 select is(
   pg_temp.cur(pg_temp.out_of('m_sep_cash') -> 'by_currency', 'USD'),
-  '{"currency": "USD", "income_minor": 4000, "direct_minor": 1000, "shared_minor": 0, "overhead_minor": 0, "expense_minor": 1000, "net_profit_minor": 3000, "count": 2}'::jsonb,
+  '{"currency": "USD", "income_minor": 4000, "direct_minor": 1000, "shared_minor": 0, "overhead_minor": 0, "expense_minor": 1000, "net_profit_minor": 3000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 2}'::jsonb,
   'mixed company: USD row is separate'
 );
 
@@ -214,7 +217,7 @@ select is(
 -- Tenancy: B sees its own ILS and none of A's USD; B cannot read A
 select is(
   pg_temp.out_of('b_sep_cash') -> 'by_currency',
-  '[{"currency": "ILS", "income_minor": 1000, "direct_minor": 0, "shared_minor": 0, "overhead_minor": 0, "expense_minor": 0, "net_profit_minor": 1000, "count": 1}]'::jsonb,
+  '[{"currency": "ILS", "income_minor": 1000, "direct_minor": 0, "shared_minor": 0, "overhead_minor": 0, "expense_minor": 0, "net_profit_minor": 1000, "excluded_income_minor": 0, "excluded_expense_minor": 0, "excluded_count": 0, "count": 1}]'::jsonb,
   'another company sees its own totals and none of the usd company lines'
 );
 

@@ -1008,3 +1008,43 @@ Deno.test("list_categories passes excluded_from_pnl and get_totals copies exclud
     assertEquals(data.by_currency[0]?.excluded_income_minor, 2);
   }
 });
+
+Deno.test("set_category_pnl forwards excluded false, rejects bad input, and refuses a read token", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: CATEGORY, undo_kind: "category_pnl" } },
+  }));
+  const back = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-back",
+    category_id: CATEGORY,
+    excluded: false,
+  }, ["write"], rpc);
+  assertEquals(back.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_category_pnl",
+    body: {
+      p_idempotency_key: "pnl-back",
+      p_category_id: CATEGORY,
+      p_excluded: false,
+    },
+  });
+  const cases = [
+    callTool("set_category_pnl", { category_id: CATEGORY, excluded: true }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", excluded: true }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", category_id: CATEGORY }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", category_id: "not-a-uuid", excluded: true }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", category_id: CATEGORY, excluded: true, hidden: true }, ["write"], rpc),
+  ];
+  for (const result of await Promise.all(cases)) {
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-read",
+    category_id: CATEGORY,
+    excluded: true,
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 1);
+});

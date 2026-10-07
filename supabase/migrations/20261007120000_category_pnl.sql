@@ -173,7 +173,7 @@ begin
   shared_alloc as (
     select
       a.project_id,
-      (a.amount_net * e.amount_net / e.line_amount_net)::bigint as amount_net,
+      coalesce(a.amount_net * e.amount_net / nullif(e.line_amount_net, 0), 0)::bigint as amount_net,
       e.in_period,
       e.in_prev
     from public.allocations a
@@ -231,7 +231,7 @@ begin
     select
       a.project_id,
       e.currency,
-      (a.amount_net * e.amount_net / e.line_amount_net)::bigint as amount_net,
+      coalesce(a.amount_net * e.amount_net / nullif(e.line_amount_net, 0), 0)::bigint as amount_net,
       e.in_period,
       e.in_prev
     from public.allocations a
@@ -248,11 +248,11 @@ begin
     from (
       select i.currency, i.amount_net as excluded_income, 0::bigint as excluded_expense, 1 as excluded_count
       from income_all i
-      where i.in_period and i.in_pnl and not i.in_pnl
+      where i.in_period and not i.in_pnl
       union all
       select e.currency, 0::bigint, (-e.amount_net)::bigint, 1
       from expense_all e
-      where e.in_period and e.in_pnl and not e.in_pnl
+      where e.in_period and not e.in_pnl
     ) parts
     group by parts.currency
   ),
@@ -393,7 +393,7 @@ begin
       ) order by bucket.currency)
       from (
         select
-          t.currency,
+          l.currency,
           coalesce(sum(l.amount_net) filter (where l.direction = 'income'), 0)::bigint as income_minor,
           coalesce(sum(l.amount_net) filter (where l.direction = 'expense'), 0)::bigint as expense_minor,
           count(*)::integer as line_count
@@ -427,21 +427,26 @@ begin
     ), '[]'::jsonb),
     'by_currency', coalesce((
       select jsonb_agg(jsonb_build_object(
-        'currency', cc.currency,
-        'income_minor', cc.income_minor,
-        'direct_minor', cc.direct_minor,
-        'shared_minor', cc.shared_minor,
-        'overhead_minor', cc.overhead_minor,
-        'expense_minor', cc.expense_minor,
-        'net_profit_minor', cc.net_profit_minor,
+        'currency', k.currency,
+        'income_minor', coalesce(cc.income_minor, 0),
+        'direct_minor', coalesce(cc.direct_minor, 0),
+        'shared_minor', coalesce(cc.shared_minor, 0),
+        'overhead_minor', coalesce(cc.overhead_minor, 0),
+        'expense_minor', coalesce(cc.expense_minor, 0),
+        'net_profit_minor', coalesce(cc.net_profit_minor, 0),
         'excluded_income_minor', coalesce(ex.excluded_income_minor, 0),
         'excluded_expense_minor', coalesce(ex.excluded_expense_minor, 0),
         'excluded_count', coalesce(ex.excluded_count, 0),
         'count', coalesce(lc.line_count, 0)
-      ) order by cc.currency)
-      from company_currency cc
-      left join currency_line_counts lc on lc.currency = cc.currency
-      left join excluded_by_currency ex on ex.currency = cc.currency
+      ) order by k.currency)
+      from (
+        select currency from company_currency
+        union
+        select currency from excluded_by_currency
+      ) k
+      left join company_currency cc on cc.currency = k.currency
+      left join currency_line_counts lc on lc.currency = k.currency
+      left join excluded_by_currency ex on ex.currency = k.currency
     ), '[]'::jsonb),
     'projects', coalesce((
       select jsonb_agg(
@@ -689,7 +694,7 @@ begin
         and l.currency = 'ILS'
     ), 0),
     'shared_agorot', -coalesce((
-      select sum((a.amount_net * l.amount_net / l.line_amount_net)::bigint)
+      select sum(coalesce(a.amount_net * l.amount_net / nullif(l.line_amount_net, 0), 0)::bigint)
       from public.allocations a
       join private.pnl_lines l on l.transaction_id = a.transaction_id
       where a.project_id = p.id and l.pnl_role = 'shared' and l.in_pnl
@@ -724,7 +729,7 @@ begin
           select l.currency as currency,
             0::bigint,
             0::bigint,
-            -(a.amount_net * l.amount_net / l.line_amount_net)::bigint as shared_minor
+            -coalesce(a.amount_net * l.amount_net / nullif(l.line_amount_net, 0), 0)::bigint as shared_minor
           from public.allocations a
           join private.pnl_lines l on l.transaction_id = a.transaction_id
           where a.project_id = p.id
@@ -746,8 +751,8 @@ begin
           (-sum(e.amount_net))::bigint as amount,
           bool_or(e.shared) as shared
         from private.project_category_entries(p.id) e
-        join public.categories cat on cat.id = e.category_id
-        where not cat.excluded_from_pnl
+        left join public.categories cat on cat.id = e.category_id
+        where not coalesce(cat.excluded_from_pnl, false)
         group by e.category_id
       ) s
       left join public.categories c on c.id = s.category_id
@@ -766,8 +771,8 @@ begin
           (-sum(e.amount_net))::bigint as amount,
           bool_or(e.shared) as shared
         from private.project_category_entries_by_currency(p.id) e
-        join public.categories cat on cat.id = e.category_id
-        where not cat.excluded_from_pnl
+        left join public.categories cat on cat.id = e.category_id
+        where not coalesce(cat.excluded_from_pnl, false)
         group by e.currency, e.category_id
       ) s
       left join public.categories c on c.id = s.category_id
@@ -823,7 +828,7 @@ begin
               or (l.direction = 'expense' and l.pnl_role = 'project')
             )
           union all
-          select l.currency, 0, (a.amount_net * l.amount_net / l.line_amount_net)::bigint, 1
+          select l.currency, 0, coalesce(a.amount_net * l.amount_net / nullif(l.line_amount_net, 0), 0)::bigint, 1
           from public.allocations a
           join private.pnl_lines l on l.transaction_id = a.transaction_id
           where a.project_id = p.id
