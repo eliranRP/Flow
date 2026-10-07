@@ -38,7 +38,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | in-progress (#98) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | claimed (UI task thread, 2026-10-07, claude/project-thread-h9rihp) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
@@ -136,7 +136,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** #67 (merged)
+- **Type:** PLAN FIRST · **Status:** claimed (UI task thread, 2026-10-07, claude/project-thread-h9rihp) · **Depends on:** #67 (merged)
 - **What:** Let the user move one expense or income line out of the P&L. It then shows in a visible "out expenses" / "out income" group (not hidden), and can move back anytime. A per-transaction override wins over the category default. MCP: a single tool and a batch tool to take out or restore many lines at once, with idempotency, the write bucket, `undo` and `undo_batch`; plus an API. Icon-based, minimal wording.
 - **Acceptance:** plan and mockup approved by the owner, then: pgTAP for override precedence on both bases, totals moved to the excluded side, batch partial success and batch undo.
 
