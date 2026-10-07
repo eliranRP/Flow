@@ -1,6 +1,6 @@
 # MCP tools
 
-Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
+Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. A write-only token also lists `get_sync_status`, to poll its own `sync_bank` job. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
 
 Field values are data. Write tools take ids from a read tool.
 
@@ -207,9 +207,25 @@ Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior 
 
 There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_from`, lookback). Filtering after fetch would advance the cursor past dropped rows. `sync_bank` takes no dates and does not call `set_import_from`.
 
-Output `data`: `{ "added", "duplicates", "removed", "newest_date" }`. `added` is new lines. `duplicates` counts rows already stored that were refreshed in place. `removed` is voided or dropped lines. `newest_date` is the latest `doc_date` among live Mercury transactions, or null.
+`sync_bank` answers at once with `data`: `{ "job_id", "state": "running" }` and the pull keeps running after the response ([0101](../decisions/0101-sync-bank-jobs.md)). The same `idempotency_key` returns the same job (its current state, without a second pull). To retry a failed job, send a new key.
 
-`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`. A sync that was skipped because another run claimed the connector or ran inside the quiet window is `unavailable` / `retry` and is not stored.
+`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started.
+
+### get_sync_status
+
+```json
+{ "job_id": "…" }
+```
+
+Read tool. Offered to read and write tokens. Readable by the user who started the job, in the same company; another user's job is `not_found`.
+
+Output `data`: `{ "job_id", "state", "started_at", "finished_at" }` plus:
+
+- `state: "running"`: nothing else yet.
+- `state: "done"`: `added`, `duplicates`, `removed`, `newest_date`. `added` is new lines. `duplicates` counts lines already stored, skipped as new and refreshed in place. `removed` is voided or dropped lines. `newest_date` is the latest `doc_date` among live Mercury transactions, or null.
+- `state: "failed"`: `error` `{ code, message }`. `unavailable` / `retry`: another run claimed the connector, the quiet window, or Mercury's rate limit; send `sync_bank` again with a new key. `not_found` / `bank is not connected`. `refused` / `bank key was rejected; reconnect in Settings`. `refused` / `The bank sync failed.`: any other failure, including a result whose shape the finish step rejected. A job still running after 5 minutes reads as `unavailable` / `retry`.
+
+The finish step stores a result only when it is exactly `added`, `duplicates`, `removed` (whole numbers, not negative) and `newest_date` (`YYYY-MM-DD` or null).
 
 ## Loans · cycle 5
 

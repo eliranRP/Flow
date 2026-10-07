@@ -19,7 +19,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 3 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | ready |
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | ready |
-| 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | claimed (Flow thread agent, 2026-10-07, claude/project-thread-7jc300) |
+| 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
@@ -160,7 +160,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-202"></a>
 ### FLOW-202 · sync_bank returns before slow MCP clients time out
-- **Type:** MCP · **Status:** claimed (Flow thread agent, 2026-10-07, claude/project-thread-7jc300) · **Depends on:** —
+- **Type:** MCP · **Status:** in-progress (#75) · **Depends on:** —
 - **What:** A bank pull through `sync_bank` can take about 45 seconds, and clients with a 30-second timeout cut it off. The MCP token also lives 60 seconds while a pull can take 120, so the finish step can fail silently. Start the sync and return a job id, plus a read tool for the job status (or stream progress).
 - **Acceptance:** tool returns within a few seconds; status tool reports added, skipped and newest date; the finish step validates the response shape before storing.
 

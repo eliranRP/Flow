@@ -317,7 +317,7 @@ select is(
 );
 select pg_temp.as_mcp('write');
 
--- sync_bank begin/finish.
+-- sync_bank begin/finish. The job flow is covered in mcp_sync_jobs.test.sql.
 select is(
   public.mcp_sync_bank_begin('sync-none')->'error'->>'message',
   'bank is not connected',
@@ -345,19 +345,21 @@ select is(
   'proceed',
   'the same key proceeds once the bank is connected'
 );
-select is(
-  public.mcp_sync_bank_begin('sync-1')->'data'->>'state',
-  'proceed',
-  'sync begin proceeds'
+insert into mcp4 (label, id)
+select 'sync_job', (public.mcp_sync_bank_begin('sync-1')->'data'->>'job_id')::uuid;
+select isnt(
+  (select id from mcp4 where label = 'sync_job'),
+  null,
+  'sync begin proceeds with a job (decision 0101)'
 );
 select public.mcp_sync_bank_finish(
-  'sync-1',
+  (select id from mcp4 where label = 'sync_job'),
   jsonb_build_object('ok', true, 'data', jsonb_build_object('added', 1, 'duplicates', 0, 'removed', 0, 'newest_date', null))
 );
 select is(
-  public.mcp_sync_bank_begin('sync-1')->'data'->>'added',
-  '1',
-  'a replay returns the stored counts'
+  public.mcp_sync_bank_begin('sync-1')->'data'->>'job_id',
+  (select id::text from mcp4 where label = 'sync_job'),
+  'a replay returns the same job'
 );
 select pg_temp.as_mcp('read');
 select is(

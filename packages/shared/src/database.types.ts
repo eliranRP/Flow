@@ -759,7 +759,10 @@ isOneToOne: false
 { Args: { "p_idempotency_key": string }; Returns: Json
                            },
 "mcp_sync_bank_finish":
-{ Args: { "p_idempotency_key": string,"p_response": Json }; Returns: undefined
+{ Args: { "p_job_id": string,"p_response": Json }; Returns: Json
+                           },
+"mcp_sync_status":
+{ Args: { "p_job_id": string }; Returns: Json
                            },
 "mcp_undo":
 { Args: { "p_id": string,"p_idempotency_key": string,"p_kind": string }; Returns: Json
