@@ -19,7 +19,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 3 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 4 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
-| 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | in-progress |
+| 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | in-progress (#89) |
 | 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
@@ -110,7 +110,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-105"></a>
 ### FLOW-105 · Link a loan to a project
-- **Type:** SMALL CYCLE · **Status:** in-progress (server and MCP); the loan sheet picker is [FLOW-119](#flow-119) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** in-progress (#89, server and MCP); the loan sheet picker is [FLOW-119](#flow-119) · **Depends on:** —
 - **Owner's go:** 2026-10-07, in the project thread (taken off hold).
 - **What:** Optional `loans.project_id` (FK, RLS, migration), settable in MCP `add_loan` / `update_loan` (idempotency, undo, RPC). Show the loan under its project; attached payment splits inherit the loan's project.
 - **Acceptance:** cross-tenant project refusal with a positive control; split inheritance tested; undo restores.
