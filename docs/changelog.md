@@ -54,6 +54,8 @@ Per-currency display in the app. Home, projects, and project detail read `by_cur
 
 Review alongside CI, then auto-merge (FLOW-813). Reviews start as soon as a PR is pushed, while CI runs. Once the reviewers approve the current head, the coordinator turns on auto-merge (squash), and GitHub merges when `lint`, `check`, and `e2e` are green. `main` no longer requires an up-to-date branch, so a PR does not merge `main` and rerun CI after every other merge. `main` still runs the full suite before each deploy. GitHub's merge queue needs an organization-owned repo, so it is not used.
 
+One tap out of the Home setup card (FLOW-511, design reviewer's option A under the owner's standing rule for UI tasks). The quiet הסתרה link is now a 44 px ✕ "סגירת ההגדרה" in the card head. Closing the card also stops the one automatic resume, so the next launch no longer opens a setup step. The toast says "ההגדרה לא תופיע שוב. אפשר לחזור אליה מההגדרות." with ביטול, which brings both back. Settings › עוד › הגדרה ראשונה stays the way back. No migration and no MCP change (the setup flags are device-local). Decision [0111](decisions/0111-setup-card-close.md).
+
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).

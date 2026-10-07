@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { Toggle } from "../ui/toggle";
 import { TagIcon } from "../ui/icons";
 import { longHebrew } from "../ui/story-support";
+import { SetupCard } from "./card";
 import { JEV_HINT } from "./copy";
 import { SetupStep } from "./shell";
 
@@ -37,4 +38,9 @@ export const SmartTag: Story = {
       />
     </SetupStep>
   ),
+};
+
+export const HomeCard: Story = {
+  args: SmartTag.args,
+  render: () => <SetupCard done={4} steps={[5]} onDismiss={() => undefined} />,
 };

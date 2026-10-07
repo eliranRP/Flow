@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { List, ListRow } from "../ui/list-row";
+import { IconButton } from "../ui/icon-button";
+import { CloseIcon } from "../ui/icons";
 import { ProgressBar } from "../ui/progress-bar";
-import { TextLink } from "../ui/text-link";
-import { SETUP_TOTAL, STEP_TITLE } from "./copy";
+import { DISMISS_LABEL, SETUP_TOTAL, STEP_TITLE } from "./copy";
 import type { CountedStep } from "./model";
 
 function OpenRing() {
@@ -24,7 +25,9 @@ export function SetupCard({
         <h2 id="setup-card-title" className="t-title-3">
           הגדרה · <bdi className="ui-num" dir="ltr">{String(done)}</bdi> מתוך <bdi className="ui-num" dir="ltr">{String(SETUP_TOTAL)}</bdi>
         </h2>
-        <TextLink tone="quiet" chevron={false} onClick={onDismiss}>הסתרה</TextLink>
+        <IconButton label={DISMISS_LABEL} className="ui-setup-card-close" onClick={onDismiss}>
+          <CloseIcon />
+        </IconButton>
       </div>
       <div className="ui-setup-card-meter">
         <ProgressBar variant="thin" value={done} max={SETUP_TOTAL} label="התקדמות ההגדרה" />

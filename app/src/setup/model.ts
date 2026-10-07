@@ -92,7 +92,8 @@ export type EntryDecision =
 /**
  * No company always opens step 0, and that does not consume the one resume.
  * A company with every counted step already done does not start a run.
- * Otherwise the first visit opens the first not-done step. The next visit resumes once.
+ * Otherwise the first visit opens the first not-done step. The next visit resumes once,
+ * unless the user closed the Home card: that opts out of setup, resume included.
  */
 export function decideEntry(store: SetupStore, facts: SetupFacts, sessionAlreadyEntered: boolean, at: string): EntryDecision {
   if (!facts.ready) return { kind: "wait" };
@@ -108,6 +109,7 @@ export function decideEntry(store: SetupStore, facts: SetupFacts, sessionAlready
       markSession: true,
     };
   }
+  if (store.card_dismissed_at != null) return { kind: "stay" };
   if (store.run_resumed_at != null || sessionAlreadyEntered) return { kind: "stay" };
   const step = firstResumable(store, facts);
   if (step == null) return { kind: "stay" };

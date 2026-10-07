@@ -56,6 +56,6 @@ describe("setup step chrome", () => {
     expect(screen.getByRole("link", { name: "מתקדם · עוזר AI" })).toHaveAttribute("href", "/settings?sheet=assistant");
     render(<SumitFailureNote />);
     expect(screen.getByText("SUMIT עוד לא מחובר.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "הסתרה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
   });
 });
