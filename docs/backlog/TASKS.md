@@ -22,7 +22,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 6 | [FLOW-104](#flow-104) | Reversals across directions (negative income, negative expense) | SMALL CYCLE | in-progress (#76) |
 | 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
-| 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
+| 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
 | 10b | [FLOW-117](#flow-117) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
 | 10c | [FLOW-118](#flow-118) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
@@ -32,18 +32,20 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
-| 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
-| 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 20 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 21 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
-| 22 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 23 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
-| 24 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
-| 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
-| 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
-| 28 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
+| 17 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
+| 18 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
+| 19 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
+| 20 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 21 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
+| 22 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 23 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
+| 24 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
+| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 29 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
+| 30 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -464,6 +466,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
 - [ ] The token's read-only scope can't be checked at connect (we rely on the path-allowlisted client); document it.
 
+<a id="flow-511"></a>
+### FLOW-511 · Easy opt-out from the Home setup card
+- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **What:** A UX review of the setup flow and its Home card ("הגדרה • 4 מתוך 5"). The owner finds it sticky: the only way out is the small quiet הסתרה link, and it's not clear that it stops the card for good. Review the whole flow (setup runner, Home card, the "ההגדרה זמינה בהגדרות." toast, re-entry from Settings, skip flags per [0089](../decisions/0089-setup-runner.md)) and propose one clear button that opts out of setup in a single tap, with the way back from Settings. Mock up the options with Claude Design for the owner.
+- **Acceptance:** written plan and mockup; owner picks an option and the approval is written here before any build; then one SMALL UI PR with design review and a CONTROLS row.
+
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
@@ -492,9 +500,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device
-- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **Type:** BUG · **Status:** in-progress (#79) · **Depends on:** —
 - **What:** Query cache keys are shared across users and the cache isn't cleared on sign-out; saved roles stay in localStorage after sign-out; the dashboard cache isn't user-scoped, so a user switch without a reload could show the wrong company's flag. Scope keys by user and company and clear on sign-out (including an expired session or another tab).
 - **Acceptance:** tests for sign-out, a user switch without reload, and an expired session.
+
+<a id="flow-605"></a>
+### FLOW-605 · Shared-device follow-ups (#79 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] Unsaved split drafts (the `flow-split:` sessionStorage keys) survive a sign-out in the same tab. Drop them when the user changes, with a test.
+- [ ] `ToastProvider` wraps `AuthProvider`, so the last user's toast and its retry or undo action outlive a user switch. Swap the providers and add a test.
 
 ## Jev
 
