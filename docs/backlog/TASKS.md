@@ -21,9 +21,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
 | 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | in-progress (#89) |
 | 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | in-progress (#87) |
-| 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
+| 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP merged; screen next) | SMALL CYCLE | in-progress (#82) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
-| 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
+| 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
+| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
+| 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
@@ -76,13 +78,25 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-112"></a>
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default.
-- [ ] A merely suggested kept-out category already removes the line from the P&L. Decide whether suggestions count (Decisions needed).
-- [ ] `get_project` doesn't report kept-out project income.
-- [ ] Document the change in what `count` means in the P&L outputs.
-- [ ] An owner who is also a viewer is refused by `set_category_excluded_from_pnl`.
-- [ ] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#81) · **Depends on:** —
+- [x] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default. (#81: `private.pnl_name_key`; the trigger also runs on a rename into a default name.)
+- [ ] A merely suggested kept-out category already removes the line from the P&L. Moved to [FLOW-121](#flow-121).
+- [ ] `get_project` doesn't report kept-out project income. Moved to [FLOW-121](#flow-121).
+- [x] Document the change in what `count` means in the P&L outputs. (#81, TOOLS.md)
+- [x] An owner who is also a viewer is refused by `set_category_excluded_from_pnl`. (#81)
+- [x] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag. (#81: `categories.loan_part` in the database checks; the app split sheet and the Mercury hint move in [FLOW-122](#flow-122).)
+
+<a id="flow-121"></a>
+### FLOW-121 · Kept-out lines: guessed categories and project income
+- **Type:** SMALL CYCLE · **Status:** ready (item a waits on the owner's answer) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
+- **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
+- **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
+
+<a id="flow-122"></a>
+### FLOW-122 · Loan categories by key in the app and the Mercury hint
+- **Type:** SMALL CYCLE · **Status:** ready · **Depends on:** FLOW-112 (#81)
+- **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name; the categories screen's locked loan line (`loanCategoryLine` in `app/src/screens/flow-screens.tsx`, FLOW-113) matches the Hebrew names too. Read `categories.loan_part` instead. No visible change.
+- **Acceptance:** app unit test with a renamed loan category; connector test; no design review needed.
 
 <a id="flow-113"></a>
 ### FLOW-113 · Kept-out toggle on the categories screen
@@ -529,7 +543,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-602"></a>
 ### FLOW-602 · Rename a company
-- **Type:** SMALL CYCLE · **Status:** in-progress (#77) for the RPC and MCP; the screen is plan-first · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** RPC and MCP merged (#77); the screen is in-progress (#82) (option A approved by the owner on 2026-10-07: the business name is its own Settings row that opens a one-field rename sheet, decision [0108](../decisions/0108-rename-company-row.md)) · **Depends on:** —
 - **What:** An owner-only RPC and MCP tool `rename_company` (idempotency key, write bucket, undo). The in-app place is a small focused screen or sheet, not a Settings catch-all; it needs a quick mockup and can ship in a second PR.
 - **Acceptance:** viewer refused, other company refused with a positive control, undo restores, TOOLS.md.
 

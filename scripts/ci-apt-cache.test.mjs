@@ -61,3 +61,11 @@ test("an unknown mode fails", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("restore makes apt give up on a stalled mirror and retry", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync(script, "utf8");
+  assert.match(source, /Acquire::http::Timeout "30";/);
+  assert.match(source, /Acquire::https::Timeout "30";/);
+  assert.match(source, /Acquire::Retries "5";/);
+});
