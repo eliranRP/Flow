@@ -4054,6 +4054,21 @@ div.ui-check-row {
   background: var(--color-text);
 }
 
+/* FLOW-303: prev and next on the transaction card, before ⋯ in the top bar. */
+.ui-txn-end,
+.ui-txn-nav {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* An icon button that stays focusable at a list end. The cursor comes from the shared disabled rule. */
+.ui-icon-btn[aria-disabled="true"],
+.ui-icon-btn[aria-disabled="true"]:active {
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
 /* FLOW-117: the other kind's categories under the category picker. */
 .ui-reversal {
   display: flex;
