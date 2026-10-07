@@ -98,7 +98,7 @@ Input:
 }
 ```
 
-Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`.
+Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, and `meta` (the line's bank details, see [get_expense](#get_expense)).
 
 ### get_expense
 
@@ -106,9 +106,11 @@ Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transacti
 
 Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, each `{part, amount_minor, in_pnl}`. `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read.
 
+Output also has `meta` ([FLOW-304](../backlog/TASKS.md#flow-304)), the line's bank details from `get_line_meta`: `{method, card_last4, memo, account, counterparty, bank_description}`. `method` is `card`, `ach`, `wire`, `check`, `transfer`, `other`, or null when the provider gave none (manual and most SUMIT lines). `card_last4` is exactly the last 4 digits or null. `account` is the bank account's name; no account number is returned. In `memo` and `bank_description` any run of 5 or more digits keeps only its last 4 (`••1234`). Every field is null when unknown. Lines imported before FLOW-304 have only `method` (from the provider's kind), `counterparty` and `bank_description` until the next sync touches them. A failed meta read is `refused`. `list_review` and `search_expenses` rows carry the same `meta`.
+
 ### search_expenses
 
-`scope` is `pending` (default), `filed`, or `all`. `pending` filters `list_review`. `filed` and `all` call `public.search_transactions`. `id` on an expense is the transaction id.
+`scope` is `pending` (default), `filed`, or `all`. `pending` filters `list_review`. `filed` and `all` call `public.search_transactions`. `id` on an expense is the transaction id. Each expense also has `meta` (see [get_expense](#get_expense)).
 
 Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 

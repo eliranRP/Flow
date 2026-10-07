@@ -47,6 +47,7 @@ import {
   useReviewQuery,
   useMercuryStatusQuery,
   useSumitStatusQuery,
+  useLineMetaQuery,
   useTransactionQuery,
   useUnpaidQuery,
 } from "../use-books";
@@ -93,6 +94,7 @@ import { MoneyField, PercentField } from "../ui/money-field";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { RadioRow } from "../ui/radio-row";
 import { ReviewCard } from "../ui/review-card";
+import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
 import { SearchField } from "../ui/search-field";
@@ -1318,6 +1320,10 @@ export function ReviewQueue({
   );
   const shownId = (shown ?? rows[0])?.transaction_id ?? null;
   const jevLoading = jevQueue.loadingFor(shownId);
+  const metaLive = !sample && previewWrite == null;
+  const lineMeta = useLineMetaQuery(shownId, metaLive);
+  // Warm the next card's bank details so its meta line paints with the card.
+  useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
   const jev = jevQueue.stateFor(shownId);
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
@@ -1582,6 +1588,7 @@ export function ReviewQueue({
           categoryButtonRef={reviewLineFocus.category}
           onProject={holdWrites ? undefined : openProject}
           onCategory={holdWrites ? undefined : openCategory}
+          meta={lineMeta.data}
         />
       </div>
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
@@ -2384,6 +2391,7 @@ export function TransactionScreen({
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
   const [extraProjects, setExtraProjects] = useState<ChangeChoice[]>([]);
   const detail = useTransactionQuery(sample ? "" : transactionId);
+  const lineMeta = useLineMetaQuery(sample ? sample.id : transactionId, sample == null);
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
@@ -2690,12 +2698,13 @@ export function TransactionScreen({
         active={sample == null}
         readOnly={holdWrites}
       />
+      <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
       {vatShown ? (
         <List>
           <ListRow
             variant="button"
             title="חשבונית ותשלום"
-            hint="מע״מ, מספר חשבונית, שורת הבנק"
+            hint="מע״מ, מספר חשבונית"
             icon={<DocumentIcon size={22} />}
             action={<ChevronDownIcon />}
             expanded={docOpen}
