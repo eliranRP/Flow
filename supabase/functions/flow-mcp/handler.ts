@@ -3,7 +3,7 @@
 // The signed pass uses the credential row. The signing key has no user identity.
 
 import { corsHeadersFor } from "../_shared/http.ts";
-import { callTool, isWriteTool, READ_TOOL_NAMES, toolsFor } from "./tools.ts";
+import { callTool, isWriteTool, READ_TOOL_NAMES, scopeAllows, type ToolDefer, toolsFor } from "./tools.ts";
 import { signUserJwt, type SigningKey } from "./sign.ts";
 
 const PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
@@ -15,12 +15,28 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 export type Deps = {
   env: (name: string) => string | undefined;
   fetch: FetchLike;
+  /** Background work after the response (sync_bank). Without it the work runs before the response. */
+  waitUntil?: ToolDefer;
 };
+
+type EdgeRuntimeLike = { waitUntil?: (work: Promise<unknown>) => void };
+
+function edgeWaitUntil(): ToolDefer | undefined {
+  const runtime = (globalThis as { EdgeRuntime?: EdgeRuntimeLike }).EdgeRuntime;
+  const waitUntil = runtime?.waitUntil;
+  if (typeof waitUntil !== "function") return undefined;
+  return (work) => waitUntil.call(runtime, work);
+}
 
 const defaultDeps: Deps = {
   env: (name) => Deno.env.get(name),
   fetch: (input, init) => fetch(input, init),
+  waitUntil: edgeWaitUntil(),
 };
+
+// The user JWT lives 60 seconds. A call made later than this (the sync_bank
+// finish step after a long pull) signs a fresh one.
+const RESIGN_AFTER_MS = 30_000;
 
 type Route = "mcp" | "mint" | "revoke" | "status";
 
@@ -531,9 +547,7 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
       }, 200);
     };
     const knownRead = (READ_TOOL_NAMES as readonly string[]).includes(name);
-    if (isWriteTool(name)) {
-      if (!scope.includes("write")) return toolError("forbidden", "forbidden");
-    } else if (knownRead && !scope.includes("read")) {
+    if ((isWriteTool(name) || knownRead) && !scopeAllows(name, scope)) {
       return toolError("forbidden", "forbidden");
     }
     const key = signingKey(deps);
@@ -541,21 +555,33 @@ async function handleMcp(req: Request, deps: Deps): Promise<Response> {
     const userId = typeof row.user_id === "string" ? row.user_id : "";
     const companyId = typeof row.company_id === "string" ? row.company_id : "";
     if (!userId || !companyId) return jsonResponse(req, { error: "unavailable" }, 503);
-    const signed = await signUserJwt(key, {
-      issuer: `${deps.env("SUPABASE_URL") ?? ""}/auth/v1`,
-      sub: userId,
-      companyId,
-      scope,
-      mcpTid: row.id,
-      jti: crypto.randomUUID(),
-      now: Math.floor(Date.now() / 1000),
-    });
+    const mcpTid = row.id;
+    const sign = () =>
+      signUserJwt(key, {
+        issuer: `${deps.env("SUPABASE_URL") ?? ""}/auth/v1`,
+        sub: userId,
+        companyId,
+        scope,
+        mcpTid,
+        jti: crypto.randomUUID(),
+        now: Math.floor(Date.now() / 1000),
+      });
+    let signed = await sign();
+    let signedAt = Date.now();
+    const currentJwt = async () => {
+      if (Date.now() - signedAt > RESIGN_AFTER_MS) {
+        signed = await sign();
+        signedAt = Date.now();
+      }
+      return signed;
+    };
     const result = await callTool(
       name,
       record?.arguments,
       scope,
-      (rpcName, rpcBody) => userRpc(deps, signed, rpcName, rpcBody),
-      (fn, fnBody) => invokeFunction(deps, signed, fn, fnBody),
+      async (rpcName, rpcBody) => userRpc(deps, await currentJwt(), rpcName, rpcBody),
+      async (fn, fnBody) => invokeFunction(deps, await currentJwt(), fn, fnBody),
+      deps.waitUntil,
     );
     const text = JSON.stringify(result.structuredContent);
     return jsonResponse(req, {

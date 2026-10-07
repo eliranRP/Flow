@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(49);
+select plan(53);
 
 do $users$
 begin
@@ -200,6 +200,37 @@ values (
   (select id from fb_ref where label = 'alpha'), 'fb:eur-in', true
 );
 
+-- Reversals in GBP (decision 0103): the category kind decides the side. An outflow under an
+-- income category is negative income; an inflow under an expense category is negative expense.
+insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl)
+values ((select id from fb_ref where label = 'co'), 'Example sales', 'income', 62, false, false);
+insert into fb_ref (label, id) select 'sales', id from public.categories where name = 'Example sales';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, project_id, category_id, description, user_assigned
+)
+select
+  (select id from fb_ref where label = 'co'),
+  v.direction::public.txn_direction,
+  v.doc_kind::public.doc_kind,
+  v.pnl_role::public.pnl_role,
+  'posted', 'GBP',
+  v.amount, v.amount, abs(v.amount), 0, 'source',
+  '2026-06-12', case when v.direction = 'income' then '2026-06-12'::date end,
+  'manual', 'fb:GBP:' || v.ikey,
+  (select id from fb_ref where label = 'alpha'),
+  (select id from fb_ref where label = v.cat),
+  v.ikey,
+  true
+from (values
+  ('income',  'invoice', null,       20000, 'sales',     'gbp-sale'),
+  ('expense', 'expense', 'project',  -5000, 'sales',     'gbp-sale-refund'),
+  ('expense', 'expense', 'project',  -8000, 'materials', 'gbp-cost'),
+  ('income',  'receipt', 'project',   3000, 'materials', 'gbp-cost-refund')
+) as v(direction, doc_kind, pnl_role, amount, cat, ikey);
+
 -- One open expense review, one open income review, and one closed expense review.
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select t.company_id, t.id, v.status::public.review_status, 'example'
@@ -231,6 +262,16 @@ insert into fb_out (label, body) values
   ('lines:page2', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 1)),
   ('lines:last', public.get_breakdown_lines('expense', 'category', (select id::text from fb_ref where label = 'materials'), 'ILS', null, null, 'cash', false, 1, 2)),
   ('lines:unassigned', public.get_breakdown_lines('expense', 'project', 'unassigned', 'ILS'));
+
+-- Reversals follow the category kind, like Home (decision 0103).
+select is(pg_temp.total(pg_temp.out_of('in:category:invoiced'), 'GBP'), (pg_temp.cur(pg_temp.out_of('dash:invoiced'), 'GBP') ->> 'income_minor')::bigint,
+  'invoiced income with a reversal matches Home (GBP)');
+select is(pg_temp.total(pg_temp.out_of('in:category:invoiced'), 'GBP'), 15000::bigint,
+  'an outflow under an income category is negative income: 20000 - 5000');
+select is(pg_temp.total(pg_temp.out_of('in:project:cash'), 'GBP'), (pg_temp.cur(pg_temp.out_of('dash:cash'), 'GBP') ->> 'income_minor')::bigint,
+  'cash income counts the reversal whatever its document kind (GBP)');
+select is(pg_temp.total(pg_temp.out_of('ex:category'), 'GBP'), 5000::bigint,
+  'an inflow under an expense category is negative expense: 8000 - 3000');
 
 -- Totals match Home.
 select is(pg_temp.total(pg_temp.out_of('ex:category'), 'ILS'), (pg_temp.out_of('dash:cash') ->> 'expense_agorot')::bigint,

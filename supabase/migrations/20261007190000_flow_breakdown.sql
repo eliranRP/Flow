@@ -5,7 +5,8 @@
 begin;
 
 -- One row per counted line, loan-split part, or shared allocation, with the group it
--- falls in. amount_minor is signed like company_pnl's income_minor / expense_minor:
+-- falls in. The category kind decides the side (decision 0103), so a reversal is a
+-- negative amount on the side its category names. amount_minor is signed like company_pnl's income_minor / expense_minor:
 -- positive for income and for a normal expense.
 create or replace function private.breakdown_rows(
   p_company_id uuid,
@@ -48,9 +49,10 @@ as $$
     from private.pnl_lines l
     join public.transactions t on t.id = l.transaction_id
     where l.company_id = p_company_id
-      and l.direction::text = p_direction
+      and l.kind = p_direction
       and (
         p_direction = 'expense'
+        or l.direction::text = 'expense'
         or (p_basis = 'cash' and l.doc_kind in ('receipt', 'invoice_receipt'))
         or (p_basis = 'invoiced' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
       )
