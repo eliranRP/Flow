@@ -25,7 +25,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
-| 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
+| 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
@@ -47,6 +47,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 31 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
 | 32 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 33 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
+| 34 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -199,10 +200,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-203"></a>
 ### FLOW-203 · get_project docs and list_projects basis echo (#66 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] TOOLS.md: `get_project` is all-time (matches `list_projects` only without dates); `transactions[]` includes pending lines and shows shared lines at full amount; the Mercury both-bases note; `other_currencies` sub-fields with negative expenses.
-- [ ] `list_projects` should echo `basis`.
-- [ ] The `get_project` transaction sort needs an id tiebreaker (equal dates sort non-deterministically).
+- **Type:** BACKLOG NIT · **Status:** in-progress (#90) · **Depends on:** —
+- [x] TOOLS.md: `get_project` is all-time (matches `list_projects` only without dates); `transactions[]` includes pending lines and shows shared lines at full amount; the Mercury both-bases note; `other_currencies` sub-fields with negative expenses.
+- [x] `list_projects` should echo `basis`.
+- [x] The `get_project` transaction sort needs an id tiebreaker (equal dates sort non-deterministically).
 
 <a id="flow-204"></a>
 ### FLOW-204 · assign_expense_split follow-ups (#68 review)
@@ -251,6 +252,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`.
 - [ ] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1).
 - [ ] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess.
+
+<a id="flow-209"></a>
+### FLOW-209 · get_project follow-ups (#90 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `transactions[]` rows carry no `line_status`, so a pending row looks the same as a posted one. Add it.
+- [ ] `other_currencies` leaves out a shared line whose own `project_id` is this project (`l.project_id is distinct from p.id`), while `by_currency` and `shared_agorot` count it. Check whether any write path stores such rows, then align or document.
 
 ## Transactions and app UX
 
