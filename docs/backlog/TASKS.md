@@ -46,7 +46,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | plan-first |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
-| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | plan-first |
+| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | claimed (design session, 2026-10-07, claude/project-thread-ns9hdv) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
@@ -168,7 +168,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-119"></a>
 ### FLOW-119 · Project picker in the loan sheet
-- **Type:** SMALL UI · **Status:** plan-first (quick mockup, owner's approval) · **Depends on:** FLOW-105
+- **Type:** SMALL UI · **Status:** claimed (2026-10-07, claude/project-thread-ns9hdv; the design session with the design reviewer is the plan, per the owner's UI rule) · **Depends on:** FLOW-105
 - **What:** Pick or clear the loan's project in the loan sheet, and show the loan under its project.
 - **Acceptance:** mockup approved; e2e sets and clears the project; design review.
 
