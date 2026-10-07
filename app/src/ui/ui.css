@@ -309,7 +309,7 @@ a.ui-row,
 }
 
 /* Money in: income rows, income totals, Home נכנס, an income detail. Only on a figure with no
-   minus, never on the band, and always with words beside it (decision 0113). */
+   minus, never on the band, and always with words beside it (decision 0114). */
 .ui-income {
   color: var(--color-income);
 }
@@ -333,7 +333,7 @@ a.ui-row,
   min-height: var(--touch-min);
   padding-block: var(--row-pad);
   padding-inline: 0;
-  /* No row hairlines anywhere: rows are separated by their padding (decision 0113, option C). */
+  /* No row hairlines anywhere: rows are separated by their padding (decision 0114, option C). */
   border-bottom: 0;
   color: inherit;
   text-decoration: none;
@@ -403,7 +403,7 @@ a.ui-row,
   flex-direction: column;
 }
 
-/* Row titles 17/400 like Mercury (decision 0113, option C): title-3 size and line at the 400 weight.
+/* Row titles 17/400 like Mercury (decision 0114, option C): title-3 size and line at the 400 weight.
    Inputs stay body 16/500. */
 .ui-row-title {
   overflow: hidden;
@@ -521,7 +521,7 @@ a.ui-row,
   text-wrap: pretty;
 }
 
-/* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0113 moves only
+/* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0114 moves only
    the row secondary line to `meta`). Matches the skeleton and status reserve. */
 .ui-row-hint.t-hint {
   font-size: var(--type-hint-size);
@@ -1919,7 +1919,7 @@ a.ui-row,
 
 .ui-flow-label {
   color: var(--color-text-secondary);
-  /* נכנס / יצא labels read quiet, at 400 (decision 0113, option C). */
+  /* נכנס / יצא labels read quiet, at 400 (decision 0114, option C). */
   font-weight: var(--type-meta-weight);
 }
 
@@ -2805,7 +2805,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   margin: var(--space-2) 0 var(--space-4);
 }
 
-/* At 34px (decision 0113) a one-word title and its action pill can pass 320 together; the action
+/* At 34px (decision 0114) a one-word title and its action pill can pass 320 together; the action
    then wraps under the title instead of clipping it. */
 .ui-page-title-row {
   display: flex;
@@ -2980,7 +2980,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   background: var(--color-bg);
 }
 
-/* Month groups are 32px apart (decision 0113). Rows carry no hairline anywhere; the pressed and
+/* Month groups are 32px apart (decision 0114). Rows carry no hairline anywhere; the pressed and
    focus tint is drawn by ::before, so it is unaffected. */
 .ui-month + .ui-month .ui-month-head {
   margin-block-start: var(--space-8);

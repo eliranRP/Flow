@@ -72,6 +72,6 @@ export const StillLoading: Story = { args: { set: "three", complete: false } };
 export const LargeAmounts: Story = { args: { set: "large" } };
 export const OneMonth: Story = { args: { set: "one" } };
 
-/** Decision 0113: two months of income and expense rows, no hairlines, 32px between the months. */
+/** Decision 0114: two months of income and expense rows, no hairlines, 32px between the months. */
 export const TwoMonthsMercury: Story = { args: { set: "two" } };
 export const TwoMonthsMercuryDark: Story = { args: { set: "two" }, globals: { theme: "dark" } };

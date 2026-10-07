@@ -67,7 +67,7 @@ type FlowLinks = {
   period: string;
 };
 
-/** Income and expenses under the hero, below the band. Income is green (decision 0113), expenses neutral, with room between the rows. With links, each row opens its breakdown (FLOW-301). */
+/** Income and expenses under the hero, below the band. Income is green (decision 0114), expenses neutral, with room between the rows. With links, each row opens its breakdown (FLOW-301). */
 export function FlowLines({
   income,
   expense,

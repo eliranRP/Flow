@@ -40,7 +40,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0040](../decisions/0040-tailwind-v4.md) | Tailwind CSS v4. Tokens map into `@theme`. No component kit with its own look. Vaul stays for sheets. |
 | [0041](../decisions/0041-amounts-before-vat.md) | P&L amounts are before VAT. VAT is stored beside the amount and kept out of profit. |
 | [0043](../decisions/0043-assumed-vat-on-expenses.md) | An expense with no VAT split assumes 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt (`net = gross`). A subtle hint may appear on the detail screen. Home has no warning banner. |
-| [0113](../decisions/0113-income-green-type-scale.md) | Money in is `income` green with no plus, only on a figure with no minus and never on the band. Option C, full Mercury: page titles 34, section and month heads `heading` 20, row titles 17/400, list amounts `amount` 17/400, row secondary lines `meta` 15/400, project name on the band 32. No row hairlines anywhere; month groups 32px apart. Transaction rows show small raised cents, ".00" included; other lists and summaries stay whole. |
+| [0114](../decisions/0114-income-green-type-scale.md) | Money in is `income` green with no plus, only on a figure with no minus and never on the band. Option C, full Mercury: page titles 34, section and month heads `heading` 20, row titles 17/400, list amounts `amount` 17/400, row secondary lines `meta` 15/400, project name on the band 32. No row hairlines anywhere; month groups 32px apart. Transaction rows show small raised cents, ".00" included; other lists and summaries stay whole. |
 
 Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md) and [0065](../decisions/0065-review-round5.md) point 40: SUMIT is the source, and there is no Hapoalim import).
 
@@ -57,7 +57,7 @@ From [design-system.md](../../design/system/design-system.md) and guide §1:
 - Calm and airy. White page, lots of space, few numbers, detail on the next screen.
 - One accent, violet. Filled violet at most about twice per screen area (normally the + button and one primary button).
 - The coloured band is only the top of Home and the Project header.
-- Figures use the main text colour. A loss is `bad` with a minus or ▼, a gain in a change pill is `good` with ▲, and money in is `income` green with no plus. Never colour on the band. [0113](../decisions/0113-income-green-type-scale.md)
+- Figures use the main text colour. A loss is `bad` with a minus or ▼, a gain in a change pill is `good` with ▲, and money in is `income` green with no plus. Never colour on the band. [0114](../decisions/0114-income-green-type-scale.md)
 - No gradients, no emoji, no heavy shadows. Depth is the violet tint and 1px hairlines. The loading shimmer is the only gradient.
 
 ### 2.2 Colour tokens
@@ -87,7 +87,7 @@ Light and dark. The band is the same violet in both modes. Dark is a violet-tint
 | `on-band-secondary` | `#F0E8FF` | `#F0E8FF` | Labels on the band |
 | `band-chip` / `band-pill` | `#FFFFFF` | `#1E1929` | Pills sitting on the band |
 | `good` | `#15733F` | `#62CB8D` | Positive change, only with ▲ |
-| `income` | `#13703D` | `#62CB8D` | Money in: income rows and totals, Home נכנס, an income detail. No plus, never with a minus, never on the band. [0113](../decisions/0113-income-green-type-scale.md) |
+| `income` | `#13703D` | `#62CB8D` | Money in: income rows and totals, Home נכנס, an income detail. No plus, never with a minus, never on the band. [0114](../decisions/0114-income-green-type-scale.md) |
 | `bad` | `#C3302B` | `#FF8A80` | Loss or negative change, only with ▼ or minus |
 | `warning` | `#8A5700` | `#EDB866` | Warning, for example over budget |
 | `error` | `#C3302B` | `#FF8A80` | Input error border and message |
@@ -111,7 +111,7 @@ Theme switching: follow the OS (`prefers-color-scheme`). `data-theme="light"` or
 
 ### 2.3 Type scale
 
-Rubik. Weights mean something: 400 hints, row titles, row secondary lines and list amounts, 500 body, inputs and labels, 600 titles, heads, hero and display amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), [0113](../decisions/0113-income-green-type-scale.md), guide §5.
+Rubik. Weights mean something: 400 hints, row titles, row secondary lines and list amounts, 500 body, inputs and labels, 600 titles, heads, hero and display amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), [0114](../decisions/0114-income-green-type-scale.md), guide §5.
 
 | Style | Size | Line | Weight | Use |
 |---|---|---|---|---|
@@ -201,7 +201,7 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed | The one tinted block on Home |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
-| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. [0113](../decisions/0113-income-green-type-scale.md) |
+| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. [0114](../decisions/0114-income-green-type-scale.md) |
 | Change pill | ▼ / ▲ plus % | On the band it sits in a solid pill |
 | Tab bar | בית, פרויקטים, +, לאישור (neutral badge), הגדרות | Active tab is violet icon and label |
 | Bottom sheet | scrim, grab handle, title, ✕ | ✕, scrim, swipe, and Android back save a valid pending change, then close. An incomplete change stays open and says why, with ביטול השינוי beside that sentence. A second dismiss discards it and closes. A dismiss during a save waits for the save, then closes. Push a history entry. [0075](../decisions/0075-save-on-tap-and-on-leave.md) |

@@ -66,7 +66,7 @@ describe("ProjectDetailScreen currency", () => {
     expect(categoryAmount?.closest("bdi")).toHaveAttribute("dir", "ltr");
     fireEvent.click(screen.getByText("תנועות אחרונות"));
     const txnAmount = screen.getByText("Sample vendor").closest(".ui-row")?.querySelector(".ui-num");
-    // Transaction rows show cents like Mercury, ".00" included, drawn small (decision 0113, option C).
+    // Transaction rows show cents like Mercury, ".00" included, drawn small (decision 0114, option C).
     expect(txnAmount?.textContent).toBe("−$1,250.00");
     expect(txnAmount?.querySelector(".ui-num-cents")?.textContent).toBe(".00");
     expect(screen.queryByRole("link", { name: /categories/ })).not.toBeInTheDocument();

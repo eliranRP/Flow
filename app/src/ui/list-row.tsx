@@ -241,7 +241,7 @@ function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transact
   if (props.variant === "transaction") {
     const abs = props.agorot < 0n ? -props.agorot : props.agorot;
     // The amount's sign wins over the direction: a negative income (an income credit) shows its
-    // minus in the main text colour and is never green (decision 0113).
+    // minus in the main text colour and is never green (decision 0114).
     const income = props.sign === "in" && props.agorot >= 0n;
     // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
     return (

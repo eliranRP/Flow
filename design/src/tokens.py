@@ -5,7 +5,7 @@
 # logo = wordmark colour off the band (brand violet / lilac, decision 0031); on the band the wordmark stays on-band (white).
 # gsi-* = "Sign in with Google" button, fixed by Google branding (light theme, same in both modes: white fill, #747775 1px stroke, #1F1F1F text).
 #   In light the white fill equals bg, so the stroke carries the edge; in dark the white fill itself is the edge.
-# income = money in (income rows, income totals, Home נכנס, income detail), never on the band and never with a minus (decision 0113).
+# income = money in (income rows, income totals, Home נכנס, income detail), never on the band and never with a minus (decision 0114).
 #   Kept apart from good (▲ change) so the two meanings can move apart; light is one step darker so it passes on tint-pressed.
 # skeleton* = loading placeholders (decorative, exempt from AA). -band variants sit on the violet band (= white 20% / 32% over #7B3FE4).
 def _lum(h):
@@ -41,7 +41,7 @@ COLOR = {
   "gsi-bg": "#FFFFFF", "gsi-border": "#747775", "gsi-text": "#1F1F1F",
  },
 }
-TYPE = {  # size px, line-height, weight. heading, amount and meta added and title-1 raised to 34 by decision 0113 (option C).
+TYPE = {  # size px, line-height, weight. heading, amount and meta added and title-1 raised to 34 by decision 0114 (option C).
  "hero": (52, 1.15, 600), "display": (36, 1.2, 600), "title-1": (34, 1.15, 600), "title-2": (22, 1.35, 600), "band-title": (32, 1.25, 600),
  "heading": (20, 1.3, 600), "title-3": (17, 1.45, 600), "amount": (17, 1.45, 400), "body": (16, 1.5, 500), "label": (15, 1.5, 500),
  "meta": (15, 1.4, 400), "hint": (13, 1.45, 400), "micro": (11, 1.3, 500),

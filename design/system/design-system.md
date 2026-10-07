@@ -7,7 +7,7 @@ Tokens live in `design-tokens.json`. The boards are `ds-1…ds-6` (light and dar
 - Calm and airy: white page, lots of space, few numbers per screen, detail on inner screens.
 - One accent, violet. It's used on the + button, the primary button, links and the active tab. Filled violet appears at most about twice per screen area.
 - The coloured band is used only at the top of Home and the Project header. All other screens are white with violet accents.
-- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with no plus. Never colour on the band (decision 0113).
+- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with no plus. Never colour on the band (decision 0114).
 - No gradients, no emoji, no heavy shadows. Depth comes from the violet tint and hairlines.
 
 ## Colour (light / dark)
