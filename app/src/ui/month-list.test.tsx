@@ -86,6 +86,22 @@ describe("MonthList", () => {
     expect(document.body.textContent).not.toMatch(/[+−]₪0\b/);
   });
 
+  it("leaves out a zero expense side too", () => {
+    renderList([row("a", "2026-09-01", 50_000n, "income"), row("b", "2026-08-01", 70_000n, "expense")]);
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הכנסות +₪500");
+  });
+
+  it("totals stored-negative expenses by their size, with one minus", () => {
+    renderList([row("a", "2026-09-02", -35_000n, "expense"), row("b", "2026-09-01", -15_000n, "expense"), row("c", "2026-08-01", 70_000n, "income")]);
+    expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")?.textContent).toBe("הוצאות −₪500");
+  });
+
+  it("draws no empty total line when a currency rounds to zero", () => {
+    renderList([row("a", "2026-09-01", 40n, "expense", "USD"), row("b", "2026-09-02", 50_000n, "expense"), row("c", "2026-08-01", 70_000n, "income")]);
+    const september = screen.getByRole("group", { name: "ספטמבר 2026" });
+    expect(september.querySelectorAll(".ui-month-line")).toHaveLength(1);
+  });
+
   it("shows only the name of the last month while more rows may load", () => {
     renderList(NEWEST_FIRST, false);
     expect(screen.getByRole("group", { name: "ספטמבר 2026" }).querySelector(".ui-month-totals")).not.toBeNull();

@@ -77,13 +77,13 @@ function MonthTotalLine({ total }: { total: MonthTotal }) {
     <span className="ui-month-line">
       {income != null ? (
         <span>
-          <span className="ui-vh">הכנסות </span>
+          <span className="sr-only">הכנסות </span>
           <bdi dir="ltr" className="ui-num">{income}</bdi>
         </span>
       ) : null}
       {expense != null ? (
         <span>
-          <span className="ui-vh">הוצאות </span>
+          <span className="sr-only">הוצאות </span>
           <bdi dir="ltr" className="ui-num">{expense}</bdi>
         </span>
       ) : null}

@@ -52,6 +52,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
 | 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
+| 37 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -314,6 +315,15 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/AHkHqk9WgUeCXb9wHYwdVB) (compact sticky header, month name, +income −expenses per currency), under the owner's standing rule for UI tasks.
 - **What:** One list, no new page: a sticky month header (for example "יולי 2026") between months, with that month's income and expenses (expenses with a minus, `$` for USD). Built once in the shared list component so every list gets it (project lists, recent transactions, review lists).
 - **Acceptance:** mockup approved; subtotals match the rows; RTL and 320px checks; design review.
+
+<a id="flow-313"></a>
+### FLOW-313 · Month dividers follow-ups (#98 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-302 (#98)
+- [ ] The month totals add rows by direction: a shared line counts at its full amount and a refund counts as income, so a month header is not that project's P&L for the month. Owner to decide whether that's fine or the header should follow the P&L rules (Decisions needed).
+- [ ] Switching between the flat and the grouped list (a held order splitting a month, or a second month loading) remounts the rows, so a focused row loses focus.
+- [ ] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines.
+- [ ] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed.
+- [ ] `MonthList` takes a `className` no caller passes; drop it or use it.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
