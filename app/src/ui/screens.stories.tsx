@@ -544,6 +544,27 @@ export const ProjectCategory: Story = {
   ),
 };
 
+/** FLOW-107. Loan payments show their parts in the hint; one waits for review. */
+const loanCategorySample = {
+  categoryName: "תשלומי הלוואה",
+  projectName: "וילה רעננה",
+  rows: [
+    { id: "l1", description: "Northgate Home Loans", doc_date: "2026-09-05", amount_net: -245_000n },
+    { id: "l2", description: "Northgate Home Loans", doc_date: "2026-08-05", amount_net: -245_000n },
+    { id: "l3", description: "Northgate Home Loans", doc_date: "2026-07-05", amount_net: -245_000n },
+  ],
+  loanMarks: { l1: "split", l2: "split", l3: "review" } as const,
+};
+
+export const ProjectCategoryLoanSplit: Story = {
+  render: () => (
+    <StoryRoute entry="/projects/a/categories/c1">
+      <ExampleBar />
+      <ProjectCategoryScreen sample={loanCategorySample} backTo="/projects/a" />
+    </StoryRoute>
+  ),
+};
+
 export const ProjectCategoryEmpty: Story = {
   render: () => (
     <StoryRoute entry="/projects/a/categories/c1">

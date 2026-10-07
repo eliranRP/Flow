@@ -439,6 +439,27 @@ a.ui-row,
 
 .ui-loan-amount {
   color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* FLOW-107. A part kept out of the profit: icon and words, muted, never only colour. */
+.ui-loan-out {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ui-loan-out svg {
+  flex: none;
+}
+
+.ui-loan-spacer {
+  display: block;
+  inline-size: 24px;
+}
+
+.ui-loan-total .ui-row-title {
+  font-weight: var(--type-title-3-weight);
 }
 
 .ui-num-field {

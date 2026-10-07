@@ -4,6 +4,7 @@ import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRo
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoanTransactionSplit } from "./loan-match";
+import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { absAgorot } from "../agorot";
 import * as reviewE2eFixture from "../dev/review-e2e-fixture";
 import { overheadHint, shownProfit } from "../overhead";
@@ -588,6 +589,7 @@ export function ProjectDetailScreen({
   const [overheadOn, setOverheadOn] = useState(sample?.after_overhead === true);
   const wantedOverhead = useRef(false);
   const heldTransactions = useHeldOrder((sample ?? detail.data)?.transactions ?? [], (txn) => txn.id);
+  const projectMarks = useLoanMarks(heldTransactions.map((txn) => txn.id), sample == null && moves);
   useEffect(() => {
     if (sample) return;
     if (detail.data) setOverheadOn(detail.data.after_overhead === true);
@@ -722,7 +724,7 @@ export function ProjectDetailScreen({
                 key={txn.id}
                 variant="transaction"
                 title={txn.description}
-                hint={`${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`}
+                {...loanRowProps(projectMarks.get(txn.id), `${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`)}
                 agorot={txn.amount_net}
                 sign={txn.direction === "income" ? "in" : "out"}
                 currency={txn.currency ?? "ILS"}
@@ -874,6 +876,7 @@ export function FiledTodayScreen({
   const filed = useFiledTodayQuery(shown == null);
   const phase = shown ? ({ kind: "ready" } as const) : screenPhase(preview, filed);
   const rows = useHeldOrder(shown ?? filed.data ?? [], (row) => row.id);
+  const filedMarks = useLoanMarks(rows.map((row) => row.id), shown == null);
   return (
     <ScreenState
       title="שויכו היום"
@@ -889,7 +892,7 @@ export function FiledTodayScreen({
             key={row.id}
             variant="transaction"
             title={row.supplier_name ?? row.description}
-            hint={[row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · ")}
+            {...loanRowProps(filedMarks.get(row.id), [row.project_name, row.category_name].filter((part) => part != null && part !== "").join(" · "))}
             agorot={row.amount_net}
             sign={row.direction === "income" ? "in" : "out"}
             source="invoice"
@@ -1725,6 +1728,8 @@ type CategorySample = {
   rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
   /** Shows עוד תנועות until the rest of the sample rows are revealed. */
   pageSize?: number;
+  /** FLOW-107. Loan split marks by row id, for stories. */
+  loanMarks?: Record<string, LoanMark>;
 };
 
 export function ProjectCategoryScreen({
@@ -1744,6 +1749,7 @@ export function ProjectCategoryScreen({
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   const heldRows = useHeldOrder(loadedRows, (row) => row.id);
+  const liveMarks = useLoanMarks(heldRows.map((row) => row.id), sample == null);
   const back = `/projects/${projectId}${search}`;
   if (phase.kind === "loading" || phase.kind === "error") {
     return <ScreenState title="קטגוריה" backTo={back} phase={phase} onRetry={() => { void category.refetch(); }} />;
@@ -1769,7 +1775,7 @@ export function ProjectCategoryScreen({
               key={txn.id}
               variant="transaction"
               title={txn.description}
-              hint={formatDayMonth(txn.doc_date)}
+              {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
               agorot={txn.amount_net}
               sign="out"
               source="invoice"

@@ -29,7 +29,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 13 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
 | 14 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 15 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | claimed (UI task 2 thread, 2026-10-07, claude/project-thread-onkan2), plan with owner |
+| 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | in-progress (#83) |
 | 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
 | 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
@@ -96,7 +96,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-107"></a>
 ### FLOW-107 · Loan split breakdown on the transaction
-- **Type:** SMALL UI · **Status:** claimed (UI task 2 thread, 2026-10-07, claude/project-thread-onkan2); mockup goes to the owner before any build · **Depends on:** FLOW-101 (merged, #70)
+- **Type:** SMALL UI · **Status:** in-progress (#83) · **Depends on:** FLOW-101 (merged, #70)
+- **Approved:** owner chose option A of the [mockups](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) on 2026-10-07 (parts list with icons, minus, total, "מחוץ לרווח", "נספר ברווח"; list rows "3 חלקים"). Decision [0107](../decisions/0107-loan-split-on-the-transaction.md).
 - **What:** When a bank line is a split loan payment, show its parts (principal, interest, escrow) on the transaction row and in the detail, so the expense makes sense. Icon-based, minimal wording, expenses with a minus. MCP: `get_expense` returns the split parts.
 - **Acceptance:** quick mockup approved; parts add up to the line amount on screen; MCP test; design review.
 
