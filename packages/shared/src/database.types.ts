@@ -722,6 +722,9 @@ isOneToOne: false
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_assign_expense_split":
+{ Args: { "p_category_id"?: string,"p_idempotency_key": string,"p_shares": Json,"p_transaction_id": string }; Returns: Json
+                           },
 "mcp_assign_expenses":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },

@@ -65,6 +65,8 @@ insert into mcpsplit (label, id) select 'south', id from public.projects where n
 insert into mcpsplit (label, id)
 select 'materials', id from public.categories where name = 'חומרים' and kind = 'expense';
 
+reset role;
+
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
@@ -98,17 +100,15 @@ select 'txn', t.project_id, t.category_id, t.pnl_role::text,
 from public.transactions t
 where t.idempotency_key = 'mcpsplit:subscription';
 
-reset role;
-select tests.authenticate_as_service_role();
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select tests.get_supabase_uid('mcpsplit_owner'), c.id, 'hash-write', 'kid', array['write']::text[], '2099-01-01'::timestamptz
+select tests.get_supabase_uid('mcpsplit_owner'), c.id, 'hash-mcpsplit-write1', 'kid', array['write']::text[], '2099-01-01'::timestamptz
 from mcpsplit c where c.label = 'company';
-insert into mcpsplit (label, id) select 'write', id from private.mcp_credentials where token_hash = 'hash-write';
+insert into mcpsplit (label, id) select 'write', id from private.mcp_credentials where token_hash = 'hash-mcpsplit-write1';
 
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select tests.get_supabase_uid('mcpsplit_owner'), c.id, 'hash-read', 'kid', array['read']::text[], '2099-01-01'::timestamptz
+select tests.get_supabase_uid('mcpsplit_owner'), c.id, 'hash-mcpsplit-read01', 'kid', array['read']::text[], '2099-01-01'::timestamptz
 from mcpsplit c where c.label = 'company';
-insert into mcpsplit (label, id) select 'read', id from private.mcp_credentials where token_hash = 'hash-read';
+insert into mcpsplit (label, id) select 'read', id from private.mcp_credentials where token_hash = 'hash-mcpsplit-read01';
 
 select tests.authenticate_as('mcpsplit_other');
 select lives_ok($$select public.create_company('Other Co', true)$$, 'other company');
@@ -132,6 +132,19 @@ select is(
   )->'error'->>'code',
   'validation',
   'shares that do not sum to 100 are validation'
+);
+
+select is(
+  public.mcp_assign_expense_split(
+    'split-dup',
+    (select id from mcpsplit where label = 'txn'),
+    jsonb_build_array(
+      jsonb_build_object('project_id', (select id::text from mcpsplit where label = 'north'), 'share', 50),
+      jsonb_build_object('project_id', (select id::text from mcpsplit where label = 'north'), 'share', 50)
+    )
+  )->'error'->>'code',
+  'validation',
+  'a repeated project is validation'
 );
 
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
@@ -165,11 +178,18 @@ select is(
     join public.transactions t on t.id = a.transaction_id
     where t.idempotency_key = 'mcpsplit:subscription'
   ),
-  jsonb_build_array(
-    jsonb_build_object('project_id', (select id from mcpsplit where label = 'north'), 'share_bp', 5000),
-    jsonb_build_object('project_id', (select id from mcpsplit where label = 'south'), 'share_bp', 5000)
+  (
+    select jsonb_agg(jsonb_build_object('project_id', m.id, 'share_bp', 5000) order by m.id)
+    from mcpsplit m
+    where m.label in ('north', 'south')
   ),
   'allocations are 50/50'
+);
+
+select is(
+  (select category_id from public.transactions where idempotency_key = 'mcpsplit:subscription'),
+  (select id from mcpsplit where label = 'materials'),
+  'split sets the category'
 );
 
 select is(
@@ -188,11 +208,14 @@ select is(
   'idempotent replay returns the stored response'
 );
 
+reset role;
 insert into mcpsplit (label, id)
 select 'undo', w.reassign_id
 from private.mcp_writes w
 join mcpsplit t on t.id = w.transaction_id
 where t.label = 'txn';
+
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
 
 select is(
   (
@@ -234,11 +257,42 @@ select is(
   'undo restores prior allocation'
 );
 
+select is(
+  public.mcp_assign_expense_split(
+    'split-unknown-project',
+    (select id from mcpsplit where label = 'txn'),
+    jsonb_build_array(
+      jsonb_build_object('project_id', (select id::text from mcpsplit where label = 'north'), 'share', 50),
+      jsonb_build_object('project_id', gen_random_uuid()::text, 'share', 50)
+    )
+  )->'error'->>'message',
+  'project or category not found',
+  'a project outside the company is refused'
+);
+
+select is(
+  public.mcp_assign_expense_split(
+    'split-income-category',
+    (select id from mcpsplit where label = 'txn'),
+    jsonb_build_array(
+      jsonb_build_object('project_id', (select id::text from mcpsplit where label = 'north'), 'share', 50),
+      jsonb_build_object('project_id', (select id::text from mcpsplit where label = 'south'), 'share', 50)
+    ),
+    (
+      select c.id from public.categories c
+      where c.company_id = (select id from mcpsplit where label = 'company') and c.kind = 'income'
+      order by c.id limit 1
+    )
+  )->'error'->>'message',
+  'category kind must match the direction',
+  'an income category on an expense is refused'
+);
+
 reset role;
 insert into private.mcp_credentials (user_id, company_id, token_hash, pepper_kid, scope, expires_at)
-select tests.get_supabase_uid('mcpsplit_other'), c.id, 'hash-other', 'kid', array['write']::text[], '2099-01-01'::timestamptz
+select tests.get_supabase_uid('mcpsplit_other'), c.id, 'hash-mcpsplit-otherw', 'kid', array['write']::text[], '2099-01-01'::timestamptz
 from mcpsplit c where c.label = 'other_company';
-insert into mcpsplit (label, id) select 'other_write', id from private.mcp_credentials where token_hash = 'hash-other';
+insert into mcpsplit (label, id) select 'other_write', id from private.mcp_credentials where token_hash = 'hash-mcpsplit-otherw';
 
 do $$ begin perform pg_temp.as_mcp('other_write', 'mcpsplit_other'); end $$;
 
