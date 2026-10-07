@@ -176,12 +176,12 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
 test("the assistant settings stories stay inside 320, 360, and 390", async ({ page }) => {
   test.setTimeout(180_000);
   const stories = [
-    "screens-routes--settings-assistant-empty",
-    "screens-routes--settings-assistant-loading",
-    "screens-routes--settings-assistant-error",
-    "screens-routes--settings-assistant-expired",
-    "screens-routes--settings-assistant-no-company",
-    "screens-routes--settings-assistant-connected",
+    "screens-routes--connections-assistant-empty",
+    "screens-routes--connections-assistant-loading",
+    "screens-routes--connections-assistant-error",
+    "screens-routes--connections-assistant-expired",
+    "screens-routes--connections-assistant-no-company",
+    "screens-routes--connections-assistant-connected",
     "screens-routes--settings-assistant-scope",
     "screens-routes--settings-assistant-secret",
     "screens-routes--settings-assistant-help",
@@ -424,7 +424,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
     { id: "components-reviewcard--suggestion", selector: ".ui-review-ai .ui-row", hover: true },
-    { id: "screens-routes--settings-connected", selector: "a.ui-row", name: "קטגוריות", hover: true },
+    { id: "screens-routes--settings-business-row", selector: "a.ui-row", name: "קטגוריות", hover: true },
   ];
   const failures: string[] = [];
   for (const item of cases) {
