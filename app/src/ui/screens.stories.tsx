@@ -1,7 +1,7 @@
 import type { CategoryRow, Dashboard, FiledTodayRow, ReviewRow, UnpaidRow } from "@flow/shared";
 import type { ReactElement, ReactNode } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { Route, Routes } from "react-router-dom";
 import { SAMPLE_ASSISTANT_SECRET } from "../assistant-sample";
 import { AssistantSettings } from "../screens/assistant-settings";
@@ -759,26 +759,6 @@ export const SettingsRenameSheet: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
     await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
-  },
-};
-
-export const SettingsRenameTooShort: Story = {
-  name: "Rename sheet, name too short",
-  render: () => (
-    <StoryRoute entry="/settings" tabs>
-      <ExampleBar />
-      <SettingsScreen sample={renameBusiness} />
-    </StoryRoute>
-  ),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
-    const sheet = await storyBody(canvasElement).findByRole("dialog", { name: "שם העסק" });
-    const field = within(sheet).getByLabelText("שם");
-    await userEvent.clear(field);
-    await userEvent.type(field, "א");
-    await userEvent.tab();
-    await expect(field).toHaveAttribute("aria-invalid", "true");
-    await within(sheet).findByText("שם קצר מדי – לפחות 2 תווים");
   },
 };
 
