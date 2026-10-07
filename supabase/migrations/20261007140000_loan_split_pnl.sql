@@ -8,6 +8,7 @@ with split as (
   select
     s.transaction_id,
     count(*) as parts,
+    sum(s.amount_minor) as parts_minor,
     bool_or(s.needs_review) as flagged
   from public.loan_splits s
   group by s.transaction_id
@@ -30,6 +31,7 @@ select
   false as loan_split_fallback
 from public.transactions t
 join split sp on sp.transaction_id = t.id and sp.parts = 3 and not sp.flagged
+  and sp.parts_minor = abs(t.amount_net)
 join public.loan_splits s on s.transaction_id = t.id
 left join public.categories c on c.id = s.category_id
 where t.removed_at is null
@@ -57,7 +59,10 @@ left join public.categories c on c.id = t.category_id
 left join split sp on sp.transaction_id = t.id
 where t.removed_at is null
   and t.line_status = 'posted'
-  and (sp.transaction_id is null or sp.parts <> 3 or sp.flagged or t.vat_amount <> 0);
+  and (
+    sp.transaction_id is null or sp.parts <> 3 or sp.flagged or t.vat_amount <> 0
+    or sp.parts_minor <> abs(t.amount_net)
+  );
 
 revoke all on private.pnl_lines from public, anon;
 grant select on private.pnl_lines to authenticated, service_role;
@@ -151,7 +156,7 @@ begin
   shared_alloc as (
     select
       a.project_id,
-      coalesce(a.amount_net * e.amount_net / nullif(e.line_amount_net, 0), 0)::bigint as amount_net,
+      coalesce(private.div_half_even(a.amount_net::numeric * e.amount_net, e.line_amount_net), 0) as amount_net,
       e.in_period,
       e.in_prev
     from public.allocations a
@@ -210,7 +215,7 @@ begin
     select
       a.project_id,
       e.currency,
-      coalesce(a.amount_net * e.amount_net / nullif(e.line_amount_net, 0), 0)::bigint as amount_net,
+      coalesce(private.div_half_even(a.amount_net::numeric * e.amount_net, e.line_amount_net), 0) as amount_net,
       e.in_period,
       e.in_prev
     from public.allocations a
@@ -270,7 +275,7 @@ begin
   currency_line_counts as (
     select
       l.currency,
-      count(*)::integer as line_count
+      count(distinct l.transaction_id)::integer as line_count
     from private.pnl_lines l
     where l.company_id = p_company_id
       and l.in_pnl
@@ -381,7 +386,7 @@ begin
           l.currency,
           coalesce(sum(l.amount_net) filter (where l.direction = 'income'), 0)::bigint as income_minor,
           coalesce(sum(l.amount_net) filter (where l.direction = 'expense'), 0)::bigint as expense_minor,
-          count(*)::integer as line_count
+          count(distinct l.transaction_id)::integer as line_count
         from private.pnl_lines l
         where l.company_id = p_company_id
           and l.in_pnl
@@ -478,6 +483,32 @@ $$;
 revoke all on function public.company_pnl(uuid, date, date, text) from public, anon;
 grant execute on function public.company_pnl(uuid, date, date, text) to authenticated, service_role;
 
+-- One project's share of one split part: share * part / line, rounded half to even.
+-- Each part is within half a minor unit, so a project's parts sum to its share within 1.
+-- A zero line returns null; callers coalesce it to 0 (the #67 guard).
+create or replace function private.div_half_even(p_num numeric, p_den numeric)
+returns bigint
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_num is null or p_den is null or p_den = 0 then null
+    else (
+      div(p_num, p_den)
+      + case
+          when 2 * abs(mod(p_num, p_den)) > abs(p_den)
+            or (2 * abs(mod(p_num, p_den)) = abs(p_den) and mod(div(p_num, p_den), 2) <> 0)
+          then sign(p_num) * sign(p_den)
+          else 0
+        end
+    )::bigint
+  end;
+$$;
+
+revoke all on function private.div_half_even(numeric, numeric) from public, anon;
+grant execute on function private.div_half_even(numeric, numeric) to authenticated, service_role;
+
 -- The project category totals and the category drill-down read these two helpers.
 -- They now read the view, so a split line shows under its part categories.
 create or replace function private.project_category_entries_by_currency(p_project uuid)
@@ -515,7 +546,7 @@ as $$
   select l.category_id, l.transaction_id, t.description, l.doc_date,
     case
       when l.part is null then a.amount_net
-      else coalesce(a.amount_net * l.amount_net / nullif(l.line_amount_net, 0), 0)::bigint
+      else coalesce(private.div_half_even(a.amount_net::numeric * l.amount_net, l.line_amount_net), 0)
     end,
     t.created_at, true, l.currency
   from public.allocations a
@@ -554,5 +585,276 @@ $$;
 
 revoke all on function private.project_category_entries(uuid) from public, anon;
 grant execute on function private.project_category_entries(uuid) to authenticated, service_role;
+
+-- get_project's shared amounts round each part the same way.
+create or replace function public.get_project(p_id uuid, p_basis text)
+returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  basis text;
+  result jsonb;
+  profit bigint;
+  available boolean;
+  share bigint;
+  waiting jsonb;
+begin
+  select c.id into cid
+    from public.companies c
+    where c.owner_id = (select auth.uid());
+  if cid is null then
+    return null;
+  end if;
+  basis := case when p_basis = 'invoiced' then 'invoiced' else 'cash' end;
+
+  waiting := public.project_waiting(p_id);
+
+  select jsonb_build_object(
+    'id', p.id,
+    'name', p.name,
+    'status', p.status,
+    'state_label', p.state_label,
+    'budget_agorot', p.budget_agorot,
+    'sumit_budget_section_id', p.sumit_budget_section_id,
+    'after_overhead', coalesce(p.after_overhead, (select c.after_overhead from public.companies c where c.id = cid)),
+    'income_agorot', coalesce((
+      select sum(l.amount_net) from private.pnl_lines l
+      where l.project_id = p.id and l.direction = 'income'
+        and l.in_pnl
+        and l.currency = 'ILS'
+        and (
+          (basis = 'cash' and l.doc_kind in ('receipt', 'invoice_receipt'))
+          or (basis = 'invoiced' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+        )
+    ), 0),
+    'direct_agorot', -coalesce((
+      select sum(l.amount_net) from private.pnl_lines l
+      where l.project_id = p.id and l.direction = 'expense' and l.pnl_role = 'project'
+        and l.in_pnl
+        and l.currency = 'ILS'
+    ), 0),
+    'shared_agorot', -coalesce((
+      select sum(coalesce(private.div_half_even(a.amount_net::numeric * l.amount_net, l.line_amount_net), 0))
+      from public.allocations a
+      join private.pnl_lines l on l.transaction_id = a.transaction_id
+      where a.project_id = p.id and l.pnl_role = 'shared' and l.in_pnl
+        and l.currency = 'ILS'
+    ), 0),
+    'by_currency', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'currency', b.currency,
+        'income_minor', b.income_minor,
+        'direct_minor', b.direct_minor,
+        'shared_minor', b.shared_minor,
+        'profit_minor', b.income_minor - b.direct_minor - b.shared_minor
+      ) order by b.currency)
+      from (
+        select
+          parts.currency,
+          coalesce(sum(parts.income_minor), 0)::bigint as income_minor,
+          coalesce(sum(parts.direct_minor), 0)::bigint as direct_minor,
+          coalesce(sum(parts.shared_minor), 0)::bigint as shared_minor
+        from (
+          select l.currency as currency,
+            case when l.direction = 'income' and (
+                (basis = 'cash' and l.doc_kind in ('receipt', 'invoice_receipt'))
+                or (basis = 'invoiced' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+              ) then l.amount_net else 0 end as income_minor,
+            case when l.direction = 'expense' and l.pnl_role = 'project' then -l.amount_net else 0 end as direct_minor,
+            0::bigint as shared_minor
+          from private.pnl_lines l
+          where l.project_id = p.id
+            and l.in_pnl
+          union all
+          select l.currency as currency,
+            0::bigint,
+            0::bigint,
+            -coalesce(private.div_half_even(a.amount_net::numeric * l.amount_net, l.line_amount_net), 0) as shared_minor
+          from public.allocations a
+          join private.pnl_lines l on l.transaction_id = a.transaction_id
+          where a.project_id = p.id
+            and l.pnl_role = 'shared'
+            and l.in_pnl
+        ) parts
+        group by parts.currency
+      ) b
+    ), '[]'::jsonb),
+    'categories', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', c.id,
+        'name', c.name,
+        'amount_agorot', s.amount,
+        'has_shared_share', s.shared
+      ) order by s.amount desc, c.name)
+      from (
+        select e.category_id,
+          (-sum(e.amount_net))::bigint as amount,
+          bool_or(e.shared) as shared
+        from private.project_category_entries(p.id) e
+        left join public.categories cat on cat.id = e.category_id
+        where not coalesce(cat.excluded_from_pnl, false)
+        group by e.category_id
+      ) s
+      left join public.categories c on c.id = s.category_id
+    ), '[]'::jsonb),
+    'categories_by_currency', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'currency', s.currency,
+        'id', c.id,
+        'name', c.name,
+        'amount_minor', s.amount,
+        'has_shared_share', s.shared
+      ) order by s.currency, s.amount desc, c.name)
+      from (
+        select e.currency,
+          e.category_id,
+          (-sum(e.amount_net))::bigint as amount,
+          bool_or(e.shared) as shared
+        from private.project_category_entries_by_currency(p.id) e
+        left join public.categories cat on cat.id = e.category_id
+        where not coalesce(cat.excluded_from_pnl, false)
+        group by e.currency, e.category_id
+      ) s
+      left join public.categories c on c.id = s.category_id
+    ), '[]'::jsonb),
+    'excluded_categories_by_currency', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'currency', s.currency,
+        'id', c.id,
+        'name', c.name,
+        'amount_minor', s.amount,
+        'has_shared_share', s.shared
+      ) order by s.currency, s.amount desc, c.name)
+      from (
+        select e.currency,
+          e.category_id,
+          (-sum(e.amount_net))::bigint as amount,
+          bool_or(e.shared) as shared
+        from private.project_category_entries_by_currency(p.id) e
+        join public.categories cat on cat.id = e.category_id
+        where cat.excluded_from_pnl
+        group by e.currency, e.category_id
+      ) s
+      left join public.categories c on c.id = s.category_id
+    ), '[]'::jsonb),
+    'other_currencies', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'currency', bucket.currency,
+        'income_minor', bucket.income_minor,
+        'expense_minor', bucket.expense_minor,
+        'count', bucket.line_count
+      ) order by bucket.currency)
+      from (
+        select
+          parts.currency,
+          sum(parts.income_minor)::bigint as income_minor,
+          sum(parts.expense_minor)::bigint as expense_minor,
+          sum(parts.line_count)::integer as line_count
+        from (
+          select
+            l.currency,
+            case when l.direction = 'income' then l.amount_net else 0 end as income_minor,
+            case when l.direction = 'expense' then l.amount_net else 0 end as expense_minor,
+            1 as line_count
+          from private.pnl_lines l
+          where l.project_id = p.id
+            and l.in_pnl
+            and l.currency <> 'ILS'
+            and (
+              (l.direction = 'income' and (
+                (basis = 'cash' and l.doc_kind in ('receipt', 'invoice_receipt'))
+                or (basis = 'invoiced' and l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+              ))
+              or (l.direction = 'expense' and l.pnl_role = 'project')
+            )
+          union all
+          select l.currency, 0, coalesce(private.div_half_even(a.amount_net::numeric * l.amount_net, l.line_amount_net), 0), 1
+          from public.allocations a
+          join private.pnl_lines l on l.transaction_id = a.transaction_id
+          where a.project_id = p.id
+            and l.pnl_role = 'shared'
+            and l.in_pnl
+            and l.currency <> 'ILS'
+            and l.project_id is distinct from p.id
+        ) parts
+        group by parts.currency
+      ) bucket
+    ), '[]'::jsonb),
+    'pending_count', coalesce(jsonb_array_length(waiting), 0),
+    'pending_agorot', coalesce((
+      select (-sum(t.amount_net))::bigint
+      from jsonb_array_elements(waiting) row
+      join public.transactions t on t.id = (row->>'transaction_id')::uuid
+      where coalesce(t.currency, 'ILS') = 'ILS'
+    ), 0),
+    'pending_other_currencies', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'currency', bucket.currency,
+        'expense_minor', bucket.expense_minor,
+        'count', bucket.line_count
+      ) order by bucket.currency)
+      from (
+        select
+          t.currency,
+          sum(t.amount_net)::bigint as expense_minor,
+          count(*)::integer as line_count
+        from jsonb_array_elements(waiting) row
+        join public.transactions t on t.id = (row->>'transaction_id')::uuid
+        where coalesce(t.currency, 'ILS') <> 'ILS'
+        group by t.currency
+      ) bucket
+    ), '[]'::jsonb),
+    'transactions', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.id,
+        'description', t.description,
+        'doc_date', t.doc_date,
+        'amount_net', t.amount_net,
+        'currency', coalesce(t.currency, 'ILS'),
+        'direction', t.direction,
+        'source', t.source,
+        'doc_kind', t.doc_kind,
+        'category', c.name
+      ) order by t.doc_date desc, t.created_at desc)
+      from (
+        select * from public.transactions t
+        where t.company_id = cid
+          and t.removed_at is null
+          and (t.project_id = p.id or exists (
+            select 1 from public.allocations a
+            where a.transaction_id = t.id and a.project_id = p.id
+          ))
+        order by t.doc_date desc, t.created_at desc
+        limit 40
+      ) t
+      left join public.categories c on c.id = t.category_id
+    ), '[]'::jsonb)
+  )
+  into result
+  from public.projects p
+  where p.id = p_id and p.company_id = cid;
+  if result is null then
+    return null;
+  end if;
+  profit :=
+    (result->>'income_agorot')::bigint
+    - (result->>'direct_agorot')::bigint
+    - (result->>'shared_agorot')::bigint;
+  select s.available, s.share_agorot into available, share
+  from private.overhead_share(p_id) s;
+  return result || jsonb_build_object(
+    'profit_agorot', profit,
+    'overhead_share_agorot', case when coalesce(available, false) then coalesce(share, 0) else null end,
+    'overhead_weighted', coalesce(available, false),
+    'profit_after_overhead_agorot', profit - case when coalesce(available, false) then coalesce(share, 0) else 0 end
+  );
+end;
+$$;
+revoke all on function public.get_project(uuid, text) from public, anon;
+grant execute on function public.get_project(uuid, text) to authenticated, service_role;
 
 commit;

@@ -11,10 +11,11 @@
 
 - `private.pnl_lines` emits one row per split part for a posted, non-removed line that has three split rows, no part flagged `needs_review`, and no VAT. `part` is the part, `category_id` is the split row's category, `amount_net` is the part amount signed like the line, and `line_amount_net` is the whole line. `in_pnl` follows the part's category, so interest (`ריבית משכנתא`) and escrow (`מסים וביטוח`) stay in and the principal (`תשלומי הלוואה`) is kept out and shows in the `excluded_*` totals.
 - A line with split rows that is flagged or carries VAT is emitted whole, as before, with the new column `loan_split_fallback` true. A line with no split rows has it false. A removed or unposted line emits nothing.
-- `company_pnl` returns `loan_split_fallback_count` on each `by_currency` row: the number of distinct lines in the period that fell back.
+- `company_pnl` returns `loan_split_fallback_count` on each `by_currency` row: the number of distinct lines in the period that fell back. `count` stays a count of distinct lines, so a split line counts once.
+- A split whose parts no longer sum to the line's net amount also falls back, so stale parts never count.
 - Deleting the split puts the whole line back under its own category. `loan_balances` reads `loan_splits` and is unchanged.
 - The two private helpers behind the project category totals and the category drill-down now read the view, so `get_project` and `list_project_category` show the part categories. Their output columns are the same.
-- Shared allocations multiply each project's share by the part over the line, in integer arithmetic that truncates, as in [0099](0099-categories-outside-pnl.md). The zero-amount guard stays. With three parts the truncation can leave a project's parts up to 2 minor units under its share, for example 33,335 of a 100,001 line.
+- Shared allocations multiply each project's share by the part over the line and round each part half to even (`private.div_half_even`) in `company_pnl`, `get_project`, and the category helper. Each part is within half a minor unit, so a project's parts sum to its share within 1 minor unit. The zero-amount guard stays: a zero line gives 0.
 
 ## Alternatives rejected
 
@@ -24,4 +25,4 @@
 
 ## Consequences
 
-The totals reconcile with the bank: parts in plus parts out equal the line. `count` in `by_currency` counts view rows, so a split line adds one per in-P&L part. Rounding half to even per shared part would bound the gap at 1 minor unit. That needs the allocation expression changed in `company_pnl`, `get_project`, and the helper, and is not part of this record.
+The totals reconcile with the bank: parts in plus parts out equal the line. A project's shared parts can differ from its share by 1 minor unit.
