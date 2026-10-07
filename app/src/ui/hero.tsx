@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { flowLinkName } from "../breakdown";
+import { expenseFigure, flowLinkName } from "../breakdown";
 import { BigNumber } from "./big-number";
 import { ChevronIcon } from "./icons";
 import { BandHero } from "./layout";
@@ -118,15 +118,19 @@ function FlowLine({
     <>
       <span className="ui-flow-label t-body">{label}</span>
       <span className="ui-flow-amounts">
-        {rows.map((row) => (
-          <BigNumber
-            key={row.currency}
-            agorot={row.agorot}
-            currency={row.currency}
-            size="list"
-            direction={expense ? "expense" : undefined}
-          />
-        ))}
+        {rows.map((row) => {
+          // A month where refunds beat costs reads as a positive amount, like its breakdown.
+          const figure = expense ? expenseFigure(row.agorot) : { agorot: row.agorot, direction: undefined };
+          return (
+            <BigNumber
+              key={row.currency}
+              agorot={figure.agorot}
+              currency={row.currency}
+              size="list"
+              direction={figure.direction}
+            />
+          );
+        })}
       </span>
     </>
   );

@@ -1,0 +1,1 @@
+Home's יצא in a refund-heavy month (FLOW-301 follow-up). When refunds beat costs, Home now shows יצא as a positive amount with no minus, the same as its breakdown, and the row's spoken name matches. A month with costs keeps the minus.

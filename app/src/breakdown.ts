@@ -86,14 +86,25 @@ export function excludedLinesPath(direction: BreakdownDirection, currency: strin
   return `/flow/${direction}/excluded/${currency}${search}`;
 }
 
-/** "יצא החודש ₪48,320 – פירוט". Every currency is read, in Home's order. */
+/**
+ * How Home shows an expense total, like the breakdown does: a cost with a minus, and a month
+ * where refunds beat costs as a plain positive amount.
+ */
+export function expenseFigure(agorot: bigint): { agorot: bigint; direction: "expense" | undefined } {
+  return agorot < 0n ? { agorot: -agorot, direction: undefined } : { agorot, direction: "expense" };
+}
+
+/** "יצא החודש −₪48,320 – פירוט". Every currency is read, in Home's order. */
 export function flowLinkName(
   direction: BreakdownDirection,
   period: string,
   rows: Array<{ currency: string; agorot: bigint }>,
 ): string {
   const amounts = rows
-    .map((row) => formatAmountText(row.agorot, row.currency, { direction: direction === "expense" ? "expense" : undefined }))
+    .map((row) => {
+      const figure = direction === "expense" ? expenseFigure(row.agorot) : { agorot: row.agorot, direction: undefined };
+      return formatAmountText(figure.agorot, row.currency, { direction: figure.direction });
+    })
     .join(", ");
   return `${directionLabel(direction)} ${period} ${amounts} – פירוט`;
 }
