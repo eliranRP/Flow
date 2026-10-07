@@ -38,7 +38,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | in-progress (#98) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (#100) |
-| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | in-progress (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
@@ -55,6 +55,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
+| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -137,9 +138,17 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** #67 (merged)
+- **Type:** PLAN FIRST · **Status:** in-progress (#105) · **Depends on:** #67 (merged)
+- **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/QPLXZjbEdoy8x2H49EEuYS) (עוד sheet button, ⊘ pill, save on tap with ביטול; loan lines locked), under the owner's standing rule for UI tasks. Decision [0112](../decisions/0112-line-out-of-pnl.md).
 - **What:** Let the user move one expense or income line out of the P&L. It then shows in a visible "out expenses" / "out income" group (not hidden), and can move back anytime. A per-transaction override wins over the category default. MCP: a single tool and a batch tool to take out or restore many lines at once, with idempotency, the write bucket, `undo` and `undo_batch`; plus an API. Icon-based, minimal wording.
 - **Acceptance:** plan and mockup approved by the owner, then: pgTAP for override precedence on both bases, totals moved to the excluded side, batch partial success and batch undo.
+
+<a id="flow-124"></a>
+### FLOW-124 · One line out of the P&L follow-ups (#105)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-108 (#105)
+- [ ] Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [ ] A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
+- [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals

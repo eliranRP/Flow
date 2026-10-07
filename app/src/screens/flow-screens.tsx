@@ -2390,6 +2390,38 @@ function txnAnnouncement(txn: NonNullable<TransactionDetail>): string {
   return `${kind}, ${party}, ${amount}`;
 }
 
+type LinePnlChange = {
+  id: string;
+  party: string;
+  /** The override to write: false out, true in, null follows the category. */
+  override: boolean | null;
+  previous: boolean | null;
+  /** The line is out of the P&L after this write. */
+  out: boolean;
+  undo: boolean;
+};
+
+type LinePnl = { override: boolean | null; categoryOut: boolean; out: boolean; forcedIn: boolean; next: boolean | null };
+
+/** FLOW-108, decision 0112. Going back to the category's own state always clears the override. */
+export function linePnlState(
+  txn: { category_excluded_from_pnl?: boolean },
+  override: boolean | null,
+): LinePnl {
+  const categoryOut = txn.category_excluded_from_pnl === true;
+  const out = override === false || (override == null && categoryOut);
+  const forcedIn = override === true && categoryOut;
+  const next = out ? (categoryOut ? true : null) : (categoryOut ? null : false);
+  return { override, categoryOut, out, forcedIn, next };
+}
+
+function linePnlHint(pnl: LinePnl, categoryName: string): string {
+  if (pnl.out && pnl.override === false) return "רק השורה הזו. הקטגוריה לא משתנה.";
+  if (pnl.out) return `הקטגוריה ${categoryName} מחוץ לרווח והפסד. אפשר להחזיר רק את השורה הזו.`;
+  if (pnl.forcedIn) return `כמו שאר הקטגוריה ${categoryName}.`;
+  return "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.";
+}
+
 export function TransactionScreen({
   sample,
   sampleProjects,
@@ -2417,6 +2449,7 @@ export function TransactionScreen({
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
+  const moreRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
   const [changeOpen, setChangeOpen] = useState(false);
   const leaveChange = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
   const setChangeSheet = useSheetHistory("txn-change", changeOpen, setChangeOpen, () => leaveChange.current());
@@ -2449,6 +2482,35 @@ export function TransactionScreen({
   const parent = transactionParent(txn?.project_id, search);
   usePrefetchNeighbours(nav, txn != null);
   useAnnounceTxn(nav, txn == null ? null : txnAnnouncement(txn));
+  // FLOW-108. A sample card keeps its override locally; a live card reads it back from the server.
+  const [sampleOverride, setSampleOverride] = useState<boolean | null | undefined>(undefined);
+  const pnlHintId = useId();
+  const pnlLine = useWrite<LinePnlChange>({
+    failure: (error) => (error.message.includes("forbidden") ? "אין הרשאה לעדכן את השורה." : "לא הצלחנו לעדכן את השורה."),
+    keys: ["txn", "dashboard", "project", "project-category", "home", "breakdown", "breakdown-lines"],
+    onSuccess: (done) => {
+      setMenu(false);
+      toast.show({
+        message: `${done.party} · ${done.out ? KEPT_OUT : "ברווח והפסד"}`,
+        ...(done.undo ? {} : {
+          action: "ביטול",
+          onAction: () => {
+            pnlLine.mutate({ ...done, override: done.previous, previous: done.override, out: !done.out, undo: true });
+          },
+        }),
+      });
+    },
+    run: async (change) => {
+      if (sample) {
+        setSampleOverride(change.override);
+        return;
+      }
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      // null clears the override; the generated types mark every argument non-null.
+      assertNoError(await supabase.rpc("set_transaction_pnl", { p_id: change.id, p_in_pnl: change.override as boolean }));
+    },
+  });
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -2693,7 +2755,12 @@ export function TransactionScreen({
   const reviewLabel = txn.review_status === "open" ? "ממתין לאישור" : txn.review_status === "approved" || txn.review_status === "changed" ? "מאושר" : null;
   const paymentLabel = txn.open_gross_agorot != null && txn.open_gross_agorot !== 0n ? "טרם נגבה" : txn.paid === true ? "שולם" : null;
   const vatShown = (txn.currency ?? "ILS") === "ILS";
-  const menuButton = holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>;
+  const pnl = linePnlState(txn, sample != null && sampleOverride !== undefined ? sampleOverride : (txn.in_pnl_override ?? null));
+  const pnlPill = pnl.out ? (
+    <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
+  ) : pnl.forcedIn ? <StatusPill>ברווח והפסד</StatusPill> : null;
+  const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
+  const menuButton = holdWrites ? <ReservedMenuSlot /> : <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>;
   return (
     <div>
       <ScreenHeader
@@ -2721,10 +2788,11 @@ export function TransactionScreen({
           {vatShown ? "לפני מע״מ · " : null}
           <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
         </p>
-        {reviewLabel || paymentLabel ? (
+        {reviewLabel || paymentLabel || pnlPill ? (
           <div className="ui-status-row">
             {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
             {paymentLabel ? <StatusPill>{paymentLabel}</StatusPill> : null}
+            {pnlPill}
           </div>
         ) : null}
       </div>
@@ -2806,12 +2874,57 @@ export function TransactionScreen({
           setExtraProjects((list) => [...list, project]);
         }, invalidate)}
       />
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
-        {txn.source === "manual" ? (
-          <Button variant="danger" icon={<TrashIcon />} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
-        ) : (
-          <p className="t-hint">תנועה מ־SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
-        )}
+      <Sheet
+        open={menu}
+        onOpenChange={(open) => {
+          // 0075: a dismiss during the P&L write waits for it; success closes the sheet, failure keeps it.
+          if (open) return true;
+          if (pnlLine.isPending) return false;
+          setMenu(false);
+          return true;
+        }}
+        title="עוד"
+        returnFocusRef={moreRef}
+      >
+        <div className="ui-stack">
+          {txn.pnl_fixed === true ? (
+            <p className="ui-cat-fixed">
+              <LockIcon size={18} />
+              תשלום הלוואה · נספר לפי החלוקה
+            </p>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                icon={<KeptOutIcon />}
+                busy={pnlLine.isPending}
+                aria-describedby={pnlHintId}
+                onClick={() => {
+                  if (pnlLine.isPending || (sample == null && blocked())) return;
+                  pnlLine.mutate({
+                    id: txn.id,
+                    party,
+                    override: pnl.next,
+                    previous: pnl.override,
+                    out: !pnl.out,
+                    undo: false,
+                  });
+                }}
+              >
+                {pnlLine.isPending ? "מעדכן…" : pnl.out ? "החזרה לרווח והפסד" : KEPT_OUT}
+              </Button>
+              <p id={pnlHintId} className="t-hint ui-cat-pnl-hint">
+                {linePnlHint(pnl, txn.category_name ?? "")}
+                {pnlSplit ? " כל הפרויקטים בשורה." : null}
+              </p>
+            </>
+          )}
+          {txn.source === "manual" ? (
+            <Button variant="danger" icon={<TrashIcon />} disabled={pnlLine.isPending} onClick={() => { setMenu(false); setConfirm(true); }}>מחיקה</Button>
+          ) : (
+            <p className="t-hint">תנועה מ־SUMIT לא נמחקת כאן. היא מתעדכנת בסנכרון.</p>
+          )}
+        </div>
       </Sheet>
       <ConfirmSheet
         open={confirm}
@@ -4496,6 +4609,7 @@ export function SettingsScreen({
 }
 
 const KEPT_OUT = "מחוץ לרווח והפסד";
+const KEPT_OUT_SHORT = "מחוץ לרווח";
 
 /** The three loan categories the server keeps fixed, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {

@@ -48,6 +48,8 @@ export const WRITE_TOOL_NAMES = [
   "update_loan",
   "attach_loan_payment",
   "split_line",
+  "set_line_pnl",
+  "set_lines_pnl",
   "undo",
   "undo_batch",
 ] as const;
@@ -86,6 +88,8 @@ const ALLOWED: Record<string, Set<string>> = {
   update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
+  set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
+  set_lines_pnl: new Set(["idempotency_key", "items"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -157,7 +161,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"]),
   id: UUID_TEXT,
 }).strict();
 const renameCompanySchema = z.object({
@@ -246,6 +250,28 @@ const batchItemSchema = z.object({
 const assignExpensesSchema = z.object({
   idempotency_key: BATCH_KEY,
   items: z.array(batchItemSchema).min(1).max(200),
+}).strict().superRefine((body, ctx) => {
+  const seen = new Set<string>();
+  for (const item of body.items) {
+    if (seen.has(item.transaction_id)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+      return;
+    }
+    seen.add(item.transaction_id);
+  }
+});
+// in_pnl false takes the line out of the P&L, true counts it, null follows its category.
+const setLinePnlSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  in_pnl: z.boolean().nullable(),
+}).strict();
+const setLinesPnlSchema = z.object({
+  idempotency_key: BATCH_KEY,
+  items: z.array(z.object({
+    transaction_id: UUID_TEXT,
+    in_pnl: z.boolean().nullable(),
+  }).strict()).min(1).max(200),
 }).strict().superRefine((body, ctx) => {
   const seen = new Set<string>();
   for (const item of body.items) {
@@ -564,7 +590,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id.", {
@@ -741,12 +767,32 @@ function writeTools() {
         },
       },
     }, true),
+    toolSpec("set_line_pnl", "Take one line out of the P&L (in_pnl false), count it although its category is kept out (in_pnl true), or follow its category again (in_pnl null). Covers every part of a split line. A loan line is refused. Returns the line's in_pnl. Undo is kind line_pnl with the transaction id.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      in_pnl: { type: ["boolean", "null"] },
+    }, true),
+    toolSpec("set_lines_pnl", "set_line_pnl for up to 200 lines in one write. Partial success is allowed. undo_batch with the returned batch_key undoes the rows that succeeded.", {
+      idempotency_key: { type: "string" },
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            transaction_id: { type: "string" },
+            in_pnl: { type: ["boolean", "null"] },
+          },
+          required: ["transaction_id", "in_pnl"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"] },
       id: { type: "string" },
     }, true),
-    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
+    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses or set_lines_pnl batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
@@ -1150,6 +1196,23 @@ async function callWrite(
         project_id: part.project_id ?? null,
         amount_minor: part.amount_minor,
       })),
+    };
+  } else if (name === "set_line_pnl") {
+    const parsed = setLinePnlSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_line_pnl";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_in_pnl: parsed.data.in_pnl,
+    };
+  } else if (name === "set_lines_pnl") {
+    const parsed = setLinesPnlSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_lines_pnl";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items,
     };
   } else if (name === "assign_expenses") {
     const parsed = assignExpensesSchema.safeParse(args);

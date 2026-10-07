@@ -551,13 +551,13 @@ isOneToOne: false
                   ]
                 },"transactions": {
                   Row: {
-                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date": string | null,"category_assigned": boolean,"category_id": string | null,"category_suggested": boolean,"company_id": string,"created_at": string,"currency": string,"customer_id": string | null,"description": string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind": Database["public"]['Enums']["doc_kind"],"external_id": string | null,"fx_rate": number | null,"fx_rate_date": string | null,"id": string,"idempotency_key": string,"in_pnl_override": boolean | null,"line_status": Database["public"]['Enums']["line_status"],"linked_external_id": string | null,"pnl_role": Database["public"]['Enums']["pnl_role"] | null,"project_assigned": boolean,"project_id": string | null,"provider_meta": NonNullable<Json>,"removed_at": string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id": string | null,"updated_at": string,"user_assigned": boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Insert: {
-                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key": string,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
+                    "amount_gross": number,"amount_net": number,"amount_original": number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id": string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction": Database["public"]['Enums']["txn_direction"],"doc_date": string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key": string,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source": Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount": number,"vat_status": Database["public"]['Enums']["vat_status"]
                   }
                   Update: {
-                    "amount_gross"?: number,"amount_net"?: number,"amount_original"?: number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key"?: string,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
+                    "amount_gross"?: number,"amount_net"?: number,"amount_original"?: number,"cash_date"?: string | null,"category_assigned"?: boolean,"category_id"?: string | null,"category_suggested"?: boolean,"company_id"?: string,"created_at"?: string,"currency"?: string,"customer_id"?: string | null,"description"?: string,"direction"?: Database["public"]['Enums']["txn_direction"],"doc_date"?: string,"doc_kind"?: Database["public"]['Enums']["doc_kind"],"external_id"?: string | null,"fx_rate"?: number | null,"fx_rate_date"?: string | null,"id"?: string,"idempotency_key"?: string,"in_pnl_override"?: boolean | null,"line_status"?: Database["public"]['Enums']["line_status"],"linked_external_id"?: string | null,"pnl_role"?: Database["public"]['Enums']["pnl_role"] | null,"project_assigned"?: boolean,"project_id"?: string | null,"provider_meta"?: NonNullable<Json>,"removed_at"?: string | null,"source"?: Database["public"]['Enums']["txn_source"],"supplier_id"?: string | null,"updated_at"?: string,"user_assigned"?: boolean,"vat_amount"?: number,"vat_status"?: Database["public"]['Enums']["vat_status"]
                   }
                   Relationships: [
                     {
@@ -819,6 +819,12 @@ isOneToOne: false
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_line_pnl":
+{ Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_set_lines_pnl":
+{ Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
+                           },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
                            },
@@ -923,6 +929,9 @@ isOneToOne: false
                            },
 "set_transaction_category":
 { Args: { "p_category_id": string,"p_id": string,"p_resolve"?: boolean }; Returns: string
+                           },
+"set_transaction_pnl":
+{ Args: { "p_id": string,"p_in_pnl": boolean }; Returns: Json
                            },
 "stamp_connector_sync":
 { Args: { "p_company": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
