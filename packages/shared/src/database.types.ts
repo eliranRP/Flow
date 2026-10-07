@@ -679,6 +679,8 @@ isOneToOne: false
                            },
 "get_project":
 { Args: { "p_id": string }; Returns: Json
+                           } |
+{ Args: { "p_basis": string,"p_id": string }; Returns: Json
                            },
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json

@@ -1,5 +1,6 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
-import { formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
+import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LoanTransactionSplit } from "./loan-match";
@@ -281,10 +282,9 @@ export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
   );
 }
 
-function projectMargin(project: { income_agorot: bigint; profit_agorot: bigint }): ReactNode | undefined {
-  if (project.income_agorot <= 0n) return undefined;
-  const pct = Number((project.profit_agorot * 100n) / project.income_agorot);
-  const shown = pct < 0 ? `−${String(Math.abs(pct))}%` : `${String(pct)}%`;
+function projectMargin(project: ProjectRow): ReactNode | undefined {
+  const shown = projectMarginHint(project);
+  if (shown == null) return undefined;
   return (
     <>
       רווחיות <bdi dir="ltr">{shown}</bdi>
@@ -327,17 +327,23 @@ function ProjectsBody({
         />
       ) : (
         <List>
-          {visible.map((project) => (
+          {visible.map((project) => {
+            const amounts = projectAmountFigures(project);
+            const single = amounts.length === 1 ? amounts[0] : undefined;
+            return (
             <ListRow
               key={project.id}
               variant="project"
               title={project.name}
               hint={project.status === "finished" ? "הסתיים" : (projectMargin(project) ?? project.state_label ?? undefined)}
-              agorot={project.profit_agorot}
-              loss={project.profit_agorot < 0n}
+              agorot={single?.minor ?? project.profit_agorot}
+              currency={single?.currency}
+              amounts={amounts.length > 1 ? amounts : undefined}
+              loss={(single?.minor ?? project.profit_agorot) < 0n}
               href={`/projects/${project.id}${search}`}
             />
-          ))}
+            );
+          })}
         </List>
       )}
       {!expanded && needle === "" && (restActive > 0 || finished.length > 0) ? (
@@ -448,6 +454,26 @@ function pendingApprovalTitle(count: number): string {
   return count === 1 ? "1 ממתינה לאישור" : `${String(count)} ממתינות לאישור`;
 }
 
+function projectRowProfit(
+  project: NonNullable<ProjectDetail>,
+  row: ProjectCurrencyRow,
+  overheadOn: boolean,
+  singleCurrency: boolean,
+): bigint {
+  if (row.currency === "ILS" && singleCurrency) {
+    return shownProfit(
+      overheadOn,
+      project.overhead_weighted === true,
+      project.profit_agorot,
+      project.profit_after_overhead_agorot,
+    );
+  }
+  if (row.currency === "ILS" && overheadOn && project.overhead_weighted === true && project.profit_after_overhead_agorot != null) {
+    return project.profit_after_overhead_agorot;
+  }
+  return row.profit_minor;
+}
+
 function withParam(search: string, key: string, value: string): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
   params.set(key, value);
@@ -464,39 +490,79 @@ function ProjectCategories({
   search: string;
   categoryTo?: string;
 }) {
-  const pending = project.pending_count ?? 0;
+  const pendingOther = project.pending_other_currencies ?? [];
+  // pending_count counts every waiting line; the non-ILS ones get their own rows below.
+  const pendingOtherCount = pendingOther.reduce((sum, bucket) => sum + bucket.count, 0);
+  const pending = Math.max(0, (project.pending_count ?? 0) - pendingOtherCount);
   const waiting = pending > 0;
-  if (project.categories.length === 0 && !waiting) {
+  const categoryRows = project.categories_by_currency ?? project.categories.map((category) => ({
+    currency: "ILS" as const,
+    id: category.id,
+    name: category.name,
+    amount_minor: category.amount_agorot,
+    has_shared_share: category.has_shared_share,
+  }));
+  const grouped = new Map<string, typeof categoryRows>();
+  for (const row of categoryRows) {
+    const list = grouped.get(row.currency) ?? [];
+    list.push(row);
+    grouped.set(row.currency, list);
+  }
+  const currencies = [...grouped.keys()].sort((a, b) => {
+    if (a === b) return 0;
+    if (a === "ILS") return -1;
+    if (b === "ILS") return 1;
+    return a.localeCompare(b);
+  });
+  const hasCategories = currencies.some((currency) => (grouped.get(currency)?.length ?? 0) > 0);
+  if (!hasCategories && !waiting && pendingOther.length === 0) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
   return (
     <>
       <List>
-      {project.categories.map((category) => (
+      {currencies.flatMap((currency) => (grouped.get(currency) ?? []).map((category) => (
         <ListRow
-          key={category.id ?? category.name}
+          key={`${currency}:${category.id ?? category.name ?? ""}`}
           variant="project"
           title={category.name ?? "בלי קטגוריה"}
-          agorot={absAgorot(category.amount_agorot)}
+          agorot={absAgorot(category.amount_minor)}
+          currency={currency}
+          amountDirection="expense"
           loss={false}
-          chevron={category.id != null}
-          href={category.id == null ? undefined : (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`)}
+          chevron={currency === "ILS" && category.id != null}
+          href={currency === "ILS" && category.id != null ? (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`) : undefined}
           wrapHint={category.has_shared_share === true}
           hint={category.has_shared_share === true ? (
             <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
           ) : undefined}
         />
-      ))}
+      )))}
       {waiting ? (
         <ListRow
           variant="project"
           title={pendingApprovalTitle(pending)}
           agorot={absAgorot(project.pending_agorot ?? 0n)}
+          currency="ILS"
+          amountDirection="expense"
           loss={false}
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
         />
       ) : null}
+      {pendingOther.map((bucket) => (
+        <ListRow
+          key={bucket.currency}
+          variant="project"
+          title={pendingApprovalTitle(bucket.count)}
+          agorot={absAgorot(bucket.expense_minor)}
+          currency={bucket.currency}
+          amountDirection="expense"
+          loss={false}
+          chevron
+          href={`/review${withParam(search, "project", project.id)}`}
+        />
+      ))}
     </List>
     </>
   );
@@ -547,16 +613,22 @@ export function ProjectDetailScreen({
   if (!project) {
     return <ScreenHeader title="פרויקט" subtitle="הפרויקט לא נמצא." backTo={`/projects${search}`} />;
   }
-  const profit = shownProfit(
-    overheadOn,
-    project.overhead_weighted === true,
-    project.profit_agorot,
-    project.profit_after_overhead_agorot,
-  );
-  const income = absAgorot(project.income_agorot);
+  const currencyRows = projectRows(project);
+  const singleCurrency = currencyRows.length === 1;
+  const profitRows = currencyRows.map((row) => ({
+    row,
+    profit: projectRowProfit(project, row, overheadOn, singleCurrency),
+  }));
+  const marginShown = singleCurrency
+    ? (() => {
+      const row = currencyRows[0];
+      if (row == null || row.income_minor <= 0n) return null;
+      const profit = profitRows[0]?.profit ?? 0n;
+      const margin = Number((profit * 100n) / row.income_minor);
+      return margin < 0 ? `−${String(Math.abs(margin))}%` : `${String(margin)}%`;
+    })()
+    : null;
   const expenses = absAgorot(project.direct_agorot) + absAgorot(project.shared_agorot);
-  const margin = income > 0n ? Number((profit * 100n) / income) : null;
-  const marginShown = margin == null ? null : margin < 0 ? `−${String(Math.abs(margin))}%` : `${String(margin)}%`;
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -579,8 +651,20 @@ export function ProjectDetailScreen({
               </>
             )}
           </p>
-          <p className="t-display"><BigNumber agorot={profit} /></p>
-          <BandFigures income={formatIls(income)} expense={formatIls(expenses)} />
+          <div className="t-display ui-project-profits">
+            {profitRows.map(({ row, profit: rowProfit }) => (
+              <p key={row.currency}>
+                <BigNumber agorot={rowProfit} currency={row.currency} loss={rowProfit < 0n} />
+              </p>
+            ))}
+          </div>
+          {currencyRows.map((row) => (
+            <BandFigures
+              key={row.currency}
+              income={formatAmountText(row.income_minor, row.currency)}
+              expense={formatAmountText(projectExpenseMinor(row), row.currency, { direction: "expense" })}
+            />
+          ))}
         </BandHero>
       </TopBand>
       <div className="ui-page-pad">
@@ -641,6 +725,7 @@ export function ProjectDetailScreen({
                 hint={`${txn.category ? `${txn.category} · ` : ""}${formatDayMonth(txn.doc_date)}`}
                 agorot={txn.amount_net}
                 sign={txn.direction === "income" ? "in" : "out"}
+                currency={txn.currency ?? "ILS"}
                 source="invoice"
                 href={`/transactions/${txn.id}${search}`}
               />
@@ -2003,7 +2088,10 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
       closeTo={closeTo}
       returnFocusRef={returnFocusRef}
       supplier={sample?.supplier ?? row?.supplier_name ?? row?.description ?? ""}
-      amount={sample?.amount ?? (row ? formatMoney(absAgorot(row.amount_net), row.currency) : "")}
+      amount={sample?.amount ?? (row ? formatAmountText(absAgorot(row.amount_net), row.currency, {
+        direction: income ? "income" : "expense",
+        detail: true,
+      }) : "")}
       direction={income ? "income" : "expense"}
       projects={projectOptions}
       categories={categoryOptions}
@@ -2519,7 +2607,14 @@ export function TransactionScreen({
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
-        <p className="t-display"><BigNumber agorot={absAgorot(txn.amount_net)} presentation="detail" currency={txn.currency} /></p>
+        <p className="t-display">
+          <BigNumber
+            agorot={absAgorot(txn.amount_net)}
+            presentation="detail"
+            currency={txn.currency}
+            direction={txn.direction === "income" ? "income" : "expense"}
+          />
+        </p>
         <p className="t-hint">
           {vatShown ? "לפני מע״מ · " : null}
           <bdi dir="ltr">{invoiceDate(txn.doc_date)}</bdi>
@@ -2557,17 +2652,19 @@ export function TransactionScreen({
         active={sample == null}
         readOnly={holdWrites}
       />
-      <List>
-        <ListRow
-          variant="button"
-          title="חשבונית ותשלום"
-          hint={vatShown ? "מע״מ, מספר חשבונית, שורת הבנק" : "מספר חשבונית, שורת הבנק"}
-          icon={<DocumentIcon size={22} />}
-          action={<ChevronDownIcon />}
-          expanded={docOpen}
-          onClick={() => { setDocOpen((open) => !open); }}
-        />
-      </List>
+      {vatShown ? (
+        <List>
+          <ListRow
+            variant="button"
+            title="חשבונית ותשלום"
+            hint="מע״מ, מספר חשבונית, שורת הבנק"
+            icon={<DocumentIcon size={22} />}
+            action={<ChevronDownIcon />}
+            expanded={docOpen}
+            onClick={() => { setDocOpen((open) => !open); }}
+          />
+        </List>
+      ) : null}
       {docOpen && vatShown ? (
         <p className="ui-page-pad t-hint">
           מע״מ <bdi dir="ltr">{formatMoney(txn.vat_amount, txn.currency, { agorot: true })}</bdi>
@@ -2589,7 +2686,10 @@ export function TransactionScreen({
         open={changeOpen}
         onOpenChange={setChangeSheet}
         supplier={party}
-        amount={formatMoney(absAgorot(txn.amount_net), txn.currency)}
+        amount={formatAmountText(absAgorot(txn.amount_net), txn.currency, {
+          direction: txn.direction === "income" ? "income" : "expense",
+          detail: true,
+        })}
         direction={txn.direction === "income" ? "income" : "expense"}
         projects={changeProjects}
         categories={changeCategories}

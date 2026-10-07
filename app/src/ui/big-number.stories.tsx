@@ -45,3 +45,8 @@ export const Inline: Story = {
   args: { agorot: "47200000" },
   render: () => <Money agorot={47_200_000n} />,
 };
+
+export const UsdExpense: Story = {
+  args: { agorot: "125000", size: "list" },
+  render: () => <BigNumber agorot={125_000n} currency="USD" direction="expense" size="list" />,
+};

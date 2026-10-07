@@ -95,6 +95,53 @@ export function roundedProfitAgorot(incomeAgorot: bigint, expenseAgorot: bigint)
   return BigInt(wholeShekels(incomeAgorot) - wholeShekels(expenseAgorot)) * 100n;
 }
 
+function currencyPrefix(currency: string): string {
+  if (currency === "" || currency === "ILS") return "₪";
+  if (currency === "USD") return "$";
+  return `${currency} `;
+}
+
+function formatUnsignedMinor(abs: bigint, currency: string, detail: boolean): string {
+  const prefix = currencyPrefix(currency);
+  if (detail && abs % 100n !== 0n) {
+    const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const fraction = (abs % 100n).toString().padStart(2, "0");
+    return `${prefix}${whole}.${fraction}`;
+  }
+  const major = wholeShekels(abs);
+  if (major === 0) return `${prefix}0`;
+  const digits = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${prefix}${digits}`;
+}
+
+/** True when the figure renders as ₪0 / $0, so it never carries a sign (no −₪0, no +$0). */
+function shownAsZero(abs: bigint, detail: boolean): boolean {
+  if (detail && abs % 100n !== 0n) return false;
+  return wholeShekels(abs) === 0;
+}
+
+export type FormatAmountOptions = {
+  direction?: "income" | "expense";
+  detail?: boolean;
+  plus?: boolean;
+};
+
+/**
+ * One formatter for signed and directional amounts.
+ * Summaries are whole units unless `detail` keeps non-zero cents/agorot.
+ * A figure that renders as zero never carries a sign.
+ */
+export function formatAmountText(minor: bigint, currency = "ILS", options?: FormatAmountOptions): string {
+  const detail = options?.detail === true;
+  const direction = options?.direction;
+  const abs = minor < 0n ? -minor : minor;
+  const body = formatUnsignedMinor(abs, currency, detail);
+  if (shownAsZero(abs, detail)) return body;
+  if (direction === "expense") return `−${body}`;
+  if (direction === "income") return options?.plus === true ? `+${body}` : body;
+  return minor < 0n ? `−${body}` : body;
+}
+
 /**
  * ₪ before the digits, thousands commas, Unicode minus.
  * Summaries are whole shekels. `{ agorot: true }` keeps a non-zero agora remainder.
@@ -106,20 +153,7 @@ export function roundedProfitAgorot(incomeAgorot: bigint, expenseAgorot: bigint)
  * Two-decimal currencies share the shekel rounding. Summaries are whole units.
  */
 export function formatMoney(minor: bigint, currency = "ILS", options?: { agorot?: boolean }): string {
-  if (currency === "" || currency === "ILS") return formatIls(minor, options);
-  const negative = minor < 0n;
-  const abs = negative ? -minor : minor;
-  const sign = negative ? "−" : "";
-  const prefix = currency === "USD" ? "$" : `${currency} `;
-  if (options?.agorot && abs % 100n !== 0n) {
-    const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    const fraction = (abs % 100n).toString().padStart(2, "0");
-    return `${sign}${prefix}${whole}.${fraction}`;
-  }
-  const major = wholeShekels(abs);
-  if (major === 0) return `${prefix}0`;
-  const digits = major.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${sign}${prefix}${digits}`;
+  return formatAmountText(minor, currency, { detail: options?.agorot === true });
 }
 
 export function formatUsd(minor: bigint, options?: { agorot?: boolean }): string {
@@ -127,18 +161,7 @@ export function formatUsd(minor: bigint, options?: { agorot?: boolean }): string
 }
 
 export function formatIls(agorot: bigint, options?: { agorot?: boolean }): string {
-  const negative = agorot < 0n;
-  const abs = negative ? -agorot : agorot;
-  const sign = negative ? "−" : "";
-  if (options?.agorot && abs % 100n !== 0n) {
-    const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    const agora = (abs % 100n).toString().padStart(2, "0");
-    return `${sign}₪${whole}.${agora}`;
-  }
-  const shekels = wholeShekels(abs);
-  if (shekels === 0) return "₪0";
-  const digits = shekels.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${sign}₪${digits}`;
+  return formatAmountText(agorot, "ILS", { detail: options?.agorot === true });
 }
 
 /**

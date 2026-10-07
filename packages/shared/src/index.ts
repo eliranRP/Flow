@@ -3,6 +3,7 @@ export {
   agorotToShekels,
   allocateByWeights,
   divHalfEven,
+  formatAmountText,
   formatIls,
   formatMoney,
   formatUsd,
