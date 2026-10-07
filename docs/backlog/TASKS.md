@@ -346,7 +346,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** claimed (UI task thread, 2026-10-07, claude/project-thread-te4krq); the design session is the plan, under the owner's standing rule for UI tasks · **Depends on:** —
 - **What:** Show the bank or provider metadata per line on the review card and the detail: payment method (card and last 4, ACH, wire, check), memo, counterparty, bank account, original bank description. Icon-based (a card icon and ••1234, a memo on tap). Source: `transactions.provider_meta`. Also a better detail screen for what isn't shown at first glance. MCP: `get_expense`, `list_review` and `search_expenses` return the normalized fields.
 - **Acceptance:** mockup approved; no account numbers beyond the last 4 anywhere.
 
