@@ -417,6 +417,19 @@ function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
   };
 }
 
+/** A stored loan whose terms no longer build a schedule, for example one saved before FLOW-111. */
+function storedLoanSchedule(loan: LoanRow): ReturnType<typeof buildLoanSchedule> | ToolResult {
+  try {
+    return buildLoanSchedule(loanTermsOf(loan, BigInt(loan.payment_minor), BigInt(loan.escrow_minor)));
+  } catch (error) {
+    if (error instanceof LoanScheduleError && error.code === "payment_below_interest") {
+      return fail("refused", "payment below interest");
+    }
+    if (error instanceof LoanScheduleError) return fail("refused", "invalid loan terms");
+    throw error;
+  }
+}
+
 async function loadLoans(rpc: ToolRpc): Promise<ToolResult | LoanRow[]> {
   const result = await rpc("mcp_list_loans", {});
   if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
@@ -970,7 +983,8 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (loan == null) return fail("refused", "loan not found");
   if (loan.currency !== currency) return fail("refused", "loan currency mismatch");
   if (BigInt(loan.balance_minor) <= 0n) return fail("refused", "loan balance exceeded");
-  const schedule = buildLoanSchedule(loanTermsOf(loan, BigInt(loan.payment_minor), BigInt(loan.escrow_minor)));
+  const schedule = storedLoanSchedule(loan);
+  if (!("rows" in schedule)) return schedule;
   const row = scheduleRowForDate(schedule.rows, docDate);
   if (row == null) return fail("refused", "no schedule row for this date");
   const parts = allocateLoanSplit({
@@ -1293,7 +1307,8 @@ export async function callTool(
     if (!Array.isArray(loans)) return loans;
     const loan = loans.find((row) => row.id === loanId);
     if (loan == null) return fail("not_found", "not found");
-    const schedule = buildLoanSchedule(loanTermsOf(loan, BigInt(loan.payment_minor), BigInt(loan.escrow_minor)));
+    const schedule = storedLoanSchedule(loan);
+    if (!("rows" in schedule)) return schedule;
     const rows = schedule.rows.slice(fromIndex, fromIndex + limit).map(scheduleRowOut);
     return ok({ loan_id: loanId, from: fromIndex, limit, total: schedule.rows.length, rows });
   }
