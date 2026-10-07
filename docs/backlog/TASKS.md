@@ -27,7 +27,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
-| 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
+| 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | claimed (thread agent, 2026-10-07, claude/project-thread-2lmif3) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
 | 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
@@ -427,7 +427,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-509"></a>
 ### FLOW-509 · Mercury connector hardening
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** claimed (thread agent, 2026-10-07, claude/project-thread-2lmif3) · **Depends on:** —
 - [ ] After a 429 the sync keeps calling; back off and stop.
 - [ ] Skip records aren't written atomically with the lines and duplicate on partial runs; writes after the import aren't atomic with it; the checked-at stamp is a separate read and write per row.
 - [ ] Reconnecting keeps the old cursor when the token or account changes.
