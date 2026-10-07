@@ -63,7 +63,7 @@ Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agoro
 
 Input: `{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "basis": "cash" }`.
 
-Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `category`), the 40 newest lines. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
+Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `category`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`), the loans filed under this project (FLOW-105; empty when none). `loans` is read apart from the P&L and changes none of its numbers. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
 
 Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category.
 
@@ -262,7 +262,7 @@ Read tools use `mcp_list_loans` and shared schedule math. Writes use the same wr
 
 ### list_loans
 
-Input `{}`. Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`.
+Input `{}`. Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `project_id` and `project_name` (null when the loan has no project).
 
 ### get_loan_schedule
 
@@ -283,11 +283,11 @@ Input `{ "loan_id", "from": 0, "limit": 12 }`. `limit` defaults to 12 and cannot
 }
 ```
 
-Optional `payment` and `escrow` (default 0). Omitted `currency` uses `mcp_company_loan_currency()` (USD only when every open line is USD; otherwise ILS). Output includes computed `payment`, `schedule_preview` (first three rows), `id`, and `undo_kind`: `"loan"`. Invalid terms return `validation` with a `LoanScheduleError` code (`principal`, `rate`, `term`, `payment`, `escrow`, `start_date`, `payment_below_interest`).
+Optional `payment` and `escrow` (default 0). Optional `project_id` files the loan under a project of this company; a project of another company, or an unknown one, is `refused` / `project not found` and nothing is written. Omitted `currency` uses `mcp_company_loan_currency()` (USD only when every open line is USD; otherwise ILS). Output includes computed `payment`, `schedule_preview` (first three rows), `id`, and `undo_kind`: `"loan"`. Invalid terms return `validation` with a `LoanScheduleError` code (`principal`, `rate`, `term`, `payment`, `escrow`, `start_date`, `payment_below_interest`).
 
 ### update_loan
 
-Patch fields: `name`, `principal`, `annual_rate_percent`, `term_months`, `start_date`, `payment`, `escrow`. `currency` is rejected. Output `{ "id", "undo_kind": "loan_update" }`.
+Patch fields: `name`, `principal`, `annual_rate_percent`, `term_months`, `start_date`, `payment`, `escrow`. `currency` is rejected. `project_id` files the loan under a project, `null` clears it, and leaving it out keeps it; a project of another company is `refused` / `project not found`. Payments already attached stay on the project they were filed under. Output `{ "id", "project_id", "undo_kind": "loan_update" }`. Undo restores the previous project (or none), and is `refused` / `project not found` if that project was deleted since.
 
 ### attach_loan_payment
 
@@ -301,6 +301,8 @@ Patch fields: `name`, `principal`, `annual_rate_percent`, `term_months`, `start_
 
 The handler loads the line, picks the schedule row for `doc_date`, and splits like the app. Output includes `parts[]` and `undo_kind`: `"loan_split"`. Undo `kind: "loan_split"` takes the **transaction** id. Once attached, the payment counts by its parts in `get_totals`, `get_project` and `list_project_category`: interest and escrow stay in the P&L under `ריבית משכנתא` and `מסים וביטוח`, and the principal counts under `תשלומי הלוואה`, which is kept out and shows in the excluded totals. The line's own category gets nothing. A split that needs review, or a line that carries VAT, counts whole instead ([0100](../decisions/0100-loan-split-pnl.md)). Deleting the split (undo) puts the whole line back.
 
+When the loan has a project and the line has no project, no shares and no role (and a category), the line is filed as a direct cost on that project, the same rule `assign_expense` uses, so the parts count there: interest and escrow as direct cost, principal in the excluded totals (FLOW-105, [0105](../decisions/0105-loan-project.md)). Output `project_inherited` (true or false), `project_id` (when inherited) and `project_inherited_reason` when false: `loan has no project`, `line already has a project`, `line has shares`, `line has a role` or `line has no category`. The line is then left exactly as it was. Undo of `loan_split` restores the line's previous project when nothing changed it since (`project_restored` true); a line changed after the attach keeps its new project (`project_restored` false).
+
 ### undo (loan kinds)
 
 | `kind` | `id` |
@@ -309,7 +311,7 @@ The handler loads the line, picks the schedule row for `doc_date`, and splits li
 | `loan_update` | loan id |
 | `loan_split` | transaction id |
 
-Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, and `invalid loan terms`.
+Refused messages add `loan not found`, `loan currency mismatch`, `loan already attached`, `loan balance exceeded`, `no schedule row for this date`, `loan categories missing`, `invalid loan terms`, and `project not found`.
 
 ## Line splits · FLOW-311
 
