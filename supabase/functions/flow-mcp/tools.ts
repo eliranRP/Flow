@@ -1,4 +1,5 @@
 // Cycle 2 reads, cycle 3a single-expense writes, cycle 4 project/category/sync, cycle 5 loans, cycle 6 batch. Decision 0080.
+// sync_bank starts a job and get_sync_status reads it. Decision 0102.
 // Identity is not an argument. The handler signs from the credential row.
 // Zod checks write arguments. A failure is the fixed validation message.
 
@@ -24,7 +25,11 @@ export const READ_TOOL_NAMES = [
   "get_totals",
   "list_loans",
   "get_loan_schedule",
+  "get_sync_status",
 ] as const;
+
+/** Read tool that a write-only token may also call: it polls that token's own sync job. */
+export const SYNC_STATUS_TOOL = "get_sync_status";
 
 export const WRITE_TOOL_NAMES = [
   "assign_expense",
@@ -36,6 +41,8 @@ export const WRITE_TOOL_NAMES = [
   "sync_bank",
   "hide_category",
   "set_category_pnl",
+  "set_overhead_project",
+  "rename_company",
   "add_loan",
   "update_loan",
   "attach_loan_payment",
@@ -57,6 +64,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set([]),
   get_loan_schedule: new Set(["loan_id", "from", "limit"]),
+  get_sync_status: new Set(["job_id"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -66,6 +74,8 @@ const ALLOWED: Record<string, Set<string>> = {
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
+  set_overhead_project: new Set(["idempotency_key", "project_id"]),
+  rename_company: new Set(["idempotency_key", "name"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency",
@@ -92,23 +102,25 @@ const splitShareSchema = z.object({
   project_id: UUID_TEXT,
   share: z.number().int().min(1).max(100),
 }).strict();
+const SPLIT_SHARES = z.array(splitShareSchema).min(2).max(50);
+// Projects are unique and the whole percents sum to 100.
+function sharesAreValid(shares: { project_id: string; share: number }[]): boolean {
+  const seen = new Set<string>();
+  let total = 0;
+  for (const item of shares) {
+    if (seen.has(item.project_id)) return false;
+    seen.add(item.project_id);
+    total += item.share;
+  }
+  return total === 100;
+}
 const assignExpenseSplitSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   category_id: UUID_TEXT.optional(),
-  shares: z.array(splitShareSchema).min(2).max(50),
+  shares: SPLIT_SHARES,
 }).strict().superRefine((body, ctx) => {
-  const seen = new Set<string>();
-  let total = 0;
-  for (const item of body.shares) {
-    if (seen.has(item.project_id)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom });
-      return;
-    }
-    seen.add(item.project_id);
-    total += item.share;
-  }
-  if (total !== 100) {
+  if (!sharesAreValid(body.shares)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
@@ -119,8 +131,12 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"]),
   id: UUID_TEXT,
+}).strict();
+const renameCompanySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().min(2).max(100),
 }).strict();
 const LOAN_NAME = z.string().trim().min(1).max(80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -173,12 +189,24 @@ const setCategoryPnlSchema = z.object({
   category_id: UUID_TEXT,
   excluded: z.boolean(),
 }).strict();
+const setOverheadProjectSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  project_id: UUID_TEXT.nullable(),
+}).strict();
 const batchItemSchema = z.object({
   transaction_id: UUID_TEXT,
   project_id: UUID_TEXT.optional(),
   category_id: UUID_TEXT.optional(),
   remember: z.boolean().optional(),
+  shares: SPLIT_SHARES.optional(),
 }).strict().superRefine((item, ctx) => {
+  if (item.shares != null) {
+    // A split row names its projects in shares[]; category_id is optional like assign_expense_split.
+    if (item.project_id != null || item.remember != null || !sharesAreValid(item.shares)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+    }
+    return;
+  }
   if (item.project_id == null && item.category_id == null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
@@ -206,6 +234,8 @@ const undoBatchSchema = z.object({
 
 export type ToolRpc = (name: string, body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>;
 export type ToolInvoke = (fn: string, body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>;
+/** Keeps work running after the response is sent (EdgeRuntime.waitUntil). */
+export type ToolDefer = (work: Promise<unknown>) => void;
 
 type ToolResult = {
   isError: boolean;
@@ -411,6 +441,7 @@ function projectRow(row: Review) {
     direct_agorot: row.direct_agorot,
     shared_agorot: row.shared_agorot,
     profit_agorot: row.profit_agorot,
+    is_overhead: row.is_overhead === true,
     by_currency: row.by_currency ?? [],
   };
 }
@@ -427,6 +458,9 @@ function totalsOf(body: Review) {
     shared_agorot: body.shared_agorot,
     overhead_agorot: body.overhead_agorot,
     expense_agorot: body.expense_agorot,
+    unassigned_income_agorot: body.unassigned_income_agorot,
+    unassigned_expense_agorot: body.unassigned_expense_agorot,
+    overhead_project_id: body.overhead_project_id ?? null,
     net_profit_agorot: body.net_profit_agorot,
     active_projects: body.active_projects,
     review_count: body.review_count,
@@ -495,7 +529,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD).", {
+    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). direct + shared + overhead + unassigned expense = expense. unassigned is income with no project, and cost with no role, a project role and no project, or a shared role and no split.", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
@@ -506,12 +540,40 @@ function readTools() {
       from: { type: "integer" },
       limit: { type: "integer" },
     }),
+    syncStatusSpec(),
   ];
 }
 
+function syncStatusSpec() {
+  return toolSpec("get_sync_status", "State of a sync_bank job: running, done, or failed. job_id is from sync_bank. When done it has added, duplicates (lines already stored, skipped), removed, and newest_date. When failed it has error.", {
+    job_id: { type: "string" },
+  });
+}
+
+/** get_sync_status is allowed with read or write scope. Other tools need their own scope. */
+export function scopeAllows(name: string, scope: string[]): boolean {
+  if (name === SYNC_STATUS_TOOL) return scope.includes("read") || scope.includes("write");
+  if ((WRITE_TOOL_NAMES as readonly string[]).includes(name)) return scope.includes("write");
+  if ((READ_TOOL_NAMES as readonly string[]).includes(name)) return scope.includes("read");
+  return false;
+}
+
+const SHARES_SPEC = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      project_id: { type: "string" },
+      share: { type: "integer" },
+    },
+    required: ["project_id", "share"],
+    additionalProperties: false,
+  },
+};
+
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       project_id: { type: "string" },
@@ -522,20 +584,9 @@ function writeTools() {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },
-      shares: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            project_id: { type: "string" },
-            share: { type: "integer" },
-          },
-          required: ["project_id", "share"],
-          additionalProperties: false,
-        },
-      },
+      shares: SHARES_SPEC,
     }, true),
-    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed.", {
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split.", {
       idempotency_key: { type: "string" },
       items: {
         type: "array",
@@ -546,13 +597,14 @@ function writeTools() {
             project_id: { type: "string" },
             category_id: { type: "string" },
             remember: { type: "boolean" },
+            shares: SHARES_SPEC,
           },
           required: ["transaction_id"],
           additionalProperties: false,
         },
       },
     }, true),
-    toolSpec("set_expense_category", "Set one expense category. Shares stay. An open review is closed.", {
+    toolSpec("set_expense_category", "Set one expense category. Shares stay. An open review is closed. A category of the other kind is a reversal: an outflow under an income category is negative income, an inflow under an expense category is negative expense.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },
@@ -567,7 +619,7 @@ function writeTools() {
       name: { type: "string" },
       kind: { type: "string", enum: ["expense", "income"] },
     }, true),
-    toolSpec("sync_bank", "Pull the latest Mercury bank lines for this company.", {
+    toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job.", {
       idempotency_key: { type: "string" },
     }, true),
     toolSpec("hide_category", "Hide a category. Undo restores the prior hidden flag.", {
@@ -578,6 +630,14 @@ function writeTools() {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
       excluded: { type: "boolean" },
+    }, true),
+    toolSpec("set_overhead_project", "Mark one project as the company's overhead project, so cost filed to it counts as overhead, not direct. project_id null clears it. Undo is kind overhead_project with the company id.", {
+      idempotency_key: { type: "string" },
+      project_id: { type: ["string", "null"] },
+    }, true),
+    toolSpec("rename_company", "Rename this company. 2 to 100 characters after trimming. Undo restores the prior name.", {
+      idempotency_key: { type: "string" },
+      name: { type: "string" },
     }, true),
     toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
       idempotency_key: { type: "string" },
@@ -608,7 +668,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -622,11 +682,12 @@ export function toolsFor(scope: string[]) {
   return [
     ...(scope.includes("read") ? readTools() : []),
     ...(scope.includes("write") ? writeTools() : []),
+    ...(!scope.includes("read") && scope.includes("write") ? [syncStatusSpec()] : []),
   ];
 }
 
-function envelopeOf(json: unknown): ToolResult {
-  if (json == null || typeof json !== "object" || Array.isArray(json)) return fail("refused", WRITE_REFUSED);
+function envelopeOf(json: unknown, refused = WRITE_REFUSED): ToolResult {
+  if (json == null || typeof json !== "object" || Array.isArray(json)) return fail("refused", refused);
   const body = json as { ok?: unknown; data?: unknown; error?: { code?: unknown; message?: unknown } };
   if (body.ok === true && body.data != null && typeof body.data === "object") return ok(body.data);
   const code = body.error?.code;
@@ -634,52 +695,95 @@ function envelopeOf(json: unknown): ToolResult {
   if (body.ok === false && typeof code === "string" && TOOL_CODES.has(code) && typeof message === "string") {
     return fail(code, message);
   }
-  return fail("refused", WRITE_REFUSED);
+  return fail("refused", refused);
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+function countOf(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value < 1_000_000_000 ? value : null;
+}
+
+/** The mercury-sync counts as the stored result, or null when the shape is wrong. */
+function syncResultOf(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const added = countOf(payload.inserted);
+  const duplicates = countOf(payload.updated);
+  const removed = countOf(payload.removed);
+  if (added == null || duplicates == null || removed == null) return null;
+  const newest = payload.newest_date;
+  if (newest != null && (typeof newest !== "string" || !DATE_ONLY.test(newest))) return null;
+  return { added, duplicates, removed, newest_date: newest ?? null };
+}
+
+type SyncOutcome = { ok: true; data: Record<string, unknown> } | { ok: false; error: { code: string; message: string } };
+
+function syncFailure(code: string, message: string): SyncOutcome {
+  return { ok: false, error: { code, message } };
+}
+
+async function pullBank(invoke: ToolInvoke): Promise<SyncOutcome> {
+  const pulled = await invoke(MERCURY_SYNC_FUNCTION, { force: true });
+  if (pulled.status === 429) return syncFailure("unavailable", "retry");
+  if (pulled.status === 401) return syncFailure("unavailable", "unavailable");
+  const payload = pulled.json != null && typeof pulled.json === "object" && !Array.isArray(pulled.json)
+    ? pulled.json as Record<string, unknown>
+    : null;
+  if (payload?.error === "Mercury is not connected") return syncFailure("not_found", "bank is not connected");
+  if (payload?.error === "auth") return syncFailure("refused", "bank key was rejected; reconnect in Settings");
+  if (pulled.status === 200 && payload != null) {
+    if (payload.skipped === true) return syncFailure("unavailable", "retry");
+    if (payload.ok === true) {
+      const data = syncResultOf(payload);
+      if (data != null) return { ok: true, data };
+    }
+  }
+  return syncFailure("refused", "The bank sync failed.");
+}
+
+/** Runs the pull and records the outcome on the job. Never throws. */
+async function runSyncJob(jobId: string, rpc: ToolRpc, invoke?: ToolInvoke): Promise<void> {
+  let outcome: SyncOutcome;
+  try {
+    outcome = invoke ? await pullBank(invoke) : syncFailure("unavailable", "unavailable");
+  } catch {
+    outcome = syncFailure("refused", "The bank sync failed.");
+  }
+  try {
+    await rpc("mcp_sync_bank_finish", { p_job_id: jobId, p_response: outcome });
+  } catch {
+    // The job stays running and get_sync_status reports it as retry after the stale window.
+  }
+}
+
+async function syncStatus(jobId: string, rpc: ToolRpc): Promise<ToolResult> {
+  const result = await rpc("mcp_sync_status", { p_job_id: jobId });
+  if (result.status >= 400) return fail("refused", READ_REFUSED);
+  return envelopeOf(result.json, READ_REFUSED);
 }
 
 async function syncBank(
   key: string,
   rpc: ToolRpc,
   invoke?: ToolInvoke,
+  defer?: ToolDefer,
 ): Promise<ToolResult> {
   const begin = await rpc("mcp_sync_bank_begin", { p_idempotency_key: key });
   if (begin.status >= 400) return fail("refused", WRITE_REFUSED);
   const begun = envelopeOf(begin.json);
   if (begun.isError) return begun;
   const state = (begun.structuredContent as { ok: true; data: Record<string, unknown> }).data;
-  if (state.state !== "proceed") {
-    return ok(state);
+  const jobId = typeof state.job_id === "string" && UUID.test(state.job_id) ? state.job_id : null;
+  if (state.state === "replay" && jobId != null) return syncStatus(jobId, rpc);
+  // A result stored before jobs existed has no state; it replays as it was.
+  if (state.state == null && !("job_id" in state) && "added" in state) return ok(state);
+  if (state.state !== "proceed" || jobId == null) return fail("refused", WRITE_REFUSED);
+  const work = runSyncJob(jobId, rpc, invoke);
+  if (defer) {
+    defer(work);
+    return ok({ job_id: jobId, state: "running" });
   }
-  if (!invoke) return fail("unavailable", "unavailable");
-  const pulled = await invoke(MERCURY_SYNC_FUNCTION, { force: true });
-  if (pulled.status === 429) return fail("unavailable", "retry");
-  if (pulled.status === 401) return fail("unavailable", "unavailable");
-  const payload = pulled.json != null && typeof pulled.json === "object" && !Array.isArray(pulled.json)
-    ? pulled.json as Record<string, unknown>
-    : null;
-  if (payload?.error === "Mercury is not connected") {
-    return fail("not_found", "bank is not connected");
-  }
-  if (payload?.error === "auth") {
-    return fail("refused", "bank key was rejected; reconnect in Settings");
-  }
-  if (pulled.status === 200 && payload != null) {
-    if (payload.skipped === true) return fail("unavailable", "retry");
-    if (payload.ok === true) {
-      const data = {
-        added: typeof payload.inserted === "number" ? payload.inserted : 0,
-        duplicates: typeof payload.updated === "number" ? payload.updated : 0,
-        removed: typeof payload.removed === "number" ? payload.removed : 0,
-        newest_date: typeof payload.newest_date === "string" ? payload.newest_date : null,
-      };
-      await rpc("mcp_sync_bank_finish", {
-        p_idempotency_key: key,
-        p_response: { ok: true, data },
-      });
-      return ok(data);
-    }
-  }
-  return fail("refused", "The bank sync failed.");
+  await work;
+  return syncStatus(jobId, rpc);
 }
 
 async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
@@ -858,6 +962,7 @@ async function callWrite(
   input: unknown,
   rpc: ToolRpc,
   invoke?: ToolInvoke,
+  defer?: ToolDefer,
 ): Promise<ToolResult> {
   const args = argsOf(input, ALLOWED[name] ?? new Set());
   if (isFail(args)) return args;
@@ -866,7 +971,7 @@ async function callWrite(
   if (name === "sync_bank") {
     const parsed = syncBankSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
-    return syncBank(parsed.data.idempotency_key, rpc, invoke);
+    return syncBank(parsed.data.idempotency_key, rpc, invoke, defer);
   }
   if (name === "assign_expense") {
     const parsed = assignSchema.safeParse(args);
@@ -933,6 +1038,22 @@ async function callWrite(
       p_category_id: parsed.data.category_id,
       p_excluded: parsed.data.excluded,
     };
+  } else if (name === "set_overhead_project") {
+    const parsed = setOverheadProjectSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_overhead_project";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_project_id: parsed.data.project_id,
+    };
+  } else if (name === "rename_company") {
+    const parsed = renameCompanySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_rename_company";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_name: parsed.data.name,
+    };
   } else if (name === "add_loan") {
     return addLoanWrite(args, rpc);
   } else if (name === "update_loan") {
@@ -975,15 +1096,21 @@ export async function callTool(
   scope: string[],
   rpc: ToolRpc,
   invoke?: ToolInvoke,
+  defer?: ToolDefer,
 ): Promise<ToolResult> {
   const write = (WRITE_TOOL_NAMES as readonly string[]).includes(name);
   const read = (READ_TOOL_NAMES as readonly string[]).includes(name);
   if (!write && !read) return fail("validation", "validation");
-  if (write && !scope.includes("write")) return fail("forbidden", "forbidden");
-  if (read && !scope.includes("read")) return fail("forbidden", "forbidden");
-  if (write) return callWrite(name as typeof WRITE_TOOL_NAMES[number], input, rpc, invoke);
+  if (!scopeAllows(name, scope)) return fail("forbidden", "forbidden");
+  if (write) return callWrite(name as typeof WRITE_TOOL_NAMES[number], input, rpc, invoke, defer);
   const args = argsOf(input, ALLOWED[name] ?? new Set());
   if (isFail(args)) return args;
+
+  if (name === SYNC_STATUS_TOOL) {
+    const jobId = args.job_id;
+    if (typeof jobId !== "string" || !UUID.test(jobId)) return fail("validation", "validation");
+    return syncStatus(jobId, rpc);
+  }
 
   if (name === "list_projects" || name === "get_totals") {
     const from = dateOf(args.from);
