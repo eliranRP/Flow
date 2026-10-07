@@ -573,7 +573,7 @@ const SHARES_SPEC = {
 
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       project_id: { type: "string" },
@@ -604,7 +604,7 @@ function writeTools() {
         },
       },
     }, true),
-    toolSpec("set_expense_category", "Set one expense category. Shares stay. An open review is closed.", {
+    toolSpec("set_expense_category", "Set one expense category. Shares stay. An open review is closed. A category of the other kind is a reversal: an outflow under an income category is negative income, an inflow under an expense category is negative expense.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       category_id: { type: "string" },

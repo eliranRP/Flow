@@ -425,6 +425,41 @@ Deno.test("assign_expense forwards project and category for an income review lin
   }
 });
 
+Deno.test("assign_expense and set_expense_category describe reversals", () => {
+  const byName = new Map(toolsFor(["write"]).map((tool) => [tool.name, tool.description]));
+  for (const name of ["assign_expense", "set_expense_category"]) {
+    const text = byName.get(name) ?? "";
+    assertEquals(text.includes("reversal"), true, `${name} names reversals`);
+    assertEquals(text.includes("negative income"), true, `${name} says an outflow can be negative income`);
+    assertEquals(text.includes("negative expense"), true, `${name} says an inflow can be negative expense`);
+  }
+  assertEquals((byName.get("assign_expense") ?? "").includes("Income needs a project"), true);
+});
+
+Deno.test("a reversal is forwarded as given: an expense line under an income category and the reverse", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { undo_kind: "reassign", id: REVIEW, closed_review: false } },
+  }));
+  const outflow = await callTool("assign_expense", {
+    idempotency_key: "rev-1",
+    transaction_id: TXN,
+    project_id: PROJECT,
+    category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(outflow.isError, false);
+  assertEquals(calls[0]?.name, "mcp_assign_expense");
+  assertEquals(calls[0]?.body.p_category_id, INCOME_CATEGORY);
+  const inflow = await callTool("set_expense_category", {
+    idempotency_key: "rev-2",
+    transaction_id: INCOME_TXN,
+    category_id: CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(inflow.isError, false);
+  assertEquals(calls[1]?.name, "mcp_set_expense_category");
+  assertEquals(calls[1]?.body.p_category_id, CATEGORY);
+});
+
 Deno.test("income assign forwards the project, single and batch, and get_project passes income through", async () => {
   const { calls, rpc } = rpcOf((name) => {
     if (name === "get_project") {

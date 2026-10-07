@@ -354,32 +354,32 @@ select is(
   'a skipped document returns to the queue after the amount changes'
 );
 
-select throws_ok(
+select lives_ok(
   format(
-    'select public.resolve_review(%L::uuid, ''approved'', %L::uuid, %L::uuid, false)',
+    'select public.resolve_review(%1$L::uuid, ''changed'', %2$L::uuid, %3$L::uuid, false, false);'
+    'select public.resolve_review(%1$L::uuid, ''changed'', %2$L::uuid, %4$L::uuid, false, false)',
     (select q.id from public.review_queue q
       join public.transactions t on t.id = q.transaction_id
       where t.idempotency_key = 'r4:exp' and q.status = 'open'),
     (select id from r4 where label = 'project'),
-    (select id from r4 where label = 'income_cat')
+    (select id from r4 where label = 'income_cat'),
+    (select id from r4 where label = 'materials')
   ),
-  'P0001',
-  'category kind must match the direction',
-  'an expense cannot be filed under an income category'
+  'an expense can be filed under an income category, then put back (FLOW-104: a reversal)'
 );
 
 select tests.authenticate_as('r4_a');
-select throws_ok(
+select lives_ok(
   format(
-    'select public.resolve_review(%L::uuid, ''approved'', null, %L::uuid, false)',
+    'select public.resolve_review(%1$L::uuid, ''changed'', null, %2$L::uuid, false, false);'
+    'select public.resolve_review(%1$L::uuid, ''changed'', null, %3$L::uuid, false, false)',
     (select q.id from public.review_queue q
       join public.transactions t on t.id = q.transaction_id
       where t.idempotency_key = 'r4:income' and q.status = 'open'),
-    (select id from r4 where label = 'materials')
+    (select id from r4 where label = 'materials'),
+    (select id from r4 where label = 'income_cat')
   ),
-  'P0001',
-  'category kind must match the direction',
-  'income cannot be filed under an expense category'
+  'income can be filed under an expense category, then put back (FLOW-104: a reversal)'
 );
 
 select throws_ok(
