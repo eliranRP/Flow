@@ -487,6 +487,19 @@ a.ui-row,
   cursor: not-allowed;
 }
 
+/* FLOW-119. The loan's project: one line, the empty value muted. */
+.ui-pick-value {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-pick-value[data-empty="true"] {
+  color: var(--color-text-muted);
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
