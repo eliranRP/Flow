@@ -21,7 +21,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
 | 6 | [FLOW-104](#flow-104) | Reversals across directions (negative income, negative expense) | SMALL CYCLE | in-progress (#76) |
 | 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
-| 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
+| 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | in-progress (#77) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
@@ -40,11 +40,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 24 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 25 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 26 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 27 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
 ## P&L and loans
-
 
 <a id="flow-102"></a>
 ### FLOW-102 · Unassigned bucket, overhead project, unpaid row on the invoiced basis
@@ -458,9 +458,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-602"></a>
 ### FLOW-602 · Rename a company
-- **Type:** SMALL CYCLE · **Status:** ready (RPC and MCP); the screen is plan-first · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** in-progress (#77) for the RPC and MCP; the screen is plan-first · **Depends on:** —
 - **What:** An owner-only RPC and MCP tool `rename_company` (idempotency key, write bucket, undo). The in-app place is a small focused screen or sheet, not a Settings catch-all; it needs a quick mockup and can ship in a second PR.
 - **Acceptance:** viewer refused, other company refused with a positive control, undo restores, TOOLS.md.
+
+<a id="flow-604"></a>
+### FLOW-604 · rename_company follow-ups (#77 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-602
+- **What:** (1) The MCP length check counts UTF-16 units, SQL counts code points; align them. (2) SQL `btrim` strips only spaces while the MCP trims all whitespace; trim all whitespace and reject control characters in `rename_company`. (3) A direct table update can still set any name; add a not-valid check constraint for 2 to 100 characters, or revoke `update(name)` once the screen uses the RPC. (4) pgTAP: assert an `audit_log` row after the MCP rename and after undo, and cover the refused path.
+- **Acceptance:** the same name is accepted or refused by the MCP, the RPC, and the table; audit rows tested.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device

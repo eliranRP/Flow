@@ -42,6 +42,7 @@ export const WRITE_TOOL_NAMES = [
   "hide_category",
   "set_category_pnl",
   "set_overhead_project",
+  "rename_company",
   "add_loan",
   "update_loan",
   "attach_loan_payment",
@@ -74,6 +75,7 @@ const ALLOWED: Record<string, Set<string>> = {
   hide_category: new Set(["idempotency_key", "category_id"]),
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
   set_overhead_project: new Set(["idempotency_key", "project_id"]),
+  rename_company: new Set(["idempotency_key", "name"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency",
@@ -129,8 +131,12 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"]),
   id: UUID_TEXT,
+}).strict();
+const renameCompanySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  name: z.string().trim().min(2).max(100),
 }).strict();
 const LOAN_NAME = z.string().trim().min(1).max(80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -629,6 +635,10 @@ function writeTools() {
       idempotency_key: { type: "string" },
       project_id: { type: ["string", "null"] },
     }, true),
+    toolSpec("rename_company", "Rename this company. 2 to 100 characters after trimming. Undo restores the prior name.", {
+      idempotency_key: { type: "string" },
+      name: { type: "string" },
+    }, true),
     toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
@@ -658,7 +668,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -1035,6 +1045,14 @@ async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_project_id: parsed.data.project_id,
+    };
+  } else if (name === "rename_company") {
+    const parsed = renameCompanySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_rename_company";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_name: parsed.data.name,
     };
   } else if (name === "add_loan") {
     return addLoanWrite(args, rpc);
