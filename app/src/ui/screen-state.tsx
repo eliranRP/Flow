@@ -17,6 +17,8 @@ export function ScreenState({
   empty,
   loading,
   children,
+  stacked = false,
+  trailing,
 }: {
   title: string;
   subtitle?: string;
@@ -28,6 +30,10 @@ export function ScreenState({
   empty?: ReactNode;
   loading?: ReactNode;
   children?: ReactNode;
+  /** The title sits under the bar, like the ready screen it stands in for. */
+  stacked?: boolean;
+  /** Known chrome that stays real while the data loads, e.g. a period pill. */
+  trailing?: ReactNode;
 }) {
   const preview = useHomePreview();
   const navigate = useNavigate();
@@ -43,7 +49,11 @@ export function ScreenState({
   }
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} kicker={kicker} />
+      {stacked ? (
+        <ScreenHeader layout="stacked" title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} trailing={trailing ?? action} kicker={kicker} />
+      ) : (
+        <ScreenHeader title={title} subtitle={phase.kind === "ready" ? subtitle : undefined} backTo={backTo} action={action} trailing={trailing} kicker={kicker} />
+      )}
       {phase.kind === "loading" ? (loading ?? <ListSkeleton />) : null}
       {phase.kind === "error" ? <ErrorState offline={phase.offline} onRetry={retry} /> : null}
       {phase.kind === "empty" ? empty : null}

@@ -29,6 +29,7 @@ import { HomeSkeleton } from "./home-skeleton";
 import { TextLink } from "../ui/text-link";
 import { TopBand } from "../ui/top-band";
 import { emptyHomeLabel } from "../home-label";
+import { breakdownPath } from "../breakdown";
 import {
   allTime,
   comparisonWords,
@@ -260,6 +261,11 @@ export function HomeBooks({
           income: row.income_minor,
           expense: row.expense_minor,
         }))}
+        links={{
+          income: breakdownPath("income", search),
+          expense: breakdownPath("expense", search),
+          period: periodLabel(period),
+        }}
       />
       {ilsOnly && comparison && percent != null ? (
         <p className="ui-flow-note">
