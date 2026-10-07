@@ -115,6 +115,8 @@ An open review is closed by `approve_review_item`. The card leaves לאישור.
 
 Passes the project and category into `approve_review_item` when a review is open. Otherwise `reassign_transaction`. A finished project is allowed, because `reassign_transaction` allows it.
 
+The category kind may differ from the line's direction. The kind decides the P&L side: an outflow under an income category is a reversal and counts as negative income, and an inflow under an expense category counts as negative expense. An income-kind category needs a project unless it is off-P&L, also on an outflow. `direction` and the signed amount stay as stored. Auto-suggested categories, connector syncs, `assign_expense_split`, and loan splits still use the line's own kind. Decision [0103](../decisions/0103-reversals-across-directions.md).
+
 Income works the same way. A filed income line keeps `pnl_role` null and gets no allocation row; the P&L reads its `project_id`, so it shows in that project's `get_project` income and `list_projects` row, and once in the company total (FLOW-109). Expenses get `pnl_role` `project` and one 100% allocation.
 
 ```json
@@ -150,6 +152,8 @@ Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as
 ### set_expense_category
 
 The category changes. Shares stay. An open review is closed the same way, using the row's current project.
+
+A category of the other kind is a reversal (see `assign_expense`): it counts as negative income on an outflow and negative expense on an inflow. On a line filed to one project the role follows the new kind, as in `assign_expense`; a shared line keeps its shares.
 
 ```json
 {
