@@ -104,6 +104,10 @@ as $$
         'invalid loan terms',
         'loan category is fixed',
         'project not found',
+        'parts must sum to the line',
+        'line has a loan split',
+        'line has a split by category',
+        'line has an open review',
         'payment below interest',
         'invalid loan parts'
       ) then p_message
@@ -280,8 +284,10 @@ declare
   key text;
   allowed constant text[] := array[
     'name', 'principal_minor', 'annual_rate_ppm', 'term_months',
-    'start_date', 'payment_minor', 'escrow_minor'
+    'start_date', 'payment_minor', 'escrow_minor', 'project_id'
   ];
+  new_project uuid;
+  set_project boolean;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -299,13 +305,28 @@ begin
       return private.mcp_error('validation', 'validation');
     end if;
     -- An explicit null would keep the old value and still log an edit.
-    if jsonb_typeof(p_patch->key) = 'null' then
+    -- project_id is the exception: null clears the link.
+    if key <> 'project_id' and jsonb_typeof(p_patch->key) = 'null' then
       return private.mcp_error('validation', 'validation');
     end if;
   end loop;
 
   if p_patch = '{}'::jsonb then
     return private.mcp_error('validation', 'validation');
+  end if;
+
+  -- project_id is a uuid string, or JSON null to clear it. An absent key leaves it.
+  set_project := p_patch ? 'project_id';
+  if set_project then
+    if jsonb_typeof(p_patch->'project_id') not in ('null', 'string')
+      or (
+        jsonb_typeof(p_patch->'project_id') = 'string'
+        and p_patch->>'project_id' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      )
+    then
+      return private.mcp_error('validation', 'validation');
+    end if;
+    new_project := (p_patch->>'project_id')::uuid;
   end if;
 
   gate := private.mcp_require_writer();
@@ -326,7 +347,7 @@ begin
   response := private.mcp_error('refused', 'The write was refused.');
   begin
     select l.name, l.principal_minor, l.annual_rate_ppm, l.term_months,
-           l.start_date, l.payment_minor, l.escrow_minor
+           l.start_date, l.payment_minor, l.escrow_minor, l.project_id
     into cur
     from public.loans l
     where l.id = p_loan_id
@@ -335,6 +356,10 @@ begin
 
     if not found then
       response := private.mcp_refused('loan not found');
+    elsif new_project is not null and not exists (
+      select 1 from public.projects p where p.id = new_project and p.company_id = cid
+    ) then
+      response := private.mcp_refused('project not found');
     else
       before := jsonb_build_object(
         'name', cur.name,
@@ -343,7 +368,8 @@ begin
         'term_months', cur.term_months,
         'start_date', cur.start_date,
         'payment_minor', cur.payment_minor,
-        'escrow_minor', cur.escrow_minor
+        'escrow_minor', cur.escrow_minor,
+        'project_id', cur.project_id
       );
 
       update public.loans l
@@ -354,12 +380,13 @@ begin
         term_months = coalesce((p_patch->>'term_months')::integer, l.term_months),
         start_date = coalesce((p_patch->>'start_date')::date, l.start_date),
         payment_minor = coalesce((p_patch->>'payment_minor')::bigint, l.payment_minor),
-        escrow_minor = coalesce((p_patch->>'escrow_minor')::bigint, l.escrow_minor)
+        escrow_minor = coalesce((p_patch->>'escrow_minor')::bigint, l.escrow_minor),
+        project_id = case when set_project then new_project else l.project_id end
       where l.id = p_loan_id
         and l.company_id = cid;
 
       select l.name, l.principal_minor, l.annual_rate_ppm, l.term_months,
-             l.start_date, l.payment_minor, l.escrow_minor
+             l.start_date, l.payment_minor, l.escrow_minor, l.project_id
       into cur
       from public.loans l
       where l.id = p_loan_id;
@@ -371,7 +398,8 @@ begin
         'term_months', cur.term_months,
         'start_date', cur.start_date,
         'payment_minor', cur.payment_minor,
-        'escrow_minor', cur.escrow_minor
+        'escrow_minor', cur.escrow_minor,
+        'project_id', cur.project_id
       );
 
       insert into private.mcp_writes (token_id, user_id, kind, loan_id, prior, created_at)
@@ -382,7 +410,7 @@ begin
 
       response := jsonb_build_object(
         'ok', true,
-        'data', jsonb_build_object('id', p_loan_id, 'undo_kind', 'loan_update')
+        'data', jsonb_build_object('id', p_loan_id, 'project_id', cur.project_id, 'undo_kind', 'loan_update')
       );
     end if;
   exception
@@ -436,6 +464,11 @@ declare
   cat_interest uuid;
   cat_escrow uuid;
   cat_principal uuid;
+  line record;
+  inherited boolean := false;
+  inherit_reason text;
+  reassign_id uuid;
+  write_prior jsonb;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -487,7 +520,7 @@ begin
     ) then
       response := private.mcp_refused('loan already attached');
     else
-      select l.currency
+      select l.currency, l.project_id
       into loan
       from public.loans l
       where l.id = p_loan_id
@@ -573,6 +606,46 @@ begin
 
               perform private.loan_splits_check(p_transaction_id);
 
+              -- The split parts count under the loan's project through the line's
+              -- own project. Only a line with no project, no shares and no role
+              -- inherits it. Anything the owner already set is left alone.
+              select t.project_id, t.pnl_role, t.category_id
+              into line
+              from public.transactions t
+              where t.id = p_transaction_id
+                and t.company_id = cid;
+
+              if loan.project_id is null then
+                inherit_reason := 'loan has no project';
+              elsif line.project_id is not null then
+                inherit_reason := 'line already has a project';
+              elsif line.pnl_role is not distinct from 'shared'::public.pnl_role
+                or exists (
+                  select 1 from public.allocations a
+                  where a.transaction_id = p_transaction_id and a.company_id = cid
+                )
+              then
+                inherit_reason := 'line has shares';
+              elsif line.pnl_role is not null then
+                inherit_reason := 'line has a role';
+              elsif line.category_id is null then
+                inherit_reason := 'line has no category';
+              else
+                -- The same rule as assign_expense: a direct cost on the project.
+                reassign_id := public.reassign_transaction(
+                  p_transaction_id, loan.project_id, line.category_id
+                );
+                inherited := true;
+              end if;
+
+              if inherited then
+                write_prior := jsonb_build_object(
+                  'reassign_id', reassign_id,
+                  'project_id', loan.project_id,
+                  'category_id', line.category_id
+                );
+              end if;
+
               -- Kept so undo can tell whether the app corrected the split afterwards.
               select jsonb_agg(jsonb_build_object(
                 'part', s.part,
@@ -582,15 +655,20 @@ begin
               into written
               from public.loan_splits s
               where s.transaction_id = p_transaction_id;
+              write_prior := coalesce(write_prior, '{}'::jsonb)
+                || jsonb_build_object('parts', written);
 
               insert into private.mcp_writes (token_id, user_id, kind, loan_id, transaction_id, prior)
-              values (token, auth.uid(), 'loan_split', p_loan_id, p_transaction_id, written);
+              values (token, auth.uid(), 'loan_split', p_loan_id, p_transaction_id, write_prior);
 
               response := jsonb_build_object(
                 'ok', true,
                 'data', jsonb_build_object(
                   'loan_id', p_loan_id,
                   'transaction_id', p_transaction_id,
+                  'project_inherited', inherited,
+                  'project_id', case when inherited then loan.project_id end,
+                  'project_inherited_reason', inherit_reason,
                   'undo_kind', 'loan_split'
                 )
               );
@@ -651,6 +729,7 @@ declare
   before jsonb;
   cur_overhead uuid;
   cur_name text;
+  restored boolean;
 begin
   if p_idempotency_key is null
     or char_length(p_idempotency_key) < 1
@@ -659,7 +738,7 @@ begin
     or p_kind is null
     or p_kind not in (
       'review', 'reassign', 'project', 'category', 'category_hidden', 'category_pnl',
-      'loan', 'loan_update', 'loan_split', 'overhead_project', 'company'
+      'loan', 'loan_update', 'loan_split', 'overhead_project', 'company', 'line_split'
     )
   then
     return private.mcp_error('validation', 'validation');
@@ -696,6 +775,7 @@ begin
         or (p_kind = 'loan_split' and w.kind = 'loan_split' and w.transaction_id = p_id)
         or (p_kind = 'overhead_project' and w.kind = 'overhead_project' and w.prior->>'company_id' = p_id::text)
         or (p_kind = 'company' and w.kind = 'company' and w.company_id = p_id)
+        or (p_kind = 'line_split' and w.kind = 'line_split' and w.transaction_id = p_id)
       )
     order by w.created_at desc
     limit 1
@@ -743,6 +823,32 @@ begin
           'data', jsonb_build_object('kind', p_kind, 'id', p_id)
         );
       end if;
+    elsif p_kind = 'line_split' then
+      perform 1 from public.transactions t
+      where t.id = p_id and t.company_id = cid and t.removed_at is null
+      for update;
+      if not found then
+        response := private.mcp_error('not_found', 'not found');
+      elsif private.line_split_parts(p_id) is distinct from rec.prior->'written' then
+        response := private.mcp_error('conflict', 'conflict');
+      else
+        delete from public.line_splits where transaction_id = p_id and company_id = cid;
+        insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+        select cid, p_id, b.ord::smallint, (b.part->>'category_id')::uuid, (b.part->>'project_id')::uuid,
+          (b.part->>'amount_minor')::bigint
+        from jsonb_array_elements(rec.prior->'before') with ordinality as b(part, ord);
+        update public.transactions
+        set user_assigned = (rec.prior->>'user_assigned')::boolean,
+            category_suggested = (rec.prior->>'category_suggested')::boolean
+        where id = p_id and company_id = cid;
+        update private.mcp_writes
+        set undone_at = clock_timestamp()
+        where id = rec.id and user_id = auth.uid() and undone_at is null;
+        response := jsonb_build_object(
+          'ok', true,
+          'data', jsonb_build_object('kind', p_kind, 'id', p_id)
+        );
+      end if;
     elsif p_kind = 'loan' then
       perform 1 from public.loans l
       where l.id = p_id and l.company_id = cid
@@ -768,23 +874,43 @@ begin
       written := rec.prior->'after';
       before := rec.prior->'before';
       select l.name, l.principal_minor, l.annual_rate_ppm, l.term_months,
-             l.start_date, l.payment_minor, l.escrow_minor
+             l.start_date, l.payment_minor, l.escrow_minor, l.project_id
       into cur_loan
       from public.loans l
       where l.id = p_id and l.company_id = cid
       for update;
       if not found or written is null or before is null then
         response := private.mcp_error('not_found', 'not found');
-      elsif jsonb_build_object(
-        'name', cur_loan.name,
-        'principal_minor', cur_loan.principal_minor,
-        'annual_rate_ppm', cur_loan.annual_rate_ppm,
-        'term_months', cur_loan.term_months,
-        'start_date', cur_loan.start_date,
-        'payment_minor', cur_loan.payment_minor,
-        'escrow_minor', cur_loan.escrow_minor
+      elsif (
+        case when written ? 'project_id'
+          then jsonb_build_object(
+            'name', cur_loan.name,
+            'principal_minor', cur_loan.principal_minor,
+            'annual_rate_ppm', cur_loan.annual_rate_ppm,
+            'term_months', cur_loan.term_months,
+            'start_date', cur_loan.start_date,
+            'payment_minor', cur_loan.payment_minor,
+            'escrow_minor', cur_loan.escrow_minor,
+            'project_id', cur_loan.project_id
+          )
+          -- An edit written before FLOW-105 has no project_id in its snapshot.
+          else jsonb_build_object(
+            'name', cur_loan.name,
+            'principal_minor', cur_loan.principal_minor,
+            'annual_rate_ppm', cur_loan.annual_rate_ppm,
+            'term_months', cur_loan.term_months,
+            'start_date', cur_loan.start_date,
+            'payment_minor', cur_loan.payment_minor,
+            'escrow_minor', cur_loan.escrow_minor
+          )
+        end
       ) is distinct from written then
         response := private.mcp_error('conflict', 'conflict');
+      elsif before->>'project_id' is not null and not exists (
+        select 1 from public.projects p
+        where p.id = (before->>'project_id')::uuid and p.company_id = cid
+      ) then
+        response := private.mcp_refused('project not found');
       else
         update public.loans l
         set
@@ -794,7 +920,9 @@ begin
           term_months = (before->>'term_months')::integer,
           start_date = (before->>'start_date')::date,
           payment_minor = (before->>'payment_minor')::bigint,
-          escrow_minor = (before->>'escrow_minor')::bigint
+          escrow_minor = (before->>'escrow_minor')::bigint,
+          project_id = case when before ? 'project_id'
+            then (before->>'project_id')::uuid else l.project_id end
         where l.id = p_id and l.company_id = cid;
         update private.mcp_writes
         set undone_at = clock_timestamp()
@@ -814,8 +942,8 @@ begin
         response := private.mcp_error('conflict', 'conflict');
       elsif (
         -- Corrected in the app after the MCP wrote it: leave the owner's version.
-        rec.prior is not null
-        and rec.prior is distinct from (
+        rec.prior->'parts' is not null
+        and rec.prior->'parts' is distinct from (
           select jsonb_agg(jsonb_build_object(
             'part', s.part,
             'amount_minor', s.amount_minor,
@@ -828,7 +956,7 @@ begin
         )
       ) or (
         -- Written before the parts were kept: any later touch counts as a correction.
-        rec.prior is null
+        rec.prior->'parts' is null
         and exists (
           select 1 from public.loan_splits s
           where s.company_id = cid
@@ -843,12 +971,38 @@ begin
         where s.company_id = cid
           and s.transaction_id = p_id
           and s.loan_id = rec.loan_id;
+        -- Give the line back the project it had before the attach, but only if
+        -- nobody has changed it since. A line that was changed is left as it is.
+        restored := false;
+        if rec.prior->>'reassign_id' is not null then
+          select t.project_id, t.category_id, t.pnl_role
+          into cur_project, cur_category, cur_role
+          from public.transactions t
+          where t.id = p_id and t.company_id = cid and t.removed_at is null
+          for update;
+          if found
+            and cur_project::text is not distinct from rec.prior->>'project_id'
+            and cur_category::text is not distinct from rec.prior->>'category_id'
+            and cur_role = 'project'::public.pnl_role
+            and exists (
+              select 1 from public.reassign_undo u
+              where u.id = (rec.prior->>'reassign_id')::uuid
+                and u.company_id = cid
+                and u.undone_at is null
+            )
+          then
+            perform public.undo_reassign((rec.prior->>'reassign_id')::uuid);
+            restored := true;
+          end if;
+        end if;
         update private.mcp_writes
         set undone_at = clock_timestamp()
         where id = rec.id and user_id = auth.uid() and undone_at is null;
         response := jsonb_build_object(
           'ok', true,
-          'data', jsonb_build_object('kind', p_kind, 'id', p_id)
+          'data', case when rec.prior->>'reassign_id' is not null
+            then jsonb_build_object('kind', p_kind, 'id', p_id, 'project_restored', restored)
+            else jsonb_build_object('kind', p_kind, 'id', p_id) end
         );
       end if;
     elsif p_kind = 'project' then
@@ -867,8 +1021,14 @@ begin
         select 1 from public.split_rule_targets s
         where s.company_id = cid and s.project_id = p_id
       ) or exists (
+        select 1 from public.line_splits lsp
+        where lsp.company_id = cid and lsp.project_id = p_id
+      ) or exists (
         select 1 from public.suppliers sup
         where sup.company_id = cid and sup.remembered_project_id = p_id
+      ) or exists (
+        select 1 from public.loans l
+        where l.company_id = cid and l.project_id = p_id
       ) then
         response := private.mcp_error('conflict', 'conflict');
       else
@@ -899,6 +1059,9 @@ begin
       ) or exists (
         select 1 from public.loan_splits ls
         where ls.company_id = cid and ls.category_id = p_id
+      ) or exists (
+        select 1 from public.line_splits lsp
+        where lsp.company_id = cid and lsp.category_id = p_id
       ) or exists (
         select 1 from public.review_queue q
         where q.company_id = cid

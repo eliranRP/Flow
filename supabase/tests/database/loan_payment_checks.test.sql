@@ -300,10 +300,10 @@ select is(
 );
 
 reset role;
-update private.mcp_writes set prior = (
+update private.mcp_writes set prior = jsonb_build_object('parts', (
   select jsonb_agg(jsonb_build_object('part', s.part, 'amount_minor', s.amount_minor, 'category_id', s.category_id) order by s.part)
   from public.loan_splits s where s.transaction_id = (select id from f111 where label = 'txn')
-)
+))
 where kind = 'loan_split' and transaction_id = (select id from f111 where label = 'txn');
 
 select pg_temp.as_mcp('write');
