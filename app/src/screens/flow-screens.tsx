@@ -2400,6 +2400,7 @@ export function TransactionScreen({
   const invalidate = useInvalidateBooks();
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
+  const moreRef = useRef<HTMLButtonElement | HTMLAnchorElement | null>(null);
   const [docOpen, setDocOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
   const leaveChange = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
@@ -2694,7 +2695,7 @@ export function TransactionScreen({
         title={txn.direction === "income" ? "הכנסה" : "הוצאה"}
         size="compact"
         leading={<BackButton fallback={parent} />}
-        trailing={holdWrites ? <ReservedMenuSlot /> : <IconButton label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
+        trailing={holdWrites ? <ReservedMenuSlot /> : <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>}
       />
       <div className="ui-page-pad">
         <p className="t-title-3 ui-party">{party}</p>
@@ -2808,7 +2809,18 @@ export function TransactionScreen({
           setExtraProjects((list) => [...list, project]);
         }, invalidate)}
       />
-      <Sheet open={menu} onOpenChange={setMenu} title="עוד">
+      <Sheet
+        open={menu}
+        onOpenChange={(open) => {
+          // 0075: a dismiss during the P&L write waits for it; success closes the sheet, failure keeps it.
+          if (open) return true;
+          if (pnlLine.isPending) return false;
+          setMenu(false);
+          return true;
+        }}
+        title="עוד"
+        returnFocusRef={moreRef}
+      >
         <div className="ui-stack">
           {txn.pnl_fixed === true ? (
             <p className="ui-cat-fixed">
