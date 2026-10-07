@@ -175,8 +175,6 @@ Everything else follows by area, roughly in priority order inside each area.
 - **MCP:** a write tool (idempotency key, write rate limit, `undo`; `undo_batch` if it takes several lines) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
 - **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income kinds on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
 
-## Projects and reports
-
 <a id="flow-202"></a>
 ### FLOW-202 · sync_bank returns before slow MCP clients time out
 - **Type:** MCP · **Status:** ready · **Depends on:** —
