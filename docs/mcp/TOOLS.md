@@ -54,6 +54,16 @@ Input: `{ "from": "2026-09-01", "to": "2026-09-30", "basis": "cash" }`.
 
 Output `data.projects[]`: `id`, `name`, `status`, `budget_agorot`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`). `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD).
 
+### get_project
+
+`get_project(p_id, p_basis)`, with no company id. `id` is a project id from `list_projects`. `basis` is `cash` or `invoiced` (default `cash`, the same as `list_projects` and `get_totals`; the app's project screen reads `invoiced`). Only income depends on the basis. A malformed `id` or `basis` is `validation`. An unknown id and a project in another company are both `not_found`.
+
+Input: `{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "basis": "cash" }`.
+
+Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `category`), the 40 newest lines. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
+
+Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category.
+
 ### list_categories
 
 Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`.
