@@ -755,6 +755,9 @@ Deno.test("sync_bank begin errors are returned at once", async () => {
   const odd = await callTool("sync_bank", { idempotency_key: "sync-2b" }, ["write"], () =>
     Promise.resolve({ status: 200, json: { ok: true, data: { state: "proceed" } } }));
   assertEquals(odd.isError, true, "proceed without a job id is refused");
+  const empty = await callTool("sync_bank", { idempotency_key: "sync-2d" }, ["write"], () =>
+    Promise.resolve({ status: 200, json: { ok: true, data: {} } }));
+  assertEquals(empty.isError, true, "an unknown begin shape is refused");
   const down = await callTool("sync_bank", { idempotency_key: "sync-2c" }, ["write"], () =>
     Promise.resolve({ status: 503, json: null }));
   assertEquals(down.isError, true);

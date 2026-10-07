@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(26);
+select plan(31);
 
 do $users$
 begin
@@ -219,6 +219,43 @@ select is(
   'refused',
   'an unknown error code is stored as the generic failure'
 );
+insert into sj (label, id) select 'k1', (public.mcp_sync_bank_begin('job-k1')->'data'->>'job_id')::uuid;
+insert into sj (label, id) select 'k2', (public.mcp_sync_bank_begin('job-k2')->'data'->>'job_id')::uuid;
+insert into sj (label, id) select 'k3', (public.mcp_sync_bank_begin('job-k3')->'data'->>'job_id')::uuid;
+insert into sj (label, id) select 'k4', (public.mcp_sync_bank_begin('job-k4')->'data'->>'job_id')::uuid;
+select public.mcp_sync_bank_finish(
+  pg_temp.job('k1'),
+  '{"ok": true, "data": {"added": "3", "duplicates": 0, "removed": 0, "newest_date": null}}'::jsonb
+);
+select public.mcp_sync_bank_finish(
+  pg_temp.job('k2'),
+  '{"ok": true, "data": {"added": 1, "duplicates": 0, "removed": 0, "newest_date": "2026-02-30"}}'::jsonb
+);
+select public.mcp_sync_bank_finish(pg_temp.job('k3'), '{"ok": false, "error": {"code": "refused", "message": ""}}'::jsonb);
+select public.mcp_sync_bank_finish(
+  pg_temp.job('k4'),
+  jsonb_build_object('ok', false, 'error', jsonb_build_object('code', 'refused', 'message', repeat('x', 201)))
+);
+select is(
+  public.mcp_sync_status(pg_temp.job('k1'))->'data'->'error'->>'message',
+  'The bank sync failed.',
+  'a string count is stored as the generic failure'
+);
+select is(
+  public.mcp_sync_status(pg_temp.job('k2'))->'data'->'error'->>'message',
+  'The bank sync failed.',
+  'an impossible date is stored as the generic failure'
+);
+select is(
+  public.mcp_sync_status(pg_temp.job('k3'))->'data'->'error'->>'message',
+  'The bank sync failed.',
+  'an empty message is stored as the generic failure'
+);
+select is(
+  public.mcp_sync_status(pg_temp.job('k4'))->'data'->'error'->>'message',
+  'The bank sync failed.',
+  'a message over 200 characters is stored as the generic failure'
+);
 select is(
   public.mcp_sync_bank_finish(null, '{}'::jsonb)->'error'->>'code',
   'validation',
@@ -261,6 +298,14 @@ select is(
   public.mcp_sync_status(pg_temp.job('j7'))->'data'->'error',
   '{"code": "unavailable", "message": "retry"}'::jsonb,
   'a stale running job reads as retry'
+);
+select is(
+  public.mcp_sync_bank_finish(
+    pg_temp.job('j7'),
+    '{"ok": true, "data": {"added": 1, "duplicates": 0, "removed": 0, "newest_date": null}}'::jsonb
+  )->'error'->>'code',
+  'not_found',
+  'a stale job cannot be finished, so a retry answer never turns into done'
 );
 
 -- PostgREST roles cannot touch the table.

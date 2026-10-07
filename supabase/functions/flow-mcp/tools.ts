@@ -738,7 +738,7 @@ async function syncBank(
   const jobId = typeof state.job_id === "string" && UUID.test(state.job_id) ? state.job_id : null;
   if (state.state === "replay" && jobId != null) return syncStatus(jobId, rpc);
   // A result stored before jobs existed has no state; it replays as it was.
-  if (state.state == null && !("job_id" in state)) return ok(state);
+  if (state.state == null && !("job_id" in state) && "added" in state) return ok(state);
   if (state.state !== "proceed" || jobId == null) return fail("refused", WRITE_REFUSED);
   const work = runSyncJob(jobId, rpc, invoke);
   if (defer) {

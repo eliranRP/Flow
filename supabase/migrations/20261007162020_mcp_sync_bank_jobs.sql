@@ -170,6 +170,7 @@ as $$
       or (
         jsonb_typeof(p_data->'newest_date') = 'string'
         and (p_data->>'newest_date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+        and pg_input_is_valid(p_data->>'newest_date', 'date')
       )
     );
 $$;
@@ -238,6 +239,8 @@ begin
   where j.id = p_job_id
     and j.token_id = token
     and j.state = 'running'
+    -- Past the stale window the job already reads as retry; it stays that way.
+    and j.started_at >= now() - interval '5 minutes'
   returning j.id into updated;
 
   if updated is null then

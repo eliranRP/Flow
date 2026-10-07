@@ -204,6 +204,14 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** `create_project` and `create_category` hit HTTP 429 after about 10 calls in a row during a company setup. Add batch create tools (like `assign_expenses`) or a higher burst for setup. Also send the MCP `tools/list_changed` notification so clients refresh a stale tool list after a deploy.
 - **Acceptance:** a setup of 30 projects and categories runs without a 429; tests for the batch and the notification.
 
+<a id="flow-207"></a>
+### FLOW-207 · sync_bank job follow-ups (#75 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `mcp_sync_bank_finish` accepts any 1–200 character failure message for a known code; allow-list the fixed strings the edge sends, like `mcp_refused`.
+- [ ] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs.
+- [ ] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
+- [ ] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
+
 ## Transactions and app UX
 
 <a id="flow-301"></a>
