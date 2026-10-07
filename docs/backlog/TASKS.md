@@ -441,7 +441,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-602"></a>
 ### FLOW-602 · Rename a company
-- **Type:** SMALL CYCLE · **Status:** in-progress (#77) for the RPC and MCP; the screen is in-progress (option A approved by the owner on 2026-10-07: the business name is its own Settings row that opens a one-field rename sheet, decision [0102](../decisions/0102-rename-company-row.md)) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** in-progress (#77) for the RPC and MCP; the screen is in-progress (option A approved by the owner on 2026-10-07: the business name is its own Settings row that opens a one-field rename sheet, decision [0103](../decisions/0103-rename-company-row.md)) · **Depends on:** —
 - **What:** An owner-only RPC and MCP tool `rename_company` (idempotency key, write bucket, undo). The in-app place is a small focused screen or sheet, not a Settings catch-all; it needs a quick mockup and can ship in a second PR.
 - **Acceptance:** viewer refused, other company refused with a positive control, undo restores, TOOLS.md.
 

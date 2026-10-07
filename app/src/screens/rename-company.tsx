@@ -40,7 +40,7 @@ async function renameCompany(companyId: string, name: string): Promise<void> {
 type Rename = { companyId: string; name: string; previous: string };
 
 /**
- * The business-name sheet: one field and שמירה (decision 0102). A saved name
+ * The business-name sheet: one field and שמירה (decision 0103). A saved name
  * shows an undo toast; ביטול writes the previous name back.
  */
 export function RenameCompanySheet({
