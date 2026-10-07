@@ -32,9 +32,11 @@ type PeriodPickerProps = {
   onOpenChange: (open: boolean) => void;
   options: PeriodOption[];
   onCustom?: () => void;
+  /** Page sits on a white screen, so the pill is tint with accent text. Band stays on the violet band. */
+  tone?: "band" | "page";
 };
 
-export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: PeriodPickerProps) {
+export function PeriodPicker({ pill, open, onOpenChange, options, onCustom, tone = "band" }: PeriodPickerProps) {
   const custom = useRef(false);
   const onCustomRef = useRef(onCustom);
   onCustomRef.current = onCustom;
@@ -54,7 +56,7 @@ export function PeriodPicker({ pill, open, onOpenChange, options, onCustom }: Pe
     <>
       <button
         type="button"
-        className="ui-band-period ui-hit"
+        className={tone === "page" ? "ui-band-period ui-page-period ui-hit" : "ui-band-period ui-hit"}
         aria-label={pill}
         onClick={() => {
           setOpen(true);

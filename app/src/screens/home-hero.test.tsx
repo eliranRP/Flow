@@ -114,3 +114,12 @@ describe("Home hero", () => {
     expect(screen.getByText(heroExplanation(period))).toBeInTheDocument();
   });
 });
+
+describe("Home flow rows (FLOW-301)", () => {
+  it("opens the breakdown from נכנס and יצא, naming the period and amount", () => {
+    renderHome(books());
+    const out = screen.getByRole("link", { name: "יצא החודש −₪432,836 – פירוט" });
+    expect(out).toHaveAttribute("href", "/flow/expense");
+    expect(screen.getByRole("link", { name: /^נכנס החודש/ })).toHaveAttribute("href", "/flow/income");
+  });
+});

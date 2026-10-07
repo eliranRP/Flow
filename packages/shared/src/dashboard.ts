@@ -300,7 +300,61 @@ export const projectWaitingRowSchema = z.object({
 
 export const projectWaitingSchema = z.array(projectWaitingRowSchema);
 
+/** FLOW-301. Home's income or expenses by group (decision 0110). Amounts are positive for income and for a normal expense. */
+export const breakdownGroupBySchema = z.enum(["category", "project", "payer"]);
+export const breakdownDirectionSchema = z.enum(["income", "expense"]);
+
+const breakdownSumSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  amount_minor: agorotSchema,
+  count: z.number().int().nonnegative(),
+});
+
+export const breakdownSchema = z
+  .object({
+    direction: breakdownDirectionSchema,
+    basis: basisSchema,
+    group_by: breakdownGroupBySchema,
+    from: z.string().nullable(),
+    to: z.string().nullable(),
+    totals: z.array(breakdownSumSchema),
+    groups: z.array(
+      breakdownSumSchema.extend({
+        key: z.string(),
+        name: z.string().nullable(),
+        shared: z.boolean(),
+      }),
+    ),
+    excluded: z.array(breakdownSumSchema),
+    review_count: z.number().int().nonnegative(),
+  })
+  .nullable();
+
+export const breakdownLinesSchema = z
+  .object({
+    rows: z.array(
+      z.object({
+        transaction_id: z.string(),
+        part: z.string().nullable(),
+        description: z.string(),
+        supplier_name: z.string().nullable(),
+        project_name: z.string().nullable(),
+        category_name: z.string().nullable(),
+        doc_date: z.string(),
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        amount_minor: agorotSchema,
+        shared: z.boolean(),
+      }),
+    ),
+    has_more: z.boolean(),
+  })
+  .nullable();
+
 export type Basis = z.infer<typeof basisSchema>;
+export type BreakdownGroupBy = z.infer<typeof breakdownGroupBySchema>;
+export type BreakdownDirection = z.infer<typeof breakdownDirectionSchema>;
+export type Breakdown = z.infer<typeof breakdownSchema>;
+export type BreakdownLinesPage = z.infer<typeof breakdownLinesSchema>;
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type ProjectRow = z.infer<typeof projectRowSchema>;
 export type UnpaidRow = z.infer<typeof unpaidRowSchema>;
