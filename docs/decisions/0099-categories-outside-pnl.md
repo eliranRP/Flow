@@ -30,3 +30,11 @@ Loan payment parts in the P&L (follow-up PR) extend `private.pnl_lines` only. MC
 | Utility deposits kept out | In expense default list |
 | Loan costs, failed acquisitions, partner loan interest stay in | Not in default list |
 | One boolean flag | `excluded_from_pnl` only |
+
+## Update 2026-10-07 (FLOW-112)
+
+- Default names match on a normalised key, `private.pnl_name_key`: lower case, punctuation and apostrophes dropped, `&` and `and` dropped, and a plural `s` dropped from words of four or more letters. `Owner distribution`, `CapEx/Rehab`, and `Closing and acquisition costs` now start kept out. The migration backfills such names, except a category whose flag the owner already set through `set_category_pnl`.
+- The default also runs on a rename (insert or update of `name` or `kind`), but only into a default name. A rename away from a default name, or between two default names, keeps the current flag, so an owner's choice is never undone by a rename.
+- The three loan categories carry `categories.loan_part` (`interest`, `escrow`, `principal`, unique per company), seeded and backfilled by their Hebrew names. The loan split check, the default category guess, `set_category_excluded_from_pnl`, and `attach_loan_payment` use `loan_part`, so a renamed loan category still works and stays fixed. The owner has no update grant on `categories`, so only the seed sets it.
+- `set_category_excluded_from_pnl` checks the caller's own company first. An owner who is also listed as a viewer of a demo company is no longer refused; a user who is only a viewer still gets `forbidden`.
+- Still open in [FLOW-117](../backlog/TASKS.md#flow-117): whether a guessed kept-out category takes a line out before it is confirmed, and kept-out project income in `get_project`.

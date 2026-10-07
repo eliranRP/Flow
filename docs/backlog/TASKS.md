@@ -22,7 +22,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
-| 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | claimed (FLOW-112 thread, 2026-10-07, claude/project-thread-f3nxsv) |
+| 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
+| 9b | [FLOW-117](#flow-117) | Kept-out lines: guessed categories and project income | SMALL CYCLE | blocked on FLOW-102, FLOW-104 |
 | 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 12 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
@@ -72,13 +73,19 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-112"></a>
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
-- **Type:** BACKLOG NIT · **Status:** claimed (FLOW-112 thread, 2026-10-07, claude/project-thread-f3nxsv) · **Depends on:** —
-- [ ] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default.
-- [ ] A merely suggested kept-out category already removes the line from the P&L. Decide whether suggestions count (Decisions needed).
-- [ ] `get_project` doesn't report kept-out project income.
-- [ ] Document the change in what `count` means in the P&L outputs.
-- [ ] An owner who is also a viewer is refused by `set_category_excluded_from_pnl`.
-- [ ] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#81) · **Depends on:** —
+- [x] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default. (#81: `private.pnl_name_key`; the trigger also runs on a rename into a default name.)
+- [ ] A merely suggested kept-out category already removes the line from the P&L. Moved to [FLOW-117](#flow-117).
+- [ ] `get_project` doesn't report kept-out project income. Moved to [FLOW-117](#flow-117).
+- [x] Document the change in what `count` means in the P&L outputs. (#81, TOOLS.md)
+- [x] An owner who is also a viewer is refused by `set_category_excluded_from_pnl`. (#81)
+- [x] The default loan categories match by Hebrew name in several places (loan split check, income review filter, loan trigger). Move to a stable key or flag. (#81: `categories.loan_part`)
+
+<a id="flow-117"></a>
+### FLOW-117 · Kept-out lines: guessed categories and project income
+- **Type:** SMALL CYCLE · **Status:** blocked on FLOW-102, FLOW-104 (both rewrite `private.pnl_lines` and `get_project`) · **Depends on:** FLOW-102, FLOW-104
+- **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
+- **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
 
 <a id="flow-113"></a>
 ### FLOW-113 · Kept-out toggle on the categories screen
