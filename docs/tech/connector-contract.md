@@ -679,7 +679,7 @@ alter table public.categories
 
 A line in either category stays in the books. It is a cash movement, so לאישור (`list_review`) and `get_transaction` still show it. There is no separate cash-flow total. The P&L sums skip it, including while the review row is still open. The upsert may set the category from `category_hint` and must leave `category_assigned` false, so the owner can change it. Changing it to a normal category puts the line back into P&L.
 
-The Mercury adapter sets `category_hint` to `תשלומי הלוואה` when the counterparty name is NEWREZ, Lakeview, or Servease, compared case-insensitively. Those three are the interim list. The core does not match lender names. It sets `העברות` for an unconnected own-account transfer, as above. The engine resolves that hint by `kind` and `name`.
+The Mercury adapter sets `category_hint` to `loan_part:principal` when the counterparty name is NEWREZ, Lakeview, or Servease, compared case-insensitively. Those three are the interim list. The core does not match lender names. It sets `העברות` for an unconnected own-account transfer, as above. The engine resolves a hint by `kind` and `name`, except a `loan_part:<part>` hint (`interest`, `escrow`, `principal`), which it resolves by `kind` and `categories.loan_part`, so a renamed loan category still gets the line (FLOW-122). A hint that finds no category leaves the usual guess.
 
 These sums gain `not exists (select 1 from public.categories c where c.id = t.category_id and c.excluded_from_pnl)`. Each amount they add is `private.to_display_minor`, not the raw `amount_net`:
 

@@ -127,7 +127,7 @@ Deno.test("the posted fixture replay counts imports, skips, loans, cashback, and
     assertEquals(MERCURY_SKIP_REASONS.includes(reason as typeof MERCURY_SKIP_REASONS[number]), true);
   }
 
-  const loans = imported.filter((line) => line.category_hint === "תשלומי הלוואה");
+  const loans = imported.filter((line) => line.category_hint === "loan_part:principal");
   const cashback = imported.filter((line) => line.category_hint === "הכנסה אחרת");
   const refunds = imported.filter((line) => line.doc_kind === "credit");
   assertEquals(loans.length, 6);
@@ -178,12 +178,12 @@ Deno.test("the canonical snapshot has no token and no forbidden field", () => {
 Deno.test("a card refund, a loan prefix, and cashback keep their hints", () => {
   const { imported } = replay(postedLines);
   const loan = imported.find((line) => line.counterparty.name === "Lakeview Loan Servicing");
-  assertEquals(loan?.category_hint, "תשלומי הלוואה");
+  assertEquals(loan?.category_hint, "loan_part:principal");
   assertEquals(dollarsToCents(-2600), -260000);
   assertEquals(loan?.amount_original, 260000);
   const servease = imported.filter((line) => line.counterparty.name === "Servease");
   assertEquals(servease.length, 2);
-  assertEquals(servease.every((line) => line.category_hint === "תשלומי הלוואה"), true);
+  assertEquals(servease.every((line) => line.category_hint === "loan_part:principal"), true);
   const cashback = imported.find((line) => line.counterparty.name === "Mercury IO Cashback" && line.amount_original === 275);
   assertEquals(cashback?.category_hint, "הכנסה אחרת");
   assertEquals(cashback?.amount_negated, false);

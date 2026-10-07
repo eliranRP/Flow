@@ -6,8 +6,11 @@ import type { Direction } from "../types.ts";
  */
 export const MERCURY_LOAN_COUNTERPARTY_PREFIXES = ["NEWREZ", "LAKEVIEW LOAN", "SERVEASE"] as const;
 
-/** Seeded expense category. excluded_from_pnl. The engine matches kind and name. */
-export const MERCURY_LOAN_CATEGORY = "תשלומי הלוואה";
+/**
+ * The loan principal category, named by its key (categories.loan_part), so a renamed
+ * category still matches. upsert_connector_lines reads the `loan_part:` prefix (FLOW-122).
+ */
+export const MERCURY_LOAN_CATEGORY = "loan_part:principal";
 
 /** Counterparty names, after the same normalisation, that are cashback income. */
 export const MERCURY_CASHBACK_COUNTERPARTIES = ["MERCURY IO CASHBACK"] as const;

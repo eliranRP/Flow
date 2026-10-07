@@ -2671,6 +2671,8 @@ export function TransactionScreen({
   const splitRow = collapsedTo == null && serverSplit;
   const shownProject = collapsedTo?.name || splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
+  const shownCategoryId = categoryId || txn.category_id || "";
+  const shownLoanPart = categories.data?.find((category) => category.id === shownCategoryId)?.loan_part ?? null;
   function openSplit() {
     if (onOpenSplit) {
       onOpenSplit();
@@ -2817,7 +2819,7 @@ export function TransactionScreen({
       <LoanTransactionSplit
         transactionId={txn.id}
         docDate={txn.doc_date}
-        categoryName={shownCategory}
+        loanPart={shownLoanPart}
         direction={txn.direction}
         active={sample == null}
         readOnly={holdWrites}
@@ -4611,15 +4613,15 @@ export function SettingsScreen({
 const KEPT_OUT = "מחוץ לרווח והפסד";
 const KEPT_OUT_SHORT = "מחוץ לרווח";
 
-/** The three loan categories the server keeps fixed, and whether each counts in the P&L (decision 0099). */
+/** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {
-  "ריבית משכנתא": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
-  "מסים וביטוח": "חלק מתשלום הלוואה · תמיד ברווח והפסד",
-  "תשלומי הלוואה": "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
+  interest: "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  escrow: "חלק מתשלום הלוואה · תמיד ברווח והפסד",
+  principal: "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
 };
 
 function loanCategoryLine(category: CategoryRow): string | null {
-  return category.kind === "expense" ? (LOAN_CATEGORY_LINES[category.name] ?? null) : null;
+  return category.loan_part ? (LOAN_CATEGORY_LINES[category.loan_part] ?? null) : null;
 }
 
 type PnlChange = { id: string; name: string; excluded: boolean; undo: boolean };
