@@ -2,7 +2,9 @@
 
 ## 2026-10-07
 
-MCP assign_expense_split. `flow-mcp` adds the write tool `assign_expense_split` (`transaction_id`, optional `category_id`, `shares[]` of whole percents summing to 100, `idempotency_key`). It wraps `public.save_split` and records undo like `assign_expense`. Migration `20261007120000_mcp_assign_expense_split.sql`. Batch split in `assign_expenses` is a follow-up.
+MCP assign_expense_split. `flow-mcp` adds the write tool `assign_expense_split` (`transaction_id`, optional `category_id`, `shares[]` of whole percents summing to 100, `idempotency_key`). It wraps `public.save_split` and records undo like `assign_expense`. Migration `20261007130000_mcp_assign_expense_split.sql`. Batch split in `assign_expenses` is a follow-up.
+
+Categories outside the P&L. Migration `20261007120000_category_pnl.sql` backfills English default names, adds `private.pnl_lines`, filters `company_pnl`, `get_home`, `get_project`, and `overhead_share`, returns excluded totals separately, exposes `set_category_excluded_from_pnl` and MCP `set_category_pnl`, and extends `list_categories`. MCP `get_project` passes through the new `excluded_categories_by_currency`. Decision [0099](decisions/0099-categories-outside-pnl.md).
 
 MCP get_project. `flow-mcp` adds the read tool `get_project` (`id`, optional `basis` `cash` or `invoiced`, default `cash` like `list_projects` and `get_totals`). It calls `public.get_project(p_id, p_basis)` and returns the project summary, `by_currency`, `categories_by_currency`, and the newest transactions with their currency. Another company's project is `not_found`. No migration. Decision [0095](decisions/0095-mcp-first.md).
 

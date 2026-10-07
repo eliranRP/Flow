@@ -247,6 +247,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "create_category",
     "sync_bank",
     "hide_category",
+    "set_category_pnl",
     "add_loan",
     "update_loan",
     "attach_loan_payment",
@@ -274,6 +275,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "create_category",
     "sync_bank",
     "hide_category",
+    "set_category_pnl",
     "add_loan",
     "update_loan",
     "attach_loan_payment",
@@ -1013,6 +1015,146 @@ Deno.test("assign_expenses sends exact p_items and validates batch input", async
   }
 });
 
+Deno.test("set_category_pnl validates, forwards p_* args, and undo accepts category_pnl", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: CATEGORY, undo_kind: "category_pnl" } },
+  }));
+  const ok = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-1",
+    category_id: CATEGORY,
+    excluded: true,
+  }, ["write"], rpc);
+  assertEquals(ok.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_category_pnl",
+    body: {
+      p_idempotency_key: "pnl-1",
+      p_category_id: CATEGORY,
+      p_excluded: true,
+    },
+  });
+  const badKey = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-1",
+    category_id: CATEGORY,
+    company_id: "forged",
+    excluded: true,
+  }, ["write"], rpc);
+  assertEquals(badKey.isError, true);
+  const badExcluded = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-2",
+    category_id: CATEGORY,
+    excluded: "yes",
+  }, ["write"], rpc);
+  assertEquals(badExcluded.isError, true);
+  const undo = await callTool("undo", {
+    idempotency_key: "pnl-undo",
+    kind: "category_pnl",
+    id: CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[1]?.name, "mcp_undo");
+});
+
+Deno.test("list_categories passes excluded_from_pnl and get_totals copies excluded agorot", async () => {
+  const dashboard = {
+    company_id: "company-a",
+    name: "Example Holdings LLC",
+    basis: "cash",
+    income_agorot: 1,
+    direct_agorot: 0,
+    shared_agorot: 0,
+    overhead_agorot: 0,
+    expense_agorot: 0,
+    net_profit_agorot: 1,
+    excluded_income_agorot: 2,
+    excluded_expense_agorot: 3,
+    active_projects: 1,
+    review_count: 0,
+    by_currency: [{
+      currency: "ILS",
+      income_minor: 1,
+      direct_minor: 0,
+      shared_minor: 0,
+      overhead_minor: 0,
+      expense_minor: 0,
+      net_profit_minor: 1,
+      excluded_income_minor: 2,
+      excluded_expense_minor: 3,
+      excluded_count: 1,
+      count: 1,
+    }],
+  };
+  const { rpc } = rpcOf((name) => {
+    if (name === "get_dashboard") return { status: 200, json: dashboard };
+    if (name === "list_categories") {
+      return {
+        status: 200,
+        json: [{ id: "c1", name: "Materials", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: null }],
+      };
+    }
+    return { status: 500, json: null };
+  });
+  const listed = await callTool("list_categories", {}, ["read"], rpc);
+  assertEquals(listed.isError, false);
+  if (listed.structuredContent.ok) {
+    const rows = (listed.structuredContent.data as { categories: { excluded_from_pnl: boolean | null }[] }).categories;
+    assertEquals(rows[0]?.excluded_from_pnl, null);
+  }
+  const totals = await callTool("get_totals", {}, ["read"], rpc);
+  assertEquals(totals.isError, false);
+  if (totals.structuredContent.ok) {
+    const data = totals.structuredContent.data as {
+      excluded_income_agorot: number;
+      excluded_expense_agorot: number;
+      by_currency: { excluded_income_minor: number }[];
+    };
+    assertEquals(data.excluded_income_agorot, 2);
+    assertEquals(data.excluded_expense_agorot, 3);
+    assertEquals(data.by_currency[0]?.excluded_income_minor, 2);
+  }
+});
+
+Deno.test("set_category_pnl forwards excluded false, rejects bad input, and refuses a read token", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { id: CATEGORY, undo_kind: "category_pnl" } },
+  }));
+  const back = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-back",
+    category_id: CATEGORY,
+    excluded: false,
+  }, ["write"], rpc);
+  assertEquals(back.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_category_pnl",
+    body: {
+      p_idempotency_key: "pnl-back",
+      p_category_id: CATEGORY,
+      p_excluded: false,
+    },
+  });
+  const cases = [
+    callTool("set_category_pnl", { category_id: CATEGORY, excluded: true }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", excluded: true }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", category_id: CATEGORY }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", category_id: "not-a-uuid", excluded: true }, ["write"], rpc),
+    callTool("set_category_pnl", { idempotency_key: "k", category_id: CATEGORY, excluded: true, hidden: true }, ["write"], rpc),
+  ];
+  for (const result of await Promise.all(cases)) {
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("set_category_pnl", {
+    idempotency_key: "pnl-read",
+    category_id: CATEGORY,
+    excluded: true,
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 1);
+});
+
 const PROJECT_FIXTURE = {
   id: PROJECT,
   name: "Example Site",
@@ -1029,6 +1171,9 @@ const PROJECT_FIXTURE = {
   categories_by_currency: [
     { currency: "USD", id: CATEGORY, name: "Example Supplies", amount_minor: 1250, has_shared_share: false },
     { currency: "USD", id: null, name: null, amount_minor: 0, has_shared_share: null },
+  ],
+  excluded_categories_by_currency: [
+    { currency: "USD", id: CATEGORY_NEW, name: "Example Loan Principal", amount_minor: 50000, has_shared_share: false },
   ],
   other_currencies: [{ currency: "USD", income_minor: 250000, expense_minor: -1250, count: 2 }],
   pending_count: 0,
@@ -1093,6 +1238,8 @@ Deno.test("get_project calls get_project with the id and each basis", async () =
       assertEquals(data.id, PROJECT);
       assertEquals(data.by_currency, PROJECT_FIXTURE.by_currency);
       assertEquals(data.categories_by_currency, PROJECT_FIXTURE.categories_by_currency);
+      assertEquals(data.excluded_categories_by_currency, PROJECT_FIXTURE.excluded_categories_by_currency);
+      assertEquals(data.excluded_categories_by_currency[0]?.amount_minor, 50000);
       assertEquals(data.transactions, PROJECT_FIXTURE.transactions);
       assertEquals(data.transactions.map((row) => row.currency), ["USD", "USD"]);
       assertEquals(data.budget_agorot, null);

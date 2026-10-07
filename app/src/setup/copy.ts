@@ -6,8 +6,7 @@ export const SETUP_TOTAL = 5;
 export const SETUP_PRODUCTION_ORIGIN = "https://flow-app-dx5.pages.dev";
 
 /**
- * Loan and transfer seeds. list_categories does not return excluded_from_pnl,
- * and two of these rows are not excluded, so the setup count matches them by name.
+ * Loan and transfer seeds. Two of these rows are not excluded, so the setup count matches them by name.
  */
 const SYSTEM_CATEGORY_NAMES = new Set([
   "תשלומי הלוואה",

@@ -35,6 +35,7 @@ export const WRITE_TOOL_NAMES = [
   "create_category",
   "sync_bank",
   "hide_category",
+  "set_category_pnl",
   "add_loan",
   "update_loan",
   "attach_loan_payment",
@@ -64,6 +65,7 @@ const ALLOWED: Record<string, Set<string>> = {
   create_category: new Set(["idempotency_key", "name", "kind"]),
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
+  set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency",
@@ -117,7 +119,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "loan", "loan_update", "loan_split"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split"]),
   id: UUID_TEXT,
 }).strict();
 const LOAN_NAME = z.string().trim().min(1).max(80);
@@ -165,6 +167,11 @@ const syncBankSchema = z.object({
 const hideCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
+}).strict();
+const setCategoryPnlSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+  excluded: z.boolean(),
 }).strict();
 const batchItemSchema = z.object({
   transaction_id: UUID_TEXT,
@@ -423,6 +430,8 @@ function totalsOf(body: Review) {
     net_profit_agorot: body.net_profit_agorot,
     active_projects: body.active_projects,
     review_count: body.review_count,
+    excluded_income_agorot: body.excluded_income_agorot,
+    excluded_expense_agorot: body.excluded_expense_agorot,
     by_currency: body.by_currency ?? [],
   };
 }
@@ -462,7 +471,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Each transaction carries its currency. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
@@ -565,6 +574,11 @@ function writeTools() {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
     }, true),
+    toolSpec("set_category_pnl", "Count a category in the P&L or keep it out. Undo restores the prior setting.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+      excluded: { type: "boolean" },
+    }, true),
     toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
@@ -594,7 +608,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "loan", "loan_update", "loan_split"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -909,6 +923,15 @@ async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "set_category_pnl") {
+    const parsed = setCategoryPnlSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_category_pnl";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+      p_excluded: parsed.data.excluded,
     };
   } else if (name === "add_loan") {
     return addLoanWrite(args, rpc);

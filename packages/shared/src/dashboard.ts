@@ -27,6 +27,9 @@ const companyByCurrencyRowSchema = z.object({
   overhead_minor: agorotSchema,
   expense_minor: agorotSchema,
   net_profit_minor: agorotSchema,
+  excluded_income_minor: agorotSchema.optional(),
+  excluded_expense_minor: agorotSchema.optional(),
+  excluded_count: z.number().int().nonnegative().optional(),
   count: z.number().int().nonnegative(),
 });
 
@@ -65,6 +68,8 @@ export const dashboardSchema = z.object({
   review_count: z.number(),
   projects: z.array(projectRowSchema),
   after_overhead: z.boolean().optional(),
+  excluded_income_agorot: agorotSchema.optional(),
+  excluded_expense_agorot: agorotSchema.optional(),
   by_currency: z.array(companyByCurrencyRowSchema).optional().default([]),
 });
 
@@ -126,6 +131,7 @@ export const categoryRowSchema = z.object({
   kind: z.enum(["expense", "income"]),
   hidden: z.boolean(),
   is_default: z.boolean(),
+  excluded_from_pnl: z.boolean().optional(),
 });
 
 export const sumitStatusSchema = z.object({
@@ -167,6 +173,17 @@ export const projectDetailSchema = z
     overhead_weighted: z.boolean().optional(),
     by_currency: z.array(projectByCurrencyRowSchema).optional(),
     categories_by_currency: z
+      .array(
+        z.object({
+          currency: z.string().regex(/^[A-Z]{3}$/),
+          id: z.string().nullable(),
+          name: z.string().nullable(),
+          amount_minor: agorotSchema,
+          has_shared_share: z.boolean().optional(),
+        }),
+      )
+      .optional(),
+    excluded_categories_by_currency: z
       .array(
         z.object({
           currency: z.string().regex(/^[A-Z]{3}$/),
