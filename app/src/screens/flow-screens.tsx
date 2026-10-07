@@ -3885,14 +3885,16 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   }, [sample, dashboard.data]);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, dashboard);
   // Back from a page puts focus on the row that opened it. A fresh visit does not.
+  // Read once per mount: StrictMode reruns the effect after the title has taken focus.
+  const [openedPage] = useState(() => settingsOpened);
   useEffect(() => {
-    if (phase.kind !== "ready") return;
-    const opened = settingsOpened;
     settingsOpened = null;
-    if (opened == null || navigationType !== NavigationType.Pop) return;
-    const row = document.querySelector<HTMLElement>(`[data-settings-page="${opened}"] a`);
+    // The rows draw once the screen stops loading, in a preview too.
+    if (phase.kind === "loading") return;
+    if (openedPage == null || navigationType !== NavigationType.Pop) return;
+    const row = document.querySelector<HTMLElement>(`[data-settings-page="${openedPage}"] a`);
     row?.focus({ preventScroll: true });
-  }, [phase.kind, navigationType]);
+  }, [phase.kind, navigationType, openedPage]);
   const saveOverhead = useWrite({
     failure: "לא הצלחנו לשמור את התצוגה.",
     keys: ["dashboard", "project"],
