@@ -316,8 +316,17 @@ export function LoanTransactionSplit({
     retry: false,
     queryFn: () => readLoanMatch(transactionId),
   });
+  // The closing sheet can hold or take focus for a few frames, so retry until the heading keeps it.
   const focusSplitSection = () => {
-    splitSectionRef.current?.focus({ preventScroll: true });
+    const started = performance.now();
+    const tryFocus = () => {
+      const heading = splitSectionRef.current;
+      if (heading?.isConnected) heading.focus({ preventScroll: true });
+      if (document.activeElement !== heading && performance.now() - started < 1000) {
+        requestAnimationFrame(tryFocus);
+      }
+    };
+    tryFocus();
   };
   const match = useWrite<string>({
     failure: failureText,
