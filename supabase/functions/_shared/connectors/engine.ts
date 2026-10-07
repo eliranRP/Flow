@@ -49,8 +49,9 @@ export interface PlanSyncInput {
    * Status recheck for a stored line the fetch did not return.
    * Pending lines, and posted lines older than windowStart, capped at
    * CONNECTOR_RECHECK_LIMIT and oldest checkedAt first. A 404 on a
-   * posted line is keep. A rate limit or a transient error keeps the
-   * line and does not fail the run. Widening the fetch date is not this recheck.
+   * posted line is keep. A transient error keeps the line and does not fail
+   * the run. A rate limit keeps the line and stops the rechecks for this run
+   * (see PlannedSync.rateLimited). Widening the fetch date is not this recheck.
    */
   confirmLine?: (line: StoredLine) => Promise<ConfirmResult>;
   /**
@@ -76,6 +77,11 @@ export interface PlannedSync {
   complete: boolean;
   pendingMissing: { externalId: string; missingSince: string }[];
   rechecked: { externalId: string; checkedAt: string }[];
+  /**
+   * Set when a recheck hit a rate limit. The run stopped rechecking there;
+   * the caller backs off until retryAfter (null when the provider sent none).
+   */
+  rateLimited: { retryAfter: string | null } | null;
 }
 
 export interface PlannedFailure {
@@ -172,6 +178,7 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
   }
   const pendingMissing: { externalId: string; missingSince: string }[] = [];
   const rechecked: { externalId: string; checkedAt: string }[] = [];
+  let rateLimited: PlannedSync["rateLimited"] = null;
   if (fetched.complete && input.confirmLine) {
     const windowStart = fetched.windowStart ?? null;
     const candidates = input.stored.filter((stored) => {
@@ -181,7 +188,9 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     });
     candidates.sort(recheckOrder);
     const checkedAt = input.now().toISOString();
-    for (const stored of candidates.slice(0, CONNECTOR_RECHECK_LIMIT)) {
+    let index = 0;
+    for (; index < candidates.length && index < CONNECTOR_RECHECK_LIMIT; index += 1) {
+      const stored = candidates[index]!;
       let confirmed: ConfirmResult;
       try {
         confirmed = await input.confirmLine(stored);
@@ -193,6 +202,12 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
               externalId: stored.externalId,
               missingSince: stored.missingSince ?? checkedAt,
             });
+          }
+          if (classified.class === "rate_limited") {
+            // Back off: every further call would hit the same limit.
+            rateLimited = { retryAfter: classified.retry_after };
+            index += 1;
+            break;
           }
           continue;
         }
@@ -219,6 +234,13 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
         return failure(input.port, error);
       }
     }
+    // Pending lines not rechecked this run keep their missing clock, so the
+    // void wait is not restarted by a rate limit or the recheck cap.
+    for (const stored of candidates.slice(index)) {
+      if (stored.lineStatus === "pending" && stored.missingSince) {
+        pendingMissing.push({ externalId: stored.externalId, missingSince: stored.missingSince });
+      }
+    }
   }
 
   return {
@@ -232,5 +254,6 @@ export async function planConnectorSync(input: PlanSyncInput): Promise<PlannedSy
     complete: fetched.complete,
     pendingMissing,
     rechecked,
+    rateLimited,
   };
 }

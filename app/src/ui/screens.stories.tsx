@@ -1183,6 +1183,75 @@ export const CategoriesLongHebrew: Story = {
   ),
 };
 
+const keptOutCategories: Array<CategoryRow & { count?: number }> = [
+  { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 42 },
+  { id: "c6", name: "פיקדונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: true, count: 3 },
+  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 12 },
+  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, count: 12 },
+  { id: "c4", name: "עבודה", kind: "expense", hidden: true, is_default: true, excluded_from_pnl: true, count: 1 },
+  { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false, count: 3 },
+];
+
+export const CategoriesKeptOut: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} hiddenOpen />
+    </StoryRoute>
+  ),
+};
+
+export const CategoriesKeptOutMenu: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, חומרים" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "חומרים" });
+  },
+};
+
+export const CategoriesKeptOutBackMenu: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, פיקדונות" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "פיקדונות" });
+  },
+};
+
+export const CategoriesKeptOutLoanMenu: Story = {
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen sample={keptOutCategories} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "עוד, תשלומי הלוואה" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "תשלומי הלוואה" });
+  },
+};
+
+export const CategoriesKeptOutLongHebrew: Story = {
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => (
+    <StoryRoute entry="/settings/categories" tabs>
+      <ExampleBar />
+      <CategoriesScreen
+        sample={longHebrewCategories.map((category) => ({ ...category, hidden: false, excluded_from_pnl: true, count: 1204 }))}
+      />
+    </StoryRoute>
+  ),
+};
+
 export const Onboarding: Story = {
   render: () => (
     <StoryRoute entry="/onboarding">

@@ -90,7 +90,7 @@ export function ListRow(props: ListRowProps) {
   const titleDir = props.ltrTitle ? "ltr" : undefined;
   const titleBody = (
     <>
-      {props.tag ? <span className="ui-row-title-text">{titleText(props)}</span> : titleText(props)}
+      {props.tag ? <span className="ui-row-title-text" data-clip-ok="">{titleText(props)}</span> : titleText(props)}
       {props.tag}
     </>
   );

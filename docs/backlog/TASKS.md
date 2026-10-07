@@ -27,12 +27,12 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
-| 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
+| 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
 | 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | in-progress (#83) |
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | plan-first |
-| 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
+| 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
 | 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
@@ -85,7 +85,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-113"></a>
 ### FLOW-113 · Kept-out toggle on the categories screen
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** FLOW-101
+- **Type:** SMALL UI · **Status:** in-progress (#86) · **Depends on:** FLOW-101 (merged)
+- **Owner approval:** 2026-10-07, option A (row sheet button, ⊘ mark, save on tap with ביטול). Decision [0106](../decisions/0106-kept-out-toggle.md).
 - **What:** The per-category P&L flag exists only through the API and MCP. Smallest option: one secondary action in the category row's "עוד" sheet next to הסתרה ("מחוץ לרווח והפסד" / "החזרה לרווח והפסד") plus a muted icon on kept-out rows with a Hebrew aria-label. On `/settings/categories`, not on Settings itself. The three loan categories stay fixed.
 - **Acceptance:** mockup approved; CONTROLS.md row; design review.
 
@@ -483,16 +484,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-509"></a>
 ### FLOW-509 · Mercury connector hardening
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] After a 429 the sync keeps calling; back off and stop.
-- [ ] Skip records aren't written atomically with the lines and duplicate on partial runs; writes after the import aren't atomic with it; the checked-at stamp is a separate read and write per row.
-- [ ] Reconnecting keeps the old cursor when the token or account changes.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#91) · **Depends on:** —
+- [x] After a 429 the sync keeps calling; back off and stop. (#91: a 429 on a recheck stops the rechecks and holds the next run until Retry-After, else 15 minutes.)
+- [ ] Skip records aren't written atomically with the lines and duplicate on partial runs; writes after the import aren't atomic with it; the checked-at stamp is still one write per row (#91 made it one read for all rows; full atomicity needs an RPC).
+- [x] Reconnecting keeps the old cursor when the token or account changes. (#91: a reconnect to a different set of accounts clears the cursor; a new token for the same accounts keeps it, since the cursor is still valid.)
 - [ ] Non-USD Mercury lines are skipped instead of imported in their own currency.
 - [ ] The whole treasury history is re-read every sync; the stored-treasury read throws past 20k rows.
 - [ ] The cron URL is built by replacing a path in the shared sync URL secret; read its own value.
-- [ ] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id; test stored-line selects against the local DB.
+- [ ] Treasury void matching: exact account first, null fallback only with one treasury account; typed `createClient<Database>` in both sync functions; regression tests for the wildcard; `maybeSingle()` errors on a duplicate external id (moot: `transactions_external_uidx` is unique, and #91 removed that read); test stored-line selects against the local DB.
 - [ ] Show "N new lines" after a manual refresh (the counts are returned now).
-- [ ] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation.
+- [x] Tests: a line dated exactly on `import_from`; an empty treasury list; a non-own treasury counterparty imports; 401/403/404 from treasury refuse validation. (#91 added the `import_from` test; the other three already existed.)
 - [ ] Six surviving mutations in the client resume and own-account paths.
 - [ ] Runbook: rolling back `mercury-sync` alone after the 0097 migration flips income back and reopens skips; a failed migration push leaves the gap open until a re-deploy.
 - [ ] Relabeling gives uncategorized Mercury income the default category suggestion; the changelog should say closing reopened review lines is part of 0097.
