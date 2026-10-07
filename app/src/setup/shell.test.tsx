@@ -54,8 +54,8 @@ describe("setup step chrome", () => {
     expect(screen.getByRole("link", { name: "התקנה" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "חיבור SUMIT" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "מתקדם · עוזר AI" })).toHaveAttribute("href", "/settings?sheet=assistant");
+    expect(screen.getByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
     render(<SumitFailureNote />);
     expect(screen.getByText("SUMIT עוד לא מחובר.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "סגירת ההגדרה" })).toBeInTheDocument();
   });
 });
