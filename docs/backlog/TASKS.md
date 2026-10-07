@@ -36,7 +36,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | in-progress (#95) |
 | 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
-| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | in-progress (#98) |
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
@@ -53,6 +53,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
 | 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
+| 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -318,9 +319,19 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-302"></a>
 ### FLOW-302 · Month dividers in every transaction list
-- **Type:** SMALL UI · **Status:** plan-first · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress (#98) · **Depends on:** —
+- **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/AHkHqk9WgUeCXb9wHYwdVB) (compact sticky header, month name, +income −expenses per currency), under the owner's standing rule for UI tasks.
 - **What:** One list, no new page: a sticky month header (for example "יולי 2026") between months, with that month's income and expenses (expenses with a minus, `$` for USD). Built once in the shared list component so every list gets it (project lists, recent transactions, review lists).
 - **Acceptance:** mockup approved; subtotals match the rows; RTL and 320px checks; design review.
+
+<a id="flow-313"></a>
+### FLOW-313 · Month dividers follow-ups (#98 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-302 (#98)
+- [ ] The month totals add rows by direction: a shared line counts at its full amount and a refund counts as income, so a month header is not that project's P&L for the month. Owner to decide whether that's fine or the header should follow the P&L rules (Decisions needed).
+- [ ] Switching between the flat and the grouped list (a held order splitting a month, or a second month loading) remounts the rows, so a focused row loses focus.
+- [ ] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines.
+- [ ] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed.
+- [ ] `MonthList` takes a `className` no caller passes; drop it or use it.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
