@@ -20,27 +20,28 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 4 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | ready |
 | 5 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
-| 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
-| 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
-| 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
-| 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
-| 11 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
-| 12 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
-| 13 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
-| 14 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
-| 15 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 16 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | blocked on FLOW-101 |
-| 17 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
-| 18 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
-| 19 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
-| 20 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
-| 21 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
-| 22 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 23 | [FLOW-104](#flow-104) | Reversals across directions (negative income, negative expense) | SMALL CYCLE | on-hold |
-| 24 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
-| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
+| 7 | [FLOW-104](#flow-104) | Reversals across directions (negative income, negative expense) | SMALL CYCLE | in-progress (#76) |
+| 8 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | ready |
+| 9 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
+| 10 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
+| 11 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
+| 12 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
+| 13 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
+| 14 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
+| 15 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
+| 16 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
+| 17 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
+| 18 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | blocked on FLOW-101 |
+| 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | plan-first |
+| 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | plan-first |
+| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | plan-first |
+| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | plan-first |
+| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | plan-first |
+| 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
+| 25 | [FLOW-105](#flow-105) | Link a loan to a project | SMALL CYCLE | on-hold |
+| 26 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 27 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
+| 28 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -114,7 +115,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-104"></a>
 ### FLOW-104 · Reversals across directions (negative income, negative expense)
-- **Type:** SMALL CYCLE · **Status:** on-hold (owner's go) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** in-progress (#76) · **Depends on:** —
+- **Owner's go:** 2026-10-07, in the project thread (taken off hold; build before FLOW-311).
 - **What:** Allow an outflow to take an income category, counted as negative income (for example rent that bounced and was taken back), and an inflow to take an expense category, counted as negative expense (a supplier refund). Touch the direction/category-kind rule in the assign, set-category and approve RPCs, `company_pnl` and `get_project` sign handling (including `by_currency`), the MCP `assign_expense` / `set_expense_category` descriptions, and the app category picker (the other kind under a "reversal" section).
 - **Acceptance:** pgTAP both ways on both bases; MCP tests; tell the MCP/data agent when it ships so it can refile affected rows.
 
@@ -165,6 +167,15 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** MCP · **Status:** in-progress (#73) · **Depends on:** #68 (merged)
 - **What:** `assign_expense_split` files one line at a time. Allow split rows (`category_id`, `shares[]`) inside `assign_expenses`, counted as one write hit, with per-row results and `undo_batch` restoring the pre-split state (including lines that were in review).
 - **Acceptance:** pgTAP and Deno tests for a mixed batch, partial success, replay, and batch undo of a split that closed a review.
+
+<a id="flow-311"></a>
+### FLOW-311 · Split one bank line across several categories
+- **Type:** MCP · **Status:** ready · **Depends on:** — · **Owner's go:** 2026-10-07, after FLOW-104
+- **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units) or percent, category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income kinds); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
+- **MCP:** a write tool (idempotency key, write rate limit, `undo`; `undo_batch` if it takes several lines) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
+- **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income kinds on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
+
+## Projects and reports
 
 <a id="flow-202"></a>
 ### FLOW-202 · sync_bank returns before slow MCP clients time out
