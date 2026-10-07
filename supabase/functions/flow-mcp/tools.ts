@@ -36,6 +36,7 @@ export const WRITE_TOOL_NAMES = [
   "sync_bank",
   "hide_category",
   "set_category_pnl",
+  "set_overhead_project",
   "add_loan",
   "update_loan",
   "attach_loan_payment",
@@ -66,6 +67,7 @@ const ALLOWED: Record<string, Set<string>> = {
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
+  set_overhead_project: new Set(["idempotency_key", "project_id"]),
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency",
@@ -121,7 +123,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project"]),
   id: UUID_TEXT,
 }).strict();
 const LOAN_NAME = z.string().trim().min(1).max(80);
@@ -174,6 +176,10 @@ const setCategoryPnlSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
   excluded: z.boolean(),
+}).strict();
+const setOverheadProjectSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  project_id: UUID_TEXT.nullable(),
 }).strict();
 const batchItemSchema = z.object({
   transaction_id: UUID_TEXT,
@@ -421,6 +427,7 @@ function projectRow(row: Review) {
     direct_agorot: row.direct_agorot,
     shared_agorot: row.shared_agorot,
     profit_agorot: row.profit_agorot,
+    is_overhead: row.is_overhead === true,
     by_currency: row.by_currency ?? [],
   };
 }
@@ -437,6 +444,9 @@ function totalsOf(body: Review) {
     shared_agorot: body.shared_agorot,
     overhead_agorot: body.overhead_agorot,
     expense_agorot: body.expense_agorot,
+    unassigned_income_agorot: body.unassigned_income_agorot,
+    unassigned_expense_agorot: body.unassigned_expense_agorot,
+    overhead_project_id: body.overhead_project_id ?? null,
     net_profit_agorot: body.net_profit_agorot,
     active_projects: body.active_projects,
     review_count: body.review_count,
@@ -505,7 +515,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD).", {
+    toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). direct + shared + overhead + unassigned expense = expense. unassigned is income with no project, and cost with no role, a project role and no project, or a shared role and no split.", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
@@ -592,6 +602,10 @@ function writeTools() {
       category_id: { type: "string" },
       excluded: { type: "boolean" },
     }, true),
+    toolSpec("set_overhead_project", "Mark one project as the company's overhead project, so cost filed to it counts as overhead, not direct. project_id null clears it. Undo is kind overhead_project with the company id.", {
+      idempotency_key: { type: "string" },
+      project_id: { type: ["string", "null"] },
+    }, true),
     toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
@@ -621,7 +635,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses batch.", {
@@ -945,6 +959,14 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
       p_excluded: parsed.data.excluded,
+    };
+  } else if (name === "set_overhead_project") {
+    const parsed = setOverheadProjectSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_overhead_project";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_project_id: parsed.data.project_id,
     };
   } else if (name === "add_loan") {
     return addLoanWrite(args, rpc);
