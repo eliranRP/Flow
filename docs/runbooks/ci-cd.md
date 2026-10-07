@@ -6,7 +6,7 @@ GitHub Actions runs the checks and the production deploy from `.github/workflows
 
 GitHub runs no CI on pull requests. Each push to a PR branch is checked on the pusher's machine instead. `bash scripts/cloud-agent-install.sh` sets `core.hooksPath` to `.githooks`, and `.githooks/pre-push` runs `scripts/local-ci.sh` before the push leaves. A failure stops the push.
 
-- By default (about 3 minutes) it runs lint, the `check (core)` steps, and `pnpm test:storybook`, in parallel where it can. The migration order check compares against the lock at the merge base with `main`.
+- By default (about 4 minutes) it runs lint, the `check (core)` steps, and `pnpm test:storybook`, in parallel where it can. The migration order check compares against the lock at the merge base with `main`.
 - `FLOW_LOCAL_CI=full git push`, or `bash scripts/local-ci.sh --full`, also runs the Storybook build and smoke specs, local Supabase with pgTAP, the db types check, the deploy preflight, and the main Playwright suite (about 12 minutes).
 - The tree must be clean. A pass writes the commit sha to `.git/flow-local-ci`, so pushing the same commit again does not rerun it.
 

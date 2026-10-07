@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The pull-request gate. Pull requests have no GitHub CI: the pre-push hook (.githooks/pre-push) runs
 # this script, and main runs the full suite on GitHub before each batch deploy.
-#   default (about 3 minutes): lint, the migration checks, Deno, typecheck, unit and connector tests,
+#   default (about 4 minutes): lint, the migration checks, Deno, typecheck, unit and connector tests,
 #     both dist builds, and the Storybook tests.
 #   --full (about 12 minutes): adds the every-story smoke, local Supabase (pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
