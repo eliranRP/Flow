@@ -179,6 +179,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead.
 - [ ] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104.
 - [ ] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo.
+- [ ] (#104 design review) Show project codes in the loan project picker once the dashboard projects carry `code`, with the "חיפוש פרויקט או קוד" placeholder.
+- [ ] (#104 design review) Keep the loan sheet's height when it swaps between the form and the project picker; wrap the loan-project stories in a sheet-like decorator.
+- [ ] (#104 design review) CONTROLS.md: note the static loan rows on the project screen.
 - [ ] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column.
 - [ ] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company.
 
