@@ -58,6 +58,8 @@ Rename a company in the app (FLOW-602 screen). In Settings, the business name is
 
 CI no longer hangs on a stalled Ubuntu mirror. Before Playwright installs its system packages, apt is set to give up on a stalled connection after 30 seconds and retry it up to 5 times. Pull requests also read the package cache that `main` saves.
 
+Kept-out categories follow-ups (FLOW-112). Default kept-out names now match near variants (case, punctuation, `&` or `and`, plural `s`), and a category renamed into a default name starts kept out; a rename never clears the owner's flag. The three loan categories get a stable key, `categories.loan_part`, used by the loan split check, the default category guess, `set_category_excluded_from_pnl`, and `attach_loan_payment` instead of their Hebrew names; `list_categories` returns it. An owner who is also listed as a viewer can set the P&L flag on their own company. TOOLS.md says what `count` means since 0099. Migration `20261007201000_kept_out_followups.sql`. pgTAP `kept_out_followups.test.sql`. Updates decision [0099](decisions/0099-categories-outside-pnl.md). The suggested-category and project-income items moved to FLOW-121.
+
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).
