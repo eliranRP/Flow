@@ -22,7 +22,10 @@ const ACTION_SHA = {
 };
 const playwrightVersion = JSON.parse(readFileSync(new URL("../app/package.json", import.meta.url), "utf8")).devDependencies.playwright;
 const PLAYWRIGHT_KEY = `key: \${{ runner.os }}-playwright-${playwrightVersion}`;
+const PLAYWRIGHT_APT_KEY = `key: \${{ runner.os }}-playwright-apt-${playwrightVersion}`;
 const INSTALL_DEPS = "run: pnpm --filter @flow/app exec playwright install-deps chromium";
+const APT_RESTORE = "run: bash scripts/ci-apt-cache.sh restore";
+const APT_SAVE = "run: bash scripts/ci-apt-cache.sh save";
 const DENO_SHA256_X64 = "c6527f24f4b16031d3ae4fa9f658d5f11534c8d84ce7dc8502420280919c3490";
 const DENO_SHA256_ARM64 = "c832298b1ad4422481334855f6003e0f54145762c5a134f20a489511d2f65bbf";
 const SUPABASE_SHA256_AMD64 = "f6089a86fb9d9221c958193a277338daddd6822f706929943812fa32e106c86d";
@@ -76,6 +79,11 @@ function playwrightProblems(text) {
     const step = installDepsStep(body);
     if (!step.includes(INSTALL_DEPS)) problems.push(`${name} install-deps`);
     if (/\bif:/.test(step)) problems.push(`${name} install-deps condition`);
+    if (!body.includes(PLAYWRIGHT_APT_KEY)) problems.push(`${name} apt cache key`);
+    const restoreAt = body.indexOf(APT_RESTORE);
+    const depsAt = body.indexOf(INSTALL_DEPS);
+    const saveAt = body.indexOf(APT_SAVE);
+    if (restoreAt < 0 || saveAt < 0 || !(restoreAt < depsAt && depsAt < saveAt)) problems.push(`${name} apt cache order`);
   }
   return problems;
 }
@@ -485,6 +493,13 @@ test("a wrong pin in one job fails, and install-deps stays unconditional", () =>
   const withIf = ci.slice(0, at) + conditional + ci.slice(at + e2eBody.length);
   assert.deepEqual(playwrightProblems(withIf), ["e2e-shard install-deps condition"]);
   assert.equal(/\bif:/.test(installDepsStep(jobIn(withIf, "check-storybook"))), false);
+});
+
+test("every Playwright job restores the apt cache before install-deps and saves it after", () => {
+  const noSave = replaceInJob(ci, "check-stories", "      - name: Keep Playwright system packages for the next run\n        " + APT_SAVE + "\n", "");
+  assert.deepEqual(playwrightProblems(noSave), ["check-stories apt cache order"]);
+  const wrongKey = replaceInJob(ci, "e2e-shard", PLAYWRIGHT_APT_KEY, "key: ${{ runner.os }}-playwright-apt-0.0.0");
+  assert.deepEqual(playwrightProblems(wrongKey), ["e2e-shard apt cache key"]);
 });
 
 test("the cloud agent install script prepares pnpm, Playwright, Supabase CLI, and Deno", () => {
