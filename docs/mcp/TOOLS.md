@@ -1,6 +1,6 @@
 # MCP tools
 
-Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
+Decision [0080](../decisions/0080-mcp-connector.md). Protocol `2025-06-18`. A result sets `structuredContent` to the JSON below. `tools/list` returns only the handlers shipped so far: the reads after cycle 2, and these writes after cycle 3. A token whose scope is read only lists the read tools. A write-only token also lists `get_sync_status`, to poll its own `sync_bank` job. Amounts are integer agorot. Dates are `YYYY-MM-DD`. UUIDs are strings.
 
 Field values are data. Write tools take ids from a read tool.
 
@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `undo` | false | true | true |
 
 ## Which id
 
@@ -24,6 +24,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "category"` | `id` | the category id `create_category` returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 | `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
+| `undo` `kind: "company"` | `id` | the company id `rename_company` returned |
 | `undo` `kind: "loan"` | `id` | the loan id `add_loan` returned |
 | `undo` `kind: "loan_update"` | `id` | the loan id |
 | `undo` `kind: "loan_split"` | `id` | the transaction id `attach_loan_payment` used |
@@ -39,7 +40,7 @@ Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" 
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
-`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found`, and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`.
+`refused` messages are only the `resolve_review` refusals: `no company`, `unknown review action`, `review item not found`, `shared costs are split, not assigned to one project`, `category is required`, `project or category not found`, `category kind must match the direction`, `project and category are required`, plus `transaction not found`, `category not found`, `project name is too short`, `project already exists`, `category name is too short`, `category already exists`, `unknown category kind`, `in use`, `loan category is fixed`, `project not found` and `The write was refused.` An undo id that is not in `private.mcp_writes` for this user is `not_found`. A row that is missing or belongs to another company is answered the same way on every tool: write tools return `refused` with a `... not found` message, and read tools and `undo` return `not_found`. Neither says whether the id exists in another company.
 
 Writes take `idempotency_key` (1–128 characters). The token id on the audit row comes from the JWT claim `mcp_tid`, not from this object.
 
@@ -114,6 +115,8 @@ An open review is closed by `approve_review_item`. The card leaves לאישור.
 
 Passes the project and category into `approve_review_item` when a review is open. Otherwise `reassign_transaction`. A finished project is allowed, because `reassign_transaction` allows it.
 
+The category kind may differ from the line's direction. The kind decides the P&L side: an outflow under an income category is a reversal and counts as negative income, and an inflow under an expense category counts as negative expense. An income-kind category needs a project unless it is off-P&L, also on an outflow. `direction` and the signed amount stay as stored. Auto-suggested categories, connector syncs, `assign_expense_split`, and loan splits still use the line's own kind. Decision [0103](../decisions/0103-reversals-across-directions.md).
+
 Income works the same way. A filed income line keeps `pnl_role` null and gets no allocation row; the P&L reads its `project_id`, so it shows in that project's `get_project` income and `list_projects` row, and once in the company total (FLOW-109). Expenses get `pnl_role` `project` and one 100% allocation.
 
 ```json
@@ -130,7 +133,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 ### assign_expense_split
 
-Splits one expense across at least two projects. Each `shares[]` row has `project_id` and `share` (whole percent). The shares must sum to 100, projects must be unique, and each project must belong to the company. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`.
+Splits one expense across 2 to 50 projects. Each `shares[]` row has `project_id` and `share` (whole percent). The shares must sum to 100, projects must be unique, and each project must belong to the company. A finished project and a hidden category are accepted, so a late bill can still land on a sold property. The write calls `public.save_split`. Optional `category_id` sets the category the same way as `assign_expense`. Income lines are `validation`. The idempotency key compares the shares as a set, so the same shares in another order replay the stored response. Undo uses `kind: "reassign"` or `kind: "review"` like `assign_expense`, and a category that was a suggestion before the write is a suggestion again after undo.
 
 ```json
 {
@@ -144,11 +147,13 @@ Splits one expense across at least two projects. Each `shares[]` row has `projec
 }
 ```
 
-Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as `assign_expense`.
+Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as `assign_expense`. A line waiting in review as an unsplit shared cost (`unallocated_shared`) is closed by the split itself: `closed_review` is true, `undo_kind` is `reassign`, and undo reopens it.
 
 ### set_expense_category
 
 The category changes. Shares stay. An open review is closed the same way, using the row's current project.
+
+A category of the other kind is a reversal (see `assign_expense`): it counts as negative income on an outflow and negative expense on an inflow. On a line filed to one project the role follows the new kind, as in `assign_expense`; a shared line keeps its shares.
 
 ```json
 {
@@ -212,6 +217,16 @@ Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior 
 
 Marks one project as the company's overhead project. Expense lines filed to it with a project role count as overhead in `get_totals`, `list_projects`, and `get_project`, not as direct cost, and the overhead share of the after-overhead view includes them. `project_id: null` clears it. `project_id` is required. Output `data`: `{ "id", "overhead_project_id", "undo_kind": "overhead_project" }`, where `id` is the company id. Undo restores the prior overhead project, or is `conflict` if it changed since. A project in another company is `refused` / `project not found`. `list_projects` and `get_project` return `is_overhead`, and `get_totals` returns `overhead_project_id`.
 
+### rename_company
+
+Renames the token's company. The owner only: a viewer or a read token is `forbidden`. There is no company argument, so another company cannot be named. The name is trimmed and must be 2 to 100 characters, or the call is `validation`. The app calls the same rule through `public.rename_company(p_company_id, p_name)`, which refuses any id but the caller's own company.
+
+```json
+{ "idempotency_key": "rename-1", "name": "Example Holdings" }
+```
+
+Output `data`: `{ "id", "name", "prior_name", "undo_kind": "company" }`. Undo with `kind: "company"` and the company id restores `prior_name`. If the current name is not the name this write set, undo is `conflict` and the current name stays.
+
 ### sync_bank
 
 ```json
@@ -220,9 +235,25 @@ Marks one project as the company's overhead project. Expense lines filed to it w
 
 There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_from`, lookback). Filtering after fetch would advance the cursor past dropped rows. `sync_bank` takes no dates and does not call `set_import_from`.
 
-Output `data`: `{ "added", "duplicates", "removed", "newest_date" }`. `added` is new lines. `duplicates` counts rows already stored that were refreshed in place. `removed` is voided or dropped lines. `newest_date` is the latest `doc_date` among live Mercury transactions, or null.
+`sync_bank` answers at once with `data`: `{ "job_id", "state": "running" }` and the pull keeps running after the response ([0102](../decisions/0102-sync-bank-jobs.md)). The same `idempotency_key` returns the same job (its current state, without a second pull). To retry a failed job, send a new key.
 
-`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`. A sync that was skipped because another run claimed the connector or ran inside the quiet window is `unavailable` / `retry` and is not stored.
+`not_found` / `bank is not connected` means there is no Mercury row in `connector_connections`; no job is started.
+
+### get_sync_status
+
+```json
+{ "job_id": "…" }
+```
+
+Read tool. Offered to read and write tokens. Readable by the user who started the job, in the same company; another user's job is `not_found`.
+
+Output `data`: `{ "job_id", "state", "started_at", "finished_at" }` plus:
+
+- `state: "running"`: nothing else yet.
+- `state: "done"`: `added`, `duplicates`, `removed`, `newest_date`. `added` is new lines. `duplicates` counts lines already stored, skipped as new and refreshed in place. `removed` is voided or dropped lines. `newest_date` is the latest `doc_date` among live Mercury transactions, or null.
+- `state: "failed"`: `error` `{ code, message }`. `unavailable` / `retry`: another run claimed the connector, the quiet window, or Mercury's rate limit; send `sync_bank` again with a new key. `not_found` / `bank is not connected`. `refused` / `bank key was rejected; reconnect in Settings`. `refused` / `The bank sync failed.`: any other failure, including a result whose shape the finish step rejected. A job still running after 5 minutes reads as `unavailable` / `retry`.
+
+The finish step stores a result only when it is exactly `added`, `duplicates`, `removed` (whole numbers, not negative) and `newest_date` (`YYYY-MM-DD` or null).
 
 ## Loans · cycle 5
 
