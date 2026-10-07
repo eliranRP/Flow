@@ -22,7 +22,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 6 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | ready |
 | 7 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP first) | SMALL CYCLE | ready |
 | 8 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | ready |
-| 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | ready |
+| 9 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | claimed (FLOW-112 thread, 2026-10-07, claude/project-thread-f3nxsv) |
 | 10 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | ready |
 | 11 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | ready |
 | 12 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | ready |
@@ -72,7 +72,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-112"></a>
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** claimed (FLOW-112 thread, 2026-10-07, claude/project-thread-f3nxsv) · **Depends on:** —
 - [ ] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default.
 - [ ] A merely suggested kept-out category already removes the line from the P&L. Decide whether suggestions count (Decisions needed).
 - [ ] `get_project` doesn't report kept-out project income.
