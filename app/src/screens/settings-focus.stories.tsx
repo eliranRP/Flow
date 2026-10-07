@@ -92,3 +92,31 @@ export const ConfirmFocus: Story = {
     await waitFor(() => expect(canvas.getByRole("button", { name: "עוזר AI" })).toHaveFocus());
   },
 };
+
+const renameBusiness = {
+  name: "סטודיו אלפא לעיצוב ובנייה בע״מ",
+  connected: false,
+  companyId: null,
+  lastError: null,
+  email: "owner@example.com",
+};
+
+/** A one-letter name shows the error on blur. Lives here because blur moves focus off the sheet title. */
+export const RenameTooShort: Story = {
+  name: "Rename sheet, name too short",
+  render: () => (
+    <StoryRoute entry="/settings">
+      <SettingsScreen sample={renameBusiness} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: `שם העסק: ${renameBusiness.name}` }));
+    const sheet = await bodyOf(canvasElement).findByRole("dialog", { name: "שם העסק" });
+    const field = within(sheet).getByLabelText("שם");
+    await userEvent.clear(field);
+    await userEvent.type(field, "א");
+    await userEvent.tab();
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await within(sheet).findByText("שם קצר מדי – לפחות 2 תווים");
+  },
+};

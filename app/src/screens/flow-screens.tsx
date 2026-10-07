@@ -64,6 +64,7 @@ import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, type AssistantSample } from "./assistant-settings";
+import { RenameCompanySheet } from "./rename-company";
 import { useJevQueue, useJevReview } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, withJev } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, type JevCardState } from "./jev-settings";
@@ -82,7 +83,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { CHANGE_SAVE_FAILURE, ChangeAssignment, changeSaveFailure, COLLAPSE_PICK_HOLD, COLLAPSE_SPLIT_NOTE, ONE_PROJECT_DETAIL, ONE_PROJECT_OPTION, type ChangeChoice } from "../ui/change-sheet";
@@ -3578,6 +3579,8 @@ export function SettingsScreen({
   const [mercuryConnectOpen, setMercuryConnectOpen] = useState(false);
   const [mercuryStatusOpen, setMercuryStatusOpen] = useState(false);
   const [mercuryDisconnectOpen, setMercuryDisconnectOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const businessRowRef = useRef<HTMLButtonElement>(null);
   const adoptSheet = useRef(false);
   const setConnectSheet = useSheetHistory("sumit-connect", connectOpen, setConnectOpen, undefined, adoptSheet);
   const setStatusSheet = useSheetHistory("sumit-status", statusOpen, setStatusOpen, undefined, adoptSheet);
@@ -3590,6 +3593,7 @@ export function SettingsScreen({
   const setMercuryConnectSheet = useSheetHistory("mercury-connect", mercuryConnectOpen, setMercuryConnectOpenClearing, undefined, adoptSheet);
   const setMercuryStatusSheet = useSheetHistory("mercury-status", mercuryStatusOpen, setMercuryStatusOpen, undefined, adoptSheet);
   const setMercuryDisconnectSheet = useSheetHistory("mercury-disconnect", mercuryDisconnectOpen, setMercuryDisconnectOpen);
+  const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
   const [overheadOn, setOverheadOn] = useState(false);
   const [clockNow, setClockNow] = useRefreshingNow();
   const [focusSumit, setFocusSumit] = useState(false);
@@ -3947,7 +3951,6 @@ export function SettingsScreen({
   const mercuryRefreshHint = mercuryRetryHint;
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const namedBusiness = (businessName ?? "").trim();
-  const accountHint = !noCompany && email !== "" ? <bdi dir="ltr">{email}</bdi> : undefined;
   const showInstall = !isStandalone();
   const showSignOut = preview === "off" || previewValue === "empty";
   return (
@@ -3963,15 +3966,31 @@ export function SettingsScreen({
         ) : null
       ) : namedBusiness !== "" ? (
         <List>
-          <ListRow
-            variant="static"
-            title={namedBusiness}
-            hint={accountHint}
-            icon={<GoogleIcon />}
-            describeHint={accountHint != null}
-            wrapHint
-          />
+          {holdWrites ? (
+            <ListRow variant="static" title={namedBusiness} icon={<BuildingIcon />} />
+          ) : (
+            <ListRow
+              variant="button"
+              title={namedBusiness}
+              label={`שם העסק: ${namedBusiness}`}
+              icon={<BuildingIcon />}
+              chevron
+              buttonRef={businessRowRef}
+              onClick={() => { setRenameSheet(true); }}
+            />
+          )}
+          {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
         </List>
+      ) : null}
+      {!noCompany && !holdWrites && namedBusiness !== "" ? (
+        <RenameCompanySheet
+          open={renameOpen}
+          onOpenChange={(next) => { setRenameSheet(next); }}
+          companyId={sample || previewSample ? null : dashboard.data?.company_id ?? null}
+          currentName={namedBusiness}
+          blocked={() => blocked(sample != null ? "empty" : undefined)}
+          returnFocusRef={businessRowRef}
+        />
       ) : null}
       <SectionHead title="חיבורים" />
       {kind === "loading" || mercuryKind === "loading" ? <p className="sr-only" role="status">טוען…</p> : null}

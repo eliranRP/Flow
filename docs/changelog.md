@@ -54,6 +54,8 @@ Per-currency display in the app. Home, projects, and project detail read `by_cur
 
 Review alongside CI, then auto-merge (FLOW-813). Reviews start as soon as a PR is pushed, while CI runs. Once the reviewers approve the current head, the coordinator turns on auto-merge (squash), and GitHub merges when `lint`, `check`, and `e2e` are green. `main` no longer requires an up-to-date branch, so a PR does not merge `main` and rerun CI after every other merge. `main` still runs the full suite before each deploy. GitHub's merge queue needs an organization-owned repo, so it is not used.
 
+Rename a company in the app (FLOW-602 screen). In Settings, the business name is now its own row, and the Google email is a separate static row. An owner taps the business row to open a one-field "שם העסק" sheet. The sheet saves through `rename_company` (2 to 100 characters, checked on blur and on save) and shows "שם העסק נשמר" with ביטול, which writes the previous name back. A viewer sees the row static. No migration. New decision [0108](decisions/0108-rename-company-row.md), which amends [0082](decisions/0082-settings-redesign.md) §2. CONTROLS.md and DESIGN-RULES §4 updated.
+
 ## 2026-10-06
 
 MCP-first rule. New features and user actions ship with a `flow-mcp` tool (and an API where possible) in the same PR; CONTRIBUTING.md and CHECKLIST-code.md updated. Decision [0095](decisions/0095-mcp-first.md).
