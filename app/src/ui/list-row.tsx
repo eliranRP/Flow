@@ -51,7 +51,7 @@ export type ListRowProps =
     amounts?: { minor: bigint; currency: string }[];
     amountDirection?: "expense" | "income";
   })
-  | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string })
+  | (Common & { variant: "transaction"; agorot: bigint; sign: "in" | "out"; source: "invoice" | "bank"; currency?: string; /** Hidden word before money in. Default הכנסה; a refund line says זיכוי. */ inWord?: string })
   | (Common & { variant: "item"; plain?: boolean })
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
@@ -240,16 +240,19 @@ function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: R
 function RowAmount(props: Extract<ListRowProps, { variant: "project" | "transaction" }>) {
   if (props.variant === "transaction") {
     const abs = props.agorot < 0n ? -props.agorot : props.agorot;
-    const income = props.sign !== "out";
+    // The amount's sign wins over the direction: a negative income (an income credit) shows its
+    // minus in the main text colour and is never green (decision 0113).
+    const income = props.sign === "in" && props.agorot >= 0n;
     // Income is green with no plus; the hidden word keeps direction out of colour alone (WCAG 1.4.1).
     return (
       <span className="t-amount">
-        {income ? <span className="sr-only">הכנסה </span> : null}
+        {income ? <span className="sr-only">{props.inWord ?? "הכנסה"} </span> : null}
         <BigNumber
           agorot={abs}
           currency={props.currency}
           direction={income ? "income" : "expense"}
           income={income}
+          cents="always"
         />
       </span>
     );

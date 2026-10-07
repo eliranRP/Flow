@@ -52,3 +52,32 @@ export const Preview: Story = {
 export const LongHebrew: Story = {
   args: { heading: longHebrew, amount: String(largeAgorot) },
 };
+
+/** The project name on the band is `band-title` 32 (decision 0113), above the 36 profit. */
+function ProjectBand({ name }: { name: string }) {
+  return (
+    <TopBand>
+      <BandHero>
+        <p className="t-band-title">{name}</p>
+        <p className="ui-band-label t-label">רווח</p>
+        <p className="t-display">
+          <BigNumber agorot={2_940_000n} />
+        </p>
+      </BandHero>
+    </TopBand>
+  );
+}
+
+export const ProjectName: Story = {
+  args: { heading: "וילה לדוגמה" },
+  render: ({ heading }) => <ProjectBand name={heading} />,
+};
+export const ProjectNameLong: Story = {
+  args: { heading: longHebrew },
+  render: ({ heading }) => <ProjectBand name={heading} />,
+};
+export const ProjectNameDark: Story = {
+  args: { heading: "וילה לדוגמה" },
+  globals: { theme: "dark" },
+  render: ({ heading }) => <ProjectBand name={heading} />,
+};

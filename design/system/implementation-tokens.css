@@ -31,13 +31,16 @@
   --type-display-size: 2.25rem; /* 36px */
   --type-display-line: 1.2;
   --type-display-weight: 600;
-  --type-title-1-size: 2rem; /* 32px */
-  --type-title-1-line: 1.25;
+  --type-title-1-size: 2.125rem; /* 34px */
+  --type-title-1-line: 1.15;
   --type-title-1-weight: 600;
   --type-title-1-tracking: -0.01em;
   --type-title-2-size: 1.375rem; /* 22px */
   --type-title-2-line: 1.35;
   --type-title-2-weight: 600;
+  --type-band-title-size: 2rem; /* 32px */
+  --type-band-title-line: 1.25;
+  --type-band-title-weight: 600;
   --type-heading-size: 1.25rem; /* 20px */
   --type-heading-line: 1.3;
   --type-heading-weight: 600;
@@ -46,7 +49,7 @@
   --type-title-3-weight: 600;
   --type-amount-size: 1.0625rem; /* 17px */
   --type-amount-line: 1.45;
-  --type-amount-weight: 500;
+  --type-amount-weight: 400;
   --type-body-size: 1rem; /* 16px */
   --type-body-line: 1.5;
   --type-body-weight: 500;
@@ -301,6 +304,7 @@
 .t-display { font-size: var(--type-display-size); line-height: var(--type-display-line); font-weight: var(--type-display-weight); }
 .t-title-1 { font-size: var(--type-title-1-size); line-height: var(--type-title-1-line); font-weight: var(--type-title-1-weight); }
 .t-title-2 { font-size: var(--type-title-2-size); line-height: var(--type-title-2-line); font-weight: var(--type-title-2-weight); }
+.t-band-title { font-size: var(--type-band-title-size); line-height: var(--type-band-title-line); font-weight: var(--type-band-title-weight); }
 .t-heading { font-size: var(--type-heading-size); line-height: var(--type-heading-line); font-weight: var(--type-heading-weight); }
 .t-title-3 { font-size: var(--type-title-3-size); line-height: var(--type-title-3-line); font-weight: var(--type-title-3-weight); }
 .t-amount { font-size: var(--type-amount-size); line-height: var(--type-amount-line); font-weight: var(--type-amount-weight); }

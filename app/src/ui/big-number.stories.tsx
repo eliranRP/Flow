@@ -50,3 +50,13 @@ export const UsdExpense: Story = {
   args: { agorot: "125000", size: "list" },
   render: () => <BigNumber agorot={125_000n} currency="USD" direction="expense" size="list" />,
 };
+
+/** Money in is green with no plus (decision 0113); a transaction row adds small cents, ".00" included. */
+export const Income: Story = {
+  args: { agorot: "350000", size: "list" },
+  render: ({ agorot }) => <BigNumber agorot={BigInt(agorot)} size="list" direction="income" income />,
+};
+export const IncomeRowCents: Story = {
+  args: { agorot: "350000", size: "list" },
+  render: ({ agorot }) => <BigNumber agorot={BigInt(agorot)} size="list" direction="income" income cents="always" />,
+};

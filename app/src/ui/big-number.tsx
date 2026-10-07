@@ -12,12 +12,10 @@ export function formatAmount(
   presentation: AmountPresentation = "summary",
   currency = "ILS",
   direction?: "income" | "expense",
-  plus?: boolean,
 ): string {
   return formatAmountText(agorot, currency, {
     detail: presentation === "detail",
     direction,
-    plus,
   });
 }
 
@@ -29,13 +27,22 @@ type BigNumberProps = {
   /** Loss colour is only used together with the minus that formatAmount already draws. */
   loss?: boolean;
   direction?: "income" | "expense";
-  plus?: boolean;
   /**
-   * Money in: draws the figure in the income colour (decision 0112). Only a figure that shows no
+   * Money in: draws the figure in the income colour (decision 0113). Only a figure that shows no
    * minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
    */
   income?: boolean;
+  /**
+   * "always": transaction rows show cents like Mercury, ".00" included, drawn small and raised
+   * (decision 0113, option C). Other lists, totals and summaries stay whole units.
+   */
+  cents?: "always";
 };
+
+/** The figure with its cents always shown: the detail text, plus ".00" when the cents are zero. */
+export function withCents(text: string): string {
+  return /\.\d{2}$/.test(text) ? text : `${text}.00`;
+}
 
 /** True when the formatted figure starts with a minus sign. */
 export function showsMinus(text: string): boolean {
@@ -45,6 +52,7 @@ export function showsMinus(text: string): boolean {
 /** Detail figures with agorot split into the whole part and the ".50" tail, which is drawn smaller. */
 export function splitCents(text: string, presentation: AmountPresentation): { whole: string; cents: string | null } {
   if (presentation !== "detail") return { whole: text, cents: null };
+  // Detail figures and transaction rows (cents="always") both end in ".dd" when they carry cents.
   const match = /\.\d{2}$/.exec(text);
   if (match == null) return { whole: text, cents: null };
   return { whole: text.slice(0, match.index), cents: match[0] };
@@ -74,12 +82,14 @@ export function BigNumber({
   size,
   loss = false,
   direction,
-  plus,
   income = false,
+  cents,
 }: BigNumberProps) {
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
-  const text = formatAmount(agorot, presentation, currency, direction, plus);
+  const shown = cents === "always" ? "detail" : presentation;
+  const formatted = formatAmount(agorot, shown, currency, direction);
+  const text = cents === "always" ? withCents(formatted) : formatted;
   useLayoutEffect(() => {
     if (size !== "hero") return;
     const node = ref.current;
@@ -154,18 +164,19 @@ export function BigNumber({
       host.remove();
     };
   }, [size, text]);
-  const green = income && !loss && !showsMinus(text);
-  const { whole, cents } = splitCents(text, presentation);
+  // Zero is not money in, and a figure with a minus is never green.
+  const green = income && !loss && agorot !== 0n && !showsMinus(text);
+  const { whole, cents: tail } = splitCents(text, shown);
   return (
     <bdi
       ref={ref}
       dir="ltr"
       className={["ui-num", heroStepClass(size, step), loss ? "ui-loss" : "", green ? "ui-income" : ""].filter(Boolean).join(" ")}
     >
-      {cents == null ? text : (
+      {tail == null ? text : (
         <>
           {whole}
-          <span className="ui-num-cents">{cents}</span>
+          <span className="ui-num-cents">{tail}</span>
         </>
       )}
     </bdi>

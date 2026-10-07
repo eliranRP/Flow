@@ -304,9 +304,10 @@ function LinesBody({
                 variant="transaction"
                 title={groupBy === "payer" && !excluded ? row.description : row.supplier_name ?? row.description}
                 hint={hint}
-                agorot={row.amount_minor}
+                agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
                 currency={row.currency}
                 sign={outgoing ? "out" : "in"}
+                inWord={direction === "expense" ? "זיכוי" : undefined}
                 source="invoice"
                 href={`/transactions/${row.transaction_id}${search}`}
               />

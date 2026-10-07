@@ -138,6 +138,9 @@
   --text-title-2: var(--type-title-2-size);
   --text-title-2--line-height: var(--type-title-2-line);
   --text-title-2--font-weight: var(--type-title-2-weight);
+  --text-band-title: var(--type-band-title-size);
+  --text-band-title--line-height: var(--type-band-title-line);
+  --text-band-title--font-weight: var(--type-band-title-weight);
   --text-heading: var(--type-heading-size);
   --text-heading--line-height: var(--type-heading-line);
   --text-heading--font-weight: var(--type-heading-weight);

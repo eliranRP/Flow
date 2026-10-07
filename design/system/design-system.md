@@ -7,7 +7,7 @@ Tokens live in `design-tokens.json`. The boards are `ds-1…ds-6` (light and dar
 - Calm and airy: white page, lots of space, few numbers per screen, detail on inner screens.
 - One accent, violet. It's used on the + button, the primary button, links and the active tab. Filled violet appears at most about twice per screen area.
 - The coloured band is used only at the top of Home and the Project header. All other screens are white with violet accents.
-- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with no plus. Never colour on the band (decision 0112).
+- Figures use the main text colour. A loss is red with a minus or ▼, a gain in a change pill is green with ▲, and money in is `income` green with no plus. Never colour on the band (decision 0113).
 - No gradients, no emoji, no heavy shadows. Depth comes from the violet tint and hairlines.
 
 ## Colour (light / dark)
@@ -53,17 +53,18 @@ Tokens live in `design-tokens.json`. The boards are `ds-1…ds-6` (light and dar
 Dark mode uses a violet-tinted near-black, never pure black. The band keeps the same violet as light mode (#7B3FE4), with white text (5.7:1) and #F0E8FF labels (4.8:1). The accent brightens to #B894FF and takes dark text on it. The period pill and change pill on the band become dark surfaces (#1E1929); red #FF8A80 inside is 7.5:1 and green #62CB8D is 8.5:1.
 
 ## Type: Rubik (Google Fonts, free, OFL)
-Weights: 400 hints and row secondary lines · 500 body, labels and list amounts · 600 titles, heads, hero and display amounts · 700 wordmark only. Numbers use equal-width (tabular) digits and are kept left-to-right inside Hebrew.
+Weights: 400 hints, row titles, secondary lines and list amounts · 500 body, inputs and labels · 600 titles, heads, hero and display amounts · 700 wordmark only. Numbers use equal-width (tabular) digits and are kept left-to-right inside Hebrew.
 
 | Style | Size / line height / weight | Use |
 |---|---|---|
 | hero | 52 / 1.15 / 600 | Main profit on Home |
 | display | 36 / 1.2 / 600 | Amount on detail screens |
-| title-1 | 32 / 1.25 / 600 | Page titles (letter-spacing −0.01em) |
-| title-2 | 22 / 1.35 / 600 | Sheet titles, project name |
+| title-1 | 34 / 1.15 / 600 | Page titles (letter-spacing −0.01em) |
+| title-2 | 22 / 1.35 / 600 | Sheet titles |
+| band-title | 32 / 1.25 / 600 | Project name on the band |
 | heading | 20 / 1.3 / 600 | Section heads, month heads |
-| title-3 | 17 / 1.45 / 600 | Compact titles, project row name |
-| amount | 17 / 1.45 / 500 | Amounts in lists |
+| title-3 | 17 / 1.45 / 600 | Compact titles; row titles at 400 |
+| amount | 17 / 1.45 / 400 | Amounts in lists; transaction rows add small cents |
 | body | 16 / 1.5 / 500 | Rows, main text |
 | label | 15 / 1.5 / 500 | Labels, subtitles, links |
 | meta | 15 / 1.4 / 400 | Row secondary line (text-muted) |

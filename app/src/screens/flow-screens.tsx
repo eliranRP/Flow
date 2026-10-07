@@ -660,7 +660,7 @@ export function ProjectDetailScreen({
         trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
         <BandHero>
-          <FocusTitle className="t-title-2">{project.name}</FocusTitle>
+          <FocusTitle className="t-band-title">{project.name}</FocusTitle>
           <p className="t-label">{project.state_label ?? (project.status === "finished" ? "הסתיים" : "פעיל")}</p>
           <p className="ui-band-label t-label">
             רווח
@@ -785,7 +785,7 @@ function LegacyEmptyProject() {
         }
       >
         <BandHero>
-          <FocusTitle className="t-title-2">פרויקט</FocusTitle>
+          <FocusTitle className="t-band-title">פרויקט</FocusTitle>
           <p className="ui-band-label t-label">רווח</p>
           <p className="t-display"><BigNumber agorot={0n} /></p>
         </BandHero>

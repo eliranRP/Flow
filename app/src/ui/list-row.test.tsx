@@ -23,7 +23,7 @@ describe("ListRow", () => {
     expect(screen.getByText("ספק · פטור ממע״מ")).toBeInTheDocument();
     const txnAmount = screen.getByText("−₪12,000");
     expect(txnAmount.closest("bdi")).toHaveAttribute("dir", "ltr");
-    expect(txnAmount.textContent).toBe("−₪12,000");
+    expect(txnAmount.textContent).toBe("−₪12,000.00");
   });
 
   it("renders a USD transaction amount inside one bdi and honours project currency", () => {
@@ -36,8 +36,10 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const usdTxn = screen.getByText("−$1,250");
-    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250");
-    expect(screen.getByText("$2,000")).toBeInTheDocument();
+    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250.00");
+    // Project rows stay whole units.
+    expect(screen.getByText("$2,000").textContent).toBe("$2,000");
+    expect(screen.getByText("$2,000").querySelector(".ui-num-cents")).toBeNull();
   });
 
   it("renders static, button, danger, and selectable rows", () => {
@@ -251,10 +253,66 @@ describe("ListRow", () => {
     const income = screen.getByText("₪3,500");
     expect(income).toHaveClass("ui-income");
     expect(income.textContent).not.toContain("+");
-    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500");
+    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500.00");
     expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
     const expense = screen.getByText("−₪1,200");
     expect(expense).not.toHaveClass("ui-income");
     expect(expense.closest(".t-amount")).not.toBeNull();
+  });
+
+  it("shows transaction cents small and raised, .00 included, and keeps project rows whole (decision 0113, option C)", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="לקוח לדוגמה" agorot={123_456n} sign="in" source="invoice" />
+          <ListRow variant="transaction" title="ספק לדוגמה" agorot={50_000n} sign="out" source="bank" />
+          <ListRow variant="project" title="פרויקט לדוגמה" agorot={98_765n} />
+        </>
+      </MemoryRouter>,
+    );
+    const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
+    expect(figures.map((node) => node.textContent)).toEqual(["₪1,234.56", "−₪500.00", "₪988"]);
+    expect(figures.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([".56", ".00", null]);
+  });
+
+  it("draws no hairline under a row", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="ספק לדוגמה" agorot={50_000n} sign="out" source="bank" />
+      </MemoryRouter>,
+    );
+    const row = screen.getByText("ספק לדוגמה").closest(".ui-row");
+    expect(row).not.toBeNull();
+    if (row instanceof HTMLElement) expect(getComputedStyle(row).borderBottomWidth).toMatch(/^(0px|0|)$/);
+  });
+
+  it("shows a negative income with its minus and no green, and names a refund זיכוי", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="זיכוי לקוח" agorot={-20_000n} sign="in" source="invoice" />
+          <ListRow variant="transaction" title="זיכוי ספק" agorot={19_400n} sign="in" inWord="זיכוי" source="invoice" />
+          <ListRow variant="transaction" title="אפס" agorot={0n} sign="in" source="invoice" />
+        </>
+      </MemoryRouter>,
+    );
+    const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
+    expect(figures[0]?.textContent).toBe("−₪200.00");
+    expect(figures[0]).not.toHaveClass("ui-income");
+    expect(figures[1]).toHaveClass("ui-income");
+    expect(figures[2]).not.toHaveClass("ui-income");
+    expect(Array.from(container.querySelectorAll(".sr-only")).map((node) => node.textContent)).toEqual(["זיכוי ", "הכנסה "]);
+  });
+
+  it("keeps a described field hint at the hint size", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="button" title="חיבור לדוגמה" hint="מחובר" describeHint onClick={() => undefined} />
+      </MemoryRouter>,
+    );
+    const hint = screen.getByText("מחובר");
+    expect(hint).toHaveClass("t-hint");
+    // jsdom keeps the custom property unresolved, so the token name is what is compared.
+    expect(getComputedStyle(hint).fontSize).toBe("var(--type-hint-size)");
   });
 });

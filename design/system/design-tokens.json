@@ -119,14 +119,19 @@
       "weight": 600
     },
     "title-1": {
-      "size": 32,
-      "lineHeight": 1.25,
+      "size": 34,
+      "lineHeight": 1.15,
       "weight": 600,
       "tracking": "-0.01em"
     },
     "title-2": {
       "size": 22,
       "lineHeight": 1.35,
+      "weight": 600
+    },
+    "band-title": {
+      "size": 32,
+      "lineHeight": 1.25,
       "weight": 600
     },
     "heading": {
@@ -142,7 +147,7 @@
     "amount": {
       "size": 17,
       "lineHeight": 1.45,
-      "weight": 500
+      "weight": 400
     },
     "body": {
       "size": 16,

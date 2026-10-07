@@ -88,7 +88,7 @@ describe("BigNumber", () => {
     }
   });
 
-  it("draws income green only when the figure shows no minus (decision 0112)", () => {
+  it("draws income green only when the figure shows no minus (decision 0113)", () => {
     render(
       <>
         <BigNumber agorot={250000n} direction="income" income />

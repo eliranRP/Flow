@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { BigNumber } from "./big-number";
 import { List, ListRow } from "./list-row";
 import { largeAgorot, longHebrew, padded } from "./story-support";
 
@@ -121,4 +122,33 @@ export const ListOfRows: Story = {
       <ListRow variant="project" title={longHebrew} agorot={largeAgorot} />
     </List>
   ),
+};
+
+/** Option C (decision 0113): income green with no plus and small cents (".00" included), expense with − and cents,
+    a negative income with its minus and never green, and a project row in whole units. No hairlines. */
+function MercuryRows() {
+  return (
+    <List>
+      <ListRow variant="transaction" title="לקוח לדוגמה" hint="מקדמה · 14/09" agorot={1_200_000n} sign="in" source="invoice" href="/transactions/1" />
+      <ListRow variant="transaction" title="לקוח שני" hint="תשלום · 12/09" agorot={345_050n} sign="in" source="bank" href="/transactions/2" />
+      <ListRow variant="transaction" title="ספק לדוגמה" hint="חומרים · 10/09" agorot={123_456n} sign="out" source="invoice" href="/transactions/3" />
+      <ListRow variant="transaction" title="זיכוי ללקוח" hint="זיכוי · 08/09" agorot={-20_000n} sign="in" source="invoice" href="/transactions/4" />
+      <ListRow variant="project" title="פרויקט לדוגמה" hint="רווחיות 27%" agorot={2_940_000n} href="/projects/1" />
+      <ListRow
+        variant="static"
+        title="הכנסה שלילית בסיכום"
+        meta={<BigNumber agorot={-40_000n} income />}
+      />
+    </List>
+  );
+}
+
+export const MercuryLight: Story = {
+  args: { variant: "transaction", title: "לקוח לדוגמה" },
+  render: () => <MercuryRows />,
+};
+export const MercuryDark: Story = {
+  args: { variant: "transaction", title: "לקוח לדוגמה" },
+  globals: { theme: "dark" },
+  render: () => <MercuryRows />,
 };

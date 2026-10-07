@@ -160,7 +160,7 @@ export function LoanSplitPanel({
                 hint={showCounted && part.inPnl === false ? (
                   <span className="ui-loan-out"><EyeOffIcon size={16} />מחוץ לרווח</span>
                 ) : undefined}
-                meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
+                meta={<bdi className="ui-num ui-loan-amount t-amount" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
               />
             ))}
             <ListRow
@@ -168,7 +168,7 @@ export function LoanSplitPanel({
               className="ui-loan-total"
               icon={<span className="ui-loan-spacer" aria-hidden="true" />}
               title="סה״כ"
-              meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
+              meta={<bdi className="ui-num ui-loan-amount t-amount" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
             />
           </List>
         </>
