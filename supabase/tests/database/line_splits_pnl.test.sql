@@ -133,7 +133,7 @@ select throws_ok(
 select throws_ok(
   $$select public.save_line_split((select id from lsp where label = 'txn_repair'),
     jsonb_build_array(pg_temp.part('repairs', 17000, 'north'), pg_temp.part('repairs', 300000, 'north')))$$,
-  'validation', 'the same category and project twice is refused');
+  'same category and project twice', 'the same category and project twice is refused');
 select throws_ok(
   $$select public.save_line_split((select id from lsp where label = 'txn_repair'),
     jsonb_build_array(pg_temp.part('repairs', 17000, 'north'), pg_temp.part('rent', 300000)))$$,

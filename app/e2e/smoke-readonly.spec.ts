@@ -308,6 +308,9 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   expect(watched.edgeResponses.length).toBeGreaterThan(0);
   expect(corsFailures, corsFailures.join("\n")).toEqual([]);
 
+  // Let the Connections page's reads settle, then drop the route so a late request cannot outlive the test.
+  await expect.poll(watched.inflight).toBe(0);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
   expect(watched.writes, watched.writes.join("\n")).toEqual([]);
   expect(watched.consoleErrors, watched.consoleErrors.join("\n")).toEqual([]);
   expect(watched.httpErrors, watched.httpErrors.join("\n")).toEqual([]);

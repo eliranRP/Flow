@@ -1,7 +1,9 @@
-// Tagging job. Decision 0084.
+// Tagging job. Decisions 0084 and 0124.
 // Off does not call Jev. Shadow stores a suggestion. Auto at or above the
 // threshold pre-fills a project and category the user has not set, marks that
 // fill as a suggestion, and leaves the line in לאישור. Nothing here approves.
+// A database lease lets one run at a time, and each company's calls are reserved
+// from its daily cap in SQL before Jev is called (decision 0124).
 
 import {
   JEV_MODEL,
@@ -25,6 +27,11 @@ export const JEV_TAG_BUDGET_MS = 120_000;
 /** Do not start another Jev call when less than this much of the budget is left. */
 export const JEV_TAG_RESERVE_MS = 20_000;
 export const JEV_TAG_INTERVAL_MS = 60_000;
+/** This many provider failures in a row end the run, so an outage marks few lines. */
+export const JEV_TAG_OUTAGE_STOP = 3;
+const TRANSPORT_CODES = new Set(["rate_limited", "overloaded", "timeout", "unavailable"]);
+/** The run lease outlives the 150 second Edge limit, so a killed run frees it on its own. */
+export const JEV_TAG_LEASE_SECONDS = 180;
 const CHOICE_CAP = 255;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -100,11 +107,29 @@ export class TagStop extends Error {
   }
 }
 
+export type CompanyUsage = {
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  tagged: number;
+  failed: number;
+};
+
 export type TagStore = {
   listWork(limit: number, companyId?: string | null): Promise<TagCompanyWork[]>;
   saveSuggestion(row: SuggestionRow): Promise<void>;
   prefill(write: PrefillWrite): Promise<void>;
   deleteSuggestion(transactionId: string, modelVersion: string): Promise<void>;
+  /** A line Jev failed on. The job does not send it again until its retry time. */
+  markFailed(companyId: string, transactionId: string, modelVersion: string): Promise<void>;
+};
+
+export type TagJobStore = {
+  takeLease(runId: string, seconds: number): Promise<boolean>;
+  releaseLease(runId: string): Promise<void>;
+  /** Calls granted from today's cap, at most `want`. */
+  reserveCalls(companyId: string, runId: string, want: number): Promise<number>;
+  finishUsage(companyId: string, runId: string, usage: CompanyUsage): Promise<void>;
 };
 
 export type TagCaller = (apiKey: string, input: JevCall) => Promise<JevResult>;
@@ -118,6 +143,7 @@ export type TagReport = {
   input_tokens: number;
   output_tokens: number;
   budget_skipped: number;
+  cap_skipped: number;
 };
 
 export type TagRunOptions = {
@@ -125,6 +151,8 @@ export type TagRunOptions = {
   budgetMs?: number;
   reserveMs?: number;
   log?: (line: string) => void;
+  /** Filled per company: calls made, tokens, tagged and failed lines. */
+  usage?: Map<string, CompanyUsage>;
 };
 
 type JsonObject = { [key: string]: unknown };
@@ -294,7 +322,12 @@ function emptyReport(companies = 0): TagReport {
     input_tokens: 0,
     output_tokens: 0,
     budget_skipped: 0,
+    cap_skipped: 0,
   };
+}
+
+export function emptyUsage(): CompanyUsage {
+  return { calls: 0, input_tokens: 0, output_tokens: 0, tagged: 0, failed: 0 };
 }
 
 export function logTagRun(report: TagReport, log?: (line: string) => void): void {
@@ -306,6 +339,7 @@ export function logTagRun(report: TagReport, log?: (line: string) => void): void
     `skipped=${report.skipped}`,
     `failed=${report.failed}`,
     `budget_skipped=${report.budget_skipped}`,
+    `cap_skipped=${report.cap_skipped}`,
   ].join(" ");
   (log ?? ((message: string) => console.info(message)))(line);
 }
@@ -319,7 +353,7 @@ function budgetSpent(started: number, budgetMs: number, now: number, reserveMs: 
 
 export async function tagWork(
   work: readonly TagCompanyWork[],
-  store: Pick<TagStore, "saveSuggestion" | "prefill" | "deleteSuggestion">,
+  store: Pick<TagStore, "saveSuggestion" | "prefill" | "deleteSuggestion"> & Partial<Pick<TagStore, "markFailed">>,
   call: TagCaller,
   apiKey: string,
   options: TagRunOptions = {},
@@ -330,6 +364,14 @@ export async function tagWork(
   const reserveMs = options.reserveMs ?? JEV_TAG_RESERVE_MS;
   const started = now();
   let stop = false;
+  let outage = 0;
+  const markFailed = async (expense: TagExpense) => {
+    try {
+      await store.markFailed?.(expense.companyId, expense.id, JEV_MODEL);
+    } catch {
+      // The line is sent again on the next run, within the daily cap.
+    }
+  };
   for (const company of work) {
     if (stop) {
       report.skipped += company.expenses.length;
@@ -340,7 +382,16 @@ export async function tagWork(
       report.skipped += company.expenses.length;
       continue;
     }
+    const usage = options.usage
+      ? options.usage.get(company.companyId) ?? emptyUsage()
+      : emptyUsage();
+    options.usage?.set(company.companyId, usage);
     for (const expense of company.expenses) {
+      if (outage >= JEV_TAG_OUTAGE_STOP) {
+        report.skipped += 1;
+        stop = true;
+        continue;
+      }
       if (budgetSpent(started, budgetMs, now(), reserveMs)) {
         report.skipped += 1;
         report.budget_skipped += 1;
@@ -360,6 +411,7 @@ export async function tagWork(
         continue;
       }
       let result: JevResult;
+      usage.calls += 1;
       try {
         result = await call(apiKey, { state: buildTagState(expense), questions });
       } catch (error) {
@@ -368,12 +420,17 @@ export async function tagWork(
           throw new TagStop(error.code);
         }
         report.failed += 1;
+        usage.failed += 1;
+        outage = error instanceof JevError && TRANSPORT_CODES.has(error.code) ? outage + 1 : 0;
+        await markFailed(expense);
         continue;
       }
-      const usage = result.usage;
-      if (usage) {
-        report.input_tokens += usage.input_tokens;
-        report.output_tokens += usage.output_tokens;
+      outage = 0;
+      if (result.usage) {
+        report.input_tokens += result.usage.input_tokens;
+        report.output_tokens += result.usage.output_tokens;
+        usage.input_tokens += result.usage.input_tokens;
+        usage.output_tokens += result.usage.output_tokens;
       }
       const plan = planTag(
         expense,
@@ -398,15 +455,19 @@ export async function tagWork(
           continue;
         }
         report.failed += 1;
+        usage.failed += 1;
+        await markFailed(expense);
         continue;
       }
       if (!plan.write) {
         report.tagged += 1;
+        usage.tagged += 1;
         continue;
       }
       try {
         await store.prefill(plan.write);
         report.tagged += 1;
+        usage.tagged += 1;
         report.prefilled += 1;
       } catch {
         try {
@@ -414,7 +475,9 @@ export async function tagWork(
         } catch {
           // The row stays. The next run will see the conflict and skip it.
         }
+        await markFailed(expense);
         report.failed += 1;
+        usage.failed += 1;
       }
     }
   }
@@ -450,18 +513,22 @@ export function categoriesPath(companyId: string): string {
 /**
  * Open untagged expenses, newest first, limited in SQL.
  * `tagged=is.null` with the model filter is the PostgREST anti-join: no
- * tag_suggestions row for the pin. The URL does not list transaction ids.
+ * tag_suggestions row for the pin. `failed=is.null` skips a line Jev failed on
+ * until its retry time (decision 0124). The URL does not list transaction ids.
  */
-export function transactionsPath(companyId: string, limit: number): string {
+export function transactionsPath(companyId: string, limit: number, nowIso: string): string {
   const cap = clampTagLimit(limit);
   return [
     `/rest/v1/transactions?company_id=eq.${companyId}`,
     "direction=eq.expense",
     "removed_at=is.null",
     "review_queue.status=eq.open",
-    "select=id,company_id,description,doc_date,supplier_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,review_queue!inner(status),allocations(id),suppliers(name),tagged:tag_suggestions()",
+    "select=id,company_id,description,doc_date,supplier_id,amount_gross,amount_net,vat_amount,project_id,category_id,project_assigned,category_assigned,user_assigned,pnl_role,review_queue!inner(status),allocations(id),suppliers(name),tagged:tag_suggestions(),failed:jev_line_failures()",
     `tagged.model_version=eq.${JEV_MODEL}`,
     "tagged=is.null",
+    `failed.model_version=eq.${JEV_MODEL}`,
+    `failed.retry_after=gt.${encodeURIComponent(nowIso)}`,
+    "failed=is.null",
     "order=doc_date.desc,id.desc",
     `limit=${cap}`,
   ].join("&");
@@ -537,6 +604,8 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
   if (!queue.some((item) => item.status === "open")) return [];
   const tagged = row.tagged;
   if (tagged != null && (!Array.isArray(tagged) || tagged.length > 0)) return [];
+  const failed = row.failed;
+  if (failed != null && (!Array.isArray(failed) || failed.length > 0)) return [];
   const id = asString(row.id);
   const docDate = asString(row.doc_date);
   const rowCompany = asString(row.company_id);
@@ -582,7 +651,12 @@ function enabledCompanies(integrations: readonly RestRow[], onlyCompanyId?: stri
   return enabled;
 }
 
-export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey: string): TagStore {
+export function createTagStore(
+  fetch: FetchLike,
+  supabaseUrl: string,
+  serviceKey: string,
+  now: () => number = Date.now,
+): TagStore {
   const base = supabaseUrl.replace(/\/+$/, "");
   const get = (path: string) => rest(fetch, `${base}${path}`, serviceKey, { method: "GET" });
 
@@ -606,7 +680,7 @@ export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey
           const name = asString(row.name);
           return id && name ? [{ id, name }] : [];
         });
-        const transactions = rows(await get(transactionsPath(company.companyId, quota)));
+        const transactions = rows(await get(transactionsPath(company.companyId, quota, new Date(now()).toISOString())));
         const loaded = transactions.flatMap((row) => expenseFromRow(row, company.companyId));
         work.push({
           companyId: company.companyId,
@@ -677,7 +751,71 @@ export function createTagStore(fetch: FetchLike, supabaseUrl: string, serviceKey
         { method: "DELETE" },
       );
     },
+
+    async markFailed(companyId: string, transactionId: string, modelVersion: string): Promise<void> {
+      await rest(fetch, `${base}/rest/v1/rpc/jev_mark_failed`, serviceKey, {
+        method: "POST",
+        body: { p_company: companyId, p_transaction: transactionId, p_model: modelVersion },
+      });
+    },
   };
+}
+
+/** The lease and the daily cap live in SQL (decision 0124). */
+export function createTagJobStore(fetch: FetchLike, supabaseUrl: string, serviceKey: string): TagJobStore {
+  const base = supabaseUrl.replace(/\/+$/, "");
+  const rpc = (name: string, body: JsonObject) =>
+    rest(fetch, `${base}/rest/v1/rpc/${name}`, serviceKey, { method: "POST", body });
+  return {
+    async takeLease(runId: string, seconds: number): Promise<boolean> {
+      return (await rpc("jev_take_lease", { p_holder: runId, p_seconds: seconds })) === true;
+    },
+    async releaseLease(runId: string): Promise<void> {
+      await rpc("jev_release_lease", { p_holder: runId });
+    },
+    async reserveCalls(companyId: string, runId: string, want: number): Promise<number> {
+      const granted = asNumber(await rpc("jev_reserve_calls", { p_company: companyId, p_run: runId, p_want: want }));
+      if (!Number.isInteger(granted) || granted < 0) throw new Error("store");
+      return Math.min(granted, want);
+    },
+    async finishUsage(companyId: string, runId: string, usage: CompanyUsage): Promise<void> {
+      await rpc("jev_finish_usage", {
+        p_company: companyId,
+        p_run: runId,
+        p_calls: usage.calls,
+        p_input_tokens: usage.input_tokens,
+        p_output_tokens: usage.output_tokens,
+        p_tagged: usage.tagged,
+        p_failed: usage.failed,
+      });
+    },
+  };
+}
+
+/**
+ * Reserve each company's calls from its daily cap and keep only that many lines,
+ * newest first. Lines over the cap are `cap_skipped` and wait for tomorrow's cap.
+ */
+export async function applyDailyCap(
+  work: readonly TagCompanyWork[],
+  jobs: Pick<TagJobStore, "reserveCalls">,
+  runId: string,
+  reserved: string[] = [],
+): Promise<{ work: TagCompanyWork[]; capSkipped: number; reserved: string[] }> {
+  const kept: TagCompanyWork[] = [];
+  let capSkipped = 0;
+  for (const company of work) {
+    const want = company.expenses.length;
+    if (want === 0) continue;
+    // Listed before the reserve, so a later throw still finishes this company's row.
+    // Finishing a company with no row is a no-op.
+    if (!reserved.includes(company.companyId)) reserved.push(company.companyId);
+    const granted = await jobs.reserveCalls(company.companyId, runId, want);
+    capSkipped += want - granted;
+    if (granted < 1) continue;
+    kept.push({ ...company, expenses: company.expenses.slice(0, granted) });
+  }
+  return { work: kept, capSkipped, reserved };
 }
 
 function constantTimeEqual(left: string, right: string): boolean {
@@ -713,6 +851,8 @@ const tagRateState: TagRateState = { lastAt: -1 };
 
 export type JevTagDeps = {
   fetch: FetchLike;
+  /** Run id for the lease and the usage log. Defaults to a random UUID. */
+  runId?: () => string;
   env(name: string): string;
   readKey?: (source: { fetch: FetchLike; supabaseUrl: string; serviceKey: string }) => Promise<string>;
   call?: TagCaller;
@@ -818,24 +958,56 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
   }
   const readKey = deps.readKey ?? readJevApiKey;
   const call = deps.call ?? tagJevCall(deps.fetch);
+  const jobs = createTagJobStore(deps.fetch, supabaseUrl, serviceKey);
+  const runId = (deps.runId ?? (() => crypto.randomUUID()))();
   try {
-    const store = createTagStore(deps.fetch, supabaseUrl, serviceKey);
-    const work = await store.listWork(requested.limit, requested.companyId);
-    const pending = work.reduce((sum, company) => sum + company.expenses.length, 0);
+    if (!(await jobs.takeLease(runId, JEV_TAG_LEASE_SECONDS))) {
+      return json({ error: "busy" }, 409);
+    }
+  } catch {
+    return json({ error: "tag_failed" }, 500);
+  }
+  const usage = new Map<string, CompanyUsage>();
+  const reserved: string[] = [];
+  try {
+    const store = createTagStore(deps.fetch, supabaseUrl, serviceKey, deps.now);
+    const listed = await store.listWork(requested.limit, requested.companyId);
+    const capped = await applyDailyCap(listed, jobs, runId, reserved);
+    const pending = capped.work.reduce((sum, company) => sum + company.expenses.length, 0);
     if (pending === 0) {
-      const report = emptyReport(work.length);
+      const report = emptyReport(listed.length);
+      report.skipped = capped.capSkipped;
+      report.cap_skipped = capped.capSkipped;
       logTagRun(report, deps.log);
       return json({ ok: true, ...report });
     }
     const apiKey = await readKey({ fetch: deps.fetch, supabaseUrl, serviceKey });
-    const report = await tagWork(work, store, call, apiKey, {
+    const report = await tagWork(capped.work, store, call, apiKey, {
       now: deps.now,
       log: deps.log,
+      usage,
     });
+    report.companies = listed.length;
+    report.skipped += capped.capSkipped;
+    report.cap_skipped = capped.capSkipped;
     return json({ ok: true, ...report });
   } catch (error) {
     if (error instanceof TagStop) return json({ error: error.code }, 500);
     if (error instanceof JevError && error.code === "missing_key") return json({ error: "missing_key" }, 500);
     return json({ error: "tag_failed" }, 500);
+  } finally {
+    // A reservation with no finish keeps counting in full for the day, which is the safe side.
+    for (const companyId of reserved) {
+      try {
+        await jobs.finishUsage(companyId, runId, usage.get(companyId) ?? emptyUsage());
+      } catch {
+        // The reservation stays counted.
+      }
+    }
+    try {
+      await jobs.releaseLease(runId);
+    } catch {
+      // The lease expires on its own.
+    }
   }
 }

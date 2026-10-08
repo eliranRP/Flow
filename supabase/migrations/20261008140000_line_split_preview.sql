@@ -1,181 +1,35 @@
--- FLOW-312 (FLOW-311 follow-ups), item 2. A bank re-sync that changes the amount of a line
--- split by category no longer makes it count whole in silence: the line gets an open review
--- item with reason split_mismatch. Saving new parts (or clearing the split) closes it, and so
--- does an amount that comes back to match the parts. save_line_split accepts a line whose
--- only open review is split_mismatch; it is otherwise as in 20261008110000_line_split_percent_rest.sql
--- (FLOW-325). Decision 0124.
+-- FLOW-325 follow-ups for the parts screen (Mercury thread's plan):
+-- 1. A repeated category and project pair is refused as 'same category and project twice'.
+-- 2. line_splits keeps each part's percent and whether it is the rest; get_line_split shows
+--    them. Undo restores amounts only, so a restored part shows neither.
+-- 3. save_line_split takes p_preview: it returns the parts a save would store (cents,
+--    percent, rest) and writes nothing.
+-- 4. A line of zero is refused as 'line amount is zero'.
+-- Decision 0123.
+-- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
 begin;
 
 set local lock_timeout = '5s';
 
--- Open or close the split_mismatch review of one line. A line whose parts no longer sum to
--- it, and that is not removed or void, gets one open review unless it already has an open
--- review of any reason. A line whose parts match again, or that has no parts, loses its open
--- split_mismatch review. Idempotent.
-create or replace function private.line_split_review_sync(p_transaction_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  line record;
-  parts integer;
-  parts_minor bigint;
-  mismatch boolean;
-begin
-  select t.company_id, t.amount_net, t.removed_at, t.line_status
-  into line
-  from public.transactions t
-  where t.id = p_transaction_id;
-  if not found then
-    return;
-  end if;
+alter table public.line_splits
+  add column percent numeric(7, 4) check (percent > 0 and percent <= 100),
+  add column is_rest boolean not null default false;
 
-  select count(*)::integer, coalesce(sum(s.amount_minor), 0)
-  into parts, parts_minor
-  from public.line_splits s
-  where s.transaction_id = p_transaction_id;
+comment on column public.line_splits.percent is
+  'The percent of the line the owner gave for this part, or null for an amount or the rest. amount_minor is what counts.';
+comment on column public.line_splits.is_rest is
+  'True for the part that took what the other parts left.';
 
-  mismatch := parts > 0
-    and parts_minor <> abs(line.amount_net)
-    and line.removed_at is null
-    and line.line_status is distinct from 'void'::public.line_status;
+drop function public.save_line_split(uuid, jsonb);
 
-  if mismatch then
-    insert into public.review_queue (company_id, transaction_id, status, reason)
-    select line.company_id, p_transaction_id, 'open', 'split_mismatch'
-    where not exists (
-      select 1 from public.review_queue q
-      where q.transaction_id = p_transaction_id and q.status = 'open'
-    );
-  else
-    delete from public.review_queue q
-    where q.transaction_id = p_transaction_id
-      and q.company_id = line.company_id
-      and q.status = 'open'
-      and q.reason = 'split_mismatch';
-  end if;
-end;
-$$;
-
-revoke all on function private.line_split_review_sync(uuid) from public, anon, authenticated;
-
--- The bank sync (and any other writer) changing a line's amount, or a line that is removed,
--- voided or comes back.
-create or replace function private.transactions_line_split_review()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if exists (select 1 from public.line_splits s where s.transaction_id = new.id) then
-    perform private.line_split_review_sync(new.id);
-  end if;
-  return null;
-end;
-$$;
-
-revoke all on function private.transactions_line_split_review() from public, anon, authenticated;
-
-create trigger transactions_line_split_review
-  after update of amount_net, removed_at, line_status on public.transactions
-  for each row
-  when (
-    old.amount_net is distinct from new.amount_net
-    or old.removed_at is distinct from new.removed_at
-    or old.line_status is distinct from new.line_status
-  )
-  execute function private.transactions_line_split_review();
-
--- A line can wait behind another open review (one open review per line). When that review
--- closes, judge the line again. A split_mismatch review that is reopened (reopen_review, undo)
--- is judged again too, so it does not stay open on parts that match; another review that is
--- reopened takes the line back from an open split_mismatch. Closing a split_mismatch
--- review itself (approve, skip, or the delete above) changes nothing here.
-create or replace function private.review_queue_line_split_review()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if old.transaction_id is null
-    or not exists (select 1 from public.line_splits s where s.transaction_id = old.transaction_id)
-  then
-    return null;
-  end if;
-  if old.status = 'open'
-    and old.reason is distinct from 'split_mismatch'
-    and (tg_op = 'DELETE' or new.status is distinct from 'open')
-  then
-    perform private.line_split_review_sync(old.transaction_id);
-  elsif tg_op = 'UPDATE'
-    and new.status = 'open'
-    and old.status is distinct from 'open'
-    and new.reason = 'split_mismatch'
-  then
-    perform private.line_split_review_sync(new.transaction_id);
-  elsif tg_op = 'UPDATE'
-    and new.status = 'open'
-    and old.status is distinct from 'open'
-    and new.reason is distinct from 'split_mismatch'
-  then
-    -- Another review came back (undo of a skip): it holds the line again, one open review.
-    delete from public.review_queue q
-    where q.transaction_id = new.transaction_id
-      and q.company_id = new.company_id
-      and q.status = 'open'
-      and q.reason = 'split_mismatch';
-  end if;
-  return null;
-end;
-$$;
-
-revoke all on function private.review_queue_line_split_review() from public, anon, authenticated;
-
-create trigger review_queue_line_split_review
-  after update of status or delete on public.review_queue
-  for each row
-  execute function private.review_queue_line_split_review();
-
--- New parts, cleared parts and undo. Deferred, so save_line_split's delete-then-insert is
--- judged once, on the parts as they stand at commit.
-create or replace function private.line_splits_review()
-returns trigger
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  perform private.line_split_review_sync(coalesce(new.transaction_id, old.transaction_id));
-  return null;
-end;
-$$;
-
-revoke all on function private.line_splits_review() from public, anon, authenticated;
-
-create constraint trigger line_splits_review
-  after insert or update or delete on public.line_splits
-  deferrable initially deferred
-  for each row
-  execute function private.line_splits_review();
-
--- Replace the parts of one line. An empty array clears the split. Each part has a category,
--- an optional project, and exactly one of:
---   amount_minor  whole minor units above zero;
---   percent       above 0 and up to 100, at most 4 decimals, of the whole line;
---   rest: true    whatever the other parts leave (at most one such part). Its category
---                 defaults to the line's own category, its project to the line's project.
--- Percent parts are rounded together by largest remainder, so they sum to the rounded total
--- of their percents (the whole line at 100%). Without a rest part the parts sum to the line.
--- A part of the other kind is a reversal (a refund under an expense category) and needs a
--- project unless it is the line's own category. An open review refuses the line, except a
--- split_mismatch review, which the new parts (or the cleared split) close at commit.
--- Returns the parts as stored, in cents.
-create or replace function public.save_line_split(p_transaction_id uuid, p_parts jsonb)
+-- See 20261008110000 for the part shapes and rules. p_preview returns
+-- [{category_id, project_id, amount_minor, percent, rest}] without writing.
+create function public.save_line_split(
+  p_transaction_id uuid,
+  p_parts jsonb,
+  p_preview boolean default false
+)
 returns jsonb
 language plpgsql
 security definer
@@ -235,12 +89,15 @@ begin
   left join public.categories c on c.id = line_category and c.company_id = cid;
 
   if n = 0 then
+    if p_preview then
+      return '[]'::jsonb;
+    end if;
     delete from public.line_splits where transaction_id = p_transaction_id and company_id = cid;
     return '[]'::jsonb;
   end if;
 
   if line_net = 0 then
-    raise exception 'parts must sum to the line';
+    raise exception 'line amount is zero';
   end if;
   line_minor := abs(line_net);
   if exists (select 1 from public.loan_splits s where s.transaction_id = p_transaction_id) then
@@ -249,7 +106,6 @@ begin
   if exists (
     select 1 from public.review_queue q
     where q.transaction_id = p_transaction_id and q.company_id = cid and q.status = 'open'
-      and q.reason is distinct from 'split_mismatch'
   ) then
     raise exception 'line has an open review';
   end if;
@@ -307,7 +163,7 @@ begin
 
     pair := category::text || '|' || coalesce(project::text, '');
     if pair = any(seen) then
-      raise exception 'validation';
+      raise exception 'same category and project twice';
     end if;
     seen := seen || pair;
 
@@ -395,13 +251,34 @@ begin
     end if;
   end if;
 
+  -- A preview returns what a save would store, with each part's percent and rest marker,
+  -- and writes nothing.
+  if p_preview then
+    return coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'category_id', categories[u.i],
+        'project_id', projects[u.i],
+        'amount_minor', amounts[u.i],
+        'percent', percents[u.i],
+        'rest', coalesce(u.i = rest_at, false)
+      ) order by u.i)
+      from generate_series(1, n) as u(i)
+      where amounts[u.i] > 0
+    ), '[]'::jsonb);
+  end if;
+
   delete from public.line_splits where transaction_id = p_transaction_id and company_id = cid;
   for i in 1..n
   loop
     continue when amounts[i] = 0;
     ord := ord + 1;
-    insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
-    values (cid, p_transaction_id, ord, categories[i], projects[i], amounts[i]);
+    insert into public.line_splits (
+      company_id, transaction_id, ordinal, category_id, project_id, amount_minor, percent, is_rest
+    )
+    values (
+      cid, p_transaction_id, ord, categories[i], projects[i], amounts[i], percents[i],
+      coalesce(i = rest_at, false)
+    );
   end loop;
 
   -- The owner chose these categories, so the line is no longer a suggestion.
@@ -414,11 +291,114 @@ begin
 end;
 $$;
 
-revoke all on function public.save_line_split(uuid, jsonb) from public, anon, authenticated, service_role;
-grant execute on function public.save_line_split(uuid, jsonb) to authenticated;
+revoke all on function public.save_line_split(uuid, jsonb, boolean) from public, anon, authenticated, service_role;
+grant execute on function public.save_line_split(uuid, jsonb, boolean) to authenticated;
 
--- Lines that already mismatch get their review now.
-select private.line_split_review_sync(d.transaction_id)
-from (select distinct s.transaction_id from public.line_splits s) d;
+-- Read the parts of one line for the owner or a viewer, with each part's percent and rest marker.
+create or replace function public.get_line_split(p_transaction_id uuid)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'transaction_id', t.id,
+    'currency', coalesce(t.currency, 'ILS'),
+    'line_minor', abs(t.amount_net),
+    'parts', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'category_id', s.category_id,
+        'category_name', c.name,
+        'project_id', s.project_id,
+        'project_name', p.name,
+        'amount_minor', s.amount_minor,
+        'percent', s.percent,
+        'rest', s.is_rest
+      ) order by s.ordinal)
+      from public.line_splits s
+      join public.categories c on c.id = s.category_id
+      left join public.projects p on p.id = s.project_id
+      where s.transaction_id = t.id
+    ), '[]'::jsonb),
+    'parts_match', coalesce((
+      select count(*) >= 2 and sum(s.amount_minor) = abs(t.amount_net)
+      from public.line_splits s
+      where s.transaction_id = t.id
+      having count(*) > 0
+    ), true)
+  )
+  from public.transactions t
+  where t.id = p_transaction_id
+    and t.removed_at is null
+    and t.company_id = (select private.readable_company_id());
+$$;
+
+revoke all on function public.get_line_split(uuid) from public, anon;
+grant execute on function public.get_line_split(uuid) to authenticated;
+
+create or replace function private.mcp_refused(p_message text)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select private.mcp_error(
+    'refused',
+    case
+      when p_message in (
+        'no company',
+        'unknown review action',
+        'review item not found',
+        'shared costs are split, not assigned to one project',
+        'category is required',
+        'project or category not found',
+        'category kind must match the direction',
+        'project and category are required',
+        'transaction not found',
+        'category not found',
+        'project name is too short',
+        'project already exists',
+        'category name is too short',
+        'category already exists',
+        'unknown category kind',
+        'in use',
+        'loan not found',
+        'loan currency mismatch',
+        'loan already attached',
+        'loan balance exceeded',
+        'no schedule row for this date',
+        'loan categories missing',
+        'invalid loan terms',
+        'loan category is fixed',
+        'project not found',
+        'parts must sum to the line',
+        'line has a loan split',
+        'line has a split by category',
+        'line has an open review',
+        'payment below interest',
+        'invalid loan parts',
+        'loan line is fixed',
+        'parts exceed the line',
+        'a part rounds to zero',
+        'nothing is left for the rest',
+        'line has no category for the rest',
+        'a reversal part needs a project',
+        'same category and project twice',
+        'line amount is zero',
+        -- FLOW-106 (#132) adds these in 20261008100000_loan_status.sql; kept here so the
+        -- list holds whichever of the two lands first.
+        'closed_on required',
+        'loan is open',
+        'payments after closed_on',
+        'loan closed'
+      ) then p_message
+      when p_message = 'loan_closed' then 'loan closed'
+      else 'The write was refused.'
+    end
+  );
+$$;
+
+revoke all on function private.mcp_refused(text) from public, anon, authenticated;
 
 commit;
