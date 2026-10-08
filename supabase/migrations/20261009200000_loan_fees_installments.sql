@@ -1247,7 +1247,7 @@ $$;
 revoke all on function public.mcp_list_loans() from public, anon;
 grant execute on function public.mcp_list_loans() to authenticated, service_role;
 
--- mcp_undo: as in 20261009000000_loan_part_categories.sql; loan_update also compares and
+-- mcp_undo: as in 20261009130000_batch_undo_write_id.sql; loan_update also compares and
 -- restores fees_category_id.
 create or replace function public.mcp_undo(
   p_idempotency_key text,
@@ -1415,9 +1415,13 @@ begin
         response := private.mcp_error('conflict', 'conflict');
       else
         delete from public.line_splits where transaction_id = p_id and company_id = cid;
-        insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+        -- A write stored before FLOW-133 has no percent or rest in before: they stay empty.
+        insert into public.line_splits (
+          company_id, transaction_id, ordinal, category_id, project_id, amount_minor, percent, is_rest
+        )
         select cid, p_id, b.ord::smallint, (b.part->>'category_id')::uuid, (b.part->>'project_id')::uuid,
-          (b.part->>'amount_minor')::bigint
+          (b.part->>'amount_minor')::bigint, (b.part->>'percent')::numeric,
+          coalesce((b.part->>'is_rest')::boolean, false)
         from jsonb_array_elements(rec.prior->'before') with ordinality as b(part, ord);
         update public.transactions
         set user_assigned = (rec.prior->>'user_assigned')::boolean,
