@@ -36,7 +36,7 @@ export const ProjectCategoryUsual: Story = {
   render: () => (
     <StoryRoute entry="/projects/a/categories/c1">
       <ExampleBar />
-      <ProjectCategoryScreen sample={{ ...categorySample, usual: { expected: 410_000n, up: true } }} backTo="/projects/a" />
+      <ProjectCategoryScreen sample={{ ...categorySample, usual: { expected: 410_000n, up: "high" as const } }} backTo="/projects/a" />
     </StoryRoute>
   ),
 };

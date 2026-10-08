@@ -42,7 +42,7 @@ describe("project categories by group (FLOW-401)", () => {
   it("marks high and new categories, and the group of a marked member", () => {
     const entries = categoryEntries(lines, groups, [month("b", "high", 410000), month("a", null, 600000), month("g", "new")]);
     const marked = entries.map((entry) => entry.up);
-    expect(marked).toEqual([true, false, true]);
+    expect(marked).toEqual(["high", null, "new"]);
   });
 
   it("puts a missing bill under its group with no amount", () => {
@@ -79,7 +79,7 @@ describe("marks only in the month view", () => {
 
   it("gives the category page its usual month", () => {
     const months = { project_id: "p", today: "2026-10-20", this_month: "2026-10-01", months: [], categories: [month("b", "high", 410000)] };
-    expect(usualFor(months, "b", "ILS")).toEqual({ expected: 410000n, up: true, currency: "ILS" });
+    expect(usualFor(months, "b", "ILS")).toEqual({ expected: 410000n, up: "high", currency: "ILS" });
     expect(usualFor(months, "b", "USD")).toBeNull();
     expect(usualFor(months, "a", "ILS")).toBeNull();
   });

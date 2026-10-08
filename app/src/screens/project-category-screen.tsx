@@ -5,7 +5,7 @@ import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { periodFromSearch, periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { usualFor, useProjectCategoryMonthsQuery } from "../project-category-months";
+import { usualFor, useProjectCategoryMonthsQuery, type UpKind } from "../project-category-months";
 import { useProjectCategoryQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
@@ -30,7 +30,7 @@ type CategorySample = {
   /** FLOW-107. Loan split marks by row id, for stories. */
   loanMarks?: Record<string, LoanMark>;
   /** FLOW-401. The usual month of the category, for stories. */
-  usual?: { expected: bigint; up: boolean };
+  usual?: { expected: bigint; up: UpKind };
 };
 
 /** The drill-down for one category row; a row in another currency names it (`?currency=`). */
@@ -130,11 +130,11 @@ export function ProjectCategoryScreen({
 }
 
 /** FLOW-401 v5: one quiet line under the title in the month view, "בד״כ ₪4,100 בחודש", with the up mark when above it. */
-function UsualLine({ usual, currency }: { usual: { expected: bigint; up: boolean } | null; currency: string }) {
+function UsualLine({ usual, currency }: { usual: { expected: bigint; up: UpKind } | null; currency: string }) {
   if (usual == null) return null;
   return (
     <p className="ui-page-pad ui-usual-line t-meta">
-      {usual.up ? <UpMark /> : null}
+      {usual.up != null ? <UpMark kind={usual.up} /> : null}
       <span>
         {"בד״כ "}
         <bdi dir="ltr" className="ui-num">{formatAmountText(usual.expected, currency)}</bdi>

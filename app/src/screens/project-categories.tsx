@@ -98,7 +98,7 @@ export function ProjectCategories({
         agorot={absAgorot(line.amount_minor)}
         currency={line.currency}
         loss={false}
-        mark={item.up ? <UpMark /> : undefined}
+        mark={item.up != null ? <UpMark kind={item.up} /> : undefined}
         missing={item.missing ? NOT_IN_YET : undefined}
         chevron={href != null}
         href={href}
@@ -123,7 +123,7 @@ export function ProjectCategories({
             name={entry.name}
             agorot={absAgorot(entry.amount_minor)}
             currency={entry.currency}
-            up={entry.up && !expanded}
+            up={expanded ? null : entry.up}
             expanded={expanded}
             onToggle={() => {
               setOpen((current) => {

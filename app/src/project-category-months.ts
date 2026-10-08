@@ -46,18 +46,21 @@ export type CategoryLine = {
 };
 
 /** One category row on the project page. `up`: above its usual month. `missing`: a usual bill not in yet. */
-export type CategoryItem = { line: CategoryLine; up: boolean; missing: boolean };
+export type CategoryItem = { line: CategoryLine; up: UpKind; missing: boolean };
+
+/** Why a category carries the up mark: above its usual month, or a cost new this month. */
+export type UpKind = "high" | "new" | null;
 
 export type CategoryEntry =
   | ({ kind: "category" } & CategoryItem)
-  | { kind: "group"; name: string; currency: string; amount_minor: bigint; up: boolean; items: CategoryItem[] };
+  | { kind: "group"; name: string; currency: string; amount_minor: bigint; up: UpKind; items: CategoryItem[] };
 
 function key(id: string | null, currency: string): string {
   return `${id ?? ""}:${currency}`;
 }
 
-function flagUp(flag: ProjectCategoryMonthRow["flag"] | undefined): boolean {
-  return flag === "high" || flag === "new";
+function flagUp(flag: ProjectCategoryMonthRow["flag"] | undefined): UpKind {
+  return flag === "high" || flag === "new" ? flag : null;
 }
 
 function absMinor(value: bigint): bigint {
@@ -82,7 +85,7 @@ export function categoryEntries(
   const currency = lines[0]?.currency ?? months?.[0]?.currency;
   for (const row of months ?? []) {
     if (row.flag !== "missing" || row.id == null || row.currency !== currency || shown.has(key(row.id, row.currency))) continue;
-    items.push({ line: { currency: row.currency, id: row.id, name: row.name, amount_minor: 0n }, up: false, missing: true });
+    items.push({ line: { currency: row.currency, id: row.id, name: row.name, amount_minor: 0n }, up: null, missing: true });
   }
   const byGroup = new Map<string, CategoryItem[]>();
   for (const item of items) {
@@ -107,7 +110,8 @@ export function categoryEntries(
       name: group,
       currency: item.line.currency,
       amount_minor: members.reduce((sum, member) => sum + member.line.amount_minor, 0n),
-      up: members.some((member) => member.up),
+      // A high member names the group's mark first; else a new one.
+      up: members.find((member) => member.up === "high")?.up ?? members.find((member) => member.up === "new")?.up ?? null,
       items: sorted,
     });
   }
@@ -136,7 +140,7 @@ export function usualFor(
   months: ProjectCategoryMonths | null | undefined,
   categoryId: string,
   currency: string,
-): { expected: bigint; up: boolean; currency: string } | null {
+): { expected: bigint; up: UpKind; currency: string } | null {
   const row = months?.categories.find((item) => item.id === categoryId && item.currency === currency);
   if (row?.expected_minor == null) return null;
   return { expected: BigInt(row.expected_minor), up: flagUp(row.flag), currency };
