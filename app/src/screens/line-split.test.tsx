@@ -91,7 +91,7 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ parts: expenseParts, api });
     await waitFor(() => { expect(restRow()).toHaveTextContent("₪2,860"); });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(await screen.findByText("החלוקה נשמרה")).toBeInTheDocument();
+    expect(await screen.findByText("הפיצול נשמר")).toBeInTheDocument();
     expect(saved).toEqual([[
       { category_id: "c-elec", project_id: "p-herz", percent: 30 },
       { category_id: "c-ins", project_id: "p-raan", amount_minor: 50_000 },
@@ -100,7 +100,7 @@ describe("split by category editor (FLOW-325)", () => {
     expect(await screen.findByText("פרטי התנועה")).toBeInTheDocument();
     // ביטול puts back what was there before: nothing, so the split is cleared.
     fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
-    expect(await screen.findByText("החלוקה הקודמת חזרה")).toBeInTheDocument();
+    expect(await screen.findByText("הפיצול הקודם חזר")).toBeInTheDocument();
     expect(saved[1]).toEqual([]);
   });
 
@@ -161,7 +161,7 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ parts: expenseParts, api });
     await waitFor(() => { expect(restRow()).toHaveTextContent("₪2,860"); });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(await screen.findByText("החלוקה לא נשמרה")).toBeInTheDocument();
+    expect(await screen.findByText("הפיצול לא נשמר")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.getByLabelText("אחוז, חשמל")).toHaveValue("30");
     fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
@@ -223,7 +223,7 @@ describe("split by category editor (FLOW-325)", () => {
     showEditor({ line, split: mismatch, api });
     await waitFor(() => { expect(restRow()).toHaveTextContent("₪3,500"); });
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(await screen.findByText("החלוקה נשמרה")).toBeInTheDocument();
+    expect(await screen.findByText("הפיצול נשמר")).toBeInTheDocument();
     expect(saved).toEqual([[{ category_id: "c-elec", project_id: "p-herz", percent: 30 }, { rest: true }]]);
     // The parts before did not sum to the line, so they cannot be put back.
     expect(screen.queryByRole("button", { name: "ביטול" })).toBeNull();
@@ -440,7 +440,7 @@ describe("the project split on a line split by category (FLOW-325)", () => {
       await Promise.resolve();
     });
     expect(await screen.findByText("לשורה יש פיצול לפי קטגוריות. אפשר רק אחד מהשניים.")).toBeInTheDocument();
-    expect(screen.queryByText("החלוקה לא נשמרה")).toBeNull();
+    expect(screen.queryByText("הפיצול לא נשמר")).toBeNull();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).toBeNull();
   });
 });

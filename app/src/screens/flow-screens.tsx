@@ -2980,7 +2980,7 @@ export function TransactionScreen({
           {txn.pnl_fixed === true ? (
             <p className="ui-cat-fixed">
               <LockIcon size={18} />
-              תשלום הלוואה · נספר לפי החלוקה
+              תשלום הלוואה · נספר לפי הפיצול
             </p>
           ) : (
             <>
@@ -3241,7 +3241,7 @@ export function SplitScreen({
   const popLeave = useRef(false);
   const save = useWrite({
     failure: projectSplitFailure,
-    success: "החלוקה נשמרה",
+    success: "הפיצול נשמר",
     keys: ["dashboard", "txn", "project"],
     onSuccess: () => {
       clearSplitDraft(draftId);
@@ -3401,7 +3401,7 @@ export function SplitScreen({
             toast.show({ tone: "bad", message: LINE_HAS_CATEGORY_SPLIT });
             return;
           }
-          toast.show({ tone: "bad", message: "החלוקה לא נשמרה", action: "ניסיון חוזר", onAction: () => { void leave(); } });
+          toast.show({ tone: "bad", message: "הפיצול לא נשמר", action: "ניסיון חוזר", onAction: () => { void leave(); } });
           return;
         } finally {
           inflight.current = null;
@@ -3509,7 +3509,7 @@ export function SplitScreen({
           leavePop();
         } catch {
           popLeave.current = false;
-          api.toast.show({ tone: "bad", message: "החלוקה לא נשמרה" });
+          api.toast.show({ tone: "bad", message: "הפיצול לא נשמר" });
         }
       })();
       inflight.current = work;
@@ -3544,7 +3544,7 @@ export function SplitScreen({
   if (phase.kind !== "ready" || active.length === 0) {
     return (
       <ScreenState
-        title="חלוקה בין פרויקטים"
+        title="פיצול בין פרויקטים"
         backTo={fallback}
         phase={phase.kind === "ready" ? { kind: "empty" } : phase}
         onRetry={() => { void dashboard.refetch(); void txn.refetch(); }}
@@ -3557,13 +3557,13 @@ export function SplitScreen({
   const chosenLine = picked.length === 0 ? "בוחרים פרויקטים, והסכום מתחלק שווה" : evenSentence(chosenParts, amount);
   const manualLeft = 10000 - manualUsed;
   const manualStatus = manualLeft > 0
-    ? `נשארו ${percentWords(manualLeft)}% לחלק`
+    ? `נשארו ${percentWords(manualLeft)}% לפצל`
     : manualLeft < 0
       ? `הסך ${percentWords(manualUsed)}%. צריך 100%.`
       : "הסך 100%";
   const oneName = [...active, ...extraProjects].find((project) => project.id === oneProject)?.name ?? "";
   const summary = !method
-    ? "בחרו איך לחלק"
+    ? "בחרו איך לפצל"
     : method === "one" && oneProject === ""
       ? COLLAPSE_PICK_HOLD
       : method === "one"
@@ -3575,7 +3575,7 @@ export function SplitScreen({
             : method === "manual" && !valid
               ? manualStatus
               : method === "manual"
-                ? `חלוקה ידנית · ${String(manualParts.length)} פרויקטים`
+                ? `פיצול ידני · ${String(manualParts.length)} פרויקטים`
                 : method === "income"
                   ? `לפי הכנסות · ${String(incomeParts.length)} פרויקטים`
                   : allLine;
@@ -3598,7 +3598,7 @@ export function SplitScreen({
     >
       <ScreenHeader
         layout="stacked"
-        title="חלוקה בין פרויקטים"
+        title="פיצול בין פרויקטים"
         leading={<IconButton label="סגירה" disabled={sampleSaving} onClick={() => { void leave(); }}><CloseIcon /></IconButton>}
         trailing={example}
       />
@@ -3606,9 +3606,9 @@ export function SplitScreen({
         <p className="t-display"><BigNumber agorot={amount} presentation="detail" currency={txn.data?.currency} /></p>
         {meta ? <p className="ui-split-meta t-label">{meta}</p> : null}
       </div>
-      <h2 className="ui-split-question t-title-3">איך לחלק?</h2>
+      <h2 className="ui-split-question t-title-3">איך לפצל?</h2>
       <fieldset className="ui-split-body" disabled={busy}>
-        <div className="ui-split-card" role="radiogroup" aria-label="איך לחלק?">
+        <div className="ui-split-card" role="radiogroup" aria-label="איך לפצל?">
           <RadioRow marker="start" label="שווה בין כל הפרויקטים" description={allLine} selected={method === "equal"} busy={busy && method === "equal"} disabled={busy && method !== "equal"} onSelect={() => { setMethod("equal"); }} />
           <RadioRow marker="start" label="שווה בין פרויקטים שאבחר" description={chosenLine} selected={method === "chosen"} busy={busy && method === "chosen"} disabled={busy && method !== "chosen"} onSelect={() => { setMethod("chosen"); }} />
           <RadioRow
@@ -3715,7 +3715,7 @@ export function SplitScreen({
           {method === "manual" ? (
             <TextLink chevron={false} disabled={busy} onClick={() => { setMethod(priorMethod.current); }}>חזרה לאפשרויות</TextLink>
           ) : (
-            <TextLink chevron={false} disabled={busy} onClick={openManual}>חלוקה ידנית</TextLink>
+            <TextLink chevron={false} disabled={busy} onClick={openManual}>פיצול ידני</TextLink>
           )}
         </p>
         {method === "manual" && valid ? <p className="ui-split-remain t-label">הסך 100%</p> : null}

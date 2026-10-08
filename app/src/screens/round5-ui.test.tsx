@@ -383,12 +383,12 @@ describe("split monthly rule", () => {
     expect(screen.queryByText("אופן הפיצול")).not.toBeInTheDocument();
     expect(screen.queryByText("נותר לשייך")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
-    const idle = screen.getByText("בחרו איך לחלק");
+    const idle = screen.getByText("בחרו איך לפצל");
     expect(idle).toBeInTheDocument();
     expect(idle).not.toHaveClass("ui-split-summary-idle");
     expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" }));
-    expect(screen.queryByText("בחרו איך לחלק")).not.toBeInTheDocument();
+    expect(screen.queryByText("בחרו איך לפצל")).not.toBeInTheDocument();
   });
 
   it("disables save while a manual split is only partly allocated", () => {
@@ -415,7 +415,7 @@ describe("split monthly rule", () => {
     expect(screen.getByText(/נשארו/)).toHaveClass("t-hint");
     expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
     expect(screen.getByText(/נשארו/)).toBeInTheDocument();
     const share = screen.getByRole("textbox", { name: "אחוז, חולון" });
     expect(share).toHaveAttribute("autocomplete", "off");
@@ -1345,7 +1345,7 @@ describe("shared transaction category", () => {
     );
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /מפוצל · 2 פרויקטים/ }));
-    expect(await screen.findByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
   });
 
   it("saves a shared category without calling reassign", async () => {
@@ -1449,7 +1449,7 @@ describe("shared transaction category", () => {
     });
     expect(await screen.findByText("עלות משותפת · טרם פוצלה")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /עלות משותפת · טרם פוצלה/ }));
-    expect(await screen.findByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
   });
 
   it("names the single project on a one-share row", async () => {
@@ -1667,7 +1667,7 @@ describe("shared transaction category", () => {
     fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
     expect(await screen.findByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /פרויקט: מפוצל · 2 פרויקטים/ })).not.toBeInTheDocument();
-    expect(screen.queryByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).not.toBeInTheDocument();
+    expect(screen.queryByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -1741,7 +1741,7 @@ describe("shared transaction category", () => {
     );
     fireEvent.click(await screen.findByRole("radio", { name: "לפרויקט אחד" }));
     expect(await screen.findByRole("heading", { name: "בחירת פרויקט" })).toBeInTheDocument();
-    expect(screen.getByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    expect(screen.getByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "חולון" }));
     await waitFor(() => {
       expect(rpc.calls.find((call) => call.name === "collapse_split")?.args).toEqual({
@@ -1778,7 +1778,7 @@ describe("shared transaction category", () => {
     fireEvent.click(screen.getByRole("radio", { name: "לפרויקט אחד" }));
     fireEvent.click(await screen.findByRole("button", { name: "חזרה" }));
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
     expect(screen.getByText("בחרו פרויקט.")).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "collapse_split" || call.name === "save_split")).toBe(false);
   });

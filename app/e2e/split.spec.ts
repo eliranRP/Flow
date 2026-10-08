@@ -34,14 +34,14 @@ async function saveAndCheck(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/e2e/split");
-  await expect(page.getByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "פיצול בין פרויקטים" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
 });
 
 test("nothing is selected until one tap on every project", async ({ page }) => {
   await expect(page.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-checked", "false");
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
-  await expect(page.getByText("בחרו איך לחלק")).toBeVisible();
+  await expect(page.getByText("בחרו איך לפצל")).toBeVisible();
   await page.getByRole("radio", { name: "שווה בין כל הפרויקטים" }).click();
   const rows = await saveAndCheck(page);
   expect(rows.map((row) => row.share_bp)).toEqual([3334, 3333, 3333]);
@@ -68,7 +68,7 @@ test("income follows the project weights", async ({ page }) => {
 });
 
 test("manual percents save, including one decimal that round-trips", async ({ page }) => {
-  await page.getByRole("button", { name: "חלוקה ידנית" }).click();
+  await page.getByRole("button", { name: "פיצול ידני" }).click();
   const first = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
   const second = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
   const third = page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" });
@@ -86,7 +86,7 @@ test("manual percents save, including one decimal that round-trips", async ({ pa
 });
 
 test("a manual 100 does not clip and is not a contact field", async ({ page }) => {
-  await page.getByRole("button", { name: "חלוקה ידנית" }).click();
+  await page.getByRole("button", { name: "פיצול ידני" }).click();
   const input = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
   await expect(input).toHaveAttribute("inputmode", "decimal");
   await expect(input).toHaveAttribute("autocomplete", "off");
@@ -111,7 +111,7 @@ test("a failed save after browser back keeps the typed percents", async ({ page 
   await page.goto("/e2e/project");
   await page.getByRole("link", { name: "פיצול שנכשל" }).click();
   await expect(page).toHaveURL(/\/e2e\/split\?save=fail$/);
-  await page.getByRole("button", { name: "חלוקה ידנית" }).click();
+  await page.getByRole("button", { name: "פיצול ידני" }).click();
   const first = page.getByRole("textbox", { name: "אחוז, שיפוץ הרצל 12" });
   const second = page.getByRole("textbox", { name: "אחוז, שיפוץ דירה ביאליק 8 חולון" });
   const third = page.getByRole("textbox", { name: "אחוז, פרגולה בית כהן" });
@@ -119,10 +119,10 @@ test("a failed save after browser back keeps the typed percents", async ({ page 
   await second.fill("30");
   await third.fill("20");
   await page.goBack();
-  await expect(page.getByText("החלוקה לא נשמרה")).toBeVisible();
+  await expect(page.getByText("הפיצול לא נשמר")).toBeVisible();
   await expect(page).toHaveURL(/\/e2e\/split\?save=fail$/);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
   await expect(first).toHaveValue("50");
   await expect(second).toHaveValue("30");
   await expect(third).toHaveValue("20");
@@ -153,6 +153,6 @@ test("light and dark both show the question", async ({ page }) => {
   const dark = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim());
   expect(light.toLowerCase()).toBe("#ffffff");
   expect(dark.toLowerCase()).toBe("#15111e");
-  await expect(page.getByRole("heading", { name: "איך לחלק?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "איך לפצל?" })).toBeVisible();
   await expect(page.getByRole("button", { name: "שמירה" })).toHaveCount(0);
 });

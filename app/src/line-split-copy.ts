@@ -48,7 +48,7 @@ export const LINE_SPLIT_PLACE: Record<LineSplitRefusal, RefusalPlace> = {
   "nothing is left for the rest": "rest",
 };
 
-export const LINE_SPLIT_SAVE_FAILURE = "החלוקה לא נשמרה";
+export const LINE_SPLIT_SAVE_FAILURE = "הפיצול לא נשמר";
 export const LINE_SPLIT_CHANGED = "משהו השתנה בינתיים. טענו מחדש ונסו שוב.";
 /**
  * The project split (`SplitScreen`) on a line that has a split by category: the detail row's
@@ -86,7 +86,7 @@ export function lineSplitCopy(
         ? `החלקים צריכים להסתכם ב־${money(ctx.lineMinor, currency)}. חסרים ${money(ctx.missingMinor, currency)}.`
         : "החלקים צריכים להסתכם בסכום השורה.";
     case "line has a loan split":
-      return "לשורה יש חלוקת הלוואה. אפשר רק אחת מהשתיים.";
+      return "לשורה יש פיצול הלוואה. אפשר רק אחד מהשניים.";
     case "line has an open review":
       return "אשרו את התנועה בתור לאישור, ואז פצלו.";
     case "same category and project twice":
@@ -135,5 +135,5 @@ export function hasCategorySplit(error: unknown): boolean {
 
 /** The project split's save failure: that refusal is final and says why, anything else is the usual copy. */
 export function projectSplitFailure(error: Error): WriteFailure {
-  return hasCategorySplit(error) ? { message: LINE_HAS_CATEGORY_SPLIT, retry: false } : "החלוקה לא נשמרה";
+  return hasCategorySplit(error) ? { message: LINE_HAS_CATEGORY_SPLIT, retry: false } : "הפיצול לא נשמר";
 }
