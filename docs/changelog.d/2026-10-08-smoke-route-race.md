@@ -1,0 +1,1 @@
+- CI: the deploy's read-only smoke waits for the last reads and removes its request watcher before it ends, so a late request no longer fails the run with "request.response: Test ended".

@@ -74,6 +74,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server); app screen plan-first |
+| 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | ready |
+| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
+| 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
+| 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
+| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | ready (owner chose: store it) |
+| 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
+| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -551,6 +558,61 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] (#135 review) A reversal part in a kept-out category still needs a project; 0103 lets a kept-out whole line skip it.
 - [ ] (#135 review) A part with no project and one naming the line's own project are different pairs, so the same category and project can appear twice.
 
+<a id="flow-326"></a>
+### FLOW-326 · Screen titles and row text on the start side
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Source:** mobile UI/UX review cycle 1 (2026-10-08, D1, D2, D5, D16, D18)
+- **What:** (1) On every screen with a Back control the title is pushed to the far left, away from its kicker (categories, connections, loans, unpaid, filed, project category, notifications, onboarding). `ScreenHeader`'s `.ui-page-title-row` uses `space-between`; put the title on the start side, Back on its own row as in mockups 07 and 14 (the existing `layout="stacked"` option may already do this). (2) `ListRow` rows rendered as `<button>` centre their label and hint (transaction detail project/category labels, connections status, add sheet rows): add `text-align: start` to `.ui-row`. (3) The settings switch row has no icon slot and a 600 title; give `Toggle` the row icon slot and the 400 row-title weight everywhere. (4) Help's Back is plain text; use the shared Back.
+- **Acceptance:** shared components only (`screen-header.tsx`, `list-row.tsx`, `toggle.tsx`, `ui.css`); stories updated; clip-check at 320/360/390, light and dark; design review.
+
+<a id="flow-327"></a>
+### FLOW-327 · Review card: actions in the thumb zone, tidy spacing
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
+- **What:** Approving one card at a time is the most repeated job, and אישור moves between y=449 and y=584 depending on the card, with about 250px empty below; on a 375x667 phone with the banner, שינוי and דלג sit under the tab bar. Pin אישור / שינוי / דלג in a bar just above the tab bar; the card scrolls above it. Also: a gap of `--space-3`–`--space-4` between the auto-filed banner and the card (they touch today); label and value columns aligned on the card with tighter rows (mockup 03); the counter reads "1 מתוך 3" without padding spaces; a disabled אישור says why ("בחרו פרויקט וקטגוריה").
+- **Acceptance:** אישור at the same position on every card state at 375, 393, 412; nothing under the tab bar at 375x667; stories for plain, banner, shared-cost and disabled cards; design review.
+
+<a id="flow-328"></a>
+### FLOW-328 · Mobile UI consistency pass (cycle 1)
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-326 · **Source:** cycle 1 (D4, D6, D7, D8, D10, D11, D13, D14, D15, D17, U10, U11, U13)
+- [ ] Change sheet rule preview: the arrow's space is inside the LTR bdi, so it renders on the wrong side ("ספק ␣␣←פרויקט"); spaces outside the bdi.
+- [ ] Split screen: remove the hairlines between choices, 24px side gutter like other screens, amount on the start side.
+- [ ] Install screen: remove step hairlines and centre the number circles on their text.
+- [ ] Change sheet: values at the same weight as the transaction detail; title-to-subtitle gap as mockup 06.
+- [ ] Project screen: more space between the band and the overhead switch (mockup 02).
+- [ ] Empty and error states use the standard button, not a 36px pill, and match each other.
+- [ ] The "מצב תצוגה" tag on the band sits on the start side, clear of the curve.
+- [ ] No minus sign on a figure already labelled expenses (project band, category rows).
+- [ ] Status chip "שולם" carries the ✓ like mockup 10.
+- [ ] Notifications uses the shared EmptyState, Hebrew only.
+- [ ] Amounts in lists in whole units; agorot only when non-zero, on detail and edit fields (§3.5).
+- [ ] Transaction list rows carry the trailing chevron, then drop the "אפשר לפתוח כל תנועה" explainer.
+- [ ] Empty Home names bank or SUMIT ("חיבור בנק או SUMIT"), opening the connections page.
+- **Acceptance:** shared components and stories; clip-check; design review.
+
+<a id="flow-329"></a>
+### FLOW-329 · Out of the P&L as a visible row on the transaction
+- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-124 · **Source:** cycle 1 (U5, D15)
+- **What:** On the transaction detail, the only way to take a line out of the P&L is an unlabelled ⋯ at the top-left corner, the hardest spot to reach one-handed. Show a "ברווח והפסד" switch row under the category row; keep ⋯ only for delete. Move "פיצול בין פרויקטים" to the bottom of the screen, in the thumb zone.
+- **Acceptance:** out-of-P&L is one tap on the detail and reversible; ⋯ shows only when delete applies; tests; design review.
+
+<a id="flow-330"></a>
+### FLOW-330 · Mark paid that stays marked
+- **Type:** SMALL CYCLE · **Status:** ready · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
+- **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`flow-screens.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
+- **MCP:** for (a), the unpaid tools return and can set the flag.
+- **Acceptance:** a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
+
+<a id="flow-331"></a>
+### FLOW-331 · A useful + tab while capture is not built
+- **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** quick actions (new project, new loan, connect a bank) · **Depends on:** — · **Overlaps:** FLOW-306 · **Source:** cycle 1 (U1, U7)
+- **What:** The + in the middle of the tab bar is the best thumb spot in the app, and today it opens a sheet where both options are disabled. Until photo capture (FLOW-306) ships, + offers what works today: new project, new loan, connect a bank. "פרויקט חדש" then leaves the Projects header's top-left corner.
+- **Acceptance:** no disabled-only sheet; design review.
+
+<a id="flow-332"></a>
+### FLOW-332 · Swipe back from the edge on pushed screens
+- **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** approved · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
+- **What:** In the installed iOS app there is no system back gesture, so the only way back from a pushed screen is the chevron at the top corner (y≈12–43). Add a swipe from the start (right) edge on pushed screens, with the same gesture rules as FLOW-314, so it never fights horizontal scrolling or the transaction swipe.
+- **Acceptance:** works on every pushed screen; doesn't trigger inside sheets or horizontal lists; e2e test with touch.
+
 ## Projects and reports
 
 <a id="flow-401"></a>
@@ -790,7 +852,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag.
 - [ ] Delete the old shared connector key once per launch, not on every read.
 - [ ] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות; a "no key" status once a key-status RPC exists.
-- [ ] Jev tagging job: a cron with a DB run lease, persisted usage per run.
+- [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
 
 ## Infra and CI
 

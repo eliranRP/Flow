@@ -95,13 +95,13 @@ isOneToOne: false
                   ]
                 },"company_integrations": {
                   Row: {
-                    "company_id": string,"created_at": string,"enabled": boolean,"mode": string,"provider": string,"threshold": number,"updated_at": string
+                    "company_id": string,"created_at": string,"daily_call_cap": number,"enabled": boolean,"mode": string,"provider": string,"threshold": number,"updated_at": string
                   }
                   Insert: {
-                    "company_id": string,"created_at"?: string,"enabled"?: boolean,"mode"?: string,"provider": string,"threshold"?: number,"updated_at"?: string
+                    "company_id": string,"created_at"?: string,"daily_call_cap"?: number,"enabled"?: boolean,"mode"?: string,"provider": string,"threshold"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"enabled"?: boolean,"mode"?: string,"provider"?: string,"threshold"?: number,"updated_at"?: string
+                    "company_id"?: string,"created_at"?: string,"daily_call_cap"?: number,"enabled"?: boolean,"mode"?: string,"provider"?: string,"threshold"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -201,6 +201,44 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "customers_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"jev_line_failures": {
+                  Row: {
+                    "attempts": number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at": string
+                  }
+                  Insert: {
+                    "attempts"?: number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"company_id"?: string,"model_version"?: string,"retry_after"?: string,"transaction_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jev_line_failures_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
+                },"jev_usage": {
+                  Row: {
+                    "calls": number,"company_id": string,"failed": number,"finished_at": string | null,"id": string,"input_tokens": number,"output_tokens": number,"reserved": number,"run_id": string,"started_at": string,"tagged": number,"usage_day": string
+                  }
+                  Insert: {
+                    "calls"?: number,"company_id": string,"failed"?: number,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number,"output_tokens"?: number,"reserved": number,"run_id": string,"started_at"?: string,"tagged"?: number,"usage_day"?: string
+                  }
+                  Update: {
+                    "calls"?: number,"company_id"?: string,"failed"?: number,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number,"output_tokens"?: number,"reserved"?: number,"run_id"?: string,"started_at"?: string,"tagged"?: number,"usage_day"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jev_usage_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "companies"
@@ -749,6 +787,21 @@ isOneToOne: false
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
                            },
+"jev_finish_usage":
+{ Args: { "p_calls": number,"p_company": string,"p_failed"?: number,"p_input_tokens"?: number,"p_output_tokens"?: number,"p_run": string,"p_tagged"?: number }; Returns: undefined
+                           },
+"jev_mark_failed":
+{ Args: { "p_company": string,"p_model": string,"p_transaction": string }; Returns: undefined
+                           },
+"jev_release_lease":
+{ Args: { "p_holder": string }; Returns: undefined
+                           },
+"jev_reserve_calls":
+{ Args: { "p_company": string,"p_run": string,"p_want": number }; Returns: number
+                           },
+"jev_take_lease":
+{ Args: { "p_holder": string,"p_seconds"?: number }; Returns: boolean
+                           },
 "list_auto_assigned_today":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -815,6 +868,9 @@ isOneToOne: false
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_jev_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
