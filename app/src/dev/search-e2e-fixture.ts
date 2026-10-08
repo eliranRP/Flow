@@ -40,15 +40,30 @@ function row(n: number, date: string, project: (typeof projects)[number] | null,
   };
 }
 
-export const searchE2eFixture = {
-  projects: [...projects],
-  categories,
-  rows: [
-    row(1, "2026-10-06", projects[0]),
-    row(2, "2026-10-04", projects[1]),
-    row(3, "2026-10-02", projects[0]),
-    row(4, "2026-09-28", null, true),
-    row(5, "2026-09-21", projects[1]),
-    row(6, "2026-09-14", projects[0]),
-  ],
+type SearchE2eFixture = {
+  projects: Array<(typeof projects)[number]>;
+  categories: typeof categories;
+  rows: SearchRow[];
 };
+
+let built: SearchE2eFixture | null = null;
+
+/**
+ * A function, so a production build that never calls it drops the module (a top-level call would
+ * keep it). Built once, so every render gets the same object.
+ */
+export function searchE2eFixture(): SearchE2eFixture {
+  built ??= {
+    projects: [...projects],
+    categories,
+    rows: [
+      row(1, "2026-10-06", projects[0]),
+      row(2, "2026-10-04", projects[1]),
+      row(3, "2026-10-02", projects[0]),
+      row(4, "2026-09-28", null, true),
+      row(5, "2026-09-21", projects[1]),
+      row(6, "2026-09-14", projects[0]),
+    ],
+  };
+  return built;
+}

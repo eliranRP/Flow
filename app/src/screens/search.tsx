@@ -96,7 +96,7 @@ export function SearchScreen({ sample }: { sample?: SearchSample } = {}) {
   const location = useLocation();
   const preview = useHomePreview();
   const previewSearch = usePreviewSearch();
-  const fixture = sample == null && preview === "empty" ? searchE2e?.searchE2eFixture ?? null : null;
+  const fixture = sample == null && preview === "empty" ? searchE2e?.searchE2eFixture() ?? null : null;
   const local: SearchSample | null = sample ?? fixture;
   const [initial] = useState(() => {
     const kept = location.key === FIRST_ENTRY ? undefined : remembered.get(location.key);
