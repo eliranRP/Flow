@@ -1089,7 +1089,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance, in the saved order (by name until reorder_loans changes it; a loan added since goes last). flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first; accrued_interest_minor is what an open demand loan owes in interest today (accrued_as_of, UTC): interest earlier payments left unpaid plus what accrued since the last payment or the start, daily on actual/365, as get_loan_schedule's accrued.interest_minor; null for other kinds (their interest is in the schedule rows) and for a closed loan.", {
+    toolSpec("list_loans", "Loans in the company with current principal balance, in the saved order (by name until reorder_loans changes it; a loan added since goes last). flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first; accrued_interest_minor is what an open demand loan owes in interest today (accrued_as_of, UTC): interest earlier payments left unpaid plus what accrued since the last payment or the start, daily on actual/365, as get_loan_schedule's accrued.interest_minor; null for other kinds (their interest is in the schedule rows), for a closed loan, and when its payments could not be read.", {
       include_closed: { type: "boolean" },
     }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left (for an amortizing loan whose payment is below the term annuity, over the months left in the amortization period that payment implies, so the balloon stays at the term). An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest due on as_of (YYYY-MM-DD, default today): carried (interest earlier payments left unpaid, simple interest) plus what accrued from the last one (or the start), daily on actual/365, with since, days, carried, interest and balance.", {
@@ -2520,13 +2520,15 @@ export async function callTool(
     for (const loan of listed) {
       let accruedMinor: number | null = null;
       if (loanKindOf(loan) === "demand" && (loan.status ?? "open") === "open") {
+        // A failed payments read leaves the figure null rather than failing the list.
         const payments = await loadLoanPayments(loan.id, rpc);
-        if (!Array.isArray(payments)) return payments;
-        const counted = countedPayments(payments, null).filter((row) => row.doc_date <= asOf);
-        try {
-          accruedMinor = Number(demandStatement(demandTermsOf(loan), demandPaymentsOf(counted), asOf).accrued.interestMinor);
-        } catch (error) {
-          if (!(error instanceof LoanScheduleError)) throw error;
+        if (Array.isArray(payments)) {
+          const counted = countedPayments(payments, null).filter((row) => row.doc_date <= asOf);
+          try {
+            accruedMinor = Number(demandStatement(demandTermsOf(loan), demandPaymentsOf(counted), asOf).accrued.interestMinor);
+          } catch (error) {
+            if (!(error instanceof LoanScheduleError)) throw error;
+          }
         }
       }
       out.push({ ...listedLoan(loan), accrued_interest_minor: accruedMinor, accrued_as_of: accruedMinor == null ? null : asOf });

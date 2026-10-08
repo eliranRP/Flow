@@ -3767,8 +3767,11 @@ Deno.test("list_loans shows an open demand loan's accrued interest today, and nu
     assertEquals(plain.calls.some((call) => call.name === "mcp_loan_payments"), false);
   }
 
+  // A failed payments read leaves the figure null; the list still reads.
   const broken = rpcOf((name) => name === "mcp_list_loans" ? { status: 200, json: [DEMAND_LOAN] } : { status: 500, json: null });
-  assertEquals((await callTool("list_loans", {}, ["read"], broken.rpc)).isError, true);
+  const partial = await callTool("list_loans", {}, ["read"], broken.rpc);
+  if (!partial.structuredContent.ok) throw new Error("read failed");
+  assertEquals((partial.structuredContent.data as { loans: Array<Record<string, unknown>> }).loans[0].accrued_interest_minor, null);
 });
 
 Deno.test("loan kind tools are described", () => {
