@@ -1,54 +1,21 @@
-import { useEffect, useId, useRef, useState, type RefObject, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type RefObject, type SubmitEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { REVERSAL_HEADING, REVERSAL_HINT } from "../reversal";
-import { isTransientWriteError, type WriteFailure } from "../use-write";
 import { Button } from "./button";
 import { HoldLine } from "./hold-line";
 import { IconButton } from "./icon-button";
-import { BackIcon, ChevronDownIcon, PlusIcon, SplitIcon } from "./icons";
+import { BackIcon } from "./icons";
 import { ListRow } from "./list-row";
-import { RadioRow } from "./radio-row";
 import { RouteSheet } from "./route-sheet";
-import { SearchField } from "./search-field";
 import { ReversalTag, SuggestTag } from "./suggest-tag";
 import { Sheet } from "./sheet";
-import { Skeleton } from "./skeleton";
 import { TextField } from "./text-field";
-import { TextLink } from "./text-link";
 import { Toggle } from "./toggle";
+import type { ChangeChoice } from "./change-sheet-copy";
+import { Picker } from "./change-picker";
 
-export const CHANGE_SAVE_FAILURE = "לא נשמר – אין חיבור";
-
-/** A refusal the database will repeat. Not a connection problem. Decision 0072. */
-export const CHANGE_SAVE_REFUSAL = "לא נשמר. בדקו את הפרטים ונסו שוב.";
-
-/** The database refuses one project on a shared cost. Say where the split happens. */
-export const SHARED_SPLIT_FAILURE = "עלות משותפת מפוצלת במסך הפיצול.";
-
-/** Decision 0076. The fourth split choice, and the note above the project picker. */
-export const ONE_PROJECT_OPTION = "לפרויקט אחד";
-export const ONE_PROJECT_DETAIL = "הסכום כולו עובר לפרויקט אחד";
-export const COLLAPSE_SPLIT_NOTE = "הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.";
-export const COLLAPSE_PICK_HOLD = "בחרו פרויקט.";
-
-export function changeSaveFailure(error: Error): WriteFailure {
-  if (error.message.includes("shared costs are split")) {
-    return { message: SHARED_SPLIT_FAILURE, retry: false, tone: "info", action: "לפיצול" };
-  }
-  if (isTransientWriteError(error)) return CHANGE_SAVE_FAILURE;
-  return { message: CHANGE_SAVE_REFUSAL, retry: false };
-}
-
-export type ChangeChoice = {
-  id: string;
-  name: string;
-  code?: string;
-  /** Relative last use. Recent rows keep the order they are given. */
-  recent?: string;
-  status?: "active" | "finished";
-  /** Hidden categories stay out of the picker. The current row can still show. */
-  hidden?: boolean;
-};
+// Moved to their own files (FLOW-807). Import from those files in new code.
+export { CHANGE_SAVE_FAILURE, CHANGE_SAVE_REFUSAL, SHARED_SPLIT_FAILURE, ONE_PROJECT_OPTION, ONE_PROJECT_DETAIL, COLLAPSE_SPLIT_NOTE, COLLAPSE_PICK_HOLD, changeSaveFailure, type ChangeChoice } from "./change-sheet-copy";
 
 type ChangeView = "summary" | "project" | "category" | "new";
 
@@ -128,8 +95,6 @@ type Props = Shared & (
   | { host: "route"; closeTo: string; returnFocusRef?: RefObject<HTMLElement | null> }
   | { host: "overlay"; open: boolean; onOpenChange: (open: boolean) => void; returnFocusRef?: RefObject<HTMLElement | null> }
 );
-
-const skeletonKeys = ["a", "b", "c", "d", "e"] as const;
 
 function searchOf(params: URLSearchParams): string {
   const text = params.toString();
@@ -710,154 +675,4 @@ export function ChangeAssignment(props: Props) {
     return <RouteSheet closeTo={props.closeTo} returnFocusRef={props.returnFocusRef} {...chrome} />;
   }
   return <Sheet open={props.open} onOpenChange={props.onOpenChange} returnFocusRef={props.returnFocusRef} {...chrome} />;
-}
-
-function Picker({
-  kind,
-  searchable,
-  query,
-  onQuery,
-  loading,
-  listed,
-  selectedId,
-  suggestionId,
-  savingId,
-  note,
-  noneLabel,
-  reversal,
-  splitLink = true,
-  onSelect,
-  onCreate,
-  onSplit,
-}: {
-  kind: "project" | "category";
-  searchable: boolean;
-  query: string;
-  onQuery: (value: string) => void;
-  loading: boolean;
-  listed: ChangeChoice[];
-  selectedId: string;
-  suggestionId: string;
-  savingId: string | null;
-  note?: string;
-  /** A first row with id "", such as "בלי פרויקט". Hidden while searching. */
-  noneLabel?: string;
-  /** The other kind's section. Shown only when it has categories. */
-  reversal?: {
-    heading: string;
-    hint: string;
-    listed: ChangeChoice[];
-    open: boolean;
-    onToggle: () => void;
-  };
-  splitLink?: boolean;
-  onSelect: (id: string) => void;
-  onCreate?: () => void;
-  onSplit?: () => void;
-}) {
-  const needle = query.trim();
-  const sectionId = useId();
-  const reversalListed = reversal?.listed ?? [];
-  const empty = !loading && needle !== "" && listed.length === 0 && reversalListed.length === 0;
-  // A checked reversal, or a search that finds one, keeps the section open so the match can be seen and reached.
-  const reversalForced = reversalListed.some((option) => option.id === selectedId) || (needle !== "" && reversalListed.length > 0);
-  const reversalShown = reversal != null && (reversal.open || reversalForced);
-  const reversalVisible = reversal != null && (needle === "" || reversalListed.length > 0);
-  function row(option: ChangeChoice) {
-    return (
-      <RadioRow
-        key={option.id}
-        layout="picker"
-        label={option.name}
-        code={option.code}
-        date={needle === "" ? option.recent : undefined}
-        tag={option.id === suggestionId}
-        selected={option.id === selectedId}
-        busy={option.id === savingId}
-        disabled={savingId != null && option.id !== savingId}
-        onSelect={() => {
-          onSelect(option.id);
-        }}
-      />
-    );
-  }
-  return (
-    <div className="ui-change-picker">
-      {searchable ? (
-        <SearchField
-          label={kind === "project" ? "חיפוש פרויקט" : "חיפוש קטגוריה"}
-          value={query}
-          onChange={onQuery}
-          placeholder={kind === "project" ? "חיפוש פרויקט או קוד (P-12)" : "חיפוש קטגוריה"}
-          autoFocus={false}
-        />
-      ) : null}
-      {note ? <p className="t-hint ui-pick-note">{note}</p> : null}
-      {loading ? (
-        <div aria-busy="true">
-          <p className="sr-only" role="status">טוען…</p>
-          {skeletonKeys.map((key) => (
-            <div className="ui-radio-row" key={key} aria-hidden="true">
-              <Skeleton width="md" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          {listed.length > 0 || (noneLabel != null && needle === "") ? (
-            <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
-              {noneLabel != null && needle === "" ? (
-                <RadioRow
-                  key="none"
-                  layout="picker"
-                  label={noneLabel}
-                  selected={selectedId === ""}
-                  busy={savingId === ""}
-                  disabled={savingId != null && savingId !== ""}
-                  onSelect={() => {
-                    onSelect("");
-                  }}
-                />
-              ) : null}
-              {listed.map(row)}
-            </div>
-          ) : null}
-          {reversal && reversalVisible ? (
-            <div className="ui-reversal">
-              {reversalForced ? (
-                <p className="t-label ui-reversal-head">{reversal.heading}</p>
-              ) : (
-                <TextLink
-                  chevron={false}
-                  expanded={reversalShown}
-                  controls={sectionId}
-                  trailing={<ChevronDownIcon size={16} />}
-                  onClick={reversal.onToggle}
-                >
-                  {reversal.heading}
-                </TextLink>
-              )}
-              <div id={sectionId} hidden={!reversalShown}>
-                {reversalShown ? (
-                  <>
-                    <p className="t-hint ui-reversal-hint" id={`${sectionId}-hint`}>{reversal.hint}</p>
-                    <div role="radiogroup" aria-label={reversal.heading} aria-describedby={`${sectionId}-hint`}>
-                      {reversalListed.map(row)}
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-          {empty ? <p className="t-hint">{kind === "project" ? "לא נמצא פרויקט בשם הזה" : "לא נמצאה קטגוריה בשם הזה"}</p> : null}
-        </>
-      )}
-      {kind === "project" && !loading ? (
-        <div className="ui-change-links">
-          <TextLink icon={<PlusIcon size={16} />} chevron={false} onClick={onCreate}>פרויקט חדש</TextLink>
-          {splitLink && onSplit ? <TextLink icon={<SplitIcon size={16} />} chevron={false} onClick={onSplit}>פיצול בין פרויקטים</TextLink> : null}
-        </div>
-      ) : null}
-    </div>
-  );
 }

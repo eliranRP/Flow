@@ -1055,6 +1055,9 @@ isOneToOne: false
 "mcp_move_category_lines":
 { Args: { "p_from": string,"p_idempotency_key": string,"p_into": string }; Returns: Json
                            },
+"mcp_rename_category":
+{ Args: { "p_category_id": string,"p_idempotency_key": string,"p_name": string }; Returns: Json
+                           },
 "mcp_rename_company":
 { Args: { "p_idempotency_key": string,"p_name": string }; Returns: Json
                            },
@@ -1150,6 +1153,9 @@ isOneToOne: false
                            },
 "reassign_transaction":
 { Args: { "p_category_id": string,"p_id": string,"p_project_id": string }; Returns: string
+                           },
+"rename_category":
+{ Args: { "p_category_id": string,"p_name": string }; Returns: Json
                            },
 "rename_company":
 { Args: { "p_company_id": string,"p_name": string }; Returns: Json

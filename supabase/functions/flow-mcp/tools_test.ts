@@ -440,6 +440,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "delete_category",
     "move_category_lines",
     "set_company_currency",
+    "rename_category",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -500,6 +501,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "delete_category",
     "move_category_lines",
     "set_company_currency",
+    "rename_category",
     "undo_jev_prefill",
     "undo",
     "undo_batch",
@@ -4087,6 +4089,33 @@ Deno.test("delete_category and move_category_lines forward their input, undo tak
   ] as const) {
     const result = await callTool(tool, input, ["write"], rpc);
     assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
+});
+
+Deno.test("rename_category forwards its input, undo takes category_name", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "category_name", id: CATEGORY } } }));
+  const renamed = await callTool("rename_category", { idempotency_key: "rn-1", category_id: CATEGORY.toUpperCase(), name: "חשמל" }, ["write"], rpc);
+  assertEquals(renamed.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_rename_category", body: { p_idempotency_key: "rn-1", p_category_id: CATEGORY, p_name: "חשמל" } });
+  const undo = await callTool("undo", { idempotency_key: "u-rn", kind: "category_name", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-rn", p_kind: "category_name", p_id: CATEGORY } });
+
+  const denied = await callTool("rename_category", { idempotency_key: "k", category_id: CATEGORY, name: "חשמל" }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const input of [
+    { idempotency_key: "k", category_id: CATEGORY },
+    { idempotency_key: "k", category_id: CATEGORY, name: "א" },
+    { idempotency_key: "k", category_id: CATEGORY, name: "א".repeat(121) },
+    { idempotency_key: "k", category_id: "not-a-uuid", name: "חשמל" },
+    { idempotency_key: "k", category_id: CATEGORY, name: "חשמל", kind: "expense" },
+  ]) {
+    const result = await callTool("rename_category", input, ["write"], rpc);
+    assertEquals(result.isError, true, JSON.stringify(input));
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, before);
