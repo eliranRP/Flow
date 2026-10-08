@@ -119,9 +119,10 @@ select is(
 select is(
   (select count(*)::integer from public.review_queue where reason is null and status = 'open'
    and company_id = pg_temp.id('co')),
-  0, 'no open row is left without a reason');
+  0, 'no open row from this sync is left without a reason');
 
 -- The owner reopens the changed row after its line posted; its reason was dropped on post.
+-- (A reopened row on a line that no longer needs review keeps no reason; it is never removed.)
 update public.review_queue set status = 'open', resolved_at = null
 where transaction_id = pg_temp.id('txn_changed');
 select pg_temp.sync();

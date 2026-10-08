@@ -257,17 +257,25 @@ end;
 $$;
 
 
--- The old code queued settled income again after a changed row. Drop those open rows now;
--- a later sync no longer adds them. An undo or reopen moves the settled row itself back to
--- open, so it never sits next to a settled row of the same line.
+-- The old code queued settled connector income again after a changed row. Drop those open
+-- rows now; a later sync no longer adds them. Only reasons the income sync gives, and only
+-- rows newer than the settled row: a split_mismatch or unallocated_shared row may sit next
+-- to a settled row on purpose, and an undo or reopen moves the settled row itself to open.
+-- A line the old code already left with two settled rows can lose one the owner reopened
+-- before this ran; only lines the old re-queue touched can reach that.
 delete from public.review_queue q
 using public.transactions t
 where q.transaction_id = t.id
   and q.status = 'open'
+  and (q.reason is null
+    or q.reason in ('pending_income', 'missing_category', 'missing_project', 'suggested'))
+  and private.is_connector_source(t.source)
   and t.direction = 'income'
   and exists (
     select 1 from public.review_queue s
-    where s.transaction_id = q.transaction_id and s.status in ('approved', 'changed')
+    where s.transaction_id = q.transaction_id
+      and s.status in ('approved', 'changed')
+      and s.created_at < q.created_at
   );
 
 commit;
