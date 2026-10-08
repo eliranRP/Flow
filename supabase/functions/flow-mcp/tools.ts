@@ -153,25 +153,25 @@ const linePartSchema = z.object({
 );
 // Two to 50 parts, or none to clear the split. A category and project pair appears once, and
 // at most one part is the rest. The database rounds percents and checks the sum.
+// Two to 50 parts (or none, to clear), at most one rest, and a category and project pair once.
+function linePartsAreValid(parts: z.infer<typeof linePartSchema>[]): boolean {
+  if (parts.length === 1 || parts.length > 50) return false;
+  if (parts.filter((part) => part.rest).length > 1) return false;
+  const seen = new Set<string>();
+  for (const part of parts) {
+    if (part.category_id === undefined) continue;
+    const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
+    if (seen.has(pair)) return false;
+    seen.add(pair);
+  }
+  return true;
+}
 const splitLineSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
-  parts: z.array(linePartSchema).max(50).refine((parts) => parts.length !== 1),
+  parts: z.array(linePartSchema),
 }).strict().superRefine((body, ctx) => {
-  if (body.parts.filter((part) => part.rest).length > 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom });
-    return;
-  }
-  const seen = new Set<string>();
-  for (const part of body.parts) {
-    if (part.category_id === undefined) continue;
-    const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
-    if (seen.has(pair)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom });
-      return;
-    }
-    seen.add(pair);
-  }
+  if (!linePartsAreValid(body.parts)) ctx.addIssue({ code: z.ZodIssueCode.custom });
 });
 const categorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -291,7 +291,18 @@ const batchItemSchema = z.object({
   category_id: UUID_TEXT.optional(),
   remember: z.boolean().optional(),
   shares: SPLIT_SHARES.optional(),
+  parts: z.array(linePartSchema).optional(),
 }).strict().superRefine((item, ctx) => {
+  if (item.parts != null) {
+    // A split_line row takes only transaction_id and parts[] (FLOW-312).
+    if (
+      item.shares != null || item.project_id != null || item.category_id != null ||
+      item.remember != null || !linePartsAreValid(item.parts)
+    ) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom });
+    }
+    return;
+  }
   if (item.shares != null) {
     // A split row names its projects in shares[]; category_id is optional like assign_expense_split.
     if (item.project_id != null || item.remember != null || !sharesAreValid(item.shares)) {
@@ -757,6 +768,21 @@ const SHARES_SPEC = {
   },
 };
 
+const LINE_PARTS_SPEC = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      category_id: { type: "string" },
+      project_id: { type: ["string", "null"] },
+      amount_minor: { type: "integer" },
+      percent: { type: "number" },
+      rest: { type: "boolean", enum: [true] },
+    },
+    additionalProperties: false,
+  },
+};
+
 function writeTools() {
   return [
     toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
@@ -772,7 +798,7 @@ function writeTools() {
       category_id: { type: "string" },
       shares: SHARES_SPEC,
     }, true),
-    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split.", {
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. undo_batch with the returned batch_key undoes the rows that succeeded.", {
       idempotency_key: { type: "string" },
       items: {
         type: "array",
@@ -784,6 +810,7 @@ function writeTools() {
             category_id: { type: "string" },
             remember: { type: "boolean" },
             shares: SHARES_SPEC,
+            parts: LINE_PARTS_SPEC,
           },
           required: ["transaction_id"],
           additionalProperties: false,
@@ -887,20 +914,7 @@ function writeTools() {
     toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
-      parts: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            category_id: { type: "string" },
-            project_id: { type: ["string", "null"] },
-            amount_minor: { type: "integer" },
-            percent: { type: "number" },
-            rest: { type: "boolean", enum: [true] },
-          },
-          additionalProperties: false,
-        },
-      },
+      parts: LINE_PARTS_SPEC,
     }, true),
     toolSpec("set_line_pnl", "Take one line out of the P&L (in_pnl false), count it although its category is kept out (in_pnl true), or follow its category again (in_pnl null). Covers every part of a split line. A loan line is refused. Returns the line's in_pnl. Undo is kind line_pnl with the transaction id.", {
       idempotency_key: { type: "string" },
