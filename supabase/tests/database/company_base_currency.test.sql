@@ -1,4 +1,4 @@
--- FLOW-504 (decision 0146). The company currency: set_company_currency and MCP
+-- FLOW-504 (decision 0147). The company currency: set_company_currency and MCP
 -- set_company_currency with undo kind company_currency, and where it leads (by_currency order,
 -- prev_* per currency, get_home, get_project's and get_profit_months' overhead share, the loan
 -- default, a new project's investment currency). Nothing is converted. Invented data only.
