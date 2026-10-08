@@ -1,0 +1,1 @@
+Design rules: screens stay light and clean, with few words and little data. A row has at most one meta line and one mark, a screen shows one main figure, and legends are gone ([DESIGN-RULES](design/DESIGN-RULES.md#21-principles)).
