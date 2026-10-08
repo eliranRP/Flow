@@ -336,6 +336,7 @@ A brief is short. It points the builder to exactly what to read and change:
 | Decisions | [docs/decisions](../decisions/README.md) |
 | Changelog | [docs/changelog.md](../changelog.md), and entries not yet folded in: [docs/changelog.d/](../changelog.d/README.md) |
 | CI, deploy, rollback | [CI and CD](../runbooks/ci-cd.md), `.github/workflows/ci.yml` |
+| Live checks with the read-only test account | [Live test account](../runbooks/live-test-account.md), [smoke user](../runbooks/smoke-user.md) |
 | Connectors | [connector contract](../tech/connector-contract.md), [connector UI states](../tech/connector-ui-states.md), [SUMIT runbook](../runbooks/sumit-connect.md), [Jev runbook](../runbooks/jev.md) |
 | Product spec and calculations | [spec](../module-1-project-pnl/spec.md), [calculations](../module-1-project-pnl/calculations.md) |
 | Migrations | `supabase/migrations/`, `supabase/migrations.lock`, pgTAP tests in `supabase/tests/database/` |
