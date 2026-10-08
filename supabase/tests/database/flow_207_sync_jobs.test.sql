@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(12);
+select plan(14);
 
 do $users$
 begin
@@ -92,6 +92,7 @@ insert into sjf (label, id) select 'f1', (public.mcp_sync_bank_begin('f-1')->'da
 insert into sjf (label, id) select 'f2', (public.mcp_sync_bank_begin('f-2')->'data'->>'job_id')::uuid;
 insert into sjf (label, id) select 'f3', (public.mcp_sync_bank_begin('f-3')->'data'->>'job_id')::uuid;
 insert into sjf (label, id) select 'f4', (public.mcp_sync_bank_begin('f-4')->'data'->>'job_id')::uuid;
+insert into sjf (label, id) select 'f5', (public.mcp_sync_bank_begin('f-5')->'data'->>'job_id')::uuid;
 select public.mcp_sync_bank_finish(pg_temp.job('f1'),
   '{"ok": false, "error": {"code": "refused", "message": "Call 555-0100 to fix your bank"}}'::jsonb);
 select public.mcp_sync_bank_finish(pg_temp.job('f2'),
@@ -100,6 +101,8 @@ select public.mcp_sync_bank_finish(pg_temp.job('f3'),
   '{"ok": false, "error": {"code": "refused", "message": "bank key was rejected; reconnect in Settings"}}'::jsonb);
 select public.mcp_sync_bank_finish(pg_temp.job('f4'),
   '{"ok": false, "error": {"code": "not_found", "message": "retry"}}'::jsonb);
+select public.mcp_sync_bank_finish(pg_temp.job('f5'),
+  '{"ok": false, "error": {"code": "unavailable", "message": "unavailable"}}'::jsonb);
 select is(public.mcp_sync_status(pg_temp.job('f1'))->'data'->'error',
   '{"code": "refused", "message": "The bank sync failed."}'::jsonb, 'free text is stored as the generic failure');
 select is(public.mcp_sync_status(pg_temp.job('f2'))->'data'->'error',
@@ -108,6 +111,8 @@ select is(public.mcp_sync_status(pg_temp.job('f3'))->'data'->'error'->>'message'
   'bank key was rejected; reconnect in Settings', 'the reconnect message is stored as sent');
 select is(public.mcp_sync_status(pg_temp.job('f4'))->'data'->'error',
   '{"code": "refused", "message": "The bank sync failed."}'::jsonb, 'a known message under another code is the generic failure');
+select is(public.mcp_sync_status(pg_temp.job('f5'))->'data'->'error',
+  '{"code": "unavailable", "message": "unavailable"}'::jsonb, 'the unavailable pair is stored as sent');
 
 -- 2. Retention: begin drops this user's old jobs only.
 reset role;
@@ -120,8 +125,11 @@ values
   ('00000000-0000-4000-8000-0000000000a4', pg_temp.job('other_write'), tests.get_supabase_uid('sjf_other'), pg_temp.job('other_company'),
    'done', '{"added": 0, "duplicates": 0, "removed": 0, "newest_date": null}', now() - interval '9 days', now() - interval '8 days');
 insert into private.mcp_sync_jobs (id, token_id, user_id, company_id, state, started_at)
-values ('00000000-0000-4000-8000-0000000000a3', pg_temp.job('write'), tests.get_supabase_uid('sjf_owner'), pg_temp.job('company'),
-  'running', now() - interval '2 days');
+values
+  ('00000000-0000-4000-8000-0000000000a3', pg_temp.job('write'), tests.get_supabase_uid('sjf_owner'), pg_temp.job('company'),
+   'running', now() - interval '2 days'),
+  ('00000000-0000-4000-8000-0000000000a5', pg_temp.job('write'), tests.get_supabase_uid('sjf_owner'), pg_temp.job('company'),
+   'running', now() - interval '2 hours');
 insert into private.mcp_sync_jobs (token_id, user_id, company_id, state, error, started_at, finished_at)
 values (pg_temp.job('write'), tests.get_supabase_uid('sjf_owner'), pg_temp.job('company'),
   'failed', '{"code": "unavailable", "message": "retry"}', now() - interval '30 days', now() - interval '30 days');
@@ -143,6 +151,9 @@ select is(
 select is(
   (select count(*)::integer from private.mcp_sync_jobs where id = '00000000-0000-4000-8000-0000000000a4'),
   1, 'another user''s old job stays');
+select is(
+  (select count(*)::integer from private.mcp_sync_jobs where id = '00000000-0000-4000-8000-0000000000a5'),
+  1, 'a job running for 2 hours stays');
 select is(
   (select count(*)::integer from private.mcp_sync_jobs where id = pg_temp.job('f1')),
   1, 'this run''s finished jobs stay');
