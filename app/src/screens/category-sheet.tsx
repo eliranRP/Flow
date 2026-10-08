@@ -14,6 +14,7 @@ import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
+import { CategoryGroupSheet, groupNames } from "./category-group";
 import { CategoryRenameSheet } from "./category-rename";
 import { KEPT_OUT } from "./screen-shared";
 
@@ -62,6 +63,7 @@ export function CategoryMenuSheet({
   const [moveFrom, setMoveFrom] = useState<ManagedCategory | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedCategory | null>(null);
   const [renameTarget, setRenameTarget] = useState<ManagedCategory | null>(null);
+  const [groupTarget, setGroupTarget] = useState<ManagedCategory | null>(null);
   const rehab = useCategoryRehab();
   const { move } = useMoveCategoryLines({ onMoved: () => { setMoveFrom(null); } });
   const { remove } = useDeleteCategory({ onDeleted: () => { setDeleteTarget(null); } });
@@ -136,6 +138,19 @@ export function CategoryMenuSheet({
                   setRenameTarget(category);
                 }}
               />
+              {/* FLOW-401: an expense category can fold into a group on the project page. */}
+              {!income ? (
+                <ListRow
+                  variant="button"
+                  title="קבוצה"
+                  meta={category.group_name ?? undefined}
+                  disabled={pnlBusy}
+                  onClick={() => {
+                    onClose();
+                    setGroupTarget(category);
+                  }}
+                />
+              ) : null}
               {loanLine == null && !hidden ? (
                 <ListRow
                   variant="button"
@@ -224,6 +239,13 @@ export function CategoryMenuSheet({
       <CategoryRenameSheet
         category={renameTarget}
         onClose={() => { setRenameTarget(null); }}
+        blocked={blocked}
+        returnFocusRef={returnFocusRef}
+      />
+      <CategoryGroupSheet
+        category={groupTarget}
+        groups={groupNames(rows)}
+        onClose={() => { setGroupTarget(null); }}
         blocked={blocked}
         returnFocusRef={returnFocusRef}
       />

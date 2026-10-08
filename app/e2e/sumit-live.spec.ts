@@ -353,7 +353,9 @@ test("live SUMIT backfill matches the golden totals and a new invoice syncs", as
   const operationsAfter = operationsUsed(await sumit("/website/companies/listquotas/", {}));
   expect(sumitCounts.writes).toBe(0);
   expect(sumitCounts.reads).toBe(2);
-  expect(serverReads).toBe(5);
+  // Connect 1, two syncs of 2 CRM reads each, and one documents/list read for the open
+  // invoices' links on the first sync (FLOW-335); the second sync finds them stored.
+  expect(serverReads).toBe(6);
   expect(operationsAfter).toBe(operationsBefore);
 });
 

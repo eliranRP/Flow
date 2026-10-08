@@ -18,11 +18,11 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | FLOW-211: Flow MCP agent requests (amount filter on search, accrued interest on list_loans, company_id note) | More Flow MCP agent requests and Jev server items |
 | UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
-| UI lane 3 | FLOW-332 swipe back from the start edge on pushed screens (taken from lane 1's queue) | FLOW-401 project categories UI (mockup tonight, owner card at 09:00 Israel), then Settings and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-401 project categories UI (owner approved v5 "clean", 2026-10-08 21:44Z): groups fold, up mark, usual line, קבוצה in the category sheet | Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
+| Backlog bug fixes | FLOW-313 item 4 + FLOW-134 item 3 (#242) | Next small ready item |
 | File split | FLOW-807 follow-up: `_shared/jev_tag.ts` split into `jev_tag_plan.ts` and `jev_tag_rest.ts` (merged: screens #219, stories #225, CSS #227, review area #229, app files #232) | `supabase/functions/flow-mcp/tools.ts` after #221 and #233 merge |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -82,10 +82,10 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
 | 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) |
 | 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | done (#162) |
-| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready (item 3 left) |
+| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | done (#242) |
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
-| 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready (item 4 open) |
+| 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready for a UI lane (server parts done in #176) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
@@ -103,7 +103,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
-| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | in-progress (UI lane 3) |
+| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | merged (#238) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
@@ -305,10 +305,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-134"></a>
 ### FLOW-134 · Loan part categories follow-ups (FLOW-106 part 2 review)
-- **Type:** BACKLOG NIT · **Status:** ready (item 3 for the Mercury UI thread) · **Depends on:** FLOW-106 part 2
+- **Type:** BACKLOG NIT · **Status:** done (#242) · **Depends on:** FLOW-106 part 2
 - [x] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge. (Moved when the target fits, else the merge is refused: migration `20261010090000`, decision 0132.)
 - [x] The categories screen shows a generic error when a flip is refused with `loan category is fixed` for a category a loan uses; give it copy (Mercury UI thread). (`pnlFailureText` in `category-copy.ts`.)
-- [ ] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread).
+- [x] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread). (`LoanTransactionSplit` takes the line's `categoryId` and offers שיוך when a loan's principal category is that category.)
 - [x] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns. (One loop over the four keys; the update trigger runs only when a part category changes: migration `20261010090000`, decision 0132.)
 
 <a id="flow-135"></a>
@@ -501,11 +501,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-313"></a>
 ### FLOW-313 · Month dividers follow-ups (#98 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-302 (#98)
+- **Type:** BACKLOG NIT · **Status:** done (#242) · **Depends on:** FLOW-302 (#98)
 - [x] The month totals add rows by direction: a shared line counts at its full amount and a refund counts as income, so a month header is not that project's P&L for the month. Owner to decide whether that's fine or the header should follow the P&L rules (Decisions needed). (Owner 2026-10-08: keep cash in and out, so the header adds up the rows it sits over.)
 - [x] Switching between the flat and the grouped list (a held order splitting a month, or a second month loading) remounts the rows, so a focused row loses focus. (The flat list is a headless section keyed by its first month, so its rows stay mounted when a month is added or removed; rows that move to another month's section still remount.)
 - [x] Screen readers hear the figures with no separator ("הוצאות −₪2,200הכנסות +$1,500"); add a pause between figures and lines. (A hidden ", " before each figure but the first.)
-- [ ] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed.
+- [x] A month with large ILS and USD figures makes a three-line pinned bar (about 85px) at 320 to 390px; consider one currency per line only when needed. (Currency lines now share a row while they fit and wrap only when needed; story `TwoCurrenciesOneRow` is 42px, was 61px. Nine-digit figures in two currencies still need the rows.)
 - [x] `MonthList` takes a `className` no caller passes; drop it or use it. (Dropped.)
 
 <a id="flow-303"></a>
@@ -714,7 +714,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-332"></a>
 ### FLOW-332 · Swipe back from the edge on pushed screens
-- **Type:** SMALL UI · **Status:** in-progress (UI lane 3) · **Owner (2026-10-08):** approved · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
+- **Type:** SMALL UI · **Status:** merged (#238, UI lane 3) · **Owner (2026-10-08):** approved · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
 - **What:** In the installed iOS app there is no system back gesture, so the only way back from a pushed screen is the chevron at the top corner (y≈12–43). Add a swipe from the start (right) edge on pushed screens, with the same gesture rules as FLOW-314, so it never fights horizontal scrolling or the transaction swipe.
 - **Acceptance:** works on every pushed screen; doesn't trigger inside sheets or horizontal lists; e2e test with touch.
 
@@ -771,7 +771,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `project-detail-screen.tsx`).
 - [x] "לפי חודש": drop the `.ui-months-note` explainer (rows carry chevrons, as FLOW-328 did elsewhere), and keep the hint's "נכנס ₪…" muted: green is for an income amount in the amount slot only (0120).
 - [x] "לפי חודש" empty state ("אין חודשים בתקופה הזו") is a dead end: add the tint button "כל התקופה" that sets הכול, and an empty-state story. Superseded by FLOW-337 (decision 0150): the page is the whole project, so the empty state has no wider period; the empty-state story is in.
-- [x] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it.
+- [x] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it. Server part: each `list_unpaid` row has `document_url`, the SUMIT link on `https://pay.sumit.co.il/` or null until a sync reads it (`UnpaidRow.document_url` in `packages/shared`).
 - [x] Unpaid after a mark: the row says "ממתין לסנכרון" but the page has no way to sync (5 taps through Settings). When any row is marked, show a "רענון מ־SUMIT" row at the bottom that starts the connector sync, or let pull-to-refresh start it.
 - [x] Home and Project: the "מצב תצוגה" tag sits 6px above the band's bottom, inside the 28px corner curve (regression of a FLOW-328 fix); give it `--space-3`.
 - [x] Connector status sheets: "ניתוק" is the bottom row right under "רענון עכשיו", where the thumb lands first. Put ניתוק in its own group after a section gap (`connections-screen.tsx`).
@@ -794,7 +794,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-401"></a>
 ### FLOW-401 · Project view by category
-- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #233, [0149](../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08; plan: the project's plans/flow-401-project-categories.md; the screen needs a mockup and the owner's approval) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (UI lane 3; server and MCP done in #233, [0149](../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08, and approved mockup v5 "clean" at 21:44Z: name and amount only, groups fold in place, an amber up arrow in the month view, "—" for a bill not in yet, a "בד״כ" line on the category page, and קבוצה in the category ⋯ sheet; the project's plans/flow-401-project-categories-light.html) · **Depends on:** —
 - **What:** Per project, expenses broken down by category with every line visible under its category (no extra taps or "show more"), category consolidation (for example all utilities under one group), a monthly expected amount per category from earlier months, and an alert when a month looks off (a new or missing recurring expense, or an amount well above usual). The math is plain SQL (median of the last 3–6 months, threshold rules); Jev only phrases. MCP: tools for the breakdown, the expected amounts and the anomaly list.
 - **Acceptance:** plan and mockup approved.
 

@@ -1,14 +1,17 @@
+import { formatAmountText } from "@flow/shared";
 import { useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
 import { periodFromSearch, periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
+import { usualFor, useProjectCategoryMonthsQuery, type UpKind } from "../project-category-months";
 import { useProjectCategoryQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
 import { Button } from "../ui/button";
 import { formatDayMonth } from "../ui/date-math";
+import { UpMark } from "../ui/category-group-row";
 import { EmptyState } from "../ui/empty-state";
 import { DocumentIcon } from "../ui/icons";
 import { ListRow } from "../ui/list-row";
@@ -26,6 +29,8 @@ type CategorySample = {
   pageSize?: number;
   /** FLOW-107. Loan split marks by row id, for stories. */
   loanMarks?: Record<string, LoanMark>;
+  /** FLOW-401. The usual month of the category, for stories. */
+  usual?: { expected: bigint; up: UpKind };
 };
 
 /** The drill-down for one category row; a row in another currency names it (`?currency=`). */
@@ -53,6 +58,7 @@ export function ProjectCategoryScreen({
   const period = periodFromSearch(new URLSearchParams(location.search));
   const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
+  const months = useProjectCategoryMonthsQuery(sample ? "" : projectId, period);
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
   const heldRows = useHeldOrder(loadedRows, (row) => row.id);
@@ -77,6 +83,7 @@ export function ProjectCategoryScreen({
   return (
     <div>
       <ScreenHeader title={name} subtitle={projectName} backTo={backOverride ?? back} />
+      <UsualLine usual={sample ? sample.usual ?? null : usualFor(months.data, categoryId, rowCurrency)} currency={rowCurrency} />
       {rows.length === 0 ? (
         <EmptyState icon={<DocumentIcon />} title="אין תנועות בקטגוריה הזו" body="הוצאות משויכות של הפרויקט יופיעו כאן." />
       ) : (
@@ -119,5 +126,20 @@ export function ProjectCategoryScreen({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** FLOW-401 v5: one quiet line under the title in the month view, "בד״כ ₪4,100 בחודש", with the up mark when above it. */
+function UsualLine({ usual, currency }: { usual: { expected: bigint; up: UpKind } | null; currency: string }) {
+  if (usual == null) return null;
+  return (
+    <p className="ui-page-pad ui-usual-line t-meta">
+      {usual.up != null ? <UpMark kind={usual.up} /> : null}
+      <span>
+        {"בד״כ "}
+        <bdi dir="ltr" className="ui-num">{formatAmountText(usual.expected, currency)}</bdi>
+        {" בחודש"}
+      </span>
+    </p>
   );
 }
