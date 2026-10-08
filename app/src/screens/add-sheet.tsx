@@ -1,7 +1,8 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { addTriggerRef } from "../add-trigger";
-import { quickNewPath } from "../open-from-query";
+import { quickNewPath, quickNewState } from "../open-from-query";
 import { usePreviewSearch } from "../preview";
+import { readSheetBackground } from "../sheet-background";
 import { useMercuryStatusQuery } from "../use-books";
 import { useWriteGate } from "../use-is-viewer";
 import { useGoBack } from "../ui/back";
@@ -29,11 +30,12 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
   const bank = sampleBank ?? addBankState(mercury);
   const goBack = useGoBack();
   const navigate = useNavigate();
+  const over = readSheetBackground(useLocation().state)?.pathname;
   const writeGate = useWriteGate("/");
   if (writeGate === "wait") return null;
   if (writeGate !== "show") return writeGate;
   function go(to: string) {
-    void navigate(to, { replace: true });
+    void navigate(to, { replace: true, state: quickNewState(over) });
   }
   return (
     <RouteSheet
@@ -41,7 +43,7 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
       closeTo={`/${search}`}
       returnFocusRef={addTriggerRef}
     >
-      <div className="ui-add-rows">
+      <div>
         <ListRow
           variant="button"
           title="פרויקט חדש"

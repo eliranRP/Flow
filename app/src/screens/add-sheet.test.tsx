@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "../App";
 import { addBankState, AddForm, type AddBankState } from "./add-sheet";
@@ -56,28 +56,62 @@ describe("AddForm bank row", () => {
   });
 });
 
-function BackButton() {
-  const navigate = useNavigate();
-  return <button type="button" onClick={() => { void navigate(-1); }}>test-back</button>;
-}
-
 describe("+ quick action history", () => {
-  it("Back after + → פרויקט חדש leaves Projects for the screen before +, not the + sheet", async () => {
+  // Real browser history: a sheet's Back layer pops only with a browser index (MemoryRouter drops it in place).
+  function renderBrowser(start: string) {
+    window.history.replaceState(null, "", start);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
+    return render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={["/review?preview=1", "/add?preview=1"]} initialIndex={1}>
+        <BrowserRouter>
           <App />
-          <BackButton />
-        </MemoryRouter>
+        </BrowserRouter>
       </QueryClientProvider>,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /פרויקט חדש/ }));
-    const dialog = await screen.findByRole("dialog", { name: "פרויקט" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "ביטול" }));
+  }
+
+  async function quickAction(name: RegExp) {
+    fireEvent.click(await screen.findByRole("link", { name: "הוספה" }));
+    fireEvent.click(await screen.findByRole("button", { name }));
+  }
+
+  it("Back after + → פרויקט חדש closes the sheet, then leaves Projects for the screen before +", async () => {
+    const view = renderBrowser("/review?preview=1");
+    await quickAction(/פרויקט חדש/);
+    expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    window.history.back();
     await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
-    fireEvent.click(screen.getByRole("button", { name: "test-back" }));
-    await waitFor(() => { expect(screen.queryByRole("heading", { name: "פרויקטים", hidden: true })).not.toBeInTheDocument(); });
+    expect(window.location.pathname).toBe("/projects");
+    expect(window.location.search).not.toContain("new=");
+    window.history.back();
+    await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
     expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
+    view.unmount();
+  });
+
+  it("over Projects itself, one Back closes the project sheet and the next leaves Projects", async () => {
+    window.history.replaceState(null, "", "/review?preview=1");
+    window.history.pushState(null, "", "/projects?preview=1");
+    const view = renderBrowser("/projects?preview=1");
+    await quickAction(/פרויקט חדש/);
+    expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    window.history.back();
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument(); });
+    expect(window.location.pathname).toBe("/projects");
+    window.history.back();
+    await waitFor(() => { expect(window.location.pathname).toBe("/review"); });
+    view.unmount();
+  });
+
+  it("Back after + → הלוואה חדשה closes the loan sheet and keeps Loans", async () => {
+    const view = renderBrowser("/review?preview=1");
+    await quickAction(/הלוואה חדשה/);
+    expect(await screen.findByRole("dialog", { name: /הלוואה/ })).toBeInTheDocument();
+    expect(window.location.search).not.toContain("new=");
+    window.history.back();
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: /הלוואה/ })).not.toBeInTheDocument(); });
+    expect(window.location.pathname).toBe("/settings/loans");
+    view.unmount();
+    window.history.replaceState(null, "", "/");
   });
 });
