@@ -1,0 +1,65 @@
+/* FLOW-401 v5: the project page's category groups, the up mark and a bill not in yet. */
+
+.ui-up-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--color-warning);
+}
+
+.ui-group-row {
+  width: 100%;
+  text-align: start;
+}
+
+/* The turned chevron says it is open; no hover fill, so it never reads as stuck pressed. */
+@media (hover: hover) {
+  .ui-row.ui-group-row:hover:not(:focus-visible)::before {
+    background: transparent;
+  }
+}
+
+.ui-group-caret {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+  transition: transform 160ms ease;
+}
+
+.ui-group-row[aria-expanded="true"] .ui-group-caret {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-group-caret {
+    transition: none;
+  }
+}
+
+/* Members sit under their group, indented, in the secondary text colour. */
+.ui-group-members .ui-row {
+  padding-inline-start: var(--space-4);
+}
+
+.ui-group-members .ui-row-title {
+  color: var(--color-text-secondary);
+}
+
+.ui-row-missing {
+  flex: none;
+  color: var(--color-text-muted);
+  /* No chevron on a bill not in yet: the dash keeps the amounts' column. */
+  margin-inline-end: calc(20px + var(--space-3));
+}
+
+.ui-usual-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+/* An action row in a picker (קבוצה חדשה): the + and the name in the accent text colour. */
+.ui-row.ui-row-add :is(.ui-row-title, .ui-row-icon) {
+  color: var(--color-accent-text);
+}

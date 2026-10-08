@@ -9,9 +9,10 @@
   inset-block-start: var(--month-sticky-top, var(--safe-top));
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  column-gap: var(--space-3);
   min-block-size: var(--space-10);
   margin-inline: calc(var(--space-side) * -1);
   padding-block: var(--space-2);
@@ -25,10 +26,11 @@
   margin-block-start: var(--space-8);
 }
 
-/* A row reached by Tab or scrolled into view stops below the pinned month bar (up to three
-   currency lines), not under it (WCAG 2.4.11). A sheet that scrolls a month list sets its own. */
+/* A row reached by Tab or scrolled into view stops below the pinned month bar, not under it
+   (WCAG 2.4.11). The tallest bar is the month name with three currency rows under it at 320
+   (8 + 26 + 3 x 22.5 + 8, about 110px). A sheet that scrolls a month list sets its own. */
 :root:has(.ui-month-head) {
-  scroll-padding-block-start: calc(var(--safe-top) + var(--space-10) * 2 + var(--space-4));
+  scroll-padding-block-start: calc(var(--safe-top) + var(--space-10) * 3);
 }
 
 .ui-month-title {
@@ -36,23 +38,24 @@
   white-space: nowrap;
 }
 
-/* Currencies share a row while they fit and wrap to a row each only when needed, so a two-currency
-   month stays one or two lines at 360 to 390px instead of growing a line per currency (FLOW-313). */
+/* Currencies share a row while they fit, 24px apart so the pairs read apart (8px inside a pair). When
+   both don't fit, the next currency wraps under the first, start-aligned; a pair never splits (FLOW-313).
+   Beside the month name the totals sit at the end; dropped under it they start under the name. */
 .ui-month-totals {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: flex-end;
-  column-gap: var(--space-3);
+  justify-content: flex-start;
+  column-gap: var(--space-6);
   min-inline-size: 0;
   margin: 0;
 }
 
 .ui-month-line {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex-wrap: nowrap;
   column-gap: var(--space-2);
+  white-space: nowrap;
 }
 
 /* FLOW-305: quiet day heads inside a month (היום, אתמול, יום ב׳ · 05/10). 15/1.4/500 text-secondary,

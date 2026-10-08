@@ -20,7 +20,7 @@ const categories: CategoryRow[] = [
   { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, lines: 42, split_lines: 3, loan_used: false, rehab: null, in_rehab: true },
   { id: "c2", name: "קבלנים", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 31, split_lines: 0, loan_used: false, in_rehab: true },
   { id: "c3", name: "כלים וציוד", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 12, split_lines: 0, loan_used: false, in_rehab: true },
-  { id: "c4", name: "חשמל ואינסטלציה", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 9, split_lines: 0, loan_used: false, in_rehab: true },
+  { id: "c4", name: "חשמל ואינסטלציה", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 9, split_lines: 0, loan_used: false, in_rehab: true, group_name: "חשבונות" },
   { id: "c5", name: "ביטוח נכס", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 18, split_lines: 0, loan_used: true, rehab: false, in_rehab: false },
   { id: "c6", name: "עמלות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 4, split_lines: 0, loan_used: false, in_rehab: true },
   { id: "c7", name: "אחר", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, lines: 0, split_lines: 0, loan_used: false, in_rehab: true },
@@ -112,3 +112,28 @@ export const Rename: Story = {
 };
 export const Rename320: Story = { ...Rename, name: "Rename, 320", ...at320 };
 export const RenameDark: Story = { ...Rename, name: "Rename, dark", ...dark };
+
+/** FLOW-401: the קבוצה row after שינוי שם, and its picker. One tap applies a group. */
+export const Group: Story = {
+  name: "Group, the picker",
+  render: () => <Screen />,
+  play: async ({ canvasElement }) => {
+    const sheet = await openMenu(canvasElement, "חשמל ואינסטלציה");
+    await userEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
+    await body(canvasElement).findByRole("dialog", { name: "קבוצה" });
+  },
+};
+export const Group320: Story = { ...Group, name: "Group, 320", ...at320 };
+export const GroupDark: Story = { ...Group, name: "Group, dark", ...dark };
+
+export const GroupNew: Story = {
+  name: "Group, a new group",
+  render: () => <Screen />,
+  play: async ({ canvasElement }) => {
+    const sheet = await openMenu(canvasElement, "חומרים");
+    await userEvent.click(within(sheet).getByRole("button", { name: /^קבוצה/ }));
+    const picker = await body(canvasElement).findByRole("dialog", { name: "קבוצה" });
+    await userEvent.click(within(picker).getByRole("button", { name: "קבוצה חדשה" }));
+    await within(picker).findByLabelText("שם הקבוצה");
+  },
+};

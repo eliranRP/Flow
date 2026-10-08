@@ -104,7 +104,7 @@ const ALLOWED: Record<string, Set<string>> = {
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
-  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "direction"]),
+  search_expenses: new Set(["scope", "query", "limit", "offset", "from", "to", "project_id", "category_id", "direction", "amount", "amount_min", "amount_max"]),
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit", "as_of"]),
@@ -756,6 +756,12 @@ function minorFromMajor(value: unknown): bigint | ToolResult {
   }
 }
 
+/** An optional amount in major units: null when absent, else as minorFromMajorNonNegative. */
+function minorFromMajorOrNull(value: unknown): bigint | null | ToolResult {
+  if (value == null) return null;
+  return minorFromMajorNonNegative(value);
+}
+
 function minorFromMajorNonNegative(value: unknown, fallback = 0n): bigint | ToolResult {
   if (value == null) return fallback;
   if (typeof value !== "number" && typeof value !== "string") return fail("validation", "validation");
@@ -1094,7 +1100,7 @@ function readTools() {
     toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag; category_suggested is true while the category is only a guess, and a guessed kept-out category still counts. pnl_state is in, out, or mixed: a line split by category with a part kept out, or a loan payment counted by its parts, is mixed. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
-    toolSpec("search_expenses", "Search pending review rows, filed rows, or both (income too). id is the ledger id. meta is the line's bank details (see get_expense). query matches the description, supplier or customer, in any case. Optional filters: from and to (YYYY-MM-DD, by document date, both ends included), direction (income or expense), project_id (the line's project, a share of a shared cost on it, or a split part on it; none for lines on no project) and category_id (the line's category, or a split or loan split part in it; none for lines with no category and no parts). filed and all rows, newest first, also have currency, amount_original, line_status, customer_name, waiting_review, kept_out, split_parts (line split parts, 0 when whole) and loan_matched. pending rows are list_review rows; with a filter they come newest first.", {
+    toolSpec("search_expenses", "Search pending review rows, filed rows, or both (income too). id is the ledger id. meta is the line's bank details (see get_expense). query matches the description, supplier or customer, in any case. Optional filters: from and to (YYYY-MM-DD, by document date, both ends included), direction (income or expense), project_id (the line's project, a share of a shared cost on it, or a split part on it; none for lines on no project), category_id (the line's category, or a split or loan split part in it; none for lines with no category and no parts), and the amount: amount finds one figure, amount_min and amount_max a range (both ends included; not with amount), each the bank amount without its sign in major units of the line's own currency, so 6245.12 finds a $6,245.12 payment or deposit. filed and all rows, newest first, also have currency, amount_gross (the signed bank amount, in minor units), amount_original, line_status, customer_name, waiting_review, kept_out, split_parts (line split parts, 0 when whole) and loan_matched. pending rows are list_review rows; with a filter they come newest first.", {
       scope: { type: "string", enum: ["pending", "filed", "all"] },
       query: { type: "string" },
       limit: { type: "integer" },
@@ -1104,13 +1110,16 @@ function readTools() {
       direction: { type: "string", enum: ["income", "expense"] },
       project_id: { type: "string" },
       category_id: { type: "string" },
+      amount: { type: ["number", "string"] },
+      amount_min: { type: ["number", "string"] },
+      amount_max: { type: ["number", "string"] },
     }),
     toolSpec("get_totals", "Company totals for a period. Omit both dates for all time. Amounts in *_agorot are ILS only. by_currency gives each currency's P&L in minor units (cents for USD). direct + shared + overhead + unassigned expense = expense. unassigned is income with no project, and cost with no role, a project role and no project, or a shared role and no split.", {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance, in the saved order (by name until reorder_loans changes it; a loan added since goes last). flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
+    toolSpec("list_loans", "Loans in the company with current principal balance, in the saved order (by name until reorder_loans changes it; a loan added since goes last). flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first; accrued_interest_minor is what an open demand loan owes in interest today (accrued_as_of, UTC): interest earlier payments left unpaid plus what accrued since the last payment or the start, daily on actual/365, as get_loan_schedule's accrued.interest_minor; null for other kinds (their interest is in the schedule rows), for a closed loan, and when its payments could not be read.", {
       include_closed: { type: "boolean" },
     }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left (for an amortizing loan whose payment is below the term annuity, over the months left in the amortization period that payment implies, so the balloon stays at the term). An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest due on as_of (YYYY-MM-DD, default today): carried (interest earlier payments left unpaid, simple interest) plus what accrued from the last one (or the start), daily on actual/365, with since, days, carried, interest and balance.", {
@@ -2465,12 +2474,25 @@ export async function callTool(
       const category = textOf(args.category_id);
       if (typeof category !== "string" && category != null) return category;
       if (category != null && category !== "none" && !UUID.test(category)) return fail("validation", "validation");
+      // An amount is the bank figure without its sign, in the line's own currency (FLOW-211):
+      // amount finds one figure, amount_min and amount_max a range, both ends included.
+      if (args.amount != null && (args.amount_min != null || args.amount_max != null)) {
+        return fail("validation", "validation");
+      }
+      const amountMin = args.amount != null ? minorFromMajor(args.amount) : minorFromMajorOrNull(args.amount_min);
+      if (amountMin != null && typeof amountMin !== "bigint") return amountMin;
+      const amountMax = args.amount != null ? amountMin : minorFromMajorOrNull(args.amount_max);
+      if (amountMax != null && typeof amountMax !== "bigint") return amountMax;
+      if (amountMin != null && amountMax != null && amountMin > amountMax) return fail("validation", "validation");
       const filters = {
         p_from: from,
         p_to: to,
         p_project: project?.toLowerCase() ?? null,
         p_category: category?.toLowerCase() ?? null,
         p_direction: direction,
+        // Sent only when set, so a call without an amount reads as before the amount filter.
+        ...(amountMin == null ? {} : { p_amount_min: Number(amountMin) }),
+        ...(amountMax == null ? {} : { p_amount_max: Number(amountMax) }),
       };
       // A query counts as a filter: search_transactions matches it on the description, the
       // supplier and the customer, in any case, as the docs say.
@@ -2577,7 +2599,28 @@ export async function callTool(
     const loans = await loadLoans(rpc);
     if (!Array.isArray(loans)) return loans;
     const listed = includeClosed ? loans : loans.filter((loan) => (loan.status ?? "open") === "open");
-    return ok({ loans: listed.map(listedLoan) });
+    // An open demand loan also shows the interest it owes today, as get_loan_schedule's accrued
+    // does: carried plus accrued since the last payment, daily on actual/365 (FLOW-211). Other
+    // kinds have it in their schedule rows, and a closed loan owes none: null.
+    const asOf = todayIso();
+    const out: Array<Record<string, unknown>> = [];
+    for (const loan of listed) {
+      let accruedMinor: number | null = null;
+      if (loanKindOf(loan) === "demand" && (loan.status ?? "open") === "open") {
+        // A failed payments read leaves the figure null rather than failing the list.
+        const payments = await loadLoanPayments(loan.id, rpc);
+        if (Array.isArray(payments)) {
+          const counted = countedPayments(payments, null).filter((row) => row.doc_date <= asOf);
+          try {
+            accruedMinor = Number(demandStatement(demandTermsOf(loan), demandPaymentsOf(counted), asOf).accrued.interestMinor);
+          } catch (error) {
+            if (!(error instanceof LoanScheduleError)) throw error;
+          }
+        }
+      }
+      out.push({ ...listedLoan(loan), accrued_interest_minor: accruedMinor, accrued_as_of: accruedMinor == null ? null : asOf });
+    }
+    return ok({ loans: out });
   }
 
   if (name === "get_loan_schedule") {
