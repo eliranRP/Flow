@@ -5,6 +5,7 @@ import { monthPeriod, periodFromSearch, windowLabel, type PeriodChoice } from ".
 import { withPeriodSearch } from "../project-period";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
+import { useCompanyCurrency } from "../company-currency";
 import { useBooks, useProfitMonthsQuery, useProjectQuery } from "../use-books";
 import { StatusPill } from "../ui/chip";
 import { HEBREW_MONTHS } from "../ui/date-math";
@@ -15,9 +16,32 @@ import { ScreenState } from "../ui/screen-state";
 
 type MonthCurrency = ProfitMonth["by_currency"][number];
 
-/** A month's figures as the row shows them: ILS first, ILS always, other currencies when not zero. */
-function shownCurrencies(month: ProfitMonth, afterOverhead: boolean): MonthCurrency[] {
-  const rows = month.by_currency.filter((row, index) => index === 0 || row.currency === "ILS" || row.income_minor !== 0n || row.expense_minor !== 0n);
+/**
+ * The currencies the period has figures in, ILS first (the server's order). A period with no
+ * figures at all falls back to the company's currency, so a USD company never reads ₪0.
+ */
+export function rangeCurrencies(data: Pick<NonNullable<ProfitMonths>, "by_currency" | "months">, emptyCurrency: string): string[] {
+  const used = new Set<string>();
+  for (const row of data.by_currency) {
+    if (row.income_minor !== 0n || row.expense_minor !== 0n) used.add(row.currency);
+  }
+  for (const month of data.months) {
+    for (const row of month.by_currency) {
+      if (row.income_minor !== 0n || row.expense_minor !== 0n) used.add(row.currency);
+    }
+  }
+  const ordered = data.by_currency.map((row) => row.currency).filter((currency) => used.has(currency));
+  for (const currency of used) if (!ordered.includes(currency)) ordered.push(currency);
+  return ordered.length > 0 ? ordered : [emptyCurrency];
+}
+
+/**
+ * A month's figures as the row shows them: every currency the period uses, in order, a zero row
+ * when the month has none in it. Only the ILS row takes the overhead share.
+ */
+function shownCurrencies(month: ProfitMonth, afterOverhead: boolean, currencies: readonly string[]): MonthCurrency[] {
+  const rows = currencies.map((currency) => month.by_currency.find((row) => row.currency === currency)
+    ?? { currency, income_minor: 0n, expense_minor: 0n, profit_minor: 0n });
   return rows.map((row) => {
     if (row.currency !== "ILS" || !afterOverhead || month.overhead_weighted !== true || month.overhead_share_agorot == null) return row;
     const share = month.overhead_share_agorot;
@@ -43,15 +67,16 @@ function countWords(count: number, one: string, many: string): string {
  * The "לפי חודש" row on the project: "6 חודשים · 2 ברווח, 3 בהפסד, 1 בתהליך". The open month is
  * counted as בתהליך, not as a profit or a loss; a month with no lines is not counted.
  */
-export function profitMonthsSummary(data: ProfitMonths | null): string | undefined {
+export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "ILS"): string | undefined {
   if (data == null) return undefined;
   const total = data.months.length;
   if (total === 0) return "אין חודשים בתקופה הזו";
   let profit = 0;
   let loss = 0;
   let open = 0;
+  const currencies = rangeCurrencies(data, emptyCurrency);
   for (const month of data.months) {
-    const main = shownCurrencies(month, data.after_overhead === true)[0];
+    const main = shownCurrencies(month, data.after_overhead === true, currencies)[0];
     if (month.open) open += 1;
     else if (main != null && main.profit_minor > 0n) profit += 1;
     else if (main != null && main.profit_minor < 0n) loss += 1;
@@ -78,6 +103,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const books = useBooks();
+  const companyCurrency = useCompanyCurrency();
   const period: PeriodChoice = periodFromSearch(new URLSearchParams(location.search)) ?? books.period;
   const months = useProfitMonthsQuery(sample ? "" : projectId, period);
   const project = useProjectQuery(sample ? "" : projectId, period);
@@ -87,8 +113,9 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   const afterOverhead = data?.after_overhead === true;
   const rows = data?.months ?? [];
   const newestYear = rows[0]?.month.slice(0, 4) ?? "";
-  const shownTotal = rows.reduce((sum, month) => sum + (shownCurrencies(month, afterOverhead)[0]?.profit_minor ?? 0n), 0n);
-  const mainCurrency = rows[0]?.by_currency[0]?.currency ?? "ILS";
+  const currencies = data == null ? [companyCurrency] : rangeCurrencies(data, companyCurrency);
+  const shownTotal = rows.reduce((sum, month) => sum + (shownCurrencies(month, afterOverhead, currencies)[0]?.profit_minor ?? 0n), 0n);
+  const mainCurrency = currencies[0] ?? companyCurrency;
   const subtitle = data == null
     ? undefined
     : `${windowLabel(period, undefined, "project")} · ${shownTotal < 0n ? "הפסד" : "רווח"} ${formatAmountText(shownTotal, mainCurrency)}${afterOverhead ? " · אחרי הוצאות כלליות" : ""}`;
@@ -114,6 +141,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
                 month={month}
                 title={monthTitle(month.month, newestYear)}
                 afterOverhead={afterOverhead}
+                currencies={currencies}
                 href={`${projectPath}${withPeriodSearch(search, monthPeriod(month.month))}`}
               />
             ))}
@@ -125,8 +153,8 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   );
 }
 
-function MonthRow({ month, title, afterOverhead, href }: { month: ProfitMonth; title: string; afterOverhead: boolean; href: string }) {
-  const currencies = shownCurrencies(month, afterOverhead);
+function MonthRow({ month, title, afterOverhead, currencies: rangeShown, href }: { month: ProfitMonth; title: string; afterOverhead: boolean; currencies: readonly string[]; href: string }) {
+  const currencies = shownCurrencies(month, afterOverhead, rangeShown);
   const main = currencies[0];
   const profit = main?.profit_minor ?? 0n;
   const loss = profit < 0n;

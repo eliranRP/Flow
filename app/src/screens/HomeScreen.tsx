@@ -1,3 +1,4 @@
+import { useCompanyCurrency } from "../company-currency";
 import { formatAmountText, formatIls, wholeShekels, type Dashboard, type ProjectRow } from "@flow/shared";
 import {
   companyRows,
@@ -56,6 +57,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const books = useBooks();
   const dashboard = useDashboardQuery();
   const unpaid = useUnpaidQuery();
+  const companyCurrency = useCompanyCurrency();
 
   const phase = screenPhase(preview, dashboard);
   const showBooks = phase.kind === "ready" && dashboard.data != null && hasBooks(dashboard.data);
@@ -117,6 +119,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
   const unpaidPhase = screenPhase(preview, unpaid);
   return (
     <HomeBooks
+      companyCurrency={companyCurrency}
       data={dashboard.data}
       previewing={previewing}
       search={search}
@@ -154,7 +157,10 @@ export function HomeBooks({
   refreshing = false,
   notice,
   checklist,
+  companyCurrency = "ILS",
 }: {
+  /** The company's currency, for an empty period's zeros (a USD company reads $0, not ₪0). */
+  companyCurrency?: string;
   data: Dashboard;
   previewing: boolean;
   search: string;
@@ -177,7 +183,7 @@ export function HomeBooks({
   const rankCurrency = primaryCurrency(data);
   const ranked = homeProjects(data.projects, rankCurrency);
   const leading = useHeldOrder(ranked, (project) => project.id);
-  const currencyRows = companyRows(data);
+  const currencyRows = companyRows(data, companyCurrency);
   const heroFigures = currencyRows.map((row) => ({
     agorot: roundedHeroProfit(row.income_minor, row.expense_minor),
     currency: row.currency,
