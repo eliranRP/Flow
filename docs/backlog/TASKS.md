@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free (FLOW-124 and FLOW-125 server parts done in #176; the list marks and the split-line pill are for a UI lane) | Next `ready` task in the queue |
+| Dev lane 1 | Server test gaps: FLOW-210 (undo_batch conflict, finished projects) and FLOW-409 item 2 (ILS filter in get_home and get_project) | Next `ready` non-UI task |
 | Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -415,7 +415,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-210"></a>
 ### FLOW-210 · Bulk setup follow-ups (#119 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-206 (#119)
+- **Type:** BACKLOG NIT · **Status:** claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll) · **Depends on:** FLOW-206 (#119)
 - [ ] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`.
 
 <a id="flow-207"></a>
@@ -761,7 +761,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll; item 1 done, 0129) · **Depends on:** —
 - [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
 - [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
 
