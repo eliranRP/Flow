@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-110 server part (#197, merges after #177) | Next `ready` non-UI task in the queue (FLOW-510 waits for its design call) |
-| Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
+| Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
@@ -91,7 +91,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
-| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | server done (#196); the screen waits for its mockup |
+| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | ready for a UI lane (server done in #196; owner approved mockup A, 2026-10-08) |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | in progress (PR #TBD) |
@@ -609,12 +609,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-323"></a>
 ### FLOW-323 · Search and all transactions
-- **Type:** PLAN FIRST · **Status:** server done (#196, owner chose "server now", 2026-10-08); the screen waits for its mockup · **Depends on:** FLOW-302
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server done in #196, owner chose "server now", 2026-10-08; owner approved mockup A, 2026-10-08) · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
 - **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
 - **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
 - [x] Server and MCP: `search_transactions` and `search_expenses` filter by date, direction, project and category (with `none`), take a `pending` scope, match the customer, and return currency, review, kept-out and split state; tenant isolation test (migration `20261011010000`, decision [0140](../decisions/0140-search-filters.md)). Plan: the project's plans/flow-323-search.md.
-- [ ] Mockup in the design thread (lean: a search icon on Home and Projects; FLOW-402 is this screen opened with the project filter), owner approval on a card.
+- [x] Mockup in the design thread, owner approval on a card (2026-10-08). **Owner picked A:** a search icon on the Home and Projects bars opens the screen; the search field and filter chips sit at the bottom, just above the keyboard, and the results list fills the space above them. The icon is a plain thin-stroke outline magnifier (no emoji, no filled glyph), like a bank app's search. Chevrons are SVG icons so right-to-left text never flips them: Back points right, "more" points left. Rows reuse the review list's statement rows with month dividers, tint the matched text, and say when a line waits for review, is split or is kept out of the P&L; a count line totals what is shown. FLOW-402 is this screen opened from the project page's "כל התנועות" with the project chip set. Mockup: the project's plans/flow-323-search-mockup.html.
 - [ ] Screen in a UI lane, reading `search_transactions`.
 
 <a id="flow-324"></a>
@@ -968,15 +968,22 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-702"></a>
 ### FLOW-702 · Jev auto mode
-- **Type:** PLAN FIRST · **Status:** on-hold · **Depends on:** FLOW-701
+- **Type:** PLAN FIRST · **Status:** ready to plan (owner's go 2026-10-08: plan card after FLOW-703, dev lane 2; build waits on the plan's approval) · **Depends on:** FLOW-703
 - **What:** When the mode is `auto` and confidence is at or above the threshold, pre-fill the tag marked as AI and undoable in one tap; anomalies above a level always go to review; the toggle is the kill switch. Needs atomic allocation writes first. Show the threshold as a percent choice only in auto mode.
 - **Acceptance:** threshold edge tests; undo restores; audit trail.
 
 <a id="flow-703"></a>
 ### FLOW-703 · Jev corrections write-back
-- **Type:** SMALL CYCLE · **Status:** on-hold (with FLOW-701) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go 2026-10-08) · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
+- [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0139](../decisions/0139-jev-corrections.md)).
+- [x] Auto prefill in one SQL call, `jev_prefill` (#177).
+- [x] `approve_split_review(review, category)`: set the category and approve a split line in one call (#177).
+- [x] A `none` project answer, never pre-filled, and the overhead project labelled (#177).
+- [x] Finished projects offered on lines dated on or before their last line (#177).
+- [ ] #177 review nits (fold into FLOW-702's server PR): `jev_prefill` checks a finished project's date in SQL too; a line filed to the overhead project counts as a `no_project` match; the two-argument `approve_split_review` refuses an income or hidden category; drop the unused `PrefillWrite.allocation` and `categorySuggested`; decide whether a prefill sets `pnl_role` (a prefilled line stays unassigned until approved).
+- [ ] App (UI lane): the change sheet seeded with a Jev guess starts with remember off, with a test; the split approve calls `approve_split_review(p_id, p_category_id)` instead of two calls; show `no_project` on the card.
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups
