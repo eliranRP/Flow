@@ -14,10 +14,11 @@ import { useAuth } from "../auth";
 import { useHoldWrites, useIsViewer, useWriteGate, ViewerNote, ViewerScope } from "../use-is-viewer";
 import { addTriggerRef } from "../add-trigger";
 import { getSupabase } from "../lib/supabase";
-import { periodFromSearch, periodLabel, periodPhrase, spansMonths } from "../period";
+import { allTime, periodFromSearch, periodLabel, periodPhrase } from "../period";
 import { unpaidIsMarked, unpaidTotals } from "../unpaid";
 import { useProjectPeriod, withPeriodSearch } from "../project-period";
 import { PeriodBar } from "../ui/period-bar";
+import { PeriodSwipe } from "../ui/period-swipe";
 import { profitMonthsSummary } from "./profit-months";
 import { keepPreview, useFlowSearch, useHomePreview, usePreviewSearch, type HomePreview } from "../preview";
 import { screenPhase, type ScreenPhase } from "../query-phase";
@@ -69,6 +70,7 @@ import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-mete
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { useSyncSettled } from "../use-sync-settled";
 import { invokeEdge } from "../edge";
+import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { mergeFailureText, pnlFailureText } from "../category-copy";
@@ -654,7 +656,8 @@ export function ProjectDetailScreen({
   // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
   const [period, setPeriod] = useProjectPeriod();
   const detail = useProjectQuery(sample ? "" : projectId, period);
-  const months = useProfitMonthsQuery(sample || !spansMonths(period) ? "" : projectId, period);
+  // FLOW-337: the "לפי חודש" row counts the whole project, as its page lists it.
+  const months = useProfitMonthsQuery(sample ? "" : projectId, allTime());
   const preview = useHomePreview();
   const companyCurrency = useCompanyCurrency();
   const blocked = useBlockedPreview();
@@ -710,6 +713,7 @@ export function ProjectDetailScreen({
   // A loss is named in the label: red on the violet band does not read (DESIGN-RULES 3.5).
   const bandLoss = singleCurrency && (profitRows[0]?.profit ?? 0n) < 0n;
   const periodWords = periodPhrase(period, undefined, "project");
+  const stateLine = projectStateLine(project);
   const periodQuery = withPeriodSearch(search, period);
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -727,43 +731,69 @@ export function ProjectDetailScreen({
         ) : null}
         trailing={holdWrites ? <ReservedMenuSlot /> : <ProjectMenu projectId={project.id} name={project.name} budget={project.budget_agorot ?? null} finished={project.status === "finished"} />}
       >
-        <BandHero>
+        <BandHero className="ui-band-hero-project">
           <FocusTitle className="t-band-title">{project.name}</FocusTitle>
-          <p className="t-label">{project.state_label ?? (project.status === "finished" ? "הסתיים" : "פעיל")}</p>
-          <PeriodBar period={period} onChange={setPeriod} scope="project" />
-          <p className="ui-band-label t-label ui-project-period-label">
-            {bandLoss ? "הפסד" : "רווח"} {periodWords}
-            {marginShown == null ? null : (
-              <>
-                {" · רווחיות "}
-                <bdi dir="ltr">{marginShown}</bdi>
-              </>
-            )}
-          </p>
-          <div className="t-display ui-project-profits">
-            {profitRows.map(({ row, profit: rowProfit }) => (
-              <p key={row.currency}>
-                <BigNumber agorot={rowProfit} currency={row.currency} loss={rowProfit < 0n} />
-              </p>
+          {/* FLOW-335: an active project says nothing here; only another state takes the line. */}
+          {stateLine == null ? null : <p className="t-label">{stateLine}</p>}
+          <PeriodBar period={period} onChange={setPeriod} scope="project" toDateHint={false} />
+          {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0147). */}
+          <PeriodSwipe period={period} onChange={setPeriod}>
+            <p className="ui-band-label t-label ui-project-period-label">
+              {bandLoss ? "הפסד" : "רווח"} {periodWords}
+              {marginShown == null ? null : (
+                <>
+                  {" · רווחיות "}
+                  <bdi dir="ltr">{marginShown}</bdi>
+                </>
+              )}
+            </p>
+            <div className="t-display ui-project-profits">
+              {profitRows.map(({ row, profit: rowProfit }) => (
+                <p key={row.currency}>
+                  <BigNumber agorot={rowProfit} currency={row.currency} loss={rowProfit < 0n} />
+                </p>
+              ))}
+            </div>
+            {currencyRows.map((row) => (
+              <BandFigures
+                key={row.currency}
+                income={formatAmountText(row.income_minor, row.currency)}
+                expense={formatAmountText(projectExpenseMinor(row), row.currency)}
+              />
             ))}
-          </div>
-          {currencyRows.map((row) => (
-            <BandFigures
-              key={row.currency}
-              income={formatAmountText(row.income_minor, row.currency)}
-              expense={formatAmountText(projectExpenseMinor(row), row.currency)}
-            />
-          ))}
+          </PeriodSwipe>
         </BandHero>
       </TopBand>
-      {spansMonths(period) ? (
-        <Banner
-          to={`/projects/${project.id}/months${periodQuery}`}
+      {/* FLOW-337: "לפי חודש" lists every month of the project, whatever the band's period. */}
+      <List className="ui-project-months">
+        <ListRow
+          variant="item"
+          href={`/projects/${project.id}/months${periodQuery}`}
           icon={<CalendarIcon />}
           title="לפי חודש"
           hint={profitMonthsSummary(sampleMonths ?? months.data ?? null, companyCurrency)}
+          chevron
         />
+      </List>
+      {project.budget_agorot != null && period.kind === "all" ? (
+        <div className="ui-page-pad ui-project-budget">
+          <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
+        </div>
       ) : null}
+      {(project.loans ?? []).length > 0 ? (
+        <>
+          <SectionHead title="הלוואות" />
+          <ProjectLoanList rows={project.loans ?? []} />
+        </>
+      ) : null}
+      <SectionHead title="הוצאות לפי קטגוריה" />
+      <ProjectCategories
+        project={project}
+        search={search}
+        categorySearch={periodQuery}
+        categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
+      />
+      {/* FLOW-335: the switch sits under the categories, so the band's first row is in reach sooner. */}
       <div className="ui-page-pad ui-project-overhead">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
@@ -787,24 +817,6 @@ export function ProjectDetailScreen({
           }}
         />
       </div>
-      {project.budget_agorot != null && period.kind === "all" ? (
-        <div className="ui-page-pad">
-          <BudgetBar label="תקציב" spentAgorot={expenses} budgetAgorot={project.budget_agorot} />
-        </div>
-      ) : null}
-      {(project.loans ?? []).length > 0 ? (
-        <>
-          <SectionHead title="הלוואות" />
-          <ProjectLoanList rows={project.loans ?? []} />
-        </>
-      ) : null}
-      <SectionHead title="הוצאות לפי קטגוריה" />
-      <ProjectCategories
-        project={project}
-        search={search}
-        categorySearch={periodQuery}
-        categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
-      />
       <SectionHead title="תנועות">
         {/* FLOW-402: every line of the project, in the search with the project chip set. */}
         <TextLink to={`/search${withParam(search, "project", project.id)}`} tone="quiet">כל התנועות</TextLink>
@@ -835,6 +847,12 @@ export function ProjectDetailScreen({
       )}
     </div>
   );
+}
+
+/** The line under the project's name: only a state other than active ("הסתיים"), else nothing. */
+export function projectStateLine(project: Pick<NonNullable<ProjectDetail>, "state_label" | "status">): string | null {
+  const label = project.state_label ?? (project.status === "finished" ? "הסתיים" : null);
+  return label == null || label === "" || label === "פעיל" ? null : label;
 }
 
 type ProjectLine = NonNullable<ProjectDetail>["transactions"][number];
@@ -2504,6 +2522,28 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       assertNoError(await supabase.rpc("set_invoice_paid", { p_id: id, p_paid: paid }));
     },
   });
+  // FLOW-335: after a mark the page offers the SUMIT sync that takes the marked rows out.
+  const anyMarked = all.some(unpaidIsMarked);
+  const sync = useSumitRefresh();
+  const sumitStatus = useSumitStatusQuery(sample == null && anyMarked);
+  const syncing = sync.isPending || sumitStatus.data?.syncing === true;
+  useSyncSettled({
+    syncing: sumitStatus.data?.syncing === true,
+    pending: sync.isPending,
+    lastSyncAt: sumitStatus.data?.last_sync_at,
+    lastError: sumitStatus.data?.last_error,
+    keys: SUMIT_REFRESH_KEYS,
+    success: REFRESH_DONE,
+  });
+  function startSync() {
+    if (holdWrites || syncing) return;
+    if (sample) {
+      toast.show({ message: REFRESH_DONE });
+      return;
+    }
+    if (blocked()) return;
+    sync.mutate();
+  }
   function setPaid(row: UnpaidRow, paid: boolean) {
     if (holdWrites || mark.isPending) return;
     if (sample) {
@@ -2564,6 +2604,20 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
           );
         })}
       </List>
+      {anyMarked && !holdWrites ? (
+        <List className="ui-unpaid-sync">
+          <ListRow
+            variant="button"
+            icon={<RefreshIcon />}
+            title={syncing ? "מרענן…" : "רענון מ־SUMIT"}
+            hint="החשבוניות שסומנו ייצאו מהרשימה אחרי הסנכרון"
+            describeHint
+            wrapHint
+            busy={syncing}
+            onClick={startSync}
+          />
+        </List>
+      ) : null}
     </ScreenState>
   );
 }
@@ -3923,8 +3977,6 @@ function onboardingFromSettings(search: string, sheet: "sumit" | "mercury"): str
   return `/onboarding?${params.toString()}`;
 }
 
-const REFRESH_DONE = "הרענון הסתיים.";
-const SUMIT_REFRESH_KEYS = ["sumit", "dashboard", "unpaid", "review", "project"];
 const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
 
 /** FLOW-501. Invented loans for `?preview=1`. */
@@ -4469,21 +4521,7 @@ export function ConnectionsScreen({
       setMercuryConnectSheet(false);
     },
   });
-  const refresh = useWrite({
-    failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
-    silent: (error) => error.message === "sync_held",
-    success: REFRESH_DONE,
-    keys: SUMIT_REFRESH_KEYS,
-    run: async () => {
-      const data = await invokeEdge("sumit-sync", { force: true });
-      if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        // Another tab or an earlier load holds the claim: show it as syncing, without a skip toast.
-        await queryClient.refetchQueries({ queryKey: ["sumit"] });
-        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["sumit"] }).some(([, d]) => d?.syncing === true);
-        throw new Error(held ? "sync_held" : "sync_skipped");
-      }
-    },
-  });
+  const refresh = useSumitRefresh();
   const disconnect = useWrite({
     failure: "לא הצלחנו לנתק.",
     success: "החיבור נותק. הספרים נשארו.",
@@ -4955,6 +4993,9 @@ export function ConnectionsScreen({
               refresh.mutate();
             }}
           />
+        </List>
+        {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
+        <List className="ui-sheet-danger-group">
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
         </List>
       </Sheet>
@@ -5026,6 +5067,9 @@ export function ConnectionsScreen({
               mercuryRefresh.mutate();
             }}
           />
+        </List>
+        {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
+        <List className="ui-sheet-danger-group">
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={mercuryDisconnectRef} onClick={() => { if (holdWrites) return; setMercuryDisconnectSheet(true); }} />
         </List>
       </Sheet>

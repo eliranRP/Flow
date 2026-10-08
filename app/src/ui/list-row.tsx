@@ -21,7 +21,7 @@ type Common = {
   href?: string;
   state?: unknown;
   action?: ReactNode;
-  /** The action sits under the row, on the end side. */
+  /** The action sits under the row, on the start side under the name (FLOW-335). */
   actionBelow?: boolean;
   icon?: ReactNode;
   chevron?: boolean;

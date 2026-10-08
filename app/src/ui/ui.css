@@ -1962,6 +1962,10 @@ a.ui-row,
   padding-bottom: var(--band-pad-bottom);
 }
 
+.ui-band:has(> .ui-preview-banner) {
+  padding-bottom: calc(var(--band-pad-bottom) + var(--space-3));
+}
+
 .ui-band-row {
   display: flex;
   align-items: center;
@@ -2157,7 +2161,8 @@ a.ui-row,
 .ui-preview-banner {
   position: absolute;
   inset-inline: var(--space-side);
-  inset-block-end: 0;
+  /* FLOW-335: --space-3 up, clear of the 28px corner curve; the band grows by as much below. */
+  inset-block-end: var(--space-3);
   margin: 0;
   padding: 0;
   text-align: start;
@@ -2690,10 +2695,11 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 .ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
 
+/* FLOW-335: an action under a row sits on the start side, under the name (Unpaid's mark). */
 .ui-row-stack {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .ui-row-action {
@@ -4634,19 +4640,24 @@ div.ui-check-row {
   margin-block-start: var(--space-4);
 }
 
+/*
+  FLOW-335: white labels on a track of 10% white pass AA (4.76:1 on the violet band, light and
+  dark alike). The old 16% track with on-band-secondary labels was 3.57:1. Never above 10%.
+*/
 .ui-seg-band {
-  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
+  background: color-mix(in srgb, var(--color-on-band) 10%, transparent);
 }
 
 .ui-seg-band .ui-seg-btn {
   flex: 1 1 auto;
   padding-inline: var(--space-2);
-  color: var(--color-on-band-secondary);
+  color: var(--color-on-band);
   font-size: var(--type-label-size);
 }
 
+/* Pressed darkens with the scrim instead of lightening, so the white label keeps AA while pressed. */
 .ui-seg-band .ui-seg-btn:active {
-  background: color-mix(in srgb, var(--color-on-band) 24%, transparent);
+  background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
 }
 
 .ui-seg-band .ui-seg-btn[aria-checked="true"] {
@@ -4722,6 +4733,22 @@ div.ui-check-row {
   background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
 }
 
+/* The ▼ after the window's name says the label opens the period sheet (FLOW-335). */
+.ui-pbar-caret {
+  display: inline-block;
+  margin-inline-start: var(--space-1);
+  color: var(--color-accent-text);
+  vertical-align: middle;
+}
+
+.ui-pbar-caret svg {
+  display: block;
+}
+
+.ui-pbar-band .ui-pbar-caret {
+  color: var(--color-on-band);
+}
+
 .ui-pbar-window {
   display: block;
   max-inline-size: 100%;
@@ -4752,14 +4779,18 @@ div.ui-check-row {
   color: var(--color-bad);
 }
 
-/* FLOW-330: one line per currency in the Unpaid total. */
-.ui-unpaid-totals bdi {
-  display: block;
+/*
+  FLOW-330: one line per currency in the Unpaid total. FLOW-335: a column that starts on the start
+  side. A block bdi with dir=ltr aligned left, to the end side of the page (regression of #199).
+*/
+.ui-unpaid-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-/* The note under the "לפי חודש" list. */
-.ui-months-note {
-  margin-block-start: var(--space-4);
+.ui-unpaid-totals bdi {
+  display: inline-block;
 }
 
 /*
@@ -4877,4 +4908,71 @@ html[data-kb="open"] .ui-search-dock {
   align-items: center;
   gap: var(--space-2);
   margin-inline-start: auto;
+}
+
+/*
+  FLOW-336 (decision 0147): the band figure steps the period with a sideways swipe. pan-y keeps
+  the page's vertical scroll with the browser; the figure follows the finger and settles back.
+*/
+.ui-pswipe {
+  min-inline-size: 0;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.ui-pswipe-on {
+  touch-action: pan-y;
+}
+
+.ui-pswipe-drag {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-pswipe {
+    transition: none;
+  }
+}
+
+/*
+  FLOW-335: the project band is shorter (mockup 02 is about 313px at 375). Under the Back bar the
+  hero starts --space-2 down, the bar and the figures sit closer, and the stepper is inset
+  --space-2 more than Back, so the "earlier" chevron does not line up under Back's.
+*/
+.ui-band-hero-project {
+  padding-top: var(--space-2);
+}
+
+.ui-band-hero-project .ui-pbar {
+  margin-block-start: var(--space-2);
+}
+
+.ui-band-hero-project .ui-pbar-step {
+  padding-inline: var(--space-2);
+}
+
+.ui-band-hero-project .ui-project-period-label {
+  margin-block: var(--space-1) 0;
+}
+
+.ui-band-hero-project .ui-band-figures {
+  padding-top: var(--space-2);
+}
+
+/* "לפי חודש" is a plain row right under the band (FLOW-335), not the tinted pending card. */
+.ui-project-months {
+  margin-block-start: var(--space-3);
+}
+
+.ui-project-budget {
+  margin-block-start: var(--space-3);
+}
+
+/* FLOW-335: the sync row under Unpaid's list, one section gap below the last invoice. */
+.ui-unpaid-sync {
+  margin-block-start: var(--space-section);
+}
+
+/* FLOW-335: "ניתוק" in its own group after a section gap, away from "רענון עכשיו". */
+.ui-sheet-danger-group {
+  margin-block-start: var(--space-section);
 }

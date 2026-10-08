@@ -58,7 +58,7 @@ describe("Home hero", () => {
     expect(style.paddingInlineEnd === "0px" || style.paddingInlineEnd === "0").toBe(true);
     expect(style.textAlign === "start" || style.textAlign === "right").toBe(true);
     expect(screen.getByRole("heading", { name: "₪39,164" })).toBeInTheDocument();
-    expect(screen.getByText(heroExplanation(thisMonth()))).toBeInTheDocument();
+    expect(screen.getByText(heroExplanation())).toBeInTheDocument();
     const income = screen.getByText("נכנס");
     const spent = screen.getByText("יצא");
     expect(income.closest(".ui-band")).toBeNull();
@@ -111,7 +111,7 @@ describe("Home hero", () => {
     renderHome(books({ income_agorot: 10_000_000n, expense_agorot: 20_000_000n, net_profit_agorot: -10_000_000n }), period);
     expect(screen.getByText(`הפסד ${periodPhrase(period)}`)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "−₪100,000" })).toBeInTheDocument();
-    expect(screen.getByText(heroExplanation(period))).toBeInTheDocument();
+    expect(screen.getByText(heroExplanation())).toBeInTheDocument();
   });
 });
 

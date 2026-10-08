@@ -1,7 +1,7 @@
 # One period bar on Home and on each project
 
 **Date:** 2026-10-08
-**Status:** Accepted (owner approved option A of the profit-by-period plan, 2026-10-08; the owner asked that the stepper arrows point outward)
+**Status:** Accepted (owner approved option A of the profit-by-period plan, 2026-10-08; the owner asked that the stepper arrows point outward). Amended by [0147](0147-period-swipe-and-whole-project-months.md): a swipe on the band figure steps the period, and "לפי חודש" lists the whole project.
 
 ## Context
 
