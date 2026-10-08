@@ -3,7 +3,6 @@ import { Button } from "./button";
 import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
 import { TextLink } from "./text-link";
-import "./confirm-sheet.css";
 
 type ConfirmSheetProps = {
   open: boolean;

@@ -13,7 +13,6 @@ import { LockIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
-import "./category-sheet.css";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
 import { KEPT_OUT } from "./screen-shared";
 
