@@ -6,13 +6,15 @@ import { getSupabase } from "../lib/supabase";
 import { unpaidIsMarked, unpaidTotals } from "../unpaid";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { useUnpaidQuery } from "../use-books";
+import { useSumitStatusQuery, useUnpaidQuery } from "../use-books";
+import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
+import { useSyncSettled } from "../use-sync-settled";
 import { useHeldOrder } from "../list-hold";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { Button } from "../ui/button";
 import { formatDayMonth, israelToday } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
-import { CheckIcon, ReviewIcon } from "../ui/icons";
+import { CheckIcon, RefreshIcon, ReviewIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenState } from "../ui/screen-state";
 import { useToast } from "../ui/toast";
@@ -65,6 +67,28 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
       assertNoError(await supabase.rpc("set_invoice_paid", { p_id: id, p_paid: paid }));
     },
   });
+  // FLOW-335: after a mark the page offers the SUMIT sync that takes the marked rows out.
+  const anyMarked = all.some(unpaidIsMarked);
+  const sync = useSumitRefresh();
+  const sumitStatus = useSumitStatusQuery(sample == null && anyMarked);
+  const syncing = sync.isPending || sumitStatus.data?.syncing === true;
+  useSyncSettled({
+    syncing: sumitStatus.data?.syncing === true,
+    pending: sync.isPending,
+    lastSyncAt: sumitStatus.data?.last_sync_at,
+    lastError: sumitStatus.data?.last_error,
+    keys: SUMIT_REFRESH_KEYS,
+    success: REFRESH_DONE,
+  });
+  function startSync() {
+    if (holdWrites || syncing) return;
+    if (sample) {
+      toast.show({ message: REFRESH_DONE });
+      return;
+    }
+    if (blocked()) return;
+    sync.mutate();
+  }
   function setPaid(row: UnpaidRow, paid: boolean) {
     if (holdWrites || mark.isPending) return;
     if (sample) {
@@ -125,6 +149,20 @@ export function UnpaidScreen({ sample }: { sample?: UnpaidRow[] } = {}) {
           );
         })}
       </List>
+      {anyMarked && !holdWrites ? (
+        <List className="ui-unpaid-sync">
+          <ListRow
+            variant="button"
+            icon={<RefreshIcon />}
+            title={syncing ? "מרענן…" : "רענון מ־SUMIT"}
+            hint="החשבוניות שסומנו ייצאו מהרשימה אחרי הסנכרון"
+            describeHint
+            wrapHint
+            busy={syncing}
+            onClick={startSync}
+          />
+        </List>
+      ) : null}
     </ScreenState>
   );
 }
