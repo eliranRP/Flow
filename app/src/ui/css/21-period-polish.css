@@ -1,6 +1,6 @@
 /*
   FLOW-335 + FLOW-336 + FLOW-337 (decision 0148): period bar, project band, by-month and Unpaid
-  polish. Loaded right after ui.css, so a rule here overrides the ui.css block it names.
+  polish. Loaded after the other area files, so a rule here overrides the block it names.
 */
 
 /* The ▼ after the window's name says the label opens the period sheet (FLOW-335). */
@@ -19,12 +19,12 @@
   color: var(--color-on-band);
 }
 
-/* FLOW-335: an action under a row sits on the start side, under the name (Unpaid's mark). Overrides ui.css .ui-row-stack. */
+/* FLOW-335: an action under a row sits on the start side, under the name (Unpaid's mark). Overrides .ui-row-stack in 09-sign-in-project.css. */
 .ui-row-stack {
   align-items: flex-start;
 }
 
-/* FLOW-335: the preview tag sits --space-3 up, clear of the 28px corner curve; the band grows by as much. Overrides ui.css .ui-preview-banner. */
+/* FLOW-335: the preview tag sits --space-3 up, clear of the 28px corner curve; the band grows by as much. Overrides .ui-preview-banner in 07-band-home.css. */
 .ui-preview-banner {
   inset-block-end: var(--space-3);
 }

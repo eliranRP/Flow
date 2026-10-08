@@ -1,0 +1,297 @@
+.ui-split {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-block-end: calc(var(--split-foot) + var(--space-2));
+}
+
+/* FLOW-328: the 24px side gutter of every other screen. */
+.ui-split .ui-page {
+  padding-inline: var(--space-side);
+}
+
+.ui-split-body {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ui-split-body:disabled {
+  opacity: 1;
+}
+
+.ui-split-detail .ui-split-link {
+  margin-top: 0;
+}
+
+.ui-split-card .ui-row-title {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* The amount starts on the start side, under the title (FLOW-328). */
+.ui-split-amount {
+  margin-top: var(--space-6);
+  padding-inline: var(--space-side);
+  text-align: start;
+}
+
+.ui-split-meta {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-split-question {
+  margin: var(--space-8) 0 0;
+  padding-inline: var(--space-side);
+  text-align: start;
+}
+
+.ui-split-card {
+  margin: var(--space-3) var(--space-side) 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* No hairlines between the choices; rows are separated by their padding (FLOW-328, decision 0120).
+   The inline padding stays: in dark the card's surface shows, and the radios must not touch its edge. */
+.ui-split-card .ui-radio-row,
+.ui-split-card .ui-check-row,
+.ui-split-card .ui-split-manual {
+  padding-inline: var(--space-4);
+  border-bottom: 0;
+}
+
+.ui-split-card .ui-radio-row {
+  min-block-size: 64px;
+}
+
+.ui-split-card .ui-row-title {
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-split-detail {
+  margin-top: var(--space-4);
+}
+
+.ui-split-link {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+.ui-split-bad {
+  color: var(--color-bad);
+}
+
+.ui-split-method {
+  margin-top: var(--space-6);
+}
+
+.ui-split-method .ui-seg-btn {
+  padding-inline: var(--space-1);
+}
+
+.ui-split-scope {
+  margin-top: var(--space-4);
+}
+
+.ui-chip-scope {
+  block-size: auto;
+  height: auto;
+  max-inline-size: 100%;
+  min-block-size: var(--size-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  white-space: normal;
+}
+
+.ui-chip-scope .ui-chip-label {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.ui-split-note {
+  margin-top: var(--space-4);
+}
+
+.ui-split-list {
+  margin-top: var(--space-4);
+}
+
+.ui-split-list .ui-row-title {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-split-share {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-split-figure {
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-title-3-weight);
+}
+
+.ui-split-remain .ui-figure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  inline-size: 100%;
+  margin: 0;
+}
+
+.ui-split-balanced .ui-figure bdi {
+  color: var(--color-good);
+}
+
+.ui-radio-desc {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line);
+  white-space: normal;
+}
+
+.ui-radio-start {
+  gap: var(--space-3);
+}
+
+div.ui-check-row {
+  cursor: default;
+}
+
+.ui-check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  inline-size: 100%;
+  min-block-size: 56px;
+  padding-block: var(--space-2);
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: transparent;
+  color: inherit;
+  text-align: start;
+}
+
+.ui-check-row .ui-row-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-check-value {
+  flex: none;
+  color: var(--color-text);
+  font-size: var(--type-body-size);
+}
+
+.ui-check-value-idle {
+  color: var(--color-text-secondary);
+}
+
+.ui-percent-field {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 96px;
+  max-inline-size: 100%;
+}
+
+.ui-percent-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  inline-size: auto;
+  width: auto;
+  min-inline-size: 96px;
+  block-size: var(--control-height);
+  height: var(--control-height);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-input);
+  font-size: var(--type-title-3-size);
+}
+
+.ui-percent-suffix {
+  inset-inline-end: var(--space-3);
+  color: var(--color-text-secondary);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-percent-field .ui-money-field input {
+  padding-inline-end: 1.75em;
+  font-size: inherit;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ui-split-manual {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 64px;
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-line);
+  cursor: pointer;
+}
+
+.ui-split-manual .ui-row-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-split-manual-end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.ui-split-manual-money {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-split-remain {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.ui-split-summary {
+  margin: 0;
+  text-align: center;
+}
+
+.ui-split-cta {
+  position: fixed;
+  z-index: 15;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-5) calc(var(--safe-bottom) + var(--space-4));
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+}

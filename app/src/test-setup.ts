@@ -5,7 +5,6 @@ import { resetSheetHistoryLock } from "./ui/back";
 import { pinReviewLine } from "./review-pin";
 import "../../design/system/implementation-tokens.css";
 import "./ui/ui.css";
-import "./ui/period-polish.css";
 
 if (typeof globalThis.ResizeObserver === "undefined") {
   globalThis.ResizeObserver = class {

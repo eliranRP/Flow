@@ -1,0 +1,253 @@
+.ui-signin {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--content-max);
+  padding-inline: var(--space-side);
+  background: var(--color-bg);
+}
+
+.ui-signin-brand {
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--signin-brand-pad));
+}
+
+.ui-signin-tagline {
+  margin-top: var(--label-gap);
+  font-size: var(--type-title-3-size);
+  line-height: var(--type-title-3-line);
+  font-weight: var(--type-body-weight);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.ui-signin-sheet {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(var(--space-8), env(safe-area-inset-bottom, 0px));
+}
+
+.ui-signin-heading {
+  margin-top: var(--space-6);
+}
+
+.ui-signin-button {
+  margin-top: var(--space-5);
+}
+
+.ui-signin-help {
+  margin-top: var(--space-3);
+  text-align: center;
+}
+
+.ui-signin-help a,
+.ui-signin-privacy a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+}
+
+/* The 44px target stays. The negative margin keeps the failed sign-in ui-stack on er-04. */
+.ui-signin-help a,
+.ui-signin-privacy a {
+  margin-block: calc((1lh - var(--touch-min)) / 2);
+}
+
+.ui-signin-privacy {
+  margin-top: var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.ui-gsi-button {
+  display: flex;
+  height: var(--control-height);
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-gsi-border);
+  border-radius: var(--radius-chip);
+  background: var(--color-gsi-bg);
+  color: var(--color-gsi-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  transition: background-color var(--dur-press);
+}
+
+.ui-gsi-button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 999px rgb(var(--gsi-ink) / var(--gsi-press));
+}
+
+.ui-gsi-dis:disabled {
+  border-color: rgb(var(--gsi-ink) / var(--gsi-press));
+  background: color-mix(in srgb, var(--color-gsi-bg) var(--gsi-disabled), transparent);
+  color: rgb(var(--gsi-ink) / var(--gsi-disabled));
+  opacity: 1;
+}
+
+.ui-gsi-mark {
+  display: block;
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: none;
+}
+
+.ui-gsi-mark-dim {
+  opacity: var(--gsi-disabled);
+}
+
+.ui-skeleton-bar,
+.ui-skeleton-bar-band {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--color-skeleton);
+}
+
+.ui-skeleton-bar-band {
+  background: var(--color-skeleton-band);
+}
+
+.ui-skeleton-bar::after,
+.ui-skeleton-bar-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-skeleton-shine), transparent);
+  animation: flow-shimmer var(--dur-shimmer) linear infinite;
+}
+
+.ui-skeleton-bar-band::after {
+  background: linear-gradient(90deg, transparent, var(--color-skeleton-band-shine), transparent);
+}
+
+@keyframes flow-shimmer {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton-bar::after,
+  .ui-skeleton-bar-band::after {
+    animation: none;
+  }
+}
+
+.ui-skeleton-bar,
+.ui-skeleton-bar-band {
+  display: block;
+  flex: none;
+  max-inline-size: 100%;
+}
+
+.ui-skel-copy {
+  display: flex;
+  min-inline-size: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-skel-label { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+.ui-skel-hero-num { inline-size: var(--skel-lg); block-size: var(--skel-hero); border-radius: var(--radius-input); }
+.ui-skel-explain { inline-size: min(100%, 280px); block-size: var(--skel-block-lg); }
+.ui-skel-flow-label { inline-size: var(--skel-sm); block-size: var(--skel-block-lg); }
+.ui-skel-figure { inline-size: var(--skel-md); block-size: var(--skel-block-lg); }
+
+/* Project loading only. These boxes match the loaded project band. */
+.ui-project-skel {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.ui-skel-project-title,
+.ui-skel-project-period {
+  display: flex;
+  align-items: flex-start;
+}
+
+.ui-skel-project-title {
+  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line));
+}
+
+.ui-skel-project-title-bar {
+  inline-size: var(--skel-md);
+  block-size: calc(var(--type-title-2-size) * var(--type-title-2-line) - var(--space-1));
+}
+
+.ui-skel-project-period {
+  block-size: calc(var(--type-label-size) * var(--type-label-line));
+}
+
+.ui-skel-project-period-bar {
+  inline-size: var(--skel-lg);
+  block-size: calc(var(--type-label-size) * var(--type-label-line) - var(--space-1));
+}
+
+.ui-skel-project-label {
+  inline-size: var(--skel-md);
+  block-size: calc(var(--type-label-size) * var(--type-label-line));
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.ui-skel-project-num {
+  inline-size: var(--skel-lg);
+  block-size: calc(var(--type-display-size) * var(--type-display-line));
+  border-radius: var(--radius-input);
+}
+
+.ui-skel-project-figure {
+  inline-size: var(--skel-md);
+  block-size: calc(var(--type-label-size) * var(--type-label-line));
+}
+.ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
+
+.ui-row-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-row-action {
+  padding-bottom: var(--space-2);
+}
+
+.ui-row-meta {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-row-chevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.ui-meter-row {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-meter-row .ui-bar {
+  flex: 1;
+}

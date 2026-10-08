@@ -1,0 +1,36 @@
+/*
+  Slim banner: one line, the hint (לרשימה ›) after the title instead of under it. When the two
+  don't fit (a 320 phone, a long count), the hint wraps under the title rather than cutting it. On לאישור it
+  frees the room the card needs above the pinned action bar on a 375×667 phone (owner's pick,
+  2026-10-08).
+*/
+.ui-banner.ui-banner-slim {
+  gap: var(--space-2);
+  padding-block: 0;
+  padding-inline: var(--space-3) var(--space-1);
+}
+
+.ui-banner.ui-banner-slim .ui-row-text {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  padding-block: var(--space-1);
+}
+
+.ui-banner.ui-banner-slim .ui-row-title {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  -webkit-line-clamp: 2;
+}
+
+/* The hint is only the link, which cuts its own label: no clip box here, so its focus ring shows. */
+.ui-banner.ui-banner-slim .ui-row-hint {
+  display: block;
+  flex: none;
+  margin: 0;
+  max-inline-size: 100%;
+  overflow: visible;
+}

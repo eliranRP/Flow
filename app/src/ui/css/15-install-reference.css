@@ -1,0 +1,409 @@
+.ui-ref {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding-block-end: calc(var(--control-height) + var(--space-4) + var(--space-4) + var(--safe-bottom));
+}
+
+.ui-ref-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--topbar-height);
+  padding-inline: var(--space-3);
+}
+
+.ui-ref-copy {
+  padding-inline: var(--space-side);
+  text-align: start;
+}
+
+.ui-ref-top .t-hint {
+  margin-inline-start: auto;
+}
+
+.ui-ref-copy .t-title-1,
+.ui-ref-copy .t-label {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
+.ui-ref-icon {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.ui-app-icon {
+  display: grid;
+  place-items: center;
+  background: var(--color-band);
+  color: var(--color-on-band);
+}
+
+.ui-app-icon svg {
+  inline-size: 50%;
+  block-size: 50%;
+}
+
+.ui-app-icon-install {
+  inline-size: var(--icon-app);
+  block-size: var(--icon-app);
+  border-radius: var(--radius-app);
+}
+
+.ui-app-icon-note {
+  inline-size: var(--icon-note);
+  block-size: var(--icon-note);
+  border-radius: var(--radius-note);
+  flex: none;
+}
+
+.ui-ref-body {
+  padding-inline: var(--space-side);
+}
+
+.ui-benefit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding-block: var(--space-3);
+}
+
+.ui-benefit-icon,
+.ui-step-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--radius-input);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-benefit-icon {
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+}
+
+.ui-step-tile {
+  inline-size: var(--size-chip);
+  block-size: var(--size-chip);
+}
+
+.ui-install {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.ui-install-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--space-4);
+}
+
+.ui-install-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: var(--topbar-height);
+  padding-inline: var(--space-3);
+}
+
+.ui-install-top .t-hint {
+  margin-inline-start: auto;
+}
+
+.ui-install-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--space-10);
+  padding-inline: var(--space-side);
+  text-align: center;
+}
+
+.ui-install-hero .t-title-1 {
+  margin-top: var(--space-6);
+  white-space: nowrap;
+}
+
+.ui-install-sub {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line);
+  text-align: center;
+}
+
+.ui-install-benefits,
+.ui-install-steps {
+  margin-top: var(--space-10);
+  padding-inline: var(--space-side);
+}
+
+.ui-install-benefits .ui-row-icon {
+  color: var(--color-accent-text);
+}
+
+.ui-install-benefits .ui-row-title {
+  font-weight: var(--type-title-3-weight);
+  white-space: normal;
+}
+
+.ui-install-steps {
+  margin-bottom: 0;
+  padding-inline: var(--space-side);
+  list-style: none;
+}
+
+/* No hairlines between the steps, and each number circle is centred on its text (FLOW-328). */
+.ui-install-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding-block: var(--space-3);
+}
+
+.ui-install-num {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: calc(var(--touch-min) - var(--space-4));
+  block-size: calc(var(--touch-min) - var(--space-4));
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-title-3-weight);
+  font-variant-numeric: var(--font-numerals);
+}
+
+.ui-install-step-text {
+  min-inline-size: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-line);
+}
+
+.ui-install-step-text strong {
+  font-weight: var(--type-title-3-weight);
+}
+
+.ui-install-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ui-install-tile {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--space-8);
+  block-size: var(--space-8);
+  border-radius: var(--radius-note);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-install-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-hint-size);
+  font-weight: var(--type-hint-weight);
+  line-height: var(--type-hint-line);
+  text-align: center;
+}
+
+.ui-install-hint svg {
+  color: var(--color-accent-text);
+}
+
+.ui-install-cta {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-side) calc(var(--safe-bottom) + var(--space-4));
+  background: var(--color-bg);
+}
+
+.ui-install-later {
+  height: var(--touch-min);
+  min-height: var(--touch-min);
+}
+
+.ui-ref-cta {
+  position: fixed;
+  z-index: 15;
+  inset-inline: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-side) calc(var(--safe-bottom) + var(--space-4));
+  background: var(--color-bg);
+}
+
+.ui-doc-tile {
+  display: grid;
+  inline-size: var(--doc-tile-w);
+  block-size: var(--doc-tile-h);
+  place-items: center;
+  border-radius: var(--radius-button);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  color: var(--color-text);
+}
+
+.ui-invoice-sheet {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  inline-size: var(--invoice-w);
+  block-size: var(--invoice-h);
+  flex-direction: column;
+  margin-inline: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.ui-invoice-scan {
+  position: absolute;
+  inset-inline: var(--space-3);
+  inset-block-start: 42%;
+  block-size: 2px;
+  background: var(--color-accent);
+}
+
+.ui-invoice-sheet .ui-skeleton-bar {
+  margin-top: var(--space-2);
+}
+
+.ui-field-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.ui-field-line > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-accent-text);
+}
+
+.ui-match-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.ui-lock {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: var(--space-8) var(--space-side) var(--space-8);
+  background: var(--color-tint);
+}
+
+.ui-lock-clock {
+  margin-top: 8vh;
+  text-align: center;
+}
+
+.ui-lock-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+
+.ui-lock .ui-app-icon-note {
+  inline-size: 48px;
+  block-size: 48px;
+}
+
+.ui-lock-time {
+  font-size: var(--lock-time);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.ui-lock-card {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.ui-lock-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.ui-lock-copy {
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.ui-lock-example {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  text-align: center;
+}
+
+.ui-lock-home {
+  inline-size: 134px;
+  block-size: 5px;
+  margin-block-start: var(--space-4);
+  margin-inline: auto;
+  border-radius: 999px;
+  background: var(--color-text);
+}
