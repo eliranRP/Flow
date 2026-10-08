@@ -1,0 +1,284 @@
+.ui-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--content-max);
+  height: var(--tabbar-height);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-tabbar-slots {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  height: var(--tabbar-content);
+  padding-top: var(--space-2);
+}
+
+button.ui-tab-slot {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ui-tab-slot {
+  display: flex;
+  width: var(--tab-slot);
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  min-height: var(--touch-min);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tab-icon-gap);
+  overflow: visible;
+  color: var(--color-text-muted);
+  font-size: var(--type-micro-size);
+  line-height: var(--type-micro-line);
+  font-weight: var(--type-micro-weight);
+  text-decoration: none;
+  border-radius: var(--radius-chip);
+  transition: background-color var(--dur-press), color var(--dur-press);
+}
+
+.ui-tab-slot[aria-current="page"] {
+  color: var(--color-accent-text);
+}
+
+.ui-tab-slot:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-tab-slot-fab {
+  background: transparent;
+}
+
+.ui-tab-slot-fab:active {
+  background: transparent;
+}
+
+.ui-fab {
+  display: grid;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  place-items: center;
+  border-radius: var(--radius-fab);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  transform: none;
+  transition: background-color var(--dur-press);
+}
+
+.ui-tab-slot-fab:active .ui-fab,
+.ui-fab-pressed {
+  background: var(--color-accent-pressed);
+  transform: none;
+}
+
+.ui-tab-label {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-empty-state {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-6) var(--space-10);
+  text-align: center;
+}
+
+.ui-empty-icon {
+  display: grid;
+  width: var(--empty-icon);
+  height: var(--empty-icon);
+  place-items: center;
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-text-muted);
+}
+
+.ui-empty-title {
+  max-inline-size: min(100%, var(--empty-measure));
+  margin: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-empty-line {
+  max-inline-size: min(100%, var(--empty-measure));
+  margin-top: var(--label-gap);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: 400;
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.ui-empty-action {
+  width: 100%;
+  max-width: 100%;
+  margin-top: var(--space-6);
+}
+
+/* Empty and error states share the standard 44px button shape, not the 36px pill (FLOW-328, ds-7). */
+.ui-empty-action .ui-btn-pill {
+  height: auto;
+  min-height: var(--touch-min);
+  border-radius: var(--radius-button);
+}
+
+.ui-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  background: var(--color-scrim);
+  /* Duration is set without a property, which would otherwise animate z-index. */
+  transition-property: opacity;
+}
+
+.ui-sheet-panel {
+  position: fixed;
+  z-index: 31;
+  display: flex;
+  flex-direction: column;
+  inset-inline: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: var(--content-max);
+  max-block-size: calc(var(--vvh, 100dvh) - var(--sheet-gap));
+  max-height: calc(var(--vvh, 100dvh) - var(--sheet-gap));
+  margin-inline: auto;
+  overflow: hidden;
+  padding: var(--space-2) 0 calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  outline: none;
+}
+
+/* A dialog focused for the screen reader is not a control, so it never draws a ring. */
+.ui-sheet-panel:focus,
+.ui-sheet-panel:focus-visible {
+  outline: none;
+}
+
+/*
+  §2.7, pinned to Vaul 1.1.2. Its injected sheet is 500ms, and these selectors
+  outrank it with !important and :has(). Drag release writes an inline transition.
+  While .vaul-dragging is set the finger owns the transform, so the override stays off.
+*/
+[data-vaul-drawer][data-state="open"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
+  animation-duration: var(--dur-sheet-in);
+  animation-timing-function: var(--ease-standard);
+}
+
+[data-vaul-drawer][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
+  animation-duration: var(--dur-sheet-out);
+  animation-timing-function: var(--ease-exit);
+}
+
+[data-vaul-drawer][data-state="open"]:not(.vaul-dragging) {
+  transition-duration: var(--dur-sheet-in) !important;
+  transition-timing-function: var(--ease-standard) !important;
+}
+
+[data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
+body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
+  transition-duration: var(--dur-sheet-out) !important;
+  transition-timing-function: var(--ease-exit) !important;
+}
+
+body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
+  transition-duration: var(--dur-sheet-in) !important;
+  transition-timing-function: var(--ease-standard) !important;
+}
+
+.ui-sheet-grab {
+  width: var(--grab-width);
+  height: var(--grab-height);
+  margin: 0 auto var(--space-3);
+  border-radius: var(--grab-radius);
+  background: var(--color-control-off);
+}
+
+.ui-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-1) var(--space-side) 0;
+}
+
+.ui-band-hero .t-title-2,
+.ui-band-hero .t-band-title,
+.ui-notice-title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-sheet-head .t-title-2 {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-sheet-hint {
+  min-width: 0;
+  padding: var(--space-2) var(--space-side) 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
+}
+
+.ui-notice-icon {
+  display: grid;
+  padding-top: var(--note-icon-nudge);
+  color: var(--color-accent-text);
+}
+
+.ui-notice-icon-bad {
+  color: var(--color-bad);
+}
+
+.ui-notice-title {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ui-notice-body {
+  margin-top: var(--note-body-gap);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  color: var(--color-text-secondary);
+}

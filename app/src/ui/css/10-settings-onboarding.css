@@ -1,0 +1,365 @@
+.ui-split-remain {
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--color-line);
+  padding-top: var(--space-3);
+}
+
+.ui-step-no {
+  display: grid;
+  width: var(--switch-track-h);
+  height: var(--switch-track-h);
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-settings-kicker {
+  margin-block: var(--space-section) var(--space-1);
+  padding-inline: var(--space-side);
+  color: var(--color-text-muted);
+}
+
+.ui-row-danger {
+  color: var(--color-bad);
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  min-height: var(--touch-min);
+}
+
+.ui-poc {
+  padding: var(--space-6) var(--space-side) var(--space-8);
+  color: var(--color-text-muted);
+}
+
+.ui-grip {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-switch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding-block: var(--space-2);
+  cursor: pointer;
+}
+
+.ui-switch-copy {
+  display: flex;
+  min-inline-size: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* The switch label reads like a row title, 17/400 (FLOW-326, decision 0120 option C). */
+.ui-switch-label {
+  overflow: hidden;
+  font-size: var(--type-title-3-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-title-3-line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-switch {
+  position: relative;
+  display: block;
+  width: var(--size-switch);
+  height: var(--switch-track-h);
+  flex: none;
+  border-radius: var(--radius-chip);
+  background: var(--color-control-border);
+}
+
+.ui-switch i {
+  position: absolute;
+  top: var(--switch-inset);
+  inset-inline-start: var(--switch-inset);
+  width: var(--switch-knob);
+  height: var(--switch-knob);
+  border-radius: var(--radius-chip);
+  background: var(--color-knob);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 16%);
+}
+
+.ui-switch-row input {
+  position: absolute;
+  z-index: 1;
+  width: var(--size-switch);
+  height: var(--switch-track-h);
+  margin: 0;
+  opacity: 0;
+  inset-inline-end: 0;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.ui-switch-row input:disabled {
+  cursor: not-allowed;
+}
+
+.ui-switch-row input:checked + .ui-switch {
+  background: var(--color-accent);
+}
+
+.ui-switch-row input:checked + .ui-switch i {
+  inset-inline-start: auto;
+  inset-inline-end: var(--switch-inset);
+  background: var(--color-knob-on);
+}
+
+.ui-switch-copy .t-hint {
+  min-inline-size: 0;
+  color: var(--color-text-muted);
+}
+
+.ui-shared-note {
+  color: var(--color-text-muted);
+}
+
+.ui-remember-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  min-inline-size: 0;
+  gap: 0.25rem;
+}
+
+.ui-remember-supplier {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ui-remember-dest {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.ui-remember-join {
+  white-space: nowrap;
+}
+
+.ui-switch-row:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.ui-switch-row input:disabled + .ui-switch {
+  background: var(--color-disabled-bg);
+  box-shadow: inset 0 0 0 var(--stroke-strong) var(--color-control-border);
+}
+
+.ui-switch-row input:disabled:checked + .ui-switch {
+  background: color-mix(in srgb, var(--color-accent) 75%, var(--color-disabled-bg));
+  box-shadow: none;
+}
+
+.ui-switch-row input:disabled:checked + .ui-switch i {
+  background: var(--color-disabled-bg);
+}
+
+.ui-switch-row input:focus-visible + .ui-switch {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-switch-row:active:not(:has(input:disabled)) .ui-switch {
+  background: var(--color-tint-pressed);
+}
+
+/* The Jev switch uses the same row box as SUMIT: 14px pad, body title, hint line, one border. */
+.ui-row.ui-switch-row {
+  padding-block: var(--row-pad);
+  cursor: pointer;
+}
+
+.ui-jev-options {
+  padding-inline: var(--space-side);
+}
+
+/* The closed אפשרויות link is one touch row. Loading holds that height so תצוגה does not jump. */
+.ui-jev-options-reserve {
+  display: block;
+  min-block-size: var(--touch-min);
+}
+
+.ui-jev-options-hint {
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+/* At 34px (decision 0120) a one-word title and its action pill can pass 320 together; the action
+   then wraps under the title instead of clipping it. */
+.ui-page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ui-page-title-row .t-title-1 {
+  min-width: 0;
+}
+
+/* FLOW-327 r2: an inline header with Back keeps its title on the start side, next to Back
+   (FLOW-326); the action goes to the end. */
+.ui-page-inline .ui-page-title-row {
+  justify-content: flex-start;
+}
+
+.ui-page-inline .ui-page-title-row > .t-title-1 + * {
+  margin-inline-start: auto;
+}
+
+.ui-page-stacked .t-title-1 {
+  margin: 0;
+}
+
+.ui-banner .ui-row-title,
+.ui-banner .ui-row-hint,
+.ui-banner-row .ui-row-title,
+.ui-banner-row .ui-row-hint {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-banner bdi,
+.ui-banner-row bdi {
+  white-space: nowrap;
+}
+
+.ui-review-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.ui-onboard {
+  display: flex;
+  min-height: 100%;
+  flex: 1;
+  flex-direction: column;
+}
+
+.ui-onboard form {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ui-onboard .ui-btn {
+  margin-top: auto;
+}
+
+.ui-gsi-spinner {
+  width: var(--space-5);
+  height: var(--space-5);
+  border-radius: var(--radius-chip);
+  border: 2px solid var(--color-gsi-border);
+  border-top-color: var(--color-gsi-text);
+  animation: flow-spin var(--dur-shimmer) linear infinite;
+}
+
+@keyframes flow-spin {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-gsi-spinner {
+    animation: none;
+  }
+
+  /*
+    Vaul 1.1.2 does not listen for animationend. onAnimationEnd is a fixed
+    500ms timer (TRANSITIONS.DURATION). These rules only keep the motion at 1ms.
+    They repeat the open and closed selectors so they outrank the token durations,
+    which the design tokens set to 0ms.
+  */
+  :root {
+    --dur-sheet-in: 1ms;
+    --dur-sheet-out: 1ms;
+  }
+
+  [data-vaul-drawer][data-state="open"]:not(.vaul-dragging),
+  [data-vaul-drawer][data-state="closed"]:not(.vaul-dragging),
+  body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"],
+  body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="closed"] {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+.ui-band-period {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-width: 0;
+  height: var(--size-period);
+  min-height: var(--size-period);
+  flex: 0 1 auto;
+  padding-inline: var(--space-3);
+  overflow: visible;
+  border-radius: var(--radius-chip);
+  background: var(--color-band-pill);
+  color: var(--color-text);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+}
+
+.ui-band-period:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-page-period {
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+}
+
+.ui-period-chevron {
+  display: inline-flex;
+  color: var(--color-accent-text);
+}
+
+.ui-page .t-title-1 {
+  letter-spacing: var(--type-title-1-tracking);
+}
+
+.ui-page .t-title-1,
+.ui-page .t-label {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-project-list {
+  display: flex;
+  flex-direction: column;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  padding-inline: var(--space-side);
+  box-sizing: border-box;
+}

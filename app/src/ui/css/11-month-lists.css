@@ -1,0 +1,278 @@
+/* FLOW-302: month groups in transaction lists. The header pins under the safe area; a scroll box that is not the page can set --month-sticky-top. */
+.ui-month {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-month-head {
+  position: sticky;
+  inset-block-start: var(--month-sticky-top, var(--safe-top));
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--space-10);
+  margin-inline: calc(var(--space-side) * -1);
+  padding-block: var(--space-2);
+  padding-inline: var(--space-side);
+  background: var(--color-bg);
+}
+
+/* Month groups are 32px apart (decision 0120). Rows carry no hairline anywhere; the pressed and
+   focus tint is drawn by ::before, so it is unaffected. */
+.ui-month + .ui-month .ui-month-head {
+  margin-block-start: var(--space-8);
+}
+
+/* A row reached by Tab or scrolled into view stops below the pinned month bar (up to three
+   currency lines), not under it (WCAG 2.4.11). A sheet that scrolls a month list sets its own. */
+:root:has(.ui-month-head) {
+  scroll-padding-block-start: calc(var(--safe-top) + var(--space-10) * 2 + var(--space-4));
+}
+
+.ui-month-title {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.ui-month-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.ui-month-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  column-gap: var(--space-2);
+}
+
+/* FLOW-305: quiet day heads inside a month (היום, אתמול, יום ב׳ · 05/10). 15/1.4/500 text-secondary,
+   16px above and 4px below, not sticky (one pinned bar is enough at 320), no hairline. */
+.ui-day-head {
+  margin: var(--space-4) 0 var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-meta-line);
+}
+
+/* FLOW-305: statement row (ListRow variant="statement"). A 40px initials circle in the tint, the
+   counterparty over a pending chip and "✦ project · category", and the amount over the method. */
+.ui-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-10);
+  block-size: var(--space-10);
+  border-radius: 50%;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ui-statement-title[dir="ltr"] {
+  text-align: end;
+}
+
+.ui-statement-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.ui-statement-line > .ui-status {
+  flex: none;
+}
+
+.ui-statement-suggest {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-statement-spark {
+  color: var(--color-accent-text);
+}
+
+.ui-statement-end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-statement-method {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ui-statement-method-icon {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+}
+
+.ui-section-head,
+.ui-page-pad {
+  padding-inline: var(--space-side);
+}
+
+/* Mockup 02: 20px between the project band and the overhead switch (FLOW-328). */
+.ui-project-overhead {
+  margin-top: var(--space-5);
+}
+
+.ui-cat-seg {
+  margin-top: var(--space-4);
+}
+
+.ui-cat-list {
+  margin-top: var(--space-2);
+}
+
+.ui-cat-list.ui-cat-hidden {
+  margin-top: 0;
+}
+
+.ui-cat-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding-inline: var(--space-side);
+}
+
+.ui-cat-foot-end {
+  margin-inline-start: auto;
+}
+
+/* A kept-out category: the mark sits right after the name and never truncates. */
+.ui-cat-list .ui-row-title-with-tag .ui-row-title-text {
+  flex: 0 1 auto;
+}
+
+.ui-cat-out {
+  display: inline-flex;
+  flex: none;
+  margin-inline-start: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.ui-cat-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.ui-cat-pnl-hint {
+  margin: calc(var(--space-1) * -1) 0 0;
+  text-align: center;
+}
+
+.ui-cat-fixed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--touch-min);
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  text-wrap: balance;
+}
+
+.ui-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-section);
+}
+
+.ui-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.ui-choice-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-form-error {
+  color: var(--color-error);
+}
+
+.ui-toast-host {
+  position: fixed;
+  z-index: 40;
+  inset-inline: 0;
+  top: calc(var(--safe-top) + var(--space-4));
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--space-side);
+  pointer-events: none;
+}
+
+/* Hidden until the pad has finished. Opacity, not visibility, so the fade can run. */
+.ui-toast-host[data-phase="measure"] .ui-toast,
+.ui-toast-host[data-phase="pad"] .ui-toast {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-toast-host[data-phase="fade"] .ui-toast {
+  opacity: 1;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.ui-toast-host[data-phase="in"] .ui-toast {
+  opacity: 1;
+}
+
+.ui-toast-live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+
+.ui-day-range {
+  background: var(--color-tint);
+}
+
+.ui-day-edge {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* --type-body-line is a unitless multiplier, so the footer height multiplies it by the body size. */
+html:has(.ui-split) {
+  --split-foot: calc(1px + var(--space-4) + var(--type-body-size) * var(--type-body-line) + var(--space-3) + var(--control-height) + var(--space-4) + var(--safe-bottom));
+  scroll-padding-bottom: calc(var(--split-foot) + var(--space-2));
+}

@@ -134,7 +134,7 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 ### UI work
 
 - All UI building goes through the two UI lanes, in the option C ("full Mercury") styles ([0120](../decisions/0120-income-green-type-scale.md), [DESIGN-RULES](../design/DESIGN-RULES.md)). Other lanes that find UI work file it as a task, or write a plan and hand it to the UI lane that owns the area. They don't open their own UI PR. Roles, the design system's sources of truth, the design log, and how the two lanes split files are in [DESIGN-TEAM.md](../design/DESIGN-TEAM.md).
-- Each UI lane keeps one queue ordered so that PRs don't touch the same files, and works it one PR at a time. Large shared files (`flow-screens.tsx`, `ui.css`, and `ui/index.ts` as DESIGN-TEAM says) are hotspots: two open PRs may change one only when their `Claim` blocks name disjoint functions or CSS blocks ([how](../design/DESIGN-TEAM.md#splitting-work-between-the-two-ui-lanes)).
+- Each UI lane keeps one queue ordered so that PRs don't touch the same files, and works it one PR at a time. Large shared files (`flow-screens.tsx`, the CSS files under `app/src/ui/css/`, and `ui/index.ts` as DESIGN-TEAM says) are hotspots: two open PRs may change one only when their `Claim` blocks name disjoint functions or CSS blocks ([how](../design/DESIGN-TEAM.md#splitting-work-between-the-two-ui-lanes)).
 - Every UI PR that changes a look or a behavior adds a [design log](../design/log/README.md) entry.
 - Every UI task updates the shared components in `app/src/ui` and adds or updates a Storybook story for every new or changed component, in the same PR.
 - For a UI task, run a design session with the design reviewer (each UI lane runs its own; see [DESIGN-TEAM](../design/DESIGN-TEAM.md)) and build the option the designer recommends. `PLAN FIRST` UI tasks are the exception: they need the owner's approval first.
@@ -169,7 +169,7 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
    - Ids: FLOW-<id>, FLOW-<id>
    - Started: YYYY-MM-DD HH:MM UTC
    - Areas: <screens, tables, MCP tools>
-   - Files: <paths or folders this PR will change, including any migration name; for `flow-screens.tsx` and `ui.css`, name the functions or CSS blocks, for example `flow-screens.tsx: ReviewQueue`>
+   - Files: <paths or folders this PR will change, including any migration name; for `flow-screens.tsx` and a CSS file under `app/src/ui/css/`, name the functions or CSS blocks, for example `flow-screens.tsx: ReviewQueue`>
    - Progress: claimed
    ```
    Each id's status line in TASKS.md becomes `claimed (<lane>, YYYY-MM-DD, <branch>)` in the first commit.
