@@ -861,7 +861,7 @@ function writeTools() {
       escrow: { type: "string" },
       project_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why. Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
