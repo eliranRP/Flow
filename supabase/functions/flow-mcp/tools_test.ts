@@ -375,6 +375,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_loan_schedule",
     "get_sync_status",
     "get_breakdown",
+    "get_jev_status",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -2432,4 +2433,29 @@ Deno.test("FLOW-304: a refused bank-details read fails the read instead of dropp
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "refused");
   }
+});
+
+Deno.test("get_jev_status passes the status through and refuses a failed read", async () => {
+  const status = {
+    enabled: true,
+    mode: "shadow",
+    threshold: 0.9,
+    daily_call_cap: 200,
+    calls_today: 12,
+    last_run_at: "2026-10-08T05:00:00Z",
+    lines_without_suggestion: 3,
+  };
+  const calls: string[] = [];
+  const read = await callTool("get_jev_status", {}, ["read"], (name) => {
+    calls.push(name);
+    return Promise.resolve({ status: 200, json: status });
+  });
+  assertEquals(read.structuredContent, { ok: true, data: status });
+  assertEquals(calls, ["mcp_jev_status"]);
+  const failed = await callTool("get_jev_status", {}, ["read"], () => Promise.resolve({ status: 403, json: null }));
+  assertEquals(failed.isError, true);
+  const extra = await callTool("get_jev_status", { company_id: "x" }, ["read"], () => Promise.resolve({ status: 200, json: status }));
+  assertEquals(extra.isError, true);
+  const writeOnly = await callTool("get_jev_status", {}, ["write"], () => Promise.resolve({ status: 200, json: status }));
+  assertEquals(writeOnly.isError, true);
 });
