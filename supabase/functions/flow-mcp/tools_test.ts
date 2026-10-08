@@ -376,6 +376,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_sync_status",
     "get_breakdown",
     "get_jev_status",
+    "get_jev_accuracy",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -592,6 +593,7 @@ Deno.test("split_line validates parts and refuses read tokens", async () => {
     { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], share: 50 }] },
     { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], project_id: "nope" }] },
     { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, amount_minor: i + 1 })) },
+    { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`, amount_minor: i + 1 })) },
     { idempotency_key: "k", transaction_id: "not-a-uuid", parts: two },
     { idempotency_key: "", transaction_id: TXN, parts: two },
     { idempotency_key: "k", transaction_id: TXN, parts: two, company_id: TXN },
@@ -1682,7 +1684,7 @@ Deno.test("assign_expenses lists shares[] on its items like assign_expense_split
   const single = tools.find((tool) => tool.name === "assign_expense_split");
   const props = batch?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
   const itemProps = props.items.items?.properties ?? {};
-  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "shares"]);
+  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "shares", "parts"]);
   assertEquals(itemProps.shares, (single?.inputSchema.properties as Record<string, unknown>).shares);
   assertEquals(itemProps.shares, {
     type: "array",
@@ -1694,6 +1696,70 @@ Deno.test("assign_expenses lists shares[] on its items like assign_expense_split
     },
   });
   assertEquals(batch?.description.includes("shares[]"), true);
+});
+
+Deno.test("assign_expenses forwards a parts[] row like split_line and validates it the same way", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: BATCH_KEY,
+        ok_count: 1,
+        error_count: 0,
+        results: [{ transaction_id: TXN, ok: true, undo_kind: "line_split" }],
+      },
+    },
+  }));
+  const TXN_B = "22222222-2222-4000-8000-000000000021";
+  const parts = [
+    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 4000 },
+    { category_id: CATEGORY, project_id: null, rest: true },
+  ];
+  const batch = await callTool("assign_expenses", {
+    idempotency_key: "batch-parts",
+    items: [{ transaction_id: TXN, parts }, { transaction_id: TXN_B, parts: [] }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_assign_expenses",
+    body: {
+      p_idempotency_key: "batch-parts",
+      p_items: [{ transaction_id: TXN, parts }, { transaction_id: TXN_B, parts: [] }],
+    },
+  });
+  const before = calls.length;
+  const bad = [
+    [{ category_id: CATEGORY, amount_minor: 4000 }],
+    [{ category_id: CATEGORY, rest: true }, { category_id: PROJECT, rest: true }],
+    [{ category_id: CATEGORY, amount_minor: 1 }, { category_id: CATEGORY, amount_minor: 2 }],
+    [{ category_id: CATEGORY, amount_minor: 1, share: 1 }, { category_id: PROJECT, amount_minor: 2 }],
+    Array.from({ length: 51 }, (_, i) => ({
+      category_id: CATEGORY,
+      project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`,
+      amount_minor: i + 1,
+    })),
+  ];
+  for (const rows of bad) {
+    const refused = await callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, parts: rows }],
+    }, ["write"], rpc);
+    assertEquals(refused.isError, true);
+  }
+  for (const extra of [{ category_id: CATEGORY }, { project_id: PROJECT }, { remember: true }, { shares: [] }]) {
+    const refused = await callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, parts: [], ...extra }],
+    }, ["write"], rpc);
+    assertEquals(refused.isError, true);
+  }
+  assertEquals(calls.length, before, "a bad parts row never reaches the database");
+  const tools = toolsFor(["write"]);
+  const batchTool = tools.find((tool) => tool.name === "assign_expenses");
+  const single = tools.find((tool) => tool.name === "split_line");
+  const props = batchTool?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
+  assertEquals(props.items.items?.properties?.parts, (single?.inputSchema.properties as Record<string, unknown>).parts);
 });
 
 Deno.test("set_category_pnl validates, forwards p_* args, and undo accepts category_pnl", async () => {
@@ -2473,6 +2539,73 @@ Deno.test("FLOW-304: a refused bank-details read fails the read instead of dropp
   }
 });
 
+Deno.test("update_loan sends status and closed_on, and validates them first", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_update_loan") {
+      return { status: 200, json: { ok: true, data: { id: LOAN, status: "paid_off", closed_on: "2026-02-01", balance_left: 500, undo_kind: "loan_update" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const closed = await callTool("update_loan", { idempotency_key: "ls-1", loan_id: LOAN, status: "paid_off", closed_on: "2026-02-01" }, ["write"], rpc);
+  assertEquals(closed.isError, false);
+  assertEquals(calls[0]?.body.p_patch, { status: "paid_off", closed_on: "2026-02-01" });
+  const reopened = await callTool("update_loan", { idempotency_key: "ls-2", loan_id: LOAN, status: "open" }, ["write"], rpc);
+  assertEquals(reopened.isError, false);
+  assertEquals(calls[1]?.body.p_patch, { status: "open" });
+  const cleared = await callTool("update_loan", { idempotency_key: "ls-3", loan_id: LOAN, closed_on: null }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[2]?.body.p_patch, { closed_on: null });
+  for (const bad of [{ status: "done" }, { status: null }, { closed_on: "2026-2-1" }, { closed_on: 20260201 }]) {
+    const out = await callTool("update_loan", { idempotency_key: "ls-bad", loan_id: LOAN, ...bad }, ["write"], rpc);
+    assertEquals(out.isError, true);
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 3);
+});
+
+Deno.test("list_loans hides closed loans only when asked, and attach refuses a line after closed_on", async () => {
+  const base = {
+    name: "Example Bank",
+    currency: "USD",
+    principal_minor: 10000000,
+    annual_rate_ppm: 60000,
+    term_months: 360,
+    start_date: "2026-01-01",
+    payment_minor: 100000,
+    escrow_minor: 10000,
+    balance_minor: 9000000,
+  };
+  const open = { ...base, id: LOAN, status: "open", closed_on: null };
+  const paid = { ...base, id: "dddddddd-dddd-4000-8000-0000000000d2", status: "paid_off", closed_on: "2026-02-01" };
+  let docDate = "2026-03-01";
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_list_loans") return { status: 200, json: [open, paid] };
+    if (name === "get_transaction") {
+      return { status: 200, json: { id: LOAN_TXN, doc_date: docDate, amount_original: 100000, currency: "USD" } };
+    }
+    if (name === "mcp_attach_loan_payment") {
+      return { status: 200, json: { ok: true, data: { loan_id: paid.id, transaction_id: LOAN_TXN, undo_kind: "loan_split" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const all = await callTool("list_loans", {}, ["read"], rpc);
+  if (all.structuredContent.ok) assertEquals((all.structuredContent.data as { loans: unknown[] }).loans.length, 2);
+  const openOnly = await callTool("list_loans", { include_closed: false }, ["read"], rpc);
+  if (openOnly.structuredContent.ok) {
+    assertEquals((openOnly.structuredContent.data as { loans: Array<{ id: string }> }).loans.map((loan) => loan.id), [LOAN]);
+  }
+  const bad = await callTool("list_loans", { include_closed: "no" }, ["read"], rpc);
+  assertEquals(bad.isError, true);
+
+  const late = await callTool("attach_loan_payment", { idempotency_key: "ls-a1", transaction_id: LOAN_TXN, loan_id: paid.id }, ["write"], rpc);
+  assertEquals(late.structuredContent, { ok: false, error: { code: "refused", message: "loan closed" } });
+  assertEquals(calls.some((call) => call.name === "mcp_attach_loan_payment"), false);
+
+  docDate = "2026-02-01";
+  const onTheDay = await callTool("attach_loan_payment", { idempotency_key: "ls-a2", transaction_id: LOAN_TXN, loan_id: paid.id }, ["write"], rpc);
+  assertEquals(onTheDay.isError, false);
+});
+
 Deno.test("get_jev_status passes the status through and refuses a failed read", async () => {
   const status = {
     enabled: true,
@@ -2496,4 +2629,30 @@ Deno.test("get_jev_status passes the status through and refuses a failed read", 
   assertEquals(extra.isError, true);
   const writeOnly = await callTool("get_jev_status", {}, ["write"], () => Promise.resolve({ status: 200, json: status }));
   assertEquals(writeOnly.isError, true);
+});
+
+Deno.test("get_jev_accuracy checks its dates and passes the report through", async () => {
+  const report = { lines: 5, all_matched: 3, bands: [] };
+  const calls: Array<[string, unknown]> = [];
+  const rpc = (name: string, body: unknown) => {
+    calls.push([name, body]);
+    return Promise.resolve({ status: 200, json: report });
+  };
+  const all = await callTool("get_jev_accuracy", {}, ["read"], rpc);
+  assertEquals(all.structuredContent, { ok: true, data: report });
+  const month = await callTool("get_jev_accuracy", { from: "2026-10-01", to: "2026-10-31" }, ["read"], rpc);
+  assertEquals(month.isError, false);
+  assertEquals(calls, [
+    ["mcp_jev_accuracy", { p_from: null, p_to: null }],
+    ["mcp_jev_accuracy", { p_from: "2026-10-01", p_to: "2026-10-31" }],
+  ]);
+  assertEquals((await callTool("get_jev_accuracy", { from: "2026-10-31", to: "2026-10-01" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_jev_accuracy", { from: "yesterday" }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("get_jev_accuracy", { basis: "cash" }, ["read"], rpc)).isError, true);
+  assertEquals(calls.length, 2);
+  const refused = await callTool("get_jev_accuracy", {}, ["read"], () => Promise.resolve({ status: 400, json: null }));
+  assertEquals(refused.isError, true);
+  const writeOnly = await callTool("get_jev_accuracy", {}, ["write"], rpc);
+  assertEquals(writeOnly.isError, true);
+  assertEquals(calls.length, 2);
 });

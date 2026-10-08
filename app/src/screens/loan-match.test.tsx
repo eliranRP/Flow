@@ -604,6 +604,24 @@ describe("LoanTransactionSplit", () => {
     expect(screen.getByText("קרן").closest(".ui-row")).toHaveTextContent("מחוץ לרווח");
   });
 
+  it("does not offer a paid-off loan for a payment after the day it ended", async () => {
+    const paidOff = { ...db.loans[0], status: "paid_off", closed_on: "2026-01-15" };
+    db.loans = [paidOff as (typeof db.loans)[number]];
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).queryByText("הלוואת דוגמה")).not.toBeInTheDocument();
+    fireEvent.click(matchButton());
+    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+  });
+
+  it("still offers a paid-off loan for a payment on or before the day it ended", async () => {
+    const paidOff = { ...db.loans[0], status: "paid_off", closed_on: "2026-02-01" };
+    db.loans = [paidOff as (typeof db.loans)[number]];
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
+  });
+
   it("hints the lone matching loan on the שיוך row", async () => {
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
