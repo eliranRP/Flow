@@ -536,6 +536,44 @@ Deno.test("set_line_pnl and set_lines_pnl validate input and refuse read tokens"
   assertEquals(calls.length, 0);
 });
 
+Deno.test("split_line forwards percent and rest parts", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, parts: [], undo_kind: "line_split", id: TXN } },
+  }));
+  const split = await callTool("split_line", {
+    idempotency_key: "line-pct",
+    transaction_id: TXN,
+    parts: [
+      { category_id: CATEGORY, project_id: PROJECT, percent: 33.3333 },
+      { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 500 },
+      { rest: true },
+    ],
+  }, ["write"], rpc);
+  assertEquals(split.isError, false);
+  assertEquals(calls[0]?.body.p_parts, [
+    { category_id: CATEGORY, project_id: PROJECT, percent: 33.3333 },
+    { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 500 },
+    { project_id: null, rest: true },
+  ]);
+  const bad: unknown[] = [
+    [{ category_id: CATEGORY, percent: 0 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 100.5 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 1.00001 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 10, amount_minor: 5 }, { rest: true }],
+    [{ category_id: CATEGORY }, { rest: true }],
+    [{ percent: 10 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 10 }, { rest: false }],
+    [{ category_id: CATEGORY, percent: 10 }, { rest: true }, { category_id: INCOME_CATEGORY, rest: true }],
+  ];
+  for (const parts of bad) {
+    const result = await callTool("split_line", { idempotency_key: "k", transaction_id: TXN, parts }, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1);
+});
+
 Deno.test("split_line validates parts and refuses read tokens", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
   const two = [

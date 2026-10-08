@@ -1,9 +1,9 @@
-// Tagging job. Decisions 0084 and 0123.
+// Tagging job. Decisions 0084 and 0124.
 // Off does not call Jev. Shadow stores a suggestion. Auto at or above the
 // threshold pre-fills a project and category the user has not set, marks that
 // fill as a suggestion, and leaves the line in לאישור. Nothing here approves.
 // A database lease lets one run at a time, and each company's calls are reserved
-// from its daily cap in SQL before Jev is called (decision 0123).
+// from its daily cap in SQL before Jev is called (decision 0124).
 
 import {
   JEV_MODEL,
@@ -514,7 +514,7 @@ export function categoriesPath(companyId: string): string {
  * Open untagged expenses, newest first, limited in SQL.
  * `tagged=is.null` with the model filter is the PostgREST anti-join: no
  * tag_suggestions row for the pin. `failed=is.null` skips a line Jev failed on
- * until its retry time (decision 0123). The URL does not list transaction ids.
+ * until its retry time (decision 0124). The URL does not list transaction ids.
  */
 export function transactionsPath(companyId: string, limit: number, nowIso: string): string {
   const cap = clampTagLimit(limit);
@@ -761,7 +761,7 @@ export function createTagStore(
   };
 }
 
-/** The lease and the daily cap live in SQL (decision 0123). */
+/** The lease and the daily cap live in SQL (decision 0124). */
 export function createTagJobStore(fetch: FetchLike, supabaseUrl: string, serviceKey: string): TagJobStore {
   const base = supabaseUrl.replace(/\/+$/, "");
   const rpc = (name: string, body: JsonObject) =>

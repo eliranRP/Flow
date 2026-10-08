@@ -1,4 +1,4 @@
--- FLOW-701 part 1 (decision 0123). Jev after each sync: the daily call cap, the usage
+-- FLOW-701 part 1 (decision 0124). Jev after each sync: the daily call cap, the usage
 -- log, the run lease, failed-line retries, the cron work check and MCP get_jev_status.
 -- Helpers come from supabase/tests/helpers.sql.
 

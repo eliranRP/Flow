@@ -1,4 +1,4 @@
--- FLOW-701 part 1 (Jev phase 1). Decision 0123.
+-- FLOW-701 part 1 (Jev phase 1). Decision 0124.
 -- Jev labels new review lines soon after each bank sync: a pg_cron job every 5 minutes
 -- calls jev-tag only when an enabled company has an open line with no suggestion.
 -- A daily call cap per company is enforced here, in SQL, because the provider has no
@@ -18,7 +18,7 @@ alter table public.company_integrations
   add constraint company_integrations_daily_call_cap_chk
   check (daily_call_cap >= 0 and daily_call_cap <= 2000);
 comment on column public.company_integrations.daily_call_cap is
-  'Most Jev calls per company per UTC day. 0 stops calls. Enforced by jev_reserve_calls. Decision 0123.';
+  'Most Jev calls per company per UTC day. 0 stops calls. Enforced by jev_reserve_calls. Decision 0124.';
 
 -- One row per company per run. reserved is what the run was allowed; calls is what it used.
 -- A run that never finished still counts its reservation for that day.
@@ -42,7 +42,7 @@ create table public.jev_usage (
   constraint jev_usage_counts_chk check (tagged >= 0 and failed >= 0)
 );
 comment on table public.jev_usage is
-  'Jev usage log: calls and token counts per company per run. No line text or answers. Decision 0123.';
+  'Jev usage log: calls and token counts per company per run. No line text or answers. Decision 0124.';
 create index jev_usage_company_day_idx on public.jev_usage (company_id, usage_day);
 
 -- A line Jev failed on is not sent again before retry_after.
@@ -60,7 +60,7 @@ create table public.jev_line_failures (
     on delete cascade
 );
 comment on table public.jev_line_failures is
-  'Lines the Jev job failed on, and when it may try again. Service role only. Decision 0123.';
+  'Lines the Jev job failed on, and when it may try again. Service role only. Decision 0124.';
 create index jev_line_failures_company_idx on public.jev_line_failures (company_id);
 
 create table private.jev_run_lease (
