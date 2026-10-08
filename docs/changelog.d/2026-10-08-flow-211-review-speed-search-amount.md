@@ -1,0 +1,1 @@
+The review list loads fast again on a long queue: with 586 lines waiting it could time out when opened twice at once ([0150](decisions/0150-review-list-speed-search-amount.md)). Search finds a line by its amount, an exact figure or a range (MCP `search_expenses` `amount`, `amount_min`, `amount_max`), and MCP `list_loans` shows a demand loan's accrued interest today.

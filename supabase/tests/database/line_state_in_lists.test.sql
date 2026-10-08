@@ -4,12 +4,13 @@
 
 begin;
 
-select plan(28);
+select plan(32);
 
 do $users$
 begin
   perform tests.create_supabase_user('lso_owner', 'lso-owner@example.com');
   perform tests.create_supabase_user('lso_viewer', 'lso-viewer@example.com');
+  perform tests.create_supabase_user('lso_stranger', 'lso-stranger@example.com');
 end
 $users$;
 
@@ -230,6 +231,30 @@ select is(
 select is(
   (pg_temp.row_of(public.list_auto_assigned_today(), 'txn_split')->>'kept_out')::boolean,
   false, 'list_auto_assigned_today: a mixed line is not kept out as a whole');
+
+-- The set read list_review uses gives each line the same state as the one-line read
+-- (the list_review speed fix, decision 0150).
+select is(
+  (select jsonb_object_agg(st.transaction_id, st.state) from private.line_pnl_states(
+    array(select id from lso where label like 'txn_%')) st),
+  (select jsonb_object_agg(l.id, private.line_pnl_state(l.id)) from lso l where l.label like 'txn_%'),
+  'line_pnl_states matches line_pnl_state on every line'
+);
+select is(
+  (select count(*)::int from private.line_pnl_states(array(select id from lso where label like 'txn_%'))),
+  (select count(*)::int from lso where label like 'txn_%'),
+  'and answers once per line'
+);
+
+-- Another company reads none of these lines, now that the state reads skip row security.
+select tests.authenticate_as('lso_stranger');
+select lives_ok($$select public.create_company('Example Stranger LLC', true)$$, 'a stranger has a company of their own');
+select is(
+  (select count(*)::int from private.line_pnl_states(array(select id from lso where label like 'txn_%')))
+    + (select count(private.line_pnl_state(l.id))::int from lso l where l.label like 'txn_%'),
+  0,
+  'and reads no state for another company''s lines'
+);
 
 -- A viewer reads the same.
 select tests.authenticate_as('lso_viewer');

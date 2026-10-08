@@ -106,12 +106,25 @@ Deno.test("search_expenses passes its filters to search_transactions (FLOW-323)"
   assertEquals(Object.keys(calls.filter((call) => call.name === "search_transactions").at(-1)?.body ?? {}).sort(),
     ["p_limit", "p_offset", "p_query", "p_scope"]);
 
+  // An amount (FLOW-211): one figure in major units goes as both ends, in minor units.
+  await callTool("search_expenses", { scope: "all", amount: "6,245.12" }, ["read"], rpc);
+  const exact = calls.filter((call) => call.name === "search_transactions").at(-1)?.body;
+  assertEquals([exact?.p_amount_min, exact?.p_amount_max], [624512, 624512]);
+  await callTool("search_expenses", { scope: "pending", amount_min: 100 }, ["read"], rpc);
+  const ranged = calls.filter((call) => call.name === "search_transactions").at(-1)?.body;
+  assertEquals([ranged?.p_scope, ranged?.p_amount_min, "p_amount_max" in (ranged ?? {})], ["pending", 10000, false]);
+
   for (const bad of [
     { from: "2026-07-01", to: "2026-06-01" },
     { direction: "transfer" },
     { project_id: "alpha" },
     { category_id: "12" },
     { from: "06-01" },
+    { amount: 5, amount_min: 1 },
+    { amount: 0 },
+    { amount_min: 5, amount_max: 4 },
+    { amount_max: -1 },
+    { amount_min: "abc" },
   ]) {
     const result = await callTool("search_expenses", { scope: "all", ...bad }, ["read"], rpc);
     assertEquals(result.isError, true);
@@ -3730,6 +3743,32 @@ Deno.test("get_loan_schedule on a demand loan lists the payments and the interes
   });
   const bad = await callTool("get_loan_schedule", { loan_id: LOAN, as_of: "2026-02-30" }, ["read"], rpc);
   assertEquals(bad.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+});
+
+Deno.test("list_loans shows an open demand loan's accrued interest today, and null for other kinds (FLOW-211)", async () => {
+  const payments = [
+    paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 30_000n, principalMinor: 1_000_000n }, { doc_date: "2026-01-31" }),
+  ];
+  const { rpc } = feesRpc(DEMAND_LOAN, 0, "2026-01-01", null, payments);
+  const listed = await callTool("list_loans", {}, ["read"], rpc);
+  const schedule = await callTool("get_loan_schedule", { loan_id: LOAN }, ["read"], rpc);
+  if (!listed.structuredContent.ok || !schedule.structuredContent.ok) throw new Error("read failed");
+  const loan = (listed.structuredContent.data as { loans: Array<Record<string, unknown>> }).loans[0];
+  const accrued = (schedule.structuredContent.data as { accrued: { as_of: string; interest_minor: number } }).accrued;
+  assertEquals([loan.accrued_interest_minor, loan.accrued_as_of], [accrued.interest_minor, accrued.as_of]);
+  assertEquals((loan.accrued_interest_minor as number) > 0, true);
+
+  for (const other of [{ ...DEMAND_LOAN, status: "closed" }, { ...DEMAND_LOAN, kind: "amortizing", term_months: 12, payment_minor: 433_000 }]) {
+    const plain = feesRpc(other, 0, "2026-01-01", null, payments);
+    const out = await callTool("list_loans", {}, ["read"], plain.rpc);
+    if (!out.structuredContent.ok) throw new Error("read failed");
+    const row = (out.structuredContent.data as { loans: Array<Record<string, unknown>> }).loans[0];
+    assertEquals([row.accrued_interest_minor, row.accrued_as_of], [null, null]);
+    assertEquals(plain.calls.some((call) => call.name === "mcp_loan_payments"), false);
+  }
+
+  const broken = rpcOf((name) => name === "mcp_list_loans" ? { status: 200, json: [DEMAND_LOAN] } : { status: 500, json: null });
+  assertEquals((await callTool("list_loans", {}, ["read"], broken.rpc)).isError, true);
 });
 
 Deno.test("loan kind tools are described", () => {
