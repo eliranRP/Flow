@@ -1,0 +1,1 @@
+In the installed app, a swipe from the right edge now goes back on any pushed screen, the same as its Back button (FLOW-332). A small back mark follows the finger and fills in once letting go will go back. It never starts inside a sheet, a field, or a sideways list.

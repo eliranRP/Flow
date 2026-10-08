@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useLocation, useNavigate, useNavigationType, NavigationType, type NavigateFunction } from "react-router-dom";
 import { IconButton } from "./icon-button";
+import { useEdgeBack } from "./edge-back";
 import { BackIcon } from "./icons";
 
 /** React Router stores its stack index on the browser history entry. */
@@ -105,6 +106,8 @@ export function BackButton({
   children?: ReactNode;
 }) {
   const goBack = useGoBack();
+  // FLOW-332: the start-edge swipe does what this button does.
+  useEdgeBack(disabled ? null : () => { goBack(fallback); });
   return (
     <IconButton
       label={label}
