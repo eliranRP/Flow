@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(57);
+select plan(68);
 
 do $users$
 begin
@@ -121,63 +121,63 @@ grant all on pin_out to authenticated, service_role;
 select tests.authenticate_as('pin_owner');
 
 -- Nothing set yet.
-select is(pg_temp.inv()->>'purchase_agorot', null, 'no purchase price until one is set');
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 130000::bigint,
+select is(pg_temp.inv()->>'purchase_minor', null, 'no purchase price until one is set');
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 130000::bigint,
   'rehab: posted paid shekel costs, direct and shared, but not kept-out, loan-part, unpaid, pending or income lines');
-select is((pg_temp.inv()->>'loan_balance_agorot')::bigint, 11980000::bigint,
+select is((pg_temp.inv()->>'loan_balance_minor')::bigint, 11980000::bigint,
   'loan balance: the open shekel loan less the principal paid, not the paid-off one');
 select is(pg_temp.inv()->'loan_balance_other_currencies', '[]'::jsonb, 'no loan in another currency on the house');
 select is(pg_temp.inv('barn')->'loan_balance_other_currencies', '[{"currency": "USD", "balance_minor": 500000}]'::jsonb,
   'an open loan in another currency is listed apart');
 select is(pg_temp.inv('barn')->'rehab_other_currencies', '[{"currency": "USD", "amount_minor": 5000}]'::jsonb,
   'and so is a cost in another currency');
-select is(pg_temp.inv()->>'forced_equity_agorot', null, 'forced equity waits for ARV and purchase');
-select is(pg_temp.inv()->>'current_equity_agorot', null, 'current equity waits for the value');
-select is((pg_temp.inv('barn')->>'rehab_agorot')::bigint, 30000::bigint, 'the other project gets its share of the shared line');
+select is(pg_temp.inv()->>'forced_equity_minor', null, 'forced equity waits for ARV and purchase');
+select is(pg_temp.inv()->>'current_equity_minor', null, 'current equity waits for the value');
+select is((pg_temp.inv('barn')->>'rehab_minor')::bigint, 30000::bigint, 'the other project gets its share of the shared line');
 
 -- The owner sets the figures.
 insert into pin_out (label, body)
 select 'set', public.set_project_investment(pg_temp.id('house'),
-  '{"purchase_agorot": 100000000, "arv_agorot": 150000000, "value_agorot": 140000000, "value_date": "2026-09-30"}');
-select is(pin_out.body->'before'->>'arv_agorot', null, 'the reply has the figures before') from pin_out where label = 'set';
-select is((pin_out.body->'after'->>'arv_agorot')::bigint, 150000000::bigint, 'and after') from pin_out where label = 'set';
-select is((pg_temp.inv()->>'forced_equity_agorot')::bigint, 150000000::bigint - 100000000 - 130000,
+  '{"purchase_minor": 100000000, "arv_minor": 150000000, "value_minor": 140000000, "value_date": "2026-09-30"}');
+select is(pin_out.body->'before'->>'arv_minor', null, 'the reply has the figures before') from pin_out where label = 'set';
+select is((pin_out.body->'after'->>'arv_minor')::bigint, 150000000::bigint, 'and after') from pin_out where label = 'set';
+select is((pg_temp.inv()->>'forced_equity_minor')::bigint, 150000000::bigint - 100000000 - 130000,
   'forced equity = ARV - purchase - rehab');
-select is((pg_temp.inv()->>'current_equity_agorot')::bigint, 140000000::bigint - 11980000,
+select is((pg_temp.inv()->>'current_equity_minor')::bigint, 140000000::bigint - 11980000,
   'current equity = value - loan balance');
 select public.set_project_investment(pg_temp.id('barn'),
-  '{"purchase_agorot": 1000000, "arv_agorot": 2000000, "value_agorot": 1800000}');
-select is(pg_temp.inv('barn')->>'forced_equity_agorot', null, 'forced equity is null when rehab has another currency');
-select is(pg_temp.inv('barn')->>'current_equity_agorot', null, 'current equity is null when a loan is in another currency');
+  '{"purchase_minor": 1000000, "arv_minor": 2000000, "value_minor": 1800000}');
+select is(pg_temp.inv('barn')->>'forced_equity_minor', null, 'forced equity is null when rehab has another currency');
+select is(pg_temp.inv('barn')->>'current_equity_minor', null, 'current equity is null when a loan is in another currency');
 select is(pg_temp.inv()->>'value_date', '2026-09-30', 'the value date');
 
 -- A key left out keeps its figure; a null clears it.
-select public.set_project_investment(pg_temp.id('house'), '{"value_agorot": 145000000}');
-select is((pg_temp.inv()->>'arv_agorot')::bigint, 150000000::bigint, 'a key left out keeps its figure');
-select is((pg_temp.inv()->>'current_equity_agorot')::bigint, 145000000::bigint - 11980000, 'the new value counts');
-select public.set_project_investment(pg_temp.id('house'), '{"purchase_agorot": null}');
-select is(pg_temp.inv()->>'purchase_agorot', null, 'a null clears a figure');
-select is(pg_temp.inv()->>'forced_equity_agorot', null, 'and forced equity waits again');
-select public.set_project_investment(pg_temp.id('house'), '{"purchase_agorot": 100000000}');
+select public.set_project_investment(pg_temp.id('house'), '{"value_minor": 145000000}');
+select is((pg_temp.inv()->>'arv_minor')::bigint, 150000000::bigint, 'a key left out keeps its figure');
+select is((pg_temp.inv()->>'current_equity_minor')::bigint, 145000000::bigint - 11980000, 'the new value counts');
+select public.set_project_investment(pg_temp.id('house'), '{"purchase_minor": null}');
+select is(pg_temp.inv()->>'purchase_minor', null, 'a null clears a figure');
+select is(pg_temp.inv()->>'forced_equity_minor', null, 'and forced equity waits again');
+select public.set_project_investment(pg_temp.id('house'), '{"purchase_minor": 100000000}');
 
 -- Refusals.
-select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_agorot": -1}')$$,
+select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": -1}')$$,
   'P0001', 'validation', 'a negative amount is validation');
-select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_agorot": 12.5}')$$,
-  'P0001', 'validation', 'a fraction of an agora');
-select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_agorot": "100"}')$$,
+select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": 12.5}')$$,
+  'P0001', 'validation', 'a fraction of a minor unit');
+select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": "100"}')$$,
   'P0001', 'validation', 'an amount as text');
 select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"value_date": "2026-02-30"}')$$,
   'P0001', 'validation', 'a date that does not exist');
-select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"budget_agorot": 1}')$$,
+select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"budget_minor": 1}')$$,
   'P0001', 'validation', 'a key it does not set');
 select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{}')$$,
   'P0001', 'validation', 'an empty patch');
-select throws_ok($$select public.set_project_investment(pg_temp.id('other_house'), '{"arv_agorot": 1}')$$,
+select throws_ok($$select public.set_project_investment(pg_temp.id('other_house'), '{"arv_minor": 1}')$$,
   'P0001', 'project not found', 'another company''s project is not found');
 reset role;
-select is((select arv_agorot from public.projects where id = pg_temp.id('other_house')), null, 'and stays as it was');
-select throws_ok($$update public.projects set value_agorot = -5 where id = pg_temp.id('house')$$,
+select is((select arv_minor from public.projects where id = pg_temp.id('other_house')), null, 'and stays as it was');
+select throws_ok($$update public.projects set value_minor = -5 where id = pg_temp.id('house')$$,
   '23514', null, 'the table refuses a negative figure');
 insert into pin (label, id)
 select 'other_cat', c.id from public.categories c where c.company_id = pg_temp.id('other_co') limit 1;
@@ -192,30 +192,51 @@ select is(
   'null'::jsonb, 'and a category with no switch shows null');
 select is(public.set_category_rehab(pg_temp.id('interest'), true), '{"before": null, "after": true}'::jsonb,
   'set_category_rehab returns the setting before and after');
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 220000::bigint,
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 220000::bigint,
   'a loan part switched on counts, the interest part of the payment too');
 select public.set_category_rehab(pg_temp.id('purchase'), true);
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 50220000::bigint, 'so does a kept-out category');
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 50220000::bigint, 'so does a kept-out category');
 select public.set_category_rehab(pg_temp.id('purchase'), null);
 select public.set_category_rehab(pg_temp.id('materials'), false);
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 110000::bigint,
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 110000::bigint,
   'a category switched off leaves rehab, direct and shared');
 select is(
   (select e->>'in_rehab' from jsonb_array_elements(public.list_categories()) e where e->>'id' = pg_temp.id('materials')::text),
   'false', 'list_categories shows it');
 select public.set_category_rehab(pg_temp.id('interest'), null);
 select public.set_category_rehab(pg_temp.id('materials'), true);
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 140000::bigint,
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 140000::bigint,
   'switched on, a category also takes the fees part filed in it');
 select public.set_category_rehab(pg_temp.id('materials'), null);
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 130000::bigint, 'null goes back to the default');
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 130000::bigint, 'null goes back to the default');
 select throws_ok($$select public.set_category_rehab(pg_temp.id('other_cat'), true)$$,
   'P0001', 'category not found', 'another company''s category is not found');
 
+-- A project in dollars: a USD company's property. Its dollar costs and loan make rehab and
+-- equity; the shekel share of the shared line is listed apart.
+select is(public.set_project_investment(pg_temp.id('barn'), '{"currency": "USD"}')->'after'->>'currency', 'USD',
+  'the owner sets the investment currency');
+select is((pg_temp.inv('barn')->>'rehab_minor')::bigint, 5000::bigint, 'rehab is in the project''s currency');
+select is(pg_temp.inv('barn')->'rehab_other_currencies', '[{"currency": "ILS", "amount_minor": 30000}]'::jsonb,
+  'and shekel costs are listed apart');
+select is((pg_temp.inv('barn')->>'loan_balance_minor')::bigint, 500000::bigint, 'the dollar loan is the balance');
+select is((pg_temp.inv('barn')->>'current_equity_minor')::bigint, 1800000::bigint - 500000,
+  'current equity in dollars');
+select is(pg_temp.inv('barn')->>'forced_equity_minor', null, 'forced equity waits while rehab has shekels');
+reset role;
+delete from public.allocations where project_id = pg_temp.id('barn');
+select tests.authenticate_as('pin_owner');
+select is((pg_temp.inv('barn')->>'forced_equity_minor')::bigint, 2000000::bigint - 1000000 - 5000,
+  'with dollar costs only, forced equity is in dollars');
+select throws_ok($$select public.set_project_investment(pg_temp.id('barn'), '{"currency": "usd"}')$$,
+  'P0001', 'validation', 'a currency is three capital letters');
+select throws_ok($$select public.set_project_investment(pg_temp.id('barn'), '{"currency": null}')$$,
+  'P0001', 'validation', 'and cannot be cleared');
+
 -- A viewer reads but does not write.
 select tests.authenticate_as('pin_viewer');
-select is((pg_temp.inv()->>'arv_agorot')::bigint, 150000000::bigint, 'a viewer reads the investment');
-select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_agorot": 1}')$$,
+select is((pg_temp.inv()->>'arv_minor')::bigint, 150000000::bigint, 'a viewer reads the investment');
+select throws_ok($$select public.set_project_investment(pg_temp.id('house'), '{"arv_minor": 1}')$$,
   '42501', 'forbidden', 'a viewer cannot set the figures');
 select throws_ok($$select public.set_category_rehab(pg_temp.id('materials'), false)$$,
   '42501', 'forbidden', 'or the rehab switch');
@@ -223,19 +244,22 @@ select throws_ok($$select public.set_category_rehab(pg_temp.id('materials'), fal
 -- MCP.
 select pg_temp.as_mcp('write');
 insert into pin_out (label, body)
-select 'mcp_set', public.mcp_set_project_investment('pin-set-1', pg_temp.id('house'), '{"arv_agorot": 160000000}');
+select 'mcp_set', public.mcp_set_project_investment('pin-set-1', pg_temp.id('house'), '{"arv_minor": 160000000}');
 select is((select body->'data'->>'undo_kind' from pin_out where label = 'mcp_set'), 'project_investment',
   'MCP set_project_investment returns its undo kind');
-select is((select (body->'data'->>'arv_agorot')::bigint from pin_out where label = 'mcp_set'), 160000000::bigint,
+select is((select (body->'data'->>'arv_minor')::bigint from pin_out where label = 'mcp_set'), 160000000::bigint,
   'and the figures after');
-select is(public.mcp_set_project_investment('pin-set-1', pg_temp.id('house'), '{"arv_agorot": 160000000}'),
+select is(public.mcp_set_project_investment('pin-set-1', pg_temp.id('house'), '{"arv_minor": 160000000}'),
   (select body from pin_out where label = 'mcp_set'), 'a replay returns the same answer');
-select is(public.mcp_set_project_investment('pin-set-2', pg_temp.id('house'), '{"arv_agorot": -1}')->'error'->>'code',
+select is(public.mcp_set_project_investment('pin-set-2', pg_temp.id('house'), '{"arv_minor": -1}')->'error'->>'code',
   'validation', 'a negative amount is validation');
-select is(public.mcp_set_project_investment('pin-set-3', pg_temp.id('other_house'), '{"arv_agorot": 1}')->'error'->>'message',
+select is(public.mcp_set_project_investment('pin-set-3', pg_temp.id('other_house'), '{"arv_minor": 1}')->'error'->>'message',
   'project not found', 'another company''s project is refused as not found');
 select is(public.mcp_undo('pin-undo-1', 'project_investment', pg_temp.id('house'))->>'ok', 'true', 'undo works');
-select is((pg_temp.inv()->>'arv_agorot')::bigint, 150000000::bigint, 'and puts the ARV back');
+select is((pg_temp.inv()->>'arv_minor')::bigint, 150000000::bigint, 'and puts the ARV back');
+select public.mcp_set_project_investment('pin-set-cur', pg_temp.id('house'), '{"currency": "EUR"}');
+select is(public.mcp_undo('pin-undo-cur', 'project_investment', pg_temp.id('house'))->>'ok', 'true', 'undo of a currency change works');
+select is(pg_temp.inv()->>'currency', 'ILS', 'and puts the currency back');
 
 -- Undo after the owner changed the figures again is a conflict.
 select public.mcp_set_project_investment('pin-set-4', pg_temp.id('house'), '{"value_date": "2026-10-01"}');
@@ -249,7 +273,7 @@ insert into pin_out (label, body)
 select 'mcp_rehab', public.mcp_set_category_rehab('pin-rehab-1', pg_temp.id('interest'), true);
 select is((select body->'data'->>'in_rehab' from pin_out where label = 'mcp_rehab'), 'true',
   'MCP set_category_rehab returns what the switch comes to');
-select is((pg_temp.inv()->>'rehab_agorot')::bigint, 220000::bigint, 'and rehab follows');
+select is((pg_temp.inv()->>'rehab_minor')::bigint, 220000::bigint, 'and rehab follows');
 select is(public.mcp_undo('pin-undo-3', 'category_rehab', pg_temp.id('interest'))->>'ok', 'true', 'undo works');
 select is((select rehab from public.categories where id = pg_temp.id('interest')), null, 'and puts the default back');
 select is(public.mcp_undo('pin-undo-4', 'category_rehab', pg_temp.id('interest'))->'error'->>'code', 'not_found',

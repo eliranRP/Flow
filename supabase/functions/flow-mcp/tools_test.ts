@@ -3897,12 +3897,12 @@ Deno.test("delete_loan and reorder_loans forward their input, undo takes loan_de
 Deno.test("set_project_investment and set_category_rehab forward their input, undo takes both kinds (FLOW-404)", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "project_investment", id: TXN } } }));
   const set = await callTool("set_project_investment", {
-    idempotency_key: "pi-1", project_id: TXN.toUpperCase(), arv_agorot: 150000000, purchase_agorot: null, value_date: "2026-09-30",
+    idempotency_key: "pi-1", project_id: TXN.toUpperCase(), arv_minor: 150000000, purchase_minor: null, value_date: "2026-09-30", currency: "USD",
   }, ["write"], rpc);
   assertEquals(set.isError, false);
   assertEquals(calls[0], {
     name: "mcp_set_project_investment",
-    body: { p_idempotency_key: "pi-1", p_project_id: TXN, p_patch: { purchase_agorot: null, arv_agorot: 150000000, value_date: "2026-09-30" } },
+    body: { p_idempotency_key: "pi-1", p_project_id: TXN, p_patch: { currency: "USD", purchase_minor: null, arv_minor: 150000000, value_date: "2026-09-30" } },
   });
   for (const rehab of [true, false, null]) {
     const switched = await callTool("set_category_rehab", { idempotency_key: "cr-1", category_id: TXN, rehab }, ["write"], rpc);
@@ -3921,12 +3921,14 @@ Deno.test("set_project_investment and set_category_rehab forward their input, un
   const before = calls.length;
   for (const [tool, input] of [
     ["set_project_investment", { idempotency_key: "k", project_id: TXN }],
-    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_agorot: -1 }],
-    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_agorot: 12.5 }],
-    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_agorot: "100" }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_minor: -1 }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_minor: 12.5 }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, currency: "usd" }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, currency: null }],
+    ["set_project_investment", { idempotency_key: "k", project_id: TXN, arv_minor: "100" }],
     ["set_project_investment", { idempotency_key: "k", project_id: TXN, value_date: "2026-02-30" }],
     ["set_project_investment", { idempotency_key: "k", project_id: TXN, budget_agorot: 1 }],
-    ["set_project_investment", { idempotency_key: "k", project_id: "not-a-uuid", arv_agorot: 1 }],
+    ["set_project_investment", { idempotency_key: "k", project_id: "not-a-uuid", arv_minor: 1 }],
     ["set_category_rehab", { idempotency_key: "k", category_id: TXN }],
     ["set_category_rehab", { idempotency_key: "k", category_id: TXN, rehab: "yes" }],
     ["set_category_rehab", { idempotency_key: "k", category_id: "not-a-uuid", rehab: true }],
