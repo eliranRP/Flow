@@ -10,6 +10,7 @@ import { ViewerPreview } from "../use-is-viewer";
 import { SettingsScreen } from "./flow-screens";
 import {
   companyNameError,
+  RENAME_CONTROL_CHAR,
   RENAME_FAILED,
   RENAME_REFUSED,
   RENAME_SAVED,
@@ -82,6 +83,25 @@ describe("company name rules", () => {
     expect(companyNameError("א".repeat(101))).toBe(RENAME_TOO_LONG);
     expect(companyNameError("א".repeat(99) + "😀")).toBeUndefined();
   });
+
+  it("refuses a control character after trimming, like private.company_name_problem (FLOW-606)", () => {
+    // Trimmed away first, as private.trim_name does.
+    expect(companyNameError("\tאלפא\n")).toBeUndefined();
+    expect(companyNameError("\u00a0אלפא\ufeff")).toBeUndefined();
+    // Inside the name: C0, DEL and C1.
+    expect(companyNameError("אל\tפא")).toBe(RENAME_CONTROL_CHAR);
+    expect(companyNameError("אל\u0001פא")).toBe(RENAME_CONTROL_CHAR);
+    expect(companyNameError("אל\u007fפא")).toBe(RENAME_CONTROL_CHAR);
+    expect(companyNameError("אל\u0085פא")).toBe(RENAME_CONTROL_CHAR);
+    expect(companyNameError("אל\u009fפא")).toBe(RENAME_CONTROL_CHAR);
+    // Next to the range, and the server's ordinary letters.
+    expect(companyNameError("אל\u00a0פא")).toBeUndefined();
+    expect(companyNameError("א״ב & Co.")).toBeUndefined();
+    expect(companyNameError("א\u0001")).toBe(RENAME_CONTROL_CHAR);
+    // Length is checked before control characters, as on the server.
+    expect(companyNameError("\u0001")).toBe(RENAME_TOO_SHORT);
+    expect(companyNameError("א".repeat(100) + "\u0001")).toBe(RENAME_TOO_LONG);
+  });
 });
 
 describe("rename company sheet", () => {
@@ -126,6 +146,19 @@ describe("rename company sheet", () => {
     expect(screen.getByText(RENAME_TOO_SHORT)).toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(screen.getByText("open")).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses a pasted tab on the field instead of the save toast (FLOW-606)", async () => {
+    const calls = mockRpc(() => ({ error: null }));
+    wrap(<Harness />);
+    fireEvent.change(field(), { target: { value: "בטא\tבע״מ" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(field()).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText(RENAME_CONTROL_CHAR)).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+    expect(screen.getByText("open")).toBeInTheDocument();
+    expect(screen.queryByText(RENAME_FAILED)).not.toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 
