@@ -220,7 +220,7 @@ describe("project page", () => {
       rpc.calls = [];
       rpc.impl = (name, args) => {
         if (name !== "get_project") return Promise.resolve({ data: [], error: null });
-        const cash = (args as { p_basis?: string }).p_basis === "cash";
+        const cash = (args as { p_basis?: string } | undefined)?.p_basis === "cash";
         return Promise.resolve({ data: cash ? project({ is_overhead: overhead }) : { ...base, is_overhead: overhead }, error: null });
       };
       const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -236,7 +236,7 @@ describe("project page", () => {
         </QueryClientProvider>,
       );
       await screen.findByText("הוצאות לפי קטגוריה");
-      await waitFor(() => { expect(rpc.calls.some((call) => (call.args as { p_basis?: string }).p_basis === "cash")).toBe(true); });
+      await waitFor(() => { expect(rpc.calls.some((call) => (call.args as { p_basis?: string } | undefined)?.p_basis === "cash")).toBe(true); });
       if (overhead) {
         await waitFor(() => { expect(view.container.querySelector(".ui-invest")).toBeNull(); });
       } else {

@@ -18,10 +18,12 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-404 השקעה card on the project page (#175 review card batch merged) | The transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
+| UI lane 3 | FLOW-405 screen: the Settings → Categories ⋯ sheet (move all lines, delete with undo, the FLOW-404 "נספרת בשיפוץ" switch), PR #217 | Settings and other areas outside the review and transaction screens |
+| UI lane 4 | FLOW-504 screen part: currency choice in Settings, base currency on Home, overhead share and loan default | FLOW-702 app part: Jev mode and threshold chips in Settings; the card part with UI lane 2 |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807: split the big files, one PR per file. Merged: one file per screen (#219), one stories file per screen (#225); now `ui.css` into `app/src/ui/css/` | The review area out of `flow-screens.tsx` (after #204); `split-screen.tsx` and `connections-screen.tsx` are near 800 lines |
+| File split | FLOW-807: last PR, the review area out of `flow-screens.tsx` (merged: screens #219, stories #225, CSS #227) | Stops after this; `split-screen.tsx` (about 780 lines) and `connections-screen.tsx` (about 750) are the biggest screen files left |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -809,14 +811,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup, 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (#217, UI lane 3: the Settings → Categories screen; server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 - [x] Mockup approved (2026-10-08; the project's plans/flow-405-category-mockup.html). The category ⋯ sheet gets two rows, drawn with the FLOW-404 switch. "העברת כל התנועות" shows the line count on the row and a hint that the category stays, and sits above מיזוג (whose hint says the category is hidden) and הסתרה. מחיקה comes last, after a line. A hidden category's sheet shows החזרה לרשימה, the move row and מחיקה.
 - [x] Move opens the merge picker titled "העברת N תנועות אל". It lists same-kind categories with their line counts, without the source or a category a loan part can't go to. One tap moves, with no confirm, then a toast naming the count and the target, with ביטול, which moves exactly those lines back.
 - [x] Delete uses ConfirmSheet. The item names the line count. The consequence says the lines go back to לאישור, counts the split lines that lose their split (a sentence only when there are some), and says remembered suppliers forget the category. When the category has lines, a new optional link, "להעביר את התנועות לקטגוריה אחרת במקום", opens the move picker. An empty category's confirm has no count and no link, and one line: "הקטגוריה תימחק מהרשימה." The toast says the lines went back to לאישור and carries ביטול, which restores the category, its lines, splits and rules. An undo conflict shows "אי אפשר לבטל: תנועה סווגה מחדש בינתיים", and a delete the server refuses anyway shows the server's sentence.
 - [x] While a loan uses the category, מחיקה stays visible but disabled, with the reason. The built-in loan categories keep their locked line and get neither row.
-- [ ] Screen in a UI lane: the two sheet rows, the picker title and counts, ConfirmSheet's optional alternative link with a story, the toasts and the undo conflict error.
+- [x] Screen in a UI lane (#217): the two sheet rows, the picker title and counts, ConfirmSheet's optional alternative link with a story, the toasts and the undo conflict error. A hidden category gets no move row, because `move_category_lines` refuses a hidden source; built-in loan categories are left out of the picker.
 
 <a id="flow-406"></a>
 ### FLOW-406 · Sub-categories and project groups
@@ -1097,7 +1099,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219 screens and #225 stories merged; now `ui.css`; then the review area) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#219 screens, #225 stories, #227 CSS merged; the review area is the last part) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 

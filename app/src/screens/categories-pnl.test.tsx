@@ -178,7 +178,8 @@ describe("categories kept out of the P&L", () => {
     const action = within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" });
     expect(action).toHaveAccessibleDescription("הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה.");
     fireEvent.click(action);
-    expect(await within(sheet).findByText("מעדכן…")).toBeInTheDocument();
+    // FLOW-405: the P&L action is a sheet row, busy with a spinner while it saves.
+    await waitFor(() => { expect(action).toHaveAttribute("aria-busy", "true"); });
     expect(within(sheet).getByRole("button", { name: "הסתרה" })).toBeDisabled();
     fireEvent.keyDown(sheet, { key: "Escape" });
     await new Promise((resolve) => setTimeout(resolve, 50));

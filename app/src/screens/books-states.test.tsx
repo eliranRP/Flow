@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Session } from "@supabase/supabase-js";
 import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -155,6 +155,33 @@ describe("rejected reads", () => {
     renderAt("/settings");
     expect(await screen.findByRole("button", { name: "ניסיון חוזר" })).toBeInTheDocument();
     expect(screen.queryByText("עדיין בלי עסק")).not.toBeInTheDocument();
+  });
+
+  it("keeps the company currency row static until the stored currency reads (FLOW-504)", async () => {
+    const answers: Array<{ data: unknown; error: { message: string } | null }> = [
+      { data: null, error: { message: "db down" } },
+      { data: "usd", error: null },
+      { data: "USD", error: null },
+    ];
+    let stored = answers[0];
+    rpc.impl = (name) => {
+      if (name === "get_dashboard") return Promise.resolve({ data: emptyDashboard, error: null });
+      if (name === "mcp_company_loan_currency") return Promise.resolve(stored ?? { data: null, error: null });
+      return Promise.resolve({ data: null, error: { message: "db down" } });
+    };
+    const currencyRow = () => screen.getByText("מטבע העסק").closest(".ui-row");
+    // A failed read and an odd value both read as a failure, never as a shekel company.
+    for (const answer of answers.slice(0, 2)) {
+      stored = answer;
+      renderAt("/settings");
+      await waitFor(() => { expect(currencyRow()).toHaveTextContent("לא הצלחנו לטעון"); });
+      expect(screen.queryByRole("button", { name: /^מטבע העסק/ })).not.toBeInTheDocument();
+      cleanup();
+      rpc.handlers.length = 0;
+    }
+    stored = answers[2];
+    renderAt("/settings");
+    expect(await screen.findByRole("button", { name: "מטבע העסק: $ דולר" })).toBeInTheDocument();
   });
 
   it("does not hide open invoices when only that query fails", async () => {
