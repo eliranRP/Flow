@@ -36,11 +36,13 @@ import {
   LINE_SPLIT_PLACE,
   LINE_SPLIT_SAVE_FAILURE,
   lineSplitCopy,
+  lineSplitPartsLabel,
   lineSplitRefusal,
   localIssueCopy,
   type LineSplitRefusal,
 } from "../line-split-copy";
 import { usePreviewSearch, useHomePreview } from "../preview";
+import { reviewFocusPath } from "../review-paths";
 import { screenPhase, type ScreenPhase } from "../query-phase";
 import { isReversal, reversalChoices, type KindedCategory } from "../reversal";
 import { useCategoriesQuery, useDashboardQuery, useInvalidateBooks, useTransactionQuery } from "../use-books";
@@ -110,6 +112,8 @@ export type LineInfo = {
   docDate: string;
   /** An open review other than `split_mismatch` refuses the save (0125). */
   reviewBlocked: boolean;
+  /** That open review's id, when known: לתור opens its card. */
+  reviewId?: string | null;
   /** A loan split refuses a split by category (0104). */
   loanSplit: boolean;
   /** `in_pnl_override` true: the line's kept-out parts count, so a reversal part needs a project (0138). */
@@ -129,6 +133,7 @@ export function lineInfo(txn: NonNullable<TransactionDetail>, loanSplit = false)
     supplier: txn.supplier_name ?? txn.customer_name ?? txn.description,
     docDate: txn.doc_date,
     reviewBlocked: txn.review_status === "open" && txn.review_reason !== "split_mismatch",
+    reviewId: txn.review_status === "open" ? txn.review_id ?? null : null,
     loanSplit,
     inPnl: txn.in_pnl_override === true,
   };
@@ -170,10 +175,12 @@ function Percent({ value }: { value: number }) {
   return <bdi className="ui-num" dir="ltr">{`${percentText(value)}%`}</bdi>;
 }
 
+export { lineSplitPartsLabel };
+
 /** "מפוצל · N חלקים · לא נספר כאן" on the detail's category and project rows (plan Q9). */
 export function lineSplitRowHint(read: LineSplitRead | null | undefined): string | undefined {
   if (!read || read.parts.length === 0 || !read.partsMatch) return undefined;
-  return `מפוצל · ${String(read.parts.length)} חלקים · לא נספר כאן`;
+  return `${lineSplitPartsLabel(read.parts.length)} · לא נספר כאן`;
 }
 
 function partProjectLabel(projectName: string | null | undefined, lineProject: string | null): string {
@@ -446,6 +453,7 @@ function LineSplitEditor({
   const goBack = useGoBack();
   const invalidate = useInvalidateBooks();
   const location = useLocation();
+  const search = usePreviewSearch();
   const [parts, setParts] = useState<PartDraft[]>(initial.parts);
   const [rest, setRest] = useState<RestDraft>(initial.rest);
   const [baseline] = useState(() => draftFromRead(split, line.categoryId));
@@ -731,7 +739,11 @@ function LineSplitEditor({
         </div>
         {bannerReason ? (
           <div className="ui-lsplit-banner">
-            <Banner icon={<AlertIcon />} title={lineSplitCopy(bannerReason)} />
+            <Banner
+              icon={<AlertIcon />}
+              title={lineSplitCopy(bannerReason)}
+              hint={bannerReason === "line has an open review" ? <TextLink to={line.reviewId ? reviewFocusPath(search, line.reviewId) : `/review${search}`}>לתור</TextLink> : undefined}
+            />
           </div>
         ) : split?.partsMatch === false ? (
           <div className="ui-lsplit-banner">

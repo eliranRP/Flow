@@ -18,3 +18,9 @@ export const AsButton: Story = {
 export const Route: Story = { args: { to: "/sign-in", children: "חזרה" } };
 export const Mail: Story = { args: { href: "mailto:ops@nromomentum.com", children: "ops@nromomentum.com" } };
 export const LongHebrew: Story = { args: { to: "/help", children: longHebrew } };
+/** FLOW-333 C6: a disabled link is grey, with no hover or press fill. */
+export const Disabled: Story = {
+  args: { children: "החזרה לתור" },
+  render: (args) => <TextLink disabled onClick={() => undefined}>{args.children}</TextLink>,
+};
+export const DisabledDark: Story = { ...Disabled, globals: { theme: "dark" } };
