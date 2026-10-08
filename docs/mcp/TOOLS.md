@@ -155,7 +155,7 @@ An open review is closed by `approve_review_item`. The card leaves לאישור.
 
 ### assign_expense
 
-Passes the project and category into `approve_review_item` when a review is open. Otherwise `reassign_transaction`. A finished project is allowed, because `reassign_transaction` allows it.
+Passes the project and category into `approve_review_item` when a review is open. Otherwise `reassign_transaction`. A finished project is allowed, because `reassign_transaction` allows it. `project_id` may be left out (or null) when the category is an income category kept out of the P&L; any other category without a project is `validation` (FLOW-205).
 
 The category kind may differ from the line's direction. The kind decides the P&L side: an outflow under an income category is a reversal and counts as negative income, and an inflow under an expense category counts as negative expense. An income-kind category needs a project unless it is off-P&L, also on an outflow. `direction` and the signed amount stay as stored. Auto-suggested categories, connector syncs, `assign_expense_split`, and loan splits still use the line's own kind. Decision [0103](../decisions/0103-reversals-across-directions.md).
 
@@ -216,6 +216,8 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 ```
 
 ## Writes · cycle 4
+
+A project, category or loan name (`create_project`, `create_category`, `create_projects`, `create_categories`, `add_loan`, `update_loan`) with a control character, a line or paragraph separator, an invisible format character (zero-width, bidi marks and controls, BOM, soft hyphen, tag characters) or a blank filler is `validation`; ZWJ is allowed for emoji (FLOW-205).
 
 `create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it. Otherwise undo is `conflict` and the row stays.
 
