@@ -20,7 +20,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-508: Mercury's business-details link returns to the Mercury sheet | Next ready bug |
+| Backlog bug fixes | FLOW-508: sync time on its own line in the connector sheets (320) | Next ready bug |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -852,7 +852,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
 - [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
 - [ ] Consider a shorter claim expiry (15 minutes in the edge functions, `sumit_status` and `claim_connector_refreshes`).
-- [ ] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320.
+- [x] Settings copy: the "עודכן" phrase should stay on one line at 320; the rate-limit copy without a retry time; the last-use date format; a dangling separator at 320. (The sync time now has its own line in the SUMIT and Mercury sheets, so no line starts with "·"; checked at 320. The retry time shows under רענון עכשיו while held; the last use and the sync time share the today / yesterday / D.M rules.)
 - [x] Onboarding header back control goes to sign-in and drops `preview=1`; the onboarding round trip leaves no-op Back steps. (Back goes to `return` with preview kept, and a save replaces the entry. Also: Mercury's "פרטי העסק" link came back to the SUMIT sheet; it now returns to Mercury's.)
 
 <a id="flow-509"></a>

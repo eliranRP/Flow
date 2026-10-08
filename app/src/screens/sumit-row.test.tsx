@@ -824,7 +824,9 @@ describe("SUMIT status row", () => {
     const phrase = israelSyncPhrase(synced);
     if (phrase == null) throw new Error("missing sync phrase");
     const stamp = [...sheet.querySelectorAll(".ui-nowrap")].find((node) => node.textContent.includes(phrase));
-    expect(stamp?.textContent.startsWith(" ·")).toBe(true);
+    // FLOW-508: the sync time has its own line, so at 320 no line starts with a separator.
+    expect(stamp?.textContent).toBe(phrase);
+    expect(stamp?.previousElementSibling?.tagName).toBe("BR");
     unmount();
 
     vi.useFakeTimers({ toFake: ["Date"] });
