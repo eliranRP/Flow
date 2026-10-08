@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-313 item 4 + FLOW-134 item 3 (#242) | Next small ready item |
+| Backlog bug fixes | FLOW-329 + FLOW-124 items 2 and 3 (#248) | Next small ready item |
 | File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | the four app test files over 1,200 lines (books-states, review-all, round5-ui, sumit-row), one per PR, each when no open PR changes it |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
@@ -82,12 +82,12 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
 | 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) |
 | 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | done (#162) |
-| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | done (#242) |
+| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready (item 5, server) |
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
 | 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | done (#242) |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
-| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready for a UI lane (server parts done in #176) |
+| 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | done (#253, #248) |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
 | 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | done (#128) |
@@ -100,7 +100,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | done (#165) |
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | done (#175) |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | done (#165; whole-unit amounts item open, conflicts with 0120) |
-| 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
+| 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | done (#248) |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | merged (#238) |
@@ -229,10 +229,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-124"></a>
 ### FLOW-124 · One line out of the P&L follow-ups (#105)
-- **Type:** SMALL UI · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-108 (#105)
+- **Type:** SMALL UI · **Status:** done (item 1 #253; items 2 and 3 #248; server #176) · **Depends on:** FLOW-108 (#105)
 - [x] (UI lane 3, 2026-10-08, for the category drill-down, שויכו היום and a project's לאישור list: the shared `KeptOutTag` ⊘ through `ListRow` `tag`; the project list already says "מחוץ לרווח" in its hint, and every breakdown line in the excluded view is out, so it gets no ⊘) (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
-- [ ] (server done in #176: `get_transaction` returns `pnl_state` `in`/`out`/`mixed`; driving the pill and hint from it is the UI part) A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
-- [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
+- [x] (server done in #176: `get_transaction` returns `pnl_state` `in`/`out`/`mixed`; driving the pill and hint from it is the UI part; done in #248: a mixed line shows "חלקית ברווח" and a split-by-category hint, a line kept out by its parts shows the kept-out pill and comes back in with true; a loan line keeps its lock) A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
+- [x] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint. (#248: the hints now sit on the card's switch row; stories `TransactionPnlCategoryOut`, `TransactionPnlForcedIn`, `TransactionPnlLoanLine`, `TransactionPnlMixed`, and `TransactionManualMore` opens ⋯.)
 
 <a id="flow-103"></a>
 ### FLOW-103 · One P&L basis for the app and MCP totals
@@ -305,11 +305,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-134"></a>
 ### FLOW-134 · Loan part categories follow-ups (FLOW-106 part 2 review)
-- **Type:** BACKLOG NIT · **Status:** done (#242) · **Depends on:** FLOW-106 part 2
+- **Type:** BACKLOG NIT · **Status:** ready (item 5, server) · **Depends on:** FLOW-106 part 2
 - [x] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge. (Moved when the target fits, else the merge is refused: migration `20261010090000`, decision 0132.)
 - [x] The categories screen shows a generic error when a flip is refused with `loan category is fixed` for a category a loan uses; give it copy (Mercury UI thread). (`pnlFailureText` in `category-copy.ts`.)
 - [x] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread). (`LoanTransactionSplit` takes the line's `categoryId` and offers שיוך when a loan's principal category is that category.)
 - [x] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns. (One loop over the four keys; the update trigger runs only when a part category changes: migration `20261010090000`, decision 0132.)
+- [ ] (from #248 review) `get_transaction`'s `pnl_fixed` is `loan_part is not null` on the line's own category, so a line matched on a loan's own principal category (item 3) reads false while `set_transaction_pnl` refuses it. Make `pnl_fixed` true when the line has loan splits; the card checks the loan-split flag meanwhile.
 
 <a id="flow-135"></a>
 ### FLOW-135 · Loan installments follow-ups (FLOW-106 part 3 review)
@@ -693,9 +694,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-329"></a>
 ### FLOW-329 · Out of the P&L as a visible row on the transaction
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-124 · **Source:** cycle 1 (U5, D15)
+- **Type:** SMALL UI · **Status:** done (#248) · **Depends on:** — · **Overlaps:** FLOW-124 · **Source:** cycle 1 (U5, D15)
 - **What:** On the transaction detail, the only way to take a line out of the P&L is an unlabelled ⋯ at the top-left corner, the hardest spot to reach one-handed. Show a "ברווח והפסד" switch row under the category row; keep ⋯ only for delete. Move "פיצול בין פרויקטים" to the bottom of the screen, in the thumb zone. (cycle 3) The new "פיצול" section from #150 also sits mid-screen; it moves with it.
 - **Acceptance:** out-of-P&L is one tap on the detail and reversible; ⋯ shows only when delete applies; tests; design review.
+- **Done (#248):** a "ברווח והפסד" switch row under the category row (a loan line shows it locked); ⋯ only on a manual line, holding מחיקה. The פיצול section was already at the bottom of the card.
 
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
