@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(12);
+select plan(16);
 
 do $users$
 begin
@@ -35,7 +35,8 @@ from (values ('Repairs'), ('Upgrades')) as v(name);
 insert into lsf (label, id) select lower(name), id from public.categories
 where name in ('Repairs', 'Upgrades') and company_id = (select id from lsf where label = 'co');
 
--- A USD bill filed to East, split later between East and West; a plain USD bill on East.
+-- On East: a USD bill split later between East and West, a plain bill, a bill whose parts all
+-- go to West, and a mortgage payment split into its three loan parts.
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role, line_status, currency,
   amount_gross, amount_net, amount_original, vat_amount, vat_status,
@@ -44,9 +45,28 @@ insert into public.transactions (
 select (select id from lsf where label = 'co'), 'expense', 'expense', 'project', 'posted', 'USD',
   v.amount, v.amount, abs(v.amount), 0, 'source', '2026-06-10', '2026-06-10', 'manual', v.key,
   (select id from lsf where label = 'east'), (select id from lsf where label = 'repairs'), v.key, true
-from (values ('lsf:split', -300000), ('lsf:plain', -5000)) as v(key, amount);
+from (values ('lsf:split', -300000), ('lsf:plain', -5000), ('lsf:moved', -20000), ('lsf:loan', -100000)) as v(key, amount);
 insert into lsf (label, id) select replace(idempotency_key, 'lsf:', 'txn_'), id
 from public.transactions where idempotency_key like 'lsf:%';
+
+insert into public.loans (
+  company_id, name, principal_minor, annual_rate_ppm, term_months,
+  start_date, payment_minor, escrow_minor, currency
+)
+values ((select id from lsf where label = 'co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 20000, 'USD');
+
+insert into public.loan_splits (
+  company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id
+)
+select t.company_id, l.id, t.id, v.part::public.loan_split_part, v.amount, v.amount,
+  (select k.id from public.categories k where k.company_id = t.company_id and k.name = v.cat and k.kind = 'expense')
+from public.transactions t
+join public.loans l on l.company_id = t.company_id
+join (values
+  ('interest', 70000, 'ריבית משכנתא'),
+  ('escrow', 20000, 'מסים וביטוח'),
+  ('principal', 10000, 'תשלומי הלוואה')
+) as v(part, amount, cat) on t.idempotency_key = 'lsf:loan';
 
 create function pg_temp.row_of(p_project text, p_txn text) returns jsonb
 language sql
@@ -89,6 +109,10 @@ select public.save_line_split((select id from lsf where label = 'txn_split'), js
   jsonb_build_object('category_id', (select id from lsf where label = 'upgrades'), 'project_id', (select id from lsf where label = 'east'), 'amount_minor', 50000),
   jsonb_build_object('category_id', (select id from lsf where label = 'upgrades'), 'project_id', (select id from lsf where label = 'west'), 'amount_minor', 150000)
 ));
+select public.save_line_split((select id from lsf where label = 'txn_moved'), jsonb_build_array(
+  jsonb_build_object('category_id', (select id from lsf where label = 'repairs'), 'project_id', (select id from lsf where label = 'west'), 'amount_minor', 15000),
+  jsonb_build_object('category_id', (select id from lsf where label = 'upgrades'), 'project_id', (select id from lsf where label = 'west'), 'amount_minor', 5000)
+));
 
 select isnt(pg_temp.row_of('west', 'txn_split'), null, 'West lists a line that reaches it only through a part');
 select is((pg_temp.row_of('west', 'txn_split') ->> 'parts_minor')::bigint, 150000::bigint,
@@ -98,17 +122,30 @@ select is((pg_temp.row_of('east', 'txn_split') ->> 'parts_minor')::bigint, 15000
 select is(pg_temp.row_of('quiet', 'txn_split'), null, 'a project with no part does not list the line');
 select is(pg_temp.row_of('east', 'txn_plain') -> 'parts_minor', 'null'::jsonb,
   'an unsplit line on the same project keeps a null parts_minor');
+select is((pg_temp.row_of('east', 'txn_moved') ->> 'parts_minor')::bigint, 0::bigint,
+  'a line filed to East with every part on West lists 0 on East');
+select is((pg_temp.row_of('west', 'txn_moved') ->> 'parts_minor')::bigint, 20000::bigint,
+  'West holds the whole of that line through its parts');
+select is(pg_temp.row_of('east', 'txn_loan') -> 'parts_minor', 'null'::jsonb,
+  'a loan split is not a split by category, so parts_minor stays null');
 
--- Counts: East has the split line (two parts) and the plain line, West one line, Home two.
-select is(pg_temp.proj_count('east'), 2, 'get_project other_currencies counts a split line once');
-select is(pg_temp.proj_count('west'), 1, 'West counts the line its part comes from once');
-select is(pg_temp.home_count(), 2, 'get_home other_currencies counts a split line once');
+-- Counts: East has the split line (two parts), the plain line and the loan payment (two
+-- parts in the P&L); West has the split line and the moved line; Home has all four.
+select is(pg_temp.proj_count('east'), 3, 'get_project other_currencies counts a split line and a loan payment once each');
+select is(pg_temp.proj_count('west'), 2, 'West counts each line its parts come from once');
+select is(pg_temp.home_count(), 4, 'get_home other_currencies counts each split line and loan payment once');
+select is(
+  (select (x ->> 'count')::int from jsonb_array_elements(
+    public.get_project((select id from lsf where label = 'west'), 'cash') -> 'other_currencies') x
+   where x ->> 'currency' = 'USD'),
+  2,
+  'the moved line counts on West, not on East');
 select is(
   (select (x ->> 'expense_minor')::bigint from jsonb_array_elements(
     public.get_project((select id from lsf where label = 'east'), 'cash') -> 'other_currencies') x
    where x ->> 'currency' = 'USD'),
-  -155000::bigint,
-  'East''s USD expense is its parts plus the plain line');
+  -245000::bigint,
+  'East''s USD expense is its parts, the plain line and the loan interest and escrow');
 
 -- Cross-tenant: the neighbour reads nothing of this company's project.
 select tests.authenticate_as('lsf_other');

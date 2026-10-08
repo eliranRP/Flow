@@ -2,7 +2,8 @@
 -- 1. get_project's transactions[] also lists a line that reaches the project only through a
 --    part of a split by category (line_splits.project_id), and every row carries parts_minor:
 --    the sum of the line's parts that count under this project (a part with no project keeps
---    the line's project), or null when no part does (or the line has no split by category).
+--    the line's project): 0 when the line is split but no part is on this project, null when
+--    the line has no split by category.
 -- 6. get_home.other_currencies[].count and get_project.other_currencies[].count count each
 --    bank line once (distinct transaction_id), as company_pnl does, instead of once per part
 --    of a split line, per loan split part or per allocation row. Amounts don't change.
@@ -296,12 +297,16 @@ begin
         'doc_kind', t.doc_kind,
         'line_status', t.line_status,
         'category', c.name,
-        'parts_minor', (
-          select sum(s.amount_minor)::bigint
+        'parts_minor', case when exists (
+          select 1 from public.line_splits s0
+          where s0.transaction_id = t.id and s0.company_id = cid
+        ) then coalesce((
+          select sum(s.amount_minor)
           from public.line_splits s
           where s.transaction_id = t.id
+            and s.company_id = cid
             and coalesce(s.project_id, t.project_id) = p.id
-        )
+        ), 0)::bigint end
       ) order by t.doc_date desc, t.created_at desc, t.id desc)
       from (
         select * from public.transactions t
