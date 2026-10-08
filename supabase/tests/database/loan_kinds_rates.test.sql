@@ -1,4 +1,4 @@
--- FLOW-106 part 4: loan kinds and a variable rate (decision 0131), plus the loan follow-ups
+-- FLOW-106 part 4: loan kinds and a variable rate (decision 0132), plus the loan follow-ups
 -- FLOW-132 (a closed loan's line that comes back or moves past closed_on), FLOW-134 items 1
 -- and 4 (merge_category moves loan categories; the part-category trigger runs on a change
 -- only) folded into the same migration.

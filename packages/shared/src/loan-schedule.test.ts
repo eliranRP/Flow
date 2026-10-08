@@ -428,7 +428,7 @@ describe("buildLoanSchedule", () => {
   });
 });
 
-describe("loan kinds and rate changes (decision 0131)", () => {
+describe("loan kinds and rate changes (decision 0132)", () => {
   // 120,000.00 at 6 percent: 600.00 interest a month on the full balance.
   const io: LoanTerms = {
     principalMinor: 12_000_000n,
@@ -562,7 +562,7 @@ describe("loan kinds and rate changes (decision 0131)", () => {
   });
 });
 
-describe("demand loans (decision 0131)", () => {
+describe("demand loans (decision 0132)", () => {
   const demand = { principalMinor: 5_000_000n, annualRatePpm: 73_000, startDate: "2026-01-01" };
 
   it("accrues daily on actual/365 from the start, rounded half to even", () => {

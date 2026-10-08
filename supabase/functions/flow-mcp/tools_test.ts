@@ -2879,7 +2879,7 @@ Deno.test("attach_loan_payment installments cover several rows from the first un
     principalMinor: sum("principalMinor"),
   });
   // The line's date is ignored: the rows start at the first one not yet paid, found from the
-  // interest and principal of the payments already attached (decision 0131).
+  // interest and principal of the payments already attached (decision 0132).
   const payments = [paidRow("ffffffff-ffff-4000-8000-0000000000f1", rows[0] ?? { interestMinor: 0n, principalMinor: 0n }), paidRow("ffffffff-ffff-4000-8000-0000000000f2", rows[1] ?? { interestMinor: 0n, principalMinor: 0n })];
   const { calls, rpc } = feesRpc(loan, lineMinor, "2027-06-01", null, payments);
   const out = await callTool("attach_loan_payment", {
@@ -3233,7 +3233,7 @@ Deno.test("attach_loan_payment files fees under the call's category, else the lo
   }
 });
 
-// FLOW-106 part 4: loan kinds and a variable rate (decision 0131).
+// FLOW-106 part 4: loan kinds and a variable rate (decision 0132).
 
 function addLoanRpc() {
   return rpcOf((name) => {

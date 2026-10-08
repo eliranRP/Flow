@@ -230,7 +230,7 @@ const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
 const LOAN_KIND = z.enum(["amortizing", "interest_only", "balloon", "demand"]);
 const LOAN_MONTHS = z.number().int().min(1).max(LOAN_TERM_MONTHS_MAX);
 /**
- * The kind fields go together (decision 0131): interest_only_months only with interest_only,
+ * The kind fields go together (decision 0132): interest_only_months only with interest_only,
  * amortization_months only with balloon, and a demand loan has no term, payment or escrow.
  */
 function kindFieldsFit(body: {
@@ -285,7 +285,7 @@ const updateLoanSchema = z.object({
   escrow_category_id: UUID_TEXT.nullable().optional(),
   principal_category_id: UUID_TEXT.nullable().optional(),
   fees_category_id: UUID_TEXT.nullable().optional(),
-  // The kind and its own field (decision 0131). A kind change clears the other kind's field;
+  // The kind and its own field (decision 0132). A kind change clears the other kind's field;
   // demand also clears the term, payment and escrow.
   kind: LOAN_KIND.optional(),
   interest_only_months: LOAN_MONTHS.optional(),
@@ -669,7 +669,7 @@ type LoanRow = {
   escrow_category_id?: string | null;
   principal_category_id?: string | null;
   fees_category_id?: string | null;
-  /** Absent on a row from before decision 0131: amortizing. */
+  /** Absent on a row from before decision 0132: amortizing. */
   kind?: LoanKind;
   interest_only_months?: number | null;
   amortization_months?: number | null;
@@ -1306,7 +1306,7 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
   if (typeof ratePpm !== "number") return ratePpm;
   const escrowMinor = minorFromMajorNonNegative(parsed.data.escrow, 0n);
   if (typeof escrowMinor !== "bigint") return escrowMinor;
-  // A demand loan has no term and no fixed payment (decision 0131).
+  // A demand loan has no term and no fixed payment (decision 0132).
   let paymentMinor: bigint | null = null;
   let preview: LoanScheduleRow[] = [];
   if (kind === "demand") {
@@ -1419,7 +1419,7 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   for (const key of ["interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id"] as const) {
     if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
   }
-  // A kind change clears the fields the new kind does not have (decision 0131).
+  // A kind change clears the fields the new kind does not have (decision 0132).
   if (parsed.data.interest_only_months !== undefined) patch.interest_only_months = parsed.data.interest_only_months;
   if (parsed.data.amortization_months !== undefined) patch.amortization_months = parsed.data.amortization_months;
   if (parsed.data.kind != null) {
@@ -1541,7 +1541,7 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   let balanceMinor = BigInt(loan.balance_minor) + attachedMinor;
   if (balanceMinor <= 0n) return fail("refused", "loan balance exceeded");
   // The scheduled figures: several rows from the first unpaid one, the row for the date, or
-  // for a demand loan the interest accrued since the last payment (decision 0131).
+  // for a demand loan the interest accrued since the last payment (decision 0132).
   let scheduled: ScheduledSum | null;
   if (loanKindOf(loan) === "demand") {
     if (parsed.data.installments !== undefined) return fail("refused", "a demand loan has no schedule rows");
@@ -1565,7 +1565,7 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     const schedule = storedLoanSchedule(loan);
     if (!("rows" in schedule)) return schedule;
     if (parsed.data.installments !== undefined) {
-      // FLOW-135 N1: interest plus principal paid so far, pending lines too (decision 0131).
+      // FLOW-135 N1: interest plus principal paid so far, pending lines too (decision 0132).
       const payments = await loadLoanPayments(loan.id, rpc);
       if (!Array.isArray(payments)) return payments;
       const paidMinor = paidInterestAndPrincipal(payments.map((row) => ({
@@ -2092,7 +2092,7 @@ export async function callTool(
     if (loan == null) return fail("not_found", "not found");
     if (loanKindOf(loan) === "demand") {
       // Nothing is scheduled ahead: the payments attached so far, then the interest accrued
-      // from the last one to as_of (default today), daily on actual/365 (decision 0131).
+      // from the last one to as_of (default today), daily on actual/365 (decision 0132).
       const payments = await loadLoanPayments(loan.id, rpc);
       if (!Array.isArray(payments)) return payments;
       const counted = countedPayments(payments, null).filter((row) => row.doc_date <= asOf);

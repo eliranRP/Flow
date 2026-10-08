@@ -107,7 +107,7 @@ export function sumScheduleRows(
 }
 
 /**
- * The index of the first schedule row not yet paid (decision 0131, FLOW-135 N1): the first
+ * The index of the first schedule row not yet paid (decision 0132, FLOW-135 N1): the first
  * row where the scheduled interest plus principal through that row is more than the
  * interest plus principal already paid on the loan. Escrow and fees are left out: they
  * do not pay the loan down, and escrow often drifts from the schedule. So a part-paid

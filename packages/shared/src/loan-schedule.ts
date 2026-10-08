@@ -15,7 +15,7 @@ const MONTHLY_DENOMINATOR = MONTHS_IN_YEAR * BigInt(RATE_PPM_SCALE);
 const ONE_CENT = 1n;
 
 /**
- * How a loan pays down (decision 0131). `amortizing` is every loan saved before FLOW-106
+ * How a loan pays down (decision 0132). `amortizing` is every loan saved before FLOW-106
  * part 4. `interest_only` pays interest (and escrow) for `interestOnlyMonths`, then
  * amortizes over the months left. `balloon` pays the annuity over `amortizationMonths`
  * and ends at the term with the rest of the balance. `demand` has no term and no fixed
@@ -25,7 +25,7 @@ export type LoanKind = "amortizing" | "interest_only" | "balloon" | "demand";
 
 export const LOAN_KINDS: readonly LoanKind[] = ["amortizing", "interest_only", "balloon", "demand"];
 
-/** Interest on a demand loan is daily on an actual/365 basis (decision 0131). */
+/** Interest on a demand loan is daily on an actual/365 basis (decision 0132). */
 export const DEMAND_DAYS_IN_YEAR = 365;
 
 /**
@@ -292,7 +292,7 @@ function finalAdjustmentOf(rows: readonly LoanScheduleRow[], terms: LoanTerms): 
  * term pays the rest of the balance. A payment that clears the balance early ends the
  * schedule.
  *
- * By kind (decision 0131): an `interest_only` row inside `interestOnlyMonths` pays interest
+ * By kind (decision 0132): an `interest_only` row inside `interestOnlyMonths` pays interest
  * and escrow only (the last one also the whole balance when those months are the term);
  * later rows use the stored payment. A `balloon` loan's stored payment is the annuity over
  * `amortizationMonths`, and the row at the term pays what is left.
@@ -379,7 +379,7 @@ export function buildLoanSchedule(terms: LoanTerms): LoanSchedule {
 }
 
 /**
- * The regular payment of a new loan of this kind, escrow included (decision 0131):
+ * The regular payment of a new loan of this kind, escrow included (decision 0132):
  * the annuity over the term (`amortizing`), over `amortizationMonths` (`balloon`), or over
  * the months after the interest-only ones (`interest_only`; a single month when they are
  * the term, so the payment is the bullet), each rounded half to even.
@@ -480,7 +480,7 @@ function assertDemand(terms: DemandTerms): LoanRate[] {
 }
 
 /**
- * Interest due on a demand loan on `asOf` (decision 0131): the balance left after the
+ * Interest due on a demand loan on `asOf` (decision 0132): the balance left after the
  * attached payments, times the rate in force on each day, for the days since the last
  * attached payment (or since the start), on an actual/365 basis, rounded half to even.
  * Payments are those dated on or before `asOf`; a later one is the caller's to refuse.

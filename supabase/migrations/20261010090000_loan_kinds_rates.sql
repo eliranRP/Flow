@@ -1,4 +1,4 @@
--- FLOW-106 part 4: loan kinds and a variable rate. Decision 0131.
+-- FLOW-106 part 4: loan kinds and a variable rate. Decision 0132.
 -- Also the loan follow-ups FLOW-132 (closed loans), FLOW-134 items 1 and 4 (part categories)
 -- and FLOW-135 N3 (the MCP side; N1 and N3 are in tools.ts and packages/shared).
 --
@@ -62,7 +62,7 @@ alter table public.loans
   ));
 
 comment on column public.loans.kind is
-  'amortizing (default), interest_only, balloon or demand. Decision 0131.';
+  'amortizing (default), interest_only, balloon or demand. Decision 0132.';
 comment on column public.loans.interest_only_months is
   'interest_only only: the first months pay interest (and escrow) only, 1 to the term.';
 comment on column public.loans.amortization_months is
@@ -89,7 +89,7 @@ create table public.loan_rates (
 );
 
 comment on table public.loan_rates is
-  'Rate changes of a loan. From effective_date on, the nominal annual rate is annual_rate_ppm; before the first row, loans.annual_rate_ppm. Entered by hand (MCP set_loan_rate); Flow does not fetch an index. Decision 0131.';
+  'Rate changes of a loan. From effective_date on, the nominal annual rate is annual_rate_ppm; before the first row, loans.annual_rate_ppm. Entered by hand (MCP set_loan_rate); Flow does not fetch an index. Decision 0132.';
 
 create index loan_rates_company_loan_idx on public.loan_rates (company_id, loan_id);
 
@@ -528,7 +528,7 @@ grant execute on function public.mcp_add_loan(text, text, bigint, integer, integ
 -- A loan's attached payments, oldest first: each line still on the books with its parts.
 -- Pending lines are listed too (line_status says which); a payment waiting for review is
 -- listed with needs_review, and counts nowhere until it is corrected. MCP reads it for a
--- demand loan's interest and statement and for the first unpaid schedule row (0131).
+-- demand loan's interest and statement and for the first unpaid schedule row (0132).
 create or replace function public.mcp_loan_payments(p_loan_id uuid)
 returns jsonb
 language sql
@@ -696,7 +696,7 @@ revoke all on function public.mcp_set_loan_rate(text, uuid, date, integer)
 grant execute on function public.mcp_set_loan_rate(text, uuid, date, integer) to authenticated;
 
 -- private.mcp_refused: as in 20261009200000_loan_fees_installments.sql, plus the rate refusals of
--- set_loan_rate (0131).
+-- set_loan_rate (0132).
 create or replace function private.mcp_refused(p_message text)
 returns jsonb
 language sql
@@ -754,7 +754,7 @@ as $$
         'category does not fit the loan part',
         -- FLOW-106 part 3 (decision 0130).
         'fees category required',
-        -- FLOW-106 part 4 (decision 0131).
+        -- FLOW-106 part 4 (decision 0132).
         'rate before the loan start',
         'rate not found'
       ) then p_message
@@ -765,7 +765,7 @@ as $$
 $$;
 
 -- mcp_update_loan: as in 20261009200000_loan_fees_installments.sql, plus kind,
--- interest_only_months and amortization_months (0131). term_months and payment_minor take
+-- interest_only_months and amortization_months (0132). term_months and payment_minor take
 -- null for a demand loan (the table's kind rule refuses it on any other kind). The part
 -- categories are checked in one loop (FLOW-134 item 4): the first one that is unknown or
 -- does not fit is refused.
@@ -1100,7 +1100,7 @@ revoke all on function public.mcp_update_loan(text, uuid, jsonb)
 grant execute on function public.mcp_update_loan(text, uuid, jsonb) to authenticated;
 
 -- mcp_list_loans: as in 20261009200000_loan_fees_installments.sql, plus the kind fields and the
--- loan's rate rows, oldest first (0131).
+-- loan's rate rows, oldest first (0132).
 create or replace function public.mcp_list_loans()
 returns jsonb
 language sql
@@ -1183,7 +1183,7 @@ grant execute on function public.mcp_list_loans() to authenticated, service_role
 
 -- mcp_undo: as in 20261009200000_loan_fees_installments.sql; loan_update also compares and
 -- restores kind, interest_only_months and amortization_months, and the new kind loan_rate
--- puts a rate row back as it was (0131).
+-- puts a rate row back as it was (0132).
 create or replace function public.mcp_undo(
   p_idempotency_key text,
   p_kind text,
@@ -1799,7 +1799,7 @@ revoke all on function public.mcp_undo(text, text, uuid) from public, anon, auth
 grant execute on function public.mcp_undo(text, text, uuid) to authenticated;
 
 -- get_project: as in 20261009120000_profit_by_month.sql; loans[] gains status, closed_on and
--- kind (FLOW-132, 0131), so a project tells paid-off and closed loans from open ones.
+-- kind (FLOW-132, 0132), so a project tells paid-off and closed loans from open ones.
 create or replace function public.get_project(p_id uuid, p_basis text, p_from date default null, p_to date default null)
 returns jsonb
 language plpgsql
