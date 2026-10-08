@@ -20,7 +20,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-205: name rule in the database, edge function type checks, TOOLS errors | FLOW-315 server items, FLOW-811 |
+| Backlog bug fixes | FLOW-811: migration checker nested bodies, smoke write guard on the Supabase host | `get_project` for a viewer, next ready bug |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -1034,13 +1034,13 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-811"></a>
 ### FLOW-811 · CI and deploy follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Migration checker: scan nested dollar-quoted bodies and commits inside DO or function bodies; don't flag `begin atomic`; flag unwrapped create/drop index.
+- [x] Migration checker: scan nested dollar-quoted bodies and commits inside DO or function bodies; don't flag `begin atomic`; flag unwrapped create/drop index. (A nested body after `do` or `as` is now scanned too; the other three were already in.)
 - [ ] Record the production row-hash baseline query in a script, so a baseline can be recomputed after a deploy.
 - [ ] If Dependabot is added, give it the fixture deny-list secret (CI fails closed without it).
 - [ ] Optional: indexes for composite foreign keys without a matching index (advisor info).
-- [ ] Smoke: a failure message on the sheet-stack scrim check; anchor the auth allowlist to the Supabase host; a unit test for the reporter.
-- [ ] Add `supabase migration repair` to the CI/CD runbook.
-- [ ] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR.
+- [x] Smoke: a failure message on the sheet-stack scrim check; anchor the auth allowlist to the Supabase host; a unit test for the reporter. (The scrim check already had its message. The write guard moved to `e2e/smoke-allow.ts`: the auth, status and list-RPC POSTs pass only on the Supabase origin. Unit tests for it and the reporter.)
+- [x] Add `supabase migration repair` to the CI/CD runbook. (Already in `docs/runbooks/ci-cd.md`.)
+- [x] Consider per-PR changelog fragments; `docs/changelog.md` conflicts on almost every parallel PR. (`docs/changelog.d`.)
 
 <a id="flow-812"></a>
 ### FLOW-812 · Faster CI
