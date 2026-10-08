@@ -23,6 +23,7 @@ import { InstallScreen, type InstallMode } from "./ui/install-screen";
 import { ChangeAssignment } from "./ui/change-sheet";
 import { BackButton, DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
 import { Button } from "./ui/button";
+import { ActionBar, ActionBarRow } from "./ui/action-bar";
 import { CheckIcon } from "./ui/icons";
 import { ProgressBar } from "./ui/progress-bar";
 import { ReviewCard } from "./ui/review-card";
@@ -341,7 +342,7 @@ function DevReview() {
   const item = devReviewItems[index];
   const total = devReviewItems.length;
   return (
-    <div>
+    <div className="ui-review-queue" data-bar="">
       <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" />
       <div className="ui-review-meter">
         <ProgressBar
@@ -371,7 +372,7 @@ function DevReview() {
       ) : (
         <p className="ui-page-pad t-title-3">אין פריטים לאישור</p>
       )}
-      <div className="ui-review-actions">
+      <ActionBar>
         <Button
           full
           icon={<CheckIcon />}
@@ -382,6 +383,7 @@ function DevReview() {
             toast.show({
               message: "הפריט אושר",
               action: "ביטול",
+              place: "bar",
               onAction: () => {
                 setIndex(next - 1);
               },
@@ -391,21 +393,30 @@ function DevReview() {
         >
           אישור
         </Button>
-        <div className="ui-review-actions-row">
+        <ActionBarRow>
           <Button variant="secondary" onClick={() => { setChange(true); }}>שינוי</Button>
           <Button
             variant="ghost"
             disabled={!item}
             onClick={() => {
               if (!item) return;
-              toast.show({ message: "דילגנו על הפריט" });
-              setIndex((current) => current + 1);
+              const next = index + 1;
+              // FLOW-327: the skip toast offers ביטול, as on the live queue, for the shots.
+              toast.show({
+                message: "דילגנו על הפריט",
+                action: "ביטול",
+                place: "bar",
+                onAction: () => {
+                  setIndex(next - 1);
+                },
+              });
+              setIndex(next);
             }}
           >
             דלג
           </Button>
-        </div>
-      </div>
+        </ActionBarRow>
+      </ActionBar>
       {change ? <p className="ui-page-pad">השינוי נפתח</p> : null}
     </div>
   );

@@ -21,6 +21,8 @@ const db = vi.hoisted(() => ({
   writes: [] as Array<{ name: string; args?: Record<string, unknown> }>,
   rows: [] as ReviewRow[],
   closed: new Set<string>(),
+  reasons: [] as unknown[],
+  flags: [] as unknown[],
 }));
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
@@ -72,6 +74,9 @@ vi.mock("../lib/supabase", () => ({
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       // FLOW-304. The card's bank details are a read too.
       if (name === "get_line_meta") return Promise.resolve({ data: [], error: null });
+      // FLOW-327. Jev's reasons and the anomaly flags are reads too.
+      if (name === "jev_suggestions") return Promise.resolve({ data: db.reasons, error: null });
+      if (name === "review_anomalies") return Promise.resolve({ data: db.flags, error: null });
       db.writes.push({ name, args });
       if (name === "approve_review_item" && args?.p_check_shown === true) {
         const id = typeof args.p_id === "string" ? args.p_id : "";
@@ -151,6 +156,8 @@ describe("Jev review one tap", () => {
     db.writes = [];
     db.rows = [];
     db.closed = new Set();
+    db.reasons = [];
+    db.flags = [];
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
@@ -192,6 +199,56 @@ describe("Jev review one tap", () => {
     });
     expect(db.writes.some((call) => call.name === "record_jev_correction")).toBe(false);
     expect(db.seenIds.some((ids) => ids.includes("t1") && ids.includes("t2"))).toBe(true);
+  });
+
+  it("shows Jev's reason under the rows once the read settles (FLOW-327)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "same_as_last", party_filings: 4, matching_filings: 4 }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦כמו בפעם הקודמת");
+    });
+  });
+
+  it("shows no reason line when the reasons read fails, and still prefills", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = "not an array" as unknown as unknown[];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-review-reason")).toBeNull();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+
+  it("shows no reason line with the connector off, but still shows a flag, unscored and quiet", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.flags = [{ transaction_id: "t1", kind: "amount_spike", ratio: 3, typical_amount_minor: 100000, jev_score: null }];
+    renderQueue([stored]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-flag-quiet")?.textContent).toBe("לבדיקה: פי 3 מהרגיל לספק");
+    });
+    expect(document.querySelector(".ui-review-reason")).toBeNull();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+  });
+
+  it("shows a loud flag from a Jev score of 0.7", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.flags = [{ transaction_id: "t1", kind: "duplicate", other_doc_date: "2026-04-10", jev_score: 0.7 }];
+    renderQueue([stored]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-flag .ui-row-title")?.textContent).toBe("לבדיקה: ייתכן שזה כפל");
+    });
+  });
+
+  it("shows Jev's no-project answer on the project row and still asks for a project (FLOW-703)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: null, category_id: "c1", no_project: true, reason: "model_only", party_filings: 0, matching_filings: 0 }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: ללא פרויקט · תקורה, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
   });
 
   it("approves a Jev-filled category with the stored shown ids", async () => {

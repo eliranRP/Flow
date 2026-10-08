@@ -562,7 +562,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
 - [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
 - [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
-- [ ] App: a דולגו section under הצג הכול that lists `list_skipped_review` with החזרה לתור (`reopen_review`). Mercury UI thread. Also drop the reviewer preview's approved split from its filed-today sample (`fileReviewerApproval`).
+- [x] App: a דולגו section under הצג הכול that lists `list_skipped_review` with החזרה לתור (`reopen_review`). Mercury UI thread. Also drop the reviewer preview's approved split from its filed-today sample (`fileReviewerApproval`). (FLOW-327 PR #175; the empty queue links to it with "{N} פריטים דולגו", owner 2026-10-08.)
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
@@ -641,9 +641,9 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-327 · Review card: actions in the thumb zone, tidy spacing
 - **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
 - **What:** Approving one card at a time is the most repeated job, and אישור moves between y=449 and y=584 depending on the card, with about 250px empty below; on a 375x667 phone with the banner, שינוי and דלג sit under the tab bar. Pin אישור / שינוי / דלג in a bar just above the tab bar; the card scrolls above it. Also: a gap of `--space-3`–`--space-4` between the auto-filed banner and the card (they touch today); label and value columns aligned on the card with tighter rows (mockup 03); the counter reads "1 מתוך 3" without padding spaces; a disabled אישור says why ("בחרו פרויקט וקטגוריה").
-- [ ] (cycle 2, deploy 9ea1e9a) The "✦ הצעת Jev" pill trails each value, so on a card where Jev filled both fields the two pills start at different points; with values in an aligned column (above) the pills line up too.
-- [ ] (cycle 2) At 320 the pill takes about 90px and long project or category names are cut to a few words ("וילה רעננה – …"). Let the name keep priority: wrap the pill under the value, or shorten it to "✦" with the full label as its accessible name.
-- [ ] (cycle 3, deploy a77efd8) The skip-undo toast sits at the top (y≈102–149) and covers the counter; show it just above the action bar, near the thumb (owner chose this 2026-10-08; supersedes the toast position in decision 0069, so the build adds a decision record). The DevReview fixture also lacks the ביטול action, so add it there for screenshots.
+- [x] (cycle 2, deploy 9ea1e9a) The "✦ הצעת Jev" pill trails each value, so on a card where Jev filled both fields the two pills start at different points; with values in an aligned column (above) the pills line up too.
+- [x] (cycle 2) At 320 the pill takes about 90px and long project or category names are cut to a few words ("וילה רעננה – …"). Let the name keep priority: wrap the pill under the value, or shorten it to "✦" with the full label as its accessible name.
+- [x] (cycle 3, deploy a77efd8) The skip-undo toast sits at the top (y≈102–149) and covers the counter; show it just above the action bar, near the thumb (owner chose this 2026-10-08; supersedes the toast position in decision 0069, so the build adds a decision record). The DevReview fixture also lacks the ביטול action, so add it there for screenshots.
 - **Acceptance:** אישור at the same position on every card state at 375, 393, 412; nothing under the tab bar at 375x667; stories for plain, banner, shared-cost, disabled and Jev-filled cards; design review.
 
 <a id="flow-328"></a>
@@ -697,15 +697,15 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL UI · **Status:** ready · **Owner (2026-10-08):** C2 "עדכון הפיצול" as the main button; C3b and C3c approved as proposed; C4 "הוספת חלק" in the bottom bar · **Depends on:** FLOW-325 (#150, #161); C2 and C8 after FLOW-327 (pinned action bar, same `review-card.tsx`) · **Overlaps:** FLOW-327, FLOW-325 (splitting from the review card) · **Source:** mobile UI/UX review cycle 3 (2026-10-08, deploy a77efd8)
 - **What:** Findings on the split-by-category editor and the split_mismatch review card, shot at 375x667, 393x852 (light and dark) and 412x915.
 - [ ] C1 (high) The ₪ field in a part is a fixed `6rem` (`ui.css` `.ui-lsplit-entry > .ui-field:last-child`), so "₪ 12,345.67" is cut off, and the percent hint shows "25720.16%" with no separators. Put the entry on its own full-width line with `flex: 1` (or size it by `--money-digits`), format the hint; add a 320 story with 9,999,999.99.
-- [ ] C2 (high, owner chose this) On a split_mismatch card the primary button is still אישור, which keeps the wrong P&L; "עדכון הפיצול" is only a text link. Build: "עדכון הפיצול" becomes the primary in the action bar, אישור becomes a secondary "להשאיר כך"; remove the link from `ReviewCard`.
+- [x] C2 (high, owner chose this) On a split_mismatch card the primary button is still אישור, which keeps the wrong P&L; "עדכון הפיצול" is only a text link. Build: "עדכון הפיצול" becomes the primary in the action bar, אישור becomes a secondary "להשאיר כך"; remove the link from `ReviewCard`.
 - [ ] C3a After a part's project or category picker closes, focus that part's value field (today 4 taps per amount part, 5 per percent part, 6 per refund part, against the plan's 3).
 - [ ] C3b (owner approved) The ₪/% unit of a new part follows the unit of the last part typed.
 - [ ] C3c (owner approved) On an inflow (refund) line, open the reversal section expanded.
 - [ ] C4 (owner chose the bottom bar) "הוספת חלק" moves down the screen with each part (y=311, 445, 602) and ends under the sticky footer; put it in the sticky bottom bar next to the totals.
 - [ ] C5 The hold sentence shows live before any ✕ and twice, and the footer grows to about 27% of a 375x667 screen; show it once, only after the first ✕ (`showHold`).
-- [ ] C6 Disabled controls look active: style `.ui-text-link:disabled`, give the rest row a disabled look, add a "לתור" link to the banner, and line the banner's inset up with the card.
+- [x] C6 Disabled controls look active: style `.ui-text-link:disabled`, give the rest row a disabled look, add a "לתור" link to the banner, and line the banner's inset up with the card.
 - [ ] C7 The ₪/% segment buttons are 34px wide; `min-inline-size: var(--touch-min)` on `.ui-seg-btn`.
-- [ ] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
+- [x] C8 The split_mismatch card shows the whole line's project and category with "הצעה" pills; show one static row "מפוצל · N חלקים" (reuse `lineSplitRowHint`).
 - [ ] C9 The line's own project appears twice in a part's project picker.
 - **Acceptance:** shared components (`ui.css`, `review-card.tsx`, `line-split.tsx`) and stories, including 320 and dark; clip-check at 320/360/390; tap counts back to 3 per part; design review. C10 (word), C11 (section placement) and C12 (undo toast) went to FLOW-328, FLOW-329 and FLOW-327.
 
@@ -943,6 +943,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL CYCLE · **Status:** on-hold (with FLOW-701) · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
+- [x] A change sheet seeded with Jev's category starts with "לזכור לספק הזה" off, so saving never turns the guess into a supplier rule by default (#175).
+- [x] The review card shows Jev's "no project" answer (`no_project` from `jev_suggestions`, server in #177) as "ללא פרויקט · תקורה" with the Jev pill (#175).
 
 <a id="flow-704"></a>
 ### FLOW-704 · Jev review card follow-ups

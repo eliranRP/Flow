@@ -397,7 +397,7 @@ test("a split returns to one project and the project totals follow", async ({ pa
   await expect(alon.getByText("₪533.44")).toBeVisible();
 });
 
-test("approving ברגי העמק adds the split to שויכו היום, and ביטול removes it", async ({ page }) => {
+test("approving ברגי העמק leaves שויכו היום automatic only, and ביטול brings the card back", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/reviewer/project");
   await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
@@ -409,26 +409,14 @@ test("approving ברגי העמק adds the split to שויכו היום, and ב�
   await expect(page.getByRole("button", { name: "אישור" })).toBeEnabled();
   await page.getByRole("button", { name: "אישור" }).click();
   await toast(page, "הפריט אושר");
-  await expect(page.locator(".ui-banner")).toContainText("5");
+  // FLOW-309: the owner's own approval is not an automatic filing, so the count stays.
+  await expect(page.locator(".ui-banner")).toContainText("4");
   const undo = toastAction(page, "ביטול");
   await expect(undo).toBeVisible();
-  // Hover pauses the 5s timer. Later moves use dispatch so the pointer stays put.
   await page.locator(".ui-toast").hover();
-  await page.getByRole("link", { name: "לרשימה" }).dispatchEvent("click");
-  await expect(page).toHaveURL(/\/reviewer\/filed$/);
-  await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
-  const filed = page.getByRole("link", { name: /ברגי העמק/ });
-  await expect(filed).toBeVisible();
-  await expect(filed.getByText("מפוצל · 2 פרויקטים")).toBeVisible();
-  await expect(filed.getByText("₪150")).toBeVisible();
-  await filed.dispatchEvent("click");
-  await expect(page).toHaveURL(/\/reviewer\/transaction\/t-bolts$/);
-  await expect(page.getByRole("list", { name: "חלוקה" })).toBeVisible();
-  await expect(page.getByText("בית הספר אלון")).toBeVisible();
-  await expect(page.getByText("מחסן הנמל")).toBeVisible();
-  await expect(page.getByText("50%")).toHaveCount(2);
   await undo.click();
-  await page.getByRole("button", { name: "חזרה" }).dispatchEvent("click");
+  await expect(page.getByRole("heading", { name: "ברגי העמק בע״מ" })).toBeVisible();
+  await page.goto("/reviewer/filed");
   await expect(page.getByRole("heading", { name: "שויכו היום" })).toBeVisible();
   await expect(page.getByRole("link", { name: /ברגי העמק/ })).toHaveCount(0);
 });

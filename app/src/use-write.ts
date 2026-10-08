@@ -45,6 +45,8 @@ export function useWrite<T = void>(options: {
   retryFocus?: () => void;
   /** An error that needs no toast, because the screen already shows the state. */
   silent?: (error: Error) => boolean;
+  /** Where this write's toasts sit. לאישור keeps them above its action bar (decision 0135). */
+  place?: "page" | "tab" | "bar";
 }) {
   const toast = useToast();
   const invalidate = useInvalidateBooks();
@@ -60,7 +62,7 @@ export function useWrite<T = void>(options: {
     },
     onSuccess: async (_data, payload) => {
       await invalidate(options.keys);
-      if (options.success) toast.show({ message: options.success });
+      if (options.success) toast.show({ message: options.success, ...(options.place ? { place: options.place } : {}) });
       options.onSuccess?.(payload);
     },
     onError: (error, payload) => {
@@ -71,6 +73,7 @@ export function useWrite<T = void>(options: {
       const tone = typeof reported === "string" ? "bad" : (reported.tone ?? "bad");
       const split = typeof reported !== "string" && reported.action != null && options.onSplit != null;
       const id = toast.show({
+        ...(options.place ? { place: options.place } : {}),
         tone,
         message: failureMessage(reported),
         ...(split

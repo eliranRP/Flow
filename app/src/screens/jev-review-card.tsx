@@ -3,10 +3,12 @@ import { useSyncExternalStore } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useHomePreview } from "../preview";
+import { ActionBar } from "../ui/action-bar";
 import { Button } from "../ui/button";
 import { CheckIcon } from "../ui/icons";
 import { ReviewCard } from "../ui/review-card";
 import { useOptionalBooks } from "../use-books";
+import { getSupabase } from "../lib/supabase";
 import {
   JEV_CONNECTOR_STALE_MS,
   JEV_REVIEW_OFF,
@@ -21,6 +23,8 @@ import {
   jevScopePhase,
   loadJevReview,
   loadJevSuggestions,
+  loadReviewFlags,
+  reviewFlagsQueryKey,
   notedJevAuthUser,
   readJevConnectorFlag,
   subscribeJevScope,
@@ -30,7 +34,9 @@ import {
   type JevPrefill,
   type JevQueueData,
   type JevReviewState,
+  type ReviewFlagsData,
 } from "./jev-review";
+import type { ReviewFlag } from "../review-copy";
 
 export const JEV_REVIEW_SAMPLE: JevPrefill = {
   suggestionId: "s1",
@@ -136,6 +142,30 @@ export function useJevQueue(transactionIds: readonly string[], live: boolean) {
   return { loadingFor, stateFor };
 }
 
+const NO_FLAGS: ReviewFlagsData = {};
+const NO_LINE_FLAGS: ReviewFlag[] = [];
+
+/**
+ * FLOW-327. One `review_anomalies` read for the queue, with the same one-second window as Jev.
+ * The flags are SQL (decision 0131), so they read with Jev off too, unscored. A failed or slow
+ * read shows no flag and no error.
+ */
+export function useReviewFlags(transactionIds: readonly string[], live: boolean) {
+  const supabase = live ? getSupabase() : null;
+  const readable = supabase != null && typeof supabase.rpc === "function" && transactionIds.some((id) => id !== "");
+  const query = useQuery({
+    queryKey: reviewFlagsQueryKey(transactionIds),
+    enabled: readable,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: ({ signal }) => withJevDeadline(signal, (linked) => loadReviewFlags(transactionIds, linked), NO_FLAGS),
+  });
+  return function flagsFor(transactionId: string | null): ReviewFlag[] {
+    if (!readable || transactionId == null || query.isError || query.data == null) return NO_LINE_FLAGS;
+    return query.data[transactionId] ?? NO_LINE_FLAGS;
+  };
+}
+
 export function JevReviewCard({
   connectorOn,
   prefill,
@@ -163,11 +193,11 @@ export function JevReviewCard({
         onProject={() => undefined}
         onCategory={() => undefined}
       />
-      <div className="ui-review-actions">
+      <ActionBar>
         <Button full disabled={!canApprove} icon={<CheckIcon />}>
           אישור
         </Button>
-      </div>
+      </ActionBar>
     </div>
   );
 }

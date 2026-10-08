@@ -1,16 +1,36 @@
 import { useLayoutEffect, useState, type Ref } from "react";
 import { formatAmountText } from "@flow/shared";
+import { lineSplitPartsLabel } from "../line-split-copy";
+import { REVIEW_FLAG_PREFIX, type CopyPart, type ReviewFlagView } from "../review-copy";
 import { methodLabel, type TxnMeta } from "../txn-meta";
 import { MethodIcon } from "./bank-details";
-import { ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
+import { AlertIcon, ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
-import { TextLink } from "./text-link";
 import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 
 /** FLOW-312 item 2 / decision 0125: a split line whose bank amount changed. */
 export const SPLIT_MISMATCH_LINE = "הפיצול לא תואם את סכום השורה בבנק.";
+/** FLOW-333 C2: the bar's primary on a split_mismatch card. */
 export const SPLIT_MISMATCH_ACTION = "עדכון הפיצול";
+/** FLOW-333 C2: the bar's secondary on a split_mismatch card; it approves the line as it stands. */
+export const SPLIT_MISMATCH_KEEP = "להשאיר כך";
+/** The mismatch sentence. להשאיר כך points at it with aria-describedby. */
+export const REVIEW_MISMATCH_ID = "review-mismatch";
+/** FLOW-327: both fields are missing. The bar's first button points at it. */
+export const REVIEW_MISSING_BOTH = "בחרו פרויקט וקטגוריה";
+export const REVIEW_MISSING_ID = "review-missing";
+
+/** Draws copy parts, each number in its own bdi. */
+export function CopyLine({ parts }: { parts: readonly CopyPart[] }) {
+  return (
+    <>
+      {parts.map((part, index) => (typeof part === "string"
+        ? <span key={index}>{part}</span>
+        : <bdi key={index} className="ui-num" dir="ltr">{part.num}</bdi>))}
+    </>
+  );
+}
 
 export type ReviewSuggestion = {
   project?: string;
@@ -26,7 +46,12 @@ export type ReviewSuggestion = {
   categoryJev?: boolean;
   /** The category is of the other kind: a bounced payment or a refund. Shows החזר. */
   categoryReversal?: boolean;
+  /** FLOW-703: Jev suggests no project (overhead). Shown on an empty project row with הצעת Jev. */
+  projectNoneJev?: boolean;
 };
+
+/** FLOW-703: Jev's "no project / overhead" answer on the project row. */
+export const JEV_NO_PROJECT = "ללא פרויקט · תקורה";
 
 type ReviewCardProps = {
   supplier: string;
@@ -49,10 +74,16 @@ type ReviewCardProps = {
   /** FLOW-304. Bank details: a method line under the source line, and the memo. */
   meta?: TxnMeta | null;
   /**
-   * FLOW-325 / 0125: on a `split_mismatch` review, opens the parts editor. Omitted for a viewer,
-   * who still reads the line.
+   * FLOW-333 C8: on a `split_mismatch` card, the number of parts. The field rows become one
+   * static row "מפוצל · N חלקים"; "loading" holds the row with a skeleton.
    */
-  onFixSplit?: () => void;
+  splitParts?: number | "loading";
+  /** FLOW-327: why Jev suggests this, one line under the rows. Shown only with a הצעת Jev pill. */
+  jevWhy?: readonly CopyPart[] | null;
+  /** FLOW-327: at most one anomaly flag, the last block of the card (decision 0131). */
+  flag?: ReviewFlagView | null;
+  /** FLOW-327: both fields are missing. The card ends with "בחרו פרויקט וקטגוריה". */
+  missingBoth?: boolean;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -71,7 +102,10 @@ export function ReviewCard({
   categoryButtonRef,
   pending = false,
   meta,
-  onFixSplit,
+  splitParts,
+  jevWhy,
+  flag,
+  missingBoth = false,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
   const memo = meta?.memo ?? null;
@@ -92,13 +126,14 @@ export function ReviewCard({
     reversal?: boolean;
     onOpen?: () => void;
   }> = [];
-  if (projectValue || onProject) {
+  const projectNone = projectValue == null && suggestion?.projectNoneJev === true;
+  if (projectValue || onProject || projectNone) {
     lines.push({
       key: "project",
       label: "פרויקט",
-      value: projectValue ?? "לא נבחר",
-      suggested: suggestion?.projectSuggested === true && projectValue != null,
-      jev: suggestion?.projectSuggested === true && suggestion.projectJev === true && projectValue != null,
+      value: projectValue ?? (projectNone ? JEV_NO_PROJECT : "לא נבחר"),
+      suggested: (suggestion?.projectSuggested === true && projectValue != null) || projectNone,
+      jev: (suggestion?.projectSuggested === true && suggestion.projectJev === true && projectValue != null) || projectNone,
       onOpen: onProject,
     });
   }
@@ -115,6 +150,8 @@ export function ReviewCard({
   }
   const note = shared ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה" : null;
   const mismatch = reason === "split_mismatch";
+  const jevOnCard = !pending && lines.some((line) => line.jev);
+  const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
@@ -147,7 +184,13 @@ export function ReviewCard({
       {vatLine ? <p className="t-hint">{vatLine}</p> : null}
       {memo ? <ReviewMemo memo={memo} /> : null}
       <div className="ui-review-ai">
-        {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
+        {mismatch ? (
+          <ListRow
+            variant="static"
+            className="ui-review-split-row"
+            title={splitParts === "loading" ? <Skeleton width="sm" /> : splitParts == null ? "מפוצל" : <SplitPartsTitle count={splitParts} />}
+          />
+        ) : lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
           <div className="ui-row ui-hit" aria-hidden="true" key={line.key}>
             <span className="ui-row-main">
               <span className="ui-row-text">
@@ -178,21 +221,72 @@ export function ReviewCard({
             tag={lineTag(line)}
           />
         ))}
+        {why ? (
+          <p className="t-hint ui-review-reason">
+            <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
+            <span className="ui-review-reason-text"><CopyLine parts={why} /></span>
+          </p>
+        ) : null}
         {note == null ? null : pending ? (
           <p className="t-label ui-review-note-slot" aria-hidden="true" />
         ) : (
           <p className="t-label">{note}</p>
         )}
         {mismatch ? (
-          <div className="ui-review-mismatch">
-            <p className="t-label">{SPLIT_MISMATCH_LINE}</p>
-            {onFixSplit ? (
-              <TextLink chevron={false} onClick={onFixSplit}>{SPLIT_MISMATCH_ACTION}</TextLink>
-            ) : null}
-          </div>
+          <p className="t-label ui-review-mismatch" id={REVIEW_MISMATCH_ID}>{SPLIT_MISMATCH_LINE}</p>
+        ) : null}
+        {missingBoth && !mismatch ? (
+          <p className="t-hint ui-review-missing" id={REVIEW_MISSING_ID}>{REVIEW_MISSING_BOTH}</p>
         ) : null}
       </div>
+      {flag ? <ReviewFlagBlock flag={flag} /> : null}
     </article>
+  );
+}
+
+/** "מפוצל · N חלקים" with the number in a bdi; one part says "חלק אחד". */
+function SplitPartsTitle({ count }: { count: number }) {
+  if (count === 1) return <>{lineSplitPartsLabel(1)}</>;
+  return (
+    <>
+      {"מפוצל · "}
+      <bdi className="ui-num" dir="ltr">{String(count)}</bdi>
+      {" חלקים"}
+    </>
+  );
+}
+
+/**
+ * Loud: a warning row with the icon, the title in the text colour and the hint in warning.
+ * Quiet: one muted hint line. Both start with a hidden "לבדיקה:". Never a control.
+ */
+function ReviewFlagBlock({ flag }: { flag: ReviewFlagView }) {
+  if (flag.tone === "loud") {
+    return (
+      <ListRow
+        variant="static"
+        tone="warning"
+        className="ui-review-flag"
+        icon={<AlertIcon size={20} />}
+        title={(
+          <>
+            <span className="sr-only">{`${REVIEW_FLAG_PREFIX} `}</span>
+            <CopyLine parts={flag.title} />
+          </>
+        )}
+        hint={<CopyLine parts={flag.hint} />}
+        wrapHint
+      />
+    );
+  }
+  return (
+    <p className="t-hint ui-review-flag-quiet">
+      <span className="ui-review-flag-icon" aria-hidden="true"><AlertIcon size={16} /></span>
+      <span className="ui-review-flag-text">
+        <span className="sr-only">{`${REVIEW_FLAG_PREFIX} `}</span>
+        <CopyLine parts={flag.line} />
+      </span>
+    </p>
   );
 }
 

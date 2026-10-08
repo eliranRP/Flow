@@ -34,6 +34,7 @@ import {
   LINE_SPLIT_PLACE,
   LINE_SPLIT_SAVE_FAILURE,
   lineSplitCopy,
+  lineSplitPartsLabel,
   lineSplitRefusal,
   localIssueCopy,
   type LineSplitRefusal,
@@ -165,10 +166,12 @@ function Percent({ value }: { value: number }) {
   return <bdi className="ui-num" dir="ltr">{`${percentText(value)}%`}</bdi>;
 }
 
+export { lineSplitPartsLabel };
+
 /** "מפוצל · N חלקים · לא נספר כאן" on the detail's category and project rows (plan Q9). */
 export function lineSplitRowHint(read: LineSplitRead | null | undefined): string | undefined {
   if (!read || read.parts.length === 0 || !read.partsMatch) return undefined;
-  return `מפוצל · ${String(read.parts.length)} חלקים · לא נספר כאן`;
+  return `${lineSplitPartsLabel(read.parts.length)} · לא נספר כאן`;
 }
 
 function partProjectLabel(projectName: string | null | undefined, lineProject: string | null): string {
@@ -441,6 +444,7 @@ function LineSplitEditor({
   const goBack = useGoBack();
   const invalidate = useInvalidateBooks();
   const location = useLocation();
+  const search = usePreviewSearch();
   const [parts, setParts] = useState<PartDraft[]>(initial.parts);
   const [rest, setRest] = useState<RestDraft>(initial.rest);
   const [baseline] = useState(() => draftFromRead(split, line.categoryId));
@@ -718,7 +722,11 @@ function LineSplitEditor({
         </div>
         {bannerReason ? (
           <div className="ui-lsplit-banner">
-            <Banner icon={<AlertIcon />} title={lineSplitCopy(bannerReason)} />
+            <Banner
+              icon={<AlertIcon />}
+              title={lineSplitCopy(bannerReason)}
+              hint={bannerReason === "line has an open review" ? <TextLink to={`/review${search}`}>לתור</TextLink> : undefined}
+            />
           </div>
         ) : split?.partsMatch === false ? (
           <div className="ui-lsplit-banner">

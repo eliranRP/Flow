@@ -909,6 +909,7 @@ describe("review amounts keep their currency", () => {
   it("shows a dollar review row as dollars", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
         <MemoryRouter>
         <ReviewAllList
           rows={[{
@@ -928,10 +929,308 @@ describe("review amounts keep their currency", () => {
           backTo="/review"
         />
         </MemoryRouter>
+        </ToastProvider>
       </QueryClientProvider>,
     );
     expect(screen.getByText("$100")).toHaveClass("ui-income");
     expect(screen.queryByText("+$100")).not.toBeInTheDocument();
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
+  });
+});
+
+function renderWithLine(path: string) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <AuthProvider>
+            <BooksProvider>
+              <Routes>
+                <Route path="/review" element={<ReviewScreen />} />
+                <Route path="/review/all" element={<ReviewScreen />} />
+                <Route path="/review/change" element={<h1>שינוי</h1>} />
+                <Route path="/transactions/:transactionId/split-category" element={<h1>עורך הפיצול</h1>} />
+                <Route path="/transactions/:transactionId" element={<h1>תנועה</h1>} />
+              </Routes>
+            </BooksProvider>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("the pinned review bar (FLOW-327)", () => {
+  it("puts אישור, שינוי and דלג in one bar above the tab bar, and the skip toast above it", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const approve = await screen.findByRole("button", { name: "אישור" });
+    const bar = approve.closest(".ui-action-bar");
+    expect(bar).toHaveAttribute("data-place", "tabbar");
+    expect(bar).toHaveAttribute("data-toast-floor");
+    expect(within(bar as HTMLElement).getByRole("link", { name: "שינוי" })).toBeInTheDocument();
+    const skip = within(bar as HTMLElement).getByRole("button", { name: "דלג" });
+    expect(document.querySelector(".ui-review-queue")).toHaveAttribute("data-bar");
+    expect(screen.getByText("פריט")).toHaveClass("sr-only");
+    fireEvent.click(skip);
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "resolve_review")).toBe(true);
+    });
+    const toast = await screen.findByText("דילגנו על הפריט");
+    expect(toast.closest(".ui-toast-host")).toHaveAttribute("data-place", "bar");
+    expect(within(toast.closest(".ui-toast") as HTMLElement).getByRole("button", { name: "ביטול" })).toBeInTheDocument();
+  });
+
+  it("says why when both fields are missing, and points the button at it", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null, { category_id: null, category_name: null })], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const pick = await screen.findByRole("button", { name: "בחירת פרויקט" });
+    expect(pick).toBeEnabled();
+    const hint = screen.getByText("בחרו פרויקט וקטגוריה");
+    expect(pick).toHaveAttribute("aria-describedby", hint.id);
+    expect(hint.closest(".ui-review")).not.toBeNull();
+  });
+
+  it("does not say it when only one field is missing", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", null)], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const pick = await screen.findByRole("button", { name: "בחירת פרויקט" });
+    expect(pick).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByText("בחרו פרויקט וקטגוריה")).toBeNull();
+  });
+
+  it("a split_mismatch card leads with עדכון הפיצול; להשאיר כך approves the line as it stands (FLOW-333 C2, C8)", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })], error: null });
+      if (name === "get_line_split") {
+        return Promise.resolve({
+          data: { parts: [
+            { id: "a", category_id: "c1", category_name: "חומרים", project_id: null, project_name: null, amount_minor: -6000 },
+            { id: "b", category_id: "c2", category_name: "הובלה", project_id: null, project_name: null, amount_minor: -3000 },
+          ], transaction_id: "t-r1", line_minor: -10000, parts_match: false },
+          error: null,
+        });
+      }
+      if (name === "approve_review_item") return Promise.resolve({ data: { ok: true }, error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const fix = await screen.findByRole("button", { name: "עדכון הפיצול" });
+    expect(fix.closest(".ui-action-bar")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: "שינוי" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "אישור" })).toBeNull();
+    const keep = screen.getByRole("button", { name: "להשאיר כך" });
+    expect(keep).toHaveAttribute("aria-describedby", "review-mismatch");
+    expect(document.getElementById("review-mismatch")).toHaveTextContent("הפיצול לא תואם את סכום השורה בבנק.");
+    expect(screen.getByRole("button", { name: "דלג" })).toBeInTheDocument();
+    expect(screen.queryByText("הצעה")).toBeNull();
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-split-row")).toHaveTextContent("מפוצל · 2 חלקים");
+    });
+    expect(rpc.calls.find((call) => call.name === "get_line_split")?.args).toEqual({ p_transaction_id: "t-r1" });
+    fireEvent.click(keep);
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "approve_review_item")).toBe(true);
+    });
+  });
+
+  it("עדכון הפיצול opens the parts editor", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1", { reason: "split_mismatch" })], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    fireEvent.click(await screen.findByRole("button", { name: "עדכון הפיצול" }));
+    expect(await screen.findByRole("heading", { name: "עורך הפיצול" })).toBeInTheDocument();
+  });
+
+  it("shows no flag and no error when the anomaly read fails", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "review_anomalies") return Promise.resolve({ data: null, error: { message: "forbidden" } });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "review_anomalies")).toBe(true);
+    });
+    expect(document.querySelector(".ui-review-flag, .ui-review-flag-quiet")).toBeNull();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+});
+
+function skippedRow(id: string, supplier: string) {
+  return {
+    id,
+    transaction_id: `t-${id}`,
+    description: supplier,
+    doc_date: "2026-09-28",
+    doc_kind: "invoice",
+    amount_net: -25_000,
+    currency: "ILS",
+    direction: "expense",
+    line_status: "posted",
+    source: "sumit",
+    project_id: "p1",
+    category_id: "c1",
+    project_name: "הרצל",
+    category_name: "חומרים",
+    supplier_name: supplier,
+    skipped_at: "2026-09-30T08:00:00Z",
+  };
+}
+
+describe("the דולגו section under הצג הכול (FLOW-309)", () => {
+  it("lists the skipped rows after the pending ones; a row opens the line; החזרה לתור reopens it", async () => {
+    let skipped = [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")];
+    rpc.impl = (name, args) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: skipped, error: null });
+      if (name === "reopen_review") {
+        expect(args).toEqual({ p_id: "s1" });
+        skipped = skipped.filter((row) => row.id !== "s1");
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all");
+    const heading = await screen.findByRole("heading", { name: "דולגו" });
+    const section = heading.closest("section") as HTMLElement;
+    expect(within(section).getByText("2")).toBeInTheDocument();
+    const pending = screen.getByRole("link", { name: /מחסן הנמל/ });
+    expect(pending.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(section).getByRole("link", { name: /ברזל הצפון/ })).toHaveAttribute("href", "/transactions/t-s1");
+    fireEvent.click(within(section).getByRole("button", { name: "החזרה לתור: ברזל הצפון" }));
+    expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(section).queryByRole("link", { name: /ברזל הצפון/ })).toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "לכרטיס" }));
+    expect(await screen.findByRole("button", { name: "אישור" })).toBeInTheDocument();
+  });
+
+  it("says when the reopen failed and offers ניסיון חוזר", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+      if (name === "reopen_review") return Promise.resolve({ data: null, error: { message: "review item not found" } });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all");
+    fireEvent.click(await screen.findByRole("button", { name: "החזרה לתור: ברזל הצפון" }));
+    expect(await screen.findByText("לא הצלחנו להחזיר לתור.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
+    await waitFor(() => {
+      expect(rpc.calls.filter((call) => call.name === "reopen_review")).toHaveLength(2);
+    });
+  });
+
+  it("renders nothing with no skipped rows, and a read error with ניסיון חוזר", async () => {
+    let fail = false;
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1")], error: null });
+      if (name === "list_skipped_review") return Promise.resolve(fail ? { data: null, error: { message: "down" } } : { data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    const first = renderWithLine("/review/all");
+    expect(await screen.findByRole("link", { name: /מחסן הנמל/ })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "list_skipped_review")).toBe(true);
+    });
+    expect(screen.queryByRole("heading", { name: "דולגו" })).toBeNull();
+    first.unmount();
+    fail = true;
+    renderWithLine("/review/all");
+    expect(await screen.findByText("לא הצלחנו לטעון את הפריטים שדולגו.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "דולגו" })).toBeInTheDocument();
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "ניסיון חוזר" }));
+    await waitFor(() => {
+      expect(screen.queryByText("לא הצלחנו לטעון את הפריטים שדולגו.")).toBeNull();
+    });
+  });
+
+  it("with nothing pending, shows the hint and the skipped rows instead of the empty state", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all");
+    expect(await screen.findByRole("heading", { name: "דולגו" })).toBeInTheDocument();
+    expect(screen.getByText("אין פריטים שמחכים לאישור.")).toBeInTheDocument();
+    expect(screen.queryByText("הכל מאושר")).toBeNull();
+  });
+
+  it("with nothing pending and nothing skipped, shows the empty state", async () => {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_skipped_review") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review/all");
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "דולגו" })).toBeNull();
+  });
+});
+
+describe("the empty queue's link to the skipped cards (FLOW-309, owner pick 2026-10-08)", () => {
+  function emptyQueue(skipped: () => Promise<{ data: unknown; error: { message: string } | null }>) {
+    rpc.impl = (name) => {
+      if (name === "list_review") return Promise.resolve({ data: [], error: null });
+      if (name === "list_skipped_review") return skipped();
+      return Promise.resolve({ data: null, error: null });
+    };
+  }
+
+  it("says how many were skipped and opens them under הצג הכול", async () => {
+    emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון"), skippedRow("s2", "צבע וגבס")], error: null }));
+    renderWithLine("/review");
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    const link = await screen.findByRole("link", { name: "2 פריטים דולגו" });
+    expect(link).toHaveAttribute("href", "/review/all#review-skipped");
+    expect(link.querySelector("bdi")?.textContent).toBe("2");
+    fireEvent.click(link);
+    const heading = await screen.findByRole("heading", { name: "דולגו" });
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
+  });
+
+  it("says פריט אחד דולג for one", async () => {
+    emptyQueue(() => Promise.resolve({ data: [skippedRow("s1", "ברזל הצפון")], error: null }));
+    renderWithLine("/review");
+    expect(await screen.findByRole("link", { name: "פריט אחד דולג" })).toBeInTheDocument();
+  });
+
+  it("is hidden with nothing skipped, and when the list fails to load", async () => {
+    emptyQueue(() => Promise.resolve({ data: [], error: null }));
+    const first = renderWithLine("/review");
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "list_skipped_review")).toBe(true);
+    });
+    expect(screen.queryByRole("link", { name: /דולג/ })).toBeNull();
+    first.unmount();
+    rpc.calls.length = 0;
+    emptyQueue(() => Promise.resolve({ data: null, error: { message: "down" } }));
+    renderWithLine("/review");
+    expect(await screen.findByText("הכל מאושר")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.some((call) => call.name === "list_skipped_review")).toBe(true);
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole("link", { name: /דולג/ })).toBeNull();
   });
 });

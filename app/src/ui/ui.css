@@ -1621,11 +1621,22 @@ a.ui-row,
 }
 
 .ui-review-queue .ui-review {
-  margin-top: 0;
+  margin-top: var(--space-2);
 }
 
+/* FLOW-327 1.2: the card stands clear of the filed-today banner. */
+.ui-review-queue .ui-banner + .ui-review-motion > .ui-review {
+  margin-top: var(--space-4);
+}
+
+/* With the pinned bar, the banner title keeps to two lines. */
 .ui-review-queue .ui-banner .ui-row-title {
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
+}
+
+/* FLOW-327: the card scrolls above the pinned action bar. Nothing sits under the bar. */
+.ui-review-queue[data-bar] {
+  padding-block-end: calc(var(--action-bar-h) + var(--space-4));
 }
 
 /* Waiting reserves the settled note line: the label's height, with no pill and no words. */
@@ -1633,10 +1644,13 @@ a.ui-row,
   min-block-size: calc(var(--type-label-size) * var(--type-label-line));
 }
 
+/* FLOW-327 1.4: "1 מתוך 3" with no padding around a digit. Tabular digits, so 9→10 grows inward. */
 .ui-review-count {
-  display: inline-block;
-  min-inline-size: 2ch;
-  text-align: center;
+  display: inline;
+}
+
+.ui-review-meter .t-hint {
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-review-ai .ui-row {
@@ -1650,8 +1664,13 @@ a.ui-row,
   gap: var(--space-2);
 }
 
+/* FLOW-327 1.3 (mockup 03): one label column wide enough for "קטגוריה", so every value starts at one x. */
 .ui-review-ai .ui-row-hint {
   flex: none;
+  inline-size: var(--review-label-w);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
 }
 
 .ui-review-ai .ui-row-title {
@@ -1659,7 +1678,23 @@ a.ui-row,
   min-inline-size: 0;
 }
 
+/* Every pill ends at the chevron column, so two הצעת Jev pills line up on both edges. */
+.ui-review-ai .ui-row-title-with-tag {
+  display: flex;
+  align-items: center;
+}
+
+.ui-review-ai .ui-row-title-text {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+
+.ui-review-ai .ui-row-title-with-tag > .ui-suggest-tag {
+  margin-inline-start: auto;
+}
+
 .ui-review {
+  container: review / inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -1801,7 +1836,7 @@ a.ui-row,
 .ui-review-ai {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
   margin-top: var(--space-2);
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-line);
@@ -1824,6 +1859,10 @@ a.ui-row,
   .ui-review {
     gap: var(--space-1);
     padding: var(--space-2);
+  }
+
+  .ui-review-queue .ui-banner + .ui-review-motion > .ui-review {
+    margin-top: var(--space-3);
   }
 
   .ui-review-actions {
@@ -3854,17 +3893,10 @@ div.ui-check-row {
   color: var(--color-warning);
 }
 
+/* FLOW-333 C2: the sentence stays on the card; the actions are in the bar. */
 .ui-review-mismatch {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
-  margin-top: var(--space-2);
-}
-
-.ui-review-mismatch .t-label {
-  margin: 0;
-  color: var(--color-warning);
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
 }
 
 .ui-add-rows .ui-row-icon {
@@ -4593,4 +4625,223 @@ div.ui-check-row {
   color: var(--color-text-secondary);
   font-size: var(--type-label-size);
   font-weight: var(--type-hint-weight);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   FLOW-327: the pinned action bar (ActionBar). A screen's repeated action sits on top of the tab
+   bar; the screen's toasts sit just above it (decision 0135). `edge` sits on the screen edge.
+   --------------------------------------------------------------------------------------------- */
+:root {
+  /* Two control rows, the gap between them, and the bar's block padding: 136px. */
+  --action-bar-h: calc(2 * var(--control-height) + var(--space-2) + 2 * var(--space-3));
+  /* Fits "קטגוריה" at the meta size: 75px. */
+  --review-label-w: calc(var(--type-meta-size) * 5);
+}
+
+.ui-action-bar {
+  position: fixed;
+  z-index: 15;
+  inset-inline: 0;
+  bottom: var(--tabbar-height);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: var(--content-max);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-card-inset);
+  border-top: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+
+.ui-action-bar[data-place="edge"],
+html:not(:has(.ui-tabbar)) .ui-action-bar[data-place="tabbar"],
+html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
+  bottom: 0;
+  padding-block-end: calc(var(--safe-bottom) + var(--space-3));
+}
+
+.ui-action-bar .ui-btn {
+  min-block-size: var(--control-height);
+}
+
+/* A grid, not flex: a padded button's basis would take its padding on top of the share. */
+.ui-action-bar-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.ui-action-bar-row > * {
+  min-inline-size: 0;
+}
+
+.ui-action-bar-row > .ui-review-approve {
+  display: flex;
+}
+
+.ui-action-bar-row > .ui-review-approve > .ui-btn {
+  flex: 1 1 0;
+}
+
+@media (max-height: 720px) {
+  :root {
+    --action-bar-h: calc(2 * var(--control-height) + var(--space-2) + 2 * var(--space-2));
+  }
+
+  .ui-action-bar {
+    padding-block: var(--space-2);
+  }
+
+  .ui-action-bar[data-place="edge"],
+  html:not(:has(.ui-tabbar)) .ui-action-bar[data-place="tabbar"] {
+    padding-block-end: calc(var(--safe-bottom) + var(--space-2));
+  }
+}
+
+/* The review toasts line up with the card (decision 0135). */
+.ui-toast-host[data-place="bar"] {
+  padding-inline: var(--space-card-inset);
+}
+
+/* FLOW-327 1.6: at 320 the הצעת Jev pill shows only ✦; the words stay the accessible name. */
+@container review (inline-size < 18rem) {
+  .ui-suggest-tag-jev {
+    padding-inline: var(--space-1);
+  }
+
+  .ui-suggest-tag-jev .ui-suggest-tag-words {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* FLOW-327 1.5: both fields missing; the bar's first button points here. */
+.ui-review-missing {
+  margin: var(--space-2) 0 0;
+}
+
+/* FLOW-327 / 0134: why Jev suggests this, in the value column under the rows. */
+.ui-review-reason {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: calc(var(--review-label-w) + var(--space-2));
+  color: var(--color-text-muted);
+}
+
+.ui-review-reason-mark {
+  flex: none;
+  color: var(--color-accent-text);
+}
+
+.ui-review-reason-text {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* FLOW-327 / 0131: one anomaly flag, the last block of the card. Loud is a warning row; quiet is a hint. */
+.ui-review-flag.ui-row {
+  min-block-size: var(--touch-min);
+  padding-block: var(--space-1);
+}
+
+.ui-review-flag .ui-row-title {
+  color: var(--color-text);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ui-review-flag .ui-row-hint {
+  color: var(--color-warning);
+}
+
+.ui-review-flag-quiet {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ui-review-flag-icon {
+  display: inline-flex;
+  flex: none;
+  padding-block-start: calc((var(--type-hint-size) * var(--type-hint-line) - 16px) / 2);
+}
+
+.ui-review-flag-text {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* FLOW-309: the skipped cards at the end of הצג הכול. */
+.ui-review-skipped {
+  margin-block-start: var(--space-8);
+}
+
+.ui-review-skipped-head {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+.ui-review-skipped-head .t-heading {
+  margin: 0;
+}
+
+.ui-review-skipped-row > .ui-row {
+  align-self: stretch;
+}
+
+.ui-review-skipped-error {
+  margin: var(--space-2) 0 0;
+  padding-inline: var(--space-side);
+}
+
+.ui-review-none-waiting {
+  margin: var(--space-4) 0 0;
+}
+
+/* FLOW-333 C6: a disabled text link looks disabled, with no pressed tint. */
+.ui-text-link:disabled,
+.ui-text-link[aria-disabled="true"] {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.ui-text-link:disabled:is(:hover, :active),
+.ui-text-link[aria-disabled="true"]:is(:hover, :active) {
+  background: none;
+}
+
+/* FLOW-333 C6: the editor's banner lines up with the parts card at --space-5. */
+.ui-lsplit-banner .ui-banner {
+  margin-inline: 0;
+}
+
+/* FLOW-333 C6: the rest row inside a disabled fieldset looks disabled, with no pressed tint. */
+.ui-lsplit-rest:disabled,
+.ui-lsplit-rest:disabled:is(:hover, :active) {
+  background: var(--color-tint);
+  cursor: not-allowed;
+}
+
+.ui-lsplit-rest:disabled :is(.ui-lsplit-name, .ui-lsplit-project, .ui-lsplit-amount, .ui-lsplit-resolved) {
+  color: var(--color-disabled-text);
+}
+
+/* FLOW-309, owner pick 2026-10-08: "N פריטים דולגו" under the empty queue's action. */
+.ui-review-empty-skipped {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--space-3);
 }
