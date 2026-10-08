@@ -398,7 +398,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] TOOLS.md conflict wording, and document the `sync_bank` errors.
 - [ ] `mercury-sync` `deno check` doesn't resolve imports (also on main).
 - [ ] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token.
-- [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; remember on a category-only row is `validation`.)
+- [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
 - [ ] A race test (dblink pgTAP or e2e) for the undo row lock.
 - [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
 - [x] The MCP review schema still requires `project_id` for kept-out income that doesn't need one. (FLOW-205 part 1: `assign_expense` takes no project for a kept-out income category; any other category without one is `validation`.)

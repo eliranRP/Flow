@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(15);
+select plan(16);
 
 do $users$
 begin
@@ -88,6 +88,10 @@ select is(
   private.mask_long_digits('acct 123-456-789-0123, ref 1234567, date 2026-10-08, phone 555-0100'),
   'acct ••0123, ref ••4567, date 2026-10-08, phone 555-0100',
   'long numbers keep their last 4; a date and a phone number stay');
+select is(
+  private.mask_long_digits('from 2026-10-08 2026-10-09'),
+  'from 2026-10-08 2026-10-09',
+  'a date range stays');
 
 -- Guard: a read the app calls must scope to the readable company, or a viewer sees nothing.
 -- mcp_* reads run on an owner's MCP token and stay owner-only.

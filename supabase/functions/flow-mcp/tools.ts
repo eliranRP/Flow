@@ -431,7 +431,7 @@ const batchItemSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
   // remember saves a project for the supplier, so a category-only row can't take it (FLOW-205).
-  if (item.project_id == null && item.remember != null) {
+  if (item.project_id == null && item.remember === true) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });

@@ -1759,7 +1759,6 @@ Deno.test("assign_expenses lowercases ids and refuses remember on a category-onl
 
   for (const items of [
     [{ transaction_id: TXN, category_id: CATEGORY, remember: true }],
-    [{ transaction_id: TXN, category_id: CATEGORY, remember: false }],
     [{ transaction_id: TXN, project_id: PROJECT, category_id: CATEGORY }, { transaction_id: TXN.toUpperCase(), category_id: CATEGORY }],
   ]) {
     const refused = await callTool("assign_expenses", { idempotency_key: "k", items }, ["write"], rpc);
@@ -1767,6 +1766,11 @@ Deno.test("assign_expenses lowercases ids and refuses remember on a category-onl
     if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.code, "validation");
   }
   assertEquals(calls.length, 1, "a refused call never reaches the database");
+  const off = await callTool("assign_expenses", {
+    idempotency_key: "batch-case-2",
+    items: [{ transaction_id: TXN, category_id: CATEGORY, remember: false }],
+  }, ["write"], rpc);
+  assertEquals(off.isError, false, "remember: false on a category-only row is allowed");
 });
 
 Deno.test("assign_expenses lists shares[] on its items like assign_expense_split", () => {

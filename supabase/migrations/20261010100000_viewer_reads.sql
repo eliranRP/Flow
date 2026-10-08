@@ -7,8 +7,8 @@
 -- viewer_reads.test.sql fails when a later redefinition drops it again.
 -- The audit log is the owner's: a viewer no longer reads the demo company's audit log.
 -- FLOW-315: get_line_meta re-checks card_last4 as 4 digits on read, and mask_long_digits also
--- masks a long number written with spaces or dashes (9 or more digits; a date or a phone
--- number stays), keeping the last 4.
+-- masks a long number written in 3+ digit groups with spaces or dashes (a date stays),
+-- keeping the last 4.
 -- FLOW-205: private.mcp_batches rows are deleted with their token.
 -- CLI 2.118.0 runs each statement on its own. This file is one transaction.
 
@@ -57,17 +57,18 @@ language sql
 immutable
 set search_path = ''
 as $$
-  -- A run of 9 or more digits with single spaces or dashes between them first, then any
-  -- unbroken run of 5 or more. Each keeps its last 4 digits.
+  -- Three or more groups of 3+ digits joined by single spaces or dashes (a card, account or
+  -- phone number) keep only their last group; then any unbroken run of 5 or more digits keeps
+  -- its last 4. Groups of 3+ digits leave a date (2026-10-08) or a date range alone.
   select regexp_replace(
     regexp_replace(
       p_text,
-      '[0-9](?:[ -]?[0-9]){4,}[ -]?([0-9])[ -]?([0-9])[ -]?([0-9])[ -]?([0-9])',
-      '••\1\2\3\4',
+      '[0-9]{3,}(?:[ -][0-9]{3,})+[ -]([0-9]{3,})',
+      '••\1',
       'g'
     ),
-    '[0-9]+([0-9]{4})',
-    '••\1',
+    '(••)?[0-9]+([0-9]{4})',
+    '••\2',
     'g'
   );
 $$;
