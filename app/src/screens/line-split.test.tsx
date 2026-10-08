@@ -133,7 +133,7 @@ describe("split by category editor (FLOW-325)", () => {
     expect(within(projects).queryByRole("radio", { name: /פרויקט השורה/ })).toBeNull();
   });
 
-  it("shows the over amount in the footer and on the part edited last", async () => {
+  it("shows the over amount in the footer and on the part edited last", () => {
     showEditor({
       parts: [
         { key: "a", categoryId: "c-elec", projectId: "p-herz", unit: "percent", value: "70" },

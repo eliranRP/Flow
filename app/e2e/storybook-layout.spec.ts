@@ -187,7 +187,7 @@ test("the split-by-category stories stay inside 320 and 390, light and dark (FLO
         const problems = await layoutProblems(page);
         const clipped = await page.locator(".ui-lsplit-name, .ui-lsplit-project, .ui-lsplit-msg").evaluateAll((nodes) =>
           nodes.filter((node) => node instanceof HTMLElement && node.getClientRects().length > 0 && node.getBoundingClientRect().width < 24).map((node) => node.textContent));
-        problems.push(...clipped.map((text) => `squeezed: ${String(text)}`));
+        problems.push(...clipped.map((text) => `squeezed: ${text}`));
         if (problems.length > 0) failures.push(`${theme} ${String(width)} ${story.id}: ${problems.join(" | ")}`);
       }
     }

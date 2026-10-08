@@ -912,7 +912,7 @@ function LineSplitEditor({
 }
 
 async function createProject(name: string, sample: boolean): Promise<ChangeChoice> {
-  if (sample) return { id: `lsplit-new-${name}`, name, status: "active" };
+  if (sample) return { id: `lsplit-added-${name}`, name, status: "active" };
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
   const saved = await supabase.rpc("upsert_project", { p_name: name, p_status: "active" });
