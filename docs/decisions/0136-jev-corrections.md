@@ -28,6 +28,7 @@ FLOW-703 lists what phase 1 left open. Jev saw how the owner filed a party befor
 
 ## Consequences
 
-- `jev_outcomes` still records a `none` suggestion with no project match; the accuracy report counts only its category.
+- `jev_outcomes` still records a `none` suggestion with no project match; the accuracy report counts only its category, and in the history `jev_corrected` reflects only the category for such a line.
+- A finished project's last line date reads `transactions.project_id` only, so a finished project used only through shared allocations or category splits is not offered on older lines.
 - The change sheet seeded with a Jev guess must not turn it into a supplier rule by default, and the split approval should use the new call: both are app changes for the UI lane.
 - Deploy the jev-tag function with this migration: the old function's REST prefill still works against the new schema, the new one needs `jev_prefill` and `jev_projects`.

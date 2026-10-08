@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(29);
+select plan(36);
 
 do $users$
 begin
@@ -90,7 +90,11 @@ insert into jc_lines values
   ('n1', 'expense', 's_oh', '2026-04-16', null, null, 'open', null, false, false),
   -- Split approvals: sp is split across two projects; ns is not split.
   ('sp', 'expense', 's_a', '2026-04-17', null, 'cat1', 'open', 'shared', false, false),
-  ('ns', 'expense', 's_a', '2026-04-18', 'p1', 'cat1', 'open', 'project', false, false);
+  ('ns', 'expense', 's_a', '2026-04-18', 'p1', 'cat1', 'open', 'project', false, false),
+  -- More prefill guards: the owner's project, a split across projects, a hidden or income category.
+  ('o7', 'expense', 's_a', '2026-04-19', 'p2', null, 'open', 'project', false, false),
+  ('o8', 'expense', 's_a', '2026-04-20', null, null, 'open', 'project', false, false),
+  ('o9', 'expense', 's_a', '2026-04-21', null, null, 'open', 'project', false, false);
 
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role, supplier_id, customer_id, project_id, category_id,
@@ -121,6 +125,20 @@ insert into public.allocations (company_id, transaction_id, project_id, share_bp
 select (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'sp'),
   (select id from jc_ref where label = p), 5000, -5000
 from unnest(array['p1', 'p2']) p;
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'o8'),
+  (select id from jc_ref where label = p), 5000, -5000
+from unnest(array['p1', 'p2']) p;
+insert into public.projects (company_id, name, status)
+values ((select id from jc_ref where label = 'co_b'), 'פרויקט זר', 'active');
+insert into jc_ref (label, id)
+select 'p_b', p.id from public.projects p
+where p.company_id = (select id from jc_ref where label = 'co_b') and p.name = 'פרויקט זר';
+insert into public.categories (company_id, name, kind, hidden, sort_order)
+values ((select id from jc_ref where label = 'co'), 'מוסתרת', 'expense', true, 999);
+insert into jc_ref (label, id)
+select 'cat_hidden', c.id from public.categories c
+where c.company_id = (select id from jc_ref where label = 'co') and c.name = 'מוסתרת';
 
 insert into public.review_queue (company_id, transaction_id, status, reason)
 select t.company_id, t.id, 'open', 'test'
@@ -182,6 +200,23 @@ begin
     (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'n1'),
     (select id from jc_ref where label = 'p1'), (select id from jc_ref where label = 'cat_b')
   );
+  insert into jc_out (label, result)
+  select 'pre_o7', public.jev_prefill(
+    (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'o7'),
+    (select id from jc_ref where label = 'p1'), null);
+  insert into jc_out (label, result)
+  select 'pre_o8', public.jev_prefill(
+    (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'o8'),
+    (select id from jc_ref where label = 'p1'), (select id from jc_ref where label = 'cat_inc'));
+  insert into jc_out (label, result)
+  select 'pre_o9', public.jev_prefill(
+    (select id from jc_ref where label = 'co'), (select id from jc_ref where label = 'o9'),
+    (select id from jc_ref where label = 'p_b'), (select id from jc_ref where label = 'cat_hidden'));
+  insert into jc_out (label, result)
+  select 'pre_xco', public.jev_prefill(
+    (select id from jc_ref where label = 'co_b'), (select id from jc_ref where label = 'o9'),
+    (select id from jc_ref where label = 'p_b'), (select id from jc_ref where label = 'cat_b'));
+  insert into jc_out (label, result) select 'projects_b', public.jev_projects((select id from jc_ref where label = 'co_b'));
   perform set_config('request.jwt.claim.role', '', true);
   perform set_config('request.jwt.claims', '{}', true);
 end
@@ -269,6 +304,42 @@ select is(
   (select result from jc_out where label = 'pre_bad'),
   '{"project": true, "category": false}'::jsonb,
   'another company''s category is not written'
+);
+
+select is(
+  (select jsonb_build_array(o.result, t.project_id = (select id from jc_ref where label = 'p2'))
+   from jc_out o, public.transactions t
+   where o.label = 'pre_o7' and t.id = (select id from jc_ref where label = 'o7')),
+  '[{"project": false, "category": false}, true]'::jsonb,
+  'a project the owner set is kept'
+);
+select is(
+  (select jsonb_build_array(o.result, (select count(*) from public.allocations a where a.transaction_id = (select id from jc_ref where label = 'o8'))::int)
+   from jc_out o where o.label = 'pre_o8'),
+  '[{"project": false, "category": false}, 2]'::jsonb,
+  'a line split across projects gets no project, and an income category is not written on an expense'
+);
+select is(
+  (select result from jc_out where label = 'pre_o9'),
+  '{"project": false, "category": false}'::jsonb,
+  'another company''s project and a hidden category are not written'
+);
+select is(
+  (select result->>'skipped' from jc_out where label = 'pre_xco'),
+  'not_found',
+  'another company cannot prefill the line'
+);
+select is(
+  (select jsonb_build_array(t.project_id is null,
+     t.category_id in (select id from jc_ref where label in ('cat_b', 'cat_hidden')))
+   from public.transactions t where t.id = (select id from jc_ref where label = 'o9')),
+  '[true, false]'::jsonb,
+  'and the line is unchanged'
+);
+select ok(
+  (select bool_and((p->>'id')::uuid <> (select id from jc_ref where label = 'p1')) from jc_out o, jsonb_array_elements(o.result) p where o.label = 'projects_b')
+  and exists (select 1 from jc_out o, jsonb_array_elements(o.result) p where o.label = 'projects_b' and (p->>'id')::uuid = (select id from jc_ref where label = 'p_b')),
+  'jev_projects lists only that company''s projects, and still lists its own'
 );
 
 -- 3. No project.
@@ -366,6 +437,15 @@ select ok(
   and not has_function_privilege('anon', 'public.approve_split_review(uuid, uuid)', 'execute'),
   'members can approve a split with a category; anon cannot'
 );
+
+select tests.authenticate_as('jc_owner');
+select throws_ok(
+  format($$select public.approve_split_review(%L, null::uuid)$$,
+    (select q.id from public.review_queue q where q.transaction_id = (select id from jc_ref where label = 'o8'))),
+  'category is required',
+  'the one-call approval needs a category'
+);
+reset role;
 
 select * from finish();
 rollback;

@@ -209,9 +209,12 @@ function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function choiceCriteria(rows: readonly { id: string; name: string }[]): Record<string, string> | null {
+function choiceCriteria(
+  rows: readonly { id: string; name: string }[],
+  cap = CHOICE_CAP,
+): Record<string, string> | null {
   const usable = rows.filter((row) => row.id.trim() !== "" && row.name.trim() !== "");
-  if (usable.length === 0 || usable.length > CHOICE_CAP) return null;
+  if (usable.length === 0 || usable.length > cap) return null;
   const criteria: Record<string, string> = {};
   for (const row of usable) criteria[row.id] = row.name;
   return criteria;
@@ -232,7 +235,7 @@ export function buildTagQuestions(
       : project.finished
       ? `${project.name} (finished)`
       : project.name,
-  })));
+  })), CHOICE_CAP - 1); // One option is kept for none: Jev takes at most CHOICE_CAP.
   if (projectCriteria) {
     projectCriteria[JEV_NO_PROJECT] = "No project: overhead, or not tied to one project.";
     questions.project = {
@@ -998,7 +1001,8 @@ export function createTagStore(
           p_category: write.categoryId ?? null,
         },
       });
-      if (!isObject(result)) return true;
+      // An answer SQL did not give says nothing was written: never count it as pre-filled.
+      if (!isObject(result)) return false;
       return result.project === true || result.category === true;
     },
 

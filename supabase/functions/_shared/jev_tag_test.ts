@@ -1862,3 +1862,15 @@ Deno.test("a prefill SQL skipped because the line closed is tagged, not counted 
   assertEquals(report.prefilled, 0);
   assertEquals(store.suggestions.length, 1);
 });
+
+Deno.test("the none option fits in Jev's 255 choices", () => {
+  const many = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      name: `p${i}`,
+    }));
+  const at = buildTagQuestions(many(254), categories);
+  assert(at.project.type === "choice");
+  assertEquals(Object.keys(at.project.criteria).length, 255);
+  assertEquals("project" in buildTagQuestions(many(255), categories), false);
+});
