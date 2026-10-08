@@ -3835,10 +3835,10 @@ function sumitKind(input: {
   return "disconnected";
 }
 
-/** Connections → onboarding, then back to Connections with the SUMIT sheet open. */
-function onboardingFromSettings(search: string): string {
+/** Connections → onboarding, then back to Connections with the same connector's sheet open. */
+function onboardingFromSettings(search: string, sheet: "sumit" | "mercury"): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : "");
-  params.set("return", "/settings/connections?sheet=sumit");
+  params.set("return", `/settings/connections?sheet=${sheet}`);
   return `/onboarding?${params.toString()}`;
 }
 
@@ -4825,7 +4825,7 @@ export function ConnectionsScreen({
         noCompanyBody={noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search, "sumit")} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
           </div>
         ) : undefined}
         authReconnect={authReconnect}
@@ -4899,7 +4899,7 @@ export function ConnectionsScreen({
         noCompanyBody={noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את Mercury צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("mercury-connect")}>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search, "mercury")} replace={sheetStack(location.state).includes("mercury-connect")}>פרטי העסק</TextLink>
           </div>
         ) : undefined}
         authReconnect={mercuryAuthReconnect}
