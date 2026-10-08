@@ -66,7 +66,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | in-progress (#111) |
 | 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | in-progress |
-| 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | ready |
+| 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | in-progress |
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | ready |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
@@ -596,7 +596,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-410"></a>
 ### FLOW-410 · Find every project in project search
-- **Type:** BUG · **Status:** ready · **Depends on:** —
+- **Type:** BUG · **Status:** in-progress · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. Project search doesn't find an active project past the first six or a finished one, so those take 3 taps or more. Search filters all projects, finished included, whenever the query is not empty; every active project shows by default, finished ones stay behind their link.
 - **MCP:** none (`list_projects` exists).
 - **Acceptance:** tests: a seventh active project and a finished project are found by name; 320px check; design review.

@@ -233,14 +233,15 @@ export function OnboardingScreen() {
   );
 }
 
-export function ProjectsScreen({ sample }: { sample?: Dashboard } = {}) {
+/** `initialQuery` lets a story open on a search without moving focus off the title. */
+export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboard; initialQuery?: string } = {}) {
   const preview = useHomePreview();
   const search = usePreviewSearch();
   const dashboard = useDashboardQuery(sample == null);
   const books = useBooks();
   const holdWrites = useHoldWrites();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [expanded, setExpanded] = useState(false);
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard);
   const data = sample ?? dashboard.data;
@@ -320,10 +321,15 @@ function ProjectsBody({
 }) {
   const finished = projects.filter((project) => project.status === "finished");
   const active = projects.filter((project) => project.status !== "finished");
-  const shown = expanded ? projects : active.slice(0, 6);
-  const restActive = Math.max(0, active.length - 6);
   const needle = query.trim();
-  const visible = shown.filter((project) => needle === "" || project.name.includes(needle) || (project.state_label ?? "").includes(needle));
+  /** Every active project by default; a query searches finished ones too (after the active ones), so none is out of reach. */
+  const shown = expanded || needle !== "" ? [...active, ...finished] : active;
+  const visible = shown.filter((project) =>
+    needle === ""
+    || project.name.includes(needle)
+    || (project.state_label ?? "").includes(needle)
+    // The finished row shows הסתיים, so that word finds it too.
+    || (project.status === "finished" && "הסתיים".includes(needle)));
   return (
     <>
       <div className="ui-page-pad ui-stack">
@@ -357,10 +363,12 @@ function ProjectsBody({
           })}
         </List>
       )}
-      {!expanded && needle === "" && (restActive > 0 || finished.length > 0) ? (
+      {!expanded && needle === "" && finished.length > 0 ? (
         <p className="ui-page-pad">
           <TextLink tone="quiet" onClick={() => { setExpanded(true); }}>
-            עוד <bdi dir="ltr">{String(restActive)}</bdi> פעילים · <bdi dir="ltr">{String(finished.length)}</bdi> הסתיימו
+            {finished.length === 1
+              ? "עוד פרויקט אחד שהסתיים"
+              : <>עוד <bdi dir="ltr">{String(finished.length)}</bdi> שהסתיימו</>}
           </TextLink>
         </p>
       ) : null}
