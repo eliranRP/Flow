@@ -13,6 +13,7 @@ import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
 import { ChevronDownIcon, KeptOutIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
+import { KeptOutTag } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -56,11 +57,7 @@ function CategoryLine({
       title={category.name}
       muted={muted}
       meta={category.count == null ? undefined : category.count === 1 ? "תנועה אחת" : `${String(category.count)} תנועות`}
-      tag={category.excluded_from_pnl === true ? (
-        <span className="ui-cat-out" role="img" aria-label={KEPT_OUT}>
-          <KeptOutIcon size={18} />
-        </span>
-      ) : undefined}
+      tag={category.excluded_from_pnl === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
       action={onMenu == null ? undefined : (
         <IconButton
           label={`עוד, ${category.name}`}

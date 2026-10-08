@@ -81,7 +81,7 @@ const income: NonNullable<Breakdown> = {
 const linesPage: NonNullable<BreakdownLinesPage> = {
   rows: [
     { transaction_id: "t1", part: null, description: "חשבונית 5521", supplier_name: "טמבור בע״מ", project_name: "מגדל הים", category_name: "חומרים", doc_date: "2026-10-05", currency: "ILS", amount_minor: 420_000n, shared: false },
-    { transaction_id: "t2", part: null, description: "חשבונית 118", supplier_name: "מחסני חשמל", project_name: "וילה בהרצליה", category_name: "חומרים", doc_date: "2026-10-04", currency: "ILS", amount_minor: 315_000n, shared: false },
+    { transaction_id: "t2", part: null, description: "חשבונית 118", supplier_name: "מחסני חשמל", project_name: "וילה בהרצליה", category_name: "חומרים", doc_date: "2026-10-04", currency: "ILS", amount_minor: 315_000n, shared: false, source: "mercury" },
     { transaction_id: "t3", part: null, description: "חשבונית 77", supplier_name: "אבן וסיד", project_name: "מגדל הים", category_name: "חומרים", doc_date: "2026-10-03", currency: "ILS", amount_minor: 288_000n, shared: true },
     { transaction_id: "t4", part: null, description: "זיכוי 12", supplier_name: "הום סנטר", project_name: null, category_name: "חומרים", doc_date: "2026-10-02", currency: "ILS", amount_minor: -19_400n, shared: false },
   ],

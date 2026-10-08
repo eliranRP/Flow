@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { loanRowProps, useLoanMarks } from "./loan-marks";
+import { loanRowProps, partsLabel, useLoanMarks } from "./loan-marks";
 
 const db = vi.hoisted(() => ({
   rows: [] as Array<{ transaction_id: string; needs_review: boolean }>,
@@ -43,8 +43,8 @@ describe("useLoanMarks", () => {
     db.batches = [];
     const { result } = renderHook(() => useLoanMarks(["t3", "t1", "t2"]), { wrapper });
     await waitFor(() => { expect(result.current.size).toBe(2); });
-    expect(result.current.get("t1")).toBe("split");
-    expect(result.current.get("t2")).toBe("review");
+    expect(result.current.get("t1")).toEqual({ parts: 3, review: false });
+    expect(result.current.get("t2")).toEqual({ parts: 3, review: true });
     expect(result.current.get("t3")).toBeUndefined();
   });
 
@@ -67,13 +67,18 @@ describe("loanRowProps", () => {
     expect(loanRowProps(undefined, "05/09")).toEqual({ hint: "05/09" });
   });
 
-  it("puts 3 חלקים before the hint on a split row", () => {
-    render(<span>{loanRowProps("split", "05/09").hint}</span>);
-    expect(screen.getByText("3 חלקים · 05/09")).toBeInTheDocument();
+  it("puts the part count before the hint on a split row", () => {
+    render(<span>{loanRowProps({ parts: 2, review: false }, "05/09").hint}</span>);
+    expect(screen.getByText("2 חלקים · 05/09")).toBeInTheDocument();
+  });
+
+  it("counts the parts as written", () => {
+    expect(partsLabel(1)).toBe("חלק אחד");
+    expect(partsLabel(4)).toBe("4 חלקים");
   });
 
   it("warns, with an icon, while a part waits for review", () => {
-    const props = loanRowProps("review", "05/09");
+    const props = loanRowProps({ parts: 3, review: true }, "05/09");
     expect(props.tone).toBe("warning");
     expect(props.icon).toBeTruthy();
     render(<span>{props.hint}</span>);
@@ -81,6 +86,6 @@ describe("loanRowProps", () => {
   });
 
   it("shows the words alone when there is no other hint", () => {
-    expect(loanRowProps("split", "").hint).toBe("3 חלקים");
+    expect(loanRowProps({ parts: 3, review: false }, "").hint).toBe("3 חלקים");
   });
 });
