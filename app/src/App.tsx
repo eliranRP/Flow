@@ -19,6 +19,7 @@ import { useCompanyRole, useHoldWrites, useIsViewer } from "./use-is-viewer";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
 import { InstallScreen } from "./ui/install-screen";
 import { DropRestoredSheet, ScrollMemory, useGoBack } from "./ui/back";
+import { EdgeSwipeBack } from "./ui/edge-back";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
@@ -76,6 +77,7 @@ export function App() {
         <ListHoldRoot />
         <ScrollMemory />
         <DropRestoredSheet />
+        <EdgeSwipeBack />
         <div className="mx-auto min-h-dvh w-full max-w-content bg-bg text-text">
           <AppRoutes />
         </div>

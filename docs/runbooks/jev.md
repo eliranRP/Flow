@@ -103,7 +103,7 @@ unset SERVICE_ROLE_KEY
 
 The deploy step ships `jev-tag` with the same `supabase functions deploy` command as `flow-mcp`.
 
-`supabase/migrations/20261012020000_jev_auto_mode_switch.sql` (FLOW-702) allows `mode` `auto`; the owner turns it on in Settings → חיבורים → תיוג חכם.
+`supabase/migrations/20261012030000_jev_auto_mode_switch.sql` (FLOW-702) allows `mode` `auto`; the owner turns it on in Settings → חיבורים → תיוג חכם.
 
 ## Accuracy
 
