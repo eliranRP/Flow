@@ -28,6 +28,7 @@ export function deleteItem(name: string, lines: number | undefined): string {
 /** What happens to the lines. Unknown counts (an older payload) say the full sentence. */
 export function deleteConsequence(lines: number | undefined): string {
   if (lines === 0) return "הקטגוריה תימחק מהרשימה.";
+  if (lines === 1) return "התנועה תישאר בלי קטגוריה ותחזור ללשונית לאישור.";
   return "התנועות יישארו בלי קטגוריה ויחזרו ללשונית לאישור.";
 }
 
@@ -40,13 +41,13 @@ export function deleteDetail(splitLines: number | undefined): string | undefined
 
 /** The toast after a delete, from delete_category's name and lines. */
 export function deletedToast(name: string, lines: number): string {
-  if (lines === 0) return `${name} נמחקה.`;
+  if (lines === 0) return `${name} נמחקה`;
   if (lines === 1) return `${name} נמחקה. תנועה אחת חזרה ללשונית לאישור`;
   return `${name} נמחקה. ${String(lines)} תנועות חזרו ללשונית לאישור`;
 }
 
 /** Why the delete row is disabled, when the server would refuse it. */
-export const DELETE_LOAN_USED = "הלוואה משתמשת בקטגוריה. העבירו קודם את התנועות, או שנו את ההלוואה.";
+export const DELETE_LOAN_USED = "הלוואה משתמשת בקטגוריה. העבירו קודם את התנועות.";
 
 /** delete_category's refusals (decision 0144). */
 export function deleteFailureText(error: Error): string {

@@ -10,6 +10,7 @@ import { CategoriesScreen } from "./categories-screen";
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   restoreRefusal: false,
+  rehabOff: false,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -19,7 +20,7 @@ vi.mock("../lib/supabase", () => ({
       if (name === "list_categories") {
         return Promise.resolve({
           data: [
-            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, lines: 42, split_lines: 3, loan_used: false, rehab: null, in_rehab: true },
+            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, lines: 42, split_lines: 3, loan_used: false, rehab: rpc.rehabOff ? false : null, in_rehab: !rpc.rehabOff },
             { id: "c2", name: "קבלנים", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 31, split_lines: 0, loan_used: false },
             { id: "c3", name: "ביטוח נכס", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 18, split_lines: 0, loan_used: true },
             { id: "c4", name: "אחר", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: false, lines: 0, split_lines: 0, loan_used: false },
@@ -28,6 +29,10 @@ vi.mock("../lib/supabase", () => ({
           ],
           error: null,
         });
+      }
+      if (name === "set_category_rehab") {
+        rpc.rehabOff = (args as { p_rehab: boolean | null }).p_rehab === false;
+        return Promise.resolve({ data: null, error: null });
       }
       if (name === "delete_category") return Promise.resolve({ data: { deletion_id: "d1", name: "חומרים", lines: 42 }, error: null });
       if (name === "move_category_lines") return Promise.resolve({ data: { move_id: "m1", lines: 42 }, error: null });
@@ -65,6 +70,7 @@ async function openSheet(name: string) {
 beforeEach(() => {
   rpc.calls.length = 0;
   rpc.restoreRefusal = false;
+  rpc.rehabOff = false;
 });
 
 describe("category sheet: move all lines and delete (FLOW-405)", () => {
@@ -135,7 +141,7 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     const sheet = await openSheet("ביטוח נכס");
     const remove = within(sheet).getByRole("button", { name: /מחיקה/ });
     expect(remove).toBeDisabled();
-    expect(within(sheet).getByText("הלוואה משתמשת בקטגוריה. העבירו קודם את התנועות, או שנו את ההלוואה.")).toBeInTheDocument();
+    expect(within(sheet).getByText("הלוואה משתמשת בקטגוריה. העבירו קודם את התנועות.")).toBeInTheDocument();
   });
 
   it("switches rehab off with set_category_rehab", async () => {
@@ -143,6 +149,12 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     fireEvent.click(within(sheet).getByRole("switch", { name: "נספרת בשיפוץ" }));
     await waitFor(() => { expect(calls("set_category_rehab")).toEqual([{ p_category_id: "c1", p_rehab: false }]); });
     expect(await screen.findByText("חומרים · לא נספרת בשיפוץ")).toBeInTheDocument();
+    // The sheet stays open and follows the refetched row.
+    await waitFor(() => { expect(within(sheet).getByRole("switch", { name: "נספרת בשיפוץ" })).not.toBeChecked(); });
+    // The open sheet hides the rest of the page from the accessibility tree, toast included.
+    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => { expect(calls("set_category_rehab")).toEqual([{ p_category_id: "c1", p_rehab: false }, { p_category_id: "c1", p_rehab: null }]); });
+    await waitFor(() => { expect(within(sheet).getByRole("switch", { name: "נספרת בשיפוץ" })).toBeChecked(); });
   });
 
   it("has no rehab switch on an income category", async () => {

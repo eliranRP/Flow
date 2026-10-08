@@ -13,6 +13,7 @@ import { LockIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Toggle } from "../ui/toggle";
+import "./category-sheet.css";
 import { useCategoryRehab, useDeleteCategory, useMoveCategoryLines } from "./category-manage";
 import { KEPT_OUT } from "./screen-shared";
 
@@ -133,6 +134,7 @@ export function CategoryMenuSheet({
                   wrapHint
                   describeHint
                   disabled={category.lines === 0}
+                  clearHint
                   onClick={() => { openMove(category); }}
                 />
               ) : null}
@@ -166,6 +168,7 @@ export function CategoryMenuSheet({
                   wrapHint
                   describeHint
                   disabled={category.loan_used === true || pnlBusy}
+                  clearHint
                   onClick={() => {
                     onClose();
                     setDeleteTarget(category);
@@ -220,6 +223,7 @@ export function CategoryMenuSheet({
         confirmLabel="מחיקה"
         destructive
         busy={remove.isPending}
+        returnFocusRef={returnFocusRef}
         alternative={deleteTarget != null && deleteTarget.lines !== 0 ? {
           label: "להעביר את התנועות לקטגוריה אחרת במקום",
           onClick: () => {

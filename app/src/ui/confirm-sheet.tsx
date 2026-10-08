@@ -3,6 +3,7 @@ import { Button } from "./button";
 import { TrashIcon } from "./icons";
 import { Sheet } from "./sheet";
 import { TextLink } from "./text-link";
+import "./confirm-sheet.css";
 
 type ConfirmSheetProps = {
   open: boolean;
@@ -62,7 +63,7 @@ export function ConfirmSheet({
         ביטול
       </Button>
       {alternative ? (
-        <div className="flex justify-center">
+        <div className="ui-confirm-alt flex justify-center">
           <TextLink tone="quiet" chevron={false} wrap disabled={busy} onClick={alternative.onClick}>
             {alternative.label}
           </TextLink>

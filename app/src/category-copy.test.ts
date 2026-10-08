@@ -37,11 +37,12 @@ describe("delete and move all lines (FLOW-405)", () => {
     expect(deleteItem("ציוד", 42)).toBe("ציוד · 42 תנועות");
     expect(deleteItem("ציוד", undefined)).toBe("ציוד");
     expect(deleteConsequence(0)).toBe("הקטגוריה תימחק מהרשימה.");
+    expect(deleteConsequence(1)).toBe("התנועה תישאר בלי קטגוריה ותחזור ללשונית לאישור.");
     expect(deleteConsequence(3)).toBe("התנועות יישארו בלי קטגוריה ויחזרו ללשונית לאישור.");
     expect(deleteDetail(0)).toBeUndefined();
     expect(deleteDetail(1)).toBe("אחת מהן מפוצלת, והפיצול שלה יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.");
     expect(deleteDetail(3)).toBe("3 מהן מפוצלות, והפיצול שלהן יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.");
-    expect(deletedToast("ציוד", 0)).toBe("ציוד נמחקה.");
+    expect(deletedToast("ציוד", 0)).toBe("ציוד נמחקה");
     expect(deletedToast("ציוד", 1)).toBe("ציוד נמחקה. תנועה אחת חזרה ללשונית לאישור");
     expect(deletedToast("ציוד", 42)).toBe("ציוד נמחקה. 42 תנועות חזרו ללשונית לאישור");
   });

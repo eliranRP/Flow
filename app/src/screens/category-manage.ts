@@ -14,7 +14,7 @@ import { assertNoError, useWrite } from "../use-write";
 /** FLOW-405 (decision 0144): delete a category with lines and move all its lines, each with a ביטול toast. */
 
 /** Everything a delete or a move changes: the lines go back to review or to another category. */
-const CATEGORY_WRITE_KEYS = ["categories", "dashboard", "review", "txn", "project", "project-category", "project-waiting"];
+const CATEGORY_WRITE_KEYS = ["categories", "dashboard", "review", "txn", "project", "project-category", "project-waiting", "breakdown", "breakdown-lines"];
 
 export type CategoryTarget = { id: string; name: string };
 

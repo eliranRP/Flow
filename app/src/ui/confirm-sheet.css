@@ -1,0 +1,5 @@
+/* FLOW-405 */
+/* A confirm's "do this instead" link breaks evenly, never one word alone. */
+.ui-confirm-alt .ui-text-link-label {
+  text-wrap: balance;
+}

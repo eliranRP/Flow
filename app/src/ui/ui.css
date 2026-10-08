@@ -3317,16 +3317,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   text-wrap: balance;
 }
 
-/* FLOW-405: the category sheet. Delete sits last, behind a 1px line (DESIGN-TEAM log 2026-10-08-flow-405). */
-.ui-cat-sheet .ui-project-list {
-  padding-inline: 0;
-}
-
-.ui-cat-danger {
-  border-top: 1px solid var(--color-line);
-  padding-top: var(--space-1);
-}
-
 .ui-section-head {
   display: flex;
   justify-content: space-between;

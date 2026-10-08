@@ -26,9 +26,9 @@ import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
 /** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
 const LOAN_CATEGORY_LINES: Record<string, string> = {
-  interest: "חלק מתשלום הלוואה · תמיד ברווח והפסד",
-  escrow: "חלק מתשלום הלוואה · תמיד ברווח והפסד",
-  principal: "קטגוריית הלוואה · תמיד מחוץ לרווח והפסד",
+  interest: "חלק מתשלום הלוואה\u00a0· תמיד ברווח והפסד",
+  escrow: "חלק מתשלום הלוואה\u00a0· תמיד ברווח והפסד",
+  principal: "קטגוריית הלוואה\u00a0· תמיד מחוץ לרווח והפסד",
 };
 
 function loanCategoryLine(category: CategoryRow): string | null {
@@ -163,7 +163,9 @@ export function CategoriesScreen({
   const hiddenRows = rows.filter((category) => category.kind === kind && category.hidden);
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
   const anyKeptOut = rows.some((category) => category.kind === kind && category.excluded_from_pnl === true);
-  const menuLoanLine = menu ? loanCategoryLine(menu) : null;
+  // Follow the refetched row, so the rehab switch shows the saved value while the sheet stays open.
+  const menuRow = menu ? rows.find((row) => row.id === menu.id) ?? menu : null;
+  const menuLoanLine = menuRow ? loanCategoryLine(menuRow) : null;
   const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
   const previewNoCompany = sample == null && params.get("preview") === "empty";
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
@@ -274,7 +276,7 @@ export function CategoriesScreen({
         </p>
       ) : null}
       <CategoryMenuSheet
-        category={menu}
+        category={menuRow}
         rows={rows}
         loanLine={menuLoanLine}
         pnlBusy={pnl.isPending}

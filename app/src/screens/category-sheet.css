@@ -1,0 +1,19 @@
+/* FLOW-405: the category sheet. Delete sits last, behind a 1px line (DESIGN-TEAM log 2026-10-08-flow-405). */
+/* The rows carry their own padding, so the stack adds no gap: a loan-used reason fits at 375x667. */
+.ui-stack.ui-cat-sheet {
+  margin-top: 0;
+  gap: 0;
+}
+
+.ui-cat-sheet .ui-project-list {
+  padding-inline: 0;
+}
+
+.ui-cat-sheet .ui-switch-copy .t-hint {
+  text-wrap: balance;
+}
+
+.ui-cat-danger {
+  border-top: 1px solid var(--color-line);
+  padding-top: var(--space-1);
+}
