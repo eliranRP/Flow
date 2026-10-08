@@ -38,6 +38,8 @@ export const projectRowSchema = z.object({
   name: z.string(),
   status: z.enum(["active", "finished"]),
   state_label: z.string().nullable().optional(),
+  /** A short project code (P-12), once the server sends one. */
+  code: z.string().nullable().optional(),
   budget_agorot: agorotOrNull.nullish(),
   sumit_budget_section_id: z.number().nullable().optional(),
   income_agorot: agorotSchema,

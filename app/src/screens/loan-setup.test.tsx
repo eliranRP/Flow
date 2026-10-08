@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { contractualPaymentMinor } from "@flow/shared";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "./loan-form";
-import { LoanSettingsSection, LoanSetupForm } from "./loan-setup";
+import { LoanProjectPicker, LoanSettingsSection, LoanSetupForm } from "./loan-setup";
 
 const db = vi.hoisted(() => ({
   inserts: [] as Array<Record<string, unknown>>,
@@ -833,6 +833,40 @@ describe("FLOW-119 loan project", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     expect(db.inserts[0]?.project_id).toBe("p-a");
+  });
+
+  it("keeps the form's height while the picker is shown", async () => {
+    const spy = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(480);
+    onTestFinished(() => { spy.mockRestore(); });
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    const group = await screen.findByRole("radiogroup", { name: "פרויקט" });
+    expect(group.closest<HTMLElement>("[style]")?.style.minHeight).toBe("480px");
+  });
+
+  it("shows project codes and finds a project by its code", () => {
+    const many = {
+      rows: Array.from({ length: 10 }, (_, index) => ({
+        id: `p-${String(index)}`,
+        name: `פרויקט ${String(index + 1)}`,
+        status: "active" as const,
+        code: `P-${String(index + 1)}`,
+      })),
+    };
+    render(<LoanProjectPicker source={many} selectedId={null} onSelect={() => undefined} />);
+    const search = screen.getByRole("searchbox", { name: "חיפוש פרויקט" });
+    expect(search).toHaveAttribute("placeholder", "חיפוש פרויקט או קוד");
+    expect(screen.getByText("P-3")).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "p-10" } });
+    expect(screen.getAllByRole("radio").map((node) => node.getAttribute("aria-label") ?? node.textContent)).toHaveLength(2);
+    expect(screen.getByRole("radio", { name: /פרויקט 10/ })).toBeInTheDocument();
+  });
+
+  it("keeps the plain placeholder when no project has a code", () => {
+    const many = { rows: Array.from({ length: 10 }, (_, index) => ({ id: `p-${String(index)}`, name: `פרויקט ${String(index + 1)}` })) };
+    render(<LoanProjectPicker source={many} selectedId={null} onSelect={() => undefined} />);
+    expect(screen.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveAttribute("placeholder", "חיפוש פרויקט");
   });
 
   it("keeps ללא פרויקט when the projects fail to load", () => {

@@ -3,6 +3,7 @@ import type { Decorator } from "@storybook/react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TxnMeta } from "../txn-meta";
 import { lineMetaQueryKey } from "../use-books";
+import { SheetSurface } from "./sheet";
 
 export const longHebrew =
   "שיפוץ דירת הגג ברחוב הרצל שתים עשרה, כולל הריסה, חשמל, אינסטלציה, ריצוף וצבע";
@@ -15,6 +16,21 @@ export const padded: Decorator = (Story) => (
     <Story />
   </div>
 );
+
+/**
+ * Draws the story on a still sheet at the bottom of the frame: grab handle, head and body
+ * padding, as in the app. `parameters.sheetTitle` names it.
+ */
+export const inSheet: Decorator = (Story, context) => {
+  const title: unknown = context.parameters.sheetTitle;
+  return (
+    <div className="flex min-h-dvh flex-col justify-end">
+      <SheetSurface title={typeof title === "string" ? title : ""}>
+        <Story />
+      </SheetSurface>
+    </div>
+  );
+};
 
 export function Stack({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-3">{children}</div>;

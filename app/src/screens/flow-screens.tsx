@@ -4210,7 +4210,7 @@ export function LoansScreen({ sample }: { sample?: SettingsSample } = {}) {
         projects={sampled
           ? { rows: sample?.loanProjects ?? [] }
           : {
-            rows: (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status })),
+            rows: (dashboard.data?.projects ?? []).map((project) => ({ id: project.id, name: project.name, status: project.status, code: project.code })),
             loading: dashboard.isLoading,
             error: dashboard.isError,
             retrying: dashboard.isFetching,

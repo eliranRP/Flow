@@ -1,20 +1,25 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { LoanBalanceList, ProjectLoanList } from "./loan-match";
+import { inSheet } from "../ui/story-support";
 import { LoanProjectPicker, LoanSetupForm, type LoanProjectChoice } from "./loan-setup";
 
 /** FLOW-119. Invented projects and loans. */
 const FEW: LoanProjectChoice[] = [
-  { id: "p1", name: "שיפוץ הרצל 12", status: "active" },
-  { id: "p2", name: "פרגולה בית כהן", status: "active" },
-  { id: "p3", name: "דירה ביאליק 8", status: "finished" },
+  { id: "p1", name: "שיפוץ הרצל 12", status: "active", code: "P-12" },
+  { id: "p2", name: "פרגולה בית כהן", status: "active", code: "P-7" },
+  { id: "p3", name: "דירה ביאליק 8", status: "finished", code: "P-3" },
 ];
 
 const MANY: LoanProjectChoice[] = Array.from({ length: 12 }, (_, index) => ({
   id: `m${String(index)}`,
   name: `פרויקט דוגמה ${String(index + 1)}`,
   status: "active" as const,
+  code: `P-${String(index + 1)}`,
 }));
+
+/** Projects from before codes: the search keeps its plain placeholder. */
+const NO_CODES: LoanProjectChoice[] = MANY.map((row) => ({ id: row.id, name: row.name, status: row.status }));
 
 const LONG: LoanProjectChoice[] = [
   { id: "l1", name: "שיפוץ מקיף של דירת ארבעה חדרים ברחוב הרצל בראשון לציון כולל מרפסת", status: "active" },
@@ -22,7 +27,7 @@ const LONG: LoanProjectChoice[] = [
 ];
 
 type PickerArgs = {
-  rows?: "few" | "many" | "long" | "none";
+  rows?: "few" | "many" | "long" | "none" | "noCodes";
   selectedId?: string | null;
   loading?: boolean;
   error?: boolean;
@@ -31,7 +36,7 @@ type PickerArgs = {
 
 function Picker({ rows = "few", selectedId = null, loading, error, savingId }: PickerArgs) {
   const [picked, setPicked] = useState<string | null>(selectedId);
-  const source = { few: FEW, many: MANY, long: LONG, none: [] }[rows];
+  const source = { few: FEW, many: MANY, long: LONG, none: [], noCodes: NO_CODES }[rows];
   return (
     <LoanProjectPicker
       source={{ rows: source, loading, error }}
@@ -55,19 +60,26 @@ const dark390 = { globals: { theme: "dark" }, parameters: { viewport: { defaultV
 const light320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
 const dark320 = { globals: { theme: "dark" }, parameters: { viewport: { defaultViewport: "flow320" } } };
 
-export const PickerNone: Story = { args: {}, ...light390 };
-export const PickerNoneDark: Story = { args: {}, ...dark390 };
-export const PickerCurrentFinished: Story = { args: { selectedId: "p3" }, ...light320 };
-export const PickerCurrentFinishedDark: Story = { args: { selectedId: "p3" }, ...dark320 };
-export const PickerSearch: Story = { args: { rows: "many", selectedId: "m3" }, ...light390 };
-export const PickerSearchDark320: Story = { args: { rows: "many", selectedId: "m3" }, ...dark320 };
-export const PickerLongHebrew: Story = { args: { rows: "long", selectedId: "l1" }, ...light320 };
-export const PickerLongHebrewDark: Story = { args: { rows: "long", selectedId: "l1" }, ...dark320 };
-export const PickerLoading: Story = { args: { loading: true }, ...light320 };
-export const PickerError: Story = { args: { error: true }, ...light320 };
-export const PickerErrorDark: Story = { args: { error: true }, ...dark320 };
-export const PickerEmpty: Story = { args: { rows: "none" }, ...light320 };
-export const PickerSaving: Story = { args: { selectedId: "p1", savingId: "p2" }, ...light320 };
+type Frame = { globals?: { theme: string }; parameters: { viewport: { defaultViewport: string } } };
+/** The picker and the form live in one sheet in the app; draw them on it. */
+function sheet(frame: Frame, sheetTitle: string) {
+  return { ...frame, decorators: [inSheet], parameters: { ...frame.parameters, sheetTitle } };
+}
+
+export const PickerNone: Story = { args: {}, ...sheet(light390, "פרויקט") };
+export const PickerNoneDark: Story = { args: {}, ...sheet(dark390, "פרויקט") };
+export const PickerCurrentFinished: Story = { args: { selectedId: "p3" }, ...sheet(light320, "פרויקט") };
+export const PickerCurrentFinishedDark: Story = { args: { selectedId: "p3" }, ...sheet(dark320, "פרויקט") };
+export const PickerSearch: Story = { args: { rows: "many", selectedId: "m3" }, ...sheet(light390, "פרויקט") };
+export const PickerSearchDark320: Story = { args: { rows: "many", selectedId: "m3" }, ...sheet(dark320, "פרויקט") };
+export const PickerLongHebrew: Story = { args: { rows: "long", selectedId: "l1" }, ...sheet(light320, "פרויקט") };
+export const PickerLongHebrewDark: Story = { args: { rows: "long", selectedId: "l1" }, ...sheet(dark320, "פרויקט") };
+export const PickerLoading: Story = { args: { loading: true }, ...sheet(light320, "פרויקט") };
+export const PickerError: Story = { args: { error: true }, ...sheet(light320, "פרויקט") };
+export const PickerErrorDark: Story = { args: { error: true }, ...sheet(dark320, "פרויקט") };
+export const PickerEmpty: Story = { args: { rows: "none" }, ...sheet(light320, "פרויקט") };
+export const PickerNoCodes: Story = { args: { rows: "noCodes" }, ...sheet(light390, "פרויקט") };
+export const PickerSaving: Story = { args: { selectedId: "p1", savingId: "p2" }, ...sheet(light320, "פרויקט") };
 
 const form = {
   name: "הלוואת דוגמה",
@@ -88,16 +100,16 @@ function Form({ project }: { project: string | null }) {
   );
 }
 
-export const FormNoProject: Story = { render: () => <Form project={null} />, ...light320 };
-export const FormNoProjectDark: Story = { render: () => <Form project={null} />, ...dark320 };
-export const FormProject: Story = { render: () => <Form project="שיפוץ הרצל 12" />, ...light390 };
+export const FormNoProject: Story = { render: () => <Form project={null} />, ...sheet(light320, "הלוואה") };
+export const FormNoProjectDark: Story = { render: () => <Form project={null} />, ...sheet(dark320, "הלוואה") };
+export const FormProject: Story = { render: () => <Form project="שיפוץ הרצל 12" />, ...sheet(light390, "הלוואה") };
 export const FormProjectLongHebrew: Story = {
   render: () => <Form project="שיפוץ מקיף של דירת ארבעה חדרים ברחוב הרצל בראשון לציון כולל מרפסת" />,
-  ...light320,
+  ...sheet(light320, "הלוואה"),
 };
 export const FormProjectLongHebrewDark: Story = {
   render: () => <Form project="שיפוץ מקיף של דירת ארבעה חדרים ברחוב הרצל בראשון לציון כולל מרפסת" />,
-  ...dark320,
+  ...sheet(dark320, "הלוואה"),
 };
 
 const LOANS = [

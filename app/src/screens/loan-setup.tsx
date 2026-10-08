@@ -352,7 +352,7 @@ const NO_PROJECT = "ללא פרויקט";
 const PROJECT_SEARCH_FROM = 8;
 const projectSkeleton = ["a", "b", "c", "d"] as const;
 
-export type LoanProjectChoice = { id: string; name: string; status?: "active" | "finished" };
+export type LoanProjectChoice = { id: string; name: string; status?: "active" | "finished"; code?: string | null };
 
 export type LoanProjectField = {
   /** null shows ללא פרויקט. */
@@ -389,7 +389,12 @@ export function LoanProjectPicker({
   const listed = source.rows.filter((row) => row.status !== "finished" || row.id === selectedId);
   const needle = query.trim();
   const searchable = !loading && !failed && listed.length > PROJECT_SEARCH_FROM;
-  const shown = searchable && needle !== "" ? listed.filter((row) => row.name.includes(needle)) : listed;
+  const lowered = needle.toLowerCase();
+  const shown = searchable && needle !== ""
+    ? listed.filter((row) => row.name.includes(needle) || (row.code ?? "").toLowerCase().includes(lowered))
+    : listed;
+  // "או קוד" only once a project has a code to search by.
+  const withCodes = listed.some((row) => row.code != null && row.code !== "");
   const busy = saving != null;
   return (
     <div className="ui-change-picker">
@@ -398,7 +403,7 @@ export function LoanProjectPicker({
           label="חיפוש פרויקט"
           value={query}
           onChange={setQuery}
-          placeholder="חיפוש פרויקט"
+          placeholder={withCodes ? "חיפוש פרויקט או קוד" : "חיפוש פרויקט"}
           autoFocus={false}
         />
       ) : null}
@@ -416,6 +421,7 @@ export function LoanProjectPicker({
             key={row.id}
             layout="picker"
             label={row.name}
+            code={row.code ?? undefined}
             description={row.status === "finished" ? "הסתיים" : undefined}
             selected={row.id === selectedId}
             busy={busy && saving.id === row.id}
@@ -567,6 +573,9 @@ export function LoanSettingsSection({
   const [open, setOpenState] = useState(false);
   const [view, setView] = useState<"form" | "project">("form");
   const [draftProject, setDraftProject] = useState<string | null>(null);
+  // The picker keeps the form's height, so the sheet does not jump when they swap.
+  const [formHeight, setFormHeight] = useState<number | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLButtonElement>(null);
   const projectFieldRef = useRef<HTMLButtonElement>(null);
   const sheetTitle = useRef<HTMLHeadingElement>(null);
@@ -638,6 +647,7 @@ export function LoanSettingsSection({
   }
 
   function openPicker() {
+    setFormHeight(formRef.current?.offsetHeight ?? null);
     setView("project");
     // The פרויקט field is hidden now. Focus the title, like the change sheet's picker.
     requestAnimationFrame(() => { sheetTitle.current?.focus({ preventScroll: true }); });
@@ -738,16 +748,18 @@ export function LoanSettingsSection({
         ) : (
           <>
             {picking ? (
-              <LoanProjectPicker
-                source={source}
-                selectedId={draftProject}
-                onSelect={(id) => {
-                  setDraftProject(id);
-                  backToForm();
-                }}
-              />
+              <div style={formHeight ? { minHeight: formHeight } : undefined}>
+                <LoanProjectPicker
+                  source={source}
+                  selectedId={draftProject}
+                  onSelect={(id) => {
+                    setDraftProject(id);
+                    backToForm();
+                  }}
+                />
+              </div>
             ) : null}
-            <div hidden={picking}>
+            <div hidden={picking} ref={formRef}>
               <LoanSetupForm
                 companyCurrency={currency}
                 initial={draftRef.current ?? undefined}
