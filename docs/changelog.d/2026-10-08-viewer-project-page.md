@@ -1,0 +1,1 @@
+A demo viewer's project page shows the project (FLOW-507 follow-up). `get_project` found the company by its owner, so a viewer got an empty page; the project's category totals, the category drill-down and the review screen's "filed today" rows also read the owner's company only. They now read the company the viewer may see, as the other screen reads do. The owner sees no change.
