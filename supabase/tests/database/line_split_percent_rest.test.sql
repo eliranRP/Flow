@@ -205,7 +205,7 @@ select throws_ok(
 select throws_ok(
   $$select public.save_line_split((select id from lpr where label = 'txn_bill'), jsonb_build_array(
     pg_temp.part('repairs', null, 'percent', 50), pg_temp.part(null, null, 'rest')))$$,
-  'validation', 'a part that repeats the rest''s category and project is validation');
+  'same category and project twice', 'a part that repeats the rest''s category and project is refused');
 select throws_ok(
   $$select public.save_line_split((select id from lpr where label = 'txn_cent'), jsonb_build_array(
     pg_temp.part('repairs', 'south', 'percent', 50), pg_temp.part(null, null, 'rest')))$$,
