@@ -1226,12 +1226,11 @@ begin
         response := private.mcp_refused('project not found');
       elsif exists (
         select 1
-        from jsonb_each_text(before) f
-        where f.key in ('interest_category_id', 'escrow_category_id', 'principal_category_id')
-          and f.value is not null
+        from (values ('interest_category_id'), ('escrow_category_id'), ('principal_category_id')) v(k)
+        where before->>v.k is not null
           and not exists (
             select 1 from public.categories c
-            where c.id = f.value::uuid and c.company_id = cid
+            where c.id = (before->>v.k)::uuid and c.company_id = cid
           )
       ) then
         -- A category the edit replaced was deleted since.
