@@ -301,8 +301,8 @@ select is(
   (select count(*)::int
     from jsonb_array_elements(public.list_auto_assigned_today()) elem
     where elem->>'id' = (select id::text from r20 where label = 'leasing')),
-  1,
-  'an approved sumit split is on שויכו היום'
+  0,
+  'an approved sumit split stays off the automatic list; the owner filed it (FLOW-309)'
 );
 select lives_ok(
   format('select public.reopen_review(%L::uuid)', (select id from r20 where label = 'review')),

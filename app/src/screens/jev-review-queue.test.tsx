@@ -631,6 +631,22 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
   });
 
+  it("skips the card on screen and ביטול reopens it", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(queue([open, other], client));
+    expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    view.rerender(queue([other, open], client));
+    fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+    await waitFor(() => {
+      expect(db.writes.find((call) => call.name === "resolve_review")?.args).toEqual({ p_id: "r1", p_action: "skipped" });
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "ביטול" }));
+    await waitFor(() => {
+      expect(db.writes.find((call) => call.name === "reopen_review")?.args).toEqual({ p_id: "r1" });
+    });
+    expect(await screen.findByText("הפריט חזר לתור.")).toBeInTheDocument();
+  });
+
   it("moves on once the card leaves the queue", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(queue([open, other], client));
