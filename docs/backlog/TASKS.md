@@ -530,7 +530,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] e2e for the plural title at 320 and for אישור clearing the tab bar at 320×693.
 - [ ] A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
 - [ ] Tests: the project-picker toast pad path; click through from 'בחירת קטגוריה' to the picker; assert `open.search` is empty; a test that fails if the effect deps revert.
-- [ ] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued; income always reports `missing_project` even when the category is missing too; a connector invoice and its receipt both land in review.
+- [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
+- [ ] Income always reports `missing_project` even when the category is missing too. (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
+- [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
