@@ -5,7 +5,8 @@
 --    (receipts on cash, invoices on invoiced) and takes a range. overhead_share keeps its two
 --    signatures and calls it for all time.
 -- 3. get_project and list_project_category take an optional range (p_from and p_to, both or
---    neither) as new last arguments with null defaults, so every existing call stays all time.
+--    neither; one alone or from after to is 'invalid range') as new last arguments with null
+--    defaults, so every existing call stays all time.
 --    Each is dropped and created again with its grants. get_project's body is
 --    otherwise as in 20261008100000_line_split_followups.sql, list_project_category's as in
 --    20260929250000_category_drilldown.sql.
@@ -66,6 +67,7 @@ as $$
       and l.currency = 'ILS'
       and l.in_pnl
       and l.kind = 'income'
+      and ((select basis from cid) = 'invoiced' or not l.unpaid)
       and (
         l.direction = 'expense'
         or ((select basis from cid) = 'cash' and l.doc_kind in ('receipt', 'invoice_receipt'))
@@ -174,6 +176,9 @@ begin
     where c.owner_id = (select auth.uid());
   if cid is null then
     return null;
+  end if;
+  if (p_from is null) <> (p_to is null) or p_from > p_to then
+    raise exception 'invalid range' using errcode = '22023';
   end if;
   basis := case when p_basis = 'invoiced' then 'invoiced' else 'cash' end;
 
@@ -551,6 +556,9 @@ begin
     select 1 from public.categories c where c.id = p_category and c.company_id = cid
   ) then
     return null;
+  end if;
+  if (p_from is null) <> (p_to is null) or p_from > p_to then
+    raise exception 'invalid range' using errcode = '22023';
   end if;
   off := greatest(coalesce(p_offset, 0), 0);
   lim := least(greatest(coalesce(p_limit, 40), 1), 100);

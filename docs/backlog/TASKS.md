@@ -715,6 +715,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **MCP:** none (`get_project` returns the lines).
 - **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.
 
+<a id="flow-412"></a>
+### FLOW-412 · Category drill-down on the cash basis
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review.
+
 ## Onboarding, Settings and connectors
 
 <a id="flow-501"></a>

@@ -4,12 +4,13 @@
 
 begin;
 
-select plan(22);
+select plan(27);
 
 do $users$
 begin
   perform tests.create_supabase_user('pm_owner', 'pm-owner@example.com');
   perform tests.create_supabase_user('pm_other', 'pm-other@example.com');
+  perform tests.create_supabase_user('pm_viewer', 'pm-viewer@example.com');
 end
 $users$;
 
@@ -212,6 +213,59 @@ select throws_ok(
   $$ select public.get_profit_months('2026-07-01', null, 'cash') $$,
   '22023', 'invalid range',
   'one date is refused'
+);
+select throws_ok(
+  $$ select public.get_project((select id from pm_ref where label = 'alpha'), 'cash', '2026-07-01', null) $$,
+  '22023', 'invalid range',
+  'get_project refuses one date'
+);
+select throws_ok(
+  $$ select public.list_project_category((select id from pm_ref where label = 'alpha'), (select id from pm_ref where label = 'cat'), p_from => '2026-07-01') $$,
+  '22023', 'invalid range',
+  'list_project_category refuses one date'
+);
+
+-- An unpaid customer credit (no cash date) is out of the cash income, so it is out of the cash
+-- weights too.
+reset role;
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, project_id, category_id, description, user_assigned
+)
+select (select id from pm_ref where label = 'co'), 'expense', 'credit', null, 'posted', 'ILS',
+  -100000, -100000, 100000, 0, 'source', '2026-09-20', null, 'manual', 'pm:alpha-credit',
+  (select id from pm_ref where label = 'alpha'),
+  (select c.id from public.categories c
+   where c.company_id = (select id from pm_ref where label = 'co') and c.kind = 'income' and not c.excluded_from_pnl
+   order by c.name limit 1),
+  'alpha-credit', true;
+select tests.authenticate_as('pm_owner');
+select is(
+  (public.get_project((select id from pm_ref where label = 'alpha'), 'cash') ->> 'overhead_share_agorot')::bigint,
+  60000::bigint,
+  'cash: an unpaid credit does not move the weights'
+);
+
+-- A viewer of a demo company reads the months; get_project stays owner-only.
+reset role;
+update public.companies set is_demo = true where id = (select id from pm_ref where label = 'co');
+insert into public.company_viewers (user_id, company_id)
+select tests.get_supabase_uid('pm_viewer'), id from pm_ref where label = 'co';
+select tests.authenticate_as('pm_owner');
+create temp table pm_owner_view as
+select public.get_profit_months('2026-07-01', '2026-09-30', 'cash', (select id from pm_ref where label = 'alpha')) -> 'by_currency' as v;
+grant all on pm_owner_view to authenticated;
+select tests.authenticate_as('pm_viewer');
+select is(
+  public.get_profit_months('2026-07-01', '2026-09-30', 'cash', (select id from pm_ref where label = 'alpha')) -> 'by_currency',
+  (select v from pm_owner_view),
+  'a viewer reads the same months as the owner'
+);
+select is(
+  public.get_project((select id from pm_ref where label = 'alpha'), 'cash'),
+  null,
+  'get_project stays owner-only'
 );
 
 select tests.authenticate_as('pm_other');
