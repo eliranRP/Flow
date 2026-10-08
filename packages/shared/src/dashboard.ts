@@ -148,7 +148,7 @@ export const categoryRowSchema = z.object({
   loan_part: z.string().nullable().optional(),
   /** Lines on the books in it, whole or by a split part: what delete_category sends back to review. */
   lines: z.number().int().optional(),
-  /** How many of those lines are split by category (delete removes their whole split). */
+  /** How many of those lines have a split part in it (delete removes their whole split). */
   split_lines: z.number().int().optional(),
   /** A loan or a loan payment part uses it, so delete_category refuses. */
   loan_used: z.boolean().optional(),

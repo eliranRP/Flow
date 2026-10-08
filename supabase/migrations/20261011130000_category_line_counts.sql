@@ -2,7 +2,8 @@
 -- returns, per category,
 --   lines: lines on the books (not removed, not void) in it, whole or by a split part, the same
 --          set delete_category sends back to review;
---   split_lines: how many of those are split by category (delete removes their whole split);
+--   split_lines: how many of those have a split part in it (delete removes their whole split; a
+--          line whose own category is it but whose parts are elsewhere keeps its split);
 --   loan_used: true when a loan or a loan payment part uses it, so delete_category refuses with
 --          "a loan uses this category".
 -- Patched from the current definition, with counted anchors, so changes merged since stay. The
@@ -53,7 +54,8 @@ begin
       g.category_id,
       count(*)::integer as lines,
       count(*) filter (where exists (
-        select 1 from public.line_splits s where s.transaction_id = g.transaction_id
+        select 1 from public.line_splits s
+        where s.transaction_id = g.transaction_id and s.category_id = g.category_id
       ))::integer as split_lines
     from tagged g
     group by g.category_id

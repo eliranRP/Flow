@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(12);
+select plan(13);
 
 do $users$
 begin
@@ -35,7 +35,7 @@ insert into clc (label, id) values
 insert into public.company_viewers (user_id, company_id)
 values (tests.get_supabase_uid('clc_viewer'), pg_temp.id('co'));
 
--- Wood: two plain lines, a void one, a removed one, and a line split between Wood and Paint
+-- Empty is used only as the own category of a split line (hx, below). Wood: two plain lines, a void one, a removed one, and a line split between Wood and Paint
 -- (its own category is null). Paint: one plain line besides the split. The other company has a
 -- Wood line too.
 insert into clc (label, id) values
@@ -44,13 +44,17 @@ insert into clc (label, id) values
   ('wv', tests.fixture_line(pg_temp.id('co'), 'clc:wv', 30000, p_project => pg_temp.id('house'), p_category => pg_temp.id('wood'), p_line_status => 'void')),
   ('wr', tests.fixture_line(pg_temp.id('co'), 'clc:wr', 40000, p_project => pg_temp.id('house'), p_category => pg_temp.id('wood'))),
   ('ws', tests.fixture_line(pg_temp.id('co'), 'clc:ws', 8000, p_project => pg_temp.id('house'))),
+  ('hx', tests.fixture_line(pg_temp.id('co'), 'clc:hx', 9000, p_project => pg_temp.id('house'), p_category => pg_temp.id('empty'))),
   ('p1', tests.fixture_line(pg_temp.id('co'), 'clc:p1', 5000, p_project => pg_temp.id('house'), p_category => pg_temp.id('paint'))),
   ('ow', tests.fixture_line(pg_temp.id('other_co'), 'clc:ow', 5000, p_category => pg_temp.id('other_wood')));
 update public.transactions set removed_at = now() where id = pg_temp.id('wr');
 insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
 values
   (pg_temp.id('co'), pg_temp.id('ws'), 1, pg_temp.id('wood'), pg_temp.id('house'), 3000),
-  (pg_temp.id('co'), pg_temp.id('ws'), 2, pg_temp.id('paint'), pg_temp.id('house'), 5000);
+  (pg_temp.id('co'), pg_temp.id('ws'), 2, pg_temp.id('paint'), pg_temp.id('house'), 5000),
+  -- Imported as Empty, then split between Wood and Paint: Empty keeps it as its own category.
+  (pg_temp.id('co'), pg_temp.id('hx'), 1, pg_temp.id('wood'), pg_temp.id('house'), 4000),
+  (pg_temp.id('co'), pg_temp.id('hx'), 2, pg_temp.id('paint'), pg_temp.id('house'), 5000);
 set constraints all immediate;
 set constraints all deferred;
 
@@ -67,21 +71,22 @@ as $$ select x from jsonb_array_elements(public.list_categories()) x where (x->>
 grant execute on function pg_temp.cat(text) to authenticated;
 
 select tests.authenticate_as('clc_owner');
-select is((pg_temp.cat('wood')->>'lines')::integer, 3, 'Wood counts its two lines and the split line, not the void or removed ones');
-select is((pg_temp.cat('wood')->>'split_lines')::integer, 1, 'one of them is split by category');
-select is((pg_temp.cat('paint')->>'lines')::integer, 2, 'Paint counts its line and the same split line');
-select is((pg_temp.cat('paint')->>'split_lines')::integer, 1, 'and the split once');
-select is(pg_temp.cat('empty')->'lines', '0'::jsonb, 'an unused category has 0 lines');
-select is(pg_temp.cat('empty')->'split_lines', '0'::jsonb, 'and 0 split lines');
+select is((pg_temp.cat('wood')->>'lines')::integer, 4, 'Wood counts its two lines and the two split lines, not the void or removed ones');
+select is((pg_temp.cat('wood')->>'split_lines')::integer, 2, 'two of them are split with a part in Wood');
+select is((pg_temp.cat('paint')->>'lines')::integer, 3, 'Paint counts its line and the same split lines');
+select is((pg_temp.cat('paint')->>'split_lines')::integer, 2, 'and each split once');
+select is(pg_temp.cat('empty')->'lines', '1'::jsonb, 'a split line whose own category is Empty counts for Empty');
+select is(pg_temp.cat('empty')->'split_lines', '0'::jsonb, 'but not as split: deleting Empty keeps its split');
 select is(pg_temp.cat('fees')->'loan_used', 'true'::jsonb, 'a category a loan uses is loan_used');
 select is(pg_temp.cat('wood')->'loan_used', 'false'::jsonb, 'Wood is not');
 select is((select count(*)::integer from jsonb_array_elements(public.list_categories()) x where (x->>'loan_used')::boolean),
   1, 'only Bank fees is loan_used (the loan categories themselves are loan_part, not loan_used)');
+select is((public.delete_category(pg_temp.id('empty'))->>'lines')::integer, 1, 'delete_category sends back the line lines counted');
 select throws_ok($$select public.delete_category(pg_temp.id('fees'))$$, 'P0001', 'a loan uses this category',
   'delete refuses exactly when loan_used is true');
 
 select tests.authenticate_as('clc_viewer');
-select is((pg_temp.cat('wood')->>'lines')::integer, 3, 'a viewer reads the same counts');
+select is((pg_temp.cat('wood')->>'lines')::integer, 4, 'a viewer reads the same counts');
 
 select tests.authenticate_as('clc_other');
 select is((select (x->>'lines')::integer from jsonb_array_elements(public.list_categories()) x where x->>'name' = 'Wood'),
