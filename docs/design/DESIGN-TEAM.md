@@ -7,7 +7,7 @@ Flow has two UI build lanes and one design lead. This file says who decides what
 | Role | Who | Owns | Never |
 | --- | --- | --- | --- |
 | Owner | Eliran | `PLAN FIRST` approvals and any change to a flow or feature, on a choice card | Is asked about pixels, spacing or wording a rule already covers |
-| Design lead | The UI/UX review cycle thread | The design system: [DESIGN-RULES](DESIGN-RULES.md), the [design log](log/README.md), answers to rule gaps from either lane, the review cycle after each deploy | Builds UI or opens a UI PR |
+| Design lead | The UI/UX review cycle thread | The design system: [DESIGN-RULES](DESIGN-RULES.md), the [design log](log/README.md), answers to rule gaps from any lane, the review cycle after each deploy, and the [sign-off on small UI](#owner-approvals) | Builds UI or opens a UI PR |
 | UI lane 1 | The "Mercury-style UI and UX review" thread | Its queue in [Lanes now](../backlog/TASKS.md#lanes-now) | Changes a file or function lane 2 has claimed |
 | UI lane 2 | The second UI lane thread | Its queue in [Lanes now](../backlog/TASKS.md#lanes-now) | Changes a file or function lane 1 has claimed |
 | Design reviewer | A fresh reviewer per PR, same [charter](../backlog/README.md#design-reviewer) in both lanes | The design gate on one PR | Approves without 320px and 375x667 shots, light and dark |
@@ -69,4 +69,16 @@ After each deploy batch the design lead reads the new log entries since the last
 
 ## Owner approvals
 
-Unchanged. The owner approves `PLAN FIRST` tasks and changes to a feature or a flow, on a choice card with a recommended option. Pixel and consistency fixes that follow DESIGN-RULES ship on the design reviewer's approval.
+The owner chose "Small UI only" on 2026-10-08 and confirmed it with no timeout on plan-first cards. The design lead signs off small UI so a lane doesn't wait for the owner, and the owner keeps `PLAN FIRST`.
+
+**Small UI: the design lead signs off.** This covers a `SMALL UI` task, polish, consistency, wording, and a choice a rule doesn't settle yet inside an existing screen.
+- **Ask.** The lane sends its question or its shots to the design lead through the coordinator, with the task id and the options.
+- **Check.** The design lead checks it against [DESIGN-RULES](DESIGN-RULES.md), the decision records and the mockups already approved for that area. It looks at screenshots at 375x667, 393x852 and 412x915, plus 320 wide, in light and dark.
+- **Answer.** The answer is "Approved", or "Changes needed" with a numbered list.
+- **Record.** The answer goes into the task in TASKS.md as "approved by the design lead (date)". A new rule goes into DESIGN-RULES in the next cycle's backlog PR.
+
+Pixel and consistency fixes that already follow DESIGN-RULES still ship on the PR's design review alone, with no ask.
+
+**`PLAN FIRST` UI: the owner decides, as today.** He decides on a choice card with a recommended option, which the design lead usually draws and posts. Nothing is built until he answers.
+
+**Night hours.** Between 00:00 and 09:00 Israel time, no `PLAN FIRST` UI work starts, and its cards wait for the morning. Small UI sign-offs go on as usual.
