@@ -80,3 +80,23 @@ describe("by-currency helpers", () => {
     expect(primaryCurrency(rows)).toBe("ILS");
   });
 });
+
+describe("empty period in a non-shekel company", () => {
+  const zeros = { income_agorot: 0n, direct_agorot: 0n, shared_agorot: 0n, profit_before_shared_agorot: 0n, profit_agorot: 0n };
+
+  it("shows the project's zero row in the company currency", () => {
+    const rows = projectRows(project({ ...zeros, by_currency: [] }), "USD");
+    expect(rows).toEqual([{ currency: "USD", income_minor: 0n, direct_minor: 0n, shared_minor: 0n, profit_minor: 0n }]);
+  });
+
+  it("keeps ILS for a shekel company and ignores the fallback when there are figures", () => {
+    expect(projectRows(project({ ...zeros, by_currency: [] }))[0]?.currency).toBe("ILS");
+    expect(projectRows(project(), "USD")[0]?.currency).toBe("ILS");
+  });
+
+  it("shows the company's zero row in the company currency", () => {
+    const rows = companyRows(dashboard(), "USD");
+    expect(rows.map((row) => row.currency)).toEqual(["USD"]);
+    expect(companyRows(dashboard()).map((row) => row.currency)).toEqual(["ILS"]);
+  });
+});

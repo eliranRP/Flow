@@ -75,7 +75,16 @@ function fallbackCompanyRow(source: Dashboard): CompanyCurrencyRow {
   };
 }
 
-export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>): ProjectCurrencyRow[] {
+/** A zero row for an empty period in a company whose books are not in shekels. */
+function zeroProjectRow(currency: string): ProjectCurrencyRow {
+  return { currency, income_minor: 0n, direct_minor: 0n, shared_minor: 0n, profit_minor: 0n };
+}
+
+/**
+ * The project's figures per currency, ILS first. An empty period shows one zero row in
+ * `emptyCurrency` (the company's currency), so a USD company reads $0, not ₪0.
+ */
+export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>, emptyCurrency = "ILS"): ProjectCurrencyRow[] {
   const fromPayload = project.by_currency ?? [];
   const base = fromPayload.length > 0
     ? fromPayload.map((row) => ({
@@ -87,17 +96,28 @@ export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>): P
     }))
     : [fallbackProjectRow(project)];
   const filtered = base.filter((row) => !projectBucketAllZero(row));
-  const rows = (filtered.length > 0 ? filtered : [fallbackProjectRow(project)]).sort((a, b) => sortCurrency(a.currency, b.currency));
+  const empty = emptyCurrency === "ILS" || !projectBucketAllZero(fallbackProjectRow(project))
+    ? fallbackProjectRow(project)
+    : zeroProjectRow(emptyCurrency);
+  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency));
   return rows;
 }
 
-export function companyRows(dashboard: Dashboard): CompanyCurrencyRow[] {
+/**
+ * The company's figures per currency, ILS first. An empty period shows one zero row in
+ * `emptyCurrency` (the company's currency), so a USD company reads $0, not ₪0.
+ */
+export function companyRows(dashboard: Dashboard, emptyCurrency = "ILS"): CompanyCurrencyRow[] {
   const fromPayload = dashboard.by_currency;
   const base = fromPayload.length > 0
     ? fromPayload.map((row) => ({ ...row }))
     : [fallbackCompanyRow(dashboard)];
   const filtered = base.filter((row) => !companyBucketAllZero(row));
-  const rows = (filtered.length > 0 ? filtered : [fallbackCompanyRow(dashboard)]).sort((a, b) => sortCurrency(a.currency, b.currency));
+  const fallback = fallbackCompanyRow(dashboard);
+  const empty = emptyCurrency === "ILS" || !companyBucketAllZero(fallback)
+    ? fallback
+    : { ...fallback, currency: emptyCurrency };
+  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency));
   return rows;
 }
 
