@@ -39,7 +39,7 @@ Every new feature or user action ships with a `flow-mcp` tool in the same pull r
 Small files keep builders reading less and stop parallel PRs from colliding. This applies to code, stories and CSS (not to generated files such as `database.types.ts`).
 
 - Aim for under 400 lines per file. **800 lines is the limit.** A test file may go to 1,200.
-- One screen per file in `app/src/screens/` (`<name>-screen.tsx`). Helpers that several screens share go in `screen-shared.tsx` or a small module named for what it does, never back into a big file.
+- One screen per file in `app/src/screens/` (`<name>-screen.tsx`); a screen's small sub-pages may share its file. Helpers that several screens share go in `screen-shared.tsx` or a small module named for what it does, never back into a big file.
 - A file already over the limit does not grow: put new code in a new file, and move code out when you change a large part of it. Splits are their own PR, with no behaviour or look change ([FLOW-807](docs/backlog/TASKS.md#flow-807)).
 - Stories live next to their screen or component (`<name>.stories.tsx`), and a component's CSS goes in its own block in the file the design team names ([DESIGN-TEAM](docs/design/DESIGN-TEAM.md)).
 
