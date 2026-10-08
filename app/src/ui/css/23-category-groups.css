@@ -12,6 +12,13 @@
   text-align: start;
 }
 
+/* The turned chevron says it is open; no hover fill, so it never reads as stuck pressed. */
+@media (hover: hover) {
+  .ui-row.ui-group-row:hover:not(:focus-visible)::before {
+    background: transparent;
+  }
+}
+
 .ui-group-caret {
   display: inline-flex;
   flex: none;
@@ -50,4 +57,9 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-secondary);
+}
+
+/* An action row in a picker (קבוצה חדשה): the + and the name in the accent text colour. */
+.ui-row.ui-row-add :is(.ui-row-title, .ui-row-icon) {
+  color: var(--color-accent-text);
 }

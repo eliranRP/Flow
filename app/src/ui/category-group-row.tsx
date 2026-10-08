@@ -25,6 +25,7 @@ export function CategoryGroupRow({
   agorot,
   currency,
   up = null,
+  missing,
   expanded,
   onToggle,
   children,
@@ -34,6 +35,8 @@ export function CategoryGroupRow({
   currency?: string;
   /** A member is above its usual month (high) or new this month. */
   up?: keyof typeof UP_MARK_LABEL | null;
+  /** Every member is a bill not in yet: a muted "—" with this hidden word instead of the total. */
+  missing?: string;
   expanded: boolean;
   onToggle: () => void;
   /** The member rows, shown while open. */
@@ -55,7 +58,14 @@ export function CategoryGroupRow({
           </span>
         </span>
         {up != null ? <UpMark kind={up} /> : null}
-        <BigNumber agorot={agorot} currency={currency} size="list" loss={false} />
+        {missing != null ? (
+          <span className="ui-row-missing ui-row-missing-group t-amount">
+            <span aria-hidden="true">—</span>
+            <span className="sr-only">{missing}</span>
+          </span>
+        ) : (
+          <BigNumber agorot={agorot} currency={currency} size="list" loss={false} />
+        )}
         <span className="ui-group-caret" aria-hidden="true">
           <ChevronDownIcon size={20} />
         </span>

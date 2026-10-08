@@ -1,4 +1,4 @@
-import { formatAmountText, type ProfitMonths, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type ProfitMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -126,6 +126,7 @@ export function ProjectDetailScreen({
   sampleMonths,
   example,
   categoryTo,
+  sampleCategories,
 }: {
   sample?: NonNullable<ProjectDetail>;
   /** The "לפי חודש" row's counts for a sample project (dev routes and Storybook). */
@@ -133,6 +134,8 @@ export function ProjectDetailScreen({
   example?: ReactNode;
   /** Dev fixtures send a category row here. Production builds the project route. */
   categoryTo?: string;
+  /** FLOW-401. A sample project's category groups and month marks (stories). */
+  sampleCategories?: { groups: Record<string, string>; months: ProjectCategoryMonthRow[] };
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
@@ -293,6 +296,8 @@ export function ProjectDetailScreen({
         categorySearch={periodQuery}
         categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
         period={sample ? undefined : period}
+        sampleGroups={sampleCategories?.groups}
+        sampleMonths={sampleCategories?.months}
       />
       <SectionHead title="תנועות">
         {/* FLOW-402: every line of the project, in the search with the project chip set. */}

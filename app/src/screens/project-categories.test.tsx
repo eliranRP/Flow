@@ -30,7 +30,7 @@ function month(id: string, flag: ProjectCategoryMonthRow["flag"]): ProjectCatego
   return { id, name: id, group_name: null, currency: "ILS", this_month_minor: 0, months_minor: [], months_seen: 4, expected_minor: 9_000, typical_day: 10, flag };
 }
 
-function renderList() {
+function renderList(months: ProjectCategoryMonthRow[] | null = [month("c1", "high"), month("c3", "new"), month("c7", "missing")]) {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter>
@@ -38,7 +38,7 @@ function renderList() {
           project={project}
           search=""
           sampleGroups={{ c5: "חשבונות", c6: "חשבונות", c7: "חשבונות" }}
-          sampleMonths={[month("c1", "high"), month("c3", "new"), month("c7", "missing")]}
+          sampleMonths={months ?? undefined}
         />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -60,9 +60,18 @@ describe("project categories list (FLOW-401)", () => {
     fireEvent.click(group);
     expect(group).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("link", { name: /חשמל/ })).toBeInTheDocument();
-    expect(screen.getByText("עוד לא הגיע")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /^c7/ })).toBeNull();
+    // The bill not in yet sits with the group's members, as "—" with its hidden word.
+    const members = document.getElementById(group.getAttribute("aria-controls") ?? "");
+    expect(members?.textContent).toContain("עוד לא הגיע");
+    expect(members?.textContent).toContain("—");
     fireEvent.click(group);
     expect(group).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows no marks and no bills not in yet without month rows (a longer period)", () => {
+    renderList(null);
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: /חשבונות/ }));
+    expect(screen.queryByText("עוד לא הגיע")).toBeNull();
   });
 });

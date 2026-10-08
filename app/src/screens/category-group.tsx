@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { getSupabase } from "../lib/supabase";
 import { Button } from "../ui/button";
+import { PlusIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
 import { Sheet } from "../ui/sheet";
@@ -65,21 +66,15 @@ export function useCategoryGroup(options: { onSaved?: () => void } = {}) {
     keys: GROUP_WRITE_KEYS,
     run: async ({ id, before }) => { await setGroup(id, before); },
   });
-  const saved = useRef<GroupWrite | null>(null);
   const save = useWrite<GroupWrite>({
     failure: groupFailureText,
     keys: GROUP_WRITE_KEYS,
-    // Also runs after a retry from the failure toast, so it reads the last payload.
-    onSuccess: () => {
-      const done = saved.current;
-      if (done == null) return;
+    // Also runs after a retry from the failure toast, with that payload.
+    onSuccess: (done) => {
       toast.show({ message: GROUP_SAVED, action: "ביטול", onAction: () => { undo.mutate(done); } });
       options.onSaved?.();
     },
-    run: async (payload) => {
-      saved.current = payload;
-      await setGroup(payload.id, payload.group);
-    },
+    run: async (payload) => { await setGroup(payload.id, payload.group); },
   });
   return { save, undo };
 }
@@ -198,6 +193,8 @@ export function CategoryGroupSheet({
             <ListRow
               variant="button"
               title="קבוצה חדשה"
+              icon={<PlusIcon />}
+              className="ui-row-add"
               disabled={save.isPending}
               onClick={() => { setAdding(true); }}
             />

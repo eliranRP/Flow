@@ -1,8 +1,8 @@
 import type { ProjectCategoryMonthRow, ProjectDetail } from "@flow/shared";
 import { useState } from "react";
 import { absAgorot } from "../agorot";
-import type { PeriodChoice } from "../period";
-import { categoryEntries, useProjectCategoryMonthsQuery, type CategoryItem, type CategoryLine } from "../project-category-months";
+import { isCurrentPeriod, type PeriodChoice } from "../period";
+import { categoryEntries, missingRows, useProjectCategoryMonthsQuery, type CategoryItem, type CategoryLine } from "../project-category-months";
 import { useCategoriesQuery } from "../use-books";
 import { CategoryGroupRow, UpMark } from "../ui/category-group-row";
 import { List, ListRow } from "../ui/list-row";
@@ -55,7 +55,10 @@ export function ProjectCategories({
   for (const row of categories.data ?? []) {
     if (row.group_name != null && row.group_name !== "") groupOf.set(row.id, row.group_name);
   }
-  const monthRows = sampleMonths ?? months.data?.categories ?? null;
+  // A past month's missing bill never came: "—" with "not in yet" is only for the open month.
+  const current = period == null || isCurrentPeriod(period);
+  const allMonthRows = sampleMonths ?? months.data?.categories ?? null;
+  const monthRows = current ? allMonthRows : (allMonthRows ?? []).filter((row) => row.flag !== "missing");
   const pendingOther = project.pending_other_currencies ?? [];
   // pending_count counts every waiting line; the non-ILS ones get their own rows below.
   const pendingOtherCount = pendingOther.reduce((sum, bucket) => sum + bucket.count, 0);
@@ -74,13 +77,17 @@ export function ProjectCategories({
     list.push(row);
     grouped.set(row.currency, list);
   }
+  // A currency with only a bill not in yet still gets its "—" rows.
+  for (const row of monthRows ?? []) {
+    if (row.flag === "missing" && row.id != null && !grouped.has(row.currency)) grouped.set(row.currency, []);
+  }
   const currencies = [...grouped.keys()].sort((a, b) => {
     if (a === b) return 0;
     if (a === "ILS") return -1;
     if (b === "ILS") return 1;
     return a.localeCompare(b);
   });
-  const hasCategories = currencies.some((currency) => (grouped.get(currency)?.length ?? 0) > 0);
+  const hasCategories = currencies.some((currency) => (grouped.get(currency)?.length ?? 0) > 0 || missingRows(monthRows, currency).length > 0);
   if (!hasCategories && !waiting && pendingOther.length === 0) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
@@ -113,7 +120,7 @@ export function ProjectCategories({
   // The section is titled הוצאות, so the figures carry no minus (FLOW-328).
   return (
     <List>
-      {currencies.flatMap((currency) => categoryEntries(grouped.get(currency) ?? [], groupOf, monthRows).map((entry) => {
+      {currencies.flatMap((currency) => categoryEntries(currency, grouped.get(currency) ?? [], groupOf, monthRows).map((entry) => {
         if (entry.kind === "category") return categoryRow(entry);
         const key = `${entry.currency}:${entry.name}`;
         const expanded = open.has(key);
@@ -124,6 +131,7 @@ export function ProjectCategories({
             agorot={absAgorot(entry.amount_minor)}
             currency={entry.currency}
             up={expanded ? null : entry.up}
+            missing={entry.missing ? NOT_IN_YET : undefined}
             expanded={expanded}
             onToggle={() => {
               setOpen((current) => {

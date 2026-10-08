@@ -242,7 +242,6 @@ export function ListRow(props: ListRowProps) {
         ? "ui-row"
         : "ui-row ui-hit",
     toneClass,
-    props.variant === "project" && props.className,
   );
   const row = props.href ? (
     <Link

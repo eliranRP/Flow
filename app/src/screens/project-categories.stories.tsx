@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { SectionHead } from "../ui/layout";
 import { StoryRoute } from "../ui/story-route";
-import { at320, dark } from "../ui/screen-stories-support";
+import { at320, dark, exampleOnBand } from "../ui/screen-stories-support";
+import { ProjectDetailScreen } from "./project-detail-screen";
 import { ProjectCategories } from "./project-categories";
 
 /**
@@ -79,3 +80,14 @@ export const GroupOpenDark: Story = { ...GroupOpen, name: "Group open, dark", ..
 
 /** Longer periods: no marks and no "—" rows, only the groups. */
 export const Quarter: Story = { name: "3 months: no marks", render: () => <List withMonth={false} /> };
+
+/** The whole project page in the month view: the band and its period bar above the categories. */
+export const FullPage: Story = {
+  name: "Month: the whole project page",
+  render: () => (
+    <StoryRoute entry="/projects/a?period=month" tabs>
+      <ProjectDetailScreen example={exampleOnBand} sample={project} sampleCategories={{ groups, months }} />
+    </StoryRoute>
+  ),
+};
+export const FullPage320: Story = { ...FullPage, name: "Whole page, 320", ...at320 };
