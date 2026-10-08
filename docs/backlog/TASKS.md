@@ -203,8 +203,8 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-118"></a>
 ### FLOW-118 · Reversals follow-ups (#76 review)
 - **Type:** BACKLOG NIT · **Status:** claimed (Claude, 2026-10-08, claude/project-thread-9u6r0w) · **Depends on:** FLOW-104
-- [ ] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message.
-- [ ] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited.
+- [x] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message. (#122: 'category not found'; the composite foreign key keeps it unreachable.)
+- [x] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited. (#122: kept. `mcp_assign_expense_split` and `save_line_split` still raise it.)
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
 - [ ] (#101 review) Overhead lines (`pnl_role` overhead) still offer the picker's reversal section; settle with the shared-line call above. Split and shared lines don't offer it.
 - [ ] (#101 review) A hidden, loan or kept-out other-kind category already on a line (filed through MCP) shows החזר on the review card but sits in the own-kind list with no mark in the change sheet.
@@ -341,9 +341,9 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-208"></a>
 ### FLOW-208 · Split and undo follow-ups (#88 review)
 - **Type:** BACKLOG NIT · **Status:** claimed (Claude, 2026-10-08, claude/project-thread-9u6r0w) · **Depends on:** —
-- [ ] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`.
-- [ ] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1).
-- [ ] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess.
+- [x] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`. (#122)
+- [x] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1). (#122; older snapshots keep the old rule. `save_split` still stores no flags.)
+- [x] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess. (#122, `review_undo_followups.test.sql`.)
 
 <a id="flow-209"></a>
 ### FLOW-209 · get_project follow-ups (#90 review)
