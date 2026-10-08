@@ -12,13 +12,16 @@ import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from ".
 import { assertNoError, useWrite } from "../use-write";
 import { useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
 import { RenameCompanySheet } from "./rename-company";
+import { CompanyCurrencySheet } from "./company-currency-sheet";
+import { useCompanyCurrencyQuery } from "../company-currency";
+import { currencyChoiceLabel } from "../ui/currency-sheet";
 import { bindJevConnectorScope, clearJevConnectorFlag } from "./jev-review";
 import { JEV_DEFAULT, jevSwitchOn, useJevIntegrationQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
 import { useSetupSettingsEntry } from "../setup/settings-row";
 import { EmptyState } from "../ui/empty-state";
 import { useSheetHistory } from "../ui/back";
-import { AlertIcon, BellIcon, BuildingIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
+import { AlertIcon, BellIcon, BuildingIcon, CoinIcon, DownloadIcon, GoogleIcon, LoanIcon, LogoutIcon, PlugIcon, SplitIcon, TagIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
@@ -159,6 +162,9 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
   const [renameOpen, setRenameOpen] = useState(false);
   const businessRowRef = useRef<HTMLButtonElement>(null);
   const setRenameSheet = useSheetHistory("company-rename", renameOpen, setRenameOpen);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+  const currencyRowRef = useRef<HTMLButtonElement>(null);
+  const currencyQuery = useCompanyCurrencyQuery(liveCompany);
   const [overheadOn, setOverheadOn] = useState(false);
   const wantedOverhead = useRef(false);
   useEffect(() => {
@@ -216,6 +222,11 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
     : previewValue === "empty" || (preview === "off" && dashboard.data?.company_id == null);
   const previewSample = sample == null && preview !== "off" && previewValue !== "empty";
   const businessName = sample ? sample.name : previewSample ? previewAccountName : dashboard.data?.name;
+  // A sample or preview has no stored currency to read; it shows the sample's.
+  const currencyReady = !live || currencyQuery.isSuccess;
+  const currencyFailed = live && currencyQuery.isError;
+  const companyCurrency = live ? (currencyQuery.data ?? "ILS") : (sample?.loanCurrency ?? "ILS");
+  const currencyHint = currencyChoiceLabel(companyCurrency);
   const email = (sample ? sample.email : previewSample ? previewAccountEmail : session?.user.email)?.trim() ?? "";
   const namedBusiness = (businessName ?? "").trim();
   const showInstall = !isStandalone();
@@ -296,8 +307,38 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
               onClick={() => { setRenameSheet(true); }}
             />
           )}
+          {/* FLOW-504: a change waits for the stored currency, so undo never writes a guess. */}
+          {currencyReady && !holdWrites ? (
+            <ListRow
+              variant="button"
+              title="מטבע העסק"
+              hint={currencyHint}
+              label={`מטבע העסק: ${currencyHint}`}
+              icon={<CoinIcon />}
+              chevron
+              buttonRef={currencyRowRef}
+              onClick={() => { setCurrencyOpen(true); }}
+            />
+          ) : (
+            <ListRow
+              variant="static"
+              title="מטבע העסק"
+              hint={currencyFailed ? "לא הצלחנו לטעון" : currencyHint}
+              skelHint={!currencyReady && !currencyFailed}
+              icon={<CoinIcon />}
+            />
+          )}
           {email !== "" ? <ListRow variant="static" title={email} ltrTitle icon={<GoogleIcon />} /> : null}
         </List>
+      ) : null}
+      {!noCompany && !holdWrites && namedBusiness !== "" && currencyReady ? (
+        <CompanyCurrencySheet
+          open={currencyOpen}
+          onOpenChange={setCurrencyOpen}
+          currency={companyCurrency}
+          blocked={() => blocked(sample != null ? "empty" : undefined)}
+          returnFocusRef={currencyRowRef}
+        />
       ) : null}
       {!noCompany && !holdWrites && namedBusiness !== "" ? (
         <RenameCompanySheet

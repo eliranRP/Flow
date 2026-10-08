@@ -86,3 +86,30 @@ export const LongHebrew: Story = {
   },
   render: () => <Demo destructive item={longHebrew} />,
 };
+/** FLOW-405: a delete that sends lines back to review names the split side effect and offers the move instead. */
+export const DeleteWithAlternative: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    title: "למחוק את הקטגוריה?",
+    item: "חומרים · 42 תנועות",
+    consequence: "התנועות יישארו בלי קטגוריה ויחזרו ללשונית לאישור.",
+    detail: "3 מהן מפוצלות, והפיצול שלהן יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.",
+    confirmLabel: "מחיקה",
+    destructive: true,
+    alternative: { label: "להעביר את התנועות לקטגוריה אחרת במקום", onClick: () => undefined },
+    onConfirm: () => undefined,
+  },
+};
+export const DeleteEmpty: Story = {
+  args: {
+    open: true,
+    onOpenChange: () => undefined,
+    title: "למחוק את הקטגוריה?",
+    item: "אחר · אין תנועות",
+    consequence: "הקטגוריה תימחק מהרשימה.",
+    confirmLabel: "מחיקה",
+    destructive: true,
+    onConfirm: () => undefined,
+  },
+};

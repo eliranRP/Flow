@@ -61,7 +61,7 @@ export type ListRowProps =
   | (Common & { variant: "static"; busy?: boolean })
   | (Common & { variant: "button"; onClick?: () => void; busy?: boolean; expanded?: boolean; disabled?: boolean; ariaDisabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; clearHint?: boolean })
   | { variant: "skeleton" }
-  | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> })
+  | (Common & { variant: "danger"; onClick: () => void; busy?: boolean; disabled?: boolean; /** A refused delete keeps its reason at full contrast (FLOW-405). */ clearHint?: boolean; buttonRef?: Ref<HTMLButtonElement> })
   | (Common & { variant: "selectable"; selected: boolean; onSelect: () => void });
 
 /**
@@ -211,7 +211,7 @@ export function ListRow(props: ListRowProps) {
       <button
         ref={props.buttonRef}
         type="button"
-        className="ui-row ui-hit ui-row-danger"
+        className={cx("ui-row ui-hit ui-row-danger", props.clearHint === true && props.disabled === true && "ui-row-clear-hint")}
         disabled={props.disabled === true || props.busy === true}
         aria-busy={props.busy === true}
         aria-label={described ? rowName(props) : undefined}

@@ -16,3 +16,85 @@ export function mergeFailureText(error: Error): string {
   if (error.message.includes("a split line has both categories")) return "אי אפשר למזג: שורה מפוצלת משתמשת בשתי הקטגוריות.";
   return "לא הצלחנו למזג.";
 }
+
+/** FLOW-405: the delete confirm's item line, from how many lines on the books use the category. */
+export function deleteItem(name: string, lines: number | undefined): string {
+  if (lines == null) return name;
+  if (lines === 0) return `${name} · אין תנועות`;
+  if (lines === 1) return `${name} · תנועה אחת`;
+  return `${name} · ${String(lines)} תנועות`;
+}
+
+/** What happens to the lines. Unknown counts (an older payload) say the full sentence. */
+export function deleteConsequence(lines: number | undefined): string {
+  if (lines === 0) return "הקטגוריה תימחק מהרשימה.";
+  if (lines === 1) return "התנועה תישאר בלי קטגוריה ותחזור ללשונית לאישור.";
+  return "התנועות יישארו בלי קטגוריה ויחזרו ללשונית לאישור.";
+}
+
+/** The split side effect, only when some of the lines are split by category. */
+export function deleteDetail(splitLines: number | undefined): string | undefined {
+  if (splitLines == null || splitLines === 0) return undefined;
+  if (splitLines === 1) return "אחת מהן מפוצלת, והפיצול שלה יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.";
+  return `${String(splitLines)} מהן מפוצלות, והפיצול שלהן יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.`;
+}
+
+/** The toast after a delete, from delete_category's name and lines. */
+export function deletedToast(name: string, lines: number): string {
+  if (lines === 0) return `${name} נמחקה`;
+  if (lines === 1) return `${name} נמחקה. תנועה אחת חזרה ללשונית לאישור`;
+  return `${name} נמחקה. ${String(lines)} תנועות חזרו ללשונית לאישור`;
+}
+
+/** Why the delete row is disabled, when the server would refuse it. */
+export const DELETE_LOAN_USED = "הלוואה משתמשת בקטגוריה. העבירו קודם את התנועות.";
+
+/** delete_category's refusals (decision 0144). */
+export function deleteFailureText(error: Error): string {
+  if (error.message.includes("loan category is fixed")) return "זו קטגוריה של הלוואה, ואי אפשר למחוק אותה.";
+  if (error.message.includes("a loan uses this category")) return "אי אפשר למחוק: הלוואה משתמשת בקטגוריה הזו.";
+  return "לא הצלחנו למחוק את הקטגוריה.";
+}
+
+/** restore_category's refusal: a line got a category again, or the name is taken. */
+export function restoreFailureText(error: Error): string {
+  if (error.message.includes("category cannot be restored")) return "אי אפשר לבטל: תנועה סווגה מחדש בינתיים.";
+  return "לא הצלחנו לבטל את המחיקה.";
+}
+
+/** The toast after "העברת כל התנועות", from move_category_lines' lines. */
+export function movedToast(lines: number, from: string, into: string): string {
+  if (lines === 0) return `לא היו תנועות להעביר מ${from}`;
+  if (lines === 1) return `תנועה אחת הועברה מ${from} אל ${into}`;
+  return `${String(lines)} תנועות הועברו מ${from} אל ${into}`;
+}
+
+/** The move row's hint and the picker's title, from the source's line count. */
+export function moveHint(name: string, lines: number | undefined): string {
+  if (lines === 0) return "אין תנועות להעביר.";
+  const count = lines == null ? "התנועות" : lines === 1 ? "תנועה אחת" : `${String(lines)} תנועות`;
+  return `${count} ${lines === 1 ? "עוברת" : "עוברות"} לקטגוריה אחרת. ${name} נשארת.`;
+}
+
+export function moveTitle(lines: number | undefined): string {
+  if (lines == null) return "העברת התנועות אל";
+  if (lines === 1) return "העברת תנועה אחת אל";
+  return `העברת ${String(lines)} תנועות אל`;
+}
+
+/** move_category_lines' refusals, the same as merge's. */
+export function moveFailureText(error: Error): string {
+  if (error.message.includes("a loan uses this category")) {
+    return "אי אפשר להעביר: הלוואה משתמשת בקטגוריה הזו לחלק שהיעד לא מתאים לו.";
+  }
+  if (error.message.includes("a split line has both categories")) return "אי אפשר להעביר: שורה מפוצלת משתמשת בשתי הקטגוריות.";
+  if (error.message.includes("categories must be the same kind")) return "אפשר להעביר רק לקטגוריה מאותו סוג.";
+  if (error.message.includes("category not found")) return "הקטגוריה לא נמצאה או מוסתרת.";
+  return "לא הצלחנו להעביר את התנועות.";
+}
+
+/** undo_category_move's refusal: a moved line changed since. */
+export function undoMoveFailureText(error: Error): string {
+  if (error.message.includes("category move cannot be undone")) return "אי אפשר לבטל: תנועה סווגה מחדש בינתיים.";
+  return "לא הצלחנו לבטל את ההעברה.";
+}

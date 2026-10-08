@@ -104,6 +104,13 @@ function projectRowProfit(
   overheadOn: boolean,
   singleCurrency: boolean,
 ): bigint {
+  // The overhead share comes off the company currency's row only (0147).
+  const base = project.base_currency ?? "ILS";
+  if (base !== "ILS") {
+    const share = project.overhead_share_minor;
+    if (row.currency !== base || !overheadOn || project.overhead_weighted !== true || share == null) return row.profit_minor;
+    return row.profit_minor - share;
+  }
   if (row.currency === "ILS" && singleCurrency) {
     return shownProfit(
       overheadOn,
@@ -374,7 +381,10 @@ export function ProjectDetailScreen({
           label="אחרי חלק בהוצאות כלליות"
           hint={overheadHint(overheadOn, {
             available: project.overhead_weighted === true,
-            shareAgorot: project.overhead_share_agorot,
+            shareAgorot: project.base_currency != null && project.base_currency !== "ILS"
+              ? project.overhead_share_minor
+              : project.overhead_share_agorot,
+            currency: project.base_currency ?? "ILS",
           })}
           checked={overheadOn}
           disabled={holdWrites}

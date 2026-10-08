@@ -126,6 +126,21 @@ describe("viewer write controls", () => {
     // FLOW-501: reading is allowed, so both pages stay a tap away.
     expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
     expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
+    // FLOW-504: the viewer reads the company currency and cannot change it.
+    expect(screen.getByText("מטבע העסק")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /מטבע העסק/ })).not.toBeInTheDocument();
+  });
+
+  it("lets the owner open the company currency sheet from Settings (FLOW-504)", async () => {
+    renderScreen(
+      <SettingsScreen
+        sample={{ name: "אלפא", connected: false, companyId: null, lastError: null, email: "dana@example.com", loanCurrency: "USD" }}
+      />,
+    );
+    const row = screen.getByRole("button", { name: "מטבע העסק: $ דולר" });
+    row.click();
+    expect(await screen.findByRole("dialog", { name: "מטבע העסק" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "$ דולר" })).toHaveAttribute("aria-checked", "true");
   });
 });
 

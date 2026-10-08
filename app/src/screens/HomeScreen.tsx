@@ -184,19 +184,27 @@ export function HomeBooks({
   const rankCurrency = primaryCurrency(data);
   const ranked = homeProjects(data.projects, rankCurrency);
   const leading = useHeldOrder(ranked, (project) => project.id);
-  const currencyRows = companyRows(data, companyCurrency);
+  const currencyRows = companyRows(data, data.base_currency ?? companyCurrency);
   const heroFigures = currencyRows.map((row) => ({
     agorot: roundedHeroProfit(row.income_minor, row.expense_minor),
     currency: row.currency,
     loss: roundedHeroProfit(row.income_minor, row.expense_minor) < 0n,
   }));
   const hero = heroLabelProfit(heroFigures);
-  const ilsOnly = currencyRows.length === 1 && currencyRows[0]?.currency === "ILS";
-  const previous =
-    data.prev_income_agorot != null && data.prev_expense_agorot != null
-      ? roundedHeroProfit(data.prev_income_agorot, data.prev_expense_agorot)
-      : data.prev_net_agorot;
-  const percent = ilsOnly ? changePercent(heroFigures[0]?.agorot ?? 0n, previous) : null;
+  // One currency on Home: its change against the previous period (0147). Older payloads have it in ILS only.
+  const single = currencyRows.length === 1 ? currencyRows[0] : undefined;
+  const previous = single == null
+    ? null
+    : single.prev_income_minor != null && single.prev_expense_minor != null
+      ? roundedHeroProfit(single.prev_income_minor, single.prev_expense_minor)
+      : single.prev_net_profit_minor !== undefined
+        ? single.prev_net_profit_minor
+        : single.currency !== "ILS"
+          ? null
+          : data.prev_income_agorot != null && data.prev_expense_agorot != null
+            ? roundedHeroProfit(data.prev_income_agorot, data.prev_expense_agorot)
+            : data.prev_net_agorot;
+  const percent = single ? changePercent(heroFigures[0]?.agorot ?? 0n, previous) : null;
   const comparison = comparisonWords(period);
   const phrase = periodPhrase(period);
   const attention = attentionRows({
@@ -247,7 +255,7 @@ export function HomeBooks({
           period: phrase,
         }}
       />
-      {ilsOnly && comparison && percent != null ? (
+      {comparison && percent != null ? (
         <p className="ui-flow-note">
           <ChangePill percent={percent} comparison={comparison} />
         </p>
