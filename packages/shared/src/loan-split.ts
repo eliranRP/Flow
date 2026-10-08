@@ -71,3 +71,19 @@ export function scheduleRowForDate(
   }
   return latest;
 }
+
+export type LoanStatus = "open" | "paid_off" | "closed";
+
+/**
+ * Whether a loan takes a payment dated `docDate`. An open loan takes any date.
+ * A paid-off or closed loan takes only payments on or before `closedOn`, so its
+ * history can still be attached. Matches `private.loan_splits_closed_check`.
+ * A missing status reads as open.
+ */
+export function loanTakesPaymentOn(
+  loan: { readonly status?: LoanStatus | null; readonly closedOn?: string | null },
+  docDate: string,
+): boolean {
+  if (loan.status == null || loan.status === "open") return true;
+  return loan.closedOn != null && docDate <= loan.closedOn;
+}
