@@ -168,7 +168,7 @@ export function RenameCompanySheet({
           ref={fieldRef}
           label="שם"
           value={name}
-          maxLength={COMPANY_NAME_MAX + 20}
+          maxLength={COMPANY_NAME_MAX * 2 + 20}
           error={error}
           disabled={save.isPending}
           onChange={(event) => {

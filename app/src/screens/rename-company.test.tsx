@@ -97,8 +97,8 @@ describe("company name rules", () => {
     // Next to the range, and the server's ordinary letters.
     expect(companyNameError("אל\u00a0פא")).toBeUndefined();
     expect(companyNameError("א״ב & Co.")).toBeUndefined();
-    // The length rules come first, as on the server.
     expect(companyNameError("א\u0001")).toBe(RENAME_CONTROL_CHAR);
+    // Length is checked before control characters, as on the server.
     expect(companyNameError("\u0001")).toBe(RENAME_TOO_SHORT);
     expect(companyNameError("א".repeat(100) + "\u0001")).toBe(RENAME_TOO_LONG);
   });

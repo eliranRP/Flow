@@ -56,11 +56,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 32c | [FLOW-130](#flow-130) | Lock timeouts return retry in every MCP write (#123 review) | BACKLOG NIT | done (#124) |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | done (#131) |
-| 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | done (#131, this PR) |
+| 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | done (#131, #134) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
-| 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, this PR) |
+| 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -71,7 +71,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
-| 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | plan-first |
+| 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -104,9 +104,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-131"></a>
 ### FLOW-131 · Loan balance checks follow-ups (#127 review)
-- **Type:** BACKLOG NIT · **Status:** done (#129, this PR) · **Depends on:** FLOW-123 (#127)
+- **Type:** BACKLOG NIT · **Status:** done (#129, #134) · **Depends on:** FLOW-123 (#127)
 - [x] MCP `list_loans` returns only `balance_minor`, so the data agent cannot see a payment the bank sync flagged for review. Return `flagged_parts` (or the flagged transaction ids). (#129: both, migration `20261008080000`.)
-- [x] A line posted while another write holds the loan is flagged even when it fits (`skip locked`). The owner has to clear it; consider a hint in the review UI (through the Mercury thread). Handed to the Mercury thread; the MCP side is covered by `flagged_transaction_ids`. (this PR: `needs_review` is one boolean with no reason, so a busy loan, a payment past the balance and a re-synced amount look the same; the split card says "ייתכן שסומנה כי ההלוואה הייתה תפוסה. עדכון החלוקה יבדוק את היתרה מחדש." above עדכון החלוקה, and a refused re-check toasts "התשלום גבוה מיתרת ההלוואה.". UI only.)
+- [x] A line posted while another write holds the loan is flagged even when it fits (`skip locked`). The owner has to clear it; consider a hint in the review UI (through the Mercury thread). Handed to the Mercury thread; the MCP side is covered by `flagged_transaction_ids`. (#134: `needs_review` is one boolean with no reason, so a busy loan, a payment past the balance and a re-synced amount look the same; the split card says "ייתכן שהתשלום סומן כי נרשם בזמן עדכון אחר של ההלוואה. עדכון החלוקה יבדוק את היתרה מחדש." above עדכון החלוקה, and a refused re-check toasts "התשלום גבוה מיתרת ההלוואה.". UI only.)
 - [x] The lock order is checked by hand with two sessions. Add a two-session pgTAP test (dblink) if CI has it. (#129: `loan_lock_order.test.sql`.)
 
 <a id="flow-112"></a>
@@ -533,7 +533,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-324"></a>
 ### FLOW-324 · Approve all suggestions in the review queue
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** dropped · **Owner (2026-10-08):** no approve-all in the app; the owner reviews lines one by one. MCP keeps batch approve through `assign_expenses` as today. · **Depends on:** —
 - **What:** The owner's ask (2026-10-08), to be planned first: an "approve all suggestions" button on the review queue, so a queue of lines that already carry a suggested project and category is cleared in one tap instead of one card at a time. The plan settles which lines count (both fields suggested, no split, no unallocated shared cost, no reversal, no loan line), what the button says with its count, a confirm or a toast with ביטול that restores every line, how a partial failure reads, and how it sits beside the list and the card. Overlaps the "approve all sure ones" item in FLOW-701.
 - **MCP:** a batch approve over `list_review` items, matching the button's rules, or a documented reason to leave it to `assign_expenses`.
 - **Acceptance:** plan and mockup approved; the rules for which lines are approved are written down; undo covers the whole batch; tenant isolation test on any new RPC.
@@ -737,9 +737,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-606"></a>
 ### FLOW-606 · Company name rule in create_company and the rename sheet
-- **Type:** BACKLOG NIT · **Status:** done (#131, this PR) · **Depends on:** FLOW-604
+- **Type:** BACKLOG NIT · **Status:** done (#131, #134) · **Depends on:** FLOW-604
 - [x] `public.create_company` still trims spaces only, has no 100-character limit and accepts control characters. Use `private.trim_name` and `private.company_name_problem` there too (inserts are not checked by the FLOW-604 trigger). Until then, an MCP `undo` of a rename back to such an older name is `refused` by the trigger, and the app's ביטול is refused by the RPC. (Migration `20261008090000`. Companies created before it keep their names.)
-- [x] The rename sheet's `companyNameError` does not refuse a control character, so a pasted tab gets the generic "שם העסק לא נשמר" toast. Add a field error (UI: through the Mercury thread). (this PR: "תו לא נתמך בשם – למשל טאב או ירידת שורה", after trimming like `private.trim_name`, and the same check as a field error in onboarding and the setup business step, which now check the name before `create_company`.)
+- [x] The rename sheet's `companyNameError` does not refuse a control character, so a pasted tab gets the generic "שם העסק לא נשמר" toast. Add a field error (UI: through the Mercury thread). (#134: "תו לא נתמך בשם – למשל טאב או ירידת שורה", after trimming like `private.trim_name`, and the same check as a field error in onboarding and the setup business step, which now check the name before `create_company`.)
 
 <a id="flow-605"></a>
 ### FLOW-605 · Shared-device follow-ups (#79 review)
@@ -753,7 +753,7 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-701 · Jev phase 1
 - **Type:** PLAN FIRST · **Status:** ready (plan answered 2026-10-08) · **Depends on:** —
 - **What:** The proposed first phase: (1) make Jev run after syncs and learn from confirmations, and produce the shadow accuracy report on approved lines; (2) faster review (reasons, "approve all sure ones", income suggestions); (3) anomalies v1 in one list (SQL detects, Jev scores only candidates); (4) recurring patterns in SQL that feed missing bills and expected months. Also a review of other features where Jev can help. The numbers always come from SQL; Jev never approves ([0084](../decisions/0084-jev-auto-prefill.md)). A daily call cap per company in SQL and a usage log, since the provider has no spend cap.
-- **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions (at or above the threshold) join the FLOW-324 approve-all button, so there is one button; anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
+- **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions are reviewed one by one like every line, with no approve-all in the app (FLOW-324 dropped; MCP keeps `assign_expenses`); anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
 - **Acceptance:** owner answers the plan's open questions, then one PR per item.
 
 <a id="flow-702"></a>

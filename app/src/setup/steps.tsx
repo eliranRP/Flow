@@ -108,7 +108,8 @@ export function StepBusiness({
         ref={fieldRef}
         label="שם העסק"
         value={name}
-        maxLength={COMPANY_NAME_MAX + 20}
+        maxLength={COMPANY_NAME_MAX * 2 + 20}
+        aria-required="true"
         error={error}
         onChange={(event) => {
           setName(event.target.value);

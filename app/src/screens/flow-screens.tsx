@@ -232,7 +232,9 @@ export function OnboardingScreen({ initialName }: { initialName?: string } = {})
           ref={nameRef}
           label="שם העסק"
           value={name}
-          maxLength={COMPANY_NAME_MAX + 20}
+          maxLength={COMPANY_NAME_MAX * 2 + 20}
+          aria-required="true"
+          reserveMessage
           error={nameError}
           onChange={(event) => {
             setName(event.target.value);

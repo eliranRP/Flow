@@ -5,7 +5,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../ui/toast";
-import { LOAN_BUSY_HINT, LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
+import { LOAN_AMOUNT_CHANGED_HINT, LOAN_BUSY_HINT, LoanBalanceList, LoanSplitPanel, LoanTransactionSplit, ProjectLoanList } from "./loan-match";
 
 const db = vi.hoisted(() => ({
   txn: { company_id: "co-1", amount_original: 100_000, currency: "ILS" },
@@ -249,6 +249,21 @@ describe("LoanSplitPanel", () => {
     expect(onMatch).toHaveBeenCalledWith("loan-1");
   });
 
+  it("says the amount changed when the parts no longer sum to the line", () => {
+    panel({
+      needsReview: true,
+      amountChanged: true,
+      byParts: true,
+      parts: [
+        { id: "a", part: "interest", amountMinor: 500n, scheduledMinor: 500n, needsReview: true, loanId: "loan-1" },
+        { id: "b", part: "escrow", amountMinor: 200n, scheduledMinor: 200n, needsReview: true, loanId: "loan-1" },
+        { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1", inPnl: false },
+      ],
+    });
+    expect(screen.getByText(LOAN_AMOUNT_CHANGED_HINT)).toBeInTheDocument();
+    expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
+  });
+
   it("shows the three parts and a one-tap correction when review is waiting", () => {
     const onCorrect = vi.fn();
     panel({
@@ -272,6 +287,7 @@ describe("LoanSplitPanel", () => {
     expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
     // FLOW-131: the flag cannot say why, so the hint names the busy loan as a maybe.
     expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "עדכון החלוקה" })).toHaveAccessibleDescription(LOAN_BUSY_HINT);
     expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
     expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
@@ -537,6 +553,8 @@ describe("LoanTransactionSplit", () => {
       { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: true, loan_id: "loan-1" },
     ];
     db.clearError = { message: "loan_split_balance", code: "23514" };
+    // The parts sum to the line, so the flag reads as the busy-loan case.
+    db.txn = { company_id: "co-1", amount_original: 1_000, currency: "ILS" };
     renderSplit();
     await waitFor(() => { expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument(); });
     fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
