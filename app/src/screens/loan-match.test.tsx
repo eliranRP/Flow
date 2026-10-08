@@ -482,6 +482,15 @@ describe("LoanTransactionSplit", () => {
     expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
   });
 
+  it("says the loan closed before the payment date (FLOW-136)", async () => {
+    db.insertError = { message: "loan_closed: paid off before 2026-09-01", code: "23514" };
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(screen.getByText("ההלוואה נסגרה לפני תאריך התשלום.")).toBeInTheDocument(); });
+  });
+
   it("shows a paid-off loan disabled with its reason", async () => {
     db.balances = [{ loan_id: "loan-1", balance_minor: 0 }];
     renderSplit();
