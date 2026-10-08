@@ -129,11 +129,13 @@ Deno.test("state carries amounts for the model and the plan does not write them"
   const plan = planTag(row, "auto", 0.9, projects, categories, answers());
   const write = plan.write;
   assert(write);
-  assertEquals(write.allocation?.amountNet, -10000);
+  assertEquals("allocation" in write, false);
+  assertEquals("amountNet" in write, false);
   assertEquals("amount_gross" in write, false);
   assertEquals("vat_amount" in write, false);
   assertEquals("doc_date" in write, false);
-  assertEquals(write.categorySuggested, true);
+  assertEquals(write.modelVersion, JEV_MODEL);
+  assertEquals(write.confidence, 0.95);
   assertEquals("projectAssigned" in write, false);
   assertEquals("userAssigned" in write, false);
 });
@@ -147,6 +149,22 @@ Deno.test("auto at the threshold pre-fills, and just below it only plans a store
   assertEquals(below.confidence, 0.89);
   assertEquals(below.write, null);
   assertEquals(below.answers.category, answers(0.9, 0.89).category);
+});
+
+Deno.test("threshold edges: a fill at exactly the threshold and none 0.001 below, for expense and income", () => {
+  const income = expense({ direction: "income", pnlRole: null, allocationCount: 0 });
+  for (const threshold of [0.8, 0.85, 0.9, 0.95]) {
+    const below = Math.round((threshold - 0.001) * 1000) / 1000;
+    const at = planTag(expense(), "auto", threshold, projects, categories, answers(threshold, threshold));
+    assertEquals(at.write?.projectId, PROJECT);
+    assertEquals(at.write?.categoryId, CATEGORY);
+    assertEquals(at.write?.confidence, threshold);
+    assertEquals(planTag(expense(), "auto", threshold, projects, categories, answers(threshold, below)).write, null);
+    const incomeAt = planTag(income, "auto", threshold, projects, incomeCategories, incomeAnswers(threshold));
+    assertEquals(incomeAt.write?.projectId, PROJECT);
+    assertEquals(incomeAt.write?.categoryId, INCOME_CATEGORY);
+    assertEquals(planTag(income, "auto", threshold, projects, incomeCategories, incomeAnswers(below)).write, null);
+  }
 });
 
 Deno.test("shadow stores the plan and does not pre-fill even at confidence 1", () => {
@@ -166,7 +184,6 @@ Deno.test("a user-owned field stays, and a shared or split line does not take on
   );
   assertEquals(owned.write?.projectId, undefined);
   assertEquals(owned.write?.categoryId, CATEGORY);
-  assertEquals(owned.write?.allocation, null);
 
   const categoryOwned = planTag(
     expense({ userAssigned: true, categoryId: CATEGORY }),
@@ -437,8 +454,8 @@ Deno.test("prefill is one SQL call with the ids only, and reports a line that cl
     transactionId: EXPENSE,
     projectId: PROJECT,
     categoryId: CATEGORY,
-    categorySuggested: true,
-    allocation: { projectId: PROJECT, amountNet: -10000 },
+    modelVersion: JEV_MODEL,
+    confidence: 0.93,
   };
   assertEquals(await store.prefill(write), true);
   assertEquals(calls.length, 1);
@@ -450,9 +467,11 @@ Deno.test("prefill is one SQL call with the ids only, and reports a line that cl
     p_transaction: EXPENSE,
     p_project: PROJECT,
     p_category: CATEGORY,
+    p_model: JEV_MODEL,
+    p_confidence: 0.93,
   });
   reply = { project: false, category: false, skipped: "closed" };
-  assertEquals(await store.prefill({ ...write, projectId: undefined, allocation: null }), false);
+  assertEquals(await store.prefill({ ...write, projectId: undefined }), false);
   assertEquals((calls[1].body as Record<string, unknown>).p_project, null);
 });
 
@@ -563,7 +582,8 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   const autoReport = await tagWork([company()], auto, call, "jev-test-key");
   assertEquals(autoReport.prefilled, 1);
   assertEquals(auto.writes[0].projectId, PROJECT);
-  assertEquals(auto.writes[0].categorySuggested, true);
+  assertEquals(auto.writes[0].categoryId, CATEGORY);
+  assertEquals(auto.writes[0].modelVersion, JEV_MODEL);
 
   const broken = memoryStore();
   broken.failPrefill = true;
@@ -1546,7 +1566,7 @@ function incomeAnswers(confidence = 0.97) {
   };
 }
 
-Deno.test("an income line gets a project and an income category, and auto does not pre-fill it", async () => {
+Deno.test("an income line gets a project and an income category, and auto pre-fills both", async () => {
   const seen: JevCall[] = [];
   const store = memoryStore();
   const income = expense({
@@ -1569,8 +1589,12 @@ Deno.test("an income line gets a project and an income category, and auto does n
     "jev-test-key",
   );
   assertEquals(report.tagged, 1);
-  assertEquals(report.prefilled, 0);
-  assertEquals(store.writes.length, 0);
+  assertEquals(report.prefilled, 1);
+  assertEquals(store.writes.length, 1);
+  // SQL writes no allocation for income (decision 0145): the job sends only ids.
+  assertEquals(store.writes[0].projectId, PROJECT);
+  assertEquals(store.writes[0].categoryId, INCOME_CATEGORY);
+  assertEquals(store.writes[0].confidence, 0.97);
   const questions = seen[0].questions;
   assertEquals(Object.keys(questions).sort(), ["category", "project"]);
   assertEquals(questions.category.type === "choice" && Object.keys(questions.category.criteria), [INCOME_CATEGORY]);
@@ -1760,7 +1784,6 @@ Deno.test("auto never pre-fills a no-project answer, and still fills the categor
   assertEquals((plan.answers.project as { choice: string }).choice, JEV_NO_PROJECT);
   assert(plan.write);
   assertEquals(plan.write.projectId, undefined);
-  assertEquals(plan.write.allocation, null);
   assertEquals(plan.write.categoryId, CATEGORY);
 });
 

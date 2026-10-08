@@ -113,7 +113,10 @@ function MonthSection<T>({
           <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
           {showTotals ? (
             <p className="ui-month-totals t-label">
-              {group.totals.map((total) => <MonthTotalLine key={total.currency} total={total} cents={cents} />)}
+              {group.totals
+                // A currency that rounds to zero draws no line, so it can't take the first slot.
+                .filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n)
+                .map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} first={index === 0} />)}
             </p>
           ) : null}
         </div>
@@ -151,7 +154,12 @@ function Rows<T>({
   );
 }
 
-function MonthTotalLine({ total, cents }: { total: MonthTotal; cents: boolean }) {
+/**
+ * One currency's figures. A screen reader hears ", " before every figure but the first, so the
+ * figures don't run together (FLOW-313). The pause leads the hidden label rather than trailing the
+ * figure, so it adds no width past the figure's box.
+ */
+function MonthTotalLine({ total, cents, first }: { total: MonthTotal; cents: boolean; first: boolean }) {
   const text = (minor: bigint, direction: "income" | "expense") => {
     const formatted = formatAmountText(minor, total.currency, { direction, detail: cents });
     return cents ? withCents(formatted) : formatted;
@@ -163,16 +171,14 @@ function MonthTotalLine({ total, cents }: { total: MonthTotal; cents: boolean })
     <span className="ui-month-line">
       {income != null ? (
         <span>
-          <span className="sr-only">הכנסות </span>
+          <span className="sr-only">{first ? "" : ", "}הכנסות </span>
           <bdi dir="ltr" className="ui-num ui-income">{income}</bdi>
-          <span className="sr-only">, </span>
         </span>
       ) : null}
       {expense != null ? (
         <span>
-          <span className="sr-only">הוצאות </span>
+          <span className="sr-only">{first && income == null ? "" : ", "}הוצאות </span>
           <bdi dir="ltr" className="ui-num">{expense}</bdi>
-          <span className="sr-only">, </span>
         </span>
       ) : null}
     </span>
