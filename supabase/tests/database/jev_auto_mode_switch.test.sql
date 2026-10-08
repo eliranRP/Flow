@@ -1,4 +1,4 @@
--- pgTAP for 20261011233000_jev_auto_mode_switch.sql (FLOW-702): mode auto can be stored.
+-- pgTAP for 20261012020000_jev_auto_mode_switch.sql (FLOW-702): mode auto can be stored.
 
 begin;
 
