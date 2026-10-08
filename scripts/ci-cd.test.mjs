@@ -607,6 +607,9 @@ test("local-ci.sh runs every part of the CI suite, and the pre-push hook runs it
   assert.ok(stamps[0] > local.indexOf("pnpm test:storybook\n") && stamps[0] < local.indexOf("pnpm test:storybook:smoke"));
   assert.ok(local.indexOf("if (( ! full )); then") < stamps[0]);
   assert.ok(stamps[1] > local.indexOf("pnpm test:e2e\n"), "--full stamps last");
+  // FLOW-813: the fast gate runs the e2e specs that reach the change before it stamps.
+  const picked = local.indexOf('playwright test --fully-parallel --workers=100% "${e2e_specs[@]}"');
+  assert.ok(picked > local.indexOf("pnpm test:storybook\n") && picked < stamps[0]);
   assert.match(local, /--full\) full=1 ;;/);
   // FLOW-813: --full and FLOW_LOCAL_CI_NO_SKIP never skip a part.
   assert.ok(local.includes('if (( full )) || [[ -n "${FLOW_LOCAL_CI_NO_SKIP:-}" ]]; then skips=0; fi'));

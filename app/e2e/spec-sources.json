@@ -1,0 +1,121 @@
+{
+  "about": "FLOW-813: which app sources each e2e spec exercises, for the pre-push gate (scripts/e2e-specs.mjs). Entries are under app/src; one ending in / takes every source in that folder. A spec runs when it, a file it imports, or anything its entries import (followed through relative imports, the screens barrel by name, and @flow/shared) changed. A change matching an `all` pattern runs every spec. `ignored` specs run on their own configs.",
+  "all": [
+    "^app/src/(App|main|dev-routes)\\.tsx$",
+    "^app/src/screens/flow-screens\\.tsx$",
+    "^app/src/.*\\.css$",
+    "^design/system/.*\\.css$",
+    "^app/(index\\.html|vite\\.config\\.ts|playwright\\.config\\.ts|package\\.json|tsconfig[^/]*\\.json)$",
+    "^app/e2e/spec-sources\\.json$",
+    "^scripts/(e2e-specs\\.mjs|hosted-env\\.mjs)$",
+    "^pnpm-lock\\.yaml$"
+  ],
+  "ignored": [
+    "smoke-readonly.spec.ts",
+    "storybook-clip.spec.ts",
+    "storybook-layout.spec.ts",
+    "storybook-secret.spec.ts",
+    "storybook-static.spec.ts",
+    "sumit-drain.spec.ts",
+    "sumit-live.spec.ts"
+  ],
+  "specs": {
+    "back.spec.ts": [
+      "screens/",
+      "ui/back.tsx",
+      "ui/install-screen.tsx",
+      "reviewer-preview.tsx"
+    ],
+    "code-field.spec.ts": [
+      "screens/connections-screen.tsx",
+      "screens/assistant-settings.tsx"
+    ],
+    "controls.spec.ts": [
+      "screens/",
+      "setup/",
+      "ui/install-screen.tsx",
+      "ui/tab-bar.tsx"
+    ],
+    "edge-back.spec.ts": [
+      "ui/edge-back.tsx",
+      "ui/back.tsx",
+      "screens/settings-screen.tsx",
+      "screens/categories-screen.tsx",
+      "screens/connections-screen.tsx"
+    ],
+    "jev-review-open.spec.ts": [
+      "screens/review-screen.tsx",
+      "screens/review-queue.tsx",
+      "screens/jev-review-card.tsx"
+    ],
+    "jev-review.spec.ts": [
+      "screens/jev-review-card.tsx"
+    ],
+    "jev-settings.spec.ts": [
+      "screens/connections-screen.tsx",
+      "screens/jev-settings.tsx"
+    ],
+    "loan-project.spec.ts": [
+      "screens/settings-screen.tsx",
+      "screens/loan-setup.tsx",
+      "screens/loan-project-picker.tsx",
+      "screens/project-detail-screen.tsx"
+    ],
+    "mcp-cycle3b.spec.ts": [
+      "reviewer-preview.tsx"
+    ],
+    "pages.spec.ts": [
+      "screens/"
+    ],
+    "period-swipe.spec.ts": [
+      "screens/HomeScreen.tsx",
+      "screens/project-detail-screen.tsx"
+    ],
+    "reversal-pick.spec.ts": [
+      "screens/review-screen.tsx",
+      "screens/review-queue.tsx"
+    ],
+    "review-field-save.spec.ts": [
+      "screens/review-screen.tsx",
+      "screens/review-queue.tsx"
+    ],
+    "review-list.spec.ts": [
+      "screens/review-screen.tsx",
+      "screens/review-queue.tsx"
+    ],
+    "reviewer.spec.ts": [
+      "reviewer-preview.tsx"
+    ],
+    "search.spec.ts": [
+      "screens/search.tsx",
+      "screens/HomeScreen.tsx",
+      "screens/projects-screen.tsx",
+      "screens/project-detail-screen.tsx"
+    ],
+    "sheet-stack.spec.ts": [
+      "screens/connections-screen.tsx",
+      "screens/assistant-settings.tsx"
+    ],
+    "smoke.spec.ts": [
+      "screens/",
+      "setup/",
+      "auth.tsx",
+      "ui/install-screen.tsx"
+    ],
+    "split-category.spec.ts": [
+      "dev/line-split-e2e.tsx",
+      "screens/line-split.tsx"
+    ],
+    "split.spec.ts": [
+      "screens/split-screen.tsx"
+    ],
+    "toast.spec.ts": [
+      "reviewer-preview.tsx",
+      "ui/toast.tsx"
+    ],
+    "txn-step.spec.ts": [
+      "screens/transaction-screen.tsx",
+      "screens/filed-today-screen.tsx"
+    ]
+  }
+}

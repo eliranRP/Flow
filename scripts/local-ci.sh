@@ -3,7 +3,8 @@
 # this script, and main runs the full suite on GitHub before each batch deploy.
 #   default (about 4 minutes cold, under 2 when the app is unchanged): lint, the migration checks,
 #     Deno, typecheck, unit and connector tests,
-#     both dist builds, and the Storybook tests.
+#     both dist builds, the Storybook tests, and the e2e specs that reach the changed files (needs
+#     Docker for local Supabase; about 3 more minutes for a screen change, see FLOW-813 in TASKS).
 #   --full (about 12 minutes): adds the every-story smoke, local Supabase (pgTAP, db types, deploy
 #     preflight, SUMIT cron), and the main Playwright suite. Needs Docker.
 # `bash scripts/cloud-agent-install.sh` installs Deno, the Supabase CLI, and Playwright's Chromium.
@@ -12,7 +13,8 @@
 # inputs (the git tree of app, packages, design, _shared and the root configs) already passed here,
 # and runs only the app tests related to the files changed since the last green commit when only
 # .ts/.tsx sources changed. --full, or FLOW_LOCAL_CI_NO_SKIP=1, runs everything. The cache of green
-# runs is $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache.
+# runs is $FLOW_LOCAL_CI_CACHE, or .git/flow-local-ci-cache. Without Docker the default run leaves the
+# e2e specs to main and says which.
 set -euo pipefail
 
 full=0
@@ -35,31 +37,6 @@ phase() {
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
   echo "local-ci: commit or stash your changes first, so the run tests the commit you push." >&2
   exit 1
-fi
-
-supabase_exit=""
-if (( full )); then
-  phase "Docker and local Supabase"
-  if ! docker info >/dev/null 2>&1; then
-    (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
-    for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done
-    docker info >/dev/null 2>&1 || { echo "local-ci: Docker is not running and could not be started." >&2; exit 1; }
-  fi
-  supabase_log="$(mktemp)"
-  supabase_exit="$(mktemp)"
-  rm -f "$supabase_exit"
-  # Starts in the background while the static checks run. An instance that is already up is reset,
-  # so it carries this branch's migrations and no rows from an earlier run.
-  (
-    rc=0
-    if supabase status >/dev/null 2>&1; then
-      supabase db reset >"$supabase_log" 2>&1 || rc=$?
-    else
-      supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >"$supabase_log" 2>&1 || rc=$?
-    fi
-    echo "$rc" >"${supabase_exit}.tmp"
-    mv "${supabase_exit}.tmp" "$supabase_exit"
-  ) >/dev/null 2>&1 &
 fi
 
 pnpm install --frozen-lockfile --silent
@@ -110,6 +87,67 @@ changed_base() {
     fi
   done
   return 1
+}
+
+# FLOW-813: the e2e specs that reach the files changed since the last commit whose specs passed here
+# (or since main, which runs them all before each deploy). app/e2e/spec-sources.json maps each spec
+# to the sources it exercises; scripts/e2e-specs.mjs follows their imports.
+e2e_specs=()
+if (( ! full )); then
+  e2e_base=""
+  if (( skips )); then
+    for commit in $(git rev-list --max-count=200 HEAD); do
+      if [[ -f "$cache/commit-e2e-$commit" ]]; then e2e_base="$commit"; break; fi
+    done
+  fi
+  [[ -n "$e2e_base" ]] || e2e_base="$(git merge-base HEAD origin/main 2>/dev/null || true)"
+  if [[ -n "$e2e_base" ]]; then
+    e2e_list="$(git diff --name-only "$e2e_base" HEAD | node scripts/e2e-specs.mjs)"
+    [[ -z "$e2e_list" ]] || mapfile -t e2e_specs <<<"$e2e_list"
+  fi
+fi
+
+supabase_exit=""
+if (( full || ${#e2e_specs[@]} > 0 )); then
+  phase "Docker and local Supabase"
+  if ! docker info >/dev/null 2>&1; then
+    (sudo -n dockerd >/tmp/flow-dockerd.log 2>&1 &)
+    for _ in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done
+  fi
+  if ! docker info >/dev/null 2>&1; then
+    if (( full )); then
+      echo "local-ci: Docker is not running and could not be started." >&2
+      exit 1
+    fi
+    echo "local-ci: Docker is not running, so the e2e specs for this change are left to main: ${e2e_specs[*]}" >&2
+    e2e_specs=()
+  else
+    supabase_log="$(mktemp)"
+    supabase_exit="$(mktemp)"
+    rm -f "$supabase_exit"
+    # Starts in the background while the static checks run. An instance that is already up is reset,
+    # so it carries this branch's migrations and no rows from an earlier run.
+    (
+      rc=0
+      if supabase status >/dev/null 2>&1; then
+        supabase db reset >"$supabase_log" 2>&1 || rc=$?
+      else
+        supabase start -x studio,postgres-meta,logflare,vector,mailpit,imgproxy,supavisor,realtime >"$supabase_log" 2>&1 || rc=$?
+      fi
+      echo "$rc" >"${supabase_exit}.tmp"
+      mv "${supabase_exit}.tmp" "$supabase_exit"
+    ) >/dev/null 2>&1 &
+  fi
+fi
+wait_supabase() {
+  phase "e2e: waiting for local Supabase"
+  while [[ ! -f "$supabase_exit" ]]; do sleep 2; done
+  if [[ "$(cat "$supabase_exit")" != 0 ]]; then
+    cat "$supabase_log"
+    echo "local-ci: local Supabase did not start." >&2
+    exit 1
+  fi
+  rm -f "$supabase_log" "$supabase_exit"
 }
 
 phase "lint and check: lint, static checks, and builds, side by side"
@@ -246,22 +284,23 @@ else
 fi
 
 if (( ! full )); then
+  if (( ${#e2e_specs[@]} > 0 )); then
+    wait_supabase
+    phase "e2e: ${#e2e_specs[@]} specs that reach the changes since ${e2e_base:0:7}"
+    eval "$(bash scripts/ci-local-supabase-env.sh)"
+    pnpm --filter @flow/app exec playwright install chromium
+    pnpm --filter @flow/app exec playwright test --fully-parallel --workers=100% "${e2e_specs[@]}"
+  fi
+  touch "$cache/commit-e2e-$head"
   echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
-  phase "passed on ${head:0:7} (main runs the every-story smoke and e2e before each deploy)"
+  phase "passed on ${head:0:7} (main runs the every-story smoke and all e2e before each deploy)"
   exit 0
 fi
 
 pnpm build-storybook
 pnpm test:storybook:smoke
 
-phase "e2e: waiting for local Supabase"
-while [[ ! -f "$supabase_exit" ]]; do sleep 2; done
-if [[ "$(cat "$supabase_exit")" != 0 ]]; then
-  cat "$supabase_log"
-  echo "local-ci: local Supabase did not start." >&2
-  exit 1
-fi
-rm -f "$supabase_log" "$supabase_exit"
+wait_supabase
 
 phase "e2e: database checks"
 bash scripts/mcp-function-smoke.sh
@@ -276,5 +315,6 @@ phase "e2e: main Playwright suite"
 eval "$(bash scripts/ci-local-supabase-env.sh)"
 pnpm test:e2e
 
+touch "$cache/commit-e2e-$head"
 echo "$head" >"$(git rev-parse --git-dir)/flow-local-ci"
 phase "passed on ${head:0:7}"
