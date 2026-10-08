@@ -1,6 +1,6 @@
 -- FLOW-205: two undos of one MCP write run one after the other (the mcp_writes row lock),
 -- with two real sessions (dblink). The fixture is committed by session a and deleted at the
--- end. @example.com only.
+-- end; a failed run leaves it until the next run's setup deletes it by name. @example.com only.
 
 begin;
 
@@ -89,9 +89,9 @@ language sql
 as $$
   select format(
     $q$select pg_temp.mcp(%L)$q$,
-    format($s$select (public.mcp_undo(%L, 'project', (select id from public.projects where name = %L)))->>'ok'
-      || ' ' || coalesce((public.mcp_undo(%L, 'project', (select id from public.projects where name = %L)))->'error'->>'code', '')$s$,
-      p_key, p_project, p_key, p_project));
+    format($s$select r->>'ok' || ' ' || coalesce(r->'error'->>'code', '')
+      from (select public.mcp_undo(%L, 'project', (select id from public.projects where name = %L)) as r) u$s$,
+      p_key, p_project));
 $$;
 
 -- 3. While session b's undo is not committed, session a's undo of the same write waits.

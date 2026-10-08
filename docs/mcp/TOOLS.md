@@ -220,7 +220,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 A project, category or loan name (`create_project`, `create_category`, `create_projects`, `create_categories`, `add_loan`, `update_loan`) with a control character, a line or paragraph separator, an invisible format character (zero-width, bidi marks and controls, BOM, soft hyphen, tag characters) or a blank filler is `validation`; ZWJ is allowed for emoji (FLOW-205).
 
-`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it, including a resolved review or a reassign undo that would restore it (FLOW-205). Otherwise undo is `conflict` and the row stays.
+`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it, including a review row, an open reassign undo or an open `split_line` undo that would restore it (FLOW-205). Otherwise undo is `conflict` and the row stays.
 
 ### create_project
 

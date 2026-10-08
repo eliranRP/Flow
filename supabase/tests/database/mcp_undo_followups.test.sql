@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(14);
+select plan(17);
 
 select tests.create_supabase_user('muf_owner', 'muf-owner@example.com');
 
@@ -59,6 +59,9 @@ insert into muf (label, id) select 'c_reassign', (public.mcp_create_category('mu
 insert into muf (label, id) select 'c_review', (public.mcp_create_category('muf-c2', 'Example Review Cat', 'expense')->'data'->>'id')::uuid;
 insert into muf (label, id) select 'c_hide', (public.mcp_create_category('muf-c3', 'Example Hide Cat', 'expense')->'data'->>'id')::uuid;
 insert into muf (label, id) select 'c_hide2', (public.mcp_create_category('muf-c4', 'Example Hide Cat Two', 'expense')->'data'->>'id')::uuid;
+insert into muf (label, id) select 'p_split', (public.mcp_create_project('muf-p4', 'Example Split Project')->'data'->>'id')::uuid;
+insert into muf (label, id) select 'c_split', (public.mcp_create_category('muf-c5', 'Example Split Cat', 'expense')->'data'->>'id')::uuid;
+insert into muf (label, id) select 'p_undone', (public.mcp_create_project('muf-p5', 'Example Undone Reassign Project')->'data'->>'id')::uuid;
 reset role;
 
 insert into public.transactions (
@@ -79,6 +82,14 @@ values
     null, null, jsonb_build_array(jsonb_build_object('project_id', pg_temp.id('p_shares'), 'share_bp', 10000, 'amount_net', -1000)));
 insert into public.reassign_undo (company_id, transaction_id, prior_category_id, prior_user_assigned, prior_allocations)
 values (pg_temp.id('company'), pg_temp.id('line'), pg_temp.id('c_reassign'), false, '[]'::jsonb);
+-- A reassign undo already used cannot restore anything.
+insert into public.reassign_undo (company_id, transaction_id, prior_project_id, prior_user_assigned, prior_allocations, undone_at)
+values (pg_temp.id('company'), pg_temp.id('line'), pg_temp.id('p_undone'), false, '[]'::jsonb, now());
+-- An open split_line write whose undo would put back parts on the split project and category.
+insert into private.mcp_writes (token_id, user_id, kind, transaction_id, prior)
+values (pg_temp.id('write'), tests.get_supabase_uid('muf_owner'), 'line_split', pg_temp.id('line'),
+  jsonb_build_object('written', '[]'::jsonb, 'before', jsonb_build_array(
+    jsonb_build_object('category_id', pg_temp.id('c_split'), 'project_id', pg_temp.id('p_split'), 'amount_minor', 1000))));
 
 select pg_temp.as_mcp();
 select is(public.mcp_undo('muf-u1', 'project', pg_temp.id('p_review'))->'error'->>'code', 'conflict',
@@ -91,6 +102,12 @@ select is(public.mcp_undo('muf-u4', 'category', pg_temp.id('c_review'))->'error'
   'nor one a review row would restore');
 select is(public.mcp_undo('muf-u5', 'project', pg_temp.id('p_free'))->>'ok', 'true',
   'a project nothing points at is removed');
+select is(public.mcp_undo('muf-u6', 'project', pg_temp.id('p_split'))->'error'->>'code', 'conflict',
+  'a project an open split_line write would restore is not removed');
+select is(public.mcp_undo('muf-u7', 'category', pg_temp.id('c_split'))->'error'->>'code', 'conflict',
+  'nor a category one would restore');
+select is(public.mcp_undo('muf-u8', 'project', pg_temp.id('p_undone'))->>'ok', 'true',
+  'a reassign undo already used does not hold a project');
 
 -- A hide the app reversed.
 select is(public.mcp_hide_category('muf-h1', pg_temp.id('c_hide'))->>'ok', 'true', 'hide a category');

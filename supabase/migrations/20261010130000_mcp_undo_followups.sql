@@ -1,8 +1,9 @@
 -- FLOW-205 undo follow-ups.
--- 1. Undo of a project or category the MCP created is a conflict while a review row or a
---    reassign undo row still points at it in prior_project_id, prior_category_id or
---    prior_allocations: deleting it would leave reopen_review or the reassign undo restoring
---    an id that no longer exists.
+-- 1. Undo of a project or category the MCP created is a conflict while a review row, a
+--    reassign undo row not yet undone, or an open split_line write still points at it
+--    (prior_project_id, prior_category_id, prior_allocations, or the split's prior parts):
+--    deleting it would leave reopen_review, the reassign undo or the split undo restoring an
+--    id that no longer exists.
 -- 2. hide_category on a category this user's open hide already covers (a second hide, or a
 --    re-hide after the app unhid it) hides it and keeps the one undoable write, instead of
 --    the generic refusal. Undo of a hide the app already reversed (the category is back to
@@ -126,15 +127,30 @@ begin
       ) or exists (
         select 1 from public.reassign_undo r
         where r.company_id = cid
+          and r.undone_at is null
           and (r.prior_project_id = p_id
             or r.prior_allocations @> jsonb_build_array(jsonb_build_object('project_id', p_id)))
+      ) or exists (
+        -- An open split_line write would restore its parts on this project.
+        select 1 from private.mcp_writes w
+        where w.user_id = auth.uid()
+          and w.kind = 'line_split'
+          and w.undone_at is null
+          and w.prior->'before' @> jsonb_build_array(jsonb_build_object('project_id', p_id))
       ) then$new$);
   def := replace(def, a_category, $new$          and (q.prior_remembered_category_id = p_id or q.written_remembered_category_id = p_id
             or q.prior_category_id = p_id)
       ) or exists (
         -- FLOW-205: a reassign undo would restore this category.
         select 1 from public.reassign_undo r
-        where r.company_id = cid and r.prior_category_id = p_id
+        where r.company_id = cid and r.undone_at is null and r.prior_category_id = p_id
+      ) or exists (
+        -- An open split_line write would restore its parts in this category.
+        select 1 from private.mcp_writes w
+        where w.user_id = auth.uid()
+          and w.kind = 'line_split'
+          and w.undone_at is null
+          and w.prior->'before' @> jsonb_build_array(jsonb_build_object('category_id', p_id))
       ) then$new$);
   def := replace(def, a_hidden, $new$      if found and cur_hidden is not distinct from rec.prior_hidden then
         -- FLOW-205: the app already put it back as it was before the hide; close the write.
