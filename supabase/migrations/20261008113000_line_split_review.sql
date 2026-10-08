@@ -90,6 +90,45 @@ create trigger transactions_line_split_review
   )
   execute function private.transactions_line_split_review();
 
+-- A line can wait behind another open review (one open review per line). When that review
+-- closes, judge the line again. A split_mismatch review that is reopened (reopen_review, undo)
+-- is judged again too, so it does not stay open on parts that match. Closing a split_mismatch
+-- review itself (approve, skip, or the delete above) changes nothing here.
+create or replace function private.review_queue_line_split_review()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.transaction_id is null
+    or not exists (select 1 from public.line_splits s where s.transaction_id = old.transaction_id)
+  then
+    return null;
+  end if;
+  if old.status = 'open'
+    and old.reason is distinct from 'split_mismatch'
+    and (tg_op = 'DELETE' or new.status is distinct from 'open')
+  then
+    perform private.line_split_review_sync(old.transaction_id);
+  elsif tg_op = 'UPDATE'
+    and new.status = 'open'
+    and old.status is distinct from 'open'
+    and new.reason = 'split_mismatch'
+  then
+    perform private.line_split_review_sync(new.transaction_id);
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function private.review_queue_line_split_review() from public, anon, authenticated;
+
+create trigger review_queue_line_split_review
+  after update of status or delete on public.review_queue
+  for each row
+  execute function private.review_queue_line_split_review();
+
 -- New parts, cleared parts and undo. Deferred, so save_line_split's delete-then-insert is
 -- judged once, on the parts as they stand at commit.
 create or replace function private.line_splits_review()

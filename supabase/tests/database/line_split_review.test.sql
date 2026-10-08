@@ -7,7 +7,7 @@ begin;
 -- The review follows the parts at commit (a deferred trigger); judge after each statement.
 set constraints all immediate;
 
-select plan(25);
+select plan(34);
 
 do $users$
 begin
@@ -173,8 +173,36 @@ insert into public.review_queue (company_id, transaction_id, status, reason)
 values ((select id from lsr where label = 'co'), (select id from lsr where label = 'txn_busy'), 'open', 'suggested');
 select pg_temp.resync('txn_busy', -12000);
 select is(pg_temp.open_reviews('txn_busy'), '["suggested"]'::jsonb, 'an open review of another reason is left alone');
+select tests.authenticate_as('lsr_owner');
+select lives_ok($$select public.resolve_review((select id from public.review_queue where transaction_id = (select id from lsr where label = 'txn_busy') and status = 'open'), 'skipped')$$,
+  'the owner skips the other review');
+reset role;
+select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'then the mismatch gets its own review');
+
+-- A skipped split_mismatch that is reopened after the parts were fixed does not stay open.
+select tests.authenticate_as('lsr_owner');
+select lives_ok($$select public.resolve_review((select id from public.review_queue where transaction_id = (select id from lsr where label = 'txn_busy') and status = 'open'), 'skipped')$$,
+  'the owner skips the split_mismatch review');
+reset role;
+select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'skipping it does not reopen it');
 select pg_temp.resync('txn_busy', -10000);
-select is(pg_temp.open_reviews('txn_busy'), '["suggested"]'::jsonb, 'and a match does not close it');
+select tests.authenticate_as('lsr_owner');
+select lives_ok($$select public.reopen_review((select id from public.review_queue where transaction_id = (select id from lsr where label = 'txn_busy') and reason = 'split_mismatch'))$$,
+  'the owner reopens it after the amount matches again');
+reset role;
+select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'a reopened split_mismatch on matching parts closes at once');
+
+-- Deferred: save_line_split is judged once, at commit (here, when constraints turn immediate).
+select pg_temp.resync('txn_busy', -12000);
+select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'the mismatch is open again');
+set constraints all deferred;
+select tests.authenticate_as('lsr_owner');
+select lives_ok($$select public.save_line_split((select id from lsr where label = 'txn_busy'), pg_temp.parts(5000, 7000))$$,
+  'new parts, deferred');
+reset role;
+select is(pg_temp.open_reviews('txn_busy'), '["split_mismatch"]'::jsonb, 'the review waits for commit');
+set constraints all immediate;
+select is(pg_temp.open_reviews('txn_busy'), '[]'::jsonb, 'and closes when the deferred check runs');
 
 -- A removed line opens nothing.
 insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
