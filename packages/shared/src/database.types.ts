@@ -1103,6 +1103,9 @@ isOneToOne: false
 "save_line_split":
 { Args: { "p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
+"save_loan_split":
+{ Args: { "p_loan_id": string,"p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
+                           },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined
                            },

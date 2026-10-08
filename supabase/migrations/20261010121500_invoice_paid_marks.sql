@@ -324,7 +324,7 @@ revoke all on function public.mcp_set_invoice_paid(text, uuid, boolean)
   from public, anon, authenticated, service_role;
 grant execute on function public.mcp_set_invoice_paid(text, uuid, boolean) to authenticated;
 
--- private.mcp_refused: as in 20261010090000_loan_kinds_rates.sql, plus 'invoice not found'.
+-- private.mcp_refused: as in 20261010120000_save_loan_split.sql, plus 'invoice not found'.
 create or replace function private.mcp_refused(p_message text)
 returns jsonb
 language sql
@@ -385,6 +385,9 @@ as $$
         -- FLOW-106 part 4 (decision 0132).
         'rate before the loan start',
         'rate not found',
+        -- The demand order checks under the loan lock (20261010120000_save_loan_split.sql).
+        'payment before the loan start',
+        'a later payment is already attached',
         -- FLOW-330 (decision 0133).
         'invoice not found'
       ) then p_message
