@@ -26,10 +26,11 @@
   margin-block-start: var(--space-8);
 }
 
-/* A row reached by Tab or scrolled into view stops below the pinned month bar (up to three
-   currency lines), not under it (WCAG 2.4.11). A sheet that scrolls a month list sets its own. */
+/* A row reached by Tab or scrolled into view stops below the pinned month bar, not under it
+   (WCAG 2.4.11). The tallest bar is the month name with three currency rows under it at 320
+   (8 + 26 + 3 x 22.5 + 8, about 110px). A sheet that scrolls a month list sets its own. */
 :root:has(.ui-month-head) {
-  scroll-padding-block-start: calc(var(--safe-top) + var(--space-10) * 2 + var(--space-4));
+  scroll-padding-block-start: calc(var(--safe-top) + var(--space-10) * 3);
 }
 
 .ui-month-title {
@@ -38,7 +39,8 @@
 }
 
 /* Currencies share a row while they fit, 24px apart so the pairs read apart (8px inside a pair). When
-   both don't fit, the next currency wraps under the first, start-aligned; a pair never splits (FLOW-313). */
+   both don't fit, the next currency wraps under the first, start-aligned; a pair never splits (FLOW-313).
+   Beside the month name the totals sit at the end; dropped under it they start under the name. */
 .ui-month-totals {
   display: flex;
   flex-wrap: wrap;
@@ -47,7 +49,6 @@
   column-gap: var(--space-6);
   min-inline-size: 0;
   margin: 0;
-  margin-inline-start: auto;
 }
 
 .ui-month-line {
