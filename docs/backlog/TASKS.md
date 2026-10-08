@@ -14,16 +14,16 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Category rename (MCP agent request, first), then FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups | The next plan-first server item |
+| Dev lane 1 | FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups (category rename merged in #228) | The next plan-first server item |
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
-| UI lane 1 | FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0149), "לפי חודש" for the whole project, Unpaid polish, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 1 | FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
 | UI lane 3 | Category rename: the "שינוי שם" row and sheet in Settings → Categories (owner priority; server in #228), PR #230 | Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-504 screen part: currency choice in Settings, base currency on Home, overhead share and loan default | FLOW-702 app part: Jev mode and threshold chips in Settings; the card part with UI lane 2 |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807 follow-up (owner's pick "App files next"): `line-split.tsx`, `toast.tsx`, `change-sheet.tsx`, `loan-setup.tsx` and `App.tsx` under 800 lines (merged: screens #219, stories #225, CSS #227, review area #229) | `supabase/functions/flow-mcp/tools.ts` and `_shared/jev_tag.ts` after their open PRs merge |
+| File split | FLOW-807 follow-up: `_shared/jev_tag.ts` split into `jev_tag_plan.ts` and `jev_tag_rest.ts` (merged: screens #219, stories #225, CSS #227, review area #229, app files #232) | `supabase/functions/flow-mcp/tools.ts` after #221 and #233 merge |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -770,13 +770,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-336"></a>
 ### FLOW-336 · Step the period one-handed
-- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0149) · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0150) · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
 - **What:** The period bar sits in the top third on Home (presets y≈15–51, stepper y≈62–111 at 375x667) and on the project band (y≈162–258). Stepping a month from Home's default takes 2 taps at the top edge and each further month another, about 550px above a resting thumb. Proposal: keep the bar where the owner put it, and add a sideways swipe on the band's hero figure that steps the window by the preset's length (same rules as the stepper: the later step stops at the current window), with a short haptic and the label updating. Swipe is the one-handed path; the arrows stay for accessibility.
 - **Acceptance:** owner's choice on a card; works in RTL (swipe toward the start side goes earlier); does not fight the edge swipe-back (FLOW-332) or vertical scroll; a decision record.
 
 <a id="flow-337"></a>
 ### FLOW-337 · A period on the "לפי חודש" page
-- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0149) · **Owner (2026-10-08):** the page always lists every month since the project started, whatever the band shows · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** in progress (PR #TBD, decision 0150) · **Owner (2026-10-08):** the page always lists every month since the project started, whatever the band shows · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
 - **What:** "לפי חודש" follows the project's period, so at the default 3 חודשים it lists three months with about 300px empty, and seeing the year takes Back, שנה and לפי חודש again (two of them in the top third). Options: the page opens on the whole project ("מתחילת הפרויקט") whatever the band shows, or it gets a compact preset row of its own (`PeriodBar tone="page"`).
 - **Acceptance:** owner's choice on a card; Back returns to the project with its own period unchanged.
 
@@ -1099,7 +1099,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229 merged; follow-up: the five app files over 800 lines, then the two server files) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229, #232 merged; `jev_tag.ts` in review; `flow-mcp/tools.ts` last) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 

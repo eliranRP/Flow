@@ -231,7 +231,7 @@ export function HomeBooks({
         <div className="ui-band-pbar">
           <PeriodBar period={period} onChange={onPeriod} />
         </div>
-        {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0149). */}
+        {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0150). */}
         <PeriodSwipe period={period} onChange={onPeriod}>
           <Hero
             label={heroProfitLabel(period, hero)}
