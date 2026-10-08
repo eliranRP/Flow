@@ -14,9 +14,9 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-705 anomaly test cases; FLOW-405 plan card for the owner | FLOW-405 server and MCP once the owner picks (FLOW-510 waits for its design call) |
+| Dev lane 1 | Review card gaps for UI lane 2: `customer_name` on list_review, `review_id` on get_transaction | Next `ready` non-UI task (FLOW-510 waits for its design call) |
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
-| UI lane 1 | Search screen (FLOW-323 option A, decision 0144) with FLOW-402 from the project page, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -615,7 +615,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
 - [x] Server and MCP: `search_transactions` and `search_expenses` filter by date, direction, project and category (with `none`), take a `pending` scope, match the customer, and return currency, review, kept-out and split state; tenant isolation test (migration `20261011010000`, decision [0140](../decisions/0140-search-filters.md)). Plan: the project's plans/flow-323-search.md.
 - [x] Mockup in the design thread, owner approval on a card (2026-10-08). **Owner picked A:** a search icon on the Home and Projects bars opens the screen; the search field and filter chips sit at the bottom, just above the keyboard, and the results list fills the space above them. The icon is a plain thin-stroke outline magnifier (no emoji, no filled glyph), like a bank app's search. Chevrons are SVG icons so right-to-left text never flips them: Back points right, "more" points left. Rows reuse the review list's statement rows with month dividers, tint the matched text, and say when a line waits for review, is split or is kept out of the P&L; a count line totals what is shown. FLOW-402 is this screen opened from the project page's "כל התנועות" with the project chip set. Mockup: the project's plans/flow-323-search-mockup.html.
-- [ ] Screen in a UI lane, reading `search_transactions` (PR #TBD, decision [0144](../decisions/0144-search-screen.md)).
+- [ ] Screen in a UI lane, reading `search_transactions` (PR #TBD, decision [0146](../decisions/0146-search-screen.md)).
 
 <a id="flow-324"></a>
 ### FLOW-324 · Approve all suggestions in the review queue
@@ -773,7 +773,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (#207: server and MCP, dev lane 1; the owner chose "Server now", 2026-10-08; decision [0144](../decisions/0144-category-delete-and-move.md); the Settings → Categories screen goes to a UI lane) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 

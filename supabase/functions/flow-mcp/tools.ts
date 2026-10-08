@@ -81,6 +81,8 @@ export const WRITE_TOOL_NAMES = [
   "reorder_loans",
   "set_project_investment",
   "set_category_rehab",
+  "delete_category",
+  "move_category_lines",
   "undo",
   "undo_batch",
 ] as const;
@@ -137,8 +139,10 @@ const ALLOWED: Record<string, Set<string>> = {
   detach_loan_payment: new Set(["idempotency_key", "transaction_id"]),
   delete_loan: new Set(["idempotency_key", "loan_id"]),
   reorder_loans: new Set(["idempotency_key", "loan_ids"]),
-  set_project_investment: new Set(["idempotency_key", "project_id", "purchase_agorot", "arv_agorot", "value_agorot", "value_date"]),
+  set_project_investment: new Set(["idempotency_key", "project_id", "currency", "purchase_minor", "arv_minor", "value_minor", "value_date"]),
   set_category_rehab: new Set(["idempotency_key", "category_id", "rehab"]),
+  delete_category: new Set(["idempotency_key", "category_id"]),
+  move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -225,7 +229,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -516,19 +520,29 @@ const reorderLoansSchema = z.object({
   loan_ids: z.array(UUID_TEXT).min(1).max(200),
 }).strict();
 const INVESTMENT_AMOUNT = z.number().int().min(0).max(999_999_999_999_999);
-const INVESTMENT_KEYS = ["purchase_agorot", "arv_agorot", "value_agorot", "value_date"] as const;
+const INVESTMENT_KEYS = ["currency", "purchase_minor", "arv_minor", "value_minor", "value_date"] as const;
 const setProjectInvestmentSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   project_id: UUID_TEXT,
-  purchase_agorot: INVESTMENT_AMOUNT.nullable().optional(),
-  arv_agorot: INVESTMENT_AMOUNT.nullable().optional(),
-  value_agorot: INVESTMENT_AMOUNT.nullable().optional(),
+  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+  purchase_minor: INVESTMENT_AMOUNT.nullable().optional(),
+  arv_minor: INVESTMENT_AMOUNT.nullable().optional(),
+  value_minor: INVESTMENT_AMOUNT.nullable().optional(),
   value_date: z.string().refine((v) => isCalendarDate(v)).nullable().optional(),
 }).strict().refine((v) => INVESTMENT_KEYS.some((k) => v[k] !== undefined));
 const setCategoryRehabSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   category_id: UUID_TEXT,
   rehab: z.boolean().nullable(),
+}).strict();
+const deleteCategorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+}).strict();
+const moveCategoryLinesSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  from_category_id: UUID_TEXT,
+  into_category_id: UUID_TEXT,
 }).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
@@ -1017,7 +1031,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project, signed against the line's own kind: a reversal part counts minus (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. investment has purchase_agorot, arv_agorot, value_agorot and value_date (set_project_investment; null until set), rehab_agorot (all time, cash basis, ILS: posted, paid costs filed or shared to the project whose category counts as rehab, see set_category_rehab; loan payment parts, fees included, stay out unless their category is switched on; not limited by from, to or basis), rehab_other_currencies (the same in other currencies, minor units), loan_balance_agorot (open ILS loans filed under the project), loan_balance_other_currencies (open loans in other currencies, in minor units, not added in), forced_equity_agorot (ARV - purchase - rehab) and current_equity_agorot (value - loan balance), each null while a figure it needs is missing; forced is also null when rehab_other_currencies has a cost, and current when loan_balance_other_currencies has a loan. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project, signed against the line's own kind: a reversal part counts minus (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. investment is in the project's investment currency (currency, default ILS; set_project_investment), in minor units of it: purchase_minor, arv_minor, value_minor and value_date (null until set), rehab_minor (all time, cash basis, in that currency: posted, paid costs filed or shared to the project whose category counts as rehab, see set_category_rehab; loan payment parts, fees included, stay out unless their category is switched on; not limited by from, to or basis), rehab_other_currencies (the same in other currencies), loan_balance_minor (open loans in that currency filed under the project), loan_balance_other_currencies (open loans in other currencies, not added in), forced_equity_minor (ARV - purchase - rehab) and current_equity_minor (value - loan balance), each null while a figure it needs is missing; forced is also null when rehab_other_currencies has a cost, and current when loan_balance_other_currencies has a loan. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
       from: { type: "string" },
@@ -1341,22 +1355,32 @@ function writeTools() {
       idempotency_key: { type: "string" },
       loan_ids: { type: "array", items: { type: "string" } },
     }, true),
-    toolSpec("set_project_investment", "Set a project's investment figures, in agorot (ILS): purchase_agorot (what it cost to buy), arv_agorot (the after-repair value), value_agorot (what it is worth today) and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole agorot, 0 or more. get_project returns them in investment with rehab and equity. Returns the figures after. Undo is kind project_investment with the project id: it puts back the figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
+    toolSpec("set_project_investment", "Set a project's investment figures: currency (ISO code like USD or ILS, default ILS: the currency of the figures, rehab and equity; it cannot be cleared), purchase_minor (what it cost to buy), arv_minor (the after-repair value), value_minor (what it is worth today), all in minor units of that currency (cents for USD), and value_date (YYYY-MM-DD, when that value was estimated). Name at least one; a key left out keeps its figure and null clears it. Amounts are whole minor units, 0 or more. Changing the currency does not convert the figures. get_project returns them in investment with rehab and equity. Returns the currency and figures after. Undo is kind project_investment with the project id: it puts back the currency and figures before, and is a conflict when they changed since. Another company's project is refused (project not found).", {
       idempotency_key: { type: "string" },
       project_id: { type: "string" },
-      purchase_agorot: { type: ["integer", "null"] },
-      arv_agorot: { type: ["integer", "null"] },
-      value_agorot: { type: ["integer", "null"] },
+      currency: { type: "string", pattern: "^[A-Z]{3}$" },
+      purchase_minor: { type: ["integer", "null"] },
+      arv_minor: { type: ["integer", "null"] },
+      value_minor: { type: ["integer", "null"] },
       value_date: { type: ["string", "null"] },
     }, true),
-    toolSpec("set_category_rehab", "Count a category as rehab on projects (rehab true), leave it out (false), or follow the default (null). By default every category counts but those kept out of the P&L and the loan parts (interest, escrow, principal, and a payment's fees part in any category unless that category is switched on). Switching on the principal category counts repayments, while the loan is already in current equity. rehab is get_project's investment.rehab_agorot. Returns rehab and in_rehab (what the category comes to). Undo is kind category_rehab with the category id: it puts back the setting before, and is a conflict when it changed since.", {
+    toolSpec("set_category_rehab", "Count a category as rehab on projects (rehab true), leave it out (false), or follow the default (null). By default every category counts but those kept out of the P&L and the loan parts (interest, escrow, principal, and a payment's fees part in any category unless that category is switched on). Switching on the principal category counts repayments, while the loan is already in current equity. rehab is get_project's investment.rehab_minor. Returns rehab and in_rehab (what the category comes to). Undo is kind category_rehab with the category id: it puts back the setting before, and is a conflict when it changed since.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
       rehab: { type: ["boolean", "null"] },
     }, true),
+    toolSpec("delete_category", "Delete a category, even one with lines. Its lines lose the category and go back to review (לאישור) with none; a line split by category loses its whole split; suppliers forget it as their remembered category. Refused for a loan part category (loan category is fixed) and while a loan or a loan payment part uses it (a loan uses this category). Returns name and lines (how many lines on the books went back to review). Undo is kind category_delete with the category id: it puts the category back with its lines, splits and remembered suppliers, and is a conflict once one of those lines has a category or a split again, or the name is taken again.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+    }, true),
+    toolSpec("move_category_lines", "Move every line of one category to another of the same kind, without hiding the source (merge_category hides it). Split parts, loan payment parts, loan part categories and remembered supplier categories move too. Refused when the target is the same category, hidden, of another kind, when a split line has parts in both, or when a loan part cannot take the target. Returns from, into and lines (lines on the books moved). Undo is kind category_move with the source category id: it moves exactly those back, and is a conflict once any of them was moved or re-tagged since.", {
+      idempotency_key: { type: "string" },
+      from_category_id: { type: "string" },
+      into_category_id: { type: "string" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -2041,6 +2065,23 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_category_id: parsed.data.category_id,
       p_rehab: parsed.data.rehab,
+    };
+  } else if (name === "delete_category") {
+    const parsed = deleteCategorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_delete_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+    };
+  } else if (name === "move_category_lines") {
+    const parsed = moveCategoryLinesSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_move_category_lines";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_from: parsed.data.from_category_id,
+      p_into: parsed.data.into_category_id,
     };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
