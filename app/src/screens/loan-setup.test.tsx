@@ -14,10 +14,9 @@ const db = vi.hoisted(() => ({
   inserts: [] as Array<Record<string, unknown>>,
   insertError: null as { message: string; code?: string } | null,
   hold: null as Promise<void> | null,
-  currencies: [] as string[],
+  baseCurrency: "ILS" as unknown,
   currencyError: null as { message: string } | null,
   currencyHold: null as Promise<void> | null,
-  currencyLimit: null as number | null,
   offline: false,
   selects: 0,
   balanceError: null as { message: string } | null,
@@ -33,6 +32,13 @@ vi.mock("../lib/supabase", () => ({
   getSupabase: () => {
     if (db.offline) return null;
     return {
+      rpc: (name: string) => {
+        if (name !== "mcp_company_loan_currency") throw new Error(name);
+        db.selects += 1;
+        const finish = () => ({ data: db.currencyError ? null : db.baseCurrency, error: db.currencyError });
+        if (db.currencyHold) return db.currencyHold.then(() => finish());
+        return Promise.resolve(finish());
+      },
       from: (table: string) => {
         if (table === "loans") {
           return {
@@ -75,28 +81,6 @@ vi.mock("../lib/supabase", () => ({
             }),
           };
         }
-        if (table === "transactions") {
-          return {
-            select: () => ({
-              is: () => ({
-                order: () => ({
-                  order: () => ({
-                    limit: (count: number) => {
-                      db.selects += 1;
-                      db.currencyLimit = count;
-                      const finish = () => ({
-                        data: db.currencyError ? null : db.currencies.map((currency) => ({ currency })),
-                        error: db.currencyError,
-                      });
-                      if (db.currencyHold) return db.currencyHold.then(() => finish());
-                      return Promise.resolve(finish());
-                    },
-                  }),
-                }),
-              }),
-            }),
-          };
-        }
         throw new Error(table);
       },
     };
@@ -116,10 +100,9 @@ beforeEach(() => {
   db.inserts = [];
   db.insertError = null;
   db.hold = null;
-  db.currencies = [];
+  db.baseCurrency = "ILS";
   db.currencyError = null;
   db.currencyHold = null;
-  db.currencyLimit = null;
   db.offline = false;
   db.selects = 0;
   db.balanceError = null;
@@ -180,14 +163,10 @@ function fillSavable() {
 }
 
 describe("company currency", () => {
-  it("uses dollars only when every open line is USD", () => {
-    expect(companyLoanCurrency([])).toBe("ILS");
-    expect(companyLoanCurrency(["USD"])).toBe("USD");
-    expect(companyLoanCurrency(["USD", "USD"])).toBe("USD");
-    expect(companyLoanCurrency(["ILS"])).toBe("ILS");
-    expect(companyLoanCurrency(["USD", "ILS"])).toBe("ILS");
-    expect(companyLoanCurrency(["EUR"])).toBe("ILS");
-    expect(companyLoanCurrency(["USD", "EUR"])).toBe("ILS");
+  it("uses dollars only for a USD company", () => {
+    expect(companyLoanCurrency("USD")).toBe("USD");
+    expect(companyLoanCurrency("ILS")).toBe("ILS");
+    expect(companyLoanCurrency("EUR")).toBe("ILS");
   });
 
   it("starts the loan on the first day of next month in Jerusalem", () => {
@@ -195,20 +174,19 @@ describe("company currency", () => {
     expect(firstOfNextMonth(new Date("2026-12-15T12:00:00Z"))).toBe("2027-01-01");
   });
 
-  it("reads that rule from open lines and stays on shekels when the read fails", async () => {
+  it("reads the stored company currency and stays on shekels when the read fails", async () => {
     db.offline = true;
     expect(await readCompanyLoanCurrency()).toBe("ILS");
     db.offline = false;
-    db.currencies = [];
     expect(await readCompanyLoanCurrency()).toBe("ILS");
-    db.currencies = ["USD", "USD"];
+    db.baseCurrency = "USD";
     expect(await readCompanyLoanCurrency()).toBe("USD");
-    db.currencies = ["USD", "EUR"];
+    db.baseCurrency = null;
     expect(await readCompanyLoanCurrency()).toBe("ILS");
+    db.baseCurrency = "USD";
     db.currencyError = { message: "down" };
     expect(await readCompanyLoanCurrency()).toBe("ILS");
     expect(db.selects).toBe(4);
-    expect(db.currencyLimit).toBe(1000);
   });
 });
 
@@ -792,7 +770,7 @@ describe("LoanSettingsSection", () => {
   it("keeps typed input when the form remounts", async () => {
     let release: () => void = () => undefined;
     db.currencyHold = new Promise((resolve) => { release = resolve; });
-    db.currencies = ["USD"];
+    db.baseCurrency = "USD";
     const view = renderSection(<LoanSettingsSection companyId={null} companyCurrency="ILS" />);
     openLoan();
     fireEvent.change(screen.getByLabelText("מלווה"), { target: { value: "בנק דוגמה" } });

@@ -17,12 +17,16 @@ export type CompanyCurrencyRow = {
   expense_minor: bigint;
   net_profit_minor: bigint;
   count: number;
+  prev_income_minor?: bigint | null;
+  prev_expense_minor?: bigint | null;
+  prev_net_profit_minor?: bigint | null;
 };
 
-function sortCurrency(a: string, b: string): number {
+/** The company currency first (0147), then the rest by code. */
+function sortCurrency(a: string, b: string, first = "ILS"): number {
   if (a === b) return 0;
-  if (a === "ILS") return -1;
-  if (b === "ILS") return 1;
+  if (a === first) return -1;
+  if (b === first) return 1;
   return a.localeCompare(b);
 }
 
@@ -81,7 +85,7 @@ function zeroProjectRow(currency: string): ProjectCurrencyRow {
 }
 
 /**
- * The project's figures per currency, ILS first. An empty period shows one zero row in
+ * The project's figures per currency, the company currency first. An empty period shows one zero row in
  * `emptyCurrency` (the company's currency), so a USD company reads $0, not ₪0.
  */
 export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>, emptyCurrency = "ILS"): ProjectCurrencyRow[] {
@@ -99,12 +103,12 @@ export function projectRows(project: ProjectRow | NonNullable<ProjectDetail>, em
   const empty = emptyCurrency === "ILS" || !projectBucketAllZero(fallbackProjectRow(project))
     ? fallbackProjectRow(project)
     : zeroProjectRow(emptyCurrency);
-  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency));
+  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency, emptyCurrency));
   return rows;
 }
 
 /**
- * The company's figures per currency, ILS first. An empty period shows one zero row in
+ * The company's figures per currency, the company currency first. An empty period shows one zero row in
  * `emptyCurrency` (the company's currency), so a USD company reads $0, not ₪0.
  */
 export function companyRows(dashboard: Dashboard, emptyCurrency = "ILS"): CompanyCurrencyRow[] {
@@ -117,11 +121,12 @@ export function companyRows(dashboard: Dashboard, emptyCurrency = "ILS"): Compan
   const empty = emptyCurrency === "ILS" || !companyBucketAllZero(fallback)
     ? fallback
     : { ...fallback, currency: emptyCurrency };
-  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency));
+  const rows = (filtered.length > 0 ? filtered : [empty]).sort((a, b) => sortCurrency(a.currency, b.currency, emptyCurrency));
   return rows;
 }
 
 export function primaryCurrency(dashboard: Dashboard): string {
+  if (dashboard.base_currency) return dashboard.base_currency;
   const rows = companyRows(dashboard);
   let best = rows[0]?.currency ?? "ILS";
   let bestCount = rows[0]?.count ?? 0;

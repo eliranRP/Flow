@@ -92,6 +92,34 @@ describe("Home hero", () => {
     expect(screen.queryByText("מחודש שעבר")).not.toBeInTheDocument();
   });
 
+  it("shows a USD company's change from its own previous period (0147)", () => {
+    renderHome(books({
+      base_currency: "USD",
+      income_agorot: 0n,
+      expense_agorot: 0n,
+      net_profit_agorot: 0n,
+      prev_income_agorot: 0n,
+      prev_expense_agorot: 0n,
+      prev_net_agorot: 0n,
+      by_currency: [{
+        currency: "USD",
+        income_minor: 500_000n,
+        direct_minor: 200_000n,
+        shared_minor: 0n,
+        overhead_minor: 0n,
+        expense_minor: 200_000n,
+        net_profit_minor: 300_000n,
+        count: 4,
+        prev_income_minor: 400_000n,
+        prev_expense_minor: 200_000n,
+        prev_net_profit_minor: 200_000n,
+      }],
+    }));
+    expect(screen.getByRole("heading", { name: "$3,000" })).toBeInTheDocument();
+    expect(screen.getByText("מחודש שעבר")).toBeInTheDocument();
+    expect(screen.getByText(/50%/)).toBeInTheDocument();
+  });
+
   it("shows one figure per currency without converting", () => {
     renderHome(books({
       income_agorot: 100_000n,
