@@ -96,6 +96,8 @@ Deno.test("the eight read tools call their own functions", async () => {
         payment_minor: 100000,
         escrow_minor: 10000,
         balance_minor: 12000000,
+        flagged_parts: 3,
+        flagged_transaction_ids: ["11111111-1111-4000-8000-000000000001"],
       }] };
     }
     return { status: 500, json: null };
@@ -119,6 +121,11 @@ Deno.test("the eight read tools call their own functions", async () => {
     assertEquals(data.by_currency[0]?.currency, "USD");
   }
   assertEquals(loans.isError, false);
+  if (loans.structuredContent.ok) {
+    const data = loans.structuredContent.data as { loans: { flagged_parts: number; flagged_transaction_ids: string[] }[] };
+    assertEquals(data.loans[0]?.flagged_parts, 3);
+    assertEquals(data.loans[0]?.flagged_transaction_ids, ["11111111-1111-4000-8000-000000000001"]);
+  }
   assertEquals(schedule.isError, false);
   assertEquals(calls.map((call) => call.name), [
     "get_dashboard",
