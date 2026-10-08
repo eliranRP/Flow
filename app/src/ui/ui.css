@@ -2966,6 +2966,16 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   min-width: 0;
 }
 
+/* FLOW-327 r2: an inline header with Back keeps its title on the start side, next to Back
+   (FLOW-326); the action goes to the end. */
+.ui-page-inline .ui-page-title-row {
+  justify-content: flex-start;
+}
+
+.ui-page-inline .ui-page-title-row > .t-title-1 + * {
+  margin-inline-start: auto;
+}
+
 .ui-page-stacked .t-title-1 {
   margin: 0;
 }

@@ -280,7 +280,8 @@ export function placeToast(layer: HTMLElement): void {
     const gap = cssPx("--space-2");
     layer.style.paddingInline = "var(--space-card-inset)";
     const safe = safeTopPx();
-    const floor = toastFloor();
+    // No bar (the last card was handled): above the tab bar, else the screen edge (0137 §3).
+    const floor = toastFloor() ?? tabBarObstacle();
     const top = floor && height > 0
       ? Math.max(safe, floor.top - gap - height)
       : Math.max(safe, window.innerHeight - gap - height);
@@ -790,7 +791,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    // A bar toast follows the bar: when the bar comes or goes (the last card skipped), place again.
+    let floorWatch: MutationObserver | null = null;
+    if (layer.dataset.place === "bar" && typeof MutationObserver !== "undefined") {
+      floorWatch = new MutationObserver((records) => {
+        const floorMoved = records.some((record) => [...record.addedNodes, ...record.removedNodes].some((node) => (
+          node instanceof Element
+          && (node.hasAttribute("data-toast-floor") || node.querySelector("[data-toast-floor]") != null)
+        )));
+        if (floorMoved) placeToast(layer);
+      });
+      floorWatch.observe(document.body, { childList: true, subtree: true });
+    }
+
     return () => {
+      floorWatch?.disconnect();
       generation += 1;
       waiting = false;
       hold = true;

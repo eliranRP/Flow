@@ -1016,6 +1016,28 @@ describe("the pinned review bar (FLOW-327)", () => {
     });
   });
 
+  it("moves focus to אישור when the next card is a normal card (FLOW-327 r2)", async () => {
+    let skipped = false;
+    rpc.impl = (name) => {
+      if (name === "list_review") {
+        const next = reviewRow("r2", "עגורני החוף", "p2");
+        return Promise.resolve({ data: skipped ? [next] : [reviewRow("r1", "מחסן הנמל", "p1"), next], error: null });
+      }
+      if (name === "resolve_review") skipped = true;
+      return Promise.resolve({ data: null, error: null });
+    };
+    renderWithLine("/review");
+    const skip = await screen.findByRole("button", { name: "דלג" });
+    skip.focus();
+    fireEvent.click(skip);
+    // A browser drops focus to the page when the button goes disabled; jsdom does not.
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "אישור" })).toHaveFocus();
+    });
+  });
+
   it("disables דלג while אישור is writing (FLOW-327 r1)", async () => {
     rpc.impl = (name) => {
       if (name === "list_review") return Promise.resolve({ data: [reviewRow("r1", "מחסן הנמל", "p1"), reviewRow("r2", "עגורני החוף", "p2")], error: null });

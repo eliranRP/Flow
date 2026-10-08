@@ -1706,8 +1706,9 @@ export function ReviewQueue({
   });
   // FLOW-333 C8: the part count, read for a split_mismatch card only.
   const mismatchLine = shown?.reason === "split_mismatch" ? shown.transaction_id : "";
-  // The bar's buttons remount when the next card switches between a normal and a split_mismatch
-  // card. Focus that was in the bar moves to its first button instead of falling to the page.
+  // Focus that was in the bar must not fall to the page: the buttons go disabled while a card
+  // leaves (and remount when the next card switches between normal and split_mismatch). Once the
+  // next card has settled, focus moves to the bar's first button.
   const queueRoot = useRef<HTMLDivElement>(null);
   const barFocus = useRef(false);
   const barKind = shown?.reason === "split_mismatch";
@@ -1716,7 +1717,7 @@ export function ReviewQueue({
     const active = document.activeElement;
     if (active != null && active !== document.body && queueRoot.current?.contains(active)) return;
     queueRoot.current?.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]")?.focus({ preventScroll: true });
-  }, [barKind]);
+  }, [barKind, shown?.id, leaving, jevLoading]);
   const splitRead = useLineSplitQuery(mismatchLine, mismatchLine !== "" && !sample && previewWrite == null);
   const splitParts: number | "loading" | undefined = splitRead.data != null
     ? splitRead.data.parts.length
