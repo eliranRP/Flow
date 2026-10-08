@@ -1985,10 +1985,6 @@ a.ui-row,
   padding-bottom: var(--band-pad-bottom);
 }
 
-.ui-band:has(> .ui-preview-banner) {
-  padding-bottom: calc(var(--band-pad-bottom) + var(--space-3));
-}
-
 .ui-band-row {
   display: flex;
   align-items: center;
@@ -2184,8 +2180,7 @@ a.ui-row,
 .ui-preview-banner {
   position: absolute;
   inset-inline: var(--space-side);
-  /* FLOW-335: --space-3 up, clear of the 28px corner curve; the band grows by as much below. */
-  inset-block-end: var(--space-3);
+  inset-block-end: 0;
   margin: 0;
   padding: 0;
   text-align: start;
@@ -2718,11 +2713,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 .ui-skel-dot { inline-size: var(--switch-knob); block-size: var(--switch-knob); border-radius: var(--radius-chip); }
 
-/* FLOW-335: an action under a row sits on the start side, under the name (Unpaid's mark). */
 .ui-row-stack {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
 }
 
 .ui-row-action {
@@ -4981,22 +4975,6 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
   background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
 }
 
-/* The ▼ after the window's name says the label opens the period sheet (FLOW-335). */
-.ui-pbar-caret {
-  display: inline-block;
-  margin-inline-start: var(--space-1);
-  color: var(--color-accent-text);
-  vertical-align: middle;
-}
-
-.ui-pbar-caret svg {
-  display: block;
-}
-
-.ui-pbar-band .ui-pbar-caret {
-  color: var(--color-on-band);
-}
-
 .ui-pbar-window {
   display: block;
   max-inline-size: 100%;
@@ -5039,6 +5017,11 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
 
 .ui-unpaid-totals bdi {
   display: inline-block;
+}
+
+/* The note under the "לפי חודש" list. */
+.ui-months-note {
+  margin-block-start: var(--space-4);
 }
 
 /*
@@ -5159,68 +5142,38 @@ html[data-kb="open"] .ui-search-dock {
 }
 
 /*
-  FLOW-336 (decision 0148): the band figure steps the period with a sideways swipe. pan-y keeps
-  the page's vertical scroll with the browser; the figure follows the finger and settles back.
+  Slim banner: one line, the hint (לרשימה ›) after the title instead of under it. When the two
+  don't fit (a 320 phone, a long count), the hint wraps under the title rather than cutting it. On לאישור it
+  frees the room the card needs above the pinned action bar on a 375×667 phone (owner's pick,
+  2026-10-08).
 */
-.ui-pswipe {
+.ui-banner.ui-banner-slim {
+  gap: var(--space-2);
+  padding-block: 0;
+  padding-inline: var(--space-3) var(--space-1);
+}
+
+.ui-banner.ui-banner-slim .ui-row-text {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-3);
+  padding-block: var(--space-1);
+}
+
+.ui-banner.ui-banner-slim .ui-row-title {
+  flex: 0 1 auto;
   min-inline-size: 0;
-  transition: transform var(--dur-fast) var(--ease-standard);
+  max-inline-size: 100%;
+  -webkit-line-clamp: 2;
 }
 
-.ui-pswipe-on {
-  touch-action: pan-y;
-}
-
-.ui-pswipe-drag {
-  transition: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ui-pswipe {
-    transition: none;
-  }
-}
-
-/*
-  FLOW-335: the project band is shorter (mockup 02 is about 313px at 375). Under the Back bar the
-  hero starts --space-2 down, the bar and the figures sit closer, and the stepper is inset
-  --space-2 more than Back, so the "earlier" chevron does not line up under Back's.
-*/
-.ui-band-hero-project {
-  padding-top: var(--space-2);
-}
-
-.ui-band-hero-project .ui-pbar {
-  margin-block-start: var(--space-2);
-}
-
-.ui-band-hero-project .ui-pbar-step {
-  padding-inline: var(--space-2);
-}
-
-.ui-band-hero-project .ui-project-period-label {
-  margin-block: var(--space-1) 0;
-}
-
-.ui-band-hero-project .ui-band-figures {
-  padding-top: var(--space-2);
-}
-
-/* "לפי חודש" is a plain row right under the band (FLOW-335), not the tinted pending card. */
-.ui-project-months {
-  margin-block-start: var(--space-3);
-}
-
-.ui-project-budget {
-  margin-block-start: var(--space-3);
-}
-
-/* FLOW-335: the sync row under Unpaid's list, one section gap below the last invoice. */
-.ui-unpaid-sync {
-  margin-block-start: var(--space-section);
-}
-
-/* FLOW-335: "ניתוק" in its own group after a section gap, away from "רענון עכשיו". */
-.ui-sheet-danger-group {
-  margin-block-start: var(--space-section);
+/* The hint is only the link, which cuts its own label: no clip box here, so its focus ring shows. */
+.ui-banner.ui-banner-slim .ui-row-hint {
+  display: block;
+  flex: none;
+  margin: 0;
+  max-inline-size: 100%;
+  overflow: visible;
 }
