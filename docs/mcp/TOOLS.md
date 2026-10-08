@@ -107,6 +107,8 @@ Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transacti
 
 Income that already has a project but only a guess of a kept-out category is queued with `reason` `suggested`: the guess counts in the P&L until it is confirmed, and approving it (or `assign_expense` / `set_expense_category`) confirms it ([FLOW-126](../backlog/TASKS.md#flow-126), [0114](../decisions/0114-kept-out-guesses.md)). A guessed loan category is not queued: it is out of the P&L even as a guess ([FLOW-127](../backlog/TASKS.md#flow-127)).
 
+A line split with `split_line` whose amount the bank sync changed is queued with `reason` `split_mismatch`: its parts no longer sum to it, so it counts whole until new parts are sent (see [split_line](#split_line)).
+
 ### get_expense
 
 `get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
@@ -404,7 +406,8 @@ A refund of $100 filed as North rent, with 30% going back against South's repair
 - A part whose category is the other kind (an expense category on an inflow, such as a supplier refund; an income category on an outflow) is a reversal: it lowers that side of the P&L, like a whole reversal line, and needs its own `project_id` unless it is the line's own category. A category and project pair appears once.
 - `project_id` is optional. A part without it keeps the line's project and P&L role; on a shared line it is shared by the line's allocations in proportion. A part with a project counts as that project's direct cost (or overhead, for the overhead project).
 - `parts: []` clears the split, and the line counts whole again.
-- Refused: `transaction not found`, `category not found`, `project not found`, `a reversal part needs a project`, `same category and project twice`, `line amount is zero`, `parts must sum to the line`, `parts exceed the line`, `a part rounds to zero`, `nothing is left for the rest` (one part would remain), `line has no category for the rest`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first).
+- Refused: `transaction not found`, `category not found`, `project not found`, `a reversal part needs a project`, `same category and project twice`, `line amount is zero`, `parts must sum to the line`, `parts exceed the line`, `a part rounds to zero`, `nothing is left for the rest` (one part would remain), `line has no category for the rest`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first). A `split_mismatch` review does not block the call.
+- When the bank sync changes the amount of a split line so the parts no longer sum to it, the line counts whole and gets an open review item with `reason` `split_mismatch` in `list_review` (unless it already has an open review). Send new parts that sum to the new amount, or `parts: []`, and the review closes; it also closes by itself if the amount comes back to match. Approving or skipping it in the review queue keeps the line counting whole. Undo of a fix brings back the old parts and the review. [FLOW-312](../backlog/TASKS.md#flow-312), [0125](../decisions/0125-split-line-resync-review.md).
 - VAT stays on the line. The parts split the net amount.
 - While a split is in place, `set_expense_category` and `assign_expense` change only the line's own category and project, which the P&L does not read for a split line. Clear the split with `parts: []` first, or send new parts.
 

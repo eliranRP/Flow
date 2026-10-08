@@ -61,7 +61,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
-| 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | in-progress (items 1 and 6) |
+| 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | in-progress (items 1 and 6 done in #133, item 2 in #136, item 5 next) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -393,13 +393,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-312"></a>
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)
-- **Type:** BACKLOG NIT · **Status:** in-progress (claude/project-thread-zq7bnv; items 1 and 6) · **Depends on:** FLOW-311
-- [ ] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part.
-- [ ] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead.
+- **Type:** BACKLOG NIT · **Status:** in-progress (items 1 and 6 done in #133, item 2 in #136; item 5 next on claude/project-thread-7c0ni2; items 3 and 4 moved to FLOW-325) · **Depends on:** FLOW-311
+- [x] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part. (#133)
+- [x] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead. (#136: an open `split_mismatch` review, decision [0125](../decisions/0125-split-line-resync-review.md). The review card has no special text for it yet; a hint goes to the Mercury thread.)
 - [x] After FLOW-104: let a part take the other kind as a reversal, like a whole line. Moved to [FLOW-325](#flow-325).
 - [x] App screen to view and edit the parts (SMALL UI, plan with a mockup first). Moved to [FLOW-325](#flow-325).
 - [ ] `split_line` inside the `assign_expenses` batch, with `undo_batch`.
-- [ ] `get_home.other_currencies[].count` (`count(*)`) and `get_project.other_currencies[].count` (one per row) count each part of a split line, and each loan split part, as a line. Count `distinct transaction_id`, as `company_pnl` does.
+- [x] `get_home.other_currencies[].count` (`count(*)`) and `get_project.other_currencies[].count` (one per row) count each part of a split line, and each loan split part, as a line. Count `distinct transaction_id`, as `company_pnl` does. (#133)
 
 <a id="flow-301"></a>
 ### FLOW-301 · Income and expense drill-down from Home
