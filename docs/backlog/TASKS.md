@@ -16,8 +16,9 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | FLOW-330 server and MCP (mark paid stays marked) batched with FLOW-412 | FLOW-330 screen goes to the UI lane |
 | Dev lane 2 | FLOW-701 (Jev phase 1) | Next `ready` task in the queue |
-| UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, 333 (split editor follow-ups), the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
-| UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
+| UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, rest of 322), loans page |
+| UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333 and the TransactionScreen part of 322 |
+| UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-205 undo: prior pointers, re-hide after unhide, undo race test | FLOW-136 balloon schedule item, rest of FLOW-205 |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
