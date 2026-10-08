@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(31);
+select plan(40);
 
 do $users$
 begin
@@ -48,7 +48,7 @@ where c.company_id = (select id from jo_ref where label = 'company_a') and c.kin
   and c.id <> (select id from jo_ref where label = 'c1')
 order by c.name limit 1;
 
--- Seven open lines in company A, one in company B.
+-- Twelve open lines in company A, one in company B.
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
@@ -56,7 +56,7 @@ insert into public.transactions (
 )
 select (select id from jo_ref where label = 'company_a'), 'expense', 'expense', 'project',
   -11800, -10000, -1800, 'assumed', '2026-04-12', '2026-04-12', 'sumit', 'sumit:jo-' || n, 'line ' || n
-from generate_series(1, 7) n;
+from generate_series(1, 12) n;
 insert into public.transactions (
   company_id, direction, doc_kind, pnl_role,
   amount_gross, amount_net, vat_amount, vat_status,
@@ -88,7 +88,7 @@ select t.company_id, t.id,
   case r.label when 't1' then 0.95 when 't2' then 0.8 else 0.5 end,
   'jev-1.13.0', 'jev-1.13.0'
 from jo_ref r join public.transactions t on t.id = r.id
-where r.label in ('t1', 't2', 't3', 't4', 't7', 'tb');
+where r.label in ('t1', 't2', 't3', 't4', 't7', 't8', 't9', 't10', 't11', 't12', 'tb');
 insert into public.tag_suggestions (company_id, transaction_id, answers, confidence, model_version, response_model)
 select t.company_id, t.id, '{"project": {"choice": "not-an-id"}, "category": {"choice": 7}}'::jsonb, 0.99,
   'jev-1.13.0', 'jev-1.13.0'
@@ -261,17 +261,118 @@ select is(
   0, 'a period with nothing resolved is empty'
 );
 select is(
-  (public.mcp_jev_accuracy(current_date, current_date) ->> 'lines')::integer,
+  (public.mcp_jev_accuracy((now() at time zone 'utc')::date, (now() at time zone 'utc')::date) ->> 'lines')::integer,
   5, 'today holds every line resolved today'
 );
 select throws_ok(
   $$select public.mcp_jev_accuracy('2026-02-01', '2026-01-01')$$,
   'P0001', 'validation', 'from after to is refused'
 );
+reset role;
+insert into public.company_integrations (company_id, provider, threshold)
+select id, 'jev', 0.50 from jo_ref where label = 'company_a'
+on conflict (company_id, provider) do update set threshold = excluded.threshold;
+select tests.authenticate_as('jo_owner');
+select is(
+  public.mcp_jev_accuracy() -> 'at_threshold',
+  '{"lines": 5, "all_matched": 3}'::jsonb,
+  'the company threshold sets the cut'
+);
 select tests.authenticate_as('jo_other');
 select is((public.mcp_jev_accuracy() ->> 'lines')::integer, 1, 'company B counts only its own line');
 select is((select count(*)::integer from public.jev_outcomes), 1, 'company B reads only its own row');
 reset role;
+
+-- t8: the app's approve and reopen.
+select tests.authenticate_as('jo_owner');
+select public.resolve_review(
+  (select q.id from public.review_queue q where q.transaction_id = (select id from jo_ref where label = 't8')),
+  'approved', (select id from jo_ref where label = 'p1'), (select id from jo_ref where label = 'c1')
+);
+reset role;
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select project_match::text || '/' || category_match::text
+   from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't8')),
+  'true/true', 'resolve_review records the outcome'
+);
+select tests.authenticate_as('jo_owner');
+select public.reopen_review(
+  (select q.id from public.review_queue q where q.transaction_id = (select id from jo_ref where label = 't8'))
+);
+reset role;
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select count(*)::integer from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't8')),
+  0, 'reopen_review removes it'
+);
+
+-- t9: approved, then a sync opens a new review row. The newest row is the line's review.
+update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
+  category_id = (select id from jo_ref where label = 'c1')
+where id = (select id from jo_ref where label = 't9');
+update public.review_queue set status = 'approved' where transaction_id = (select id from jo_ref where label = 't9');
+set constraints all immediate;
+set constraints all deferred;
+-- One test transaction shares now(), so the later row is dated a second on.
+insert into public.review_queue (company_id, transaction_id, status, reason, created_at)
+select company_id, id, 'open', 'test reopen', now() + interval '1 second' from public.transactions where id = (select id from jo_ref where label = 't9');
+update public.transactions set category_id = (select id from jo_ref where label = 'c2')
+where id = (select id from jo_ref where label = 't9');
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select count(*)::integer from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't9')),
+  0, 'a line back in review has no outcome, even with an older approved row'
+);
+update public.review_queue set status = 'skipped'
+where transaction_id = (select id from jo_ref where label = 't9') and reason = 'test reopen';
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select count(*)::integer from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't9')),
+  0, 'skipping the new row records nothing'
+);
+
+-- t10 to t12: approved as suggested, then edited without touching the review.
+update public.transactions set project_id = (select id from jo_ref where label = 'p1'),
+  category_id = (select id from jo_ref where label = 'c1')
+where id in (select id from jo_ref where label in ('t10', 't11', 't12'));
+update public.review_queue set status = 'approved'
+where transaction_id in (select id from jo_ref where label in ('t10', 't11', 't12'));
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select count(*)::integer from public.jev_outcomes o join jo_ref r on r.id = o.transaction_id
+   where r.label in ('t10', 't11', 't12') and o.project_match and o.category_match),
+  3, 't10 to t12 match before the edits'
+);
+update public.transactions set removed_at = now() where id = (select id from jo_ref where label = 't10');
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+select t.company_id, t.id, n, (select id from jo_ref where label = 'c1'),
+  (select id from jo_ref where label = case n when 1 then 'p1' else 'p2' end), 5000
+from public.transactions t, generate_series(1, 2) n
+where t.id = (select id from jo_ref where label = 't11');
+update public.transactions set pnl_role = 'overhead', project_id = null
+where id = (select id from jo_ref where label = 't12');
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select count(*)::integer from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't10')),
+  0, 'removing the line removes its outcome'
+);
+select ok(
+  (select project_match is null and category_match is null
+   from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't11')),
+  'a split across two projects added after approval is no longer compared'
+);
+select ok(
+  (select project_match is null and category_match
+   from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't12')),
+  'moving the line to overhead drops the project comparison'
+);
 
 -- The suggestion row going away removes the outcome with it.
 delete from public.tag_suggestions where transaction_id = (select id from jo_ref where label = 'tb');

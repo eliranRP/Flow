@@ -2520,4 +2520,7 @@ Deno.test("get_jev_accuracy checks its dates and passes the report through", asy
   assertEquals(calls.length, 2);
   const refused = await callTool("get_jev_accuracy", {}, ["read"], () => Promise.resolve({ status: 400, json: null }));
   assertEquals(refused.isError, true);
+  const writeOnly = await callTool("get_jev_accuracy", {}, ["write"], rpc);
+  assertEquals(writeOnly.isError, true);
+  assertEquals(calls.length, 2);
 });

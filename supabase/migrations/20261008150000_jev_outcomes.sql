@@ -79,7 +79,7 @@ begin
   select q.status into review
   from public.review_queue q
   where q.company_id = p_company and q.transaction_id = p_transaction
-  order by (q.status in ('approved', 'changed')) desc, q.updated_at desc
+  order by q.created_at desc, q.updated_at desc, q.id desc
   limit 1;
 
   select * into sugg
@@ -104,10 +104,16 @@ begin
   project_comparable := s_project is not null
     and coalesce(line.pnl_role::text, '') not in ('shared', 'overhead')
     and (select count(*) from public.allocations a
-         where a.company_id = p_company and a.transaction_id = p_transaction) <= 1;
+         where a.company_id = p_company and a.transaction_id = p_transaction) <= 1
+    and (select count(distinct ls.project_id) from public.line_splits ls
+         where ls.company_id = p_company and ls.transaction_id = p_transaction) <= 1;
   f_project := case when project_comparable then coalesce(line.project_id, (
     select a.project_id from public.allocations a
     where a.company_id = p_company and a.transaction_id = p_transaction
+    limit 1
+  ), (
+    select ls.project_id from public.line_splits ls
+    where ls.company_id = p_company and ls.transaction_id = p_transaction and ls.project_id is not null
     limit 1
   )) end;
   category_comparable := s_category is not null
@@ -167,11 +173,65 @@ $$;
 revoke all on function private.jev_outcome_review_trigger() from public, anon, authenticated;
 
 -- Deferred, so the approval's own writes to the line (project, category, splits) are in place.
+-- A new review row (a sync reopening the line) fires it too: the newest row is the current review.
 create constraint trigger jev_outcome_review
   after insert or update of status on public.review_queue
   deferrable initially deferred
   for each row
   execute function private.jev_outcome_review_trigger();
+
+-- Edits after the approval (removal, a later split or allocation, a category merge) keep the
+-- outcome in step. Only lines Jev suggested on are synced, so SUMIT upserts stay cheap.
+create or replace function private.jev_outcome_line_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  cid uuid;
+  tid uuid;
+begin
+  if tg_table_name = 'transactions' then
+    cid := coalesce(new.company_id, old.company_id);
+    tid := coalesce(new.id, old.id);
+  elsif tg_op = 'DELETE' then
+    cid := old.company_id;
+    tid := old.transaction_id;
+  else
+    cid := new.company_id;
+    tid := new.transaction_id;
+  end if;
+  if exists (select 1 from public.tag_suggestions s where s.company_id = cid and s.transaction_id = tid) then
+    perform private.jev_outcome_sync(cid, tid);
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function private.jev_outcome_line_trigger() from public, anon, authenticated;
+
+create constraint trigger jev_outcome_line
+  after update of removed_at, project_id, category_id, pnl_role on public.transactions
+  deferrable initially deferred
+  for each row
+  when (old.removed_at is distinct from new.removed_at
+     or old.project_id is distinct from new.project_id
+     or old.category_id is distinct from new.category_id
+     or old.pnl_role is distinct from new.pnl_role)
+  execute function private.jev_outcome_line_trigger();
+
+create constraint trigger jev_outcome_split
+  after insert or update or delete on public.line_splits
+  deferrable initially deferred
+  for each row
+  execute function private.jev_outcome_line_trigger();
+
+create constraint trigger jev_outcome_allocation
+  after insert or update or delete on public.allocations
+  deferrable initially deferred
+  for each row
+  execute function private.jev_outcome_line_trigger();
 
 -- Lines approved before this migration. Their resolved_at is the review's resolved_at.
 do $backfill$
@@ -189,10 +249,14 @@ begin
   end loop;
   update public.jev_outcomes o
   set resolved_at = coalesce(q.resolved_at, q.updated_at)
-  from public.review_queue q
+  from (
+    select distinct on (rq.transaction_id) rq.transaction_id, rq.company_id, rq.resolved_at, rq.updated_at
+    from public.review_queue rq
+    where rq.transaction_id is not null
+    order by rq.transaction_id, rq.created_at desc, rq.updated_at desc, rq.id desc
+  ) q
   where q.company_id = o.company_id
-    and q.transaction_id = o.transaction_id
-    and q.status = o.review_status;
+    and q.transaction_id = o.transaction_id;
 end
 $backfill$;
 
