@@ -112,12 +112,15 @@ html[data-kb="open"] .ui-action-bar[data-place="tabbar"] {
 
 /* FLOW-702: "✦ מולא ע״י Jev" with בטל at the end. The line keeps its hint height; בטל gets a 44x44 hit
    area that grows down and sideways only, so it never takes a tap from the category row's chevron above. */
+/* Baseline, as the reason line: on two or three lines ✦ and בטל stay on the first line. בטל never shrinks
+   (a hint text link has min-width 0, so it would cut to "ב…"). */
 .ui-review-filled {
-  align-items: center;
+  align-items: baseline;
 }
 
 .ui-review-filled-undo {
   position: relative;
+  flex: none;
   margin-inline-start: auto;
 }
 
