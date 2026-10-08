@@ -15,25 +15,25 @@ const november = secondMonth(SAMPLE_EXPECTED);
 const novemberTwo = secondMonth(SAMPLE_EXPECTED_TWO_CURRENCIES);
 const firstParty = november.parties.slice(0, 1).map((party) => ({ ...party, name: longHebrew, minor: 12_345_600n }));
 
+// Parties carry bigint amounts, so they stay in render: story args go through JSON.
 const meta = {
   title: "Components/ExpectedMonthSheet",
-  component: ExpectedMonthParties,
   parameters: { sheetTitle: "נובמבר" },
-} satisfies Meta<typeof ExpectedMonthParties>;
+} satisfies Meta;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 // FLOW-403, plan option A4: who makes up one month's figure. Income in green; no edit.
-export const Filled: Story = { decorators: [inSheet], args: { parties: november.parties } };
-export const FilledDark: Story = { name: "Filled, dark", decorators: [inSheet], args: { parties: november.parties }, globals: { theme: "dark" } };
-export const Filled320: Story = { name: "Filled, 320", decorators: [inSheet], args: { parties: november.parties }, parameters: { viewport: { defaultViewport: "flow320" } } };
-export const OneParty: Story = { decorators: [inSheet], args: { parties: november.parties.slice(0, 1) } };
-export const OtherCurrency: Story = { decorators: [inSheet], args: { parties: novemberTwo.parties } };
+export const Filled: Story = { decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties} /> };
+export const FilledDark: Story = { name: "Filled, dark", decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties} />, globals: { theme: "dark" } };
+export const Filled320: Story = { name: "Filled, 320", decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties} />, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const OneParty: Story = { decorators: [inSheet], render: () => <ExpectedMonthParties parties={november.parties.slice(0, 1)} /> };
+export const OtherCurrency: Story = { decorators: [inSheet], render: () => <ExpectedMonthParties parties={novemberTwo.parties} /> };
 export const LongHebrew: Story = {
   name: "Long Hebrew",
   decorators: [inSheet],
-  args: { parties: firstParty },
+  render: () => <ExpectedMonthParties parties={firstParty} />,
   parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
@@ -44,6 +44,5 @@ function OpenSheet({ month }: { month: ExpectedMonthRow }) {
 
 export const AsSheet: Story = {
   name: "As a sheet",
-  args: { parties: november.parties },
   render: () => <OpenSheet month={november} />,
 };
