@@ -710,16 +710,20 @@ function expenseFromRow(row: RestRow, companyId: string): TagExpense[] {
   const rowCompany = asString(row.company_id);
   if (!id || !isUuid(id) || !docDate || rowCompany !== companyId) return [];
   const income = row.direction === "income";
-  const party = income ? row.customers : row.suppliers;
-  const partyName = isObject(party) ? asString(party.name) : null;
+  // The party is the supplier, else the customer, as SQL reads it (coalesce(supplier_id,
+  // customer_id) for the history and the flags), so an income refund from a supplier keeps it.
+  const supplierName = isObject(row.suppliers) ? asString(row.suppliers.name) : null;
+  const customerName = isObject(row.customers) ? asString(row.customers.name) : null;
+  const supplierId = asString(row.supplier_id);
+  const customerId = asString(row.customer_id);
   return [{
     id,
     companyId,
     description: asString(row.description) ?? "",
     docDate,
     direction: income ? "income" : "expense",
-    supplierName: partyName,
-    supplierId: asString(income ? row.customer_id : row.supplier_id),
+    supplierName: supplierId ? supplierName : customerId ? customerName : supplierName ?? customerName,
+    supplierId: supplierId ?? customerId,
     amountGross: asNumber(row.amount_gross),
     amountNet: asNumber(row.amount_net),
     vatAmount: asNumber(row.vat_amount),

@@ -349,8 +349,7 @@ select ok(
   not has_function_privilege('authenticated', 'private.jev_suggestions_for(uuid, uuid[])', 'execute')
   and not has_function_privilege('authenticated', 'private.flags_with_scores(uuid, uuid[])', 'execute')
   and not has_function_privilege('authenticated', 'private.open_review_ids(uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'private.jev_suggestion_rows(uuid, uuid[])', 'execute')
-  and not has_function_privilege('authenticated', 'private.jev_line_filed(uuid, uuid)', 'execute'),
+  and not has_function_privilege('authenticated', 'private.jev_suggestion_rows(uuid, uuid[])', 'execute'),
   'the private helpers are not callable by members'
 );
 

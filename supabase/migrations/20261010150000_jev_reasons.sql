@@ -288,7 +288,8 @@ end;
 $$;
 
 -- How the owner filed a party before (decision 0127), now for customers too: p_suppliers holds
--- supplier or customer ids, and supplier_id in the result is that party id.
+-- supplier or customer ids, and supplier_id in the result is that party id. p_per lines per
+-- party and direction, each with its direction.
 create or replace function public.jev_supplier_history(
   p_company uuid,
   p_suppliers uuid[],
@@ -311,7 +312,16 @@ begin
     raise exception 'validation';
   end if;
 
-  with filed as (
+  with latest as (
+    -- The current (newest) review row of each line of these parties, read once.
+    select distinct on (q.transaction_id) q.transaction_id, q.status
+    from public.review_queue q
+    join public.transactions t on t.company_id = q.company_id and t.id = q.transaction_id
+    where q.company_id = p_company
+      and coalesce(t.supplier_id, t.customer_id) = any (p_suppliers)
+    order by q.transaction_id, q.created_at desc, q.updated_at desc, q.id desc
+  ),
+  filed as (
     select coalesce(t.supplier_id, t.customer_id) as party_id, t.id, t.direction, t.doc_date,
       t.description, t.amount_net, t.project_id, t.category_id, t.pnl_role,
       exists (
@@ -321,13 +331,13 @@ begin
       (select count(*) from public.allocations a
        where a.company_id = t.company_id and a.transaction_id = t.id) as allocation_count,
       row_number() over (
-        partition by coalesce(t.supplier_id, t.customer_id) order by t.doc_date desc, t.id desc
+        partition by coalesce(t.supplier_id, t.customer_id), t.direction order by t.doc_date desc, t.id desc
       ) as n
     from public.transactions t
+    join latest l on l.transaction_id = t.id and l.status in ('approved', 'changed')
     where t.company_id = p_company
       and coalesce(t.supplier_id, t.customer_id) = any (p_suppliers)
       and t.removed_at is null
-      and private.jev_line_filed(t.company_id, t.id)
   )
   select coalesce(jsonb_agg(jsonb_build_object(
       'supplier_id', f.party_id,
@@ -339,31 +349,13 @@ begin
       'category_id', f.category_id,
       'pnl_role', f.pnl_role,
       'split', f.split or f.allocation_count > 1
-    ) order by f.party_id, f.n), '[]'::jsonb)
+    ) order by f.party_id, f.direction, f.n), '[]'::jsonb)
   into result
   from filed f
   where f.n <= p_per;
   return result;
 end;
 $$;
-
--- A line the owner filed: its current (newest) review row is approved or changed.
-create or replace function private.jev_line_filed(p_company uuid, p_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select coalesce((
-    select q.status in ('approved', 'changed') from public.review_queue q
-    where q.company_id = p_company and q.transaction_id = p_id
-    order by q.created_at desc, q.updated_at desc, q.id desc
-    limit 1
-  ), false);
-$$;
-
-revoke all on function private.jev_line_filed(uuid, uuid) from public, anon, authenticated;
 
 -- Open lines the job would send now, income included. The pin matches JEV_MODEL in jev.ts.
 create or replace function private.jev_has_work()
@@ -470,23 +462,43 @@ as $$
     join public.transactions t on t.company_id = p_company and t.id = r.transaction_id
     where r.project_id is not null or r.category_id is not null
   ),
+  parties as (
+    select distinct s.party_id, s.direction from s where s.party_id is not null
+  ),
+  candidates as (
+    select t.id, coalesce(t.supplier_id, t.customer_id) as party_id, t.direction, t.doc_date,
+      t.project_id, t.category_id
+    from public.transactions t
+    join parties p on p.party_id = coalesce(t.supplier_id, t.customer_id) and p.direction = t.direction
+    where t.company_id = p_company and t.removed_at is null
+  ),
+  -- The current (newest) review row of each candidate, read once.
+  latest as (
+    select distinct on (q.transaction_id) q.transaction_id, q.status
+    from public.review_queue q
+    join candidates c on c.id = q.transaction_id
+    where q.company_id = p_company
+    order by q.transaction_id, q.created_at desc, q.updated_at desc, q.id desc
+  ),
+  -- The last 6 filed lines per party and direction: 5 once the line itself is left out.
+  recent as (
+    select r.* from (
+      select c.*, row_number() over (
+          partition by c.party_id, c.direction order by c.doc_date desc, c.id desc
+        ) as rank
+      from candidates c
+      join latest l on l.transaction_id = c.id and l.status in ('approved', 'changed')
+    ) r
+    where r.rank <= 6
+  ),
   filings as (
-    select s.transaction_id, f.n, f.project_id, f.category_id
-    from s
-    cross join lateral (
-      select h.project_id, h.category_id,
-        row_number() over (order by h.doc_date desc, h.id desc) as n
-      from public.transactions h
-      where h.company_id = p_company
-        and coalesce(h.supplier_id, h.customer_id) = s.party_id
-        and h.id <> s.transaction_id
-        and h.direction = s.direction
-        and h.removed_at is null
-        and private.jev_line_filed(h.company_id, h.id)
-      order by h.doc_date desc, h.id desc
-      limit 5
+    select f.* from (
+      select s.transaction_id, r.project_id, r.category_id,
+        row_number() over (partition by s.transaction_id order by r.doc_date desc, r.id desc) as n
+      from s
+      join recent r on r.party_id = s.party_id and r.direction = s.direction and r.id <> s.transaction_id
     ) f
-    where s.party_id is not null
+    where f.n <= 5
   ),
   counted as (
     select s.transaction_id,
