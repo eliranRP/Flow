@@ -86,7 +86,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -114,6 +114,8 @@ import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
 import { splitDraftKey } from "../split-drafts";
+import type { LineSplitRead } from "../line-split";
+import { LineSplitSection, lineSplitRowHint, useLineSplitQuery, useLoanSplitFlag } from "./line-split";
 
 function blockedPreview(preview: HomePreview, tell: (message: string) => void): boolean {
   if (preview === "off") return false;
@@ -1673,6 +1675,9 @@ export function ReviewQueue({
           onProject={holdWrites ? undefined : openProject}
           onCategory={holdWrites ? undefined : openCategory}
           meta={lineMeta.data}
+          onFixSplit={holdWrites || !card.transaction_id ? undefined : () => {
+            void navigate(`/transactions/${card.transaction_id}/split-category${search}`);
+          }}
         />
       </div>
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
@@ -2499,11 +2504,14 @@ export function TransactionScreen({
   sample,
   sampleProjects,
   sampleCategories,
+  sampleLineSplit,
   onOpenSplit,
 }: {
   sample?: NonNullable<TransactionDetail>;
   sampleProjects?: Array<{ id: string; name: string; code?: string }>;
-  sampleCategories?: Array<{ id: string; name: string }>;
+  sampleCategories?: Array<{ id: string; name: string; kind?: "income" | "expense" }>;
+  /** FLOW-325: a story's split by category, in place of the get_line_split read. */
+  sampleLineSplit?: LineSplitRead | null;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
 } = {}) {
@@ -2533,6 +2541,8 @@ export function TransactionScreen({
   useTxnNavKeys(nav);
   const dashboard = useDashboardQuery(sample == null);
   const categories = useCategoriesQuery(sample == null);
+  const lineSplitQuery = useLineSplitQuery(sample ? "" : transactionId, sample == null);
+  const loanSplitFlag = useLoanSplitFlag(sample?.id ?? transactionId);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, detail);
   const remove = useWrite({
     failure: "לא הצלחנו למחוק.",
@@ -2792,6 +2802,9 @@ export function TransactionScreen({
     <StatusPill icon={<KeptOutIcon size={16} />}>{KEPT_OUT_SHORT}</StatusPill>
   ) : pnl.forcedIn ? <StatusPill>ברווח והפסד</StatusPill> : null;
   const pnlSplit = txn.pnl_role === "shared" || (txn.allocations?.length ?? 0) > 1;
+  const lineSplit = sample ? (sampleLineSplit ?? null) : lineSplitQuery.data;
+  // FLOW-325 (plan Q9): the P&L reads the parts, not the line's own category and project.
+  const lineSplitHint = lineSplitRowHint(lineSplit);
   const menuButton = holdWrites ? <ReservedMenuSlot /> : <IconButton ref={moreRef} label="עוד" onClick={() => { setMenu(true); }}><MoreIcon /></IconButton>;
   return (
     <div>
@@ -2832,9 +2845,9 @@ export function TransactionScreen({
       </div>
       <List>
         {holdWrites ? (
-          <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} />
+          <ListRow variant="static" eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} />
         ) : (
-          <ListRow variant="button" buttonRef={projectRowRef} eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} chevron onClick={() => {
+          <ListRow variant="button" buttonRef={projectRowRef} eyebrow="פרויקט" title={shownProject} icon={<ProjectsIcon />} hint={lineSplitHint} chevron onClick={() => {
             if (splitRow) {
               openSplit();
               return;
@@ -2844,9 +2857,9 @@ export function TransactionScreen({
           }} />
         )}
         {holdWrites ? (
-          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} />
+          <ListRow variant="static" eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} />
         ) : (
-          <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} chevron onClick={() => {
+          <ListRow variant="button" buttonRef={categoryRowRef} eyebrow="קטגוריה" title={shownCategory} icon={<TagIcon />} tag={shownReversal ? <ReversalTag /> : undefined} hint={lineSplitHint} chevron onClick={() => {
             setChangeStart("category");
             setChangeSheet(true);
           }} />
@@ -2872,15 +2885,16 @@ export function TransactionScreen({
       ) : (
         <BankDetails meta={lineMeta.data} party={party} direction={txnDirection} />
       )}
-      {holdWrites ? null : (
-      <div className="ui-stack ui-page-pad">
-        {onOpenSplit ? (
-          <Button variant="secondary" icon={<SplitIcon />} onClick={openSplit}>פיצול בין פרויקטים</Button>
-        ) : (
-          <Button variant="secondary" icon={<SplitIcon />} to={`/transactions/${txn.id}/split${search}`}>פיצול בין פרויקטים</Button>
-        )}
-      </div>
-      )}
+      <LineSplitSection
+        txn={txn}
+        split={lineSplit}
+        readOnly={holdWrites}
+        categories={sample ? (sampleCategories ?? []) : (categories.data ?? [])}
+        loanSplit={loanSplitFlag}
+        projectSplitTo={`/transactions/${txn.id}/split${search}`}
+        onProjectSplit={onOpenSplit ? openSplit : undefined}
+        categorySplitTo={onOpenSplit ? undefined : `/transactions/${txn.id}/split-category${search}`}
+      />
       <ChangeAssignment
         host="overlay"
         open={changeOpen}

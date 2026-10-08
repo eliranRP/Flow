@@ -416,6 +416,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Entry: a transaction row.
 - Steps: amount before VAT, VAT beside it, source, links. [0041](../decisions/0041-amounts-before-vat.md). Assumed VAT may show a subtle hint. [0043](../decisions/0043-assumed-vat-on-expenses.md).
 - Loan split: "חלוקת התשלום" lists ריבית, מסים וביטוח, קרן with a 24px icon each, amounts with a minus in the text colour, and a "סה״כ" row equal to the line. When the P&L counts by parts: "נספר ברווח <amount>" under the heading and "מחוץ לרווח" with an eye-off icon on a kept-out part. Transaction rows add "3 חלקים", or "ממתין לבדיקה" in the warning tone. [0107](../decisions/0107-loan-split-on-the-transaction.md). Mockup: [Loan split breakdown](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) option A.
+- Split (FLOW-325): a "פיצול" section with two rows, "בין פרויקטים" (11) and "לפי קטגוריות" (11a). A line split by category lists its parts instead (category, the project in the hint, the amount and its percent at the end, "השאר · <category>" for the rest) and a "סה״כ" row, as the loan split does; a part row opens 11a. The project and category rows then say "מפוצל · N חלקים · לא נספר כאן". An open review (other than `split_mismatch`) or a loan split keeps "לפי קטגוריות" visible but off, with the reason under it; a line of zero hides it. A viewer sees the parts only.
 - Back: chevron. Delete opens 20. What delete removes is still an open question. [0030](../decisions/0030-confirmation-sheets.md).
 - Prev and next (FLOW-303): opened from a list, the top bar is Back · title · ˄ ˅ ⋯. ˄ is the row above and ˅ the row below, in the order the list showed; the chevrons are not mirrored. A move replaces the history entry, so Back returns to the list at its scroll spot. At a list end the button stays, `aria-disabled` in `disabled-text`, with a hidden hint. While a card loads or fails, ⋯ keeps its slot and the title sits under the bar. A deep link or a one-row list shows no arrows. No position on screen; screen readers hear "תנועה N מתוך M". Swipe is FLOW-314. Mockup: flow-303 option A.
 - Error: save toast `er-05`.
@@ -431,6 +432,17 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - Displayed shekel parts put the leftover agora on the last project so the line adds up. The save sends those shares reversed, so the stored agorot match the screen. Stored shares still sum to 10000 basis points.
 - Cancel: ✕. Guide §13.
 - Success: toast "החלוקה נשמרה", then close. Error: `er-05`, "החלוקה לא נשמרה", with "ניסיון חוזר". Values stay.
+
+### 11a Split by category
+
+- Plan: `flow-325-line-split.md`, option A of its mockup (owner approved). Decisions [0123](../decisions/0123-line-split-percent-rest-reversal.md), [0075](../decisions/0075-save-on-tap-and-on-leave.md).
+- Template C, ✕, title "פיצול לפי קטגוריות", the line amount in `display` (income green only here), then supplier · date.
+- One parts card with no row hairlines. A part row: the category (and החזר on a reversal) over its project in the muted line ("<line project> · פרויקט השורה" when it has none); at the end a 2-option `%` / `₪` segmented control, the field, and under it the resolved figure (the cents for a percent, the share for an amount). A quiet ✕ removes the part. Tapping the text opens the picker on the category, then straight on the project.
+- The rest row is tinted, inside the card, read-only: "השאר · <category>", "<project> · נשאר בשורה", and the live amount and percent. A tap changes its category or project. Over the line it shows the overrun with a minus in the bad colour and "לא נשאר".
+- The resolved cents come from the server preview (`save_line_split(..., p_preview => true)`), debounced; nothing on the screen mirrors the per-part rounding. "הוספת חלק" is a text link with a plus, off at 49 parts.
+- Refunds: on an inflow the category picker adds "הוצאה שהוחזרה"; a reversal part's project line says "פרויקט · חובה בהחזר" in the error colour until a project is picked, and its project picker does not offer the line's project.
+- The sticky footer shows "חולקו" and "נשאר לשורה" (or "עוברים את השורה" in the bad colour). No שמירה: ✕ and back save a valid change and toast "החלוקה נשמרה" with ביטול; an invalid one shows the hold sentence with ביטול השינוי, and a second dismiss discards. "הסרת הפיצול" is a quiet bad-coloured link under the card, behind a confirm sheet.
+- Every refusal has Hebrew copy (`app/src/line-split-copy.ts`); a reason about the line (open review, loan split, a line of zero, something changed) is a banner under the amount.
 
 ### 12 Unpaid
 

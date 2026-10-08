@@ -4,6 +4,8 @@ import { holdFieldMouse, holdFieldPointer } from "./field-pointer";
 
 type MoneyFieldProps = {
   label: string;
+  /** The row already names the part. The label stays for the input (FLOW-325). */
+  hideLabel?: boolean;
   value: string;
   onValueChange: (raw: string) => void;
   error?: string;
@@ -46,6 +48,7 @@ function grouped(raw: string): string {
  */
 export function MoneyField({
   label,
+  hideLabel = false,
   value,
   onValueChange,
   error,
@@ -66,7 +69,7 @@ export function MoneyField({
   const shellStyle = { "--money-digits": `${String(shown.length)}ch` } as CSSProperties;
   return (
     <div className={error ? "ui-field ui-field-error" : "ui-field"}>
-      <label className="ui-field-label" htmlFor={fieldId}>
+      <label className={hideLabel ? "sr-only" : "ui-field-label"} htmlFor={fieldId}>
         {label}
       </label>
       <div
