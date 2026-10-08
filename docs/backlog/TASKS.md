@@ -55,12 +55,12 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | in-progress (#123) |
 | 32c | [FLOW-130](#flow-130) | Lock timeouts return retry in every MCP write (#123 review) | BACKLOG NIT | done (#124) |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
-| 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
-| 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
+| 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | in-progress |
+| 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | in-progress (the sheet's field error goes to the Mercury thread) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
-| 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | in-progress (#129; the review UI hint goes to the Mercury thread) |
+| 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129; the review UI hint goes to the Mercury thread) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -104,7 +104,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-131"></a>
 ### FLOW-131 · Loan balance checks follow-ups (#127 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#129) · **Depends on:** FLOW-123 (#127)
+- **Type:** BACKLOG NIT · **Status:** done (#129) · **Depends on:** FLOW-123 (#127)
 - [x] MCP `list_loans` returns only `balance_minor`, so the data agent cannot see a payment the bank sync flagged for review. Return `flagged_parts` (or the flagged transaction ids). (#129: both, migration `20261008080000`.)
 - [ ] A line posted while another write holds the loan is flagged even when it fits (`skip locked`). The owner has to clear it; consider a hint in the review UI (through the Mercury thread). Handed to the Mercury thread; the MCP side is covered by `flagged_transaction_ids`.
 - [x] The lock order is checked by hand with two sessions. Add a two-session pgTAP test (dblink) if CI has it. (#129: `loan_lock_order.test.sql`.)
@@ -737,15 +737,15 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-606"></a>
 ### FLOW-606 · Company name rule in create_company and the rename sheet
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-604
-- [ ] `public.create_company` still trims spaces only, has no 100-character limit and accepts control characters. Use `private.trim_name` and `private.company_name_problem` there too (inserts are not checked by the FLOW-604 trigger). Until then, an MCP `undo` of a rename back to such an older name is `refused` by the trigger, and the app's ביטול is refused by the RPC.
+- **Type:** BACKLOG NIT · **Status:** in-progress · **Depends on:** FLOW-604
+- [x] `public.create_company` still trims spaces only, has no 100-character limit and accepts control characters. Use `private.trim_name` and `private.company_name_problem` there too (inserts are not checked by the FLOW-604 trigger). Until then, an MCP `undo` of a rename back to such an older name is `refused` by the trigger, and the app's ביטול is refused by the RPC. (Migration `20261008090000`. Companies created before it keep their names.)
 - [ ] The rename sheet's `companyNameError` does not refuse a control character, so a pasted tab gets the generic "שם העסק לא נשמר" toast. Add a field error (UI: through the Mercury thread).
 
 <a id="flow-605"></a>
 ### FLOW-605 · Shared-device follow-ups (#79 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Unsaved split drafts (the `flow-split:` sessionStorage keys) survive a sign-out in the same tab. Drop them when the user changes, with a test.
-- [ ] `ToastProvider` wraps `AuthProvider`, so the last user's toast and its retry or undo action outlive a user switch. Swap the providers and add a test.
+- **Type:** BACKLOG NIT · **Status:** in-progress · **Depends on:** —
+- [x] Unsaved split drafts (the `flow-split:` sessionStorage keys) survive a sign-out in the same tab. Drop them when the user changes, with a test. (`app/src/split-drafts.ts`: the tab records the drafts' user and drops them on any other user, a reload included.)
+- [x] `ToastProvider` wraps `AuthProvider`, so the last user's toast and its retry or undo action outlive a user switch. Swap the providers and add a test. (`SessionProviders`, used by the app and the stories.)
 
 ## Jev
 

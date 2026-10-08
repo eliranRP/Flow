@@ -3,7 +3,8 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, usePar
 import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { homeSummarySchema, type Dashboard } from "@flow/shared";
 import { thisMonth } from "./period";
-import { AuthProvider, useAuth } from "./auth";
+import { useAuth } from "./auth";
+import { SessionProviders } from "./session-providers";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
 import { AuthCallbackView } from "./ui/auth-callback-view";
@@ -26,7 +27,7 @@ import { CheckIcon } from "./ui/icons";
 import { ProgressBar } from "./ui/progress-bar";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
-import { ToastProvider, useToast } from "./ui/toast";
+import { useToast } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
@@ -73,8 +74,7 @@ export function App() {
     };
   }, []);
   return (
-    <ToastProvider>
-    <AuthProvider>
+    <SessionProviders>
       <BooksProvider>
         <ThemeColor />
         <LedgerFocusRefresh />
@@ -85,8 +85,7 @@ export function App() {
           <AppRoutes />
         </div>
       </BooksProvider>
-    </AuthProvider>
-    </ToastProvider>
+    </SessionProviders>
   );
 }
 
