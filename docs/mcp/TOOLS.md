@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -48,6 +48,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `move_category_lines` | `from_category_id`, `into_category_id` | `list_categories` `categories[].id` (the target not hidden) |
 | `undo` `kind: "category_delete"` | `id` | the category id `delete_category` used |
 | `undo` `kind: "category_move"` | `id` | the source category id `move_category_lines` used |
+| `undo` `kind: "company_currency"` | `id` | the company id `set_company_currency` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -325,6 +326,14 @@ Deletes a category, even one with lines. Its lines keep their project, lose the 
 ```
 
 Moves every line of one category to another of the same kind, and with them split parts, loan payment parts, loan part categories and remembered supplier categories. Neither category is hidden (`merge_category` in the app is this move plus hiding the source). A moved line counts as the owner's choice. Output `data`: `from`, `into`, `lines` (lines on the books moved, a split line once), `undo_kind: "category_move"` and `id` (the source). Refused: the same category (`pick a different category`), a hidden or another company's target (`category not found`), another kind (`categories must be the same kind`), a split line with parts in both (`a split line has both categories`), a loan part the target cannot take (`a loan uses this category for a part the other category cannot take`). Undo, with the source category id, moves exactly those back with their old flags; it is `conflict` once any of them was moved or re-tagged since. A remembered category the owner changed since stays ([0144](../decisions/0144-category-delete-and-move.md)).
+
+### set_company_currency
+
+```json
+{ "idempotency_key": "currency-1", "currency": "USD" }
+```
+
+Sets the company's base currency (owner only), three capital letters. Nothing is converted. The base currency's row comes first in every `by_currency` list, it is the default for a new loan, a new project's investment currency and `get_breakdown`'s lines, and the base-currency twins of the ILS-only figures are in it: `by_currency[].prev_income_minor`, `prev_expense_minor`, `prev_net_profit_minor` (null without a period), `get_home` `net_profit_minor`, `get_project` `overhead_share_minor` and `get_profit_months` `months[].overhead_share_minor`. Each of those responses carries `base_currency`. Output `data`: `id` (the company), `base_currency`, `prior` and `undo_kind: "company_currency"`. A bad code is `validation`. Undo, with the company id, puts the prior currency back; it is `conflict` once the currency was changed again ([0146](../decisions/0146-company-currency.md)).
 
 ### set_overhead_project
 

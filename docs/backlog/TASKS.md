@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Review card gaps for UI lane 2: `customer_name` on list_review, `review_id` on get_transaction | Next `ready` non-UI task (FLOW-510 waits for its design call) |
+| Dev lane 1 | FLOW-504 server and MCP: a stored company currency (no exchange rates) | The next ready non-UI task or plan card (FLOW-801 and FLOW-407 on hold) |
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -820,7 +820,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-407"></a>
 ### FLOW-407 · Export for the accountant
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** on-hold (the owner chose "Not now" on the plan, 2026-10-08; plan: a Hebrew CSV from one export_lines function matching company_pnl, plus MCP export_lines) · **Depends on:** —
 - **What:** From the original plan: an Excel/CSV export with Hebrew headers and net plus VAT columns, carrying each line's original currency and rate date. MCP: an export tool.
 - **Acceptance:** opens correctly in Excel; numbers match the P&L for the period.
 
@@ -877,7 +877,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-504"></a>
 ### FLOW-504 · Display currency toggle and USD-base companies
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** server and MCP done ([0146](../decisions/0146-company-currency.md)); the screen part is ready for a UI lane: the currency choice in Settings → company, `useCompanyCurrency` reads `base_currency`, Home shows `net_profit_minor` and its change from the `prev_*_minor` fields, the overhead share uses `overhead_share_minor`, and the loan form default · **Depends on:** —
 - **What:** A per-company `₪`/`$` display choice with mixed totals converted at display time ([0087](../decisions/0087-multi-currency.md)), and a decision on companies whose base currency is USD (there is no company currency column today).
 - **Acceptance:** owner decision; plan approved.
 
@@ -1048,7 +1048,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** on-hold (the owner chose "Not now" on the plan, 2026-10-08; plan: nightly age-encrypted pg_dump to R2 with a weekly restore test) · **Depends on:** —
 - **What:** From the original plan: a nightly encrypted dump to off-site storage with failure alerts, a weekly storage sync, a monthly restore test (row counts and P&L checksums), and a quarterly drill runbook.
 - **Acceptance:** plan approved (storage, keys, cost); seven nightly dumps; an alert fires on a forced failure.
 
