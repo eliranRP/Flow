@@ -166,7 +166,7 @@ describe("categories kept out of the P&L", () => {
     fireEvent.click(await screen.findByRole("button", { name: "עוד, חומרים" }));
     const sheet = await screen.findByRole("dialog", { name: "חומרים" });
     fireEvent.click(within(sheet).getByRole("button", { name: "מחוץ לרווח והפסד" }));
-    expect(await screen.findByText("הלוואה משתמשת בקטגוריה הזו, ולכן אי אפשר לשנות אם היא ברווח והפסד.")).toBeInTheDocument();
+    expect(await screen.findByText("זו קטגוריה של הלוואה, ולכן המצב שלה ברווח והפסד קבוע.")).toBeInTheDocument();
   });
 
   it("waits for the save when the sheet is dismissed mid-write", async () => {

@@ -362,7 +362,7 @@ export function LoanReadError({ label, busy, onRetry }: { label: string; busy: b
 }
 
 /** The server refuses a payment dated after a paid-off or closed loan ended (FLOW-136). */
-const LOAN_CLOSED_TEXT = "ההלוואה נסגרה לפני התאריך של התשלום.";
+const LOAN_CLOSED_TEXT = "ההלוואה נסגרה לפני תאריך התשלום.";
 
 function failureText(error: Error): string {
   const code = (error as { code?: string }).code;

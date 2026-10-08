@@ -488,7 +488,7 @@ describe("LoanTransactionSplit", () => {
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     fireEvent.click(matchButton());
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
-    await waitFor(() => { expect(screen.getByText("ההלוואה נסגרה לפני התאריך של התשלום.")).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByText("ההלוואה נסגרה לפני תאריך התשלום.")).toBeInTheDocument(); });
   });
 
   it("shows a paid-off loan disabled with its reason", async () => {
