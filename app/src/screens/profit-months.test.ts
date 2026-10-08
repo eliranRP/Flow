@@ -12,7 +12,7 @@ function usdMonth(month: string, income: bigint, expense: bigint, open = false):
     to: `${month}-28`,
     open,
     by_currency: [zeroIls, { currency: "USD", income_minor: income, expense_minor: expense, profit_minor: income - expense }],
-  } as Data["months"][number];
+  };
 }
 
 function data(months: Data["months"]): Data {
