@@ -117,7 +117,7 @@ select is(
   jsonb_build_array(null, pg_temp.id('cat_back')), 'the other line has the kept-out category and no project');
 select is(
   (select category_id from public.transactions where id = pg_temp.id('txn_out')),
-  pg_temp.id('cat_rent'), 'the refused line is unchanged');
+  pg_temp.id('cat_rent'), 'the rejected line is unchanged');
 
 select * from finish();
 rollback;
