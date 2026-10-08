@@ -20,8 +20,10 @@ import {
   percentText,
   readLineDraft,
   resolvePreview,
+  reversalNeedsProject,
   shareOfLine,
   writeLineDraft,
+  type LineContext,
   type LineSplitRead,
   type PartDraft,
   type PayloadPart,
@@ -110,6 +112,8 @@ export type LineInfo = {
   reviewBlocked: boolean;
   /** A loan split refuses a split by category (0104). */
   loanSplit: boolean;
+  /** `in_pnl_override` true: the line's kept-out parts count, so a reversal part needs a project (0138). */
+  inPnl?: boolean;
 };
 
 export function lineInfo(txn: NonNullable<TransactionDetail>, loanSplit = false): LineInfo {
@@ -126,6 +130,7 @@ export function lineInfo(txn: NonNullable<TransactionDetail>, loanSplit = false)
     docDate: txn.doc_date,
     reviewBlocked: txn.review_status === "open" && txn.review_reason !== "split_mismatch",
     loanSplit,
+    inPnl: txn.in_pnl_override === true,
   };
 }
 
@@ -467,7 +472,15 @@ function LineSplitEditor({
   const projects = useMemo(() => [...givenProjects, ...extraProjects.filter((extra) => !givenProjects.some((project) => project.id === extra.id))], [givenProjects, extraProjects]);
   const reversalIds = useMemo(() => new Set(reversalChoices(categories, line.direction, line.categoryId).map((choice) => choice.id)), [categories, line.direction, line.categoryId]);
   const partIsReversal = (categoryId: string) => categoryId !== line.categoryId && (reversalIds.has(categoryId) || isReversal(categories, categoryId, line.direction));
-  const ctx = { lineMinor, lineCategoryId: line.categoryId, lineProjectId: line.projectId, isReversal: partIsReversal };
+  const keptOutIds = useMemo(() => new Set(categories.filter((category) => category.excluded_from_pnl === true).map((category) => category.id)), [categories]);
+  const ctx: LineContext = {
+    lineMinor,
+    lineCategoryId: line.categoryId,
+    lineProjectId: line.projectId,
+    isReversal: partIsReversal,
+    keptOut: (categoryId: string) => keptOutIds.has(categoryId),
+    lineInPnl: line.inPnl === true,
+  };
   const check = checkParts(parts, rest, ctx);
   const restNoCategory = rest.categoryId == null && line.categoryId == null;
   const formIssue = check.form;
@@ -732,7 +745,7 @@ function LineSplitEditor({
               const reversal = part.categoryId !== "" && partIsReversal(part.categoryId);
               const issue = check.parts[part.key];
               const needsProject = issue === "a reversal part needs a project";
-              const project = part.projectId == null ? (reversal ? "פרויקט · חובה בהחזר" : partProjectLabel(null, line.projectName)) : (projectName(part.projectId) ?? "פרויקט");
+              const project = part.projectId == null ? (reversal && reversalNeedsProject(part.categoryId, ctx) ? "פרויקט · חובה בהחזר" : partProjectLabel(null, line.projectName)) : (projectName(part.projectId) ?? "פרויקט");
               const percent = part.unit === "percent" ? percentOf(part.value) : null;
               const amount = part.unit === "amount" ? amountOf(part.value) : null;
               const cents = resolved?.parts[part.key];

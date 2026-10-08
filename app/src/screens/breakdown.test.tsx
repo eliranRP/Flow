@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GROUP_BY_KEY } from "../breakdown";
-import { allTime, periodLabel, thisMonth } from "../period";
+import { allTime, defaultPeriod, periodLabel } from "../period";
 import { BooksProvider } from "../use-books";
 import { BreakdownLinesScreen, BreakdownScreen } from "./breakdown";
 
@@ -179,8 +179,8 @@ describe("Breakdown screen", () => {
     wrap("/flow/expense");
     await screen.findByText("חומרי בנייה לדוגמה");
     expect(rpc.calls.find((c) => c.name === "get_breakdown")?.args).toHaveProperty("p_from");
-    fireEvent.click(screen.getByRole("button", { name: periodLabel(thisMonth()) }));
-    fireEvent.click(screen.getByRole("radio", { name: new RegExp(`^${periodLabel(allTime())}`) }));
+    fireEvent.click(screen.getByRole("button", { name: periodLabel(defaultPeriod()) }));
+    fireEvent.click(screen.getByRole("radio", { name: /^הכול/ }));
     await waitFor(() => {
       expect(rpc.calls.some((c) => c.name === "get_breakdown" && !("p_from" in (c.args as object)))).toBe(true);
     });

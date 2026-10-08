@@ -14,6 +14,7 @@ import {
   percentMinorOf,
   readLineDraft,
   resolvePreview,
+  reversalNeedsProject,
   shareOfLine,
   type LineContext,
   type PartDraft,
@@ -56,6 +57,21 @@ describe("line split editor logic (FLOW-325)", () => {
     ]);
     expect(buildPayload([part("a", { value: "" })], { categoryId: null, projectId: null })).toBeNull();
     expect(buildPayload([], { categoryId: "c-ins", projectId: "p-raan" })).toEqual([{ rest: true, category_id: "c-ins", project_id: "p-raan" }]);
+  });
+
+  it("lets a reversal part in a kept-out category go without a project unless the line is in the P&L (0138)", () => {
+    const keptOutCtx: LineContext = { ...ctx, isReversal: (id) => id === "c-refund" || id === "c-owner", keptOut: (id) => id === "c-owner" };
+    const noProject = (categoryId: string, context: LineContext) =>
+      checkParts([part("a", { categoryId, projectId: null })], { categoryId: null, projectId: null }, context).parts.a;
+    // Kept out and the line not forced in: it counts in no P&L, so no project is asked for.
+    expect(noProject("c-owner", keptOutCtx)).toBeUndefined();
+    expect(reversalNeedsProject("c-owner", keptOutCtx)).toBe(false);
+    // A reversal part in a category that counts still needs one.
+    expect(noProject("c-refund", keptOutCtx)).toBe("a reversal part needs a project");
+    // The owner put the line in the P&L: its kept-out parts count, so the project is needed again.
+    const inPnl = { ...keptOutCtx, lineInPnl: true };
+    expect(noProject("c-owner", inPnl)).toBe("a reversal part needs a project");
+    expect(reversalNeedsProject("c-owner", inPnl)).toBe(true);
   });
 
   it("catches what the server would refuse, before the save", () => {

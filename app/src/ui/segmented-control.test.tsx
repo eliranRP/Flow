@@ -22,4 +22,21 @@ describe("SegmentedControl", () => {
     expectTarget(selected);
     expectThemePaint(selected, "backgroundColor");
   });
+
+  it("keeps one tab stop when no segment is selected (a custom period)", () => {
+    render(
+      <SegmentedControl<string>
+        label="תקופה"
+        value="custom"
+        onChange={() => undefined}
+        options={[
+          { value: "month", label: "חודש" },
+          { value: "year", label: "שנה" },
+        ]}
+      />,
+    );
+    const radios = screen.getAllByRole("radio");
+    expect(radios.map((radio) => radio.getAttribute("aria-checked"))).toEqual(["false", "false"]);
+    expect(radios.map((radio) => radio.tabIndex)).toEqual([0, -1]);
+  });
 });

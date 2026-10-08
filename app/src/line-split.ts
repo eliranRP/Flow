@@ -135,7 +135,20 @@ export type LineContext = {
   lineProjectId: string | null;
   /** True for a category of the other kind than the line (a reversal), except the line's own. */
   isReversal: (categoryId: string) => boolean;
+  /** True for a category kept out of the P&L. Missing: every category counts. */
+  keptOut?: (categoryId: string) => boolean;
+  /** The owner put the line in the P&L (`in_pnl_override` true), so its kept-out parts count too. */
+  lineInPnl?: boolean;
 };
+
+/**
+ * A reversal part needs its own project, except in a kept-out category on a line that is not
+ * forced into the P&L: that part counts in no P&L, so the server lets it go without (0138).
+ */
+export function reversalNeedsProject(categoryId: string, ctx: LineContext): boolean {
+  if (categoryId === ctx.lineCategoryId || !ctx.isReversal(categoryId)) return false;
+  return ctx.lineInPnl === true || ctx.keptOut?.(categoryId) !== true;
+}
 
 /** The request, in the order shown: the parts, then the rest. */
 export function buildPayload(parts: readonly PartDraft[], rest: RestDraft): PayloadPart[] | null {
@@ -209,7 +222,7 @@ export function checkParts(parts: readonly PartDraft[], rest: RestDraft, ctx: Li
         note(part.key, "same category and project twice");
         issues[earlier] ??= "same category and project twice";
       } else seen.set(pair, part.key);
-      if (part.projectId == null && part.categoryId !== ctx.lineCategoryId && ctx.isReversal(part.categoryId)) {
+      if (part.projectId == null && reversalNeedsProject(part.categoryId, ctx)) {
         note(part.key, "a reversal part needs a project");
       }
     }

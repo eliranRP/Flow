@@ -68,7 +68,6 @@ const project: NonNullable<ProjectDetail> = {
 describe("lists that open a card with prev and next", () => {
   it("the project's recent list sends its rows and is still open on Back", () => {
     wrap("/projects/p1", "/projects/:projectId", <ProjectDetailScreen sample={project} />);
-    fireEvent.click(screen.getByText("תנועות אחרונות"));
     fireEvent.click(screen.getByRole("link", { name: /Line b/ }));
     expect(screen.getByTestId("card")).toHaveTextContent("/transactions/b");
     expect(screen.getByTestId("ids")).toHaveTextContent("a,b,c");
