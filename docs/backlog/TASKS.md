@@ -64,12 +64,13 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
 | 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | in-progress (#111) |
-| 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | ready |
+| 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | in-progress |
 | 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | ready |
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | ready |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
+| 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | plan-first |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -496,7 +497,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-320"></a>
 ### FLOW-320 · Open the picker that was tapped on the transaction detail
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** —
+- **Type:** SMALL UI · **Status:** in-progress · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. On the transaction detail, the project row opens the change sheet straight on the project picker and the category row on the category picker, instead of the summary sheet. The review card's שינוי keeps the summary. A split row keeps opening the split.
 - **MCP:** none new; `assign_expense` and `set_expense_category` cover the write.
 - **Acceptance:** re-filing a project or category from the detail is 2 taps; Back from the picker returns to the detail with no dead history step; focus returns to the tapped row; tests for both rows; design review.
@@ -521,6 +522,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
 - **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
 - **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
+
+<a id="flow-324"></a>
+### FLOW-324 · Approve all suggestions in the review queue
+- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **What:** The owner's ask (2026-10-08), to be planned first: an "approve all suggestions" button on the review queue, so a queue of lines that already carry a suggested project and category is cleared in one tap instead of one card at a time. The plan settles which lines count (both fields suggested, no split, no unallocated shared cost, no reversal, no loan line), what the button says with its count, a confirm or a toast with ביטול that restores every line, how a partial failure reads, and how it sits beside the list and the card. Overlaps the "approve all sure ones" item in FLOW-701.
+- **MCP:** a batch approve over `list_review` items, matching the button's rules, or a documented reason to leave it to `assign_expenses`.
+- **Acceptance:** plan and mockup approved; the rules for which lines are approved are written down; undo covers the whole batch; tenant isolation test on any new RPC.
 
 ## Projects and reports
 

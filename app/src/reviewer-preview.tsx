@@ -487,8 +487,6 @@ function ReviewerUnsplit() {
           sampleProjects={projects}
           sampleCategories={reviewerCategories}
           onOpenSplit={() => { setShowSplit(true); }}
-          onSampleUnsplit={(id) => { setCollapsed(id); }}
-          onSampleUndo={() => { setCollapsed(null); }}
         />
       )}
     </>
