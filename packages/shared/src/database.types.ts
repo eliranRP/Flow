@@ -801,6 +801,9 @@ isOneToOne: false
 "disconnect_sumit":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"expected_months":
+{ Args: { "p_months"?: number,"p_project_id"?: string,"p_today"?: string }; Returns: Json
+                           },
 "get_breakdown":
 { Args: { "p_basis"?: string,"p_direction": string,"p_from"?: string,"p_group_by"?: string,"p_to"?: string }; Returns: Json
                            },
@@ -930,6 +933,9 @@ isOneToOne: false
 "mcp_rename_company":
 { Args: { "p_idempotency_key": string,"p_name": string }; Returns: Json
                            },
+"mcp_review_anomalies":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "mcp_set_category_pnl":
 { Args: { "p_category_id": string,"p_excluded": boolean,"p_idempotency_key": string }; Returns: Json
                            },
@@ -968,6 +974,9 @@ isOneToOne: false
                            },
 "merge_category":
 { Args: { "p_from": string,"p_into": string }; Returns: undefined
+                           },
+"missing_bills":
+{ Args: { "p_today"?: string }; Returns: Json
                            },
 "note_auth_failure":
 { Args: { "p_address": string }; Returns: Json
@@ -1010,6 +1019,9 @@ isOneToOne: false
                            },
 "resolve_review":
 { Args: { "p_action": string,"p_category_id"?: string,"p_id": string,"p_project_id"?: string,"p_remember"?: boolean,"p_resolve"?: boolean }; Returns: undefined
+                           },
+"review_anomalies":
+{ Args: { "p_transaction_ids": (string)[] }; Returns: Json
                            },
 "revoke_mcp_credential":
 { Args: { "p_id": string,"p_user": string }; Returns: Json

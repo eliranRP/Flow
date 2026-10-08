@@ -31,6 +31,9 @@ export const READ_TOOL_NAMES = [
   "get_jev_status",
   "get_jev_accuracy",
   "get_profit_months",
+  "get_anomalies",
+  "get_missing_bills",
+  "get_expected_months",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -79,6 +82,9 @@ const ALLOWED: Record<string, Set<string>> = {
   get_jev_status: new Set(),
   get_jev_accuracy: new Set(["from", "to"]),
   get_profit_months: new Set(["from", "to", "basis", "project_id"]),
+  get_anomalies: new Set(),
+  get_missing_bills: new Set(),
+  get_expected_months: new Set(["months", "project_id"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -783,6 +789,12 @@ function readTools() {
       from: { type: "string" },
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
+      project_id: { type: "string" },
+    }),
+    toolSpec("get_anomalies", "Flags on the open review lines (newest 500), found in SQL: duplicate (another live line of the same supplier or customer, same gross amount and currency, within 7 days; other_transaction_id, other_doc_date), amount_spike (at least 3 times the median of that supplier's or customer's last 12 lines in the year before, and at least 100.00 more; typical_amount_minor, ratio), new_party_large (the first line of a supplier or customer, at or above the company's 90th percentile line amount over the year before; company_p90_minor). Each item has transaction_id and kind. A flag is a reason to look, not an error; the owner decides.", {}),
+    toolSpec("get_missing_bills", "Recurring suppliers (an expense line in at least 3 of the last 6 complete months and in one of the last 2) with no expense line yet this month, after their usual day plus 5 days (Israel time). Each has supplier_id, supplier_name, currency, typical_amount_minor (median monthly net, negative for expenses), typical_day, expected_by, months_seen, last_doc_date, and the usual project_id and category_id.", {}),
+    toolSpec("get_expected_months", "Expected income and expense per month from recurring suppliers and customers (median monthly net), for this month and the next ones. months is 1 to 12 (default 3). This month (open: true) counts only the recurring ones not seen yet this month. project_id limits it to parties whose usual project is that one. Output: today, project_id, months[] (month YYYY-MM, open, by_currency[] with currency, income_minor, expense_minor; expenses are negative) and recurring[] (direction, party_id, name, currency, typical_amount_minor, typical_day, months_seen, seen_this_month, project_id, category_id). A projection from past months, not booked lines.", {
+      months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
     }),
   ];
@@ -1567,6 +1579,33 @@ export async function callTool(
       return fail("refused", READ_REFUSED);
     }
     return ok(report);
+  }
+
+  if (name === "get_anomalies" || name === "get_missing_bills") {
+    const result = await rpc(name === "get_anomalies" ? "mcp_review_anomalies" : "missing_bills", {});
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object") return fail("refused", READ_REFUSED);
+    if (name === "get_anomalies") {
+      if (Array.isArray(data)) return fail("refused", READ_REFUSED);
+      return ok(data);
+    }
+    if (!Array.isArray(data)) return fail("refused", READ_REFUSED);
+    return ok({ missing: data });
+  }
+
+  if (name === "get_expected_months") {
+    const months = args.months == null ? 3 : args.months;
+    if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 12) {
+      return fail("validation", "validation");
+    }
+    const projectId = args.project_id ?? null;
+    if (projectId != null && (typeof projectId !== "string" || !UUID.test(projectId))) return fail("validation", "validation");
+    const result = await rpc("expected_months", { p_months: months, p_project_id: projectId });
+    const data = result.json;
+    if (result.status >= 400 || data === null || typeof data !== "object" || Array.isArray(data)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(data);
   }
 
   if (name === "get_breakdown") {
