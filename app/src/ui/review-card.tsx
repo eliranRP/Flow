@@ -7,6 +7,7 @@ import { MethodIcon } from "./bank-details";
 import { AlertIcon, ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
+import { TextLink } from "./text-link";
 import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 
 /** FLOW-312 item 2 / decision 0125: a split line whose bank amount changed. */
@@ -20,6 +21,9 @@ export const REVIEW_MISMATCH_ID = "review-mismatch";
 /** FLOW-327: both fields are missing. The bar's first button points at it. */
 export const REVIEW_MISSING_BOTH = "בחרו פרויקט וקטגוריה";
 export const REVIEW_MISSING_ID = "review-missing";
+/** FLOW-702: the auto job wrote Jev's values on this line; בטל takes the fill back (decision 0145). */
+export const JEV_FILLED = "מולא ע״י Jev";
+export const JEV_FILLED_UNDO = "בטל";
 
 /** Draws copy parts, each number in its own bdi. */
 export function CopyLine({ parts }: { parts: readonly CopyPart[] }) {
@@ -84,6 +88,12 @@ type ReviewCardProps = {
   flag?: ReviewFlagView | null;
   /** FLOW-327: both fields are missing. The card ends with "בחרו פרויקט וקטגוריה". */
   missingBoth?: boolean;
+  /**
+   * FLOW-702: Jev's auto fill stands on this line. The card says "✦ מולא ע״י Jev" under the rows, with
+   * the reason after it on the same line (so the card does not grow at 375x667) and בטל when `onUndo`
+   * is set (a viewer gets the label only). Shown only with a הצעת Jev pill.
+   */
+  jevFilled?: { onUndo?: () => void; busy?: boolean } | null;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -106,6 +116,7 @@ export function ReviewCard({
   jevWhy,
   flag,
   missingBoth = false,
+  jevFilled,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
   const memo = meta?.memo ?? null;
@@ -152,6 +163,7 @@ export function ReviewCard({
   const mismatch = reason === "split_mismatch";
   const jevOnCard = !pending && lines.some((line) => line.jev);
   const why = jevOnCard && jevWhy != null && jevWhy.length > 0 ? jevWhy : null;
+  const filled = jevOnCard && jevFilled != null ? jevFilled : null;
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
@@ -221,7 +233,28 @@ export function ReviewCard({
             tag={lineTag(line)}
           />
         ))}
-        {why ? (
+        {filled ? (
+          <p className="t-hint ui-review-reason ui-review-filled">
+            <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
+            <span className="ui-review-reason-text">
+              {JEV_FILLED}
+              {why ? <>{" · "}<CopyLine parts={why} /></> : null}
+            </span>
+            {filled.onUndo ? (
+              <TextLink
+                className="ui-review-filled-undo"
+                size="hint"
+                chevron={false}
+                busy={filled.busy === true}
+                label={`${JEV_FILLED_UNDO} את המילוי של Jev`}
+                onClick={filled.onUndo}
+              >
+                {JEV_FILLED_UNDO}
+              </TextLink>
+            ) : null}
+          </p>
+        ) : null}
+        {why && !filled ? (
           <p className="t-hint ui-review-reason">
             <span className="ui-review-reason-mark" aria-hidden="true">✦</span>
             <span className="ui-review-reason-text"><CopyLine parts={why} /></span>

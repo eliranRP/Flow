@@ -14,7 +14,8 @@ import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-mete
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { useJevQueue, useReviewFlags } from "./jev-review-card";
-import { jevShown, withJev } from "./jev-review";
+import { jevFilledOnCard, jevShown, withJev } from "./jev-review";
+import { useJevUndo } from "./jev-undo";
 import { Banner } from "../ui/banner";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
@@ -143,7 +144,8 @@ export function ReviewQueue({
   const lineMeta = useLineMetaQuery(shownId, metaLive);
   // Warm the next card's bank details so its meta line paints with the card.
   useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
-  const jev = jevQueue.stateFor(shownId);
+  const jevUndo = useJevUndo();
+  const jev = jevUndo.stateFor(shownId, jevQueue.stateFor(shownId));
   const flagsFor = useReviewFlags(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
@@ -413,6 +415,16 @@ export function ReviewQueue({
   const mismatch = card.reason === "split_mismatch";
   const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, reviewHasParty(card));
   const flag = reviewFlagView(flagsFor(card.transaction_id), { direction: card.direction, currency: card.currency });
+  // FLOW-702: the auto job's fill still stands on the stored row; בטל takes it back (a viewer reads it only).
+  const jevFilled = !jevLoading && card.transaction_id && jevFilledOnCard(card, jev) ? {
+    busy: jevUndo.pendingFor(card.transaction_id),
+    ...(holdWrites || leaving ? {} : {
+      onUndo: () => {
+        if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
+        jevUndo.undo(card.transaction_id, jev.prefill?.auto ?? null);
+      },
+    }),
+  } : null;
   function runApprove() {
     if (approveGuard.current || !settled) return;
     if (nextPick === "project") {
@@ -528,6 +540,7 @@ export function ReviewQueue({
           jevWhy={jevWhy}
           flag={flag}
           missingBoth={missingBoth}
+          jevFilled={jevFilled}
         />
       </div>
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
