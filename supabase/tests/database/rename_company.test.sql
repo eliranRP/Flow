@@ -84,6 +84,28 @@ select tests.get_supabase_uid('rename_viewer'), id, 'hash-rename-viewer-write', 
 from rename_ids where label = 'demo';
 insert into rename_ids (label, id) select 'viewer_write', id from private.mcp_credentials where token_hash = 'hash-rename-viewer-write';
 
+-- Table, first: an owner's direct update runs the name trigger as authenticated.
+-- It comes before any RPC call so no cached plan from a postgres run hides a
+-- missing execute grant on the private helpers.
+
+select tests.authenticate_as('rename_owner');
+
+select throws_ok(
+  $$update public.companies set name = 'A' where id = (select id from rename_ids where label = 'company')$$,
+  '23514',
+  'company name is too short',
+  'table: the owner''s own direct update with a one-letter name is refused'
+);
+
+select lives_ok(
+  $$update public.companies set name = 'Example Owner' where id = (select id from rename_ids where label = 'company')$$,
+  'table: the owner''s own direct update with a valid name is stored'
+);
+
+update public.companies set name = 'Example Co' where id = (select id from rename_ids where label = 'company');
+
+reset role;
+
 -- RPC: owner, other company, viewer, no company, anon.
 
 select tests.authenticate_as('rename_owner');
@@ -419,21 +441,6 @@ select is(
 
 -- Table: a direct update of the name is held to the same rule (23514).
 
-select tests.authenticate_as('rename_owner');
-
-select throws_ok(
-  $$update public.companies set name = 'A' where id = (select id from rename_ids where label = 'company')$$,
-  '23514',
-  'company name is too short',
-  'table: the owner''s own direct update with a one-letter name is refused'
-);
-
-select lives_ok(
-  $$update public.companies set name = 'Example Owner' where id = (select id from rename_ids where label = 'company')$$,
-  'table: the owner''s own direct update with a valid name is stored'
-);
-
-reset role;
 
 select throws_ok(
   $$update public.companies set name = 'A' where id = (select id from rename_ids where label = 'company')$$,
