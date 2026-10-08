@@ -244,23 +244,12 @@ export function heroProfitLabel(period: PeriodChoice, profitAgorot: bigint, now 
   return `${word} ${periodPhrase(period, now)}`;
 }
 
-function hebrewDay(iso: string, now: Date): string {
-  const day = String(Number(iso.slice(8, 10)));
-  const month = HEBREW_MONTHS[Number(iso.slice(5, 7)) - 1] ?? "";
-  const spoken = `${day} ב${month}`;
-  const year = iso.slice(0, 4);
-  if (year !== israelToday(now).slice(0, 4)) return `${spoken} ${year}`;
-  return spoken;
-}
-
-/** One plain line for the hero. A range that ends today says עד היום. */
-export function heroExplanation(period: PeriodChoice, now = new Date()): string {
-  const lead = "הכנסות פחות הוצאות";
-  if (period.kind === "all" || period.from == null) return `${lead}, בכל התקופה`;
-  const today = israelToday(now);
-  const start = hebrewDay(period.from, now);
-  const end = period.to == null || period.to === today ? "היום" : hebrewDay(period.to, now);
-  return `${lead}, מ־${start} עד ${end}`;
+/**
+ * One plain line for the hero. FLOW-335: it no longer repeats the dates. The period bar names the
+ * window and the label names the period, so the band says the window once, not three times.
+ */
+export function heroExplanation(): string {
+  return "הכנסות פחות הוצאות";
 }
 
 /** The hint under a row of the period sheet. */

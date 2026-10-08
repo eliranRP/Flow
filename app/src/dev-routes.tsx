@@ -356,7 +356,10 @@ export function DevCategories() {
   );
 }
 
+/** `?marked=1` adds a row already marked paid, waiting for the sync (review-cycle fixture, FLOW-335). */
 export function DevUnpaid() {
+  const [params] = useSearchParams();
+  const marked = params.get("marked") === "1";
   return (
     <UnpaidScreen
       sample={[{
@@ -367,7 +370,16 @@ export function DevUnpaid() {
         project_name: "שיפוץ הרצל 12",
         open_gross_agorot: 50_000n,
         open_net_agorot: 40_000n,
-      }]}
+      }, ...(marked ? [{
+        id: "u2",
+        description: "חשבונית שסומנה",
+        doc_date: "2026-08-20",
+        customer_name: "לקוח שני לדוגמה",
+        project_name: null,
+        open_gross_agorot: 120_000n,
+        open_net_agorot: 100_000n,
+        marked_paid_at: "2026-10-06T09:00:00Z",
+      }] : [])]}
     />
   );
 }
@@ -463,7 +475,19 @@ export function DevProjectDetail() {
 }
 
 /** Dev-only months for the "לפי חודש" page: one open month, a loss and a profit. */
+/** `?empty=1` is a project with no month yet (review-cycle fixture, FLOW-335). */
 export function DevProjectMonths() {
+  const [params] = useSearchParams();
+  if (params.get("empty") === "1") {
+    return (
+      <ProfitMonthsScreen
+        sample={{
+          projectName: "שיפוץ הרצל 12",
+          data: { basis: "invoiced", from: null, to: null, project_id: "p1", after_overhead: false, months: [], by_currency: [] },
+        }}
+      />
+    );
+  }
   return (
     <ProfitMonthsScreen
       sample={{

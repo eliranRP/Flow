@@ -3,8 +3,8 @@ import { useGoBack } from "./back";
 import { FocusTitle } from "./focus-title";
 import { TextLink } from "./text-link";
 
-export function BandHero({ children }: { children: ReactNode }) {
-  return <div className="ui-band-hero">{children}</div>;
+export function BandHero({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={className == null ? "ui-band-hero" : `ui-band-hero ${className}`}>{children}</div>;
 }
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {

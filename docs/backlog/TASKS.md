@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
-| UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 1 | Free: FLOW-335 + FLOW-336 + FLOW-337: period bar contrast and polish, the band-figure swipe (decision 0150), "לפי חודש" for the whole project, Unpaid polish, done in #239 | Jev bills and forecast (layout card with the owner), navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
 | UI lane 3 | FLOW-332 swipe back from the start edge on pushed screens (taken from lane 1's queue) | FLOW-401 project categories UI (mockup tonight, owner card at 09:00 Israel), then Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
@@ -106,9 +106,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | in-progress (UI lane 3) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
-| 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | ready |
-| 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | ready (owner chose the swipe, 2026-10-08) |
-| 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | ready (owner chose the whole project, 2026-10-08) |
+| 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
+| 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | done (#239; owner chose the swipe, 2026-10-08) |
+| 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | done (#239; owner chose the whole project, 2026-10-08) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -750,33 +750,33 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-335"></a>
 ### FLOW-335 · Period bar, by-month page and Unpaid polish (cycle 5)
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** FLOW-411 and FLOW-330 (#199) · **Overlaps:** FLOW-334 (Home row pitch, project band gap, labelled Back), FLOW-336 and FLOW-337 (plan-first period items) · **Source:** mobile UI/UX review cycle 5 (2026-10-08, deploy 89b9dc5), shots in the project's reviews/ui-ux-cycle-5/
+- **Type:** SMALL UI · **Status:** done (#239) · **Depends on:** FLOW-411 and FLOW-330 (#199) · **Overlaps:** FLOW-334 (Home row pitch, project band gap, labelled Back), FLOW-336 and FLOW-337 (plan-first period items) · **Source:** mobile UI/UX review cycle 5 (2026-10-08, deploy 89b9dc5), shots in the project's reviews/ui-ux-cycle-5/
 - **What:** Polish after the period bar, the "לפי חודש" page and one-tap mark paid, shot at 375x667, 393x852 (light and dark) and 412x915.
-- [ ] (high) Period presets fail contrast: the unselected labels are `on-band-secondary` #F0E8FF on a 16% white track (#905EE8), 3.57:1 against the 4.5:1 that 15px text needs. Use `on-band` #FFF on a track of at most 10% white (4.76:1); `.ui-seg-band` in `ui.css`.
-- [ ] (high, regression from #199) Unpaid's total jumped to the end side (x≈24–128 at 375): `.ui-unpaid-totals bdi { display:block }` inside `dir=ltr` aligns left. Make `.ui-unpaid-totals` a flex column with `align-items:flex-start` and keep each bdi inline-block (`css/18-period-bar.css`, `UnpaidScreen`).
-- [ ] Project band at 375x667 is 410px (61% of the screen; mockup 02 is about 313px), and the first line sits at y≈801, 134px under the fold. Drop "פעיל" and the "עד היום" line when the window is the current one, tighten `.ui-band-hero .ui-pbar` margins and the hero padding, and move the overhead switch under the categories. Target: the first line row starts by y≈620 at 375x667.
-- [ ] The period label is the only way to the period sheet and a custom range, but it reads as plain text. Add a small ▼ (or calendar) icon after it, sized like the band pill's. When the window isn't the current one, the label's hint reads "חזרה להיום" and tapping the selected preset (which already jumps back) gets the same `aria-label`.
-- [ ] Home's band names the window three or four times (the preset, the label, "רווח נקי ב־3 חודשים" and "מ־1 באוגוסט עד היום"). The explanation line reads only "הכנסות פחות הוצאות" (`heroExplanation`).
-- [ ] Project band: Back and the "earlier" arrow are the same right-pointing chevron in the same 44px column, about 150px apart. FLOW-334 H2's labelled Back tells them apart; until then give the stepper `--space-2` more inset than Back.
-- [ ] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `project-detail-screen.tsx`).
-- [ ] "לפי חודש": drop the `.ui-months-note` explainer (rows carry chevrons, as FLOW-328 did elsewhere), and keep the hint's "נכנס ₪…" muted: green is for an income amount in the amount slot only (0120).
-- [ ] "לפי חודש" empty state ("אין חודשים בתקופה הזו") is a dead end: add the tint button "כל התקופה" that sets הכול, and an empty-state story.
-- [ ] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it. Server part done (FLOW-335 server PR): each `list_unpaid` row has `document_url`, the SUMIT link on `https://pay.sumit.co.il/` or null until a sync reads it; `UnpaidRow.document_url` in `packages/shared`.
-- [ ] Unpaid after a mark: the row says "ממתין לסנכרון" but the page has no way to sync (5 taps through Settings). When any row is marked, show a "רענון מ־SUMIT" row at the bottom that starts the connector sync, or let pull-to-refresh start it.
-- [ ] Home and Project: the "מצב תצוגה" tag sits 6px above the band's bottom, inside the 28px corner curve (regression of a FLOW-328 fix); give it `--space-3`.
-- [ ] Connector status sheets: "ניתוק" is the bottom row right under "רענון עכשיו", where the thumb lands first. Put ניתוק in its own group after a section gap (`connections-screen.tsx`).
-- [ ] Review-cycle fixtures: add the "לפי חודש" empty state, an Unpaid row already marked, and the connector status and connect sheets so the next cycle can shoot them.
+- [x] (high) Period presets fail contrast: the unselected labels are `on-band-secondary` #F0E8FF on a 16% white track (#905EE8), 3.57:1 against the 4.5:1 that 15px text needs. Use `on-band` #FFF on a track of at most 10% white (4.76:1); `.ui-seg-band` in `ui.css`.
+- [x] (high, regression from #199) Unpaid's total jumped to the end side (x≈24–128 at 375): `.ui-unpaid-totals bdi { display:block }` inside `dir=ltr` aligns left. Make `.ui-unpaid-totals` a flex column with `align-items:flex-start` and keep each bdi inline-block (`css/18-period-bar.css`, `UnpaidScreen`).
+- [x] Project band at 375x667 is 410px (61% of the screen; mockup 02 is about 313px), and the first line sits at y≈801, 134px under the fold. Drop "פעיל" and the "עד היום" line when the window is the current one, tighten `.ui-band-hero .ui-pbar` margins and the hero padding, and move the overhead switch under the categories. Target: the first line row starts by y≈620 at 375x667.
+- [x] The period label is the only way to the period sheet and a custom range, but it reads as plain text. Add a small ▼ (or calendar) icon after it, sized like the band pill's. When the window isn't the current one, the label's hint reads "חזרה להיום" and tapping the selected preset (which already jumps back) gets the same `aria-label`.
+- [x] Home's band names the window three or four times (the preset, the label, "רווח נקי ב־3 חודשים" and "מ־1 באוגוסט עד היום"). The explanation line reads only "הכנסות פחות הוצאות" (`heroExplanation`).
+- [x] Project band: Back and the "earlier" arrow are the same right-pointing chevron in the same 44px column, about 150px apart. FLOW-334 H2's labelled Back tells them apart; until then give the stepper `--space-2` more inset than Back.
+- [x] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `project-detail-screen.tsx`).
+- [x] "לפי חודש": drop the `.ui-months-note` explainer (rows carry chevrons, as FLOW-328 did elsewhere), and keep the hint's "נכנס ₪…" muted: green is for an income amount in the amount slot only (0120).
+- [x] "לפי חודש" empty state ("אין חודשים בתקופה הזו") is a dead end: add the tint button "כל התקופה" that sets הכול, and an empty-state story. Superseded by FLOW-337 (decision 0150): the page is the whole project, so the empty state has no wider period; the empty-state story is in.
+- [x] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it. Server part: each `list_unpaid` row has `document_url`, the SUMIT link on `https://pay.sumit.co.il/` or null until a sync reads it (`UnpaidRow.document_url` in `packages/shared`).
+- [x] Unpaid after a mark: the row says "ממתין לסנכרון" but the page has no way to sync (5 taps through Settings). When any row is marked, show a "רענון מ־SUMIT" row at the bottom that starts the connector sync, or let pull-to-refresh start it.
+- [x] Home and Project: the "מצב תצוגה" tag sits 6px above the band's bottom, inside the 28px corner curve (regression of a FLOW-328 fix); give it `--space-3`.
+- [x] Connector status sheets: "ניתוק" is the bottom row right under "רענון עכשיו", where the thumb lands first. Put ניתוק in its own group after a section gap (`connections-screen.tsx`).
+- [x] Review-cycle fixtures: add the "לפי חודש" empty state, an Unpaid row already marked, and the connector status and connect sheets so the next cycle can shoot them.
 - **Acceptance:** shared components (`period-bar.tsx`, `segmented-control.tsx`, `ui.css`) and stories, 320 and dark included; a design log entry; clip-check at 320/360/390; contrast check on the band; design review.
 
 <a id="flow-336"></a>
 ### FLOW-336 · Step the period one-handed
-- **Type:** PLAN FIRST · **Status:** ready · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** done (#239, decision 0150) · **Owner (2026-10-08):** add the swipe on the band figure; the arrows stay · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
 - **What:** The period bar sits in the top third on Home (presets y≈15–51, stepper y≈62–111 at 375x667) and on the project band (y≈162–258). Stepping a month from Home's default takes 2 taps at the top edge and each further month another, about 550px above a resting thumb. Proposal: keep the bar where the owner put it, and add a sideways swipe on the band's hero figure that steps the window by the preset's length (same rules as the stepper: the later step stops at the current window), with a short haptic and the label updating. Swipe is the one-handed path; the arrows stay for accessibility.
 - **Acceptance:** owner's choice on a card; works in RTL (swipe toward the start side goes earlier); does not fight the edge swipe-back (FLOW-332) or vertical scroll; a decision record.
 
 <a id="flow-337"></a>
 ### FLOW-337 · A period on the "לפי חודש" page
-- **Type:** PLAN FIRST · **Status:** ready · **Owner (2026-10-08):** the page always lists every month since the project started, whatever the band shows · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** done (#239, decision 0150) · **Owner (2026-10-08):** the page always lists every month since the project started, whatever the band shows · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
 - **What:** "לפי חודש" follows the project's period, so at the default 3 חודשים it lists three months with about 300px empty, and seeing the year takes Back, שנה and לפי חודש again (two of them in the top third). Options: the page opens on the whole project ("מתחילת הפרויקט") whatever the band shows, or it gets a compact preset row of its own (`PeriodBar tone="page"`).
 - **Acceptance:** owner's choice on a card; Back returns to the project with its own period unchanged.
 
