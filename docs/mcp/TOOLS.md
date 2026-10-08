@@ -680,7 +680,7 @@ SUMIT invoices still open, and a mark the owner sets when one was paid before SU
 
 Read. No arguments. The open documents the Unpaid screen shows: SUMIT invoices with an amount still open after their linked receipts and credit notes, oldest first. Customer invoices have `direction` `income` and a positive amount; supplier invoices have `direction` `expense` and a negative one.
 
-Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at" }`; `id` is the transaction id, and `marked_paid_at` is when the document was marked paid (`null` when not). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
+Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at", "document_url" }`; `id` is the transaction id, `marked_paid_at` is when the document was marked paid (`null` when not), and `document_url` is the SUMIT document link on `https://pay.sumit.co.il/` (`null` until a sync reads it). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
 
 ### set_invoice_paid
 

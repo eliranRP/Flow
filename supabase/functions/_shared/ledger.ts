@@ -222,7 +222,31 @@ export function mapCrmEntity(entity: Record<string, unknown>): SumitDoc | null {
 export const SUMIT_ALLOWLIST = [
   "https://api.sumit.co.il/crm/schema/listfolders/",
   "https://api.sumit.co.il/crm/data/listentities/",
+  "https://api.sumit.co.il/accounting/documents/list/",
 ] as const;
+
+/** A SUMIT document link the app may open: SUMIT's own download page, nothing else. */
+export const SUMIT_DOCUMENT_URL = /^https:\/\/pay\.sumit\.co\.il\/[^\s"'<>\\]{1,500}$/;
+
+/**
+ * FLOW-335. DocumentID to DocumentDownloadURL from one `accounting/documents/list` page. The
+ * DocumentID is the CRM entity ID the sync keys documents by. Links on another host are dropped.
+ */
+export function documentUrls(data: unknown): Map<number, string> {
+  const urls = new Map<number, string>();
+  const documents = data && typeof data === "object" ? (data as Record<string, unknown>).Documents : null;
+  if (!Array.isArray(documents)) return urls;
+  for (const item of documents) {
+    if (!item || typeof item !== "object") continue;
+    const doc = item as Record<string, unknown>;
+    const id = doc.DocumentID;
+    const url = doc.DocumentDownloadURL;
+    if (typeof id !== "number" || !Number.isSafeInteger(id)) continue;
+    if (typeof url !== "string" || !SUMIT_DOCUMENT_URL.test(url)) continue;
+    urls.set(id, url);
+  }
+  return urls;
+}
 
 export function assertSumitUrl(url: string): void {
   if (!(SUMIT_ALLOWLIST as readonly string[]).includes(url)) {
