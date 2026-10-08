@@ -84,6 +84,7 @@ export const WRITE_TOOL_NAMES = [
   "delete_category",
   "move_category_lines",
   "set_company_currency",
+  "rename_category",
   "undo_jev_prefill",
   "undo",
   "undo_batch",
@@ -146,6 +147,7 @@ const ALLOWED: Record<string, Set<string>> = {
   delete_category: new Set(["idempotency_key", "category_id"]),
   move_category_lines: new Set(["idempotency_key", "from_category_id", "into_category_id"]),
   set_company_currency: new Set(["idempotency_key", "currency"]),
+  rename_category: new Set(["idempotency_key", "category_id", "name"]),
   undo_jev_prefill: new Set(["idempotency_key", "transaction_id"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
@@ -233,7 +235,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name"]),
   id: UUID_TEXT,
 }).strict();
 // Control characters, line/paragraph separators, every format character (zero-width,
@@ -551,6 +553,11 @@ const moveCategoryLinesSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   from_category_id: UUID_TEXT,
   into_category_id: UUID_TEXT,
+}).strict();
+const renameCategorySchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  category_id: UUID_TEXT,
+  name: visibleName(2, 120),
 }).strict();
 const setCompanyCurrencySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -1395,13 +1402,18 @@ function writeTools() {
       idempotency_key: { type: "string" },
       currency: { type: "string" },
     }, true),
+    toolSpec("rename_category", "Rename a category (owner only), for example to Hebrew. name is 2 to 120 letters, trimmed, and must not be another category's of the same kind. The id stays, so its lines, splits, loans, remembered suppliers and flags stay; loan categories can be renamed (match them by loan_part). Returns category_id, name, prior (the old name) and undo_kind. Refused: category already exists, category name is too short, category name is too long, category not found. Undo is kind category_name with the category id, a conflict once it was renamed again or while another category has the old name.", {
+      idempotency_key: { type: "string" },
+      category_id: { type: "string" },
+      name: { type: "string" },
+    }, true),
     toolSpec("undo_jev_prefill", "Undo Jev's auto fill on one open review line (auto mode): put back the project, its allocation and the category the line had before Jev filled it. Only while the line is still open and still holds Jev's values: a line the owner has changed since is a conflict (line changed since), a line with no fill to undo is not_found (nothing to undo), and a filed line is already_closed. Lines Jev filled show prefilled true in get_jev_suggestions. The line stays in review; it is not approved.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid", "loan_detach", "loan_delete", "loan_order", "project_investment", "category_rehab", "category_delete", "category_move", "company_currency", "category_name"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -2111,6 +2123,15 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_from: parsed.data.from_category_id,
       p_into: parsed.data.into_category_id,
+    };
+  } else if (name === "rename_category") {
+    const parsed = renameCategorySchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_rename_category";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_category_id: parsed.data.category_id,
+      p_name: parsed.data.name,
     };
   } else if (name === "set_company_currency") {
     const parsed = setCompanyCurrencySchema.safeParse(args);
