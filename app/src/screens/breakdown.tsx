@@ -27,6 +27,7 @@ import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { ChartIcon, DocumentIcon, ReviewIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
+import { rowSource } from "../ui/line-marks";
 import { List, ListRow } from "../ui/list-row";
 import { PeriodPicker, RangeSheet } from "../ui/period-picker";
 import { ScreenHeader } from "../ui/screen-header";
@@ -298,7 +299,8 @@ function LinesBody({
         <List>
           {rows.map((row) => {
             const outgoing = (direction === "expense") === (row.amount_minor >= 0n);
-            const hint = [lineHint(groupBy, row), formatDayMonth(row.doc_date), row.shared ? "חלק משותף" : null]
+            // The date leads, so at 320 the name is the part that drops (design lead, FLOW-125 review).
+            const hint = [formatDayMonth(row.doc_date), lineHint(groupBy, row), row.shared ? "חלק משותף" : null]
               .filter((part): part is string => part != null && part !== "")
               .join(" · ");
             return (
@@ -311,7 +313,7 @@ function LinesBody({
                 currency={row.currency}
                 sign={outgoing ? "out" : "in"}
                 inWord={direction === "expense" ? "זיכוי" : undefined}
-                source="invoice"
+                source={rowSource(row.source)}
                 href={`/transactions/${row.transaction_id}${search}`}
               />
             );

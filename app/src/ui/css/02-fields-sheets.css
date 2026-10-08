@@ -99,6 +99,30 @@
   white-space: normal;
 }
 
+/* A transaction row's secondary line: one line, cut at its end (design lead, FLOW-125 review). */
+.ui-row-hint-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Its parts: whole parts in order; the ones that do not fit wrap to a hidden second line. */
+.ui-hint-parts {
+  display: flex;
+  flex-wrap: wrap;
+  max-block-size: calc(var(--type-meta-size) * var(--type-meta-line));
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.ui-hint-part {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
 .ui-row-hint-skel {
   display: flex;
   align-items: center;

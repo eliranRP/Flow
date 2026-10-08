@@ -9,11 +9,13 @@ import { useHeldOrder } from "../list-hold";
 import { reviewFocusPath } from "../review-paths";
 import { SetupSampleReview } from "../setup/sample-review";
 import { formatDayMonth } from "../ui/date-math";
+import { KeptOutTag, rowSource } from "../ui/line-marks";
 import { ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
 import { statementMethodOf } from "../ui/statement";
 import { ReviewSkippedSection, useSkippedReviewQuery } from "./review-skipped";
 import { ScreenHeader } from "../ui/screen-header";
+import { KEPT_OUT } from "./screen-shared";
 import { ScreenState } from "../ui/screen-state";
 import { EMPTY_REVIEW, listFocusId, listPlace, queueAfterFocus, REVIEW_NONE_WAITING, reviewE2e, ReviewEmpty, reviewLineFocus, reviewListPath, rotateReview, statementSuggestion, useE2eReviewRows } from "./review-shared";
 import { type ReviewPreviewWrite, ReviewQueue } from "./review-queue";
@@ -251,7 +253,8 @@ export function ProjectWaitingList({
             hint={formatDayMonth(row.doc_date)}
             agorot={row.amount_net}
             sign="out"
-            source="invoice"
+            source={rowSource(row.source)}
+            tag={row.kept_out === true ? <KeptOutTag label={KEPT_OUT} /> : undefined}
             href={hrefFor
               ? hrefFor(row)
               : row.review_id == null
