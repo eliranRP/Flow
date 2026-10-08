@@ -3,8 +3,10 @@ import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
+  loanTakesPaymentOn,
   scheduleRowForDate,
   type LoanSplitPart,
+  type LoanStatus,
 } from "@flow/shared";
 import { BankIcon, AlertIcon, EyeOffIcon, HomeIcon, PercentIcon } from "../ui/icons";
 import { splitCents, withCents } from "../ui/big-number";
@@ -53,6 +55,10 @@ type LoanChoice = {
   paymentMinor: number;
   escrowMinor: number;
   balanceMinor: bigint;
+  status?: LoanStatus;
+  closedOn?: string | null;
+  /** The loan's own category per part (decision 0128). A missing one uses the keyed default. */
+  categoryIds?: Partial<Record<LoanSplitPart, string | null>>;
 };
 
 export type LoanBalanceRow = {
@@ -466,9 +472,11 @@ export function LoanTransactionSplit({
   const parts = loaded.splits.length === 3 ? loaded.splits : null;
   if (parts == null && !offerMatch) return null;
   const loan = loaded.loans.find((item) => item.id === parts?.[0]?.loanId);
+  // A paid-off or closed loan is offered only for payments on or before the day it ended.
+  const offered = loaded.loans.filter((item) => item.id === loan?.id || loanTakesPaymentOn(item, docDate));
   const lineCurrency = loaded.currency;
   const displayCurrency = loan?.currency ?? lineCurrency;
-  const currencyLoans = loaded.loans.filter((item) => item.currency === lineCurrency);
+  const currencyLoans = offered.filter((item) => item.currency === lineCurrency);
   const matchHint = currencyLoans.length === 1 ? currencyLoans[0]?.name : undefined;
   const savingId = match.isPending ? match.variables : null;
   return (
@@ -478,7 +486,7 @@ export function LoanTransactionSplit({
       displayCurrency={displayCurrency}
       parts={parts}
       byParts={loaded.byParts}
-      loans={loaded.loans}
+      loans={offered}
       needsReview={parts?.some((part) => part.needsReview) ?? false}
       amountChanged={parts != null && absMinor(parts.reduce((sum, part) => sum + part.amountMinor, 0n)) !== absMinor(loaded.lineMinor)}
       currencyMismatch={loan != null && loan.currency !== lineCurrency}
@@ -573,7 +581,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .eq("transaction_id", transactionId),
     supabase
       .from("loans")
-      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor")
+      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id")
       .eq("company_id", companyId),
     supabase
       .from("categories")
@@ -623,6 +631,13 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       paymentMinor: loan.payment_minor,
       escrowMinor: loan.escrow_minor,
       balanceMinor: balanceByLoan.get(loan.id) ?? 0n,
+      status: loan.status,
+      closedOn: loan.closed_on,
+      categoryIds: {
+        interest: loan.interest_category_id,
+        escrow: loan.escrow_category_id,
+        principal: loan.principal_category_id,
+      },
     })),
     categoryIds,
   };
@@ -665,7 +680,7 @@ async function writeSplit(transactionId: string, docDate: string, loaded: Loaded
   const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
   if (principalPart > loan.balanceMinor) throw new Error("loan_split_over_balance");
   const rows = parts.map((part) => {
-    const categoryId = loaded.categoryIds[part.part];
+    const categoryId = loan.categoryIds?.[part.part] ?? loaded.categoryIds[part.part];
     if (!categoryId) throw new Error("supabase");
     return {
       company_id: loaded.companyId,

@@ -65,7 +65,7 @@ To change a company's cap, as the service role: `update public.company_integrati
 
 One run labels at most 50 expenses. A request may set `limit`; values above 100 are clamped to 100, and a missing or unusable limit stays 50. That cap is split across the enabled companies in company-id order. The first companies get one extra line when the cap does not divide evenly. A company with a long backlog cannot take another company's share. The candidate query orders by `doc_date` descending and applies that company's share in SQL. It does not put every open id in the URL. An approved review line is not sent. An overhead line, a shared cost, or a split with more than one allocation is not asked for a project. That call sends the category question only, and the stored suggestion has no project. Each expense is at most 2 attempts of 8 seconds. The run budget is 120 seconds. A new call is not started when fewer than 20 seconds of that budget remain, so the last call still finishes under the 150 second Edge limit. Lines that were not started are `budget_skipped`. TypeSafe accepts `{ model, state, questions }` only. It has no max-output field, so the job does not send one. The response and the function log include `input_tokens` and `output_tokens`. Those are counts. The log does not include the expense text or the answers.
 
-Project names and category names are sent to TypeSafe as the choice labels. That is the owner's own data. Amounts may be included in the request state. The job does not write amounts, VAT, or dates.
+Each request also carries `past_filings`, up to 5 lines the owner filed for the same supplier (date, a description cut to 120 characters, net amount, project, category, P&L role, split), from `jev_supplier_history` ([0127](../decisions/0127-jev-supplier-history.md)). A line with no supplier has none. Project names and category names are sent to TypeSafe as the choice labels. That is the owner's own data. Amounts may be included in the request state. The job does not write amounts, VAT, or dates.
 
 The function does not read `jev_api_key` when no enabled company has a line to label.
 
@@ -104,3 +104,7 @@ unset SERVICE_ROLE_KEY
 The deploy step ships `jev-tag` with the same `supabase functions deploy` command as `flow-mcp`.
 
 `supabase/pending/20261004120000_jev_auto_mode.sql` allows `mode` `auto`. It is not in `supabase/migrations.lock`. Do not apply it until the migration slot is free.
+
+## Accuracy
+
+Each approved or changed review line that had a Jev suggestion gets a `jev_outcomes` row at commit: Jev's project and category, the filed ones, and whether each matched ([0126](../decisions/0126-jev-outcomes.md)). MCP `get_jev_accuracy` sums them for a period, at the company's threshold and by confidence band. Use it before turning on auto mode, and to pick the threshold.

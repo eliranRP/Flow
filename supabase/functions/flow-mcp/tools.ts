@@ -12,7 +12,8 @@ import {
   LOAN_TERM_MONTHS_MAX,
   type LoanScheduleRow,
 } from "../../../packages/shared/src/loan-schedule.ts";
-import { allocateLoanSplit, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
+import { allocateLoanSplit, loanTakesPaymentOn, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
+import type { LoanStatus } from "../../../packages/shared/src/loan-split.ts";
 import { parseDecimalHalfEven } from "../../../packages/shared/src/money.ts";
 
 export const READ_TOOL_NAMES = [
@@ -28,6 +29,7 @@ export const READ_TOOL_NAMES = [
   "get_sync_status",
   "get_breakdown",
   "get_jev_status",
+  "get_jev_accuracy",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -69,11 +71,12 @@ const ALLOWED: Record<string, Set<string>> = {
   get_expense: new Set(["transaction_id"]),
   search_expenses: new Set(["scope", "query", "limit", "offset"]),
   get_totals: new Set(["from", "to", "basis"]),
-  list_loans: new Set([]),
+  list_loans: new Set(["include_closed"]),
   get_loan_schedule: new Set(["loan_id", "from", "limit"]),
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
   get_jev_status: new Set(),
+  get_jev_accuracy: new Set(["from", "to"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -91,7 +94,7 @@ const ALLOWED: Record<string, Set<string>> = {
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
@@ -223,6 +226,13 @@ const updateLoanSchema = z.object({
   escrow: z.union([z.number(), z.string()]).optional(),
   // null clears the project, an absent key leaves it.
   project_id: UUID_TEXT.nullable().optional(),
+  status: z.enum(["open", "paid_off", "closed"]).optional(),
+  // null clears the date (status open does too), an absent key leaves it.
+  closed_on: z.string().regex(DATE).nullable().optional(),
+  // A part's own category; null goes back to the default, an absent key leaves it.
+  interest_category_id: UUID_TEXT.nullable().optional(),
+  escrow_category_id: UUID_TEXT.nullable().optional(),
+  principal_category_id: UUID_TEXT.nullable().optional(),
 }).strict();
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -546,6 +556,11 @@ type LoanRow = {
   flagged_transaction_ids?: string[];
   project_id?: string | null;
   project_name?: string | null;
+  status?: LoanStatus;
+  closed_on?: string | null;
+  interest_category_id?: string | null;
+  escrow_category_id?: string | null;
+  principal_category_id?: string | null;
 };
 
 function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
@@ -718,7 +733,9 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null.", {}),
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults.", {
+      include_closed: { type: "boolean" },
+    }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
       loan_id: { type: "string" },
       from: { type: "integer" },
@@ -738,6 +755,10 @@ function readTools() {
       offset: { type: "integer" },
     }),
     toolSpec("get_jev_status", "The Jev AI tagger for this company: enabled, mode (off, shadow or auto), threshold, daily_call_cap and calls_today (calls per UTC day), last_run_at, and lines_without_suggestion (open expense lines in review that Jev has not labelled yet). Jev only suggests a project and category; it never approves a line. It runs within about 5 minutes after a bank sync, up to the daily cap.", {}),
+    toolSpec("get_jev_accuracy", "How often Jev's suggestions matched what the owner filed, for lines resolved in a period (from and to are YYYY-MM-DD, by the UTC day the review was approved or changed; omit both for all time). lines counts resolved lines that had a Jev suggestion. all_matched counts lines where every compared field matched. project_compared/project_matched and category_compared/category_matched count each field; a shared, overhead or multi-project line is not compared on project, and a line split by category is not compared on category. at_threshold has lines and all_matched for suggestions at or above the company's threshold, which is what auto mode would pre-fill. bands splits by confidence: high from 0.9, medium from 0.7, low below.", {
+      from: { type: "string" },
+      to: { type: "string" },
+    }),
   ];
 }
 
@@ -894,7 +915,7 @@ function writeTools() {
       currency: { type: "string" },
       project_id: { type: "string" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. Undo restores the previous project.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). Payments already attached keep their categories. Undo restores the previous project, status, closed_on and categories.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -905,8 +926,13 @@ function writeTools() {
       payment: { type: "string" },
       escrow: { type: "string" },
       project_id: { type: ["string", "null"] },
+      status: { type: "string", enum: ["open", "paid_off", "closed"] },
+      closed_on: { type: ["string", "null"] },
+      interest_category_id: { type: ["string", "null"] },
+      escrow_category_id: { type: ["string", "null"] },
+      principal_category_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, each under the loan's own category for that part or the default. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
@@ -1160,6 +1186,11 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     patch.escrow_minor = Number(minor);
   }
   if (parsed.data.project_id !== undefined) patch.project_id = parsed.data.project_id;
+  if (parsed.data.status != null) patch.status = parsed.data.status;
+  if (parsed.data.closed_on !== undefined) patch.closed_on = parsed.data.closed_on;
+  for (const key of ["interest_category_id", "escrow_category_id", "principal_category_id"] as const) {
+    if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
+  }
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
   const result = await rpc("mcp_update_loan", {
     p_idempotency_key: parsed.data.idempotency_key,
@@ -1191,6 +1222,9 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   const loan = loans.find((row) => row.id === parsed.data.loan_id);
   if (loan == null) return fail("refused", "loan not found");
   if (loan.currency !== currency) return fail("refused", "loan currency mismatch");
+  if (!loanTakesPaymentOn({ status: loan.status, closedOn: loan.closed_on }, docDate)) {
+    return fail("refused", "loan closed");
+  }
   if (BigInt(loan.balance_minor) <= 0n) return fail("refused", "loan balance exceeded");
   const schedule = storedLoanSchedule(loan);
   if (!("rows" in schedule)) return schedule;
@@ -1469,6 +1503,20 @@ export async function callTool(
     return ok(status);
   }
 
+  if (name === "get_jev_accuracy") {
+    const from = dateOf(args.from);
+    if (typeof from !== "string" && from != null) return from;
+    const to = dateOf(args.to);
+    if (typeof to !== "string" && to != null) return to;
+    if (from != null && to != null && from > to) return fail("validation", "validation");
+    const result = await rpc("mcp_jev_accuracy", { p_from: from, p_to: to });
+    const report = result.json;
+    if (result.status >= 400 || report === null || typeof report !== "object" || Array.isArray(report)) {
+      return fail("refused", READ_REFUSED);
+    }
+    return ok(report);
+  }
+
   if (name === "get_breakdown") {
     const direction = args.direction;
     if (direction !== "income" && direction !== "expense") return fail("validation", "validation");
@@ -1600,9 +1648,11 @@ export async function callTool(
   }
 
   if (name === "list_loans") {
+    const includeClosed = args.include_closed ?? true;
+    if (typeof includeClosed !== "boolean") return fail("validation", "validation");
     const loans = await loadLoans(rpc);
     if (!Array.isArray(loans)) return loans;
-    return ok({ loans });
+    return ok({ loans: includeClosed ? loans : loans.filter((loan) => (loan.status ?? "open") === "open") });
   }
 
   if (name === "get_loan_schedule") {

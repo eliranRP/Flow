@@ -226,6 +226,31 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"jev_outcomes": {
+                  Row: {
+                    "category_match": boolean | null,"company_id": string,"confidence": number,"final_category_id": string | null,"final_project_id": string | null,"model_version": string,"project_match": boolean | null,"resolved_at": string,"review_status": Database["public"]['Enums']["review_status"],"suggested_category_id": string | null,"suggested_project_id": string | null,"suggestion_id": string,"transaction_id": string
+                  }
+                  Insert: {
+                    "category_match"?: boolean | null,"company_id": string,"confidence": number,"final_category_id"?: string | null,"final_project_id"?: string | null,"model_version": string,"project_match"?: boolean | null,"resolved_at"?: string,"review_status": Database["public"]['Enums']["review_status"],"suggested_category_id"?: string | null,"suggested_project_id"?: string | null,"suggestion_id": string,"transaction_id": string
+                  }
+                  Update: {
+                    "category_match"?: boolean | null,"company_id"?: string,"confidence"?: number,"final_category_id"?: string | null,"final_project_id"?: string | null,"model_version"?: string,"project_match"?: boolean | null,"resolved_at"?: string,"review_status"?: Database["public"]['Enums']["review_status"],"suggested_category_id"?: string | null,"suggested_project_id"?: string | null,"suggestion_id"?: string,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jev_outcomes_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "jev_outcomes_suggestion_id_fkey"
+      columns: ["suggestion_id"]
+isOneToOne: false
+      referencedRelation: "tag_suggestions"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"jev_usage": {
                   Row: {
                     "calls": number,"company_id": string,"failed": number,"finished_at": string | null,"id": string,"input_tokens": number,"output_tokens": number,"reserved": number,"run_id": string,"started_at": string,"tagged": number,"usage_day": string
@@ -327,13 +352,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"project_id": string | null,"start_date": string,"term_months": number,"updated_at": string
+                    "annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"id": string,"interest_category_id": string | null,"name": string,"payment_minor": number,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at": string
                   }
                   Insert: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"project_id"?: string | null,"start_date": string,"term_months": number,"updated_at"?: string
+                    "annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_category_id"?: string | null,"escrow_minor": number,"id"?: string,"interest_category_id"?: string | null,"name": string,"payment_minor": number,"principal_category_id"?: string | null,"principal_minor": number,"project_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at"?: string
                   }
                   Update: {
-                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"term_months"?: number,"updated_at"?: string
+                    "annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_category_id"?: string | null,"escrow_minor"?: number,"id"?: string,"interest_category_id"?: string | null,"name"?: string,"payment_minor"?: number,"principal_category_id"?: string | null,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -347,6 +372,24 @@ isOneToOne: false
       columns: ["company_id","project_id"]
 isOneToOne: false
       referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loans_escrow_category_fkey"
+      columns: ["company_id","escrow_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loans_interest_category_fkey"
+      columns: ["company_id","interest_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loans_principal_category_fkey"
+      columns: ["company_id","principal_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
       referencedColumns: ["company_id","id"]
     }
                   ]
@@ -799,6 +842,9 @@ isOneToOne: false
 "jev_reserve_calls":
 { Args: { "p_company": string,"p_run": string,"p_want": number }; Returns: number
                            },
+"jev_supplier_history":
+{ Args: { "p_company": string,"p_per"?: number,"p_suppliers": (string)[] }; Returns: Json
+                           },
 "jev_take_lease":
 { Args: { "p_holder": string,"p_seconds"?: number }; Returns: boolean
                            },
@@ -868,6 +914,9 @@ isOneToOne: false
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_jev_accuracy":
+{ Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
                            },
 "mcp_jev_status":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1035,7 +1084,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
+            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal","loan_status": "open"|"paid_off"|"closed","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
             "connector_upsert_result": {
@@ -1153,7 +1202,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
+            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal"],"loan_status": ["open", "paid_off", "closed"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
           }
         }
 } as const

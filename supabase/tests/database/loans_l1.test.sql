@@ -213,7 +213,7 @@ select throws_ok(
       on t.company_id = l.company_id and t.idempotency_key = 'loan:category'
     cross join (
       values
-        ('interest', 'ביטוח', 5000),
+        ('interest', 'מסים וביטוח', 5000),
         ('escrow', 'מסים וביטוח', 2000),
         ('principal', 'תשלומי הלוואה', 3000)
     ) as v(part, category, amount)
@@ -223,7 +223,7 @@ select throws_ok(
   $$,
   '23514',
   'loan_split_category',
-  'interest uses ריבית משכנתא'
+  'interest cannot use another part''s loan category (0128)'
 );
 
 select throws_ok(
@@ -306,8 +306,8 @@ select throws_ok(
     set constraints all immediate;
   $$,
   '23514',
-  'loan_split_category',
-  'interest cannot use an excluded category'
+  'loan category is fixed',
+  'a category holding interest cannot be kept out (0128)'
 );
 
 insert into public.categories (company_id, name, kind, sort_order, is_default, excluded_from_pnl)
@@ -366,8 +366,8 @@ select throws_ok(
     set constraints all immediate;
   $$,
   '23514',
-  'loan_split_category',
-  'principal stays on an excluded category'
+  'loan category is fixed',
+  'a category holding principal stays kept out (0128)'
 );
 
 select throws_ok(

@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1";
 import { JEV_MODEL, JEV_TIMEOUT_MS, JevError, callJev, type JevCall, type JevTimer } from "./jev.ts";
 import {
+  JEV_HISTORY_PER_SUPPLIER,
   JEV_TAG_ATTEMPTS,
   JEV_TAG_BUDGET_MS,
   JEV_TAG_DEFAULT_LIMIT,
@@ -32,6 +33,7 @@ import {
   type SuggestionRow,
   type TagCompanyWork,
   type TagExpense,
+  type TagFiling,
   type TagStore,
 } from "./jev_tag.ts";
 
@@ -119,7 +121,7 @@ Deno.test("questions use project and category ids, and 256 options omit that que
 
 Deno.test("state carries amounts for the model and the plan does not write them", () => {
   const row = expense();
-  const state = buildTagState(row);
+  const state = buildTagState(row, projects, categories);
   assert(typeof state === "object" && state !== null && !Array.isArray(state));
   assertEquals(state.amount_net, -10000);
   const plan = planTag(row, "auto", 0.9, projects, categories, answers());
@@ -296,6 +298,122 @@ Deno.test("the store reads only enabled Jev rows and open untagged expenses", as
   assert(transactions.includes("review_queue!inner(status)"));
   assert(!transactions.includes(EXPENSE));
   assert(urls.every((url) => !url.includes("status=eq.approved")));
+  assert(urls.every((url) => !url.includes("jev_supplier_history")), "no supplier, no history call");
+});
+
+const SUPPLIER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+function filing(overrides: Partial<TagFiling> = {}): TagFiling {
+  return {
+    docDate: "2026-03-01",
+    description: "מלט",
+    amountNet: -9000,
+    projectId: PROJECT,
+    categoryId: CATEGORY,
+    pnlRole: "project",
+    split: false,
+    ...overrides,
+  };
+}
+
+Deno.test("state carries the supplier's past filings with names, and none without history", () => {
+  const plain = buildTagState(expense(), projects, categories);
+  assert(typeof plain === "object" && plain !== null && !Array.isArray(plain));
+  assertEquals("past_filings" in plain, false);
+  const archived = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const history = [
+    filing(),
+    filing({ projectId: archived, categoryId: null, pnlRole: "shared", split: true }),
+    ...Array.from({ length: 6 }, () => filing()),
+  ];
+  const state = buildTagState(expense({ history }), projects, categories);
+  assert(typeof state === "object" && state !== null && !Array.isArray(state));
+  const past = state.past_filings;
+  assert(Array.isArray(past));
+  assertEquals(past.length, JEV_HISTORY_PER_SUPPLIER);
+  assertEquals(past[0], {
+    doc_date: "2026-03-01",
+    description: "מלט",
+    amount_net: -9000,
+    project_id: PROJECT,
+    project_name: "שיפוץ",
+    category_id: CATEGORY,
+    category_name: categories.find((row) => row.id === CATEGORY)?.name ?? null,
+    pnl_role: "project",
+    split: false,
+  });
+  assertEquals(past[1], {
+    doc_date: "2026-03-01",
+    description: "מלט",
+    amount_net: -9000,
+    project_id: archived,
+    project_name: null,
+    category_id: null,
+    category_name: null,
+    pnl_role: "shared",
+    split: true,
+  });
+});
+
+Deno.test("the store loads each supplier's filed lines in one SQL call per company", async () => {
+  const OTHER_SUPPLIER = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const calls: Array<{ url: string; body: unknown }> = [];
+  const fetch: typeof globalThis.fetch = (input, init) => {
+    const url = String(input);
+    calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : null });
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/rpc/jev_supplier_history")) {
+      return Promise.resolve(Response.json([
+        { supplier_id: SUPPLIER, doc_date: "2026-03-01", description: "מלט", amount_net: -9000, project_id: PROJECT, category_id: CATEGORY, pnl_role: "project", split: false },
+        { supplier_id: SUPPLIER, doc_date: "2026-02-01", description: "חול", amount_net: "-500", project_id: "not-an-id", category_id: null, pnl_role: null, split: true },
+        { supplier_id: SUPPLIER, doc_date: null, amount_net: 1 },
+      ]));
+    }
+    if (url.includes("/transactions")) {
+      return Promise.resolve(Response.json([
+        txnRow({ supplier_id: SUPPLIER }),
+        txnRow({ id: "99999999-9999-4999-8999-999999999999", doc_date: "2026-04-11", supplier_id: OTHER_SUPPLIER }),
+        txnRow({ id: "88888888-8888-4888-8888-888888888888", doc_date: "2026-04-10", supplier_id: SUPPLIER }),
+      ]));
+    }
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const store = createTagStore(fetch, "http://db.test/", "service-role-test");
+  const work = await store.listWork(20);
+  const history = calls.filter((call) => call.url.includes("/rpc/jev_supplier_history"));
+  assertEquals(history.length, 1);
+  assertEquals(history[0].body, {
+    p_company: COMPANY,
+    p_suppliers: [SUPPLIER, OTHER_SUPPLIER].sort(),
+    p_per: JEV_HISTORY_PER_SUPPLIER,
+  });
+  const [first, other, third] = work[0].expenses;
+  assertEquals(first.history, [
+    filing(),
+    filing({ docDate: "2026-02-01", description: "חול", amountNet: -500, projectId: null, categoryId: null, pnlRole: null, split: true }),
+  ]);
+  assertEquals(other.history, undefined);
+  assertEquals(third.history?.length, 2);
+});
+
+Deno.test("a failed history read fails the listing like any other store read", async () => {
+  const fetch: typeof globalThis.fetch = (input) => {
+    const url = String(input);
+    if (url.includes("/company_integrations")) {
+      return Promise.resolve(Response.json([{ company_id: COMPANY, enabled: true, mode: "shadow", threshold: 0.9 }]));
+    }
+    if (url.includes("/projects")) return Promise.resolve(Response.json(projects));
+    if (url.includes("/categories")) return Promise.resolve(Response.json(categories));
+    if (url.includes("/rpc/jev_supplier_history")) return Promise.resolve(new Response(null, { status: 500 }));
+    if (url.includes("/transactions")) return Promise.resolve(Response.json([txnRow({ supplier_id: SUPPLIER })]));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const store = createTagStore(fetch, "http://db.test/", "service-role-test");
+  await assertRejects(() => store.listWork(20), Error, "store");
 });
 
 Deno.test("prefill writes the suggestion flags and the allocation, and not the review", async () => {
@@ -425,7 +543,16 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   assertEquals(shadow.writes.length, 0);
   assertEquals(shadow.suggestions[0].modelVersion, "jev-1.13.0");
   assertEquals(shadow.suggestions[0].responseModel, "jev-1.13.0");
-  assertEquals(seen[0].state, buildTagState(expense()));
+  assertEquals(seen[0].state, buildTagState(expense(), projects, categories));
+
+  const withHistory = memoryStore();
+  seen.length = 0;
+  await tagWork([company({ mode: "shadow", expenses: [expense({ history: [filing()] })] })], withHistory, call, "jev-test-key");
+  const sent = seen[0].state;
+  assert(typeof sent === "object" && sent !== null && !Array.isArray(sent));
+  const past = sent.past_filings;
+  assert(Array.isArray(past) && past.length === 1);
+  assertEquals((past[0] as Record<string, unknown>).project_name, "שיפוץ");
 
   const auto = memoryStore();
   const autoReport = await tagWork([company()], auto, call, "jev-test-key");

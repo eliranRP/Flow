@@ -497,6 +497,22 @@ describe("LoanTransactionSplit", () => {
     });
   });
 
+  it("files a part under the loan's own category when it names one", async () => {
+    const own = { ...db.loans[0], interest_category_id: "cat-own", escrow_category_id: null, principal_category_id: null };
+    db.loans = [own as (typeof db.loans)[number]];
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    const rows = db.inserts[0] as Array<{ part: string; category_id: string }>;
+    expect(Object.fromEntries(rows.map((row) => [row.part, row.category_id]))).toEqual({
+      interest: "cat-own",
+      escrow: "cat-e",
+      principal: "cat-p",
+    });
+  });
+
   it("does not offer שיוך on a category that is not the loan principal", async () => {
     const first = renderSplit({ loanPart: null });
     await new Promise((r) => { setTimeout(r, 50); });
@@ -602,6 +618,24 @@ describe("LoanTransactionSplit", () => {
     expect(screen.getByText("−$5")).toBeInTheDocument();
     expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח $7");
     expect(screen.getByText("קרן").closest(".ui-row")).toHaveTextContent("מחוץ לרווח");
+  });
+
+  it("does not offer a paid-off loan for a payment after the day it ended", async () => {
+    const paidOff = { ...db.loans[0], status: "paid_off", closed_on: "2026-01-15" };
+    db.loans = [paidOff as (typeof db.loans)[number]];
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).queryByText("הלוואת דוגמה")).not.toBeInTheDocument();
+    fireEvent.click(matchButton());
+    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+  });
+
+  it("still offers a paid-off loan for a payment on or before the day it ended", async () => {
+    const paidOff = { ...db.loans[0], status: "paid_off", closed_on: "2026-02-01" };
+    db.loans = [paidOff as (typeof db.loans)[number]];
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
   });
 
   it("hints the lone matching loan on the שיוך row", async () => {
