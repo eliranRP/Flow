@@ -192,11 +192,10 @@ select lives_ok(
   'a split onto the renamed interest category passes the check'
 );
 
-select throws_ok(
+-- Since 0127 any expense category in the P&L may hold interest, whatever its name.
+select lives_ok(
   $$select pg_temp.ko_split('ko:loan-name', 'name')$$,
-  '23514',
-  'loan_split_category',
-  'a category that only has the old Hebrew name is refused'
+  'a category that only has the old Hebrew name may hold interest (0127)'
 );
 set constraints all deferred;
 

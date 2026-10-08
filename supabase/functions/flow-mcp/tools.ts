@@ -94,7 +94,7 @@ const ALLOWED: Record<string, Set<string>> = {
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
@@ -229,6 +229,10 @@ const updateLoanSchema = z.object({
   status: z.enum(["open", "paid_off", "closed"]).optional(),
   // null clears the date (status open does too), an absent key leaves it.
   closed_on: z.string().regex(DATE).nullable().optional(),
+  // A part's own category; null goes back to the default, an absent key leaves it.
+  interest_category_id: UUID_TEXT.nullable().optional(),
+  escrow_category_id: UUID_TEXT.nullable().optional(),
+  principal_category_id: UUID_TEXT.nullable().optional(),
 }).strict();
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -554,6 +558,9 @@ type LoanRow = {
   project_name?: string | null;
   status?: LoanStatus;
   closed_on?: string | null;
+  interest_category_id?: string | null;
+  escrow_category_id?: string | null;
+  principal_category_id?: string | null;
 };
 
 function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
@@ -726,7 +733,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true).", {
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults.", {
       include_closed: { type: "boolean" },
     }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
@@ -908,7 +915,7 @@ function writeTools() {
       currency: { type: "string" },
       project_id: { type: "string" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. Undo restores the previous project, status and closed_on.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). Payments already attached keep their categories. Undo restores the previous project, status, closed_on and categories.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -921,8 +928,11 @@ function writeTools() {
       project_id: { type: ["string", "null"] },
       status: { type: "string", enum: ["open", "paid_off", "closed"] },
       closed_on: { type: ["string", "null"] },
+      interest_category_id: { type: ["string", "null"] },
+      escrow_category_id: { type: ["string", "null"] },
+      principal_category_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, each under the loan's own category for that part or the default. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
@@ -1178,6 +1188,9 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (parsed.data.project_id !== undefined) patch.project_id = parsed.data.project_id;
   if (parsed.data.status != null) patch.status = parsed.data.status;
   if (parsed.data.closed_on !== undefined) patch.closed_on = parsed.data.closed_on;
+  for (const key of ["interest_category_id", "escrow_category_id", "principal_category_id"] as const) {
+    if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
+  }
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
   const result = await rpc("mcp_update_loan", {
     p_idempotency_key: parsed.data.idempotency_key,

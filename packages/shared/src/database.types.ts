@@ -352,13 +352,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"project_id": string | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at": string
+                    "annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"id": string,"interest_category_id": string | null,"name": string,"payment_minor": number,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at": string
                   }
                   Insert: {
-                    "annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"project_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at"?: string
+                    "annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_category_id"?: string | null,"escrow_minor": number,"id"?: string,"interest_category_id"?: string | null,"name": string,"payment_minor": number,"principal_category_id"?: string | null,"principal_minor": number,"project_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at"?: string
                   }
                   Update: {
-                    "annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number,"updated_at"?: string
+                    "annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_category_id"?: string | null,"escrow_minor"?: number,"id"?: string,"interest_category_id"?: string | null,"name"?: string,"payment_minor"?: number,"principal_category_id"?: string | null,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -372,6 +372,24 @@ isOneToOne: false
       columns: ["company_id","project_id"]
 isOneToOne: false
       referencedRelation: "projects"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loans_escrow_category_fkey"
+      columns: ["company_id","escrow_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loans_interest_category_fkey"
+      columns: ["company_id","interest_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "loans_principal_category_fkey"
+      columns: ["company_id","principal_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
       referencedColumns: ["company_id","id"]
     }
                   ]

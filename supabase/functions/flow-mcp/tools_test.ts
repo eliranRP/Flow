@@ -2656,3 +2656,19 @@ Deno.test("get_jev_accuracy checks its dates and passes the report through", asy
   assertEquals(writeOnly.isError, true);
   assertEquals(calls.length, 2);
 });
+
+Deno.test("update_loan sends the part categories as uuids or null, and validates them first", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_update_loan") return { status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_update" } } };
+    return { status: 500, json: null };
+  });
+  const set = await callTool("update_loan", { idempotency_key: "lc-1", loan_id: LOAN, interest_category_id: CATEGORY, principal_category_id: null }, ["write"], rpc);
+  assertEquals(set.isError, false);
+  assertEquals(calls[0]?.body.p_patch, { interest_category_id: CATEGORY, principal_category_id: null });
+  for (const bad of ["not-a-uuid", 5, true]) {
+    const out = await callTool("update_loan", { idempotency_key: "lc-2", loan_id: LOAN, escrow_category_id: bad }, ["write"], rpc);
+    assertEquals(out.isError, true);
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1);
+});
