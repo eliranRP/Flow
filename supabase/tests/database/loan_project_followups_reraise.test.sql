@@ -128,8 +128,8 @@ select is(
 );
 
 select is(
-  pg_temp.attach('lr-att-lock', '55P03')->'error'->>'code',
-  'unavailable',
+  pg_temp.attach('lr-att-lock', '55P03')->'error',
+  '{"code": "unavailable", "message": "retry"}'::jsonb,
   'a lock timeout while filing the line ends the attach as unavailable'
 );
 reset role;
@@ -201,8 +201,8 @@ end;
 $$;
 
 select is(
-  pg_temp.undo('lr-undo-lock', '55P03')->'error'->>'code',
-  'unavailable',
+  pg_temp.undo('lr-undo-lock', '55P03')->'error',
+  '{"code": "unavailable", "message": "retry"}'::jsonb,
   'a lock timeout in undo returns unavailable'
 );
 reset role;

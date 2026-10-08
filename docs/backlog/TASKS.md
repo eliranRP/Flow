@@ -52,7 +52,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | in-progress (#122) |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | done (#121; UI items go to the design PR, #121 review items to FLOW-129) |
-| 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | in-progress |
+| 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | in-progress (#123) |
+| 32c | [FLOW-130](#flow-130) | Lock timeouts return retry in every MCP write (#123 review) | BACKLOG NIT | ready |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
@@ -233,9 +234,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-129"></a>
 ### FLOW-129 · Loan attach follow-ups (#121 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress · **Depends on:** FLOW-120
+- **Type:** BACKLOG NIT · **Status:** in-progress (#123) · **Depends on:** FLOW-120
 - [x] `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock. (Migration `20261008040000`, tested in `loan_project_followups_reraise.test.sql`.)
 - [x] `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead. (No trigger queues it; the test asserts that and inserts the item.)
+
+<a id="flow-130"></a>
+### FLOW-130 · Lock timeouts return retry in every MCP write (#123 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-129
+- [ ] The other `mcp_*` write functions still send `lock_not_available` to `others`, so a lock timeout is stored as a refusal under the idempotency key. Map it to `unavailable` / `retry` in each, as #123 did for `attach_loan_payment` and `undo`, and update TOOLS.md.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
