@@ -11,6 +11,8 @@ export function samplePreview(
   lineCategoryId: string | null,
   parts: readonly PayloadPart[],
   isReversal: (categoryId: string) => boolean = () => false,
+  /** A kept-out reversal part needs no project unless the line is in the P&L (0138). */
+  keptOut: (categoryId: string) => boolean = () => false,
 ): ServerPart[] {
   if (parts.length === 0) return [];
   if (lineMinor === 0n) throw new Error("line amount is zero");
@@ -25,7 +27,7 @@ export function samplePreview(
     const pair = `${categoryId}|${projectId ?? ""}`;
     if (seen.has(pair)) throw new Error("same category and project twice");
     seen.add(pair);
-    if (projectId == null && categoryId !== lineCategoryId && isReversal(categoryId)) {
+    if (projectId == null && categoryId !== lineCategoryId && isReversal(categoryId) && !keptOut(categoryId)) {
       throw new Error("a reversal part needs a project");
     }
     return {

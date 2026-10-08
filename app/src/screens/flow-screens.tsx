@@ -820,16 +820,20 @@ export function ProjectDetailScreen({
 type ProjectLine = NonNullable<ProjectDetail>["transactions"][number];
 
 /**
- * What a project line adds to its month head. A kept-out line adds nothing (0099). A line split
- * by category adds this project's parts, which come unsigned, with the line's sign (FLOW-325).
+ * What a project line adds to its month head. A kept-out line adds nothing (0099). A split line
+ * adds this project's share, `parts_minor`, taken as it comes: signed in the line's own terms, a
+ * reversal part already minus (decision 0138). Plus is the line's own way, so the share moves
+ * money the way the line does; a share the reversals push below zero moves it the other way.
  */
 export function projectMonthAmount(txn: ProjectLine): { minor: bigint; currency: string; direction: "income" | "expense" } {
   const direction = txn.direction === "income" ? "income" : "expense";
   const currency = txn.currency ?? "ILS";
   if (txn.kept_out === true) return { minor: 0n, currency, direction };
   if (txn.parts_minor != null) {
-    const parts = txn.parts_minor < 0n ? -txn.parts_minor : txn.parts_minor;
-    return { minor: txn.amount_net < 0n ? -parts : parts, currency, direction };
+    const share = txn.parts_minor;
+    if (share >= 0n) return { minor: direction === "income" ? share : -share, currency, direction };
+    const other = direction === "income" ? "expense" : "income";
+    return { minor: other === "income" ? -share : share, currency, direction: other };
   }
   return { minor: txn.amount_net, currency, direction };
 }
@@ -3892,10 +3896,10 @@ function sumitKind(input: {
   return "disconnected";
 }
 
-/** Connections → onboarding, then back to Connections with the SUMIT sheet open. */
-function onboardingFromSettings(search: string): string {
+/** Connections → onboarding, then back to Connections with the same connector's sheet open. */
+function onboardingFromSettings(search: string, sheet: "sumit" | "mercury"): string {
   const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : "");
-  params.set("return", "/settings/connections?sheet=sumit");
+  params.set("return", `/settings/connections?sheet=${sheet}`);
   return `/onboarding?${params.toString()}`;
 }
 
@@ -4882,7 +4886,7 @@ export function ConnectionsScreen({
         noCompanyBody={noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את SUMIT צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search, "sumit")} replace={sheetStack(location.state).includes("sumit-connect")}>פרטי העסק</TextLink>
           </div>
         ) : undefined}
         authReconnect={authReconnect}
@@ -4908,7 +4912,7 @@ export function ConnectionsScreen({
           <p>
             מחובר
             {sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
-            {syncPhrase != null ? <span className="ui-nowrap">{` · ${syncPhrase}`}</span> : null}
+            {syncPhrase != null ? <><br /><span className="ui-nowrap">{syncPhrase}</span></> : null}
           </p>
           {refreshHeld && rawError != null && rawError !== "sumit_auth" ? <p>הרענון נכשל</p> : null}
           {!refreshHeld && rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}
@@ -4956,7 +4960,7 @@ export function ConnectionsScreen({
         noCompanyBody={noCompany ? (
           <div className="ui-stack">
             <p>כדי לחבר את Mercury צריך עסק.</p>
-            <TextLink to={onboardingFromSettings(search)} replace={sheetStack(location.state).includes("mercury-connect")}>פרטי העסק</TextLink>
+            <TextLink to={onboardingFromSettings(search, "mercury")} replace={sheetStack(location.state).includes("mercury-connect")}>פרטי העסק</TextLink>
           </div>
         ) : undefined}
         authReconnect={mercuryAuthReconnect}
@@ -4979,7 +4983,7 @@ export function ConnectionsScreen({
         <div className="ui-stack">
           <p>
             מחובר
-            {mercurySyncPhrase != null ? <span className="ui-nowrap">{` · ${mercurySyncPhrase}`}</span> : null}
+            {mercurySyncPhrase != null ? <><br /><span className="ui-nowrap">{mercurySyncPhrase}</span></> : null}
           </p>
           {mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" ? <p>הרענון נכשל</p> : null}
           {!mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" && mercuryLastError ? <p>{mercuryLastError}</p> : null}

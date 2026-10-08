@@ -96,6 +96,19 @@ describe("project recent list months", () => {
     expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");
   });
 
+  it("takes a signed share as it comes: a reversal part is already minus (decision 0138)", () => {
+    wrap(<ProjectDetailScreen sample={project([
+      // A supplier refund filed as income: 70.00 left as income, 30.00 put back against expenses.
+      { ...txn("a", "2026-09-14", 10_000n, "income"), parts_minor: 4_000n },
+      // An expense line whose reversal parts outweigh its own on this project: money comes back.
+      { ...txn("b", "2026-09-12", -600_000n, "expense"), parts_minor: -50_000n },
+      // An income line whose share here is below zero: money goes out.
+      { ...txn("c", "2026-08-20", 1_000_000n, "income"), parts_minor: -200_000n },
+    ])} />);
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪540");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,000");
+  });
+
   it("marks a kept-out line on the row and opens the lines without an extra tap (FLOW-411)", () => {
     wrap(<ProjectDetailScreen sample={project([
       { ...txn("a", "2026-09-14", -150_000n, "expense"), kept_out: true, category: "ציוד" },

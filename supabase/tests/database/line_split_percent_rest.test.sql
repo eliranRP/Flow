@@ -176,7 +176,7 @@ select throws_ok(
   'parts exceed the line', 'percents above 100 are refused');
 select throws_ok(
   $$select public.save_line_split((select id from lpr where label = 'txn_bill'), jsonb_build_array(
-    pg_temp.part('repairs', 'north', 'amount', 20000), pg_temp.part(null, null, 'rest')))$$,
+    pg_temp.part('repairs', 'south', 'amount', 20000), pg_temp.part(null, null, 'rest')))$$,
   'parts exceed the line', 'an amount above the line is refused even with a rest');
 select throws_ok(
   $$select public.save_line_split((select id from lpr where label = 'txn_bill'), jsonb_build_array(
