@@ -62,6 +62,25 @@ function categoryOpen(row: JevRow): boolean {
   return row.category_suggested !== false;
 }
 
+export type JevShown = { project: boolean; category: boolean };
+
+const JEV_SHOWN_NONE: JevShown = { project: false, category: false };
+
+/**
+ * Which fields of the stored row show Jev's value once `withJev` has run: the
+ * connector is on, this line has a Jev answer for the field, and the field is
+ * open (empty or a suggestion). A supplier rule, an owned field, and off are not.
+ * A field the auto job already pre-filled with the same answer still counts.
+ */
+export function jevShown(row: JevRow, state: JevReviewState): JevShown {
+  const prefill = state.connectorOn ? state.prefill : null;
+  if (!prefill || prefill.transactionId !== row.transaction_id) return JEV_SHOWN_NONE;
+  return {
+    project: prefill.project != null && projectOpen(row),
+    category: prefill.category != null && categoryOpen(row),
+  };
+}
+
 /** Fills an empty or already-suggested field from Jev. An owned field stays. Off returns the same row. */
 export function withJev<T extends JevRow>(row: T, state: JevReviewState): T & {
   project_suggested?: boolean;

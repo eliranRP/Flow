@@ -790,6 +790,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] Delete the old shared connector key once per launch, not on every read.
 - [ ] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות; a "no key" status once a key-status RPC exists.
 - [ ] Jev tagging job: a cron with a DB run lease, persisted usage per run.
+- [x] The review card marks a project or category Jev filled with "✦ הצעת Jev" (the shared `JevTag`) instead of הצעה (2026-10-08).
+- [ ] שינוי שיוך and the statement row still show הצעה, or ✦ alone, on a Jev fill.
 
 ## Infra and CI
 
