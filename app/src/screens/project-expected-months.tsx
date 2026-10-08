@@ -1,5 +1,5 @@
 import type { ExpectedMonths as ExpectedMonthsData } from "@flow/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCompanyCurrency } from "../company-currency";
 import { expectedMonthViews, hasExpectedHistory, useExpectedMonthsQuery } from "../forecast";
 import { useHomePreview } from "../preview";
@@ -28,6 +28,7 @@ export function ProjectExpectedMonths({
   const query = useExpectedMonthsQuery(live ? projectId : "");
   const [selected, setSelected] = useState<ExpectedMonthRow | null>(null);
   const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLElement | null>(null);
   if (!live && sample == null) return null;
   const data = live ? query.data : sample;
   const phase = live ? screenPhase(preview, query) : ({ kind: "ready" } as const);
@@ -38,12 +39,13 @@ export function ProjectExpectedMonths({
         months={months}
         phase={phase}
         onRetry={() => { void query.refetch(); }}
-        onOpen={(month) => {
+        onOpen={(month, button) => {
+          opener.current = button;
           setSelected(month);
           setOpen(true);
         }}
       />
-      <ExpectedMonthSheet month={selected} open={open} onOpenChange={setOpen} />
+      <ExpectedMonthSheet month={selected} open={open} onOpenChange={setOpen} returnFocusRef={opener} />
     </>
   );
 }

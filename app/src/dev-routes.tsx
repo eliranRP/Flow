@@ -364,6 +364,8 @@ export function DevCategories() {
 export function DevUnpaid() {
   const [params] = useSearchParams();
   const marked = params.get("marked") === "1";
+  // FLOW-335: `?doc=1` gives the first row SUMIT's document link (an invented path).
+  const doc = params.get("doc") === "1" ? { document_url: "https://pay.sumit.co.il/example/doc-1" } : {};
   return (
     <UnpaidScreen
       sample={[{
@@ -374,6 +376,7 @@ export function DevUnpaid() {
         project_name: "שיפוץ הרצל 12",
         open_gross_agorot: 50_000n,
         open_net_agorot: 40_000n,
+        ...doc,
       }, ...(marked ? [{
         id: "u2",
         description: "חשבונית שסומנה",

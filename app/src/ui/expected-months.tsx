@@ -38,7 +38,8 @@ export function ExpectedMonths({
 }: {
   months: readonly ExpectedMonthRow[];
   phase?: ScreenPhase;
-  onOpen?: (month: ExpectedMonthRow) => void;
+  /** Gets the row's button too, so the sheet can return focus to it. */
+  onOpen?: (month: ExpectedMonthRow, opener: HTMLButtonElement) => void;
   onRetry?: () => void;
 }) {
   return (
@@ -85,7 +86,7 @@ export function ExpectedMonths({
                 className="ui-row ui-hit"
                 aria-label={name}
                 aria-haspopup="dialog"
-                onClick={() => { onOpen(month); }}
+                onClick={(event) => { onOpen(month, event.currentTarget); }}
               >
                 {body}
               </button>

@@ -1,5 +1,6 @@
 import { ApproxAmount } from "./approx-amount";
 import type { ExpectedMonthRow, ExpectedPartyRow } from "./expected-months";
+import type { RefObject } from "react";
 import { Sheet } from "./sheet";
 
 /** The parties behind one expected month: name and amount, income in green. Read only. */
@@ -28,13 +29,16 @@ export function ExpectedMonthSheet({
   month,
   open,
   onOpenChange,
+  returnFocusRef,
 }: {
   month: ExpectedMonthRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The month row that opened the sheet; focus goes back to it on close. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   return (
-    <Sheet open={open && month != null} onOpenChange={onOpenChange} title={month?.label ?? ""}>
+    <Sheet open={open && month != null} onOpenChange={onOpenChange} title={month?.label ?? ""} returnFocusRef={returnFocusRef}>
       {month == null ? null : <ExpectedMonthParties parties={month.parties} />}
     </Sheet>
   );

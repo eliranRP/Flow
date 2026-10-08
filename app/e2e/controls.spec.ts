@@ -866,6 +866,7 @@ const sweepPages = [
   "/e2e/loans?preview=1",
   "/e2e/categories?preview=1",
   "/e2e/unpaid?preview=1",
+  "/e2e/missing-bills?preview=1",
   "/e2e/txn?preview=1",
   "/e2e/project-detail?preview=1",
   "/e2e/project-months?preview=1",
