@@ -19,7 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
 | UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | Loan backend: save_loan_split, demand order, viewer loan payments, rate start (FLOW-136) | FLOW-205 undo items, then FLOW-136 balloon schedule item |
+| Backlog bug fixes | FLOW-205 undo: prior pointers, re-hide after unhide, undo race test | FLOW-136 balloon schedule item, rest of FLOW-205 |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -393,14 +393,14 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-205"></a>
 ### FLOW-205 · MCP hardening follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Undo ignores `review_queue.prior_*` and `reassign_undo.prior_*` that still point at the row.
+- [x] Undo ignores `review_queue.prior_*` and `reassign_undo.prior_*` that still point at the row. (Conflict while a prior project, category or share points at it: migration `20261010130000`.)
 - [x] Names accept control and invisible characters. (FLOW-205 part 1: project, category and loan names with a control or invisible format character are `validation`; ZWJ stays for emoji.)
-- [ ] A second hide returns the generic refusal; if the app unhides a category the MCP hid, the MCP can neither re-hide nor undo.
+- [x] A second hide returns the generic refusal; if the app unhides a category the MCP hid, the MCP can neither re-hide nor undo. (A re-hide keeps the one open undo; undo of a hide the app reversed succeeds: migration `20261010130000`.)
 - [ ] TOOLS.md conflict wording, and document the `sync_bank` errors.
 - [ ] `mercury-sync` `deno check` doesn't resolve imports (also on main).
 - [ ] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token.
 - [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
-- [ ] A race test (dblink pgTAP or e2e) for the undo row lock.
+- [x] A race test (dblink pgTAP or e2e) for the undo row lock. (`mcp_undo_race.test.sql`.)
 - [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
 - [x] The MCP review schema still requires `project_id` for kept-out income that doesn't need one. (FLOW-205 part 1: `assign_expense` takes no project for a kept-out income category; any other category without one is `validation`.)
 - [ ] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space.
