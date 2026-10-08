@@ -91,7 +91,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | done (#199) |
-| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | in progress (PR #210), UI lane 1, with FLOW-402 |
+| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | done (#210), with FLOW-402 |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | done (#165) |
@@ -787,7 +787,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-402"></a>
 ### FLOW-402 · All transactions of a project, at a glance
-- **Type:** PLAN FIRST · **Status:** in progress (PR #210), UI lane 1, with FLOW-323: the project page's "כל התנועות" opens the search screen with the project chip set (owner, mockup A, 2026-10-08) · **Depends on:** FLOW-302
+- **Type:** PLAN FIRST · **Status:** done (#210), with FLOW-323: the project page's "כל התנועות" opens the search screen with the project chip set (owner, mockup A, 2026-10-08) · **Depends on:** FLOW-302
 - **What:** Tapping "תנועות אחרונות ›" on a project opens a full page with all the project's transactions, with filters by date and category. Polish the project and company cards so everything is reviewable with fewer taps. MCP: `search_expenses` already covers the data.
 - **Acceptance:** mockup approved.
 
