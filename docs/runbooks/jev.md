@@ -59,7 +59,7 @@ The caller is either `x-flow-cron` matching `CRON_SECRET`, or `Authorization: Be
 
 An accepted call reserves the isolate for 60 seconds. The next call in that window is 429 `rate_limited` and does not call Jev. A run then takes the database lease (`jev_take_lease`, 180 seconds); a run that finds it taken is 409 `busy` and does not call Jev. The lease is released at the end of the run, and an abandoned one expires on its own ([0123](../decisions/0123-jev-after-sync.md)).
 
-Each company has `company_integrations.daily_call_cap` (default 200, 0 to 2000) calls per UTC day. Before calling Jev the run reserves calls for each company with `jev_reserve_calls`; lines over the grant are `cap_skipped` in the response and wait for the next day. A spent cap does not read the key. Every run writes one `jev_usage` row per company with its calls and token counts. A line Jev failed on goes to `jev_line_failures` and waits 6 hours (24 hours from its third failure).
+Each company has `company_integrations.daily_call_cap` (default 200, 0 to 2000) calls per UTC day. Before calling Jev the run reserves calls for each company with `jev_reserve_calls`; lines over the grant are `cap_skipped` in the response and wait for the next day. A spent cap does not read the key. Every run writes one `jev_usage` row per company with its calls and token counts. A line Jev failed on, or whose suggestion could not be saved, goes to `jev_line_failures` and waits 6 hours (24 hours from its third failure). Three provider failures in a row end the run.
 
 To change a company's cap, as the service role: `update public.company_integrations set daily_call_cap = 300 where company_id = 'COMPANY_UUID' and provider = 'jev';`. Today's use: `select sum(case when finished_at is null then reserved else calls end) from public.jev_usage where company_id = 'COMPANY_UUID' and usage_day = (now() at time zone 'utc')::date;`.
 
@@ -71,7 +71,7 @@ The function does not read `jev_api_key` when no enabled company has a line to l
 
 ## Schedule
 
-`flow-jev-tag` runs every 5 minutes (migration `20261008130000_jev_after_sync.sql`). It posts to `jev-tag` with the `x-flow-cron` header only when `private.jev_has_work()` is true, so a quiet 5 minutes sends no request. The URL is the `flow_sync_url` Vault value with `/sumit-sync` replaced by `/jev-tag`. Without `pg_cron`, `pg_net`, `cron_secret` or `flow_sync_url` the schedule is skipped with a notice; after adding them, run `select private.schedule_jev_tag();` as the service role. Check it with `select jobname, schedule from cron.job where jobname = 'flow-jev-tag';`.
+`flow-jev-tag` runs every 5 minutes (migration `20261008130000_jev_after_sync.sql`). It posts to `jev-tag` with the `x-flow-cron` header only when `private.jev_has_work()` is true, so a quiet 5 minutes sends no request. The URL is the `flow_sync_url` Vault value with `/sumit-sync` replaced by `/jev-tag`. Without `pg_cron`, `pg_net`, `cron_secret` or `flow_sync_url` (or when `flow_sync_url` has no `/sumit-sync`), the schedule is skipped with a notice. After fixing that, in one transaction from the SQL editor: `begin; select set_config('request.jwt.claim.role', 'service_role', true); select private.schedule_jev_tag(); commit;`. Check it with `select jobname, schedule from cron.job where jobname = 'flow-jev-tag';`.
 
 ## Hand trigger
 

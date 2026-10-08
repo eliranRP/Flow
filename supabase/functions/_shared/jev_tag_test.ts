@@ -439,6 +439,7 @@ Deno.test("tagWork stores shadow, pre-fills auto, and does not keep a suggestion
   assertEquals(brokenReport.failed, 1);
   assertEquals(brokenReport.prefilled, 0);
   assertEquals(broken.suggestions.length, 0);
+  assertEquals(broken.failed, [EXPENSE]);
 
   let calls = 0;
   const again = await tagWork([company()], auto, () => {
@@ -1188,7 +1189,7 @@ Deno.test("the daily cap keeps only the granted lines, newest first, per company
   }, RUN);
   assertEquals(asked, [[COMPANY, RUN, 3], [other, RUN, 1]]);
   assertEquals(capped.capSkipped, 3);
-  assertEquals(capped.reserved, [COMPANY]);
+  assertEquals(capped.reserved, [COMPANY, other]);
   assertEquals(capped.work.length, 1);
   assertEquals(capped.work[0].expenses.map((row) => row.id), [EXPENSE]);
 });
@@ -1346,8 +1347,8 @@ Deno.test("a spent cap does not read the key or call Jev", async () => {
   assertEquals(body.cap_skipped, 3);
   assertEquals(log.jev, 0);
   assertEquals(log.key, 0);
-  assertEquals(finished, []);
-  assertEquals(log.rpc, ["jev_take_lease", "jev_reserve_calls", "jev_release_lease"]);
+  assertEquals((finished as { p_calls: number }[]).map((row) => row.p_calls), [0]);
+  assertEquals(log.rpc, ["jev_take_lease", "jev_reserve_calls", "jev_finish_usage", "jev_release_lease"]);
 });
 
 Deno.test("a stopped run still records the call it made and frees the lease", async () => {
@@ -1357,4 +1358,47 @@ Deno.test("a stopped run still records the call it made and frees the lease", as
   assertEquals(log.jev, 1);
   assertEquals((finished[0] as { p_calls: number }).p_calls, 1);
   assertEquals(log.rpc.at(-1), "jev_release_lease");
+});
+
+Deno.test("a reserve that throws for one company still finishes the companies before it", async () => {
+  const other = "66666666-6666-4666-8666-666666666666";
+  const reserved: string[] = [];
+  await assertRejects(() => applyDailyCap([
+    company(),
+    company({ companyId: other, expenses: [expense({ id: SECOND, companyId: other })] }),
+  ], {
+    reserveCalls: (companyId) => companyId === other ? Promise.reject(new Error("store")) : Promise.resolve(1),
+  }, RUN, reserved));
+  assertEquals(reserved, [COMPANY, other]);
+});
+
+Deno.test("a suggestion that cannot be saved marks the line", async () => {
+  const store = memoryStore();
+  store.saveSuggestion = () => Promise.reject(new Error("store"));
+  const report = await tagWork([company({ mode: "shadow" })], store, () =>
+    Promise.resolve({ model: JEV_MODEL, answers: answers(), usage: null }), "jev-test-key", { log: () => {} });
+  assertEquals(report.failed, 1);
+  assertEquals(store.failed, [EXPENSE]);
+});
+
+Deno.test("three provider failures in a row end the run without sending the rest", async () => {
+  const store = memoryStore();
+  const ids = [EXPENSE, SECOND, THIRD, "dddddddd-dddd-4ddd-8ddd-dddddddddddd", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"];
+  let calls = 0;
+  const report = await tagWork([company({ mode: "shadow", expenses: ids.map((id) => expense({ id })) })], store, () => {
+    calls += 1;
+    return Promise.reject(new JevError("unavailable"));
+  }, "jev-test-key", { log: () => {} });
+  assertEquals(calls, 3);
+  assertEquals(report.failed, 3);
+  assertEquals(report.skipped, 2);
+  assertEquals(store.failed, ids.slice(0, 3));
+
+  let mixed = 0;
+  const bad = await tagWork([company({ mode: "shadow", expenses: ids.map((id) => expense({ id })) })], memoryStore(), () => {
+    mixed += 1;
+    return Promise.reject(new JevError(mixed % 2 === 0 ? "invalid_request" : "timeout"));
+  }, "jev-test-key", { log: () => {} });
+  assertEquals(mixed, 5);
+  assertEquals(bad.failed, 5);
 });

@@ -305,7 +305,7 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_jev_status
 
-`mcp_jev_status`, no arguments ([0123](../decisions/0123-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (or null), and `lines_without_suggestion` (open expense lines in לאישור with no Jev suggestion for the pinned model). Counts only; no line text.
+`mcp_jev_status`, no arguments ([0123](../decisions/0123-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (the end of the latest run, or its start while it runs; null before the first), and `lines_without_suggestion` (open expense lines in לאישור with no Jev suggestion for the pinned model, including lines waiting to retry after a failure). Counts only; no line text.
 
 Jev labels new lines within about 5 minutes of a bank sync, up to `daily_call_cap`. It only suggests a project and category on the review card; it never approves a line ([0084](../decisions/0084-jev-auto-prefill.md)). A line Jev failed on waits 6 hours (a day from the third failure) before it is sent again.
 

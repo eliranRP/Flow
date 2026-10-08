@@ -184,7 +184,7 @@ $$;
 
 -- Reserve up to p_want calls for this run from today's cap. Returns how many were granted.
 -- The integration row lock makes two runs for one company take turns. A run reserves once
--- per company; a second reserve for the same run is a conflict.
+-- per company: a second reserve after a grant above 0 is a conflict (a grant of 0 stores no row).
 create or replace function public.jev_reserve_calls(p_company uuid, p_run uuid, p_want integer)
 returns integer
 language plpgsql
@@ -361,7 +361,7 @@ declare
   sync_url text;
 begin
   if coalesce(auth.role(), '') is distinct from 'service_role' then
-    raise exception 'forbidden';
+    raise exception 'forbidden' using errcode = '42501';
   end if;
   if not exists (select 1 from pg_extension where extname = 'pg_cron')
      or not exists (select 1 from pg_extension where extname = 'pg_net') then
@@ -387,6 +387,12 @@ begin
 
   if secret is null or btrim(secret) = '' or sync_url is null or btrim(sync_url) = '' then
     raise notice 'flow-jev-tag skipped: cron_secret or flow_sync_url is missing';
+    return;
+  end if;
+  -- The job URL is derived from the sumit-sync URL. Without that path it would post to
+  -- the wrong function, so it does not schedule.
+  if position('/sumit-sync' in sync_url) = 0 then
+    raise notice 'flow-jev-tag skipped: flow_sync_url does not end in /sumit-sync';
     return;
   end if;
 

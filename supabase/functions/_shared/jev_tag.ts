@@ -27,6 +27,9 @@ export const JEV_TAG_BUDGET_MS = 120_000;
 /** Do not start another Jev call when less than this much of the budget is left. */
 export const JEV_TAG_RESERVE_MS = 20_000;
 export const JEV_TAG_INTERVAL_MS = 60_000;
+/** This many provider failures in a row end the run, so an outage marks few lines. */
+export const JEV_TAG_OUTAGE_STOP = 3;
+const TRANSPORT_CODES = new Set(["rate_limited", "overloaded", "timeout", "unavailable"]);
 /** The run lease outlives the 150 second Edge limit, so a killed run frees it on its own. */
 export const JEV_TAG_LEASE_SECONDS = 180;
 const CHOICE_CAP = 255;
@@ -361,6 +364,14 @@ export async function tagWork(
   const reserveMs = options.reserveMs ?? JEV_TAG_RESERVE_MS;
   const started = now();
   let stop = false;
+  let outage = 0;
+  const markFailed = async (expense: TagExpense) => {
+    try {
+      await store.markFailed?.(expense.companyId, expense.id, JEV_MODEL);
+    } catch {
+      // The line is sent again on the next run, within the daily cap.
+    }
+  };
   for (const company of work) {
     if (stop) {
       report.skipped += company.expenses.length;
@@ -376,6 +387,11 @@ export async function tagWork(
       : emptyUsage();
     options.usage?.set(company.companyId, usage);
     for (const expense of company.expenses) {
+      if (outage >= JEV_TAG_OUTAGE_STOP) {
+        report.skipped += 1;
+        stop = true;
+        continue;
+      }
       if (budgetSpent(started, budgetMs, now(), reserveMs)) {
         report.skipped += 1;
         report.budget_skipped += 1;
@@ -405,13 +421,11 @@ export async function tagWork(
         }
         report.failed += 1;
         usage.failed += 1;
-        try {
-          await store.markFailed?.(expense.companyId, expense.id, JEV_MODEL);
-        } catch {
-          // The line is sent again on the next run, within the daily cap.
-        }
+        outage = error instanceof JevError && TRANSPORT_CODES.has(error.code) ? outage + 1 : 0;
+        await markFailed(expense);
         continue;
       }
+      outage = 0;
       if (result.usage) {
         report.input_tokens += result.usage.input_tokens;
         report.output_tokens += result.usage.output_tokens;
@@ -442,6 +456,7 @@ export async function tagWork(
         }
         report.failed += 1;
         usage.failed += 1;
+        await markFailed(expense);
         continue;
       }
       if (!plan.write) {
@@ -460,6 +475,7 @@ export async function tagWork(
         } catch {
           // The row stays. The next run will see the conflict and skip it.
         }
+        await markFailed(expense);
         report.failed += 1;
         usage.failed += 1;
       }
@@ -784,17 +800,19 @@ export async function applyDailyCap(
   work: readonly TagCompanyWork[],
   jobs: Pick<TagJobStore, "reserveCalls">,
   runId: string,
+  reserved: string[] = [],
 ): Promise<{ work: TagCompanyWork[]; capSkipped: number; reserved: string[] }> {
   const kept: TagCompanyWork[] = [];
-  const reserved: string[] = [];
   let capSkipped = 0;
   for (const company of work) {
     const want = company.expenses.length;
     if (want === 0) continue;
+    // Listed before the reserve, so a later throw still finishes this company's row.
+    // Finishing a company with no row is a no-op.
+    if (!reserved.includes(company.companyId)) reserved.push(company.companyId);
     const granted = await jobs.reserveCalls(company.companyId, runId, want);
     capSkipped += want - granted;
     if (granted < 1) continue;
-    reserved.push(company.companyId);
     kept.push({ ...company, expenses: company.expenses.slice(0, granted) });
   }
   return { work: kept, capSkipped, reserved };
@@ -950,12 +968,11 @@ export async function handleJevTag(req: Request, deps: JevTagDeps): Promise<Resp
     return json({ error: "tag_failed" }, 500);
   }
   const usage = new Map<string, CompanyUsage>();
-  let reserved: string[] = [];
+  const reserved: string[] = [];
   try {
     const store = createTagStore(deps.fetch, supabaseUrl, serviceKey, deps.now);
     const listed = await store.listWork(requested.limit, requested.companyId);
-    const capped = await applyDailyCap(listed, jobs, runId);
-    reserved = capped.reserved;
+    const capped = await applyDailyCap(listed, jobs, runId, reserved);
     const pending = capped.work.reduce((sum, company) => sum + company.expenses.length, 0);
     if (pending === 0) {
       const report = emptyReport(listed.length);
