@@ -1,0 +1,1 @@
+Fix (profit by period, #199): in a company whose books are in dollars, the "לפי חודש" page led with a ₪0 headline and a "נכנס ₪0 · יצא ₪0" row on every month, and an empty period on Home or a project band read ₪0. The page now shows only the currencies the period has figures in (ILS first when it has any), and an empty period shows its zeros in the company's currency.

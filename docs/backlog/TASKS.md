@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-404 server and MCP part: investment figures, equity, rehab switch per category | Next `ready` non-UI task in the queue (FLOW-510 waits for its design call) |
+| Dev lane 1 | FLOW-404 follow-up: investment figures in the project's currency (USD companies) | FLOW-405 server and MCP (the owner chose "Server now"; FLOW-510 waits for its design call) |
 | Dev lane 2 | FLOW-702 server side: Jev auto mode (anomaly gate, income, audit and one-tap undo) with the #177 review nits | FLOW-702 Settings and card UI for a UI lane |
 | UI lane 1 | Profit by period (option A, decision 0141) with FLOW-411 and the FLOW-330 screen, one PR (PR #199) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -764,9 +764,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-404"></a>
 ### FLOW-404 · Project as an investment
-- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP done in #201, [0143](../decisions/0143-project-investment.md): rehab is every project cost but loan parts and kept-out categories, with a switch per category; the investment card on the project page and the rehab switch in category settings wait for a UI lane, after a mockup) · **Depends on:** FLOW-105
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #201, [0143](../decisions/0143-project-investment.md): rehab is every project cost but loan parts and kept-out categories, with a switch per category; owner approved the mockup as drawn, 2026-10-08) · **Depends on:** FLOW-105
 - **What:** Per property or project: purchase price, after-repair value, and from Flow's actual costs, forced equity (ARV − purchase − rehab) and current equity (value − loan balance). MCP tools to set and read purchase price, ARV and value.
 - **Acceptance:** UX research, mockup and plan approved by the owner.
+- [x] Mockup approved as drawn (2026-10-08; the project's plans/flow-404-investment-mockup.html). The project page gets an "השקעה" card under the categories. Its head says מתחילת הפרויקט, and the screen's period and basis don't change it. It has three rows (מחיר קנייה, שווי אחרי שיפוץ, שווי היום with its date), each opening a bottom sheet with the number pad. Each sheet saves its own figure through `set_project_investment` (the שווי היום sheet also its date, which starts on today), on שמירה or when the sheet closes, and מחיקה clears the figure. Under the rows, הון מאולץ and הון נוכחי sit side by side with their formula. An equity that needs a missing figure names the figure; one that can't be worked out because of another currency says so; it never shows 0. Then come two rows: שיפוץ עד היום opens the rehab list by category, with the left-out categories under it, and יתרת הלוואות lists other-currency loans apart. A viewer sees no chevrons and no הוספה, and the overhead project has no card.
+- [x] The category ⋯ sheet gets a "נספרת בשיפוץ" switch showing `in_rehab`, with a one-line hint. A kept-out category's hint says why it is off by default. When the owner changed the default, the hint says so and "החזרה לברירת המחדל" sends null. A viewer sees the switch disabled, with its hint.
+- [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
@@ -1008,10 +1011,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-705"></a>
 ### FLOW-705 · Jev anomalies follow-ups (#160 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done · **Depends on:** —
 - [x] A voided credit note still suppresses a duplicate flag. (#168)
 - [x] An income receipt that pays several invoices can be flagged as a spike. (#168)
-- [ ] pgTAP cases for a pending line, two loans and an uneven median.
+- [x] pgTAP cases for a pending line, two loans and an uneven median. (`jev_anomaly_cases.test.sql`.)
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests

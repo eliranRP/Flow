@@ -13,8 +13,9 @@ MCP needs to set and read the figures. The open question was what counts as reha
 
 ## Decision
 
-**The figures live on the project.**
-- `projects` gets `purchase_agorot`, `arv_agorot`, `value_agorot` (whole agorot, 0 or more, null until set) and `value_date`.
+**The figures live on the project, in the project's own currency.**
+- `projects` gets `investment_currency` (default `ILS`), `purchase_minor`, `arv_minor`, `value_minor` (whole minor units of that currency, 0 or more, null until set) and `value_date`.
+- Amended the same day, before any deploy: the first version was in shekels only (`*_agorot`), which left every equity of a USD company (all its costs and loans in dollars) null. Flow has no company currency yet (FLOW-504), so the currency is set per project. Rehab, the loan balance and both equities are in it; anything in another currency is listed apart.
 - They sit on the project row rather than a table of their own (the plan's first idea): the row's RLS, audit trigger and viewer reads already cover them, and there is one per project.
 - `set_project_investment(project, patch)` is the owner's call. A key left out keeps its figure and a null clears it, so the app can save one field on tap. A bad amount or date, another key, or an empty patch is `validation`; a viewer is `forbidden`; another company's project is `project not found`.
 
@@ -23,13 +24,13 @@ MCP needs to set and read the figures. The open question was what counts as reha
 - By default a category counts unless it is kept out of the P&L (`excluded_from_pnl`) or is a loan part (`loan_part`). Kept-out categories stay out by default so the purchase itself, usually filed in one, is not counted twice. A line with no category counts.
 - A loan payment's fees part sits in an ordinary category (0130), but it is still a loan part: it stays out unless its category is switched on.
 - `set_category_rehab(category, rehab)` is the owner's call. `list_categories` shows `rehab` and `in_rehab` (what the category comes to).
-- Rehab sums, for all time on the cash basis, the project's posted, paid expense lines (direct) plus its share of shared lines, by part for split lines, whose category counts. Shekels make `rehab_agorot`; other currencies are listed apart in `rehab_other_currencies`. The project screen's period and basis do not change it: rehab is what the property has cost so far.
+- Rehab sums, for all time on the cash basis, the project's posted, paid expense lines (direct) plus its share of shared lines, by part for split lines, whose category counts. The project's currency makes `rehab_minor`; other currencies are listed apart in `rehab_other_currencies`. The project screen's period and basis do not change it: rehab is what the property has cost so far.
 - A line's own P&L switch (`set_line_pnl`) does not decide rehab; the category does, as stored, so a guessed kept-out category (0114) is out of rehab while it still counts in the P&L. One switch per category keeps the rule short.
 - The overhead project's own lines count as overhead, so its rehab is 0.
 
 **Equity comes with `get_project`.**
-- `get_project` returns `investment`: the four figures, `rehab_agorot`, `rehab_other_currencies` (costs in other currencies, listed apart), `loan_balance_agorot` (open shekel loans filed under the project), `loan_balance_other_currencies` (open loans in other currencies, listed apart, never added in), `forced_equity_agorot` and `current_equity_agorot`.
-- Each equity is null while a figure it needs is missing, so the screen can say what to fill in rather than show a wrong number. For the same reason forced equity is null while rehab has a cost in another currency, and current equity while an open loan is in another currency: Flow does not convert them.
+- `get_project` returns `investment`: the four figures, `rehab_minor`, `rehab_other_currencies` (costs in other currencies, listed apart), `loan_balance_minor` (open loans in the project's currency filed under it), `loan_balance_other_currencies` (open loans in other currencies, listed apart, never added in), `forced_equity_minor` and `current_equity_minor`.
+- Each equity is null while a figure it needs is missing, so the screen can say what to fill in rather than show a wrong number. For the same reason forced equity is null while rehab has a cost in another currency than the project's, and current equity while an open loan is in another one: Flow does not convert them.
 
 **MCP.**
 - `set_project_investment` (undo kind `project_investment`) and `set_category_rehab` (undo kind `category_rehab`), with the idempotency key and the write rate limit.
