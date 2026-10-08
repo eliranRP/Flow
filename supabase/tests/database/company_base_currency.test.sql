@@ -6,7 +6,7 @@
 
 begin;
 
-select plan(31);
+select plan(33);
 
 do $users$
 begin
@@ -92,6 +92,11 @@ select is(jsonb_path_query_array(public.get_profit_months('2026-07-01', '2026-07
   '["USD"]'::jsonb, 'a month with nothing has no shekel row any more');
 select is((public.get_profit_months('2026-09-01', '2026-09-30', 'cash', pg_temp.id('house'))->'months'->0->>'overhead_share_minor')::bigint,
   30000::bigint, 'a project''s month carries its dollar overhead share');
+
+select is(public.company_pnl(pg_temp.id('co'), '2026-10-01', '2026-10-31', 'cash')->'by_currency'->0->>'currency', 'USD',
+  'a quiet month still leads with a dollar row');
+select is((public.company_pnl(pg_temp.id('co'), '2026-10-01', '2026-10-31', 'cash')->'by_currency'->0->>'prev_net_profit_minor')::bigint,
+  360000::bigint, 'and keeps September''s dollar profit to compare with');
 
 select is(public.mcp_company_loan_currency(), 'USD', 'a new loan defaults to dollars');
 reset role;

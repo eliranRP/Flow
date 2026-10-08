@@ -270,6 +270,18 @@ $a$;
   def := replace(def, anchor, anchor || $n$      left join prev_currency pv on pv.currency = k.currency
 $n$);
 
+  -- A currency with lines only in the previous period keeps its row, so a quiet period still
+  -- has its prev_* figures.
+  anchor := $a$        select currency from excluded_by_currency
+      ) k$a$;
+  if pg_temp.anchor_count(def, anchor) <> 1 then
+    raise exception 'company_pnl by_currency keys are not the expected definition';
+  end if;
+  def := replace(def, anchor, $n$        select currency from excluded_by_currency
+        union
+        select currency from prev_currency where p_from is not null
+      ) k$n$);
+
   anchor := $a$            ) order by pc.currency)$a$;
   if pg_temp.anchor_count(def, anchor) <> 1 then
     raise exception 'company_pnl project by_currency is not the expected definition';
