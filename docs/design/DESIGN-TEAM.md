@@ -81,4 +81,9 @@ Pixel and consistency fixes that already follow DESIGN-RULES still ship on the P
 
 **`PLAN FIRST` UI: the owner decides, as today.** He decides on a choice card with a recommended option. Nothing is built until he answers.
 
+**Mockups for the owner are phone-sized.** He reviews on his phone, and a wide page with several frames side by side is unreadable there (2026-10-08).
+- Every mockup sent with a card is drawn at 390px wide: one option per frame, stacked, with no desktop layout around it.
+- Each option is also attached as a PNG screenshot at 390px wide, next to any HTML link, so he can choose without opening the page.
+- The card's options name the frames ("A", "B") as the PNGs do.
+
 **Night hours.** Between 00:00 and 09:00 Israel time, no `PLAN FIRST` UI work starts. Small UI sign-offs go on as usual.

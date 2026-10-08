@@ -4,7 +4,7 @@
 -- instead of the line's own index: about 11 ms a line. line_pnl_state becomes security definer
 -- with the caller's company checked in its own where clause, a new private.line_pnl_states gives
 -- the same answer for a set of lines in one read, and list_review uses it and reads the lines
--- filed today once instead of twice. Decision 0150.
+-- filed today once instead of twice. Decision 0155.
 --
 -- FLOW-211 (from the Flow MCP agent): search_transactions finds a line by its amount, the bank
 -- figure without its sign, exact or within a range (p_amount_min, p_amount_max), and each row

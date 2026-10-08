@@ -10,6 +10,7 @@ import {
   completeJevScopeLookup,
   JEV_SUGGESTION_CHUNK,
   fetchJevConnector,
+  jevFilledOnCard,
   jevShown,
   jevConnectorStorageKey,
   jevScopePhase,
@@ -34,6 +35,8 @@ const connectorDb = vi.hoisted(() => ({
   hang: false,
   suggestionReads: [] as string[][],
   suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
+  fills: [] as Array<{ transaction_id: string; project_id: string | null; category_id: string | null; undone_at: string | null }>,
+  fillsError: false,
 }));
 
 vi.mock("../lib/supabase", () => ({
@@ -47,6 +50,7 @@ vi.mock("../lib/supabase", () => ({
         }
         if (name === "projects") return [{ id: "p1", name: "וילה רעננה", status: "active" }];
         if (name === "categories") return [{ id: "c1", name: "חומרים", hidden: false }];
+        if (name === "jev_prefills") return connectorDb.fills.filter((row) => wanted?.includes(row.transaction_id));
         return [];
       };
       const builder = {
@@ -54,12 +58,14 @@ vi.mock("../lib/supabase", () => ({
         eq: () => builder,
         in: (_column: string, values: string[]) => {
           wanted = values;
-          connectorDb.suggestionReads.push(values);
+          if (name === "tag_suggestions") connectorDb.suggestionReads.push(values);
           return builder;
         },
         order: () => builder,
-        then: (onFulfilled: (value: { data: unknown; error: null }) => unknown) =>
-          Promise.resolve({ data: rows(), error: null }).then(onFulfilled),
+        then: (onFulfilled: (value: { data: unknown; error: { message: string } | null }) => unknown) =>
+          Promise.resolve(name === "jev_prefills" && connectorDb.fillsError
+            ? { data: null, error: { message: "jev_prefills down" } }
+            : { data: rows(), error: null }).then(onFulfilled),
         abortSignal: (next: AbortSignal) => {
           linked = next;
           return builder;
@@ -380,5 +386,72 @@ describe("loadJevSuggestions", () => {
     expect(queue.byId.t0?.suggestionId).toBe("s-first");
     expect(queue.byId[lastId]?.category?.name).toBe("חומרים");
     expect(queue.byId.t1).toBeNull();
+  });
+
+  it("fails closed when the fill read fails, so an undone line is not filled again (#231 r1)", async () => {
+    connectorDb.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 } } }];
+    connectorDb.fillsError = true;
+    try {
+      await expect(loadJevSuggestions(["t1"])).rejects.toThrow("jev_prefills down");
+    } finally {
+      connectorDb.fillsError = false;
+    }
+  });
+});
+
+describe("Jev auto fills (FLOW-702)", () => {
+  const filledRow = {
+    transaction_id: "t1",
+    project_id: "p1",
+    project_name: "וילה רעננה",
+    project_suggested: true,
+    category_id: "c1",
+    category_name: "חומרים",
+    category_suggested: true,
+  };
+
+  it("reads the newest standing fill per line, else marks the line undone (#231 r1)", async () => {
+    connectorDb.suggestions = [
+      { id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.95 }, category: { choice: "c1", confidence: 0.95 } } },
+      { id: "s2", transaction_id: "t2", answers: { category: { choice: "c1", confidence: 0.95 } } },
+      { id: "s3", transaction_id: "t3", answers: { project: { choice: "p1", confidence: 0.95 }, category: { choice: "c1", confidence: 0.95 } } },
+    ];
+    // Newest first, as the read orders them.
+    connectorDb.fills = [
+      { transaction_id: "t1", project_id: "p1", category_id: "c1", undone_at: null },
+      { transaction_id: "t2", project_id: null, category_id: "c1", undone_at: "2026-10-08T10:00:00Z" },
+      { transaction_id: "t3", project_id: null, category_id: "c1", undone_at: "2026-10-08T10:00:00Z" },
+      { transaction_id: "t3", project_id: "p1", category_id: null, undone_at: null },
+      { transaction_id: "t3", project_id: "p1", category_id: null, undone_at: "2026-10-08T09:00:00Z" },
+    ];
+    const queue = await loadJevSuggestions(["t1", "t2", "t3"]);
+    expect(queue.byId.t1?.auto).toEqual({ state: "filled", projectId: "p1", categoryId: "c1" });
+    expect(queue.byId.t2?.auto?.state).toBe("undone");
+    // The category fill was taken back, the older project fill still stands: בטל takes that one next.
+    expect(queue.byId.t3?.auto).toEqual({ state: "filled", projectId: "p1", categoryId: null });
+    connectorDb.fills = [];
+  });
+
+  it("labels a standing fill only while the stored row holds Jev's value", () => {
+    const state: JevReviewState = {
+      connectorOn: true,
+      prefill: { ...prefill, auto: { state: "filled", projectId: "p1", categoryId: "c1" } },
+    };
+    expect(jevFilledOnCard(filledRow, state)).toBe(true);
+    expect(jevFilledOnCard({ ...filledRow, project_id: null, category_id: null }, state)).toBe(false);
+    expect(jevFilledOnCard({ ...filledRow, project_assigned: true, category_assigned: true }, state)).toBe(false);
+    expect(jevFilledOnCard(filledRow, { ...state, connectorOn: false })).toBe(false);
+    expect(jevFilledOnCard(filledRow, { connectorOn: true, prefill })).toBe(false);
+  });
+
+  it("fills nothing on a line whose fill was undone", () => {
+    const state: JevReviewState = {
+      connectorOn: true,
+      prefill: { ...prefill, auto: { state: "undone", projectId: "p1", categoryId: "c1" } },
+    };
+    const empty = { transaction_id: "t1", project_id: null, category_id: null };
+    expect(withJev(empty, state)).toBe(empty);
+    expect(jevShown(empty, state)).toEqual({ project: false, category: false });
+    expect(jevFilledOnCard(empty, state)).toBe(false);
   });
 });

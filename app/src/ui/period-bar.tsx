@@ -3,6 +3,7 @@ import {
   PRESET_KINDS,
   canStep,
   customRange,
+  isCurrentPeriod,
   periodHint,
   presetLabel,
   presetPeriod,
@@ -17,6 +18,7 @@ import {
 } from "../period";
 import { cx } from "./cx";
 import { IconButton } from "./icon-button";
+import { ChevronDownIcon } from "./icons";
 import { PeriodSheet, RangeSheet } from "./period-picker";
 import { SegmentedControl } from "./segmented-control";
 
@@ -27,6 +29,11 @@ type PeriodBarProps = {
   tone?: "band" | "page";
   /** On a project, הכול reads מתחילת הפרויקט. */
   scope?: PeriodScope;
+  /**
+   * "עד היום" under the label of the current window. The project band leaves it out: its band
+   * already says the period, and the line cost the band a row (FLOW-335).
+   */
+  toDateHint?: boolean;
 };
 
 /**
@@ -36,7 +43,7 @@ type PeriodBarProps = {
  * the current window. Both chevrons are SVG and point outward, never a glyph RTL would mirror.
  * The label opens the period sheet with טווח מותאם. הכול and a custom range have no arrows.
  */
-export function PeriodBar({ period, onChange, tone = "band", scope = "company" }: PeriodBarProps) {
+export function PeriodBar({ period, onChange, tone = "band", scope = "company", toDateHint = true }: PeriodBarProps) {
   const [sheet, setSheet] = useState(false);
   const [range, setRange] = useState(false);
   const currentId = useId();
@@ -45,7 +52,10 @@ export function PeriodBar({ period, onChange, tone = "band", scope = "company" }
   const later = stepPeriod(period, 1);
   const arrows = canStep(period);
   const label = windowLabel(period, undefined, scope);
-  const toDate = windowToDate(period);
+  const toDate = toDateHint && windowToDate(period);
+  // FLOW-335: a stepped-back window says how to come back. The selected preset already jumps back.
+  const back = arrows && !isCurrentPeriod(period);
+  const hint = back ? "חזרה להיום" : toDate ? "עד היום" : null;
   return (
     <div className={cx("ui-pbar", onBand ? "ui-pbar-band" : "ui-pbar-page")}>
       <SegmentedControl<PeriodKind>
@@ -53,7 +63,12 @@ export function PeriodBar({ period, onChange, tone = "band", scope = "company" }
         showLabel={false}
         tone={onBand ? "band" : "page"}
         value={period.kind}
-        options={PRESET_KINDS.map((kind) => ({ value: kind, label: presetLabel(kind), short: presetShortLabel(kind) }))}
+        options={PRESET_KINDS.map((kind) => ({
+          value: kind,
+          label: presetLabel(kind),
+          short: presetShortLabel(kind),
+          name: back && kind === period.kind ? `${presetLabel(kind)}, חזרה להיום` : undefined,
+        }))}
         onChange={(kind) => {
           if (kind === "custom") return;
           onChange(presetPeriod(kind));
@@ -77,13 +92,20 @@ export function PeriodBar({ period, onChange, tone = "band", scope = "company" }
         <button
           type="button"
           className="ui-pbar-label ui-hit"
-          aria-label={`${label}${toDate ? ", עד היום" : ""} – בחירת תקופה`}
+          aria-label={`${label}${hint ? `, ${hint}` : ""} – בחירת תקופה`}
+          aria-haspopup="dialog"
           onClick={() => {
             setSheet(true);
           }}
         >
-          <span className="ui-pbar-window">{label}</span>
-          {toDate ? <span className="ui-pbar-hint">עד היום</span> : null}
+          <span className="ui-pbar-window">
+            {label}
+            {/* FLOW-335: the label opens the period sheet, so it carries the band pill's ▼, after the last word. */}
+            <span className="ui-pbar-caret" aria-hidden="true">
+              <ChevronDownIcon />
+            </span>
+          </span>
+          {hint ? <span className="ui-pbar-hint">{hint}</span> : null}
         </button>
         {arrows ? (
           <>

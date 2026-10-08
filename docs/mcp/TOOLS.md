@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `rename_category`, `set_category_group`, `set_jev_mode`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -55,6 +55,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `get_project_categories` | `id` | `list_projects` `projects[].id` |
 | `set_category_group` | `category_id` | `list_categories` `categories[].id` |
 | `undo` `kind: "category_group"` | `id` | the category id `set_category_group` used |
+| `undo` `kind: "jev_mode"` | `id` | the company id `set_jev_mode` returned |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -171,7 +172,7 @@ Filters, all optional ([FLOW-323](../backlog/TASKS.md#flow-323), [0140](../decis
 - `direction` is `income` or `expense`.
 - `project_id` matches the line's project, a share of a shared cost on it, or a split part on it. `none` lists lines on no project.
 - `category_id` matches the line's category, or a split or loan split part in it. `none` lists lines with no category and no parts.
-- `amount` finds one figure; `amount_min` and `amount_max` a range, both ends included (not together with `amount`). Each is the line's bank amount (gross) without its sign, in major units of the line's own currency: `6245.12` finds a $6,245.12 payment or deposit, and a shekel line of ₪6,245.12 too. A minimum above the maximum, a negative amount, or an `amount` of 0 is `validation` ([FLOW-211](../backlog/TASKS.md#flow-211), [0150](../decisions/0150-review-list-speed-search-amount.md)). `filed` and `all` rows also carry `amount_gross`, the signed bank amount in minor units.
+- `amount` finds one figure; `amount_min` and `amount_max` a range, both ends included (not together with `amount`). Each is the line's bank amount (gross) without its sign, in major units of the line's own currency: `6245.12` finds a $6,245.12 payment or deposit, and a shekel line of ₪6,245.12 too. A minimum above the maximum, a negative amount, or an `amount` of 0 is `validation` ([FLOW-211](../backlog/TASKS.md#flow-211), [0155](../decisions/0155-review-list-speed-search-amount.md)). `filed` and `all` rows also carry `amount_gross`, the signed bank amount in minor units.
 
 `query` matches the description, the supplier or the customer, in any case. `filed` and `all` rows come newest first. They also carry `currency`, `amount_original`, `line_status`, `customer_name`, `waiting_review`, `kept_out` (as in [0135](../decisions/0135-line-state-in-lists.md)), `split_parts` (the line split's part count, 0 when whole) and `loan_matched`. With a filter or a `query`, `pending` lets `search_transactions` pick the page, and the rows stay `list_review` rows, newest first. Without either, it lists `list_review` as before.
 
@@ -440,6 +441,14 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 ### get_jev_suggestions
 
 `mcp_jev_suggestions`, no arguments ([0134](../decisions/0134-jev-reasons-income-scores.md), [0139](../decisions/0139-jev-corrections.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `no_project` (true when Jev answered no project: overhead, or not one project), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null), `prefilled` (auto mode filled this line and it was not undone, [0145](../decisions/0145-jev-auto-mode.md)). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). A `no_project` suggestion matches a filed line with no project, filed as shared or overhead, or filed to the company's overhead project. Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
+
+### set_jev_mode
+
+```json
+{ "idempotency_key": "jev-mode-1", "enabled": true, "mode": "auto", "threshold": 0.9 }
+```
+
+Turns the Jev tagger on or off and sets its mode and threshold, as Settings → חיבורים → תיוג חכם does ([FLOW-702](../backlog/TASKS.md#flow-702), [0145](../decisions/0145-jev-auto-mode.md)). Write tool, `mcp_set_jev_mode`, which calls `set_company_integration` for the token's company; a viewer cannot write. `enabled` is required; `mode` is `off`, `shadow` (suggestions only) or `auto` (Jev fills what it is sure of at or above the threshold; every line still waits for approval, and `undo_jev_prefill` takes a fill back); `threshold` is 0.50 to 1 (the app offers 0.80, 0.85, 0.90 and 0.95). A mode or threshold left out keeps the stored one (`shadow` and 0.90 at first). Output `data`: `id` (the company), `enabled`, `mode`, `threshold`, `prior` (the values before, or null when Jev was never set) and `undo_kind: "jev_mode"`. Undo, with the company id, puts the values before back (or removes the setting when there was none); it is `conflict` once they were changed again.
 
 ### undo_jev_prefill
 

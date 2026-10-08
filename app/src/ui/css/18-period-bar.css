@@ -17,19 +17,24 @@
   margin-block-start: var(--space-4);
 }
 
+/*
+  FLOW-335: white labels on a track of 10% white pass AA (4.76:1 on the violet band, light and
+  dark alike). The old 16% track with on-band-secondary labels was 3.57:1. Never above 10%.
+*/
 .ui-seg-band {
-  background: color-mix(in srgb, var(--color-on-band) 16%, transparent);
+  background: color-mix(in srgb, var(--color-on-band) 10%, transparent);
 }
 
 .ui-seg-band .ui-seg-btn {
   flex: 1 1 auto;
   padding-inline: var(--space-2);
-  color: var(--color-on-band-secondary);
+  color: var(--color-on-band);
   font-size: var(--type-label-size);
 }
 
+/* Pressed darkens with the scrim instead of lightening, so the white label keeps AA while pressed. */
 .ui-seg-band .ui-seg-btn:active {
-  background: color-mix(in srgb, var(--color-on-band) 24%, transparent);
+  background: color-mix(in srgb, var(--color-scrim) 50%, transparent);
 }
 
 .ui-seg-band .ui-seg-btn[aria-checked="true"] {
@@ -135,9 +140,18 @@
   color: var(--color-bad);
 }
 
-/* FLOW-330: one line per currency in the Unpaid total. */
+/*
+  FLOW-330: one line per currency in the Unpaid total. FLOW-335: a column that starts on the start
+  side. A block bdi with dir=ltr aligned left, to the end side of the page (regression of #199).
+*/
+.ui-unpaid-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .ui-unpaid-totals bdi {
-  display: block;
+  display: inline-block;
 }
 
 /* The note under the "לפי חודש" list. */

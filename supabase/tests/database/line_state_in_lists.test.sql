@@ -233,7 +233,7 @@ select is(
   false, 'list_auto_assigned_today: a mixed line is not kept out as a whole');
 
 -- The set read list_review uses gives each line the same state as the one-line read
--- (the list_review speed fix, decision 0150).
+-- (the list_review speed fix, decision 0155).
 select is(
   (select jsonb_object_agg(st.transaction_id, st.state) from private.line_pnl_states(
     array(select id from lso where label like 'txn_%')) st),

@@ -1085,6 +1085,9 @@ isOneToOne: false
 "mcp_set_invoice_paid":
 { Args: { "p_idempotency_key": string,"p_paid": boolean,"p_transaction_id": string }; Returns: Json
                            },
+"mcp_set_jev_mode":
+{ Args: { "p_enabled": boolean,"p_idempotency_key": string,"p_mode"?: string,"p_threshold"?: number }; Returns: Json
+                           },
 "mcp_set_line_pnl":
 { Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
                            },

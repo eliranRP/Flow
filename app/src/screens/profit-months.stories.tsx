@@ -46,7 +46,10 @@ export const ProfitByMonthOverhead: Story = {
   ),
 };
 export const ProfitByMonth320Overhead: Story = { ...ProfitByMonthOverhead, name: "Project by month, after overhead, 320", ...at320 };
+/** A project with no line yet: the page is already the whole project, so there is nothing to widen (FLOW-335, FLOW-337). */
 export const ProfitByMonthEmpty: Story = {
   name: "Project by month, empty",
   render: () => <MonthsRoute data={{ ...periodMonths, months: [], by_currency: [] }} />,
 };
+export const ProfitByMonthEmptyDark: Story = { ...ProfitByMonthEmpty, name: "Project by month, empty, dark", ...dark };
+export const ProfitByMonthEmpty320: Story = { ...ProfitByMonthEmpty, name: "Project by month, empty, 320", ...at320 };
