@@ -319,10 +319,9 @@ function ProjectsBody({
   search: string;
 }) {
   const finished = projects.filter((project) => project.status === "finished");
-  const active = projects.filter((project) => project.status !== "finished");
-  const shown = expanded ? projects : active.slice(0, 6);
-  const restActive = Math.max(0, active.length - 6);
   const needle = query.trim();
+  /** Every active project by default; a query searches finished ones too, so none is out of reach. */
+  const shown = expanded || needle !== "" ? projects : projects.filter((project) => project.status !== "finished");
   const visible = shown.filter((project) => needle === "" || project.name.includes(needle) || (project.state_label ?? "").includes(needle));
   return (
     <>
@@ -357,10 +356,10 @@ function ProjectsBody({
           })}
         </List>
       )}
-      {!expanded && needle === "" && (restActive > 0 || finished.length > 0) ? (
+      {!expanded && needle === "" && finished.length > 0 ? (
         <p className="ui-page-pad">
           <TextLink tone="quiet" onClick={() => { setExpanded(true); }}>
-            עוד <bdi dir="ltr">{String(restActive)}</bdi> פעילים · <bdi dir="ltr">{String(finished.length)}</bdi> הסתיימו
+            עוד <bdi dir="ltr">{String(finished.length)}</bdi> שהסתיימו
           </TextLink>
         </p>
       ) : null}

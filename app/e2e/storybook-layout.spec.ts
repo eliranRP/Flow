@@ -173,6 +173,33 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
+test("the project search stories stay inside 320 and 390, light and dark", async ({ page }) => {
+  test.setTimeout(120_000);
+  const failures: string[] = [];
+  for (const theme of ["light", "dark"]) {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const id of ["screens-routes--projects-search", "screens-routes--projects-many-active"]) {
+        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
+        await page.locator("#storybook-root").waitFor({ state: "attached" });
+        if (id.endsWith("search")) {
+          // The play types תמר: the active and the finished match both show, and the finished one says so.
+          await expect(page.getByRole("link", { name: /^בית תמר/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^מחסן תמר/ })).toContainText("הסתיים");
+          await expect(page.getByRole("link", { name: /^בית ארז/ })).toHaveCount(0);
+        } else {
+          await expect(page.getByRole("link", { name: /^בית כלנית/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^מחסן תמר/ })).toHaveCount(0);
+        }
+        const problems = await layoutProblems(page);
+        if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
+      }
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("the assistant settings stories stay inside 320, 360, and 390", async ({ page }) => {
   test.setTimeout(180_000);
   const stories = [

@@ -154,6 +154,16 @@ const projectsList: Dashboard = {
   ],
 };
 
+/** FLOW-410: more active projects than one screen, and a finished one that shares a name with an active one. */
+const projectsSearch: Dashboard = {
+  ...sampleDashboard,
+  projects: [
+    ...["בית ארז", "בית אלון", "בית ברוש", "בית דקל", "בית הדס", "בית ורד", "בית תמר", "בית חצב", "בית כלנית"].map((name, index) => listedProject(`s${String(index)}`, name)),
+    listedProject("sf1", "מחסן תמר", "finished"),
+    listedProject("sf2", "חנות רימון", "finished"),
+  ],
+};
+
 const exampleLabel = "נתוני דוגמה · Example data";
 
 function ExampleBar() {
@@ -705,6 +715,55 @@ export const ProjectsList: Story = {
       <ProjectsScreen sample={projectsList} />
     </StoryRoute>
   ),
+};
+
+/** FLOW-410: a query searches every project; the finished match reads הסתיים. */
+export const ProjectsSearch: Story = {
+  name: "Projects, search finds a finished project",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsSearch} />
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.type(within(canvasElement).getByRole("searchbox", { name: "חיפוש פרויקט" }), "תמר");
+  },
+};
+export const ProjectsSearchDark: Story = { ...ProjectsSearch, name: "Projects, search finds a finished project, dark", globals: { theme: "dark" } };
+export const ProjectsSearch320: Story = {
+  ...ProjectsSearch,
+  name: "Projects, search finds a finished project, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const ProjectsSearchDark320: Story = {
+  ...ProjectsSearch,
+  name: "Projects, search finds a finished project, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
+/** FLOW-410: with no query every active project shows, past the first six. */
+export const ProjectsManyActive: Story = {
+  name: "Projects, every active project",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsSearch} />
+    </StoryRoute>
+  ),
+};
+export const ProjectsManyActiveDark: Story = { ...ProjectsManyActive, name: "Projects, every active project, dark", globals: { theme: "dark" } };
+export const ProjectsManyActive320: Story = {
+  ...ProjectsManyActive,
+  name: "Projects, every active project, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const ProjectsManyActiveDark320: Story = {
+  ...ProjectsManyActive,
+  name: "Projects, every active project, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 export const ProjectsLoading: Story = {
