@@ -9,6 +9,7 @@ import {
   companyIdFromReviewPayload,
   completeJevScopeLookup,
   fetchJevConnector,
+  jevShown,
   jevConnectorStorageKey,
   jevScopePhase,
   noteJevAuthUser,
@@ -290,4 +291,48 @@ afterEach(() => {
   resetJevScopeMemory();
   localStorage.removeItem("flow.jev-connector");
   localStorage.removeItem(jevConnectorStorageKey(scope));
+});
+
+describe("Jev shown fields (הצעת Jev)", () => {
+  it("marks both fields Jev fills on an open line", () => {
+    expect(jevShown(empty, on)).toEqual({ project: true, category: true });
+  });
+
+  it("marks nothing when the connector is off, there is no answer, or it is another line", () => {
+    expect(jevShown(empty, off)).toEqual({ project: false, category: false });
+    expect(jevShown(empty, JEV_REVIEW_OFF)).toEqual({ project: false, category: false });
+    expect(jevShown(empty, { connectorOn: true, prefill: null })).toEqual({ project: false, category: false });
+    expect(jevShown({ ...empty, transaction_id: "t2" }, on)).toEqual({ project: false, category: false });
+  });
+
+  it("marks only the field Jev answered", () => {
+    expect(jevShown(empty, { connectorOn: true, prefill: { ...prefill, category: null } })).toEqual({ project: true, category: false });
+    expect(jevShown(empty, { connectorOn: true, prefill: { ...prefill, project: null } })).toEqual({ project: false, category: true });
+  });
+
+  it("does not mark a supplier rule or a field the user set", () => {
+    const rule = {
+      ...empty,
+      project_id: "p-rule",
+      project_name: "פרויקט שמור",
+      project_suggested: false,
+      category_id: "c-rule",
+      category_name: "קטגוריה שמורה",
+      category_suggested: false,
+    };
+    expect(jevShown(rule, on)).toEqual({ project: false, category: false });
+    expect(jevShown({ ...empty, user_assigned: true }, on)).toEqual({ project: false, category: false });
+    expect(jevShown({ ...empty, category_assigned: true }, on)).toEqual({ project: true, category: false });
+  });
+
+  it("does not mark a project on a shared cost, where Jev gives no project", () => {
+    expect(jevShown({ ...empty, reason: "unallocated_shared" }, on)).toEqual({ project: false, category: true });
+  });
+
+  it("marks a replaced suggestion and an auto pre-fill with the same answer", () => {
+    const guessed = { ...empty, project_id: "p-old", project_name: "ישן", project_suggested: true };
+    expect(jevShown(guessed, on).project).toBe(true);
+    const prefilled = withJev(empty, on);
+    expect(jevShown(prefilled, on)).toEqual({ project: true, category: true });
+  });
 });

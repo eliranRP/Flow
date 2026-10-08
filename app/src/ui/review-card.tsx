@@ -5,7 +5,7 @@ import { MethodIcon } from "./bank-details";
 import { ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
-import { ReversalTag, SuggestTag } from "./suggest-tag";
+import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
   project?: string;
@@ -15,6 +15,10 @@ export type ReviewSuggestion = {
   projectSuggested?: boolean;
   /** This category line is a guess. A rule or an owner pick is not. */
   categorySuggested?: boolean;
+  /** Jev filled this suggested project. Shows הצעת Jev instead of הצעה. */
+  projectJev?: boolean;
+  /** Jev filled this suggested category. A supplier rule or an owner pick is not Jev's. */
+  categoryJev?: boolean;
   /** The category is of the other kind: a bounced payment or a refund. Shows החזר. */
   categoryReversal?: boolean;
 };
@@ -73,6 +77,7 @@ export function ReviewCard({
     label: string;
     value: string;
     suggested: boolean;
+    jev: boolean;
     reversal?: boolean;
     onOpen?: () => void;
   }> = [];
@@ -82,6 +87,7 @@ export function ReviewCard({
       label: "פרויקט",
       value: projectValue ?? "לא נבחר",
       suggested: suggestion?.projectSuggested === true && projectValue != null,
+      jev: suggestion?.projectSuggested === true && suggestion.projectJev === true && projectValue != null,
       onOpen: onProject,
     });
   }
@@ -91,6 +97,7 @@ export function ReviewCard({
       label: "קטגוריה",
       value: categoryValue ?? "לא נבחר",
       suggested: suggestion?.categorySuggested === true && categoryValue != null,
+      jev: suggestion?.categorySuggested === true && suggestion.categoryJev === true && categoryValue != null,
       reversal: suggestion?.categoryReversal === true && categoryValue != null,
       onOpen: onCategory,
     });
@@ -144,8 +151,8 @@ export function ReviewCard({
             eyebrow={line.label}
             title={line.value}
             muted={line.value === "לא נבחר"}
-            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : line.reversal ? ", החזר" : ""}`}
-            tag={line.suggested ? <SuggestTag /> : line.reversal ? <ReversalTag /> : undefined}
+            label={`${line.label}: ${line.value}${line.jev ? ", הצעת Jev" : line.suggested ? ", הצעה" : line.reversal ? ", החזר" : ""}`}
+            tag={lineTag(line)}
             chevron
             buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
             onClick={line.onOpen}
@@ -156,7 +163,7 @@ export function ReviewCard({
             variant="static"
             eyebrow={line.label}
             title={line.value}
-            tag={line.suggested ? <SuggestTag /> : line.reversal ? <ReversalTag /> : undefined}
+            tag={lineTag(line)}
           />
         ))}
         {note == null ? null : pending ? (
@@ -167,6 +174,13 @@ export function ReviewCard({
       </div>
     </article>
   );
+}
+
+/** הצעת Jev on a Jev fill, הצעה on any other suggestion, then החזר. */
+function lineTag(line: { suggested: boolean; jev: boolean; reversal?: boolean }) {
+  if (line.jev) return <JevTag />;
+  if (line.suggested) return <SuggestTag />;
+  return line.reversal ? <ReversalTag /> : undefined;
 }
 
 /**
