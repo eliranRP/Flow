@@ -15,9 +15,12 @@ type CardArgs = {
   reason?: string;
   meta?: TxnMeta;
   currency?: string;
+  /** Jev filled the suggested project or category: הצעת Jev instead of הצעה. */
+  projectJev?: boolean;
+  categoryJev?: boolean;
 };
 
-function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency }: CardArgs) {
+function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev }: CardArgs) {
   const shared = reason === "unallocated_shared";
   const suggestion = project || category
     ? {
@@ -26,6 +29,8 @@ function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category,
         confidence,
         projectSuggested: Boolean(project) && !shared,
         categorySuggested: Boolean(category),
+        projectJev,
+        categoryJev,
       }
     : undefined;
   return (
@@ -38,6 +43,8 @@ function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category,
       reason={reason}
       meta={meta}
       currency={currency}
+      onProject={projectJev || categoryJev ? () => undefined : undefined}
+      onCategory={projectJev || categoryJev ? () => undefined : undefined}
     />
   );
 }
@@ -155,5 +162,34 @@ export const MetaHebrewMemo: Story = {
   args: {
     ...mercuryCard,
     meta: storyMeta("t1", { method: "card", card_last4: "4242", memo: "תשלום על חשבונית 1042 עבור שכירות משרד חודש ספטמבר" }),
+  },
+};
+
+/** הצעת Jev marks the field whose value Jev filled. Invented data. */
+const jevCard = { ...OneCard.args, project: "וילה רעננה", category: "חומרים" };
+const dark = { globals: { theme: "dark" } };
+const narrow = { parameters: { viewport: { defaultViewport: "flow320" } } };
+
+export const JevProject: Story = { name: "Jev: project", args: { ...jevCard, projectJev: true } };
+export const JevProjectDark: Story = { ...dark, name: "Jev: project, dark", args: JevProject.args };
+export const JevProject320: Story = { ...narrow, name: "Jev: project, 320", args: JevProject.args };
+
+export const JevCategory: Story = { name: "Jev: category", args: { ...jevCard, categoryJev: true } };
+export const JevCategoryDark: Story = { ...dark, name: "Jev: category, dark", args: JevCategory.args };
+export const JevCategory320: Story = { ...narrow, name: "Jev: category, 320", args: JevCategory.args };
+
+export const JevBoth: Story = { name: "Jev: both", args: { ...jevCard, projectJev: true, categoryJev: true } };
+export const JevBothDark: Story = { ...dark, name: "Jev: both, dark", args: JevBoth.args };
+export const JevBoth320: Story = { ...narrow, name: "Jev: both, 320", args: JevBoth.args };
+
+/** A long value is cut with an ellipsis; the pill and the chevron stay on the row. */
+export const JevBothLong320: Story = {
+  ...narrow,
+  name: "Jev: both, long names, 320",
+  args: {
+    ...JevBoth.args,
+    supplier: "ספק חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי",
+    project: "וילה רעננה — שיפוץ מלא של הקומה העליונה והחצר האחורית",
+    category: "חומרי בניין והובלה כללית בע״מ סניף רעננה המרכזי והסביבה הקרובה",
   },
 };

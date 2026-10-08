@@ -272,13 +272,13 @@ isOneToOne: false
                   ]
                 },"line_splits": {
                   Row: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"ordinal": number,"project_id": string | null,"transaction_id": string
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"is_rest": boolean,"ordinal": number,"percent": number | null,"project_id": string | null,"transaction_id": string
                   }
                   Insert: {
-                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"ordinal": number,"project_id"?: string | null,"transaction_id": string
+                    "amount_minor": number,"category_id": string,"company_id": string,"created_at"?: string,"id"?: string,"is_rest"?: boolean,"ordinal": number,"percent"?: number | null,"project_id"?: string | null,"transaction_id": string
                   }
                   Update: {
-                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"ordinal"?: number,"project_id"?: string | null,"transaction_id"?: string
+                    "amount_minor"?: number,"category_id"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"is_rest"?: boolean,"ordinal"?: number,"percent"?: number | null,"project_id"?: string | null,"transaction_id"?: string
                   }
                   Relationships: [
                     {
@@ -991,7 +991,7 @@ isOneToOne: false
 { Args: { "p_id": string,"p_user": string }; Returns: Json
                            },
 "save_line_split":
-{ Args: { "p_parts": Json,"p_transaction_id": string }; Returns: Json
+{ Args: { "p_parts": Json,"p_preview"?: boolean,"p_transaction_id": string }; Returns: Json
                            },
 "save_split":
 { Args: { "p_shares": Json,"p_transaction_id": string }; Returns: undefined

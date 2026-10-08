@@ -177,8 +177,8 @@ describe("Jev review one tap", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
       expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
@@ -209,7 +209,7 @@ describe("Jev review one tap", () => {
       },
     }];
     renderQueue([row]);
-    expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     expect(await screen.findByText("הפריט אושר")).toBeInTheDocument();
@@ -222,6 +222,37 @@ describe("Jev review one tap", () => {
       p_check_shown: true,
       p_shown_project_id: "p-stored",
     });
+  });
+
+  it("marks only the Jev field הצעת Jev and leaves a supplier rule unmarked", async () => {
+    const row: ReviewRow = { ...stored, project_id: null, project_name: null };
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{
+      id: "s1",
+      transaction_id: "t1",
+      answers: {
+        project: { choice: "p1", confidence: 0.91 },
+        category: { choice: "c1", confidence: 0.88 },
+      },
+    }];
+    renderQueue([row]);
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: קטגוריה שמורה" })).toBeInTheDocument();
+    expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
+    expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+  });
+
+  it("keeps הצעה on a stored suggestion Jev did not answer", async () => {
+    const row: ReviewRow = { ...stored, project_suggested: true, category_suggested: true };
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{
+      id: "s1",
+      transaction_id: "t1",
+      answers: { category: { choice: "c1", confidence: 0.88 } },
+    }];
+    renderQueue([row]);
+    expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור, הצעה" })).toBeInTheDocument();
   });
 
   it("does not prefill when the connector is off", async () => {
@@ -240,6 +271,7 @@ describe("Jev review one tap", () => {
     });
     expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
+    expect(screen.queryByText("הצעת Jev")).not.toBeInTheDocument();
     expect(db.writes).toEqual([]);
   });
 
@@ -271,8 +303,8 @@ describe("Jev review one tap", () => {
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
@@ -396,7 +428,7 @@ describe("Jev review one tap", () => {
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
       expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
@@ -468,7 +500,7 @@ describe("Jev review one tap", () => {
       expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     });
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     release();
     await waitFor(() => {
@@ -504,7 +536,7 @@ describe("Jev review one tap", () => {
       expect(document.querySelector("[data-jev-pending]")).not.toBeNull();
     });
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור" })).toBeInTheDocument();
     release();
@@ -532,7 +564,7 @@ describe("Jev review one tap", () => {
       expect(document.querySelector("[data-jev-pending]")).toBeNull();
       expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     });
-    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
   });

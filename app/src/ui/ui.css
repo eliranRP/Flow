@@ -3738,6 +3738,15 @@ div.ui-check-row {
   vertical-align: middle;
 }
 
+/* הצעת Jev: the same pill on the stronger tint, one line, never squeezed. */
+.ui-suggest-tag-jev {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-tint-strong);
+  white-space: nowrap;
+}
+
 .ui-pick-name {
   display: flex;
   flex: 0 1 auto;

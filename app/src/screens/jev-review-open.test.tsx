@@ -307,13 +307,13 @@ describe("cold review scope", () => {
     });
     expect(boundJevConnectorScope()).toEqual(scope);
     expect(screen.getByRole("button", { name: "פרויקט: פרויקט שמור, הצעה" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).not.toBeInTheDocument();
     expect(enabledWithoutScope).toEqual([]);
     await act(async () => {
       releaseIntegration();
       await Promise.resolve();
     });
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעה" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
     expect(enabledWithoutScope).toEqual([]);
     expect(connectorKeys(client)).toContainEqual(["jev-connector", scope.userId, scope.companyId]);
     expect(connectorKeys(client).some((key) => key.length === 1)).toBe(false);

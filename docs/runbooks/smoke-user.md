@@ -1,5 +1,7 @@
 # Smoke user
 
+To use this account for a live check, see [live-test-account.md](live-test-account.md).
+
 The live check after Pages signs in as one email-and-password user and only reads. That user is a viewer of the demo company **Flow Test**. It is not a member of any real company, and it cannot write. `authenticated` has no insert on `public.companies`. Onboarding calls `create_company`, which rejects a viewer. The app hides or disables the write controls for this viewer. The server still rejects a write.
 
 There is no viewer role on `companies`. `private.current_company_id()` is still the owner. Write policies and write RPCs use that. `public.company_viewers` adds one user to one company, and a trigger rejects the row unless `companies.is_demo` is true. Select policies use `private.readable_company_id()`, so the list RPCs below can run. A table read follows that same company. Detail RPCs do not.
