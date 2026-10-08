@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(8);
+select plan(12);
 
 do $users$
 begin
@@ -141,6 +141,39 @@ select is(
   'list_loans names every flagged line, sorted'
 );
 select is(pg_temp.listed('flagged_parts'), '6'::jsonb, 'and counts all their parts');
+
+-- A second loan of the same company does not show the first loan's flagged lines.
+select pg_temp.as_mcp('write');
+select public.mcp_add_loan('f131-add-2', 'Example Bank Two', 5000000, 60000, 360, '2026-01-01'::date, 50000, 0, 'USD');
+select pg_temp.as_mcp('write');
+create temp table f131_other_loan on commit drop as
+select l from jsonb_array_elements(public.mcp_list_loans()) l where l->>'name' = 'Example Bank Two';
+reset role;
+select is(
+  (select l -> 'flagged_transaction_ids' from f131_other_loan),
+  '[]'::jsonb,
+  'another loan of the company lists no flagged lines'
+);
+select is((select l -> 'flagged_parts' from f131_other_loan), '0'::jsonb, 'and counts no flagged parts');
+
+-- A viewer of this company, made a demo, can read its loans through RLS, but list_loans is
+-- scoped to the caller's own company, so it shows nothing (fails without the filter).
+do $viewer$
+begin
+  perform tests.create_supabase_user('f131_viewer', 'viewer131@example.com');
+end
+$viewer$;
+update public.companies set is_demo = true where id = (select id from f131 where label = 'company');
+insert into public.company_viewers (user_id, company_id)
+select tests.get_supabase_uid('f131_viewer'), id from f131 where label = 'company';
+select tests.authenticate_as('f131_viewer');
+select ok((select count(*) from public.loans) > 0, 'a viewer reads the demo company loans');
+select is(
+  (select count(*)::int from jsonb_array_elements(public.mcp_list_loans())),
+  0,
+  'but list_loans does not return another company''s loan or its flags'
+);
+reset role;
 
 -- Another company's list_loans does not see the loan or its flags.
 do $other$

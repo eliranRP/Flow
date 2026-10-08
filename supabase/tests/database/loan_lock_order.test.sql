@@ -127,7 +127,9 @@ as $$
   $s$;
 $$;
 
--- Session a holds the loan, as mcp_attach_loan_payment does while it splits a line.
+-- Session a holds the loan as another app split's balance check does (for no key update).
+-- Not for update: that also blocks the key-share lock the loan_splits foreign key takes,
+-- so the app split below would time out on the insert even with no lock in the check.
 select extensions.dblink_exec('f131a', 'begin');
 select extensions.dblink_exec('f131a', $$
   do $lock$
@@ -135,7 +137,7 @@ select extensions.dblink_exec('f131a', $$
     perform 1 from public.loans l
     join public.companies c on c.id = l.company_id
     where c.name = 'Example Lock Co'
-    for update of l;
+    for no key update of l;
   end
   $lock$
 $$);
