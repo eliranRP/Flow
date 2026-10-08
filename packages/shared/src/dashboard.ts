@@ -95,6 +95,8 @@ export const unpaidRowSchema = z.object({
   direction: z.enum(["income", "expense"]).optional().catch(undefined),
   /** FLOW-330 (decision 0133). Set when the owner marked it paid and the sync has not closed it yet. */
   marked_paid_at: z.string().nullable().optional(),
+  /** FLOW-335. The SUMIT document link (pay.sumit.co.il), null until a sync reads it. */
+  document_url: z.string().nullable().optional(),
 });
 
 export const reviewRowSchema = z.object({

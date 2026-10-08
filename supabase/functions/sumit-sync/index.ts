@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
-import { assertSumitUrl, deriveLine, mapCrmEntity, type SumitDoc } from "../_shared/ledger.ts";
+import { assertSumitUrl, deriveLine, documentUrls, invoicesMissingLinks, mapCrmEntity, type SumitDoc } from "../_shared/ledger.ts";
 import { classifySumitStatus } from "../_shared/sumit-policy.ts";
 
 declare const Deno: {
@@ -11,6 +11,7 @@ declare const Deno: {
 
 const LIST_FOLDERS = "https://api.sumit.co.il/crm/schema/listfolders/";
 const LIST_ENTITIES = "https://api.sumit.co.il/crm/data/listentities/";
+const LIST_DOCUMENTS = "https://api.sumit.co.il/accounting/documents/list/";
 const PAGE_CAP = 20;
 const CLAIM_MS = 15 * 60 * 1000;
 const te = new TextEncoder();
@@ -185,10 +186,14 @@ async function runSync(
     apiKey = await openApiKey(envelope, kek, companyId, "sumit");
     const listed = await listDocuments(sumitCompanyId, apiKey);
     const documents = listed.docs;
-    await writeLedger(admin, companyId, documents);
+    const missing = invoicesMissingLinks(documents, await linkedInvoices(admin, companyId));
+    const links = missing.from == null
+      ? { urls: new Map<number, string>(), reads: 0 }
+      : await listDocumentUrls(sumitCompanyId, apiKey, missing.from);
+    await writeLedger(admin, companyId, documents, links.urls);
     const stamped = await admin.rpc("stamp_sumit_sync", { p_company: companyId });
     if (stamped.error) throw new Error("could not stamp the sync");
-    return { ok: true, documents: documents.length, sumit_reads: listed.reads };
+    return { ok: true, documents: documents.length, sumit_reads: listed.reads + links.reads };
   } catch (error) {
     const message = error instanceof Error ? error.message : "sync failed";
     const safe = apiKey === "" ? message : message.replaceAll(apiKey, "[redacted]");
@@ -322,6 +327,60 @@ async function listDocuments(companyId: number, apiKey: string): Promise<{ docs:
   throw new Error("sync_page_cap");
 }
 
+/** FLOW-335. The SUMIT invoices that already have a stored link, by external id. */
+async function linkedInvoices(admin: SupabaseClient, companyId: string): Promise<Set<string>> {
+  const linked = await admin
+    .from("transactions")
+    .select("external_id")
+    .eq("company_id", companyId)
+    .eq("doc_kind", "invoice")
+    .is("removed_at", null)
+    .not("provider_meta->>document_url", "is", null);
+  if (linked.error) return new Set();
+  return new Set((linked.data ?? []).map((row) => String(row.external_id)));
+}
+
+/**
+ * FLOW-335. The download links of the tax invoices (type 0) dated from `from`, for the Unpaid
+ * list. The sync calls it only while an open invoice has no link, since every call counts
+ * against the customer's SUMIT quota. A failure here only loses the links: the sync goes on,
+ * and a document keeps the link it had.
+ */
+async function listDocumentUrls(
+  companyId: number,
+  apiKey: string,
+  from: string,
+): Promise<{ urls: Map<number, string>; reads: number }> {
+  const credentials = { CompanyID: companyId, APIKey: apiKey };
+  const urls = new Map<number, string>();
+  let reads = 0;
+  let start = 0;
+  try {
+    for (let page = 0; page < PAGE_CAP; page += 1) {
+      reads += 1;
+      const payload = await sumitCall(LIST_DOCUMENTS, credentials, {
+        DocumentTypes: [0],
+        DateFrom: `${from}T00:00:00`,
+        Paging: { StartIndex: start, PageSize: 1000 },
+      });
+      const data = payload.Data;
+      for (const [id, url] of documentUrls(data)) urls.set(id, url);
+      const documents = data && typeof data === "object" ? (data as Record<string, unknown>).Documents : null;
+      const count = Array.isArray(documents) ? documents.length : 0;
+      const hasNext = Boolean(
+        data && typeof data === "object" && "HasNextPage" in data && (data as { HasNextPage?: boolean }).HasNextPage,
+      );
+      if (!hasNext || count === 0) return { urls, reads };
+      start += count;
+    }
+    console.error("sumit document links stopped at the page cap");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "list failed";
+    console.error("sumit document links skipped", message.replace(/[A-Za-z0-9+/=]{16,}/g, "[redacted]").slice(0, 200));
+  }
+  return { urls, reads };
+}
+
 function extractEntities(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   if (!data || typeof data !== "object") return [];
@@ -341,7 +400,12 @@ function docKind(kind: SumitDoc["kind"]): string {
   return "expense";
 }
 
-async function writeLedger(admin: SupabaseClient, companyId: string, docs: SumitDoc[]): Promise<void> {
+async function writeLedger(
+  admin: SupabaseClient,
+  companyId: string,
+  docs: SumitDoc[],
+  urls: Map<number, string>,
+): Promise<void> {
   const company = await admin.from("companies").select("vat_rate_bp").eq("id", companyId).single();
   if (company.error || !company.data) throw new Error("could not read the company");
   const rate = Number(company.data.vat_rate_bp);
@@ -381,6 +445,7 @@ async function writeLedger(admin: SupabaseClient, companyId: string, docs: Sumit
       party_name: doc.cust_name,
       party_kind: doc.cust_name == null ? null : expense ? "supplier" : "customer",
       party_external_id: doc.cust,
+      document_url: urls.get(doc.sumit_id) ?? null,
     };
   });
 
