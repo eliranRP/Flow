@@ -55,6 +55,27 @@ test("a mid-file commit is rejected, and one begin plus a final commit is not", 
     explicitTransactionProblems("do $$\nbegin\n  -- commit;\n  perform $$commit$$;\nend;\n$$;\n", "skipped.sql"),
     [],
   );
+  assert.deepEqual(
+    explicitTransactionProblems(
+      "do $outer$\nbegin\n  execute $f$create function g() returns void language plpgsql as $b$ begin perform 1; end; $b$$f$;\nend;\n$outer$;\n",
+      "nested-ok.sql",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems(
+      "create function f() returns void language plpgsql as $outer$\nbegin\n  do $inner$\n  begin\n    commit;\n  end;\n  $inner$;\nend;\n$outer$;\n",
+      "nested-do.sql",
+    ),
+    ["nested-do.sql:5 has a transaction statement inside a DO or function body (commit)"],
+  );
+  assert.deepEqual(
+    explicitTransactionProblems(
+      "do $outer$\nbegin\n  create procedure p() language plpgsql as $p$\n  begin\n    rollback;\n  end;\n  $p$;\nend;\n$outer$;\n",
+      "nested-as.sql",
+    ),
+    ["nested-as.sql:5 has a transaction statement inside a DO or function body (rollback)"],
+  );
   assert.deepEqual(explicitTransactionProblems("drop index concurrently ix;\n", "dropc.sql"), []);
   assert.deepEqual(
     explicitTransactionProblems("begin;\ncreate index concurrently ix on public.t (id);\ncommit;\n", "cin.sql"),
