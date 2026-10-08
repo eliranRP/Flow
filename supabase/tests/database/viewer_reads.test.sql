@@ -137,7 +137,9 @@ select is(
   '{}'::text[],
   'no viewer-facing read finds the company by its owner');
 -- The private read helpers those reads call. Excluded: the two company lookups themselves,
--- MCP-only helpers (mcp_*) and the owner's SUMIT connection rows.
+-- MCP-only helpers (mcp_*) and the owner's SUMIT connection rows. A helper that must stay
+-- owner-only (a permission check for a write, say) goes in this exclusion list; switching it to
+-- readable_company_id() would let a viewer through.
 select is(
   (select coalesce(array_agg(p.proname::text order by p.proname), '{}')
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
