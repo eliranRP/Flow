@@ -62,8 +62,8 @@ describe("project recent list months", () => {
       txn("d", "2026-08-20", -220_000n, "expense"),
     ])} />);
     fireEvent.click(screen.getByText("תנועות אחרונות"));
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000הוצאות −₪3,500הוצאות −$400");
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200");
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000, הוצאות −₪3,500, הוצאות −$400, ");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200, ");
   });
 
   it("shows only the name of the last month when get_project hit its 40-line cap", () => {
@@ -71,7 +71,7 @@ describe("project recent list months", () => {
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
     wrap(<ProjectDetailScreen sample={project(rows)} />);
     fireEvent.click(screen.getByText("תנועות אחרונות"));
-    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪2,000");
+    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪2,000, ");
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
@@ -84,8 +84,8 @@ describe("project recent list months", () => {
       txn("e", "2026-08-18", -220_000n, "expense"),
     ])} />);
     fireEvent.click(screen.getByText("תנועות אחרונות"));
-    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000הוצאות −₪3,500");
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200");
+    expect(totalsOf("ספטמבר 2026")).toBe("הכנסות ₪12,000, הוצאות −₪3,500, ");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪2,200, ");
   });
 
   it("totals the last month when the list is under the cap", () => {
@@ -93,7 +93,7 @@ describe("project recent list months", () => {
       txn(`r${String(index)}`, index < 20 ? "2026-09-10" : "2026-08-10", -10_000n, "expense"));
     wrap(<ProjectDetailScreen sample={project(rows)} />);
     fireEvent.click(screen.getByText("תנועות אחרונות"));
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪1,900");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪1,900, ");
   });
 });
 
@@ -123,7 +123,7 @@ describe("review list months", () => {
       backTo="/review"
     />);
     // FLOW-305: the statement rows show cents, so the month total shows exact cents too.
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250.00הכנסות $100.00");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪250.00, הכנסות $100.00, ");
   });
 
   it("adds exact cents, so the month matches its statement rows", () => {
@@ -136,7 +136,7 @@ describe("review list months", () => {
       search=""
       backTo="/review"
     />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪201.00");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪201.00, ");
   });
 });
 
@@ -203,18 +203,18 @@ describe("category drill-down months", () => {
 
   it("hides the last month's total while עוד תנועות can still load rows", () => {
     wrap(<ProjectCategoryScreen sample={sample} backTo="/projects/a" />);
-    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪1,000");
+    expect(totalsOf("ספטמבר 2026")).toBe("הוצאות −₪1,000, ");
     expect(totalsOf("אוגוסט 2026")).toBeNull();
   });
 
   it("shows a USD drill-down in dollars", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, currency: "USD", pageSize: undefined }} backTo="/projects/a" />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −$5,000");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −$5,000, ");
     expect(screen.getByText("Line 1").closest(".ui-row")?.querySelector(".ui-num")?.textContent).toBe("−$1,000.00");
   });
 
   it("totals the last month once every row is shown", () => {
     wrap(<ProjectCategoryScreen sample={{ ...sample, pageSize: undefined }} backTo="/projects/a" />);
-    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000");
+    expect(totalsOf("אוגוסט 2026")).toBe("הוצאות −₪5,000, ");
   });
 });

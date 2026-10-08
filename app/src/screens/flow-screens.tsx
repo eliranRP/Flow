@@ -65,6 +65,7 @@ import { useSyncSettled } from "../use-sync-settled";
 import { invokeEdge } from "../edge";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
+import { mergeFailureText, pnlFailureText } from "../category-copy";
 import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
 import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
@@ -4851,7 +4852,7 @@ export function ConnectionsScreen({
           <p>
             מחובר
             {sumitId != null ? <span className="ui-nowrap">{` · מספר חברה `}<bdi dir="ltr">{String(sumitId)}</bdi></span> : null}
-            {syncPhrase != null ? <span className="ui-nowrap">{` · ${syncPhrase}`}</span> : null}
+            {syncPhrase != null ? <><br /><span className="ui-nowrap">{syncPhrase}</span></> : null}
           </p>
           {refreshHeld && rawError != null && rawError !== "sumit_auth" ? <p>הרענון נכשל</p> : null}
           {!refreshHeld && rawError != null && rawError !== "sumit_auth" && lastError ? <p>{lastError}</p> : null}
@@ -4922,7 +4923,7 @@ export function ConnectionsScreen({
         <div className="ui-stack">
           <p>
             מחובר
-            {mercurySyncPhrase != null ? <span className="ui-nowrap">{` · ${mercurySyncPhrase}`}</span> : null}
+            {mercurySyncPhrase != null ? <><br /><span className="ui-nowrap">{mercurySyncPhrase}</span></> : null}
           </p>
           {mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" ? <p>הרענון נכשל</p> : null}
           {!mercuryRefreshHeld && mercuryRawError != null && mercuryRawError !== "auth" && mercuryLastError ? <p>{mercuryLastError}</p> : null}
@@ -5050,7 +5051,7 @@ export function CategoriesScreen({
   const menuOpener = useRef<HTMLElement | null>(null);
   const pnlHintId = useId();
   const pnl = useWrite<PnlChange>({
-    failure: "לא הצלחנו לעדכן את הקטגוריה.",
+    failure: pnlFailureText,
     keys: ["categories", "dashboard", "project", "project-category"],
     onSuccess: (done) => {
       setMenu(null);
@@ -5094,7 +5095,7 @@ export function CategoriesScreen({
     },
   });
   const merge = useWrite({
-    failure: "לא הצלחנו למזג.",
+    failure: mergeFailureText,
     success: "הקטגוריות מוזגו",
     keys: ["categories", "dashboard"],
     onSuccess: () => { setMergeOpen(false); },

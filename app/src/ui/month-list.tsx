@@ -17,13 +17,14 @@ type MonthListProps<T> = {
   days?: boolean;
   /** The rows show cents, so the month totals add exact minor units and show cents too. FLOW-305. */
   cents?: boolean;
-  className?: string;
 };
 
 /**
  * A transaction list with a sticky header per month: the month name, then income (+)
  * and expenses (−) per currency. Lists from a single month render as before. FLOW-302.
  * With `days`, each month (or the single-month list) also gets quiet day heads. FLOW-305.
+ * The flat list is one headless section keyed by its first month, so a second month loading
+ * keeps the first month's rows (and a focused row) mounted (FLOW-313).
  */
 export function MonthList<T>({
   rows,
@@ -34,19 +35,33 @@ export function MonthList<T>({
   complete = true,
   days = false,
   cents = false,
-  className,
 }: MonthListProps<T>) {
   const baseId = useId();
   const groups = groupByMonth(rows, dateOf, amountOf, cents);
   if (groups == null) {
+    const first = rows[0];
+    const flat: MonthGroup<T> = { key: first == null ? "" : monthKey(dateOf(first)), title: "", rows: [...rows], totals: [] };
     return (
-      <List className={className}>
-        <Rows rows={rows} keyOf={keyOf} dateOf={dateOf} renderRow={renderRow} days={days} />
+      <List>
+        {[
+          <MonthSection
+            key={flat.key}
+            id={`${baseId}-${flat.key}`}
+            group={flat}
+            head={false}
+            showTotals={false}
+            keyOf={keyOf}
+            dateOf={dateOf}
+            renderRow={renderRow}
+            days={days}
+            cents={cents}
+          />,
+        ]}
       </List>
     );
   }
   return (
-    <List className={className}>
+    <List>
       {groups.map((group, index) => (
         <MonthSection
           key={group.key}
@@ -64,9 +79,15 @@ export function MonthList<T>({
   );
 }
 
+/** The month a row belongs to, as groupByMonth keys it; "" when the date can't be read. */
+function monthKey(date: string): string {
+  return /^\d{4}-\d{2}/.exec(date)?.[0] ?? "";
+}
+
 function MonthSection<T>({
   id,
   group,
+  head = true,
   showTotals,
   keyOf,
   dateOf,
@@ -76,6 +97,8 @@ function MonthSection<T>({
 }: {
   id: string;
   group: MonthGroup<T>;
+  /** False for the flat list: no month name or totals, and no group role. */
+  head?: boolean;
   showTotals: boolean;
   keyOf: (row: T) => string;
   dateOf: (row: T) => string;
@@ -84,15 +107,17 @@ function MonthSection<T>({
   cents: boolean;
 }) {
   return (
-    <div className="ui-month" role="group" aria-labelledby={id}>
-      <div className="ui-month-head">
-        <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
-        {showTotals ? (
-          <p className="ui-month-totals t-label">
-            {group.totals.map((total) => <MonthTotalLine key={total.currency} total={total} cents={cents} />)}
-          </p>
-        ) : null}
-      </div>
+    <div className="ui-month" role={head ? "group" : undefined} aria-labelledby={head ? id : undefined}>
+      {head ? (
+        <div className="ui-month-head">
+          <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
+          {showTotals ? (
+            <p className="ui-month-totals t-label">
+              {group.totals.map((total) => <MonthTotalLine key={total.currency} total={total} cents={cents} />)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <Rows rows={group.rows} keyOf={keyOf} dateOf={dateOf} renderRow={renderRow} days={days} />
     </div>
   );
@@ -140,12 +165,14 @@ function MonthTotalLine({ total, cents }: { total: MonthTotal; cents: boolean })
         <span>
           <span className="sr-only">הכנסות </span>
           <bdi dir="ltr" className="ui-num ui-income">{income}</bdi>
+          <span className="sr-only">, </span>
         </span>
       ) : null}
       {expense != null ? (
         <span>
           <span className="sr-only">הוצאות </span>
           <bdi dir="ltr" className="ui-num">{expense}</bdi>
+          <span className="sr-only">, </span>
         </span>
       ) : null}
     </span>
