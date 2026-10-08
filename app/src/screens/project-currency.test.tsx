@@ -78,7 +78,8 @@ describe("ProjectDetailScreen currency", () => {
   it("links a USD category to its drill-down in dollars", () => {
     renderProject(usdProject());
     const row = screen.getByText("Utilities").closest("a");
-    expect(row).toHaveAttribute("href", "/projects/p-usd/categories/cat-1?currency=USD");
+    // The project's period travels with it (FLOW-411), then the currency.
+    expect(row?.getAttribute("href")).toMatch(/^\/projects\/p-usd\/categories\/cat-1\?period=[^&]+(&at=[^&]+)?&currency=USD$/);
   });
 
   it("shows waiting USD lines once, in dollars, with no ₪0 row", () => {
