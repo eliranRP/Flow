@@ -173,7 +173,7 @@ View only. Stored transactions, the overhead bucket, and the company income, exp
 
 The period is the one selected on that screen. On Home that is this month, last month, or year to date. On the project screen it is project to date, meaning every counting line on every project and on overhead, any date. The project screen does not gain the Home period switch.
 
-Let `H` be overhead profit in that period (income − expenses on the overhead bucket). Let `I_p` be project `p`'s income in that period. Let `I = sum I_p` over projects, not including overhead's own income. The company's overhead project is left out of `I` and its share is 0: its cost is the overhead being spread, so it does not carry a share of it ([0117](../decisions/0117-overhead-project-weights.md)).
+Let `H` be overhead profit in that period (income − expenses on the overhead bucket). On the cash basis `H` leaves out unpaid overhead invoices, like the overhead bucket ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)). Let `I_p` be project `p`'s income in that period. Let `I = sum I_p` over projects, not including overhead's own income. The company's overhead project is left out of `I` and its share is 0: its cost is the overhead being spread, so it does not carry a share of it ([0117](../decisions/0117-overhead-project-weights.md)).
 
 - If `I` is 0, allocation is unavailable. The after-overhead view is not shown. The screen says so. It does not pretend every share is zero.
 - Otherwise each exact share is `H × I_p / I`. A project with `I_p = 0` has share 0.

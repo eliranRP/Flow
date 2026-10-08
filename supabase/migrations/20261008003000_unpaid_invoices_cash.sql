@@ -5,8 +5,8 @@
 -- pnl_lines gains an `unpaid` column; company_pnl, get_project, breakdown_rows and get_home
 -- read the view through a subquery that drops unpaid lines unless the basis is invoiced.
 -- They are otherwise as in 20261007180040_reversals.sql, 20261007223000_kept_out_guesses.sql
--- and 20261007203000_flow_breakdown.sql. overhead_share weights by invoiced income and reads
--- overhead cost on every basis; it is unchanged.
+-- and 20261007203000_flow_breakdown.sql. overhead_share gains a basis: it still weights by
+-- invoiced income, and on the cash basis it leaves unpaid overhead invoices out of the cost.
 
 begin;
 
@@ -941,7 +941,7 @@ begin
     - (result->>'direct_agorot')::bigint
     - (result->>'shared_agorot')::bigint;
   select s.available, s.share_agorot into available, share
-  from private.overhead_share(p_id) s;
+  from private.overhead_share(p_id, basis) s;
   return result || jsonb_build_object(
     'profit_agorot', profit,
     'overhead_share_agorot', case when coalesce(available, false) then coalesce(share, 0) else null end,
@@ -1149,6 +1149,115 @@ as $$
       'is_demo', false
     )
   );
+$$;
+
+-- The after-overhead view on the cash basis leaves unpaid overhead invoices out of the cost it
+-- spreads, so the projects' shares add up to company_pnl's cash overhead. The weights still use
+-- invoiced income on every basis. The one-argument form is the invoiced basis.
+create or replace function private.overhead_share(p_project uuid, p_basis text)
+returns table (available boolean, share_agorot bigint)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with cid as (
+    select
+      private.current_company_id() as id,
+      (
+        select c.overhead_project_id
+        from public.companies c
+        where c.id = private.current_company_id()
+      ) as overhead_project
+  ),
+  totals as (
+    select
+      coalesce((
+        select sum(l.amount_net)::bigint
+        from private.pnl_lines l
+        where l.company_id = (select id from cid)
+          and l.currency = 'ILS'
+          and l.in_pnl
+          and l.kind = 'income'
+          and (l.direction = 'expense' or l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+          and l.project_id is not null
+          and l.project_id is distinct from (select overhead_project from cid)
+      ), 0) as total_income,
+      coalesce((
+        select -sum(l.amount_net)::bigint
+        from private.pnl_lines l
+        where l.company_id = (select id from cid)
+          and l.currency = 'ILS'
+          and l.in_pnl
+          and l.kind = 'expense' and l.pnl_role = 'overhead'
+          and (p_basis = 'invoiced' or not l.unpaid)
+      ), 0) as overhead_cost
+  ),
+  rounded as (
+    select
+      p.id as project_id,
+      p.name as project_name,
+      s.income,
+      (select overhead_cost from totals)::numeric * s.income / (select total_income from totals) as exact,
+      private.round_agorot_shekel_hundreds(
+        (select overhead_cost from totals)::numeric * s.income / (select total_income from totals)
+      ) as rounded
+    from public.projects p
+    join (
+      select l.project_id, sum(l.amount_net)::bigint as income
+      from private.pnl_lines l
+      where l.company_id = (select id from cid)
+        and l.currency = 'ILS'
+        and l.in_pnl
+        and l.kind = 'income'
+        and (l.direction = 'expense' or l.doc_kind in ('invoice', 'credit', 'invoice_receipt'))
+        and l.project_id is not null
+        and l.project_id is distinct from (select overhead_project from cid)
+      group by l.project_id
+      having sum(l.amount_net) > 0
+    ) s on s.project_id = p.id
+    where p.company_id = (select id from cid)
+      and (select id from cid) is not null
+      and (select total_income from totals) <> 0
+  ),
+  chosen as (
+    select r.project_id
+    from rounded r
+    order by
+      case when (select max(x.exact - x.rounded) from rounded x) > 0 then (r.exact - r.rounded) end desc nulls last,
+      case when (select max(x.exact - x.rounded) from rounded x) <= 0 then r.income end desc nulls last,
+      r.project_name asc
+    limit 1
+  ),
+  adjusted as (
+    select
+      r.project_id,
+      r.rounded + case
+        when r.project_id = (select c.project_id from chosen c)
+          then (select overhead_cost from totals) - (select coalesce(sum(x.rounded), 0) from rounded x)
+        else 0
+      end as share
+    from rounded r
+  )
+  select
+    (select id from cid) is not null and (select total_income from totals) <> 0,
+    case
+      when (select id from cid) is null or (select total_income from totals) = 0 then null::bigint
+      else coalesce((select a.share from adjusted a where a.project_id = p_project), 0)
+    end;
+$$;
+
+revoke all on function private.overhead_share(uuid, text) from public, anon;
+grant execute on function private.overhead_share(uuid, text) to authenticated, service_role;
+
+create or replace function private.overhead_share(p_project uuid)
+returns table (available boolean, share_agorot bigint)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select s.available, s.share_agorot from private.overhead_share(p_project, 'invoiced') s;
 $$;
 
 commit;

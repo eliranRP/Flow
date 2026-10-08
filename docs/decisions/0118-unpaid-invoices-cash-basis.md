@@ -13,7 +13,7 @@
 - On the cash basis an unpaid line counts nowhere: not in the totals, the buckets, `count`, the excluded fields, the project card, its category lists, or the breakdown. Once it gets a cash date it counts.
 - On the invoiced basis nothing changes: an unpaid supplier invoice counts by its document date.
 - Every other expense line keeps counting by its document date on both bases. Bank lines and manual expenses always carry a cash date, so they are never unpaid. A pending bank line still counts on neither basis ([0086](0086-mercury.md)).
-- The after-overhead weights (`private.overhead_share`) are unchanged: they use invoiced income and every overhead cost.
+- The after-overhead view (`private.overhead_share`) still weights by invoiced income on both bases. The overhead cost it spreads follows the basis: on cash it leaves unpaid overhead invoices out, so the projects' shares add up to the cash `overhead_*` total.
 - The owner was asked on 2026-10-08; this is the recommended answer ("leave unpaid out") and can still be switched to counting cash-basis expenses by payment date.
 
 ## Alternatives rejected
@@ -23,3 +23,5 @@
 ## Consequences
 
 `company_pnl` (`get_dashboard`, MCP `get_totals` and `list_projects`), `get_project`, `get_breakdown`, `get_breakdown_lines` and `get_home` drop unpaid supplier invoices on the cash basis. Companies whose expenses all come from bank lines see no change.
+
+Nothing sets a cash date on a supplier invoice yet: there is no mark-paid action and no link to the bank line that pays it. Whoever adds one must make sure the invoice and its bank line do not both count on the cash basis ([0007](0007-bank-statement-is-primary-input.md)).

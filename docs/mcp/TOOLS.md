@@ -380,7 +380,7 @@ Takes one line out of the P&L, or counts one line of a kept-out category. Decisi
 ```
 
 - `in_pnl: false` keeps the line out, `true` counts it although its category is kept out, `null` clears the override so the line follows its category again. The override wins over the category's `excluded_from_pnl` and covers every part of a split line.
-- An out line moves to the `excluded_*` totals of `get_totals`, `list_projects` and `get_project`, and to `get_breakdown`'s `excluded` group, on both bases. Nothing is hidden.
+- An out line moves to the `excluded_*` totals of `get_totals`, `list_projects` and `get_project`, and to `get_breakdown`'s `excluded` group, on both bases. Nothing is hidden, except that an unpaid supplier invoice is in no field on `cash` ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)).
 - Refused: `transaction not found` (also another company's line) and `loan line is fixed` (a line with a loan split or in a loan category; its parts decide what counts).
 
 Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "line_pnl", "id" }`. Undo `kind: "line_pnl"` with the transaction id puts back the override from before this write. If the override changed since (for example in the app), undo is `conflict`.

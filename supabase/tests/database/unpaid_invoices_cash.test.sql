@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(20);
+select plan(38);
 
 do $users$
 begin
@@ -26,12 +26,20 @@ create function pg_temp.total(p jsonb, c text) returns bigint
 language sql immutable
 as $$ select (x ->> 'amount_minor')::bigint from jsonb_array_elements(p -> 'totals') x where x ->> 'currency' = c $$;
 
+create function pg_temp.minor_sum(p jsonb, k text, c text) returns bigint
+language sql immutable
+as $$ select coalesce(sum((x ->> 'amount_minor')::bigint), 0)::bigint from jsonb_array_elements(p -> k) x where x ->> 'currency' = c $$;
+
+create function pg_temp.other(p jsonb, c text) returns jsonb
+language sql immutable
+as $$ select x from jsonb_array_elements(p -> 'other_currencies') x where x ->> 'currency' = c $$;
+
 create function pg_temp.cat_sum(p jsonb) returns bigint
 language sql immutable
 as $$ select coalesce(sum((x ->> 'amount_agorot')::bigint), 0)::bigint from jsonb_array_elements(p -> 'categories') x $$;
 
 grant execute on function pg_temp.cur(jsonb, text), pg_temp.proj(jsonb, text), pg_temp.total(jsonb, text),
-  pg_temp.cat_sum(jsonb) to authenticated;
+  pg_temp.cat_sum(jsonb), pg_temp.minor_sum(jsonb, text, text), pg_temp.other(jsonb, text) to authenticated;
 
 select tests.authenticate_as('ui_owner');
 select public.create_company('Example Renovations LLC', true);
@@ -127,6 +135,91 @@ select is(
   (public.get_home() ->> 'net_profit_agorot')::bigint, -13000::bigint,
   'get_home counts it once paid'
 );
+
+-- Every other read of the view: shared cost, foreign currency lists, kept-out lines and an
+-- unpaid invoice filed to an income category (a reversal). Each assertion fails when its
+-- read drops the unpaid filter.
+reset role;
+insert into public.categories (company_id, name, kind, sort_order, excluded_from_pnl)
+select (select id from ui_ref where label = 'co'), v.name, v.kind::public.category_kind, 900, v.out
+from (values ('UI kept out', 'expense', true), ('UI income', 'income', false), ('UI income out', 'income', true))
+  as v(name, kind, out);
+insert into ui_ref (label, id)
+select 'out', id from public.categories
+where company_id = (select id from ui_ref where label = 'co') and name = 'UI kept out';
+insert into ui_ref (label, id)
+select 'inc', id from public.categories
+where company_id = (select id from ui_ref where label = 'co') and name = 'UI income';
+insert into ui_ref (label, id)
+select 'inc-out', id from public.categories
+where company_id = (select id from ui_ref where label = 'co') and name = 'UI income out';
+
+insert into public.transactions (
+  company_id, direction, doc_kind, pnl_role, line_status, currency,
+  amount_gross, amount_net, amount_original, vat_amount, vat_status,
+  doc_date, cash_date, source, idempotency_key, project_id, category_id, description, user_assigned
+)
+select
+  (select id from ui_ref where label = 'co'),
+  'expense', 'invoice', v.role::public.pnl_role, 'posted', v.cur,
+  v.amount, v.amount, abs(v.amount), 0, 'source',
+  '2026-06-10', null,
+  'manual', 'ui:' || v.ikey,
+  case when v.role = 'project' then (select id from ui_ref where label = 'alpha') end,
+  (select id from ui_ref where label = v.cat),
+  v.ikey,
+  true
+from (values
+  ('shared', -800, 'ILS', 'cat', 'shared-ils'),
+  ('shared', -700, 'USD', 'cat', 'shared-usd'),
+  ('project', -500, 'ILS', 'out', 'kept-out-ils'),
+  ('project', -300, 'ILS', 'inc', 'reversal-ils'),
+  ('project', -200, 'ILS', 'inc-out', 'reversal-out')
+) as v(role, amount, cur, cat, ikey);
+
+insert into public.allocations (company_id, transaction_id, project_id, share_bp, amount_net)
+select t.company_id, t.id, (select id from ui_ref where label = 'alpha'), 10000, t.amount_net
+from public.transactions t
+where t.idempotency_key in ('ui:shared-ils', 'ui:shared-usd');
+
+select tests.authenticate_as('ui_owner');
+
+select is((public.get_project((select id from ui_ref where label = 'alpha'), 'cash') ->> 'shared_agorot')::bigint, 0::bigint,
+  'get_project cash: an unpaid shared invoice is not shared cost');
+select is((public.get_project((select id from ui_ref where label = 'alpha'), 'invoiced') ->> 'shared_agorot')::bigint, 800::bigint,
+  'get_project invoiced: the unpaid shared invoice counts');
+select is((pg_temp.cur(public.get_project((select id from ui_ref where label = 'alpha'), 'cash'), 'USD') ->> 'direct_minor')::bigint, 1000::bigint,
+  'get_project cash, by_currency USD: direct cost without the unpaid invoice');
+select is((pg_temp.cur(public.get_project((select id from ui_ref where label = 'alpha'), 'cash'), 'USD') ->> 'shared_minor')::bigint, 0::bigint,
+  'get_project cash, by_currency USD: no unpaid shared cost');
+select is(pg_temp.minor_sum(public.get_project((select id from ui_ref where label = 'alpha'), 'cash'), 'categories_by_currency', 'USD'), 1000::bigint,
+  'get_project cash: categories_by_currency leaves the unpaid invoices out');
+select is(pg_temp.minor_sum(public.get_project((select id from ui_ref where label = 'alpha'), 'cash'), 'excluded_categories_by_currency', 'ILS'), 0::bigint,
+  'get_project cash: an unpaid kept-out invoice is not in excluded_categories_by_currency');
+select is(pg_temp.minor_sum(public.get_project((select id from ui_ref where label = 'alpha'), 'invoiced'), 'excluded_categories_by_currency', 'ILS'), 500::bigint,
+  'get_project invoiced: the unpaid kept-out invoice is listed');
+select is((pg_temp.other(public.get_project((select id from ui_ref where label = 'alpha'), 'cash'), 'USD') ->> 'expense_minor')::bigint, -1000::bigint,
+  'get_project cash, other_currencies: no unpaid direct or shared USD invoice');
+select is((public.get_project((select id from ui_ref where label = 'alpha'), 'cash') ->> 'income_agorot')::bigint, 0::bigint,
+  'get_project cash: an unpaid invoice in an income category is not income');
+select is((public.get_project((select id from ui_ref where label = 'alpha'), 'invoiced') ->> 'income_agorot')::bigint, -300::bigint,
+  'get_project invoiced: it counts as negative income');
+select is(pg_temp.minor_sum(public.get_project((select id from ui_ref where label = 'alpha'), 'cash'), 'excluded_income_by_currency', 'ILS'), 0::bigint,
+  'get_project cash: an unpaid invoice in a kept-out income category is not in excluded_income_by_currency');
+select is(pg_temp.minor_sum(public.get_project((select id from ui_ref where label = 'alpha'), 'invoiced'), 'excluded_income_by_currency', 'ILS'), -200::bigint,
+  'get_project invoiced: it is listed there');
+select is((public.get_dashboard(null, null, 'cash') ->> 'income_agorot')::bigint, 0::bigint,
+  'get_dashboard cash: the unpaid reversal is not income');
+select is((pg_temp.cur(public.get_dashboard(null, null, 'cash'), 'ILS') ->> 'income_minor')::bigint, 0::bigint,
+  'get_dashboard cash, by_currency: the unpaid reversal is not income');
+select is((public.get_dashboard(null, null, 'cash') ->> 'excluded_expense_agorot')::bigint, 0::bigint,
+  'get_dashboard cash: an unpaid kept-out invoice is not in excluded_*');
+select is((public.get_dashboard(null, null, 'invoiced') ->> 'excluded_expense_agorot')::bigint, 500::bigint,
+  'get_dashboard invoiced: the unpaid kept-out invoice is in excluded_*');
+select is((pg_temp.other(public.get_dashboard(null, null, 'cash'), 'USD') ->> 'expense_minor')::bigint, -1000::bigint,
+  'get_dashboard cash, other_currencies: no unpaid USD invoice');
+select is((pg_temp.other(public.get_home(), 'USD') ->> 'expense_minor')::bigint, -1000::bigint,
+  'get_home, other_currencies: no unpaid USD invoice');
 
 select * from finish();
 rollback;
