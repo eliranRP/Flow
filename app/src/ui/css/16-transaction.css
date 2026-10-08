@@ -1,0 +1,114 @@
+/* FLOW-303: prev and next on the transaction card, before ⋯ in the top bar. */
+.ui-txn-end,
+.ui-txn-nav {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* An icon button that stays focusable at a list end. The cursor comes from the shared disabled rule. */
+.ui-icon-btn[aria-disabled="true"],
+.ui-icon-btn[aria-disabled="true"]:active {
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
+/* FLOW-117: the other kind's categories under the category picker. */
+.ui-reversal {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-reversal > .ui-text-link {
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.ui-reversal-head {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-reversal-hint {
+  margin: 0 0 var(--space-2);
+}
+
+/* FLOW-501: the Settings rows that open a page. The wrapper only marks the row for focus return. */
+.ui-settings-page-row {
+  display: contents;
+}
+
+/* FLOW-304. "פרטי הבנק" on the transaction screen. Static rows; text stays selectable. */
+.ui-bank .ui-row {
+  user-select: text;
+}
+
+.ui-bank-account {
+  display: inline-flex;
+  max-inline-size: 100%;
+  gap: var(--space-1);
+  vertical-align: bottom;
+}
+
+.ui-bank-account-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bank-last4 {
+  flex: none;
+}
+
+/* The clipping box takes the name's own direction, so a Latin name loses its end, not its start. */
+.ui-bank-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bank-wrap .ui-row-title {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.ui-bank-memo {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.ui-bank-memo[data-open] {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+.ui-bank-text {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-hint-weight);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   FLOW-327: the pinned action bar (ActionBar). A screen's repeated action sits on top of the tab
+   bar; the screen's toasts sit just above it (decision 0137). `edge` sits on the screen edge.
+   --------------------------------------------------------------------------------------------- */
+:root {
+  /* Two control rows, the gap between them, and the bar's block padding: 136px. */
+  --action-bar-h: calc(2 * var(--control-height) + var(--space-2) + 2 * var(--space-3));
+  /* Fits "קטגוריה" at the meta size: 75px. */
+  --review-label-w: calc(var(--type-meta-size) * 5);
+}

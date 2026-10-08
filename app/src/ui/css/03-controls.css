@@ -1,0 +1,228 @@
+.ui-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  min-inline-size: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: start;
+}
+
+.ui-toggle-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-toggle:active:not(:has(input:disabled)) {
+  background: var(--color-tint);
+}
+
+.ui-toggle:disabled,
+.ui-toggle:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.ui-toggle input:focus-visible {
+  outline: none;
+}
+
+.ui-toggle input:focus-visible + .ui-check {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ui-seg {
+  display: flex;
+  max-width: 100%;
+  min-width: 0;
+  gap: var(--seg-gap);
+  padding: var(--seg-gap);
+  border-radius: var(--radius-segment);
+  background: var(--color-tint);
+}
+
+.ui-seg-input {
+  inline-size: 100%;
+  border-radius: var(--radius-input);
+}
+
+.ui-seg-btn {
+  position: relative;
+  block-size: var(--size-chip);
+  min-block-size: var(--size-chip);
+  min-width: 0;
+  flex: 1;
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: var(--type-body-weight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-seg-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-seg-btn:active {
+  background: var(--color-tint-pressed);
+}
+
+.ui-seg-btn[aria-checked="true"] {
+  background: var(--color-seg-on);
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: 0 1px 0 var(--color-line);
+}
+
+.ui-chip {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  block-size: var(--size-chip);
+  min-block-size: var(--size-chip);
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--field-pad);
+  border-radius: var(--radius-chip);
+  border: 1px solid transparent;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-body-weight);
+}
+
+.ui-chip-mark,
+.ui-chip-spark,
+.ui-period-chevron {
+  flex: none;
+}
+
+.ui-chip:active:not(:disabled) {
+  background: var(--color-tint-pressed);
+}
+
+.ui-chip-suggested {
+  background: var(--color-tint);
+  color: var(--color-text);
+}
+
+.ui-chip-spark {
+  color: var(--color-accent-text);
+}
+
+.ui-chip-choice {
+  background: var(--color-surface);
+  border-color: var(--color-control-border);
+  color: var(--color-text);
+}
+
+.ui-chip-selected {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.ui-chip-disabled {
+  border-color: var(--color-line);
+  color: var(--color-disabled-text);
+}
+
+.ui-status {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  min-height: var(--switch-track-h);
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+  color: var(--color-text);
+  font-size: var(--type-micro-size);
+  font-weight: var(--type-micro-weight);
+}
+
+.ui-status-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.ui-bar {
+  height: var(--bar-h);
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: var(--color-tint);
+}
+
+.ui-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.ui-bar-fill[data-over="true"] {
+  background: var(--color-bad);
+}
+
+.ui-overage {
+  color: var(--color-bad);
+}
+
+.ui-meter-label {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ui-budget {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ui-budget-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ui-budget-title {
+  display: -webkit-box;
+  min-inline-size: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ui-budget-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.ui-budget-amounts bdi,
+.ui-num {
+  white-space: nowrap;
+}
+
+.ui-budget .ui-row-hint {
+  margin-top: var(--space-1);
+}

@@ -132,4 +132,38 @@ describe("ProjectDetailScreen currency", () => {
     });
     expect(screen.getByText("₪800")).toBeInTheDocument();
   });
+  it("takes the overhead share off the company currency's row only (0147)", () => {
+    renderProject({
+      ...usdProject(),
+      base_currency: "USD",
+      after_overhead: true,
+      overhead_weighted: true,
+      overhead_share_agorot: 90_000n,
+      overhead_share_minor: 75_000n,
+      income_agorot: 100_000n,
+      direct_agorot: 20_000n,
+      profit_agorot: 80_000n,
+      profit_after_overhead_agorot: -10_000n,
+      by_currency: [
+        { currency: "USD", income_minor: 400_000n, direct_minor: 125_000n, shared_minor: 0n, profit_minor: 275_000n },
+        { currency: "ILS", income_minor: 100_000n, direct_minor: 20_000n, shared_minor: 0n, profit_minor: 80_000n },
+      ],
+    });
+    expect(screen.getByText("$2,000")).toBeInTheDocument();
+    expect(screen.getByText("₪800")).toBeInTheDocument();
+    expect(screen.getByText("דלוק · החלק בכלליות הוא $750")).toBeInTheDocument();
+  });
+
+  it("leaves the USD row alone when the share is off or unknown (0147)", () => {
+    const shared = { ...usdProject(), base_currency: "USD", after_overhead: true, overhead_weighted: true, overhead_share_minor: 75_000n };
+    for (const project of [
+      { ...shared, overhead_share_minor: null },
+      { ...shared, after_overhead: false },
+      { ...shared, overhead_weighted: false },
+    ]) {
+      const view = renderProject(project);
+      expect(screen.getByText("$2,750")).toBeInTheDocument();
+      view.unmount();
+    }
+  });
 });
