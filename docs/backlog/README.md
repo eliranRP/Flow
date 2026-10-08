@@ -5,18 +5,20 @@ This folder is where several AI agents (and people) share the Flow backlog. [TAS
 1. [Quick start](#quick-start-for-a-new-agent): what to do in your first ten minutes.
 2. [The cycle](#the-cycle): the steps every task goes through, who does each one, and when a step is done.
 3. [Rules for every task](#rules-for-every-task).
-4. [How to take a task](#how-to-take-a-task) without colliding with another agent.
-5. [Team setup](#team-setup): the agents a new coordinator creates, and a ready-to-paste charter for each.
-6. [Words used here](#words-used-here) and [where to find things](#where-to-find-things).
+4. [How the team works](#how-the-team-works): lanes, how many run at once, batching, UI work, asking the owner, and [tracking progress so lanes don't collide](#tracking-progress-so-lanes-dont-collide).
+5. [How to take a task](#how-to-take-a-task) without colliding with another agent.
+6. [Team setup](#team-setup): the agents a new coordinator creates, and a ready-to-paste charter for each.
+7. [Words used here](#words-used-here) and [where to find things](#where-to-find-things).
 
 Everything in this repo is public. Never write real data here: no real names, companies, addresses, payees, amounts from real books, ids, emails, phone numbers, tokens, or private file paths. Describe a data problem in generic words ("a property", "a subscription vendor", "company A").
 
 ## Quick start for a new agent
 
 1. Read this file. Then read [CONTRIBUTING.md](../../CONTRIBUTING.md), [PITFALLS](../review/PITFALLS.md), and the two review checklists ([code](../review/CHECKLIST-code.md), [design](../review/CHECKLIST-design.md)).
-2. Find out your role. If nobody else is coordinating, you are the **coordinator**. Create the team in [Team setup](#team-setup) before you take a task.
-3. Open [TASKS.md](TASKS.md). Take the highest task in the [priority queue](TASKS.md#priority-queue) whose status is `ready` and that has no open PR (see [How to take a task](#how-to-take-a-task)).
-4. Run the [cycle](#the-cycle) for that one task, to the end. Then take the next task.
+2. Find out your role and your lane ([How the team works](#how-the-team-works)). If nobody else is coordinating, you are the **coordinator**. Create the team in [Team setup](#team-setup) before you take a task.
+3. Read the board: the open PRs and their `Claim` blocks, and [Lanes now](TASKS.md#lanes-now) ([how](#tracking-progress-so-lanes-dont-collide)).
+4. Open [TASKS.md](TASKS.md). Take the highest task in the [priority queue](TASKS.md#priority-queue) whose status is `ready`, that has no open PR, and whose files no open PR is changing. Add related items in the same area to the batch (see [How to take a task](#how-to-take-a-task)).
+5. Run the [cycle](#the-cycle) for that task or batch, to the end, keeping the PR's `Claim` block current. Then take the next one.
 
 ## The cycle
 
@@ -100,6 +102,80 @@ pnpm build-storybook && pnpm clip-check   # then read clip-report.txt; the conso
 
 The builder runs lint, typecheck, and the touched tests, then pushes. The pre-push hook runs `scripts/local-ci.sh` (about 4 minutes) and stops a push that fails. `main` runs the full set before each deploy. A reviewer may run it locally on the patched code.
 
+## How the team works
+
+These are the owner's standing rules for how the agent team splits and runs work. They apply on top of the cycle above. Where they differ from an older line in this file, these win.
+
+### Lanes and how many run at once
+
+Work runs in **lanes**. A lane is one long-running agent thread that owns a kind of work and acts as the coordinator for its own tasks: it claims, builds or briefs, gets the reviews, merges, and tells the data agent.
+
+| Lane | How many | Owns |
+| --- | --- | --- |
+| Dev task lane | **At most 2 at the same time** | Ready tasks from the [priority queue](TASKS.md#priority-queue) that are not UI building |
+| UI lane | 1 | **All** UI building: screens, shared components, Storybook. One PR at a time, in a collision-ordered queue |
+| UI/UX review cycle | 1 | Screenshots the app at phone sizes after each deploy batch, reviews pixels and one-handed use, and files findings as tasks for the UI lane ([runbook](../runbooks/ui-ux-review-cycle.md)) |
+| Production QA | 1 | The deploy and prod checks, including write tests, only in the sandbox QA company |
+| Backlog bug fixes | 1 | Open `BUG` and `BACKLOG NIT` items, small and high-impact first |
+| MCP/data agent | 1 | Real data through the MCP tools. Never changes the repo |
+
+The UI lane, review cycle, Production QA, and bug-fix lanes have their own slots. They don't count against the 2 dev task lanes. Don't start a third dev task lane; wait for one to finish.
+
+### Priority
+
+1. A red batch on `main` first. Its fix merges before anything else.
+2. Requests from the MCP/data agent (a wrong total, a missing tool) come before every other task.
+3. Then the [priority queue](TASKS.md#priority-queue), top down.
+
+### Batching by area
+
+Bugs, features, and tasks are **batched by area**. A lane takes related items together (same screen, same table, same MCP tool, same review follow-ups) and ships them in **one thread and one PR**. Each lane picks the batch size itself: big enough to save a review and merge cycle, small enough that one review round can cover it. A batch PR is titled with every id, for example `FLOW-207 + FLOW-510: <title>`, and each id's status line names the PR. Unrelated items never share a PR.
+
+### UI work
+
+- All UI building goes through the single UI lane, in the option C ("full Mercury") styles ([0120](../decisions/0120-income-green-type-scale.md), [DESIGN-RULES](../design/DESIGN-RULES.md)). Other lanes that find UI work file it as a task, or write a plan and hand it to the UI lane. They don't open their own UI PR.
+- The UI lane keeps one queue ordered so that PRs don't touch the same files, and works it one PR at a time. Large shared screen files are hotspots: two PRs never change the same one at once.
+- Every UI task updates the shared components in `app/src/ui` and adds or updates a Storybook story for every new or changed component, in the same PR.
+- For a UI task, run a design session with the design reviewer and build the option the designer recommends. `PLAN FIRST` UI tasks are the exception: they need the owner's approval first.
+
+### Asking the owner
+
+- Ask only what changes the goal, an output the owner will notice, or a step nobody can undo. For anything else, pick the reasonable default, say which, and keep going.
+- Ask as a choice card (2 to 4 short options, one marked recommended), not as plain text, whenever the tool exists. Raise every question so the project coordinator can also show it in the main project chat.
+- Write the answer into the task in TASKS.md (for `PLAN FIRST`: "approved option X by the owner, date").
+
+### Merging and after the merge
+
+- A lane merges its own PR once every gate has passed (code review, design review if the UI changed, local CI on the push). It does not ask the owner.
+- PR flow: run `bash scripts/cloud-agent-install.sh` before the first push, so the pre-push hook runs local CI; send the PR to reviewers right after the push; squash-merge (or turn on squash auto-merge) once they approve the current head. Before any later push, turn auto-merge off; turn it on again after the new head is approved. Changelog entries go in `docs/changelog.d/` only.
+- While a PR waits on review, check it about once a minute. Never leave a PR idle.
+- After the merge, tell the MCP/data agent what changed and what it means for bookkeeping (new or changed tools, totals that will move).
+
+### Safety
+
+- Production QA writes only to the sandbox QA company. Never write to a real company's books or to the shared test company to test a change.
+- Secrets live in the environment or network settings, never in the repo, a PR, or chat. Session ids, chat links, and other internal handles don't go in the repo either.
+
+### Tracking progress so lanes don't collide
+
+`main` only changes through PRs, so the **open PRs are the live board** of who is working on what. A claim has to be visible the moment work starts and gone the moment it ends, and only an open PR does that. Every lane keeps its PR up to date:
+
+1. **Before you start**, read the board: list the open PRs and the files each one changes, and read the `Claim` block in each body (`gh pr list --state open --json number,title,headRefName,isDraft,files`, or the GitHub MCP `list_pull_requests` and `pull_request_read`). Also check the [Lanes now](TASKS.md#lanes-now) table. If an open PR names your id, or changes a file or migration you need, pick another task or batch, or wait for it to merge. Don't race it.
+2. **When you start**, open the draft PR right away (step 2 of [How to take a task](#how-to-take-a-task)) with a `Claim` block at the top of the body:
+   ```text
+   Claim
+   - Lane: <dev lane 1 | dev lane 2 | UI | UI/UX review | Production QA | bug fixes>
+   - Ids: FLOW-<id>, FLOW-<id>
+   - Started: YYYY-MM-DD HH:MM UTC
+   - Areas: <screens, tables, MCP tools>
+   - Files: <paths or folders this PR will change, including any migration name>
+   - Progress: claimed
+   ```
+   Each id's status line in TASKS.md becomes `claimed (<lane>, YYYY-MM-DD, <branch>)` in the first commit.
+3. **While you work**, update `Progress` at each step: `claimed`, `building`, `in review`, `fixing`, `approved`, `merged`. Add a file to `Files` as soon as you know you'll touch it. Set each status line to `in-progress (#PR)` when the PR goes to review.
+4. **When you finish**, the merge (or closing the PR) takes the claim off the board. Set `Progress: merged <sha>` in the body, and mark the ids `done (#PR)` in TASKS.md in your next PR that touches it. A dropped claim gets a closing comment saying why, and its status line goes back to `ready`.
+5. **Lanes now.** When a lane starts, stops, or changes what it owns, update the [Lanes now](TASKS.md#lanes-now) table in TASKS.md in the next PR that touches it. That table says which lanes exist and what each one is on; the open PRs say exactly which files are taken.
+
 ## How to take a task
 
 Task statuses in [TASKS.md](TASKS.md):
@@ -107,7 +183,7 @@ Task statuses in [TASKS.md](TASKS.md):
 | Status | Meaning |
 | --- | --- |
 | `ready` | Can be built now. |
-| `claimed` | An agent owns it: `claimed (agent name, YYYY-MM-DD, branch)`. |
+| `claimed` | An agent owns it: `claimed (lane, YYYY-MM-DD, branch)`. |
 | `in-progress` | Built or in review. Add the PR number. |
 | `plan-first` | Needs a plan, a mockup, and the owner's approval before a build. The planning itself can be claimed. |
 | `on-hold` | Waits for the owner's go or decision. Don't claim it. |
@@ -121,9 +197,9 @@ Steps:
    gh pr list --state open --search "FLOW-123"
    git ls-remote --heads origin 'flow-123*'
    ```
-   If an open PR, a draft PR, or a branch names the id, the task is taken. Pick the next one.
-2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only that task's status line in TASKS.md to `claimed (your agent name, date, branch)`. Push it and open a **draft PR** titled `FLOW-123: <task title>`. The draft PR is the lock.
-3. **Build** on that branch, or brief a builder to. Keep the PR to this one task.
+   If an open PR, a draft PR, or a branch names the id, the task is taken. Pick the next one. Also check that no open PR changes the files you need ([board](#tracking-progress-so-lanes-dont-collide)).
+2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only the status lines of the task (or every task in the batch) in TASKS.md to `claimed (your lane, date, branch)`. Push it and open a **draft PR** titled `FLOW-123: <task title>` (a batch lists every id) with the `Claim` block at the top of the body. The draft PR is the lock.
+3. **Build** on that branch, or brief a builder to. Keep the PR to this task or batch (related items in one area only).
 4. **Open it for review.** Mark the PR ready. Set the status to `in-progress (#PR)`. Put the id in the PR title and body.
 5. **Finish.** After the merge, and the deploy check and prod check of the batch that carries it, the coordinator moves the task to Done with the PR number. That edit goes in the next PR that touches TASKS.md (usually the next claim).
 
@@ -163,7 +239,7 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 
 ```text
 You are the Flow coordinator for this public repo.
-Your job: move one task at a time through the cycle in docs/backlog/README.md:
+Your job: move one task or batch at a time through the cycle in docs/backlog/README.md:
 claim -> brief -> build (the pre-push hook runs local CI) -> code review (+ design review if UI)
 -> one fix round -> merge -> per batch of 5 merges: deploy check (build.txt shows the last sha) -> prod check
 -> tell the MCP/data agent -> close.

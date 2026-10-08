@@ -1,12 +1,26 @@
 # Flow backlog
 
-Open tasks only. How to claim and finish a task is in the [backlog guide](README.md). Keep each task's status line current; a claim lives in an open draft PR titled `FLOW-<id>: <title>`.
+Open tasks only. How to claim and finish a task is in the [backlog guide](README.md). Keep each task's status line current; a claim lives in an open draft PR titled `FLOW-<id>: <title>` with a `Claim` block in its body ([how](README.md#tracking-progress-so-lanes-dont-collide)). Before you start, read the open PRs and the table below.
 
 Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI change, design review), `PLAN FIRST` (plan and mockup, owner approval before any build), `BUG`, `MCP` (flow-mcp work), `BACKLOG NIT` (reviewer follow-ups, batch several per PR).
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `blocked`, `done`.
 
 Last full sync: 2026-10-07.
+
+## Lanes now
+
+Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Update it in the next PR that touches TASKS.md when a lane starts, stops, or changes what it owns.
+
+| Lane | Owns now | Next |
+| --- | --- | --- |
+| Dev lane 1 | FLOW-106 loans (parts 1 to 3 merged) | FLOW-106 part 4 |
+| Dev lane 2 | Free | Next `ready` task in the queue |
+| UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
+| UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
+| Backlog bug fixes | FLOW-309 (#158) | Next small, high-impact `BUG` or `BACKLOG NIT` |
+| MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
 
@@ -44,7 +58,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-2 done #132 #151; part 3 in review) |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-3 done #132 #151 #157; part 4 next) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -295,7 +309,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** in-progress (parts 1-2 done #132 #151; part 3 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
+- **Type:** PLAN FIRST · **Status:** in-progress (parts 1-3 done #132 #151 #157; part 4 next) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
 - **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
   1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.
