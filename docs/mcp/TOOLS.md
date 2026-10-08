@@ -103,7 +103,7 @@ Input:
 }
 ```
 
-Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, and `meta` (the line's bank details, see [get_expense](#get_expense)).
+Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, `meta` (the line's bank details, see [get_expense](#get_expense)), `line_status` (`pending`, `posted`, or `void`; a pending bank line may still change) and `source` (`sumit`, `mercury`, `manual`, or `photo`) ([FLOW-305](../backlog/TASKS.md#flow-305)). `search_expenses` with `scope: "pending"` returns the same rows, so it carries both fields too.
 
 Income that already has a project but only a guess of a kept-out category is queued with `reason` `suggested`: the guess counts in the P&L until it is confirmed, and approving it (or `assign_expense` / `set_expense_category`) confirms it ([FLOW-126](../backlog/TASKS.md#flow-126), [0114](../decisions/0114-kept-out-guesses.md)). A guessed loan category is not queued: it is out of the P&L even as a guess ([FLOW-127](../backlog/TASKS.md#flow-127)).
 

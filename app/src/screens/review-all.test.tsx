@@ -219,9 +219,10 @@ describe("review queue list", () => {
     fireEvent.click(await screen.findByRole("link", { name: "הצג הכול" }));
     const first = await screen.findByRole("link", { name: /מחסן הנמל/ });
     const second = screen.getByRole("link", { name: /עגורני החוף/ });
-    expect(first).toHaveTextContent("29/09");
+    // FLOW-305: the date moved from each row into one quiet day head above the rows.
+    expect(screen.getAllByRole("heading", { level: 3, name: /29\/09/ })).toHaveLength(1);
     expect(first).toHaveTextContent("100");
-    expect(second).toHaveTextContent("29/09");
+    expect(first).toHaveTextContent("✦ הרצל · חומרים");
     fireEvent.click(second);
     expect(await screen.findByRole("heading", { name: "עגורני החוף" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "אישור" })).toBeInTheDocument();
@@ -907,7 +908,8 @@ describe("review queue list", () => {
 describe("review amounts keep their currency", () => {
   it("shows a dollar review row as dollars", () => {
     render(
-      <MemoryRouter>
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
         <ReviewAllList
           rows={[{
             id: "r-usd",
@@ -925,9 +927,11 @@ describe("review amounts keep their currency", () => {
           search=""
           backTo="/review"
         />
-      </MemoryRouter>,
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
-    expect(screen.getByText("+$100")).toBeInTheDocument();
+    expect(screen.getByText("$100")).toHaveClass("ui-income");
+    expect(screen.queryByText("+$100")).not.toBeInTheDocument();
     expect(screen.queryByText("₪100")).not.toBeInTheDocument();
   });
 });

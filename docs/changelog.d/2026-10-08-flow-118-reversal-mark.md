@@ -1,0 +1,1 @@
+Reversal mark in the change sheet (FLOW-118, #101 review). A line already filed under a hidden, loan or kept-out category of the other kind (through MCP) now shows that category with החזר in the change sheet, in the reversal section, as the review card does, instead of in the own-kind list with no mark. Stories: kept-out reversal on the summary and in the picker.

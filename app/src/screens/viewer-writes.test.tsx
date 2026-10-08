@@ -14,6 +14,7 @@ import {
   AddForm,
   CategoriesScreen,
   ChangeForm,
+  ConnectionsScreen,
   OnboardingScreen,
   ProjectDetailScreen,
   ProjectsScreen,
@@ -103,6 +104,17 @@ describe("viewer write controls", () => {
             jev: { enabled: false, mode: "shadow", threshold: 0.9, status: "ready" },
           }}
         />
+        <ConnectionsScreen
+          sample={{
+            name: "אלפא",
+            connected: false,
+            companyId: null,
+            lastError: null,
+            email: "dana@example.com",
+            assistant: { state: "empty" },
+            jev: { enabled: false, mode: "shadow", threshold: 0.9, status: "ready" },
+          }}
+        />
       </ViewerPreview>,
     );
     expect(screen.getByText("SUMIT")).toBeInTheDocument();
@@ -111,6 +123,9 @@ describe("viewer write controls", () => {
     expect(screen.queryByRole("button", { name: /עוזר AI/ })).not.toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "רווח אחרי כלליות" })).toBeDisabled();
     expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toBeDisabled();
+    // FLOW-501: reading is allowed, so both pages stay a tap away.
+    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
   });
 });
 
@@ -269,7 +284,7 @@ describe("viewer gates", () => {
     }],
     ["V27", "a disabled switch stays at full strength", () => {
       viewer(
-        <SettingsScreen
+        <ConnectionsScreen
           sample={{
             name: "אלפא",
             connected: true,
@@ -290,7 +305,7 @@ describe("viewer gates", () => {
     }],
     ["V29", "an expired assistant is neutral", () => {
       viewer(
-        <SettingsScreen
+        <ConnectionsScreen
           sample={{
             name: "אלפא",
             connected: true,

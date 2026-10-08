@@ -25,7 +25,7 @@ describe("App", () => {
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
     expect(screen.getByText("הרווח יופיע כאן אחרי ש־SUMIT מחובר.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings?preview=1");
+    expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
@@ -185,6 +185,42 @@ describe("App", () => {
       expect(window.location.pathname).not.toBe("/install");
     });
     window.history.replaceState({}, "", "/");
+  });
+
+  it("routes Settings to the Connections and Loans pages under the הגדרות tab (FLOW-501)", async () => {
+    const settings = renderAt("/settings?preview=1");
+    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections?preview=1");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans?preview=1");
+    expect(screen.queryByRole("button", { name: "SUMIT" })).not.toBeInTheDocument();
+    settings.unmount();
+
+    const connections = renderAt("/settings/connections?preview=1");
+    expect(await screen.findByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "SUMIT" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mercury" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ספרים ובנק" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "עזרים" })).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "ניווט ראשי" });
+    expect(within(nav).getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
+    connections.unmount();
+
+    renderAt("/settings/loans?preview=1");
+    expect(await screen.findByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+    expect(screen.getByText("משכנתא אלון")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הלוואה חדשה" })).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("moves an old Settings sheet link to the Connections page with the sheet open", async () => {
+    renderAt("/settings?preview=1&sheet=sumit");
+    expect(await screen.findByRole("dialog", { name: "חיבור SUMIT" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "חיבורים", hidden: true })).toBeInTheDocument();
+  });
+
+  it("sends Loans with no company back to Settings", async () => {
+    renderAt("/settings/loans?preview=empty");
+    expect(await screen.findByRole("heading", { name: "הגדרות" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "הלוואות" })).not.toBeInTheDocument();
   });
 
   it("sends a signed-out visitor to sign-in", async () => {

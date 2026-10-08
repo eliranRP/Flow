@@ -7,6 +7,7 @@ import { SignInActions, SignInBrand, SignInFrame, SignInHeading, SignInHelp, Sig
 import { TextLink } from "../ui/text-link";
 import { Wordmark } from "../ui/wordmark";
 import { getSupabase } from "../lib/supabase";
+import { rememberSignInReturn, safeSignInReturn } from "../safe-return";
 
 type Notice = "cancelled" | "failed" | null;
 
@@ -35,8 +36,10 @@ export function SignInScreen() {
     };
   }, []);
 
+  const returnPath = safeSignInReturn(params.get("return"));
+
   if (status === "authed") {
-    return <Navigate to="/" replace />;
+    return <Navigate to={returnPath ?? "/"} replace />;
   }
 
   async function continueWithGoogle() {
@@ -47,6 +50,7 @@ export function SignInScreen() {
     }
     setLocalNotice(null);
     setPending(true);
+    rememberSignInReturn(returnPath);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

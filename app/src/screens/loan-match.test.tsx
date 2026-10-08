@@ -360,7 +360,10 @@ describe("LoanBalanceList", () => {
       />,
     );
     expect(screen.getByText("הלוואת דוגמה")).toBeInTheDocument();
-    expect(screen.getByText("₪117,000")).toBeInTheDocument();
+    const amount = screen.getByText("₪117,000");
+    // FLOW-501: cents are drawn small, ".00" included.
+    expect(amount).toHaveTextContent("₪117,000.00");
+    expect(amount.querySelector(".ui-num-cents")).toHaveTextContent(".00");
     expect(screen.getByText("ממתין לבדיקה")).toBeInTheDocument();
   });
 

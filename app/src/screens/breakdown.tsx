@@ -48,7 +48,7 @@ function Totals({ direction, totals }: { direction: BreakdownDirection; totals: 
     <p className="ui-breakdown-total ui-page-pad">
       {totals.map((total) => (
         <span key={total.currency} className="ui-breakdown-total-line">
-          <BigNumber agorot={shown(direction, total.amount_minor)} currency={total.currency} size="display" />
+          <BigNumber agorot={shown(direction, total.amount_minor)} currency={total.currency} size="display" income={direction === "income"} />
         </span>
       ))}
     </p>
@@ -304,9 +304,10 @@ function LinesBody({
                 variant="transaction"
                 title={groupBy === "payer" && !excluded ? row.description : row.supplier_name ?? row.description}
                 hint={hint}
-                agorot={row.amount_minor}
+                agorot={row.amount_minor < 0n ? -row.amount_minor : row.amount_minor}
                 currency={row.currency}
                 sign={outgoing ? "out" : "in"}
+                inWord={direction === "expense" ? "זיכוי" : undefined}
                 source="invoice"
                 href={`/transactions/${row.transaction_id}${search}`}
               />

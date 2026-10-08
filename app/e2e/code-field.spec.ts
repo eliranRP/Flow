@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 test.use({ hasTouch: true });
 
 async function openCode(page: Page) {
-  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.goto("/e2e/connections?preview=1&e2e=stack");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });

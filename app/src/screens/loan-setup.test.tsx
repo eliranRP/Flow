@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { contractualPaymentMinor } from "@flow/shared";
 import { dayLabel, formatDisplay, israelToday, shiftDays } from "../ui/date-math";
 import { ToastProvider } from "../ui/toast";
 import { ViewerPreview } from "../use-is-viewer";
 import { companyLoanCurrency, firstOfNextMonth, readCompanyLoanCurrency } from "./loan-form";
-import { LoanSettingsSection, LoanSetupForm } from "./loan-setup";
+import { LoanProjectPicker, LoanSettingsSection, LoanSetupForm } from "./loan-setup";
 
 const db = vi.hoisted(() => ({
   inserts: [] as Array<Record<string, unknown>>,
@@ -594,15 +594,41 @@ describe("LoanSetupForm", () => {
 });
 
 describe("LoanSettingsSection", () => {
-  it("hides a new loan from a viewer", () => {
+  it("hides a new loan from a viewer and keeps the balances readable (FLOW-501, U10)", async () => {
+    db.loans = [{ id: "l1", name: "משכנתא אלון", currency: "ILS", project_id: null }];
     renderSection(
       <ViewerPreview>
         <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
       </ViewerPreview>,
     );
-    expect(screen.getByRole("heading", { name: "הלוואות" })).toBeInTheDocument();
+    expect(await screen.findByText("משכנתא אלון")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /משכנתא אלון/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "הלוואה" })).not.toBeInTheDocument();
+  });
+
+  it("shows the empty state with one primary action, and none for a viewer", async () => {
+    const owner = renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    expect(await screen.findByText("אין הלוואות עדיין")).toBeInTheDocument();
+    expect(screen.getByText("הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "הלוואה חדשה" })).toHaveLength(1);
+    owner.unmount();
+    renderSection(
+      <ViewerPreview>
+        <LoanSettingsSection companyId="co-1" companyCurrency="ILS" />
+      </ViewerPreview>,
+    );
+    expect(await screen.findByText("כשיתווספו הלוואות הן יופיעו כאן.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
+  });
+
+  it("returns focus to the empty state's button when the new-loan sheet closes", async () => {
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
+    await screen.findByText("אין הלוואות עדיין");
+    const add = screen.getByRole("button", { name: "הלוואה חדשה" });
+    fireEvent.click(add);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "הלוואה" })).getByRole("button", { name: "סגירה" }));
+    await waitFor(() => { expect(add).toHaveFocus(); }, { timeout: 2500 });
   });
 
   it("opens the sheet on the company currency", () => {
@@ -615,10 +641,14 @@ describe("LoanSettingsSection", () => {
   it("shows a retry when the balances read fails", async () => {
     db.balanceError = { message: "offline" };
     renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" />);
-    const retry = await screen.findByRole("button", { name: "ניסיון חוזר: יתרות הלוואות" });
+    expect(await screen.findByText("לא הצלחנו לטעון את ההלוואות")).toBeInTheDocument();
+    // An error is not an empty state with a live primary action (CHECKLIST).
+    expect(screen.queryByRole("button", { name: "הלוואה חדשה" })).not.toBeInTheDocument();
+    const retry = screen.getByRole("button", { name: "ניסיון חוזר" });
     db.balanceError = null;
     fireEvent.click(retry);
-    await waitFor(() => { expect(screen.queryByRole("button", { name: "ניסיון חוזר: יתרות הלוואות" })).not.toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.queryByRole("button", { name: "ניסיון חוזר" })).not.toBeInTheDocument(); });
+    expect(screen.getByText("אין הלוואות עדיין")).toBeInTheDocument();
   });
 
   it("inserts the allowed columns, in minor units, with the typed rate", async () => {
@@ -803,6 +833,40 @@ describe("FLOW-119 loan project", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
     await waitFor(() => { expect(db.inserts).toHaveLength(1); });
     expect(db.inserts[0]?.project_id).toBe("p-a");
+  });
+
+  it("keeps the form's height while the picker is shown", async () => {
+    const spy = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(480);
+    onTestFinished(() => { spy.mockRestore(); });
+    renderSection(<LoanSettingsSection companyId="co-1" companyCurrency="ILS" projects={projects} />);
+    openLoan();
+    fireEvent.click(screen.getByRole("button", { name: "פרויקט ללא פרויקט" }));
+    const group = await screen.findByRole("radiogroup", { name: "פרויקט" });
+    expect(group.closest<HTMLElement>("[style]")?.style.minHeight).toBe("480px");
+  });
+
+  it("shows project codes and finds a project by its code", () => {
+    const many = {
+      rows: Array.from({ length: 10 }, (_, index) => ({
+        id: `p-${String(index)}`,
+        name: `פרויקט ${String(index + 1)}`,
+        status: "active" as const,
+        code: `P-${String(index + 1)}`,
+      })),
+    };
+    render(<LoanProjectPicker source={many} selectedId={null} onSelect={() => undefined} />);
+    const search = screen.getByRole("searchbox", { name: "חיפוש פרויקט" });
+    expect(search).toHaveAttribute("placeholder", "חיפוש פרויקט או קוד");
+    expect(screen.getByText("P-3")).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "p-10" } });
+    expect(screen.getAllByRole("radio").map((node) => node.getAttribute("aria-label") ?? node.textContent)).toHaveLength(2);
+    expect(screen.getByRole("radio", { name: /פרויקט 10/ })).toBeInTheDocument();
+  });
+
+  it("keeps the plain placeholder when no project has a code", () => {
+    const many = { rows: Array.from({ length: 10 }, (_, index) => ({ id: `p-${String(index)}`, name: `פרויקט ${String(index + 1)}` })) };
+    render(<LoanProjectPicker source={many} selectedId={null} onSelect={() => undefined} />);
+    expect(screen.getByRole("searchbox", { name: "חיפוש פרויקט" })).toHaveAttribute("placeholder", "חיפוש פרויקט");
   });
 
   it("keeps ללא פרויקט when the projects fail to load", () => {

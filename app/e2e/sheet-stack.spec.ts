@@ -8,7 +8,7 @@ async function dismissTop(page: Page, how: "escape" | "close" | "back", top: Loc
 }
 
 test("closing a disconnect confirm keeps the details sheet", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&connected=1");
+  await page.goto("/e2e/connections?preview=1&connected=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
   const sumit = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await expect(sumit).toBeVisible();
@@ -21,7 +21,7 @@ test("closing a disconnect confirm keeps the details sheet", async ({ page }) =>
     await expect(sumit).toBeVisible();
   }
 
-  await page.goto("/e2e/settings?preview=1&assistant=connected");
+  await page.goto("/e2e/connections?preview=1&assistant=connected");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   const details = page.getByRole("dialog", { name: "עוזר AI", exact: true });
   await expect(details).toBeVisible();
@@ -36,7 +36,7 @@ test("closing a disconnect confirm keeps the details sheet", async ({ page }) =>
 });
 
 test("closing the Claude help sheet keeps the shown-once code and focuses the link", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.goto("/e2e/connections?preview=1&e2e=stack");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });
@@ -66,7 +66,7 @@ test("closing the Claude help sheet keeps the shown-once code and focuses the li
 });
 
 test("a tap on step 2 while help is fading keeps the code sheet open", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.goto("/e2e/connections?preview=1&e2e=stack");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });
@@ -112,7 +112,7 @@ test("a tap on step 2 while help is fading keeps the code sheet open", async ({ 
 });
 
 test("a double tap on the help backdrop keeps the shown-once code", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.goto("/e2e/connections?preview=1&e2e=stack");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });
@@ -138,12 +138,12 @@ test("a double tap on the help backdrop keeps the shown-once code", async ({ pag
 });
 
 test("a tap under the only closing sheet does not open a sheet or follow a link", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&connected=1");
+  await page.goto("/e2e/connections?preview=1&connected=1");
   const settings = page.url();
-  const categories = page.getByRole("link", { name: "קטגוריות" });
-  await categories.scrollIntoViewIfNeeded();
-  const row = await categories.boundingBox();
-  if (row == null) throw new Error("categories row has no box");
+  const mercuryRow = page.getByRole("button", { name: "Mercury" });
+  await mercuryRow.scrollIntoViewIfNeeded();
+  const row = await mercuryRow.boundingBox();
+  if (row == null) throw new Error("Mercury row has no box");
   await page.getByRole("button", { name: "SUMIT" }).click();
   const sumit = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await expect(sumit).toBeVisible();
@@ -156,7 +156,7 @@ test("a tap under the only closing sheet does not open a sheet or follow a link"
 });
 
 test("a second ✕ while the sheet is closing does not activate the row underneath", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&connected=1");
+  await page.goto("/e2e/connections?preview=1&connected=1");
   const settings = page.url();
   await page.getByRole("button", { name: "SUMIT" }).click();
   const sumit = page.getByRole("dialog", { name: "SUMIT", exact: true });
@@ -203,7 +203,7 @@ test("a second ✕ while the sheet is closing does not activate the row undernea
 });
 
 test("Back then Forward still closes the sheet under the restored entry", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.goto("/e2e/connections?preview=1&e2e=stack");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "יצירת קוד" }).click();
   const code = page.getByRole("dialog", { name: "הקוד מוכן" });
@@ -229,7 +229,7 @@ test("Back then Forward still closes the sheet under the restored entry", async 
     await expect(code).toBeVisible();
   }
 
-  await page.goto("/e2e/settings?preview=1&connected=1");
+  await page.goto("/e2e/connections?preview=1&connected=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
   const sumit = page.getByRole("dialog", { name: "SUMIT", exact: true });
   await expect(sumit).toBeVisible();
@@ -250,7 +250,7 @@ test("Back then Forward still closes the sheet under the restored entry", async 
     await expect(sumit).toBeVisible();
   }
 
-  await page.goto("/e2e/settings?preview=1&assistant=connected");
+  await page.goto("/e2e/connections?preview=1&assistant=connected");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   const details = page.getByRole("dialog", { name: "עוזר AI", exact: true });
   await expect(details).toBeVisible();
@@ -273,7 +273,7 @@ test("Back then Forward still closes the sheet under the restored entry", async 
 });
 
 test("a double tap on סיום pops one history step, and open and close can repeat", async ({ page }) => {
-  await page.goto("/e2e/settings?preview=1&e2e=stack");
+  await page.goto("/e2e/connections?preview=1&e2e=stack");
   const row = page.getByRole("button", { name: "עוזר AI", exact: true });
   const settings = page.url();
 

@@ -60,7 +60,7 @@ async function pickProject(page: Page, name: string) {
 }
 
 test("the new-loan picker swaps in place, and Escape goes back to the form", async ({ page }) => {
-  await page.goto("/e2e/settings");
+  await page.goto("/e2e/loans");
   await page.getByRole("button", { name: "הלוואה חדשה" }).click();
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByRole("heading", { name: "הלוואה" })).toBeVisible();
@@ -117,7 +117,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
     return row.data == null ? undefined : (row.data.project_id as string | null);
   }
 
-  await page.goto("/settings");
+  await page.goto("/settings/loans");
   await page.getByRole("button", { name: "הלוואה חדשה" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("מלווה").fill(lender);
@@ -135,7 +135,7 @@ test("a loan's project is set, changed and cleared, and shows on the project", a
   await expect(page.getByRole("heading", { name: "הלוואות" })).toBeVisible();
   await expect(page.getByText(lender)).toBeVisible();
 
-  await page.goto("/settings");
+  await page.goto("/settings/loans");
   await page.getByRole("button", { name: new RegExp(`^${lender}, .*פרויקט: פרויקט א$`) }).click();
   await pickProject(page, "פרויקט ב");
   await expect(page.getByRole("status").filter({ hasText: "ההלוואה שויכה לפרויקט" })).toBeVisible();

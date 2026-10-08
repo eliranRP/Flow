@@ -45,7 +45,7 @@ export function SetupCard({
         ))}
         <ListRow
           variant="item"
-          href="/settings?sheet=assistant"
+          href="/settings/connections?sheet=assistant"
           title={<span className="ui-setup-card-advanced">מתקדם · עוזר AI</span>}
           label="מתקדם · עוזר AI"
           chevron

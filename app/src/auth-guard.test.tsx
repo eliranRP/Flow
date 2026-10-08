@@ -153,4 +153,28 @@ describe("auth guard when Supabase is configured", () => {
     expect(screen.queryByText("עוד אין נתונים")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "העלאת דוח בנק" })).not.toBeInTheDocument();
   });
+
+  it("keeps a listed deep link through sign-in and drops an off-list one", async () => {
+    const first = renderAt("/review");
+    act(() => {
+      emit("INITIAL_SESSION", null);
+    });
+    expect(screen.getByRole("heading", { name: "כניסה או הרשמה" })).toBeInTheDocument();
+    act(() => {
+      emit("SIGNED_IN", session);
+    });
+    expect(await screen.findByRole("heading", { name: "לאישור" })).toBeInTheDocument();
+    first.unmount();
+    auth.handlers.length = 0;
+
+    renderAt("/install");
+    act(() => {
+      emit("INITIAL_SESSION", null);
+    });
+    act(() => {
+      emit("SIGNED_IN", session);
+    });
+    expect(await screen.findByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "לאישור" })).not.toBeInTheDocument();
+  });
 });

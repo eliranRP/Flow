@@ -40,6 +40,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0040](../decisions/0040-tailwind-v4.md) | Tailwind CSS v4. Tokens map into `@theme`. No component kit with its own look. Vaul stays for sheets. |
 | [0041](../decisions/0041-amounts-before-vat.md) | P&L amounts are before VAT. VAT is stored beside the amount and kept out of profit. |
 | [0043](../decisions/0043-assumed-vat-on-expenses.md) | An expense with no VAT split assumes 18% (`vat_status='assumed'`), unless the supplier is VAT-exempt (`net = gross`). A subtle hint may appear on the detail screen. Home has no warning banner. |
+| [0120](../decisions/0120-income-green-type-scale.md) | Money in is `income` green with no plus, only on a figure with no minus and never on the band. Option C, full Mercury: page titles 34, section and month heads `heading` 20, row titles 17/400, list amounts `amount` 17/400, row secondary lines `meta` 15/400, project name on the band 32. No row hairlines anywhere; month groups 32px apart. Transaction rows show small raised cents, ".00" included; other lists and summaries stay whole. |
 
 Records that are not visual rules but change what a screen may show: [0004](../decisions/0004-cash-basis-for-v1.md) cash basis, [0007](../decisions/0007-bank-statement-is-primary-input.md) unpaid invoices stay out of the P&L until paid (amended in role by [0042](../decisions/0042-sumit-primary-income-and-expenses.md) and [0065](../decisions/0065-review-round5.md) point 40: SUMIT is the source, and there is no Hapoalim import).
 
@@ -56,7 +57,7 @@ From [design-system.md](../../design/system/design-system.md) and guide §1:
 - Calm and airy. White page, lots of space, few numbers, detail on the next screen.
 - One accent, violet. Filled violet at most about twice per screen area (normally the + button and one primary button).
 - The coloured band is only the top of Home and the Project header.
-- Figures use the main text colour. Red and green only together with ▼ / ▲ or a minus sign.
+- Figures use the main text colour. A loss is `bad` with a minus or ▼, a gain in a change pill is `good` with ▲, and money in is `income` green with no plus. Never colour on the band. [0120](../decisions/0120-income-green-type-scale.md)
 - No gradients, no emoji, no heavy shadows. Depth is the violet tint and 1px hairlines. The loading shimmer is the only gradient.
 
 ### 2.2 Colour tokens
@@ -86,6 +87,7 @@ Light and dark. The band is the same violet in both modes. Dark is a violet-tint
 | `on-band-secondary` | `#F0E8FF` | `#F0E8FF` | Labels on the band |
 | `band-chip` / `band-pill` | `#FFFFFF` | `#1E1929` | Pills sitting on the band |
 | `good` | `#15733F` | `#62CB8D` | Positive change, only with ▲ |
+| `income` | `#13703D` | `#62CB8D` | Money in: income rows and totals, Home נכנס, an income detail. No plus, never with a minus, never on the band. [0120](../decisions/0120-income-green-type-scale.md) |
 | `bad` | `#C3302B` | `#FF8A80` | Loss or negative change, only with ▼ or minus |
 | `warning` | `#8A5700` | `#EDB866` | Warning, for example over budget |
 | `error` | `#C3302B` | `#FF8A80` | Input error border and message |
@@ -109,22 +111,26 @@ Theme switching: follow the OS (`prefers-color-scheme`). `data-theme="light"` or
 
 ### 2.3 Type scale
 
-Rubik. Weights mean something: 400 hints, 500 body and labels, 600 titles and amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), guide §5.
+Rubik. Weights mean something: 400 hints, row titles, row secondary lines and list amounts, 500 body, inputs and labels, 600 titles, heads, hero and display amounts, 700 wordmark only. Do not use 300, 800, or 900. [0023](../decisions/0023-violet-coloured-top-band.md), [0024](../decisions/0024-design-system-approved.md), [0120](../decisions/0120-income-green-type-scale.md), guide §5.
 
 | Style | Size | Line | Weight | Use |
 |---|---|---|---|---|
 | hero | 52px | 1.15 | 600 | Home profit only. Letter-spacing −0.02em |
 | display | 36px | 1.2 | 600 | Main amount on inner screens |
-| title-1 | 28px | 1.3 | 600 | Page titles |
-| title-2 | 22px | 1.35 | 600 | Sheet titles, project name |
-| title-3 | 17px | 1.45 | 600 | Section heads, amounts in lists |
+| title-1 | 34px | 1.15 | 600 | Page titles. Letter-spacing −0.01em |
+| title-2 | 22px | 1.35 | 600 | Sheet titles |
+| band-title | 32px | 1.25 | 600 | Project name on the band |
+| heading | 20px | 1.3 | 600 | Section heads, month heads in lists |
+| title-3 | 17px | 1.45 | 600 | Compact transaction title. Row titles use its size and line at 400 |
+| amount | 17px | 1.45 | 400 | Amounts in lists, Home נכנס / יצא. Transaction rows add small raised cents |
 | body | 16px | 1.5 | 500 | Rows, input values. Inputs stay at least 16px so iOS does not zoom |
-| label | 15px | 1.5 | 500 | Labels, secondary lines |
+| label | 15px | 1.5 | 500 | Labels, subtitles, links |
+| meta | 15px | 1.4 | 400 | Row secondary line, in `text-muted` |
 | hint | 13px | 1.45 | 400 | Dates, helper text, field labels |
 | micro | 11px | 1.3 | 500 | Tab labels and badges only |
 | wordmark | 22px | 1.2 | 700 | "Flow" only. Letter-spacing −0.01em. LTR |
 
-CSS names are `--type-<style>-size`, `--type-<style>-line`, `--type-<style>-weight`, and `--font-family`. Numbers use `tabular-nums` and `lining-nums`. [implementation-tokens.css](../../design/system/implementation-tokens.css), guide §5.
+CSS names are `--type-<style>-size`, `--type-<style>-line`, `--type-<style>-weight`, `--type-title-1-tracking`, and `--font-family`. Numbers use `tabular-nums` and `lining-nums`. [implementation-tokens.css](../../design/system/implementation-tokens.css), guide §5.
 
 ### 2.4 Spacing
 
@@ -195,7 +201,8 @@ A viewer cannot take an action that would not apply, so that action is hidden. W
 | Search | default, typing (violet ring) | |
 | Pending card | default, pressed | The one tinted block on Home |
 | Project row | profit in `text`, loss in `bad` with a minus | Name and margin on the start side |
-| Transaction row | amount in `text` with an explicit sign | Grey source icon |
+| Transaction row | expense in `text` with −; income in `income` green, no plus, with a hidden "הכנסה"; cents small and raised, ".00" included | Grey source icon. No hairline. [0120](../decisions/0120-income-green-type-scale.md) |
+| Statement row (`ListRow variant="statement"`) | default, pressed, focus; pending; with suggestion; income; name with no letter | FLOW-305 option A, the review list. 40px initials circle in `tint` with `accent-text` letters (one colour for every row; a name with no letter shows the source icon). Counterparty 17/400 `text`, one line; a Latin name is LTR and cuts at its end. Line 2 in `meta`: the `בהמתנה` status chip, then `✦` in `accent-text` and "project · category" (ellipsis). End column: the amount as in a transaction row, the method under it (16px icon + `meta` label, never cut). The link name reads counterparty, method, "הצעה: …", direction word + amount, "בהמתנה". Day heads (`היום`, `אתמול`, `יום ב׳ · 05/10`) are h3, 15/500 `text-secondary`, under the sticky month head, not sticky; month totals show cents when the rows do. |
 | Change pill | ▼ / ▲ plus % | On the band it sits in a solid pill |
 | Tab bar | בית, פרויקטים, +, לאישור (neutral badge), הגדרות | Active tab is violet icon and label |
 | Bottom sheet | scrim, grab handle, title, ✕ | ✕, scrim, swipe, and Android back save a valid pending change, then close. An incomplete change stays open and says why, with ביטול השינוי beside that sentence. A second dismiss discards it and closes. A dismiss during a save waits for the save, then closes. Push a history entry. [0075](../decisions/0075-save-on-tap-and-on-leave.md) |
@@ -396,7 +403,7 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 - 09a sign-in: [09a-onboarding-light.png](../../design/screens/09a-onboarding-light.png), [09a-onboarding-dark.png](../../design/screens/09a-onboarding-dark.png). No top bar, no progress. Wordmark, one value line, "כניסה או הרשמה", Google button, privacy line. [0033](../decisions/0033-google-sign-in.md), guide §7.24.
   - Cancel: [er-03-google-cancelled](../../design/states/er-03-google-cancelled-light.png). Neutral note. The Google button is the retry. No help link.
   - Fail: [er-04-google-failed](../../design/states/er-04-google-failed-light.png). Same note, red icon, and "צריך עזרה בכניסה?". `/help` is [0045](../decisions/0045-phase-0-design-gaps.md).
-  - Success: a new account goes to step 0. A returning account goes to Home.
+  - Success: a new account goes to step 0. A returning account goes to the screen it asked for when that screen is on the sign-in return list (FLOW-308), otherwise Home. The callback line names it ("נכנסתם. עוברים לאישור.").
 - 09b company, merged into step 0 and retired: [09b-onboarding-light.png](../../design/screens/09b-onboarding-light.png). The live step has no counter and no דלג.
 - 09c bank report, superseded: [09c-onboarding-light.png](../../design/screens/09c-onboarding-light.png). Not a build task. [0065](../decisions/0065-review-round5.md) point 40. The drawing shows a Hapoalim export. Do not build it.
 - 09d projects, merged into step 3 and retired: [09d-onboarding-light.png](../../design/screens/09d-onboarding-light.png).
@@ -445,10 +452,27 @@ First-run setup replaces this strip. The files stay. 09, 09c, and 09e are supers
 
 - Mockups: [14-settings-light.png](../../design/screens/14-settings-light.png), [14-settings-dark.png](../../design/screens/14-settings-dark.png).
 - Entry: tab הגדרות.
-- Steps: the account row, חיבורים, תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
+- Steps: the account row, then one group with no section head (חיבורים and הלוואות, each opening a page), תצוגה (categories and the overhead switch, which starts off), and עוד. Projects stay on `/projects`. Notification times are not on this screen. [0082](../decisions/0082-settings-redesign.md), [0116](../decisions/0116-settings-connections-and-loans-pages.md), [0022](../decisions/0022-after-overhead-starts-off.md), [0033](../decisions/0033-google-sign-in.md).
 - With a company, the account area is two rows: the business name, which opens the one-field "שם העסק" sheet for an owner (static for a viewer), and the static Google email. [0108](../decisions/0108-rename-company-row.md).
-- Back: none. This is a tab root.
+- The חיבורים hint is "N מתוך M פעילים", or "Mercury: צריך לחבר מחדש" in the warning tone when one connector needs reconnecting, or "2 חיבורים צריכים חיבור מחדש". The הלוואות hint is the count ("2 הלוואות", "הלוואה אחת", "אין הלוואות עדיין"), never a total. Loading is a skeleton hint; a failed read says "לא הצלחנו לטעון" with no retry. הלוואות is hidden with no company. Viewers see and open both rows.
+- Back: none. This is a tab root. Back from either page puts focus on the row that opened it.
 - Logout clears the session. There is no second confirmation in the approved set.
+
+### 14a Connections
+
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/connections`, template A with the tab bar (הגדרות stays current).
+- Header: kicker הגדרות, title חיבורים, Back to `/settings`.
+- Steps: "ספרים ובנק" holds SUMIT and Mercury; "עזרים" holds תיוג חכם (Jev) and עוזר AI. Each row is the shared `ConnectorRow`: the one-word status and its one sheet, unchanged from [0082](../decisions/0082-settings-redesign.md) §3–§8. `?sheet=sumit|mercury|assistant` opens that sheet once; the old `/settings?sheet=` links redirect here.
+- States: loading keeps the real titles over skeleton hints; an error is the row's inline ניסיון חוזר; the page is never empty. With no company the page stays open and SUMIT and Mercury offer פרטי העסק.
+- Viewer: static rows, no chevrons.
+
+### 14b Loans
+
+- Mockup: `flow-501-mockup.html` option A (FLOW-501). Route `/settings/loans`, template A with the tab bar. `/settings/loans/:id` is kept for FLOW-110's detail page.
+- Header: kicker הגדרות, title הלוואות, Back to `/settings`. No company goes back to Settings.
+- Steps: each loan's name, its hint (project, or ממתין לבדיקה in the warning tone), and the balance with small cents (".00" included); then the הלוואה חדשה row. A row tap opens the project sheet (FLOW-119).
+- States: two skeleton rows while loading; the error layout "לא הצלחנו לטעון את ההלוואות" with ניסיון חוזר and no new-loan row; the empty state "אין הלוואות עדיין" with one primary הלוואה חדשה.
+- Viewer: the balances as static rows, no chevrons and no הלוואה חדשה; the empty state says "כשיתווספו הלוואות הן יופיעו כאן." with no button.
 
 ### 15 Date picker
 

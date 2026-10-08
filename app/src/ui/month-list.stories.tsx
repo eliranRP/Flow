@@ -24,9 +24,17 @@ const LARGE: Row[] = [
 ];
 
 /** Story args name a sample set, so they stay JSON-serializable (no bigint). */
-const SETS = { three: ROWS, large: LARGE, one: ROWS.slice(0, 2) } as const;
+const TWO: Row[] = [
+  { id: "1", title: "לקוח לדוגמה", date: "2026-09-14", minor: 1_250_050n, currency: "ILS", direction: "income" },
+  { id: "2", title: "ספק לדוגמה", date: "2026-09-10", minor: 123_456n, currency: "ILS", direction: "expense" },
+  { id: "3", title: "חומרי בניין", date: "2026-09-03", minor: 80_000n, currency: "ILS", direction: "expense" },
+  { id: "4", title: "מקדמה מלקוח", date: "2026-08-25", minor: 500_000n, currency: "ILS", direction: "income" },
+  { id: "5", title: "אינסטלציה", date: "2026-08-12", minor: 220_075n, currency: "ILS", direction: "expense" },
+];
 
-function MonthListView({ set, complete = true }: { set: keyof typeof SETS; complete?: boolean }) {
+const SETS = { three: ROWS, large: LARGE, one: ROWS.slice(0, 2), two: TWO } as const;
+
+function MonthListView({ set, complete = true, days = false }: { set: keyof typeof SETS; complete?: boolean; days?: boolean }) {
   const rows: readonly Row[] = SETS[set];
   return (
     <MonthList
@@ -35,6 +43,8 @@ function MonthListView({ set, complete = true }: { set: keyof typeof SETS; compl
       dateOf={(row) => row.date}
       amountOf={(row) => ({ minor: row.minor, currency: row.currency, direction: row.direction })}
       complete={complete}
+      days={days}
+      cents={days}
       renderRow={(row) => (
         <ListRow
           variant="transaction"
@@ -63,3 +73,13 @@ export const ThreeMonths: Story = { args: { set: "three" } };
 export const StillLoading: Story = { args: { set: "three", complete: false } };
 export const LargeAmounts: Story = { args: { set: "large" } };
 export const OneMonth: Story = { args: { set: "one" } };
+
+/** Decision 0120: two months of income and expense rows, no hairlines, 32px between the months. */
+export const TwoMonthsMercury: Story = { args: { set: "two" } };
+export const TwoMonthsMercuryDark: Story = { args: { set: "two" }, globals: { theme: "dark" } };
+
+/** FLOW-305: quiet day heads (h3) under each sticky month head, and month totals with exact cents. */
+export const DayHeads: Story = { args: { set: "two", days: true } };
+export const DayHeadsDark: Story = { args: { set: "two", days: true }, globals: { theme: "dark" } };
+export const DayHeads320: Story = { args: { set: "two", days: true }, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const DayHeadsOneMonth: Story = { args: { set: "one", days: true } };
