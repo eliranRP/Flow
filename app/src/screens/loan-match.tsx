@@ -391,6 +391,7 @@ export function LoanTransactionSplit({
   transactionId,
   docDate,
   loanPart,
+  categoryId = null,
   direction,
   active,
   readOnly = false,
@@ -399,6 +400,8 @@ export function LoanTransactionSplit({
   docDate: string;
   /** `categories.loan_part` of the line's category; null for any other category. */
   loanPart: string | null;
+  /** The line's category. A loan's own principal category also offers the match (FLOW-134). */
+  categoryId?: string | null;
   direction: string;
   active: boolean;
   /** From the transaction screen. A viewer, and a role that is still loading, pass true. */
@@ -407,7 +410,9 @@ export function LoanTransactionSplit({
   const queryClient = useQueryClient();
   const holdWrites = useHoldWrites();
   const writesHeld = readOnly || holdWrites;
-  const offerMatch = direction !== "income" && loanPart === "principal";
+  // The keyed principal category offers the match before the loans load; a loan's own principal
+  // category offers it once they have (FLOW-134).
+  const keyedPrincipal = direction !== "income" && loanPart === "principal";
   const [sheetOpen, setSheetOpen] = useState(false);
   const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
   const splitSectionRef = useRef<HTMLHeadingElement>(null);
@@ -467,7 +472,7 @@ export function LoanTransactionSplit({
   });
   if (!active || direction === "income") return null;
   if (query.isLoading) {
-    if (!offerMatch) return null;
+    if (!keyedPrincipal) return null;
     return (
       <List className="ui-loan-skel">
         <ListRow variant="skeleton" />
@@ -475,7 +480,7 @@ export function LoanTransactionSplit({
     );
   }
   if (query.isError) {
-    if (!offerMatch) return null;
+    if (!keyedPrincipal) return null;
     return (
       <LoanReadError
         label="שיוך להלוואה"
@@ -486,6 +491,8 @@ export function LoanTransactionSplit({
   }
   const loaded = query.data;
   if (!loaded) return null;
+  const offerMatch = keyedPrincipal
+    || (categoryId != null && loaded.loans.some((item) => item.categoryIds?.principal === categoryId));
   // Three parts, or four with fees (decision 0130; MCP attach_loan_payment writes those).
   const parts = loaded.splits.length === 3 || loaded.splits.length === 4 ? loaded.splits : null;
   if (parts == null && !offerMatch) return null;

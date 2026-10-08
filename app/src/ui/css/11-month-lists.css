@@ -36,10 +36,14 @@
   white-space: nowrap;
 }
 
+/* Currencies share a row while they fit and wrap to a row each only when needed, so a two-currency
+   month stays one or two lines at 360 to 390px instead of growing a line per currency (FLOW-313). */
 .ui-month-totals {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  column-gap: var(--space-3);
   min-inline-size: 0;
   margin: 0;
 }
