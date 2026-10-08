@@ -214,6 +214,68 @@ test("a crash keeps the views measured before it", { skip: playwrightSkip }, asy
   }
 });
 
+test("a sheet panel that never shows is skipped, not a crash (#231 follow-up)", { skip: playwrightSkip }, async () => {
+  const { execute } = await import("./clip-check.mjs");
+  const dir = staticSite("<div id=\"storybook-root\"><span>שלום</span></div>", {
+    swap: { type: "story", id: "swap", title: "Swap", name: "Swap" },
+  });
+  const lines = [];
+  try {
+    const code = await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      log: (line) => { lines.push(line); },
+      launch: async () => ({
+        async newPage() {
+          return {
+            async setViewportSize() {},
+            async goto() {},
+            locator(selector) {
+              const panels = selector === ".ui-sheet-panel";
+              return {
+                waitFor: async () => {},
+                count: async () => (panels ? 2 : 0),
+                nth: (index) => ({
+                  waitFor: async () => {
+                    if (panels && index === 0) {
+                      const timeout = new Error("Timeout 15000ms exceeded.");
+                      timeout.name = "TimeoutError";
+                      throw timeout;
+                    }
+                  },
+                }),
+              };
+            },
+            async waitForFunction() {},
+            async evaluate(fn) {
+              const source = Function.prototype.toString.call(fn);
+              if (source.includes("fonts")) return undefined;
+              if (source.includes("classList.contains")) return false;
+              return [{
+                textWidth: 40,
+                boxWidth: 80,
+                textOverflow: "clip",
+                whiteSpace: "normal",
+                overflow: "visible",
+                clipOk: false,
+                className: "span",
+                label: "span \"שלום\"",
+              }];
+            },
+          };
+        },
+        async close() {},
+      }),
+    });
+    assert.equal(code, 0);
+    assert.ok(lines.some((line) => line.includes("sheet panel 1 not visible, skipped")));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("the clip report sits at the repo root", async () => {
   const { clipReportDir } = await import("./clip-check.mjs");
   assert.equal(clipReportDir(), fileURLToPath(new URL("..", import.meta.url)));

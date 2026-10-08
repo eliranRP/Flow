@@ -6,6 +6,8 @@ type Option<T extends string> = {
   label: string;
   /** Drawn instead of the label under 360px. The label stays the accessible name. */
   short?: string;
+  /** A number or percent ("90%"): drawn in an LTR bdi, as every number (DESIGN-RULES numbers rule). */
+  numeric?: boolean;
 };
 
 type SegmentedControlProps<T extends string> = {
@@ -20,6 +22,11 @@ type SegmentedControlProps<T extends string> = {
   /** The hint under the control. The group points at it. */
   describedBy?: string;
   disabled?: boolean;
+  /**
+   * A save is running: the group says aria-busy and ignores taps and arrow keys, but stays
+   * enabled, so the focused segment keeps focus (disabling it would send focus to the body).
+   */
+  busy?: boolean;
   /** The period bar sits on the violet band: a translucent track and white text (decision 0141). */
   tone?: "page" | "band";
 };
@@ -34,6 +41,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   describedBy,
   disabled = false,
+  busy = false,
   tone = "page",
 }: SegmentedControlProps<T>) {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
@@ -41,7 +49,7 @@ export function SegmentedControl<T extends string>({
   const index = Math.max(0, found);
 
   function move(delta: number) {
-    if (options.length === 0) return;
+    if (options.length === 0 || busy) return;
     const next = (index + delta + options.length) % options.length;
     const option = options[next];
     if (!option) return;
@@ -70,6 +78,7 @@ export function SegmentedControl<T extends string>({
         aria-label={label}
         aria-describedby={describedBy}
         aria-disabled={disabled || undefined}
+        aria-busy={busy || undefined}
         onKeyDown={disabled ? undefined : onKeyDown}
       >
       {options.map((option, optionIndex) => {
@@ -89,12 +98,12 @@ export function SegmentedControl<T extends string>({
             aria-label={option.label}
             disabled={disabled}
             onClick={() => {
-              if (disabled) return;
+              if (disabled || busy) return;
               onChange(option.value);
             }}
           >
             <span className="ui-seg-label" data-clip-ok="">
-              {option.short == null ? option.label : (
+              {option.numeric === true ? <bdi className="ui-num" dir="ltr">{option.label}</bdi> : option.short == null ? option.label : (
                 <>
                   <span className="ui-seg-long">{option.label}</span>
                   <span className="ui-seg-short" aria-hidden="true">{option.short}</span>

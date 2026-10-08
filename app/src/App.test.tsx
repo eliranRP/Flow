@@ -82,11 +82,11 @@ describe("App", () => {
     renderAt("/add?preview=1");
     const dialog = screen.getByRole("dialog", { name: "הוספה" });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByText("צילום חשבונית")).toBeInTheDocument();
-    expect(screen.getByText("הצילום וההזנה הידנית יגיעו בהמשך.")).toBeInTheDocument();
-    expect(screen.queryByText("העלאת דוח בנק")).not.toBeInTheDocument();
-    expect(screen.queryByText(/ה־AI ישייך/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /צילום חשבונית/ })).toBeDisabled();
+    // FLOW-331: quick actions that work today, all enabled, and no "coming later" line.
+    for (const name of ["פרויקט חדש", "הלוואה חדשה", "חיבור בנק"]) {
+      expect(screen.getByRole("button", { name: new RegExp(name) })).toBeEnabled();
+    }
+    expect(screen.queryByText(/צילום חשבונית/)).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "כאן יופיע הרווח הנקי של העסק", hidden: true }),
     ).toBeInTheDocument();
@@ -94,6 +94,26 @@ describe("App", () => {
     await waitFor(() => {
       expect(dialog.contains(document.activeElement)).toBe(true);
     });
+  });
+
+  it("opens the project sheet from + → פרויקט חדש, and Back does not reopen +", async () => {
+    renderAt("/add?preview=1");
+    fireEvent.click(screen.getByRole("button", { name: /פרויקט חדש/ }));
+    expect(await screen.findByRole("dialog", { name: "פרויקט" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "הוספה" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
+  });
+
+  it("opens the new-loan sheet from + → הלוואה חדשה", async () => {
+    renderAt("/add?preview=1");
+    fireEvent.click(screen.getByRole("button", { name: /הלוואה חדשה/ }));
+    expect(await screen.findByRole("dialog", { name: "הלוואה" })).toBeInTheDocument();
+  });
+
+  it("opens the bank sheet on Connections from + → חיבור בנק", async () => {
+    renderAt("/add?preview=1");
+    fireEvent.click(screen.getByRole("button", { name: /חיבור בנק/ }));
+    expect(await screen.findByRole("heading", { name: "חיבורים", hidden: true })).toBeInTheDocument();
   });
 
   it("closes the add sheet on Escape after the exit animation", async () => {
@@ -140,7 +160,8 @@ describe("App", () => {
     renderAt("/projects/1?preview=1");
     expect(screen.getByText("אין עדיין תנועות")).toBeInTheDocument();
     expect(screen.getByText("חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "צילום חשבונית" })).toBeInTheDocument();
+    // FLOW-331: no capture button until capture ships.
+    expect(screen.queryByRole("link", { name: "צילום חשבונית" })).not.toBeInTheDocument();
   });
 
   it("offers sign-in help only after a failed attempt", () => {

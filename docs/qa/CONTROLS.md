@@ -81,8 +81,8 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Projects | ניקוי החיפוש | Clears the query. Shown when the filter matches nothing. | never | no | the query is empty | none | pass |
 | Projects | a project row | Opens that project. | never | no | route `/projects/:id` | none | pass |
 | Projects | finished expander | "עוד N שהסתיימו" ("עוד פרויקט אחד שהסתיים" for one), shown when the query is empty and there is a finished project. Reveals finished projects. | never | no | the extra rows appear | none | pass |
-| Projects | פרויקט חדש | Opens the project sheet. | never | no | sheet title פרויקט | none | pass |
-| Projects | חיפוש תנועות | FLOW-323. The same magnifier at the end of the header bar, after פרויקט חדש. Opens search with the field focused. | never | no | route `/search`, the field focused | none | e2e |
+| Projects, empty | פרויקט חדש | Opens the project sheet. With projects, the header has no פרויקט חדש: it is on + (FLOW-331). | never | no | sheet title פרויקט | none | pass |
+| Projects | חיפוש תנועות | FLOW-323. The same magnifier at the end of the header bar, alone in the header (FLOW-331). Opens search with the field focused. | never | no | route `/search`, the field focused | none | e2e |
 | Projects | שמירה on the new-project sheet | Calls `upsert_project`. | never | the button is busy | toast "הפרויקט נשמר", sheet closes | toast "לא הצלחנו לשמור את הפרויקט." | pass |
 | Projects | ביטול on the new-project sheet | Closes the sheet without saving. | never | no | sheet gone | none | pass |
 | Projects | שם on the new-project sheet | A tap on the left edge, the centre, or the right edge focuses the field. | never | no | the text field is focused | none | pass |
@@ -115,7 +115,6 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Search | עוד תנועות | Loads the next 50 rows. Shown while the server has more. | never | the pill is busy | the rows grow, the pill goes at the end | as the field | unit |
 | Search | ניקוי החיפוש / ניקוי הסינון | The one action on "לא מצאנו ״…״" or "אין תנועות שמתאימות לסינון". Clears the text and every chip. | never | no | every line lists | none | unit |
 | Search | ניסיון חוזר | Reads the results again. Offline it says so. | never | no | the rows | the error state stays | unit |
-| Project, empty | צילום חשבונית | Opens the add sheet. The capture row there is disabled. | never | no | route `/add` | none | pass |
 | Review | לרשימה | Opens today's filed list. The banner is the one-line `slim` banner "<bdi>N</bdi> שויכו אוטומטית היום", or "אחת שויכה אוטומטית היום" when the count is 1; לרשימה wraps under the title when they do not fit. | never, and only rendered when the count is above zero | no | route `/review/filed`, title "שויכו היום". Empty body "כש־SUMIT משייך תנועה בלי תור, או כשהעוזר מאשר תנועה היום, היא תופיע כאן." | the shared error state on that list. ניסיון חוזר refetches. A preview error opens the empty list | pass |
 | Review | banner סגירה | Hides the banner for this visit. | never | no | the banner is gone | none | pass |
 | Review filed | a transaction row | Opens that transaction so the project and category can be changed. | never | no | route `/transactions/:id` | none | pass |
@@ -152,8 +151,9 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Change sheet | פיצול בין פרויקטים | Opens Split for this transaction. From the transaction sheet this replaces the history entry. Without a transaction id, a toast explains that. The picker opened from לפרויקט אחד hides this link. | never | no | route `/transactions/:id/split`, or the toast | none | pass |
 | Change sheet | remember toggle | Included in the assignment write. Expense only, and hidden on a split, including the preview. The hint shows the supplier's full name, wrapping when it does not fit, never truncated. The project and category take the remaining space and wrap. | never | no | the switch moves | after the assignment is saved, leaving with the switch flipped stays open. See ✕. | pass |
 | Change sheet | summary | No שמירה and no שמירה ואישור. The radio is the save. | n/a | n/a | the summary has neither button | n/a | pass |
-| Add | צילום חשבונית | Does not run. Capture is not built. | always. Hint says camera or PDF. Cursor not-allowed. | no | none | none | pass |
-| Add | הזנה ידנית | Does not run. Manual entry is not built. | always. Hint says it is only when needed. Cursor not-allowed. | no | none | none | pass |
+| Add | פרויקט חדש | FLOW-331. Replaces `/add` with `/projects?new=project`, which opens the project sheet once and drops `new`. Back from there does not reopen +. | never (a viewer has no +) | no | Projects with sheet title פרויקט | none | unit |
+| Add | הלוואה חדשה | FLOW-331. Replaces `/add` with `/settings/loans?new=loan`, which opens the new-loan sheet once the currency is read and drops `new`. | never | no | Loans with sheet title הלוואה | none | unit |
+| Add | חיבור בנק | FLOW-331. Not connected: `/settings/connections?sheet=mercury` (the Mercury sheet). Connected: meta "מחובר" and the Connections page. Needs reconnecting (`last_error` auth): hint "צריך לחבר מחדש" in warning, and the Mercury sheet. A loading or failed status read shows the plain row. | never | no | Connections | none | unit |
 | Add | ביטול and ✕ | Close the sheet back to the screen that opened it. | never | no | the sheet is gone | none | pass |
 | Unpaid | Back | Returns to Home. | never | no | route `/` | none | pass |
 | Unpaid | סימון כשולם | One tap calls `set_invoice_paid(id, true)` (FLOW-330). The row stays, muted, with "סומן כשולם · ממתין לסנכרון", and leaves the total and Home's unpaid row. Hidden while writes are held; preview shows the toast only. | while the write runs ("מסמן…") | the button | toast "סומן כשולם. החשבונית תצא מהרשימה אחרי הסנכרון עם SUMIT." | toast with the write error, the row unchanged | e2e |

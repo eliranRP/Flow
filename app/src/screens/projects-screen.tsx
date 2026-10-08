@@ -2,6 +2,7 @@ import { shekelsToAgorot, type Dashboard, type ProjectRow } from "@flow/shared";
 import { projectAmountFigures, projectMarginHint } from "../by-currency";
 import { useState, type ReactNode, type SubmitEvent } from "react";
 import { useHoldWrites } from "../use-is-viewer";
+import { useOpenFromQuery } from "../open-from-query";
 import { getSupabase } from "../lib/supabase";
 import { periodLabel } from "../period";
 import { useHomePreview, usePreviewSearch } from "../preview";
@@ -31,6 +32,8 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
   const books = useBooks();
   const holdWrites = useHoldWrites();
   const [open, setOpen] = useState(false);
+  // FLOW-331: + → פרויקט חדש lands here with ?new=project.
+  useOpenFromQuery("project", !holdWrites, () => { setOpen(true); });
   const [query, setQuery] = useState(initialQuery);
   const [expanded, setExpanded] = useState(false);
   const phase: ScreenPhase = sample ? { kind: "ready" } : screenPhase(preview, dashboard);
@@ -58,11 +61,11 @@ export function ProjectsScreen({ sample, initialQuery = "" }: { sample?: Dashboa
       <ScreenState
         title="פרויקטים"
         subtitle={data ? `${String(data.projects.filter((project) => project.status === "active").length)} פעילים · רווח ${periodLabel(books.period)}` : undefined}
-        // FLOW-323: the search icon sits in the bar's end corner, as on Home, with פרויקט חדש before it; the title stacks under.
+        // FLOW-323: the search icon sits in the bar's end corner, as on Home; the title stacks under.
+        // FLOW-331: פרויקט חדש moved to the + tab's quick actions; the empty state keeps its button.
         stacked
         trailing={(
           <span className="ui-head-actions">
-            {holdWrites ? null : <Button variant="pill" icon={<PlusIcon size={16} />} onClick={() => { setOpen(true); }}>פרויקט חדש</Button>}
             <SearchEntry to={`/search${search}`} />
           </span>
         )}

@@ -15,6 +15,7 @@ import { useSheetHistory } from "../ui/back";
 import { formatDisplay } from "../ui/date-math";
 import { getSupabase } from "../lib/supabase";
 import { assertNoError, useWrite } from "../use-write";
+import { useOpenFromQuery } from "../open-from-query";
 import { useHoldWrites } from "../use-is-viewer";
 import {
   LOAN_CURRENCY_MARK,
@@ -451,6 +452,9 @@ export function LoanSettingsSection({
     else clearDraft();
     setSheet(next);
   }
+
+  // FLOW-331: + → הלוואה חדשה lands on /settings/loans with ?new=loan.
+  useOpenFromQuery("loan", !holdWrites && currency != null, () => { setLoanSheet(true); });
 
   function openPicker() {
     setFormHeight(formRef.current?.offsetHeight ?? null);

@@ -362,7 +362,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 
 - Mockups: [04-add-light.png](../../design/screens/04-add-light.png), [04-add-dark.png](../../design/screens/04-add-dark.png).
 - Entry: the + button.
-- Steps: the sheet opens over the screen that opened it. A direct `/add` still shows Home underneath. Photo, bank report, or manual entry. [0020](../decisions/0020-capture-from-the-phone.md). Phase 0 shows only the title and one hint ([0045](../decisions/0045-phase-0-design-gaps.md)). Closing returns focus to +.
+- Steps: the sheet opens over the screen that opened it. A direct `/add` still shows Home underneath. Until capture ships ([0020](../decisions/0020-capture-from-the-phone.md)), three quick actions (FLOW-331): פרויקט חדש (the project sheet on Projects), הלוואה חדשה (the new-loan sheet on Loans), חיבור בנק (the Mercury sheet on Connections; "מחובר" as meta when connected, "צריך לחבר מחדש" in warning when it needs it). No hints and no line about features to come. A tap replaces the sheet's entry, so Back from the target does not reopen it. Closing returns focus to +.
 - Cancel: ✕, scrim, swipe down, or back. Guide §3.3.
 - Success: processing screens [ld-05](../../design/states/ld-05-upload-processing-light.png) (bank) and [ld-06](../../design/states/ld-06-invoice-reading-light.png) (invoice), then results or the new row.
 - Error: [er-01-bank-file](../../design/states/er-01-bank-file-light.png) wrong file. [er-02-invoice-blurry](../../design/states/er-02-invoice-blurry-light.png) unreadable photo. Each has a dark twin.

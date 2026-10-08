@@ -15,7 +15,6 @@ import { PeriodBar } from "../ui/period-bar";
 import { profitMonthsSummary } from "./profit-months";
 import { useHomePreview, usePreviewSearch } from "../preview";
 import { screenPhase } from "../query-phase";
-import { withSheetBackground } from "../sheet-background";
 import { useProjectQuery, useProfitMonthsQuery } from "../use-books";
 import { useHeldOrder } from "../list-hold";
 import { txnListState } from "../txn-nav";
@@ -28,7 +27,7 @@ import { formatDayMonth } from "../ui/date-math";
 import { EmptyState } from "../ui/empty-state";
 import { BackButton } from "../ui/back";
 import { IconButton } from "../ui/icon-button";
-import { CalendarIcon, CameraIcon, DocumentIcon, MoreIcon } from "../ui/icons";
+import { CalendarIcon, DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -454,8 +453,6 @@ function projectLineHint(txn: ProjectLine): string {
 
 function LegacyEmptyProject() {
   const search = usePreviewSearch();
-  const location = useLocation();
-  const holdWrites = useHoldWrites();
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <TopBand
@@ -474,12 +471,6 @@ function LegacyEmptyProject() {
         icon={<DocumentIcon />}
         title="אין עדיין תנועות"
         body="חשבוניות ותשלומים שישויכו לפרויקט הזה יופיעו כאן."
-        action={holdWrites ? undefined : (
-          <Button variant="pill" to={`/add${search}`} state={withSheetBackground(location)}>
-            <CameraIcon />
-            צילום חשבונית
-          </Button>
-        )}
       />
     </div>
   );

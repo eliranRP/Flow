@@ -122,12 +122,10 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
   await expect(addSheet).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
   await page.goto("/add?preview=1");
-  const capture = page.getByRole("button", { name: /צילום חשבונית/ });
-  const manual = page.getByRole("button", { name: /הזנה ידנית/ });
-  await expect(capture).toBeDisabled();
-  await expect(manual).toBeDisabled();
-  expect(await cursorOf(capture)).toBe("not-allowed");
-  expect(await cursorOf(manual)).toBe("not-allowed");
+  // FLOW-331: three quick actions, all enabled.
+  for (const name of [/פרויקט חדש/, /הלוואה חדשה/, /חיבור בנק/]) {
+    await expect(page.getByRole("button", { name })).toBeEnabled();
+  }
   await page.getByRole("button", { name: "ביטול" }).click();
   await expect(page.getByRole("dialog", { name: "הוספה" })).toHaveCount(0);
 });
@@ -243,7 +241,8 @@ test("amount and text fields focus on either edge and do not clip", async ({ pag
   await focusAt(page, searchBox, search, 0.5);
   await focusAt(page, searchBox, search, 0.98);
 
-  await page.getByRole("button", { name: "פרויקט חדש" }).click();
+  // FLOW-331: פרויקט חדש lives on +, which lands here with ?new=project.
+  await page.goto("/e2e/projects?preview=1&new=project");
   const dialog = page.getByRole("dialog", { name: "פרויקט" });
   await expect(dialog).toBeVisible();
   const name = dialog.getByRole("textbox", { name: "שם" });
@@ -304,8 +303,7 @@ test("projects search, expand, open, and the new-project sheet", async ({ page }
   await expect(page.getByRole("link", { name: "פרויקט ישן" })).toBeVisible();
   await page.getByRole("link", { name: "וילה רעננה" }).click();
   await expect(page).toHaveURL(/\/projects\/p2/);
-  await page.goto("/e2e/projects?preview=1");
-  await page.getByRole("button", { name: "פרויקט חדש" }).click();
+  await page.goto("/e2e/projects?preview=1&new=project");
   await expect(page.getByRole("dialog", { name: "פרויקט" })).toBeVisible();
   await page.getByRole("textbox", { name: "שם" }).fill("גג חדש");
   await page.getByRole("button", { name: "שמירה" }).click();
@@ -339,9 +337,11 @@ test("a project opens its menu, categories, and a transaction", async ({ page })
   await page.getByRole("link", { name: /^מלט/ }).click();
   await expect(page).toHaveURL(/\/transactions\/t1/);
 
-  await page.goto("/projects/missing?preview=1");
-  await page.getByRole("link", { name: /צילום חשבונית/ }).click();
-  await expect(page.getByRole("dialog", { name: "הוספה" })).toBeVisible();
+  // FLOW-331: + → פרויקט חדש opens the project sheet on Projects; Back does not reopen +.
+  await page.goto("/add?preview=1");
+  await page.getByRole("button", { name: /פרויקט חדש/ }).click();
+  await expect(page.getByRole("dialog", { name: "פרויקט" })).toBeVisible();
+  await expect(page).toHaveURL(/\/projects\?preview=1$/);
 });
 
 test("change sheet picks, remembers, splits, and saves", async ({ page }) => {
