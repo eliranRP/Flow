@@ -778,7 +778,12 @@ Deno.test("assign_expense without a project forwards null for a kept-out categor
 
 Deno.test("names with control or invisible characters are refused before the RPC", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
-  for (const name of ["Site\u200bBeta", "Site\u0007Beta", "\u202eSite Beta", "Site\ufeffBeta", "Site\u00adBeta"]) {
+  for (
+    const name of [
+      "Site\u200bBeta", "Site\u0007Beta", "\u202eSite Beta", "Site\ufeffBeta", "Site\u00adBeta",
+      "Site\u200fBeta", "Site\u061cBeta", "Site\u2028Beta", "Site\u{e0041}Beta", "Site\u3164Beta",
+    ]
+  ) {
     const project = await callTool("create_project", { idempotency_key: "k", name }, ["write"], rpc);
     assertEquals(project.isError, true, JSON.stringify(name));
     const category = await callTool("create_category", { idempotency_key: "k", name, kind: "expense" }, ["write"], rpc);
@@ -787,12 +792,20 @@ Deno.test("names with control or invisible characters are refused before the RPC
     assertEquals(batch.isError, true, JSON.stringify(name));
     const loan = await callTool("update_loan", { idempotency_key: "k", loan_id: PROJECT, name }, ["write"], rpc);
     assertEquals(loan.isError, true, JSON.stringify(name));
+    const categories = await callTool("create_categories", { idempotency_key: "k", items: [{ name, kind: "expense" }] }, ["write"], rpc);
+    assertEquals(categories.isError, true, JSON.stringify(name));
+    const added = await callTool("add_loan", {
+      idempotency_key: "k", name, principal: "1000", annual_rate_percent: 5, term_months: 12, start_date: "2026-01-01",
+    }, ["write"], rpc);
+    assertEquals(added.isError, true, JSON.stringify(name));
   }
   assertEquals(calls.length, 0);
   // Hebrew and an emoji joined with ZWJ are fine.
   const ok = await callTool("create_project", { idempotency_key: "k", name: "פרויקט 👨‍👩‍👧" }, ["write"], rpc);
   assertEquals(ok.isError, false);
-  assertEquals(calls.length, 1);
+  const marked = await callTool("create_project", { idempotency_key: "k2", name: "שָׁלוֹם ❤️ 🇮🇱" }, ["write"], rpc);
+  assertEquals(marked.isError, false);
+  assertEquals(calls.length, 2);
 });
 
 Deno.test("assign_expense and set_expense_category describe reversals", () => {

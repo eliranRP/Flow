@@ -201,9 +201,10 @@ const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().refine(companyNameIsValid),
 }).strict();
-// Control characters and invisible format characters (zero-width, bidi controls, BOM,
-// soft hyphen) make two names look the same. ZWJ (U+200D) stays for emoji sequences.
-const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u00ad\u200b\u200c\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
+// Control characters, line/paragraph separators, every format character (zero-width,
+// bidi marks and controls incl. U+061C, BOM, soft hyphen, tag characters) and blank
+// fillers make two names look the same. ZWJ (U+200D) stays for emoji sequences.
+const HIDDEN_CHARS = /[\p{Cc}\p{Zl}\p{Zp}\u034f\u115f\u1160\u3164\uffa0]|(?!\u200d)\p{Cf}/u;
 function visibleName(min: number, max: number) {
   return z.string().trim().min(min).max(max).refine((name) => !HIDDEN_CHARS.test(name));
 }
@@ -813,10 +814,10 @@ const LINE_PARTS_SPEC = {
 
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. A line needs a project unless the category is kept out of the P&L; then project_id can be left out. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. A line needs a project unless its category is an income category kept out of the P&L; then project_id can be left out or null. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
-      project_id: { type: "string" },
+      project_id: { type: ["string", "null"] },
       category_id: { type: "string" },
       remember: { type: "boolean" },
     }, true),
