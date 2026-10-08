@@ -56,11 +56,11 @@ Sources: [design-system.md](../../design/system/design-system.md), [implementati
 From [design-system.md](../../design/system/design-system.md) and guide §1:
 
 - Calm and airy. White page, lots of space, few numbers, detail on the next screen.
-- **Light and clean, few words (owner, 2026-10-08).** He turned down every option for the FLOW-401 project page as "too busy, too much data, noisy". A screen is light, with few words and little data. Before adding a figure, a word or a mark, ask whether it changes what the user does next on this screen. If not, leave it out or put it on the next screen. Checked in every design review and sign-off:
-  - A row has a title, an amount, and at most one short meta line. It has at most one mark (chip, icon or flag).
-  - A screen shows one main figure. Other figures are one tap away.
-  - Labels are one or two words. A sentence of help appears only in an empty state, an error, or a destructive confirm.
-  - No legends, keys or "X = Y" explanations on a screen. If a screen needs one, it shows too much.
+- **Light and clean, few words (owner, 2026-10-08).** He turned down every option for the FLOW-401 project page as too busy, with too much data, and noisy. A screen is light, with few words and little data. Before adding a figure, a word or a mark, ask whether it changes what the user does next on this screen. If not, leave it out or put it on the next screen. Checked in every design review and sign-off:
+  - A row stays short: a title, its value, and at most one meta line. Add a mark only when it changes what the user does with that row.
+  - A screen leads with one main figure. Every other figure needs a reason to be there, and Home keeps to its figure budget (§3.5).
+  - Labels are one or two words. Add a help sentence only where an existing rule calls for one (empty state, error, confirmation consequence).
+  - No new legends, keys or "X = Y" explanations on a screen. If a new screen needs one, it shows too much.
   - When in doubt, draw the lighter option and recommend it.
 - One accent, violet. Filled violet at most about twice per screen area (normally the + button and one primary button).
 - The coloured band is only the top of Home and the Project header.
