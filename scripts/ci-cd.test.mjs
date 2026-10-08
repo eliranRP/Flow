@@ -356,10 +356,13 @@ test("CI bounds every job, cancels only pull requests, and installs Playwright b
   assert.equal(smokeConfig.blank, "https://flow-app-dx5.pages.dev");
   assert.ok(smokeConfig.reporter.some((entry) => String(entry).endsWith("smoke-retry-reporter.ts")));
   const smokeSpec = readFileSync(new URL("../app/e2e/smoke-readonly.spec.ts", import.meta.url), "utf8");
-  assert.equal(smokeSpec.includes('if (url.includes("/auth/v1/")) return true'), false);
-  assert.match(smokeSpec, /return isAuthAllowed\(request\)/);
-  assert.match(smokeSpec, /\/auth\/v1\/token/);
-  assert.match(smokeSpec, /\/auth\/v1\/user/);
+  // The write guard lives in smoke-allow.ts (unit-tested there) and is anchored to the Supabase host.
+  const smokeAllow = readFileSync(new URL("../app/e2e/smoke-allow.ts", import.meta.url), "utf8");
+  assert.match(smokeSpec, /return isReadRequest\(request\.method\(\), request\.url\(\), hosted\.url\)/);
+  assert.equal(smokeAllow.includes('if (url.includes("/auth/v1/")) return true'), false);
+  assert.match(smokeAllow, /target\.origin === supabase\.origin/);
+  assert.match(smokeAllow, /\/auth\/v1\/token/);
+  assert.match(smokeAllow, /\/auth\/v1\/user/);
   const smokeRunbook = readFileSync(new URL("../docs/runbooks/smoke-user.md", import.meta.url), "utf8");
   assert.match(smokeRunbook, /Never set `is_demo`/);
   assert.match(smokeRunbook, /SMOKE_BASE_URL/);

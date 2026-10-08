@@ -138,8 +138,8 @@ function sqlPieces(sql) {
 }
 
 /**
- * Transaction words in a routine body. Comments, strings, and nested
- * dollar quotes are skipped. Scanning inside those nested quotes is backlog.
+ * Transaction words in a routine body. Comments and strings are skipped, and so is a
+ * nested dollar quote unless it follows `do` or `as` (a nested body, scanned the same way).
  * The line is the word itself, not the `begin` that opened the block.
  * @param {string} sql
  * @returns {{ line: number, word: string }[]}
@@ -209,6 +209,12 @@ function innerTransactionHits(sql) {
       const tag = dollar[0];
       const close = rest.indexOf(tag, tag.length);
       const chunk = close < 0 ? rest : rest.slice(0, close + tag.length);
+      // A nested body after `do` or `as` is code too (a DO block that creates a function,
+      // or a function that runs a DO block), so its transaction words count.
+      if (/(?:^|\s)(?:do|as)$/i.test(buf.replace(/\s+/g, " ").trim())) {
+        const body = close < 0 ? rest.slice(tag.length) : rest.slice(tag.length, close);
+        for (const hit of innerTransactionHits(body)) hits.push({ line: line + hit.line - 1, word: hit.word });
+      }
       line += (chunk.match(/\n/g) ?? []).length;
       i += chunk.length;
       if (started) buf += " ";
