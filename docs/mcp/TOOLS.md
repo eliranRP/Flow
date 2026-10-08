@@ -423,7 +423,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`, each res
 
 ## Batch · cycle 6
 
-`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. When `shares[]` is set, the row behaves like `assign_expense_split`: `category_id` is optional, and `project_id` or `remember` on the same row is `validation`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters.
+`assign_expenses` applies up to 200 rows in one write. Each item needs `transaction_id` and at least one of `project_id` or `category_id`. When `project_id` is set, `category_id` is required and the row behaves like `assign_expense`. When only `category_id` is set, the row behaves like `set_expense_category`. When `shares[]` is set, the row behaves like `assign_expense_split`: `category_id` is optional, and `project_id` or `remember` on the same row is `validation`. Duplicate `transaction_id` values in one call are `validation`. A bad row does not block good rows. Each row uses the key `idempotency_key:ordinal`, so `assign_expenses` and `undo_batch` take a key of 1–124 characters. A retry with a split row's `shares[]` in another order replays the stored response.
 
 ```json
 {
