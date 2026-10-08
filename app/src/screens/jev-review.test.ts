@@ -8,10 +8,12 @@ import {
   clearJevConnectorFlag,
   companyIdFromReviewPayload,
   completeJevScopeLookup,
+  JEV_SUGGESTION_CHUNK,
   fetchJevConnector,
   jevShown,
   jevConnectorStorageKey,
   jevScopePhase,
+  loadJevSuggestions,
   noteJevAuthUser,
   parseJevSuggestion,
   readJevConnectorFlag,
@@ -30,15 +32,34 @@ const connectorDb = vi.hoisted(() => ({
   integration: null as { enabled: boolean; mode: string } | null,
   error: null as { message: string } | null,
   hang: false,
+  suggestionReads: [] as string[][],
+  suggestions: [] as Array<{ id: string; transaction_id: string; answers: unknown }>,
 }));
 
 vi.mock("../lib/supabase", () => ({
   getSupabase: () => ({
-    from: () => {
+    from: (name: string) => {
       let linked: AbortSignal | undefined;
+      let wanted: string[] | null = null;
+      const rows = () => {
+        if (name === "tag_suggestions") {
+          return connectorDb.suggestions.filter((row) => wanted?.includes(row.transaction_id));
+        }
+        if (name === "projects") return [{ id: "p1", name: "וילה רעננה", status: "active" }];
+        if (name === "categories") return [{ id: "c1", name: "חומרים", hidden: false }];
+        return [];
+      };
       const builder = {
         select: () => builder,
         eq: () => builder,
+        in: (_column: string, values: string[]) => {
+          wanted = values;
+          connectorDb.suggestionReads.push(values);
+          return builder;
+        },
+        order: () => builder,
+        then: (onFulfilled: (value: { data: unknown; error: null }) => unknown) =>
+          Promise.resolve({ data: rows(), error: null }).then(onFulfilled),
         abortSignal: (next: AbortSignal) => {
           linked = next;
           return builder;
@@ -334,5 +355,24 @@ describe("Jev shown fields (הצעת Jev)", () => {
     expect(jevShown(guessed, on).project).toBe(true);
     const prefilled = withJev(empty, on);
     expect(jevShown(prefilled, on)).toEqual({ project: true, category: true });
+  });
+});
+
+describe("loadJevSuggestions", () => {
+  it("reads a long queue in chunks, so the URL stays short, and keeps every line's suggestion", async () => {
+    const ids = Array.from({ length: 2 * JEV_SUGGESTION_CHUNK + 50 }, (_, index) => `t${String(index)}`);
+    const lastId = `t${String(ids.length - 1)}`;
+    connectorDb.suggestionReads = [];
+    connectorDb.suggestions = [
+      { id: "s-first", transaction_id: "t0", answers: { project: { choice: "p1", confidence: 0.9 } } },
+      { id: "s-last", transaction_id: lastId, answers: { category: { choice: "c1", confidence: 0.9 } } },
+    ];
+    const queue = await loadJevSuggestions([...ids, "t0", ""]);
+    expect(connectorDb.suggestionReads.map((chunk) => chunk.length)).toEqual([JEV_SUGGESTION_CHUNK, JEV_SUGGESTION_CHUNK, 50]);
+    expect(new Set(connectorDb.suggestionReads.flat()).size).toBe(ids.length);
+    expect(Object.keys(queue.byId)).toHaveLength(ids.length);
+    expect(queue.byId.t0?.suggestionId).toBe("s-first");
+    expect(queue.byId[lastId]?.category?.name).toBe("חומרים");
+    expect(queue.byId.t1).toBeNull();
   });
 });

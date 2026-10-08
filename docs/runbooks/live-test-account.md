@@ -41,4 +41,4 @@
 - Never point this user at a real company, and never set `is_demo` on a company.
 - Don't create new prod users or reset this password without the owner's OK.
 - If a check fails, don't fix it on prod. Report it.
-- Live write tests need a separate account the owner approves, not this one.
+- Live write tests need a separate account the owner approves, not this one. That account is the [QA user](qa-user.md), which owns its own sandbox company, Flow QA.

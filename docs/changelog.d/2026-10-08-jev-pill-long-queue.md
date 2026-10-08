@@ -1,0 +1,1 @@
+Fix: the "✦ הצעת Jev" pill now shows on a long review queue. The app read every queued line's suggestion in one request, and a queue of a few hundred lines made the request too long, so it failed and no pill showed. It now reads 100 lines per request.

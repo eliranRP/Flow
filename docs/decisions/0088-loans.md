@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-04
 **Status:** Accepted
+**Superseded in part by:** [0128](0128-loan-part-categories.md) (the fixed categories of the three split rows)
 
 ## Context
 
