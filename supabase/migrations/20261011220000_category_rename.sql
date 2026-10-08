@@ -32,6 +32,7 @@ declare
   cid uuid;
   cat_kind public.category_kind;
   before text;
+  was_excluded boolean;
   clean text := private.trim_name(p_name);
 begin
   cid := private.current_company_id();
@@ -50,7 +51,7 @@ begin
   if char_length(clean) > 120 then
     raise exception 'category name is too long';
   end if;
-  select c.name, c.kind into before, cat_kind
+  select c.name, c.kind, c.excluded_from_pnl into before, cat_kind, was_excluded
   from public.categories c
   where c.id = p_category_id and c.company_id = cid
   for update;
@@ -66,6 +67,11 @@ begin
   update public.categories c
   set name = clean
   where c.id = p_category_id and c.company_id = cid and c.name is distinct from clean;
+  -- The categories_default_pnl trigger may set excluded_from_pnl from the new name;
+  -- a rename keeps the flag. This update leaves the name alone, so the trigger stays quiet.
+  update public.categories c
+  set excluded_from_pnl = was_excluded
+  where c.id = p_category_id and c.company_id = cid and c.excluded_from_pnl is distinct from was_excluded;
   return jsonb_build_object('id', p_category_id, 'name', clean, 'before', before, 'after', clean);
 end;
 $$;
@@ -203,9 +209,20 @@ begin
       if not found then
         response := private.mcp_error('conflict', 'conflict');
       else
-        update public.categories c
-        set name = rec.prior->>'before'
-        where c.id = p_id and c.company_id = cid;
+        -- Keep excluded_from_pnl: the name trigger may set it from the old name.
+        declare
+          was_excluded boolean;
+        begin
+          select c.excluded_from_pnl into was_excluded
+          from public.categories c
+          where c.id = p_id and c.company_id = cid;
+          update public.categories c
+          set name = rec.prior->>'before'
+          where c.id = p_id and c.company_id = cid;
+          update public.categories c
+          set excluded_from_pnl = was_excluded
+          where c.id = p_id and c.company_id = cid and c.excluded_from_pnl is distinct from was_excluded;
+        end;
         update private.mcp_writes
         set undone_at = clock_timestamp()
         where id = rec.id and user_id = auth.uid() and undone_at is null;

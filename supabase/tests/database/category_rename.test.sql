@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(18);
+select plan(22);
 
 do $users$
 begin
@@ -92,6 +92,24 @@ select public.mcp_rename_category('crn-3', pg_temp.id('utilities'), 'חשמל');
 select public.rename_category(pg_temp.id('utilities'), 'מים');
 select is(public.mcp_undo('crn-u2', 'category_name', pg_temp.id('utilities'))->'error'->>'code', 'conflict',
   'undo is a conflict once it was renamed again');
+
+-- The P&L flag stays through a rename and its undo, whatever the new name.
+reset role;
+insert into crn (label, id) values
+  ('repairs', tests.fixture_category(pg_temp.id('co'), 'Repairs')),
+  ('capex', tests.fixture_category(pg_temp.id('co'), 'Capex & rehab'));
+update public.categories set excluded_from_pnl = true where id = pg_temp.id('capex');
+select pg_temp.as_mcp('write');
+select public.mcp_rename_category('crn-4', pg_temp.id('repairs'), 'Capex and rehab costs');
+select public.mcp_rename_category('crn-5', pg_temp.id('repairs'), 'Capex & Rehab');
+select is((select excluded_from_pnl from public.categories where id = pg_temp.id('repairs')), false,
+  'renaming to a non-P&L name keeps the category in the P&L');
+select is(public.mcp_undo('crn-u5', 'category_name', pg_temp.id('repairs'))->>'ok', 'true', 'undo of that rename works');
+select is((select excluded_from_pnl from public.categories where id = pg_temp.id('repairs')), false,
+  'and the category stays in the P&L');
+select public.rename_category(pg_temp.id('capex'), 'Renovation');
+select is((select excluded_from_pnl from public.categories where id = pg_temp.id('capex')), true,
+  'a category kept out of the P&L stays out after a rename');
 
 select * from finish();
 rollback;
