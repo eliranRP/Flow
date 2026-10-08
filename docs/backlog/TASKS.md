@@ -49,11 +49,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | on-hold |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
-| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | claimed (Claude, 2026-10-08, claude/project-thread-9u6r0w) |
+| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | in-progress (#122) |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | done (#121; UI items go to the design PR, #121 review items to FLOW-129) |
 | 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | ready |
-| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | claimed (Claude, 2026-10-08, claude/project-thread-9u6r0w) |
+| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
@@ -202,7 +202,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-118"></a>
 ### FLOW-118 · Reversals follow-ups (#76 review)
-- **Type:** BACKLOG NIT · **Status:** claimed (Claude, 2026-10-08, claude/project-thread-9u6r0w) · **Depends on:** FLOW-104
+- **Type:** BACKLOG NIT · **Status:** in-progress (#122) · **Depends on:** FLOW-104
 - [x] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message. (#122: 'category not found'; the composite foreign key keeps it unreachable.)
 - [x] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited. (#122: kept. `mcp_assign_expense_split` and `save_line_split` still raise it.)
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
@@ -340,7 +340,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-208"></a>
 ### FLOW-208 · Split and undo follow-ups (#88 review)
-- **Type:** BACKLOG NIT · **Status:** claimed (Claude, 2026-10-08, claude/project-thread-9u6r0w) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** in-progress (#122) · **Depends on:** —
 - [x] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`. (#122)
 - [x] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1). (#122; older snapshots keep the old rule. `save_split` still stores no flags.)
 - [x] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess. (#122, `review_undo_followups.test.sql`.)

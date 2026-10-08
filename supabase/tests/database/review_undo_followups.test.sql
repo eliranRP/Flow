@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(21);
+select plan(26);
 
 do $users$
 begin
@@ -299,6 +299,74 @@ select is(
   'the same batch with the shares in another order replays the stored response'
 );
 reset role;
+
+-- A batch stored before FLOW-208 (hashed as sent, shares out of order) still replays.
+-- pg_temp.batch(unsorted()) lists the shares out of project order, whatever the uuids are.
+create or replace function pg_temp.unsorted()
+returns boolean
+language sql
+set search_path = ''
+as $$
+  select (select id::text from pg_temp.rufu where label = 'north') < (select id::text from pg_temp.rufu where label = 'south')
+$$;
+grant execute on function pg_temp.unsorted() to authenticated, service_role;
+insert into private.mcp_idempotency (token_id, idempotency_key, request_hash, response)
+values (
+  (select id from rufu where label = 'write'), 'rufu-legacy',
+  'batch|' || md5(pg_temp.batch(pg_temp.unsorted())::text), '{"ok": true, "data": {"legacy": true}}'::jsonb
+);
+do $$ begin perform pg_temp.as_mcp(); end $$;
+select is(
+  public.mcp_assign_expenses('rufu-legacy', pg_temp.batch(pg_temp.unsorted()))->'data'->>'legacy',
+  'true',
+  'a batch stored with the old hash replays on an identical retry'
+);
+select is(
+  public.mcp_assign_expenses('rufu-legacy', pg_temp.batch(not pg_temp.unsorted()))->'error'->>'code',
+  'conflict',
+  'the old-hash batch with its shares reordered is still conflict'
+);
+reset role;
+
+-- A snapshot from before FLOW-208 (null flag) keeps the old rule: the confirmed flag stays.
+insert into public.transactions (
+  company_id, direction, doc_kind, amount_gross, amount_net, vat_amount, vat_status,
+  doc_date, source, idempotency_key, category_id, description, user_assigned
+)
+select c.id, 'expense', 'expense', -10000, -10000, 0, 'unknown',
+  '2026-09-15', 'manual', 'rufu:old-snapshot', (select id from rufu where label = 'materials'), 'Synthetic line', false
+from rufu c where c.label = 'company';
+insert into rufu (label, id) select 'old', id from public.transactions where idempotency_key = 'rufu:old-snapshot';
+do $$ begin perform pg_temp.as_mcp(); end $$;
+select is(
+  public.mcp_assign_expense_split(
+    'rufu-old', (select id from rufu where label = 'old'),
+    jsonb_build_array(
+      jsonb_build_object('project_id', (select id from rufu where label = 'north'), 'share', 50),
+      jsonb_build_object('project_id', (select id from rufu where label = 'south'), 'share', 50)
+    ),
+    (select id from rufu where label = 'labor')
+  )->>'ok',
+  'true',
+  'split onto a provider category for the old-snapshot case'
+);
+reset role;
+update public.reassign_undo set prior_category_assigned = null
+where transaction_id = (select id from rufu where label = 'old');
+insert into rufu (label, id)
+select 'old_undo', w.reassign_id from private.mcp_writes w where w.transaction_id = (select id from rufu where label = 'old');
+do $$ begin perform pg_temp.as_mcp(); end $$;
+select is(
+  public.mcp_undo('rufu-undo-old', 'reassign', (select id from rufu where label = 'old_undo'))->>'ok',
+  'true',
+  'undo of the old-snapshot write succeeds'
+);
+reset role;
+select is(
+  (select t.category_assigned from public.transactions t where t.id = (select id from rufu where label = 'old')),
+  true,
+  'a null snapshot flag keeps the old rule and leaves the category confirmed'
+);
 
 select * from finish();
 rollback;

@@ -227,6 +227,10 @@ begin
     from jsonb_array_elements(p_items) with ordinality x(elem, pos)
   )::text);
   prior := private.mcp_idempotency_lookup(token, p_idempotency_key, hash);
+  if prior->>'state' = 'conflict' then
+    -- A batch stored before FLOW-208 was hashed as sent; its identical retry still replays.
+    prior := private.mcp_idempotency_lookup(token, p_idempotency_key, 'batch|' || md5(p_items::text));
+  end if;
   if prior->>'state' = 'replay' then
     return prior->'response';
   end if;
