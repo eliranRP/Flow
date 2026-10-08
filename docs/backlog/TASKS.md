@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Free (FLOW-325 undo follow-up done in #192) | Next `ready` non-UI task in the queue (FLOW-510 waits for its design call) |
+| Dev lane 1 | FLOW-323 server part: search filters on `search_transactions` and MCP `search_expenses` (owner chose "server now") | Next `ready` non-UI task in the queue (FLOW-510 waits for its design call) |
 | Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
 | UI lane 1 | Collision-ordered UI queue, one PR at a time: FLOW-326 + 328 (#165) | Profit by period with 411, FLOW-330 screen, Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -91,7 +91,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | done (#130) |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
-| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
+| 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | in progress (server part; the screen waits for its mockup) |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | in progress (PR #TBD) |
@@ -607,7 +607,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-323"></a>
 ### FLOW-323 · Search and all transactions
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** FLOW-302
+- **Type:** PLAN FIRST · **Status:** server part in progress (owner chose "server now", 2026-10-08); the screen waits for its mockup · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review: finding a line by supplier takes 4 to 6 taps and only inside the selected period. One list of every transaction with a focused search field and filter chips one tap away (income or expenses, project, category, period, waiting for review), reached from a search icon on Home and Projects. Options for the mockup: an entry icon only, or the review tab becomes a transactions tab with review as a filter.
 - **MCP:** `search_expenses` and its RPC gain optional date, project, category and direction arguments (read only).
 - **Acceptance:** plan and mockup approved; a line is 2 taps away after typing; results match `search_expenses`; tenant isolation test on the RPC. Overlaps FLOW-402, 303 and 305.
