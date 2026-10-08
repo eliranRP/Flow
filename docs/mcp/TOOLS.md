@@ -306,7 +306,7 @@ There is no date range. Mercury sync is cursor-based (`sync_cursor`, `import_fro
 { "job_id": "…" }
 ```
 
-Read tool. Offered to read and write tokens. Readable by the user who started the job, in the same company; another user's job is `not_found`.
+Read tool. Offered to read and write tokens, and it takes the read rate bucket, so polling does not use up writes. Readable by the user who started the job, in the same company; another user's job is `not_found`. A job that finished more than 7 days ago (or never finished, after a day) is dropped when that user starts a new sync and then reads `not_found` ([FLOW-207](../backlog/TASKS.md#flow-207)). A failed job's `error` is one of `unavailable` / `retry`, `unavailable` / `unavailable`, `not_found` / `bank is not connected`, `refused` / `bank key was rejected; reconnect in Settings`, or `refused` / `The bank sync failed.`; anything else is stored as the last.
 
 Output `data`: `{ "job_id", "state", "started_at", "finished_at" }` plus:
 
