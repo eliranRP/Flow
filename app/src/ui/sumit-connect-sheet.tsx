@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { ConnectSheet } from "./connect-sheet";
 import { TextField } from "./text-field";
 
@@ -37,6 +37,16 @@ export function SumitConnectSheet({
   onDisconnect?: () => void;
   disconnectRef?: RefObject<HTMLButtonElement | null>;
 }) {
+  // Empty fields are caught here, on reserved message lines, before they reach the server.
+  const [missing, setMissing] = useState({ companyId: false, apiKey: false });
+  const companyRef = useRef<HTMLInputElement>(null);
+  const keyRef = useRef<HTMLInputElement>(null);
+  // A closed sheet opens again without the last attempt's messages.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) setMissing({ companyId: false, apiKey: false });
+  }
   return (
     <ConnectSheet
       open={open}
@@ -47,14 +57,45 @@ export function SumitConnectSheet({
       authReconnect={authReconnect}
       fields={(
         <>
-          <TextField label="מספר חברה" dir="ltr" numeric value={companyId} inputMode="numeric" onChange={(event) => { setCompanyId(event.target.value); }} />
-          <TextField label="מפתח API" type="password" dir="ltr" value={apiKey} autoComplete="off" onChange={(event) => { setApiKey(event.target.value); }} />
+          <TextField
+            ref={companyRef}
+            label="מספר חברה"
+            dir="ltr"
+            numeric
+            value={companyId}
+            inputMode="numeric"
+            readOnly={busy}
+            error={missing.companyId ? "חסר מספר חברה." : undefined}
+            reserveMessage
+            onChange={(event) => { setMissing((m) => ({ ...m, companyId: false })); setCompanyId(event.target.value); }}
+          />
+          <TextField
+            ref={keyRef}
+            label="מפתח API"
+            type="password"
+            dir="ltr"
+            value={apiKey}
+            autoComplete="off"
+            readOnly={busy}
+            error={missing.apiKey ? "חסר מפתח." : undefined}
+            reserveMessage
+            onChange={(event) => { setMissing((m) => ({ ...m, apiKey: false })); setApiKey(event.target.value); }}
+          />
         </>
       )}
       submitLabel={submitLabel}
       busy={busy}
       disabled={disabled}
-      onSubmit={onSubmit}
+      onSubmit={() => {
+        if (busy) return;
+        const next = { companyId: companyId.trim() === "", apiKey: apiKey.trim() === "" };
+        if (next.companyId || next.apiKey) {
+          setMissing(next);
+          (next.companyId ? companyRef : keyRef).current?.focus();
+          return;
+        }
+        onSubmit();
+      }}
       onDisconnect={onDisconnect}
       disconnectRef={disconnectRef}
     />
