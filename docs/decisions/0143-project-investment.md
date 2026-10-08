@@ -21,13 +21,15 @@ MCP needs to set and read the figures. The open question was what counts as reha
 **Rehab is every project cost but the loan parts, and each category can be switched.**
 - `categories.rehab`: null follows the default, true adds the category to rehab, false takes it out.
 - By default a category counts unless it is kept out of the P&L (`excluded_from_pnl`) or is a loan part (`loan_part`). Kept-out categories stay out by default so the purchase itself, usually filed in one, is not counted twice. A line with no category counts.
+- A loan payment's fees part sits in an ordinary category (0130), but it is still a loan part: it stays out unless its category is switched on.
 - `set_category_rehab(category, rehab)` is the owner's call. `list_categories` shows `rehab` and `in_rehab` (what the category comes to).
-- Rehab sums, for all time on the cash basis in shekels, the project's posted, paid expense lines (direct) plus its share of shared lines, by part for split lines, whose category counts. The project screen's period and basis do not change it: rehab is what the property has cost so far.
-- A line's own P&L switch (`set_line_pnl`) does not decide rehab; the category does. One switch per category keeps the rule short.
+- Rehab sums, for all time on the cash basis, the project's posted, paid expense lines (direct) plus its share of shared lines, by part for split lines, whose category counts. Shekels make `rehab_agorot`; other currencies are listed apart in `rehab_other_currencies`. The project screen's period and basis do not change it: rehab is what the property has cost so far.
+- A line's own P&L switch (`set_line_pnl`) does not decide rehab; the category does, as stored, so a guessed kept-out category (0114) is out of rehab while it still counts in the P&L. One switch per category keeps the rule short.
+- The overhead project's own lines count as overhead, so its rehab is 0.
 
 **Equity comes with `get_project`.**
 - `get_project` returns `investment`: the four figures, `rehab_agorot`, `loan_balance_agorot` (open shekel loans filed under the project), `loan_balance_other_currencies` (open loans in other currencies, listed apart, never added in), `forced_equity_agorot` and `current_equity_agorot`.
-- Each equity is null while a figure it needs is missing, so the screen can say what to fill in rather than show a wrong number.
+- Each equity is null while a figure it needs is missing, so the screen can say what to fill in rather than show a wrong number. For the same reason forced equity is null while rehab has a cost in another currency, and current equity while an open loan is in another currency: Flow does not convert them.
 
 **MCP.**
 - `set_project_investment` (undo kind `project_investment`) and `set_category_rehab` (undo kind `category_rehab`), with the idempotency key and the write rate limit.

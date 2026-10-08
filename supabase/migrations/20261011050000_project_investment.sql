@@ -6,9 +6,10 @@
 -- 2. categories.rehab: null follows the default (in rehab unless the category is kept out of
 --    the P&L or is a loan part), true adds the category to rehab, false takes it out.
 --    public.set_category_rehab(category, rehab) sets it.
--- 3. get_project returns investment: the figures, rehab (the project's posted, paid ILS costs
---    in rehab categories, direct and shared, all time), the balance of its open loans, and
---    forced equity (ARV - purchase - rehab) and current equity (value - loan balance).
+-- 3. get_project returns investment: the figures, rehab (the project's posted, paid costs in
+--    rehab categories, direct and shared, all time; shekels, other currencies apart), the
+--    balance of its open loans, and forced equity (ARV - purchase - rehab) and current equity
+--    (value - loan balance), null while a figure is missing or in another currency.
 -- 4. MCP set_project_investment (undo kind project_investment) and set_category_rehab (undo
 --    kind category_rehab), with the usual idempotency key and write rate limit.
 -- get_project, list_categories, mcp_undo and the mcp_writes checks are patched from their
@@ -57,13 +58,15 @@ as $$
 $$;
 
 revoke all on function private.category_in_rehab(boolean, boolean, public.loan_split_part) from public, anon, authenticated, service_role;
-grant execute on function private.category_in_rehab(boolean, boolean, public.loan_split_part) to authenticated;
+grant execute on function private.category_in_rehab(boolean, boolean, public.loan_split_part) to authenticated, service_role;
 
 -- A project's investment figures and the equity they give. The caller has checked that the
 -- project is in company p_company_id and that the user may read it.
--- Rehab is on the cash basis for all time: posted, paid ILS expense lines filed to the project
--- (direct) or shared to it (its allocation), whose category counts as rehab. The line's own
--- P&L switch does not decide it: rehab follows the category.
+-- Rehab is on the cash basis for all time: posted, paid expense lines filed to the project
+-- (direct) or shared to it (its allocation), whose category counts as rehab. A loan payment's
+-- part (fees too, whatever its category) is a loan part. The line's own P&L switch does not
+-- decide it: rehab follows the category. Shekels make rehab_agorot; other currencies are
+-- listed apart, and an equity that would need them is null rather than wrong.
 create function private.project_investment(p_company_id uuid, p_project_id uuid)
 returns jsonb
 language plpgsql
@@ -73,8 +76,9 @@ as $$
 declare
   p record;
   rehab bigint;
+  rehab_other jsonb;
   loan_balance bigint;
-  other jsonb;
+  loan_other jsonb;
 begin
   select pr.purchase_agorot, pr.arv_agorot, pr.value_agorot, pr.value_date into p
   from public.projects pr
@@ -83,19 +87,18 @@ begin
     return null;
   end if;
 
-  rehab := -coalesce((
-    select sum(l.amount_net)
+  with costs as (
+    select l.currency, l.amount_net
     from private.pnl_lines l
     left join public.categories c on c.id = l.category_id
     where l.company_id = p_company_id
       and l.project_id = p_project_id
       and l.kind = 'expense'
       and l.pnl_role = 'project'
-      and l.currency = 'ILS'
       and not l.unpaid
-      and private.category_in_rehab(c.rehab, c.excluded_from_pnl, c.loan_part)
-  ), 0) - coalesce((
-    select sum(coalesce(private.div_half_even(a.amount_net::numeric * l.amount_net, l.line_amount_net), 0))
+      and private.category_in_rehab(c.rehab, c.excluded_from_pnl, coalesce(c.loan_part, l.part))
+    union all
+    select l.currency, coalesce(private.div_half_even(a.amount_net::numeric * l.amount_net, l.line_amount_net), 0)
     from public.allocations a
     join private.pnl_lines l on l.transaction_id = a.transaction_id
     left join public.categories c on c.id = l.category_id
@@ -103,10 +106,22 @@ begin
       and l.company_id = p_company_id
       and l.kind = 'expense'
       and l.pnl_role = 'shared'
-      and l.currency = 'ILS'
       and not l.unpaid
-      and private.category_in_rehab(c.rehab, c.excluded_from_pnl, c.loan_part)
-  ), 0);
+      and private.category_in_rehab(c.rehab, c.excluded_from_pnl, coalesce(c.loan_part, l.part))
+  ),
+  by_currency as (
+    select x.currency, (-sum(x.amount_net))::bigint as amount_minor
+    from costs x
+    group by x.currency
+  )
+  select
+    coalesce((select b.amount_minor from by_currency b where b.currency = 'ILS'), 0),
+    coalesce((
+      select jsonb_agg(jsonb_build_object('currency', b.currency, 'amount_minor', b.amount_minor) order by b.currency)
+      from by_currency b
+      where b.currency <> 'ILS' and b.amount_minor <> 0
+    ), '[]'::jsonb)
+  into rehab, rehab_other;
 
   select coalesce(sum(b.balance_minor), 0)::bigint into loan_balance
   from public.loans l
@@ -116,10 +131,9 @@ begin
     and l.status = 'open'::public.loan_status
     and l.currency = 'ILS';
 
-  -- Open loans in another currency are listed apart, never added to the shekel balance.
   select coalesce(jsonb_agg(jsonb_build_object('currency', x.currency, 'balance_minor', x.balance_minor)
            order by x.currency), '[]'::jsonb)
-  into other
+  into loan_other
   from (
     select l.currency, sum(b.balance_minor)::bigint as balance_minor
     from public.loans l
@@ -137,16 +151,17 @@ begin
     'value_agorot', p.value_agorot,
     'value_date', p.value_date,
     'rehab_agorot', rehab,
+    'rehab_other_currencies', rehab_other,
     'loan_balance_agorot', loan_balance,
-    'loan_balance_other_currencies', other,
-    'forced_equity_agorot', p.arv_agorot - p.purchase_agorot - rehab,
-    'current_equity_agorot', p.value_agorot - loan_balance
+    'loan_balance_other_currencies', loan_other,
+    'forced_equity_agorot', case when rehab_other = '[]'::jsonb then p.arv_agorot - p.purchase_agorot - rehab end,
+    'current_equity_agorot', case when loan_other = '[]'::jsonb then p.value_agorot - loan_balance end
   );
 end;
 $$;
 
 revoke all on function private.project_investment(uuid, uuid) from public, anon, authenticated, service_role;
-grant execute on function private.project_investment(uuid, uuid) to authenticated;
+grant execute on function private.project_investment(uuid, uuid) to authenticated, service_role;
 
 -- The figures as they stand, for undo and for the RPC's reply.
 create function private.project_figures(p_company_id uuid, p_project_id uuid)
