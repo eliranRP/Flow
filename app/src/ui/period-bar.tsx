@@ -82,7 +82,7 @@ export function PeriodBar({ period, onChange, tone = "band", scope = "company" }
             setSheet(true);
           }}
         >
-          <span className="ui-pbar-window" data-clip-ok="">{label}</span>
+          <span className="ui-pbar-window">{label}</span>
           {toDate ? <span className="ui-pbar-hint">עד היום</span> : null}
         </button>
         {arrows ? (

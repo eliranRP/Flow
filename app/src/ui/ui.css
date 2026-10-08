@@ -4725,12 +4725,12 @@ div.ui-check-row {
 .ui-pbar-window {
   display: block;
   max-inline-size: 100%;
-  overflow: hidden;
   font-size: var(--type-label-size);
   font-weight: var(--type-label-weight);
   line-height: var(--type-label-line);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .ui-pbar-hint {
