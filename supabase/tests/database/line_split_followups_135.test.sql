@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(13);
+select plan(18);
 
 do $users$
 begin
@@ -35,6 +35,8 @@ insert into lsf (label, id) values
   ('refund', tests.fixture_line(pg_temp.id('co'), 'lsf:refund', 10000, 'income', pg_temp.id('alpha'), pg_temp.id('sales'))),
   ('refund_b', tests.fixture_line(pg_temp.id('co'), 'lsf:refund_b', 10000, 'income', pg_temp.id('alpha'), pg_temp.id('sales'))),
   ('expense', tests.fixture_line(pg_temp.id('co'), 'lsf:expense', 10000, 'expense', pg_temp.id('alpha'), pg_temp.id('costs'))),
+  ('refund_c', tests.fixture_line(pg_temp.id('co'), 'lsf:refund_c', 10000, 'income', pg_temp.id('alpha'), pg_temp.id('sales'))),
+  ('bounce', tests.fixture_line(pg_temp.id('co'), 'lsf:bounce', 10000, 'income', pg_temp.id('alpha'), pg_temp.id('costs'))),
   ('loose', tests.fixture_line(pg_temp.id('co'), 'lsf:loose', 10000, 'expense', null, pg_temp.id('costs'), p_pnl_role => 'overhead'));
 
 create or replace function pg_temp.parts_minor(p_project text, p_line text)
@@ -97,13 +99,34 @@ select throws_ok(
     jsonb_build_array(
       jsonb_build_object('category_id', pg_temp.id('materials'), 'amount_minor', 4000),
       jsonb_build_object('category_id', pg_temp.id('materials'), 'amount_minor', 6000))),
-  'P0001', 'same category and project twice', 'on a line with no project, two parts with none are the same pair');
+  'P0001', 'same category and project twice', 'on a line with no project, two parts with none are the same pair (a guard: refused before too)');
 select lives_ok(
   format($$select public.save_line_split(%L, %L::jsonb, true)$$, pg_temp.id('loose'),
     jsonb_build_array(
       jsonb_build_object('category_id', pg_temp.id('materials'), 'amount_minor', 4000),
       jsonb_build_object('category_id', pg_temp.id('materials'), 'project_id', pg_temp.id('alpha'), 'amount_minor', 6000))),
   'on a line with no project, a part on Alpha is another pair');
+
+-- A line put in the P&L counts its kept-out parts, so there a kept-out reversal part needs a project.
+select throws_ok(
+  format($$select public.set_transaction_pnl(%L, true)$$, pg_temp.id('refund')),
+  'P0001', 'a reversal part needs a project', 'putting a line with a kept-out reversal part on no project in the P&L is refused');
+select lives_ok(format($$select public.set_transaction_pnl(%L, true)$$, pg_temp.id('refund_c')),
+  'the owner puts another refund in the P&L');
+select throws_ok(
+  format($$select public.save_line_split(%L, %L::jsonb)$$, pg_temp.id('refund_c'),
+    jsonb_build_array(jsonb_build_object('category_id', pg_temp.id('draws'), 'amount_minor', 3000), jsonb_build_object('rest', true))),
+  'P0001', 'a reversal part needs a project', 'on a line in the P&L, a kept-out reversal part needs a project');
+
+-- A whole reversal line (income filed in an expense category): its own kind is expense.
+select lives_ok(
+  format($$select public.save_line_split(%L, %L::jsonb)$$, pg_temp.id('bounce'),
+    jsonb_build_array(
+      jsonb_build_object('category_id', pg_temp.id('sales'), 'project_id', pg_temp.id('alpha'), 'amount_minor', 3000),
+      jsonb_build_object('rest', true))),
+  'a whole reversal line split with an income part on Alpha');
+select is(pg_temp.parts_minor('alpha', 'bounce'), 4000::bigint,
+  'the rest in the line''s own expense category counts plus, the income part minus');
 
 reset role;
 select is((select count(*)::int from public.line_splits where transaction_id = pg_temp.id('loose')), 0,
