@@ -1154,6 +1154,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** A PR waits about 11 minutes for CI because one runner does every storybook step after the unit tests, and the static-story smoke opens every story in one serial test (about 6 minutes). Run the storybook smoke and the main Playwright suite as shards on parallel runners behind the `check` and `e2e` gate jobs. Start local Supabase while dependencies install.
 - **Acceptance:** Same tests run; the required check names stay `lint`, `check`, `e2e`; PR CI wall time drops by at least a third.
 
+<a id="flow-813"></a>
+### FLOW-813 · Faster pre-push local CI
+- **Type:** SMALL CYCLE · **Status:** done (this PR) · **Depends on:** —
+- **What:** The pre-push run (`scripts/local-ci.sh`) took 4–5 minutes on every push: app unit tests 147s, lint 48s, Storybook 43s, the two builds about 45s, typecheck 17s (measured 2026-10-08). The default run now skips the typecheck, the builds, the app unit tests and Storybook when their inputs (git trees of app, packages, design, `_shared`, the migrations, scripts, the root configs and `.env`) already passed in this clone, runs only the app tests related to the files changed since the last green commit when only `.ts`/`.tsx` sources or migrations changed (plus the tests that glob the migrations), and runs the server tests beside the static checks. `--full` and `FLOW_LOCAL_CI_NO_SKIP=1` run everything.
+- **Measured:** cold 247s; a push that leaves the app unchanged (server, docs, tests) 53s; a one-file app change 148s (39 related unit files, 17 story files).
+- **Next:** run the e2e specs for the screens a diff touches (needs local Supabase, so outside the 2-minute budget); lint (48s, type-aware) now bounds the fast path; a shared green cache (`FLOW_LOCAL_CI_CACHE`) would let one lane's pass count for another.
+
 ## Data hygiene (public repo)
 
 <a id="flow-901"></a>
