@@ -52,6 +52,6 @@ describe("line split refusal copy (FLOW-325)", () => {
 
   it("the project split names a line split by category instead of offering a retry", () => {
     expect(projectSplitFailure(new Error("line has a split by category"))).toEqual({ message: LINE_HAS_CATEGORY_SPLIT, retry: false });
-    expect(projectSplitFailure(new Error("Failed to fetch"))).toBe("החלוקה לא נשמרה");
+    expect(projectSplitFailure(new Error("Failed to fetch"))).toBe("הפיצול לא נשמר");
   });
 });

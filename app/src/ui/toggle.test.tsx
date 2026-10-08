@@ -37,4 +37,13 @@ describe("Toggle", () => {
     expect(offTrack?.style.background).toContain("--color-disabled-bg");
     expect(offTrack?.style.boxShadow).toContain("--color-control-border");
   });
+
+  it("reads its label like a row title, 17/400 (FLOW-326)", () => {
+    render(<Toggle label="לזכור לספק הזה" checked={false} onChange={() => undefined} />);
+    const label = screen.getByText("לזכור לספק הזה");
+    expect(label).toHaveClass("ui-switch-label");
+    const style = getComputedStyle(label);
+    expect(style.fontWeight).toBe("var(--type-meta-weight)");
+    expect(style.fontSize).toBe("var(--type-title-3-size)");
+  });
 });

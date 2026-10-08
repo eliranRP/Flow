@@ -567,10 +567,10 @@ function LineSplitEditor({
     // loan split or an open review), cannot be sent back, so there is no ביטול for them.
     const undoable = split?.partsMatch !== false && !blocked;
     toast.show({
-      message: kind === "clear" ? "הפיצול הוסר" : "החלוקה נשמרה",
+      message: kind === "clear" ? "הפיצול הוסר" : "הפיצול נשמר",
       ...(undoable ? {
         action: "ביטול",
-        onAction: () => { void undoTo(previous, kind === "clear" ? "הפיצול חזר" : "החלוקה הקודמת חזרה"); },
+        onAction: () => { void undoTo(previous, kind === "clear" ? "הפיצול חזר" : "הפיצול הקודם חזר"); },
       } : {}),
     });
     leaving.current = true;
@@ -855,7 +855,7 @@ function LineSplitEditor({
             </button>
             {/* Outside the button, whose label would hide it; tied back by aria-describedby. */}
             {restMessage != null ? <p id={restMessageId} className="ui-lsplit-msg ui-lsplit-rest-msg" role="status">{restMessage}</p> : null}
-            {parts.length === 0 ? <p className="t-hint ui-lsplit-empty">הוסיפו חלק כדי לפצל. מה שלא חולק נשאר בשורה.</p> : null}
+            {parts.length === 0 ? <p className="t-hint ui-lsplit-empty">הוסיפו חלק כדי לפצל. מה שלא פוצל נשאר בשורה.</p> : null}
             <p className="ui-lsplit-add">
               <TextLink
                 buttonRef={addRef}
@@ -878,7 +878,7 @@ function LineSplitEditor({
         <div className="ui-split-cta ui-lsplit-foot" aria-busy={busy || undefined}>
           <div className="ui-lsplit-totals">
             <span className="ui-lsplit-total">
-              <span className="t-hint">חולקו</span>
+              <span className="t-hint">פוצלו</span>
               <span className="t-body">
                 {busy ? <span className="ui-spinner" aria-hidden="true" /> : null}
                 {check.overMinor > 0n

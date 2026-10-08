@@ -227,7 +227,7 @@ describe("split discard", () => {
     }
     expect(screen.getByRole("radio", { name: "שווה בין כל הפרויקטים" })).toHaveAttribute("aria-busy", "true");
     fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-    expect(screen.getByRole("heading", { name: "איך לחלק?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "איך לפצל?" })).toBeInTheDocument();
     await act(() => {
       finish?.();
       return Promise.resolve();

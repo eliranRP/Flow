@@ -113,10 +113,11 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
         <EmptyState
           icon={<ChartIcon />}
           title="עוד אין נתונים"
-          body="הרווח יופיע כאן אחרי ש־SUMIT מחובר."
+          body="הרווח יופיע כאן אחרי חיבור בנק או SUMIT."
           action={holdWrites ? undefined : (
-            <Button variant="pill" to={previewing ? `/settings/connections${search}` : "/setup/1?from=card"}>
-              חיבור SUMIT
+            // FLOW-328: a bank or SUMIT both start the books, so the action opens the connections page.
+            <Button variant="pill" to={`/settings/connections${search}`}>
+              חיבור בנק או SUMIT
             </Button>
           )}
         />

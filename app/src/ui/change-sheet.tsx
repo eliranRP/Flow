@@ -23,17 +23,17 @@ export const CHANGE_SAVE_FAILURE = "לא נשמר – אין חיבור";
 export const CHANGE_SAVE_REFUSAL = "לא נשמר. בדקו את הפרטים ונסו שוב.";
 
 /** The database refuses one project on a shared cost. Say where the split happens. */
-export const SHARED_SPLIT_FAILURE = "עלות משותפת מחולקת במסך החלוקה.";
+export const SHARED_SPLIT_FAILURE = "עלות משותפת מפוצלת במסך הפיצול.";
 
 /** Decision 0076. The fourth split choice, and the note above the project picker. */
 export const ONE_PROJECT_OPTION = "לפרויקט אחד";
 export const ONE_PROJECT_DETAIL = "הסכום כולו עובר לפרויקט אחד";
-export const COLLAPSE_SPLIT_NOTE = "החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.";
+export const COLLAPSE_SPLIT_NOTE = "הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.";
 export const COLLAPSE_PICK_HOLD = "בחרו פרויקט.";
 
 export function changeSaveFailure(error: Error): WriteFailure {
   if (error.message.includes("shared costs are split")) {
-    return { message: SHARED_SPLIT_FAILURE, retry: false, tone: "info", action: "לחלוקה" };
+    return { message: SHARED_SPLIT_FAILURE, retry: false, tone: "info", action: "לפיצול" };
   }
   if (isTransientWriteError(error)) return CHANGE_SAVE_FAILURE;
   return { message: CHANGE_SAVE_REFUSAL, retry: false };
@@ -630,8 +630,9 @@ export function ChangeAssignment(props: Props) {
                 <span className="ui-remember-line">
                   <span className="ui-remember-supplier">{props.supplier}</span>
                   <span className="ui-remember-dest">
-                    <bdi className="ui-remember-join" dir="ltr">{"←\u00A0"}</bdi>
-                    {"\u2060"}
+                    {/* Only the arrow is LTR. A space inside the bdi lands on the wrong side in RTL (FLOW-328). */}
+                    <bdi className="ui-remember-join" dir="ltr">←</bdi>
+                    {"\u00A0\u2060"}
                     {projectName === "" ? "פרויקט" : projectName}
                     {" · "}
                     {categoryName === "" ? "קטגוריה" : categoryName}

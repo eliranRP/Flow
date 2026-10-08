@@ -453,8 +453,8 @@ describe("placeToast", () => {
           onClick={() => {
             toast.show({
               tone: "info",
-              message: "עלות משותפת מחולקת במסך החלוקה.",
-              action: "לחלוקה",
+              message: "עלות משותפת מפוצלת במסך הפיצול.",
+              action: "לפיצול",
               onAction: () => undefined,
             });
           }}
@@ -472,7 +472,7 @@ describe("placeToast", () => {
     act(() => {
       vi.advanceTimersByTime(4_000);
     });
-    expect(screen.getByRole("status")).toHaveTextContent("עלות משותפת מחולקת במסך החלוקה.");
+    expect(screen.getByRole("status")).toHaveTextContent("עלות משותפת מפוצלת במסך הפיצול.");
     act(() => {
       vi.advanceTimersByTime(1_000);
     });

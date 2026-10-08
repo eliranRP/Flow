@@ -526,13 +526,13 @@ describe("rejected writes", () => {
       return Promise.resolve({ data: [], error: null });
     };
     renderAt("/review");
-    expect(await screen.findByText("הוצאה משותפת · אישור יפתח חלוקה")).toBeInTheDocument();
+    expect(await screen.findByText("הוצאה משותפת · אישור יפתח פיצול")).toBeInTheDocument();
     expect(screen.queryByText("חסר פרויקט, הקישו לבחירה")).not.toBeInTheDocument();
     expect(screen.getByText("חומרים")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: "אישור" });
     expect(approve).toBeEnabled();
     fireEvent.click(approve);
-    expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
     expect(calls).not.toContain("resolve_review");
     expect(calls).not.toContain("approve_split_review");
   });
@@ -688,7 +688,7 @@ describe("rejected writes", () => {
     };
     renderAt("/review/change?item=r1");
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
-    expect(await screen.findByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    expect(await screen.findByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
     await waitFor(() => {
       expect(calls).toContain("collapse_split");
@@ -831,7 +831,7 @@ describe("rejected writes", () => {
     expect(screen.queryByText("בחרו פרויקט וקטגוריה.")).not.toBeInTheDocument();
     expect(calls).not.toContain("resolve_review");
     fireEvent.click(await screen.findByRole("button", { name: /פרויקט:/ }));
-    expect(await screen.findByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
+    expect(await screen.findByText("הפיצול ירד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: "הרצל" }));
     await waitFor(() => {
       expect(calls).toContain("collapse_split");

@@ -46,7 +46,7 @@ test("an expense splits 30% and ₪500, the rest stays on the line, and ✕ save
     { category_id: "c-ins", project_id: "p-raan", amount_minor: 50000 },
     { rest: true },
   ]);
-  await expect(page.getByText("החלוקה נשמרה")).toBeVisible();
+  await expect(page.getByText("הפיצול נשמר")).toBeVisible();
 });
 
 test("a refund's reversal part needs a project before it saves", async ({ page }) => {
@@ -83,7 +83,7 @@ test("a dropped connection keeps the screen and offers ניסיון חוזר", a
   await page.getByLabel("סכום, חשמל").fill("100");
   await expect(page.getByRole("button", { name: /^השאר,/ })).toContainText("₪4,700");
   await page.getByRole("button", { name: "סגירה" }).click();
-  await expect(page.getByText("החלוקה לא נשמרה")).toBeVisible();
+  await expect(page.getByText("הפיצול לא נשמר")).toBeVisible();
   await expect(page.getByRole("button", { name: "ניסיון חוזר" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "פיצול לפי קטגוריות" })).toBeVisible();
 });

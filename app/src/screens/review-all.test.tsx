@@ -448,7 +448,7 @@ describe("review queue list", () => {
     expect(await screen.findByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" })).toBeInTheDocument();
     expect(screen.queryByText("חסר קטגוריה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "פרויקט: מפוצל · 2 פרויקטים" }));
-    expect(await screen.findByRole("heading", { name: "חלוקה בין פרויקטים" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "פיצול בין פרויקטים" })).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "collapse_split")).toBe(false);
   });
 
