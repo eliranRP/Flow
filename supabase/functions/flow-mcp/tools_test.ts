@@ -592,6 +592,7 @@ Deno.test("split_line validates parts and refuses read tokens", async () => {
     { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], share: 50 }] },
     { idempotency_key: "k", transaction_id: TXN, parts: [two[0], { ...two[1], project_id: "nope" }] },
     { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, amount_minor: i + 1 })) },
+    { idempotency_key: "k", transaction_id: TXN, parts: Array.from({ length: 51 }, (_, i) => ({ category_id: CATEGORY, project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`, amount_minor: i + 1 })) },
     { idempotency_key: "k", transaction_id: "not-a-uuid", parts: two },
     { idempotency_key: "", transaction_id: TXN, parts: two },
     { idempotency_key: "k", transaction_id: TXN, parts: two, company_id: TXN },
@@ -1682,7 +1683,7 @@ Deno.test("assign_expenses lists shares[] on its items like assign_expense_split
   const single = tools.find((tool) => tool.name === "assign_expense_split");
   const props = batch?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
   const itemProps = props.items.items?.properties ?? {};
-  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "shares"]);
+  assertEquals(Object.keys(itemProps), ["transaction_id", "project_id", "category_id", "remember", "shares", "parts"]);
   assertEquals(itemProps.shares, (single?.inputSchema.properties as Record<string, unknown>).shares);
   assertEquals(itemProps.shares, {
     type: "array",
@@ -1694,6 +1695,70 @@ Deno.test("assign_expenses lists shares[] on its items like assign_expense_split
     },
   });
   assertEquals(batch?.description.includes("shares[]"), true);
+});
+
+Deno.test("assign_expenses forwards a parts[] row like split_line and validates it the same way", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: BATCH_KEY,
+        ok_count: 1,
+        error_count: 0,
+        results: [{ transaction_id: TXN, ok: true, undo_kind: "line_split" }],
+      },
+    },
+  }));
+  const TXN_B = "22222222-2222-4000-8000-000000000021";
+  const parts = [
+    { category_id: CATEGORY, project_id: PROJECT, amount_minor: 4000 },
+    { category_id: CATEGORY, project_id: null, rest: true },
+  ];
+  const batch = await callTool("assign_expenses", {
+    idempotency_key: "batch-parts",
+    items: [{ transaction_id: TXN, parts }, { transaction_id: TXN_B, parts: [] }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_assign_expenses",
+    body: {
+      p_idempotency_key: "batch-parts",
+      p_items: [{ transaction_id: TXN, parts }, { transaction_id: TXN_B, parts: [] }],
+    },
+  });
+  const before = calls.length;
+  const bad = [
+    [{ category_id: CATEGORY, amount_minor: 4000 }],
+    [{ category_id: CATEGORY, rest: true }, { category_id: PROJECT, rest: true }],
+    [{ category_id: CATEGORY, amount_minor: 1 }, { category_id: CATEGORY, amount_minor: 2 }],
+    [{ category_id: CATEGORY, amount_minor: 1, share: 1 }, { category_id: PROJECT, amount_minor: 2 }],
+    Array.from({ length: 51 }, (_, i) => ({
+      category_id: CATEGORY,
+      project_id: `8c1a0b2e-1111-4000-8000-${String(i).padStart(12, "0")}`,
+      amount_minor: i + 1,
+    })),
+  ];
+  for (const rows of bad) {
+    const refused = await callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, parts: rows }],
+    }, ["write"], rpc);
+    assertEquals(refused.isError, true);
+  }
+  for (const extra of [{ category_id: CATEGORY }, { project_id: PROJECT }, { remember: true }, { shares: [] }]) {
+    const refused = await callTool("assign_expenses", {
+      idempotency_key: "k",
+      items: [{ transaction_id: TXN, parts: [], ...extra }],
+    }, ["write"], rpc);
+    assertEquals(refused.isError, true);
+  }
+  assertEquals(calls.length, before, "a bad parts row never reaches the database");
+  const tools = toolsFor(["write"]);
+  const batchTool = tools.find((tool) => tool.name === "assign_expenses");
+  const single = tools.find((tool) => tool.name === "split_line");
+  const props = batchTool?.inputSchema.properties as Record<string, { items?: { properties?: Record<string, unknown> } }>;
+  assertEquals(props.items.items?.properties?.parts, (single?.inputSchema.properties as Record<string, unknown>).parts);
 });
 
 Deno.test("set_category_pnl validates, forwards p_* args, and undo accepts category_pnl", async () => {
