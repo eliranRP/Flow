@@ -8,6 +8,7 @@ import { bindJevConnectorScope, jevConnectorQueryKey, jevConnectorStorageKey, ty
 const scope: JevConnectorScope = { userId: "user-1", companyId: "company-1" };
 import {
   JEV_DEFAULT,
+  AUTO_HINT,
   JevSettings,
   parseJevThreshold,
   readJevIntegration,
@@ -108,7 +109,7 @@ describe("Jev settings card", () => {
     expect(parseJevThreshold("1.01")).toBeNull();
   });
 
-  it("says כבוי when off and פעיל · מצב צל when on", () => {
+  it("says כבוי when off and פעיל · הצעות בלבד when on", () => {
     const { unmount } = render(<JevSettings sample={off} />);
     const toggle = screen.getByRole("switch", { name: "תיוג חכם (Jev)" });
     expect(toggle).not.toBeChecked();
@@ -118,15 +119,15 @@ describe("Jev settings card", () => {
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
-    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+    expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
     expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeInTheDocument();
     expect(screen.queryByText("צל")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("סף")).not.toBeInTheDocument();
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "הצעות בלבד" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByRole("radiogroup", { name: "סף ביטחון" })).not.toBeInTheDocument();
     const described = document.getElementById(toggle.getAttribute("aria-describedby") ?? "");
-    expect(described).toHaveTextContent("פעיל · מצב צל");
+    expect(described).toHaveTextContent("פעיל · הצעות בלבד");
     fireEvent.click(toggle);
     expect(toggle).not.toBeChecked();
     expect(screen.getByText("כבוי")).toBeInTheDocument();
@@ -146,19 +147,36 @@ describe("Jev settings card", () => {
     expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
     expect(screen.getByText("שגיאה")).toBeInTheDocument();
     expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
-    expect(screen.queryByText("פעיל · מצב צל")).not.toBeInTheDocument();
+    expect(screen.queryByText("פעיל · הצעות בלבד")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "אפשרויות" })).not.toBeInTheDocument();
   });
 
-  it("keeps a threshold outside 0.50 to 1.00 off the stored value", () => {
-    render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true }} showThreshold />);
+  it("offers the threshold only in auto mode, 90% by default (FLOW-702)", () => {
+    render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true }} />);
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
-    const field = screen.getByLabelText("סף");
-    fireEvent.change(field, { target: { value: "0.20" } });
-    fireEvent.blur(field);
-    expect(screen.getByText("בין 0.50 ל-1.00")).toBeInTheDocument();
-    expect(field).toHaveValue("0.20");
+    expect(screen.getByRole("radio", { name: "הצעות בלבד" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByRole("radiogroup", { name: "סף ביטחון" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "מילוי אוטומטי" }));
+    expect(screen.getByText("פעיל · מילוי אוטומטי")).toBeInTheDocument();
+    expect(screen.getByText(AUTO_HINT)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "90%" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("radio", { name: "95%" }));
+    expect(screen.getByRole("radio", { name: "95%" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("names a stored threshold that is not one of the choices", () => {
+    render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true, mode: "auto", threshold: 0.92 }} optionsOpen />);
+    expect(screen.getByText("הסף כרגע 92%")).toBeInTheDocument();
+    for (const label of ["80%", "85%", "90%", "95%"]) {
+      expect(screen.getByRole("radio", { name: label })).toHaveAttribute("aria-checked", "false");
+    }
+  });
+
+  it("shows a viewer the mode without letting it change", () => {
+    render(<JevSettings sample={{ ...JEV_DEFAULT, enabled: true, mode: "auto" }} optionsOpen readOnly />);
+    expect(screen.getByRole("radio", { name: "מילוי אוטומטי" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "90%" })).toBeDisabled();
   });
 
   it("gives the loading row the hint height and marks it busy", () => {
@@ -189,7 +207,7 @@ describe("Jev settings card", () => {
       ]);
     });
     expect(toggle).toBeChecked();
-    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+    expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument();
   });
 
   it("replaces a cached Jev off flag when the connector is turned on", async () => {
@@ -221,30 +239,31 @@ describe("Jev settings card", () => {
     expect(screen.getByText("כבוי")).toBeInTheDocument();
   });
 
-  it("saves a comma threshold at two decimals and keeps אפשרויות open while busy", async () => {
+  it("stores auto mode and a threshold through set_company_integration and keeps אפשרויות open while busy", async () => {
     let release: () => void = () => undefined;
     db.hold = new Promise((resolve) => { release = resolve; });
     db.row = { enabled: true, mode: "shadow", threshold: 0.9 };
-    renderLive(<JevSettings showThreshold />);
+    renderLive(<JevSettings />);
     const toggle = await readySwitch();
     expect(toggle).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "אפשרויות" }));
-    const field = screen.getByLabelText("סף");
-    fireEvent.change(field, { target: { value: "0,95" } });
-    fireEvent.blur(field);
-    await waitFor(() => expect(screen.getByLabelText("סף")).toBeDisabled());
+    fireEvent.click(screen.getByRole("radio", { name: "מילוי אוטומטי" }));
+    await waitFor(() => expect(screen.getByRole("radio", { name: "מילוי אוטומטי" })).toBeDisabled());
     expect(db.writes).toEqual([
-      { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
+      { p_enabled: true, p_mode: "auto", p_threshold: 0.9, p_provider: "jev" },
     ]);
     expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.queryByText("צל")).not.toBeInTheDocument();
     release();
-    await waitFor(() => expect(screen.getByLabelText("סף")).toBeEnabled());
-    expect(db.writes).toEqual([
-      { p_enabled: true, p_mode: "shadow", p_threshold: 0.95, p_provider: "jev" },
-    ]);
-    expect(screen.getByLabelText("סף")).toHaveValue("0.95");
-    expect(screen.getByRole("button", { name: "אפשרויות" })).toHaveAttribute("aria-expanded", "true");
+    await waitFor(() => expect(screen.getByRole("radio", { name: "95%" })).toBeEnabled());
+    db.hold = null;
+    fireEvent.click(screen.getByRole("radio", { name: "95%" }));
+    await waitFor(() => {
+      expect(db.writes).toEqual([
+        { p_enabled: true, p_mode: "auto", p_threshold: 0.9, p_provider: "jev" },
+        { p_enabled: true, p_mode: "auto", p_threshold: 0.95, p_provider: "jev" },
+      ]);
+    });
+    expect(await screen.findByText("פעיל · מילוי אוטומטי")).toBeInTheDocument();
   });
 
   it("ignores a second toggle while the write is in flight", async () => {
@@ -307,7 +326,7 @@ describe("Jev settings card", () => {
     expect(retry).toHaveFocus();
     release();
     await waitFor(() => expect(screen.getByRole("switch", { name: "תיוג חכם (Jev)" })).toHaveFocus());
-    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+    expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).not.toBeInTheDocument();
   });
 
@@ -345,7 +364,7 @@ describe("Jev settings card", () => {
       expect(screen.getByRole("button", { name: "אפשרויות" })).toBeInTheDocument();
     });
     expect(container.querySelector(".ui-jev-options-reserve")).toBeNull();
-    expect(screen.getByText("פעיל · מצב צל")).toBeInTheDocument();
+    expect(screen.getByText("פעיל · הצעות בלבד")).toBeInTheDocument();
   });
 
   it("shows שגיאה when the row fails to load, not an on state", async () => {
@@ -354,7 +373,7 @@ describe("Jev settings card", () => {
     expect(await screen.findByText("שגיאה")).toBeInTheDocument();
     expect(screen.queryByRole("switch", { name: "תיוג חכם (Jev)" })).not.toBeInTheDocument();
     expect(screen.queryByText("מחובר")).not.toBeInTheDocument();
-    expect(screen.queryByText("פעיל · מצב צל")).not.toBeInTheDocument();
+    expect(screen.queryByText("פעיל · הצעות בלבד")).not.toBeInTheDocument();
     expect(screen.queryByText("כבוי")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ניסיון חוזר: תיוג חכם" })).toBeInTheDocument();
   });

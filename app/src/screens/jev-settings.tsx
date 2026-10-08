@@ -5,13 +5,13 @@ import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { ConnectorRow } from "../ui/connector-row";
 import { ChevronDownIcon, TagIcon } from "../ui/icons";
 import { List } from "../ui/list-row";
-import { TextField } from "../ui/text-field";
+import { SegmentedControl } from "../ui/segmented-control";
 import { TextLink } from "../ui/text-link";
 import { Toggle } from "../ui/toggle";
 import { useWrite } from "../use-write";
 import { jevConnectorOn, jevConnectorQueryKey, writeJevConnectorFlag } from "./jev-review";
 
-export type JevMode = "off" | "shadow";
+export type JevMode = "off" | "shadow" | "auto";
 export type JevStatus = "ready" | "error" | "loading";
 
 export type JevCardState = {
@@ -36,6 +36,20 @@ type StoredJev = {
 
 const TITLE = "תיוג חכם (Jev)";
 const SHADOW_HINT = "ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.";
+export const AUTO_HINT = "Jev ממלא פרויקט וקטגוריה כשהוא בטוח לפחות כמו הסף. כל שורה עדיין ממתינה לאישור, ואפשר לבטל מילוי בכרטיס.";
+
+/** FLOW-702 (decision 0145): the two modes a switched-on Jev runs in. */
+const MODE_OPTIONS: Array<{ value: "shadow" | "auto"; label: string }> = [
+  { value: "shadow", label: "הצעות בלבד" },
+  { value: "auto", label: "מילוי אוטומטי" },
+];
+
+/** The thresholds auto mode offers, 90% by default (plan FLOW-702). */
+export const JEV_THRESHOLDS = [0.8, 0.85, 0.9, 0.95] as const;
+
+function percent(value: number): string {
+  return `${String(Math.round(value * 100))}%`;
+}
 
 /** On only when the stored row is enabled and not mode off. */
 export function jevSwitchOn(state: Pick<JevCardState, "enabled" | "mode" | "status">): boolean {
@@ -44,7 +58,7 @@ export function jevSwitchOn(state: Pick<JevCardState, "enabled" | "mode" | "stat
 
 export function jevStatusWord(state: Pick<JevCardState, "enabled" | "mode" | "status">): string {
   if (state.status === "error") return "שגיאה";
-  if (jevSwitchOn(state)) return "פעיל · מצב צל";
+  if (jevSwitchOn(state)) return state.mode === "auto" ? "פעיל · מילוי אוטומטי" : "פעיל · הצעות בלבד";
   return "כבוי";
 }
 
@@ -70,7 +84,7 @@ function storedFromRow(data: unknown): StoredJev | null {
   if (typeof data !== "object") return null;
   const row = data as Record<string, unknown>;
   if (typeof row.enabled !== "boolean") return null;
-  if (row.mode !== "off" && row.mode !== "shadow") return null;
+  if (row.mode !== "off" && row.mode !== "shadow" && row.mode !== "auto") return null;
   const raw = typeof row.threshold === "number" ? row.threshold : Number(row.threshold);
   if (!Number.isFinite(raw)) return null;
   const threshold = roundJevThreshold(raw);
@@ -118,11 +132,11 @@ export function JevSettingsCard({
   state,
   busy = false,
   optionsOpen = false,
-  showThreshold = false,
   retryBusy = false,
   retryRef,
   switchRef,
   onToggle,
+  onMode,
   onThreshold,
   onRetry,
   readOnly = false,
@@ -130,12 +144,12 @@ export function JevSettingsCard({
   state: JevCardState;
   busy?: boolean;
   optionsOpen?: boolean;
-  /** The percent field stays hidden until auto mode. Tests still exercise the save. */
-  showThreshold?: boolean;
   retryBusy?: boolean;
   retryRef?: Ref<HTMLButtonElement>;
   switchRef?: Ref<HTMLInputElement>;
   onToggle?: (enabled: boolean) => void;
+  /** הצעות בלבד or מילוי אוטומטי (FLOW-702). */
+  onMode?: (mode: "shadow" | "auto") => void;
   onThreshold?: (value: number) => void;
   onRetry?: () => void;
   /** A viewer sees the switch and cannot change it. */
@@ -145,15 +159,14 @@ export function JevSettingsCard({
   const shownOn = jevSwitchOn(state);
   const showOptions = shownOn;
   const [open, setOpen] = useState(optionsOpen && shownOn);
-  const [draft, setDraft] = useState(formatJevThreshold(state.threshold));
-  const [draftError, setDraftError] = useState(false);
+  const modeHintId = useId();
+  const thresholdHintId = useId();
   useEffect(() => {
     if (!showOptions) setOpen(false);
   }, [showOptions]);
-  useEffect(() => {
-    setDraft(formatJevThreshold(state.threshold));
-    setDraftError(false);
-  }, [state.threshold]);
+  const auto = state.mode === "auto";
+  const threshold = roundJevThreshold(state.threshold);
+  const offered = JEV_THRESHOLDS.some((value) => value === threshold);
 
   const row = state.status === "loading" || state.status === "error" ? (
     <ConnectorRow
@@ -197,32 +210,37 @@ export function JevSettingsCard({
             אפשרויות
           </TextLink>
           {open ? (
-            <div id={panelId}>
-              <p className="t-hint ui-jev-options-hint">{SHADOW_HINT}</p>
-              {showThreshold ? (
-                <TextField
-                  label="סף"
-                  inputMode="decimal"
-                  dir="ltr"
-                  numeric
-                  value={draft}
-                  disabled={busy || readOnly}
-                  error={draftError ? "בין 0.50 ל-1.00" : undefined}
-                  onChange={(event) => {
-                    setDraft(event.target.value);
-                    setDraftError(false);
-                  }}
-                  onBlur={() => {
-                    if (busy || readOnly) return;
-                    const parsed = parseJevThreshold(draft);
-                    if (parsed == null) {
-                      setDraftError(true);
-                      return;
-                    }
-                    setDraft(formatJevThreshold(parsed));
-                    if (parsed !== roundJevThreshold(state.threshold)) onThreshold?.(parsed);
-                  }}
-                />
+            <div id={panelId} className="ui-jev-options-panel">
+              <SegmentedControl
+                label="מצב"
+                value={auto ? "auto" : "shadow"}
+                options={MODE_OPTIONS}
+                describedBy={modeHintId}
+                disabled={busy || readOnly}
+                onChange={(mode) => {
+                  if (busy || readOnly || mode === (auto ? "auto" : "shadow")) return;
+                  onMode?.(mode);
+                }}
+              />
+              <p className="t-hint ui-jev-options-hint" id={modeHintId}>{auto ? AUTO_HINT : SHADOW_HINT}</p>
+              {auto ? (
+                <>
+                  <SegmentedControl
+                    label="סף ביטחון"
+                    value={offered ? String(threshold) : ""}
+                    options={JEV_THRESHOLDS.map((value) => ({ value: String(value), label: percent(value) }))}
+                    describedBy={offered ? undefined : thresholdHintId}
+                    disabled={busy || readOnly}
+                    onChange={(value) => {
+                      const next = Number(value);
+                      if (busy || readOnly || next === threshold) return;
+                      onThreshold?.(next);
+                    }}
+                  />
+                  {offered ? null : (
+                    <p className="t-hint ui-jev-options-hint" id={thresholdHintId}>{`הסף כרגע ${percent(threshold)}`}</p>
+                  )}
+                </>
               ) : null}
             </div>
           ) : null}
@@ -244,37 +262,39 @@ export function JevSettings({
   sample,
   noCompany = false,
   blocked,
-  showThreshold = false,
+  optionsOpen = false,
   readOnly = false,
 }: {
   sample?: JevCardState;
   noCompany?: boolean;
   blocked?: () => boolean;
-  showThreshold?: boolean;
+  /** Stories open אפשרויות on first draw. */
+  optionsOpen?: boolean;
   readOnly?: boolean;
 }) {
   if (noCompany) return null;
-  if (sample) return <JevSettingsSample sample={sample} showThreshold={showThreshold} readOnly={readOnly} />;
-  return <JevSettingsLive blocked={blocked} showThreshold={showThreshold} readOnly={readOnly} />;
+  if (sample) return <JevSettingsSample sample={sample} optionsOpen={optionsOpen} readOnly={readOnly} />;
+  return <JevSettingsLive blocked={blocked} readOnly={readOnly} />;
 }
 
-function JevSettingsSample({ sample, showThreshold, readOnly }: { sample: JevCardState; showThreshold: boolean; readOnly: boolean }) {
+function JevSettingsSample({ sample, optionsOpen, readOnly }: { sample: JevCardState; optionsOpen: boolean; readOnly: boolean }) {
   const [state, setState] = useState(sample);
   return (
     <JevSettingsCard
       state={state}
-      showThreshold={showThreshold}
+      optionsOpen={optionsOpen}
       readOnly={readOnly}
       onToggle={readOnly ? undefined : (enabled) => {
         setState((current) => ({ ...current, ...turnedOn(current, enabled), status: current.status }));
       }}
+      onMode={readOnly ? undefined : (mode) => { setState((current) => ({ ...current, mode })); }}
       onThreshold={readOnly ? undefined : (threshold) => { setState((current) => ({ ...current, threshold })); }}
       onRetry={() => undefined}
     />
   );
 }
 
-function JevSettingsLive({ blocked, showThreshold, readOnly }: { blocked?: () => boolean; showThreshold: boolean; readOnly: boolean }) {
+function JevSettingsLive({ blocked, readOnly }: { blocked?: () => boolean; readOnly: boolean }) {
   const client = useQueryClient();
   const query = useJevIntegrationQuery(true);
   const save = useWrite<StoredJev>({
@@ -340,7 +360,6 @@ function JevSettingsLive({ blocked, showThreshold, readOnly }: { blocked?: () =>
     <JevSettingsCard
       state={view}
       busy={save.isPending}
-      showThreshold={showThreshold}
       readOnly={readOnly}
       retryBusy={retryingView}
       retryRef={retryRef}
@@ -348,6 +367,10 @@ function JevSettingsLive({ blocked, showThreshold, readOnly }: { blocked?: () =>
       onToggle={readOnly ? undefined : (enabled) => {
         if (!stored || save.isPending) return;
         commit(turnedOn(stored, enabled));
+      }}
+      onMode={readOnly ? undefined : (mode) => {
+        if (!stored || save.isPending) return;
+        commit({ ...stored, mode, threshold: roundJevThreshold(stored.threshold) });
       }}
       onThreshold={readOnly ? undefined : (threshold) => {
         if (!stored || save.isPending) return;
