@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-404 server and MCP part: investment figures, equity, rehab switch per category | Next `ready` non-UI task in the queue (FLOW-510 waits for its design call) |
+| Dev lane 1 | FLOW-705 anomaly test cases; FLOW-405 plan card for the owner | FLOW-405 server and MCP once the owner picks (FLOW-510 waits for its design call) |
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Profit by period (option A, decision 0141) with FLOW-411 and the FLOW-330 screen, one PR (PR #199) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -1003,10 +1003,10 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-705"></a>
 ### FLOW-705 · Jev anomalies follow-ups (#160 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done · **Depends on:** —
 - [x] A voided credit note still suppresses a duplicate flag. (#168)
 - [x] An income receipt that pays several invoices can be flagged as a spike. (#168)
-- [ ] pgTAP cases for a pending line, two loans and an uneven median.
+- [x] pgTAP cases for a pending line, two loans and an uneven median. (`jev_anomaly_cases.test.sql`.)
 - [x] `mcp_review_anomalies` scans many rows when few lines are open. (#168)
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
