@@ -1044,7 +1044,7 @@ function readTools() {
       from: { type: "string" },
       to: { type: "string" },
     }),
-    toolSpec("list_categories", "The company's categories. rehab is the category's rehab switch (true, false, or null for the default) and in_rehab whether it counts as rehab (set_category_rehab).", {}),
+    toolSpec("list_categories", "The company's categories. rehab is the category's rehab switch (true, false, or null for the default) and in_rehab whether it counts as rehab (set_category_rehab). lines is how many lines on the books are in it (whole or by a split part; delete_category sends these back to review), split_lines how many of them are split by category, and loan_used whether a loan uses it (delete_category refuses).", {}),
     toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense). supplier matches part of the supplier's name, or of the customer's (customer_name) on an income line.", {
       direction: { type: "string", enum: ["expense", "income"] },
       reason: { type: "string" },

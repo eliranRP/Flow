@@ -100,7 +100,7 @@ On the company's overhead project (`is_overhead` true, see `set_overhead_project
 
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`), `lines` (lines on the books in it, whole or by a split part, not removed or void: what `delete_category` sends back to review), `split_lines` (how many of those are split by category; delete removes their whole split) and `loan_used` (a loan or a loan payment part uses it, so `delete_category` refuses). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
 
 ### list_review
 

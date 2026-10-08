@@ -146,6 +146,12 @@ export const categoryRowSchema = z.object({
   excluded_from_pnl: z.boolean().optional(),
   /** Set on the three loan categories. Omitted on older payloads. */
   loan_part: z.string().nullable().optional(),
+  /** Lines on the books in it, whole or by a split part: what delete_category sends back to review. */
+  lines: z.number().int().optional(),
+  /** How many of those lines are split by category (delete removes their whole split). */
+  split_lines: z.number().int().optional(),
+  /** A loan or a loan payment part uses it, so delete_category refuses. */
+  loan_used: z.boolean().optional(),
 });
 
 export const sumitStatusSchema = z.object({
