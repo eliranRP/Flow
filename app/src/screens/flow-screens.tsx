@@ -86,7 +86,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BellIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -575,6 +575,7 @@ function ProjectCategories({
   if (!hasCategories && !waiting && pendingOther.length === 0) {
     return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
   }
+  // The section is titled הוצאות, so the figures carry no minus (FLOW-328).
   return (
     <>
       <List>
@@ -585,7 +586,6 @@ function ProjectCategories({
           title={category.name ?? "בלי קטגוריה"}
           agorot={absAgorot(category.amount_minor)}
           currency={currency}
-          amountDirection="expense"
           loss={false}
           chevron={currency === "ILS" && category.id != null}
           href={currency === "ILS" && category.id != null ? (categoryTo ?? `/projects/${project.id}/categories/${category.id}${search}`) : undefined}
@@ -601,7 +601,6 @@ function ProjectCategories({
           title={pendingApprovalTitle(pending)}
           agorot={absAgorot(project.pending_agorot ?? 0n)}
           currency="ILS"
-          amountDirection="expense"
           loss={false}
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
@@ -614,7 +613,6 @@ function ProjectCategories({
           title={pendingApprovalTitle(bucket.count)}
           agorot={absAgorot(bucket.expense_minor)}
           currency={bucket.currency}
-          amountDirection="expense"
           loss={false}
           chevron
           href={`/review${withParam(search, "project", project.id)}`}
@@ -725,12 +723,12 @@ export function ProjectDetailScreen({
             <BandFigures
               key={row.currency}
               income={formatAmountText(row.income_minor, row.currency)}
-              expense={formatAmountText(projectExpenseMinor(row), row.currency, { direction: "expense" })}
+              expense={formatAmountText(projectExpenseMinor(row), row.currency)}
             />
           ))}
         </BandHero>
       </TopBand>
-      <div className="ui-page-pad">
+      <div className="ui-page-pad ui-project-overhead">
         <Toggle
           label="אחרי חלק בהוצאות כלליות"
           hint={overheadHint(overheadOn, {
@@ -958,7 +956,6 @@ export function FiledTodayScreen({
   return (
     <ScreenState
       title="שויכו היום"
-      subtitle="אפשר לפתוח כל תנועה ולשנות את השיוך"
       backTo={backTo ?? `/review${search}`}
       phase={phase.kind === "ready" && rows.length === 0 ? { kind: "empty" } : phase}
       onRetry={() => { void filed.refetch(); }}
@@ -2839,7 +2836,7 @@ export function TransactionScreen({
         {reviewLabel || paymentLabel || pnlPill ? (
           <div className="ui-status-row">
             {reviewLabel ? <StatusPill>{reviewLabel}</StatusPill> : null}
-            {paymentLabel ? <StatusPill>{paymentLabel}</StatusPill> : null}
+            {paymentLabel ? <StatusPill icon={paymentLabel === "שולם" ? <CheckIcon size={14} /> : undefined}>{paymentLabel}</StatusPill> : null}
             {pnlPill}
           </div>
         ) : null}
@@ -5306,12 +5303,9 @@ export function NotificationsScreen() {
   const search = usePreviewSearch();
   return (
     <div>
-      <ScreenHeader
-        title="התראות"
-        subtitle="אין עדיין התראות."
-        backTo={`/settings${search}`}
-      />
-      <p className="t-hint ui-page-pad">בשלב הזה ההודעות לא נשלחות. אין שירות בתשלום ואין Push.</p>
+      <ScreenHeader title="התראות" backTo={`/settings${search}`} />
+      {/* FLOW-328: the shared empty state, Hebrew only. */}
+      <EmptyState icon={<BellIcon />} title="אין עדיין התראות" body="בשלב הזה ההודעות לא נשלחות." />
     </div>
   );
 }

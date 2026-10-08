@@ -173,7 +173,9 @@ describe("project overhead hero", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("₪200,000")).toBeInTheDocument();
-    expect(screen.getByText("−₪100,000")).toBeInTheDocument();
+    // The band labels the figure הוצאות, so it carries no minus (FLOW-328).
+    expect(screen.getByText("₪100,000", { selector: "bdi" })).toBeInTheDocument();
+    expect(screen.queryByText("−₪100,000")).not.toBeInTheDocument();
     expect(screen.getByText("₪60,000")).toBeInTheDocument();
     expect(screen.queryByText("₪100,000", { selector: ".t-display" })).not.toBeInTheDocument();
     expect(screen.getByText("דלוק · החלק בכלליות הוא ₪40,000")).toBeInTheDocument();

@@ -24,8 +24,8 @@ describe("App", () => {
     expect(screen.queryByText("שלום")).not.toBeInTheDocument();
     expect(screen.queryByText("Flow")).not.toBeInTheDocument();
     expect(screen.getByText("עוד אין נתונים")).toBeInTheDocument();
-    expect(screen.getByText("הרווח יופיע כאן אחרי ש־SUMIT מחובר.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "חיבור SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
+    expect(screen.getByText("הרווח יופיע כאן אחרי חיבור בנק או SUMIT.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveAttribute("href", "/settings/connections?preview=1");
     expect(screen.getByText("מצב תצוגה")).toBeInTheDocument();
     expect(screen.queryByText("נתוני דוגמה · Example data")).not.toBeInTheDocument();
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();

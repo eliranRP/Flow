@@ -72,3 +72,23 @@ describe("delete on a card opened from a list", () => {
     });
   });
 });
+
+describe("payment status on the card (FLOW-328)", () => {
+  it("draws שולם with the ✓ icon, like mockup 10", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider>
+          <BooksProvider>
+            <MemoryRouter initialEntries={["/transactions/t2"]}>
+              <Routes>
+                <Route path="/transactions/:transactionId" element={<TransactionScreen sample={manual} />} />
+              </Routes>
+            </MemoryRouter>
+          </BooksProvider>
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    const pill = screen.getByText("שולם").closest(".ui-status");
+    expect(pill?.querySelector(".ui-status-icon svg")).not.toBeNull();
+  });
+});

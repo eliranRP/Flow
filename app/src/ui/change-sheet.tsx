@@ -630,8 +630,9 @@ export function ChangeAssignment(props: Props) {
                 <span className="ui-remember-line">
                   <span className="ui-remember-supplier">{props.supplier}</span>
                   <span className="ui-remember-dest">
-                    <bdi className="ui-remember-join" dir="ltr">{"←\u00A0"}</bdi>
-                    {"\u2060"}
+                    {/* Only the arrow is LTR. A space inside the bdi lands on the wrong side in RTL (FLOW-328). */}
+                    <bdi className="ui-remember-join" dir="ltr">←</bdi>
+                    {"\u00A0\u2060"}
                     {projectName === "" ? "פרויקט" : projectName}
                     {" · "}
                     {categoryName === "" ? "קטגוריה" : categoryName}

@@ -327,7 +327,7 @@ Grids: [screens/overview-light.png](../../design/screens/overview-light.png), [s
 - Entry: tab בית. Sunday notification. Returning sign-in. [0018](../decisions/0018-two-notifications.md), guide §7.24.
 - Steps: period pill opens 16. The hero is the label, the number, and one line that says income minus expenses. נכנס and יצא sit below the band. The pending card has a row to Review and a row to Unpaid with its total, each only when it has items (FLOW-321). A project row opens 02. + opens 04. Overhead switch starts off ([0022](../decisions/0022-after-overhead-starts-off.md)). On, the hero stays company net profit ([0032](../decisions/0032-home-hero-stays-company-net-profit.md)).
 - Back: none. This is a tab root.
-- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור SUMIT", and the line says the profit appears once SUMIT is connected. No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
+- Success: the summary. Empty first run follows [0044](../decisions/0044-phase-0-shell-calls.md): the button is "חיבור בנק או SUMIT" and opens the connections page, and the line says the profit appears once a bank or SUMIT is connected (FLOW-328). No greeting and no wordmark ([0069](../decisions/0069-back-and-one-tap-review.md)).
 - Error: skeleton while loading (`ld-01`). The loading band matches the calm hero. Offline is `ld-08`. A server load failure and the period pill are [0045](../decisions/0045-phase-0-design-gaps.md). Home no longer greets a missing name ([0069](../decisions/0069-back-and-one-tap-review.md) amends that sentence).
 
 ### 02 Project
