@@ -412,6 +412,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_lines_pnl",
     "set_invoice_paid",
     "detach_loan_payment",
+    "delete_loan",
+    "reorder_loans",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -464,6 +466,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_lines_pnl",
     "set_invoice_paid",
     "detach_loan_payment",
+    "delete_loan",
+    "reorder_loans",
     "undo",
     "undo_batch",
   ]);
@@ -3850,6 +3854,40 @@ Deno.test("detach_loan_payment forwards the line and undo takes kind loan_detach
   const undo = await callTool("undo", { idempotency_key: "u-1", kind: "loan_detach", id: TXN }, ["write"], rpc);
   assertEquals(undo.isError, false);
   assertEquals(calls[1], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "loan_detach", p_id: TXN } });
+});
+
+Deno.test("delete_loan and reorder_loans forward their input, undo takes loan_delete and loan_order (FLOW-110)", async () => {
+  const other = "11111111-1111-4000-8000-000000000110";
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { undo_kind: "loan_delete", id: TXN } } }));
+  const deleted = await callTool("delete_loan", { idempotency_key: "dl-1", loan_id: TXN.toUpperCase() }, ["write"], rpc);
+  assertEquals(deleted.isError, false);
+  assertEquals(calls[0], { name: "mcp_delete_loan", body: { p_idempotency_key: "dl-1", p_loan_id: TXN } });
+  const ordered = await callTool("reorder_loans", { idempotency_key: "ro-1", loan_ids: [other, TXN] }, ["write"], rpc);
+  assertEquals(ordered.isError, false);
+  assertEquals(calls[1], { name: "mcp_reorder_loans", body: { p_idempotency_key: "ro-1", p_loan_ids: [other, TXN] } });
+  for (const kind of ["loan_delete", "loan_order"]) {
+    const undo = await callTool("undo", { idempotency_key: "u-" + kind, kind, id: TXN }, ["write"], rpc);
+    assertEquals(undo.isError, false);
+    assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "u-" + kind, p_kind: kind, p_id: TXN } });
+  }
+
+  const denied = await callTool("delete_loan", { idempotency_key: "k", loan_id: TXN }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const before = calls.length;
+  for (const [tool, input] of [
+    ["delete_loan", { idempotency_key: "k" }],
+    ["delete_loan", { idempotency_key: "k", loan_id: "not-a-uuid" }],
+    ["delete_loan", { idempotency_key: "k", loan_id: TXN, transaction_id: TXN }],
+    ["reorder_loans", { idempotency_key: "k", loan_ids: [] }],
+    ["reorder_loans", { idempotency_key: "k", loan_ids: ["not-a-uuid"] }],
+    ["reorder_loans", { idempotency_key: "k", loan_ids: TXN }],
+  ] as const) {
+    const result = await callTool(tool, input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, before);
 });
 
 Deno.test("detach_loan_payment validates input, refuses read tokens and passes the fixed refusal", async () => {
