@@ -24,7 +24,7 @@ function Pushed({ pull, armed }: { pull: number; armed: boolean }) {
           <ListRow variant="button" title="כלים וציוד" onClick={() => undefined} />
         </List>
       </div>
-      <EdgeBackMark pull={pull} armed={armed} />
+      <EdgeBackMark pull={pull} y={520} armed={armed} />
     </StoryRoute>
   );
 }

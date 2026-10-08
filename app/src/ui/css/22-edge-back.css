@@ -1,8 +1,13 @@
-/* FLOW-332: the mark a swipe from the start edge shows while it pulls back. */
+/* FLOW-332: the mark a swipe from the start edge shows while it pulls back. It sits at the
+   height of the touch, clear of the safe areas, and starts with only 4px showing. */
 .ui-edge-back {
   position: fixed;
-  inset-block-start: 50%;
-  inset-inline-start: calc(var(--edge-back-shift, 0px) - 8px);
+  inset-block-start: clamp(
+    calc(env(safe-area-inset-top, 0px) + 40px),
+    var(--edge-back-y, 50dvh),
+    calc(100dvh - env(safe-area-inset-bottom, 0px) - 40px)
+  );
+  inset-inline-start: -36px;
   z-index: 40;
   display: grid;
   place-items: center;
@@ -12,13 +17,16 @@
   border-radius: 999px;
   background: var(--color-raised);
   color: var(--color-text);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);
+  /* An inset ring, not a drop shadow (DESIGN-RULES 2.6): the edge on a same-colour page. */
+  box-shadow: inset 0 0 0 1px var(--color-control-border);
+  transform: translateX(var(--edge-back-x, 0px));
   pointer-events: none;
 }
 
 .ui-edge-back-armed {
   background: var(--color-accent);
   color: var(--color-on-accent);
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {

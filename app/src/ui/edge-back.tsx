@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { BackIcon } from "./icons";
+import { isStandalone } from "./install-prompt";
 
 /**
  * FLOW-332: a swipe from the start (right) edge goes back on a pushed screen, like the iOS
@@ -16,26 +17,36 @@ const COMMIT_SHARE = 0.3;
 const FLICK_PX_PER_MS = 0.5;
 const FLICK_MIN_PX = 40;
 
-const handlers: Array<{ go: () => void }> = [];
+type Entry = { go: () => void; enabled: boolean };
+const handlers: Entry[] = [];
 
-/** The newest mounted Back registers last and wins. */
+/**
+ * Each Back keeps its place from when it mounted, so the front-most screen's Back wins even
+ * after an older one is disabled and enabled again. A disabled Back is skipped, not removed.
+ */
 export function useEdgeBack(go: (() => void) | null): void {
   const goRef = useRef(go);
   goRef.current = go;
-  const enabled = go != null;
+  const entry = useRef<Entry | null>(null);
   useEffect(() => {
-    if (!enabled) return;
-    const entry = { go: () => { goRef.current?.(); } };
-    handlers.push(entry);
+    const mine: Entry = { go: () => { goRef.current?.(); }, enabled: goRef.current != null };
+    entry.current = mine;
+    handlers.push(mine);
     return () => {
-      const index = handlers.indexOf(entry);
+      const index = handlers.indexOf(mine);
       if (index !== -1) handlers.splice(index, 1);
     };
+  }, []);
+  const enabled = go != null;
+  useEffect(() => {
+    if (entry.current) entry.current.enabled = enabled;
   }, [enabled]);
 }
 
+/** The front-most Back, or null when it is disabled or there is none (a tab root). */
 export function edgeBackHandler(): (() => void) | null {
-  return handlers[handlers.length - 1]?.go ?? null;
+  const top = handlers[handlers.length - 1];
+  return top?.enabled === true ? top.go : null;
 }
 
 /**
@@ -43,9 +54,7 @@ export function edgeBackHandler(): (() => void) | null {
  * starts at the right edge). Tests and stories opt in with `data-edge-back="on"` on <html>.
  */
 export function edgeBackAvailable(): boolean {
-  if (document.documentElement.dataset.edgeBack === "on") return true;
-  const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return standalone || window.matchMedia("(display-mode: standalone)").matches;
+  return document.documentElement.dataset.edgeBack === "on" || isStandalone();
 }
 
 function rtl(): boolean {
@@ -80,11 +89,11 @@ export function blocksEdgeBack(target: EventTarget | null): boolean {
   return false;
 }
 
-type Track = { id: number; x: number; y: number; t: number; dx: number; decided: boolean };
+type Track = { id: number; x: number; y: number; t: number; dx: number; decided: boolean; armed: boolean };
 
 /** Mounted once at the app root. Shows a small back mark that follows the finger. */
 export function EdgeSwipeBack() {
-  const [pull, setPull] = useState<number | null>(null);
+  const [pull, setPull] = useState<{ dx: number; y: number } | null>(null);
   const track = useRef<Track | null>(null);
 
   useEffect(() => {
@@ -93,12 +102,13 @@ export function EdgeSwipeBack() {
       setPull(null);
     }
     function onStart(event: TouchEvent) {
-      track.current = null;
+      // A second finger ends a swipe in progress, and takes the mark with it.
+      if (track.current != null) reset();
       if (event.touches.length !== 1 || !edgeBackAvailable()) return;
       const touch = event.touches[0];
       if (touch == null || fromStart(touch.clientX) > EDGE_PX) return;
       if (edgeBackHandler() == null || blocksEdgeBack(event.target)) return;
-      track.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY, t: event.timeStamp, dx: 0, decided: false };
+      track.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY, t: event.timeStamp, dx: 0, decided: false, armed: false };
     }
     function onMove(event: TouchEvent) {
       const current = track.current;
@@ -116,9 +126,15 @@ export function EdgeSwipeBack() {
         }
         current.decided = true;
       }
+      // iOS hands a touch to native scroll once a move is not prevented; this one is, from here on.
       if (event.cancelable) event.preventDefault();
       current.dx = Math.max(0, dx);
-      setPull(current.dx);
+      const armed = current.dx >= window.innerWidth * COMMIT_SHARE;
+      // A short tick where letting go starts to go back, where the device supports it.
+      if (armed && !current.armed && "vibrate" in navigator) navigator.vibrate(10);
+      current.armed = armed;
+      // The mark keeps the height where the touch started.
+      setPull({ dx: current.dx, y: current.y });
     }
     function onEnd(event: TouchEvent) {
       const current = track.current;
@@ -143,18 +159,21 @@ export function EdgeSwipeBack() {
   }, []);
 
   if (pull == null) return null;
-  return <EdgeBackMark pull={pull} armed={pull >= window.innerWidth * COMMIT_SHARE} />;
+  return <EdgeBackMark pull={pull.dx} y={pull.y} armed={pull.dx >= window.innerWidth * COMMIT_SHARE} />;
 }
 
-/** The round back mark at the start edge; it slides in at half the pull, up to 48px. */
-export function EdgeBackMark({ pull, armed }: { pull: number; armed: boolean }) {
-  const shift = Math.min(pull, 96) / 2;
+/**
+ * The round back mark at the start edge, at the height of the touch. It starts almost hidden
+ * and slides in at half the pull, up to 52px.
+ */
+export function EdgeBackMark({ pull, y, armed }: { pull: number; y: number; armed: boolean }) {
+  const shift = Math.min(pull, 104) / 2;
+  const style = {
+    "--edge-back-x": `${String(rtl() ? -shift : shift)}px`,
+    "--edge-back-y": `${String(y)}px`,
+  } as CSSProperties;
   return (
-    <div
-      className={armed ? "ui-edge-back ui-edge-back-armed" : "ui-edge-back"}
-      style={{ "--edge-back-shift": `${String(shift)}px` } as CSSProperties}
-      aria-hidden="true"
-    >
+    <div className={armed ? "ui-edge-back ui-edge-back-armed" : "ui-edge-back"} style={style} aria-hidden="true">
       <BackIcon size={20} />
     </div>
   );

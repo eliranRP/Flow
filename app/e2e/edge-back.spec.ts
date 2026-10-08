@@ -62,3 +62,13 @@ test("a tab root has no Back, so the swipe does nothing", async ({ page }) => {
   await edgeSwipe(page, 180);
   await expect(page).toHaveURL(/\/settings\?preview=1$/);
 });
+
+test("an open sheet keeps the touch", async ({ page }) => {
+  await page.goto("/settings/connections?preview=1");
+  await page.getByRole("button", { name: "SUMIT" }).click();
+  const sheet = page.getByRole("dialog", { name: "חיבור SUMIT" });
+  await expect(sheet).toBeVisible();
+  await edgeSwipe(page, 180);
+  await expect(sheet).toBeVisible();
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
+});

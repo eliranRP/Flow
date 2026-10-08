@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { BackButton } from "./back";
-import { EdgeSwipeBack } from "./edge-back";
+import { edgeBackHandler, EdgeSwipeBack, useEdgeBack } from "./edge-back";
 
 const WIDTH = 390;
 
@@ -149,6 +149,18 @@ describe("swipe back from the start edge (FLOW-332)", () => {
     expect(onHome()).toBe(false);
   });
 
+  it("a second finger ends the pull and takes the mark away", () => {
+    renderApp();
+    const target = screen.getByRole("heading");
+    fire("touchstart", target, touches(WIDTH - 8, 400), 0);
+    fire("touchmove", target, touches(WIDTH - 60, 400), 100);
+    expect(document.querySelector(".ui-edge-back")).not.toBeNull();
+    fire("touchstart", target, [...touches(WIDTH - 60, 400), { identifier: 2, clientX: 100, clientY: 300 }], 150);
+    expect(document.querySelector(".ui-edge-back")).toBeNull();
+    fire("touchend", target, [], 400);
+    expect(onHome()).toBe(false);
+  });
+
   it("shows the back mark while pulling and arms it past the threshold", () => {
     renderApp();
     const target = screen.getByRole("heading");
@@ -161,5 +173,27 @@ describe("swipe back from the start edge (FLOW-332)", () => {
     expect(document.querySelector(".ui-edge-back-armed")).not.toBeNull();
     fire("touchend", target, [], 2000);
     expect(document.querySelector(".ui-edge-back")).toBeNull();
+  });
+});
+
+describe("which Back the swipe uses", () => {
+  function Probe({ name, on, log }: { name: string; on: boolean; log: string[] }) {
+    useEdgeBack(on ? () => { log.push(name); } : null);
+    return null;
+  }
+
+  it("keeps the front-most Back after an older one is disabled and enabled again", () => {
+    const log: string[] = [];
+    const view = render(<><Probe name="older" on log={log} /><Probe name="front" on log={log} /></>);
+    view.rerender(<><Probe name="older" on={false} log={log} /><Probe name="front" on log={log} /></>);
+    view.rerender(<><Probe name="older" on log={log} /><Probe name="front" on log={log} /></>);
+    edgeBackHandler()?.();
+    expect(log).toEqual(["front"]);
+  });
+
+  it("does nothing when the front-most Back is disabled", () => {
+    const log: string[] = [];
+    render(<><Probe name="older" on log={log} /><Probe name="front" on={false} log={log} /></>);
+    expect(edgeBackHandler()).toBeNull();
   });
 });
