@@ -9,7 +9,7 @@ import {
   type LoanSchedule,
 } from "@flow/shared";
 import { israelToday } from "../ui/date-math";
-import { getSupabase } from "../lib/supabase";
+import { readCompanyCurrency } from "../company-currency";
 
 export type LoanCurrency = "ILS" | "USD";
 
@@ -20,17 +20,9 @@ export const LOAN_CURRENCY_MARK: Record<LoanCurrency, string> = {
 
 const SAFE_MINOR = BigInt(Number.MAX_SAFE_INTEGER);
 
-/**
- * Dollars only when every open line is USD.
- * Shekels for a mix, another currency, or a company with no lines yet.
- * `companies.display_currency` is not in the schema, so this is the stand-in.
- */
-export function companyLoanCurrency(currencies: readonly string[]): LoanCurrency {
-  if (currencies.length === 0) return "ILS";
-  for (const currency of currencies) {
-    if (currency !== "USD") return "ILS";
-  }
-  return "USD";
+/** A loan is in shekels or dollars: dollars for a USD company, shekels for any other (0147). */
+export function companyLoanCurrency(baseCurrency: string): LoanCurrency {
+  return baseCurrency === "USD" ? "USD" : "ILS";
 }
 
 /** First day of next month in Asia/Jerusalem. */
@@ -316,22 +308,7 @@ export function loanErrorText(code: string): string {
   return "לא ניתן לחשב את לוח הסילוקין.";
 }
 
-/**
- * Open lines only. One non-USD line keeps shekels.
- * A failure stays shekels: the books are shekels until display currency exists.
- * TODO(display_currency): read companies.display_currency instead of inferring it from open lines.
- */
+/** The loan form's default: the stored company currency. A failure stays shekels. */
 export async function readCompanyLoanCurrency(): Promise<LoanCurrency> {
-  const supabase = getSupabase();
-  if (!supabase) return "ILS";
-  // The newest 1000 open lines. mcp_company_loan_currency reads the same set.
-  const lines = await supabase
-    .from("transactions")
-    .select("currency")
-    .is("removed_at", null)
-    .order("doc_date", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(1000);
-  if (lines.error) return "ILS";
-  return companyLoanCurrency(lines.data.map((row) => row.currency));
+  return companyLoanCurrency(await readCompanyCurrency());
 }

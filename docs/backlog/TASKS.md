@@ -19,6 +19,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
 | UI lane 3 | FLOW-405 screen: the Settings → Categories ⋯ sheet (move all lines, delete with undo, the FLOW-404 "נספרת בשיפוץ" switch), PR #217 | Settings and other areas outside the review and transaction screens |
+| UI lane 4 | FLOW-504 screen part: currency choice in Settings, base currency on Home, overhead share and loan default | FLOW-702 app part: Jev mode and threshold chips in Settings; the card part with UI lane 2 |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |

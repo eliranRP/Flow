@@ -38,4 +38,11 @@ describe("profit months currencies (USD company)", () => {
     expect(summary).toContain("1 ברווח");
     expect(summary).toContain("1 בהפסד");
   });
+
+  it("takes the overhead share off the company currency's row (0147)", () => {
+    const month = { ...usdMonth("2026-09", 500_00n, 200_00n), overhead_weighted: true, overhead_share_agorot: 0n, overhead_share_minor: 400_00n };
+    const shared = { ...data([month]), after_overhead: true, base_currency: "USD" } as Data;
+    expect(profitMonthsSummary(shared, "USD")).toContain("1 בהפסד");
+    expect(profitMonthsSummary({ ...shared, after_overhead: false }, "USD")).toContain("1 ברווח");
+  });
 });

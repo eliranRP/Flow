@@ -107,6 +107,41 @@ export const SettingsRenameSheet: Story = {
   },
 };
 
+/** FLOW-504: the company currency row under the business name, a dollar company. */
+export const SettingsCurrencyRow: Story = {
+  name: "Company currency row, dollars",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...renameBusiness, loanCurrency: "USD" }} />
+    </StoryRoute>
+  ),
+};
+export const SettingsCurrencyRow320: Story = { ...SettingsCurrencyRow, name: "Company currency row, dollars, 320", ...at320 };
+export const SettingsCurrencyRowDark: Story = { ...SettingsCurrencyRow, name: "Company currency row, dollars, dark", ...dark };
+
+export const SettingsCurrencyRowViewer: Story = {
+  name: "Company currency row, viewer",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <SettingsScreen sample={{ ...renameBusiness, loanCurrency: "USD" }} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const SettingsCurrencySheet: Story = {
+  name: "Company currency sheet",
+  render: SettingsCurrencyRow.render,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "מטבע העסק: $ דולר" }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "מטבע העסק" });
+  },
+};
+export const SettingsCurrencySheetDark: Story = { ...SettingsCurrencySheet, name: "Company currency sheet, dark", ...dark };
+
 export const SettingsAssistantScope: Story = {
   name: "Assistant scope",
   render: () => (

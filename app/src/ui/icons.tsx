@@ -493,3 +493,13 @@ export function NoteIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** FLOW-504. The company currency row in Settings. */
+export function CoinIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M14.5 9.2A2.6 2.6 0 0 0 12 8c-1.5 0-2.5.8-2.5 1.9 0 2.6 5 1.4 5 4.1 0 1.1-1 1.9-2.5 1.9a2.7 2.7 0 0 1-2.5-1.2M12 6.5V8m0 8v1.5" />
+    </Svg>
+  );
+}
