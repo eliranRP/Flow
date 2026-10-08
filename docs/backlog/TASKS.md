@@ -51,7 +51,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
-| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | in-progress (#PRNUM; UI items go to the design PR) |
+| 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | in-progress (#121; UI items go to the design PR) |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
@@ -218,16 +218,16 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-120"></a>
 ### FLOW-120 · Loan project follow-ups (#89 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#PRNUM; UI items go to the design PR) · **Depends on:** FLOW-105
-- [x] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag. (#PRNUM: skipped, reason `line category is a guess`; the owner was asked and can still pick "keep the flag".)
-- [x] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead. (#PRNUM: reason `project not set`.)
-- [x] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104. (#PRNUM: said so in 0105.)
-- [x] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo. (#PRNUM: the attach keeps the role it gave the line and undo checks that role, so such a line is restored; tested both ways.)
+- **Type:** BACKLOG NIT · **Status:** in-progress (#121; UI items go to the design PR) · **Depends on:** FLOW-105
+- [x] Attaching a payment to an unassigned line with a suggested category confirms that category and closes its review item. Decide whether inheritance should skip suggested categories or keep the suggestion flag. (#121: skipped, reason `line category is a guess`; the owner was asked and can still pick "keep the flag".)
+- [x] An error inside `reassign_transaction` refuses the whole attach; fall back to `project_inherited: false` instead. (#121: reason `project not set`.)
+- [x] The app's own loan split path does not inherit the loan's project; only MCP `attach_loan_payment` does. Cover it with FLOW-119 or say so in 0104. (#121: said so in 0105.)
+- [x] A line under an income (reversal) category is not restored by the attach undo (its role is not `project`). Test the role guard in that undo. (#121: the attach keeps the role it gave the line and undo checks that role, so such a line is restored; tested both ways.)
 - [ ] (#104 design review) Show project codes in the loan project picker once the dashboard projects carry `code`, with the "חיפוש פרויקט או קוד" placeholder.
 - [ ] (#104 design review) Keep the loan sheet's height when it swaps between the form and the project picker; wrap the loan-project stories in a sheet-like decorator.
 - [ ] (#104 design review) CONTROLS.md: note the static loan rows on the project screen.
-- [x] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column. (#PRNUM; undo still reads older writes from `prior`.)
-- [x] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company. (#PRNUM, `loan_project_followups.test.sql`.)
+- [x] The attach keeps `reassign_id` inside `mcp_writes.prior` although the table has a `reassign_id` column. (#121; undo still reads older writes from `prior`.)
+- [x] Add a pgTAP test for a viewer updating their own company's loan through the table; the current test is cross-company. (#121, `loan_project_followups.test.sql`.)
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
