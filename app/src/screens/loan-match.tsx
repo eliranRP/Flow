@@ -57,6 +57,8 @@ type LoanChoice = {
   balanceMinor: bigint;
   status?: LoanStatus;
   closedOn?: string | null;
+  /** The loan's own category per part (decision 0128). A missing one uses the keyed default. */
+  categoryIds?: Partial<Record<LoanSplitPart, string | null>>;
 };
 
 export type LoanBalanceRow = {
@@ -579,7 +581,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .eq("transaction_id", transactionId),
     supabase
       .from("loans")
-      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on")
+      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id")
       .eq("company_id", companyId),
     supabase
       .from("categories")
@@ -631,6 +633,11 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       balanceMinor: balanceByLoan.get(loan.id) ?? 0n,
       status: loan.status,
       closedOn: loan.closed_on,
+      categoryIds: {
+        interest: loan.interest_category_id,
+        escrow: loan.escrow_category_id,
+        principal: loan.principal_category_id,
+      },
     })),
     categoryIds,
   };
@@ -673,7 +680,7 @@ async function writeSplit(transactionId: string, docDate: string, loaded: Loaded
   const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
   if (principalPart > loan.balanceMinor) throw new Error("loan_split_over_balance");
   const rows = parts.map((part) => {
-    const categoryId = loaded.categoryIds[part.part];
+    const categoryId = loan.categoryIds?.[part.part] ?? loaded.categoryIds[part.part];
     if (!categoryId) throw new Error("supabase");
     return {
       company_id: loaded.companyId,

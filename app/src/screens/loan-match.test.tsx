@@ -497,6 +497,22 @@ describe("LoanTransactionSplit", () => {
     });
   });
 
+  it("files a part under the loan's own category when it names one", async () => {
+    const own = { ...db.loans[0], interest_category_id: "cat-own", escrow_category_id: null, principal_category_id: null };
+    db.loans = [own as (typeof db.loans)[number]];
+    renderSplit();
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(db.inserts).toHaveLength(1); });
+    const rows = db.inserts[0] as Array<{ part: string; category_id: string }>;
+    expect(Object.fromEntries(rows.map((row) => [row.part, row.category_id]))).toEqual({
+      interest: "cat-own",
+      escrow: "cat-e",
+      principal: "cat-p",
+    });
+  });
+
   it("does not offer שיוך on a category that is not the loan principal", async () => {
     const first = renderSplit({ loanPart: null });
     await new Promise((r) => { setTimeout(r, 50); });
