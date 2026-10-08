@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-106 part 4 batched with FLOW-132, FLOW-134, FLOW-135 (in review) | FLOW-106 screen fields go to the UI lane |
-| Dev lane 2 | Free | Next `ready` task in the queue |
+| Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines | Next `ready` task in the queue |
 | UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
 | UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -59,7 +59,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-3 done #132 #151 #157; part 4 in review) |
-| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
+| 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | done (#101) |
@@ -903,7 +903,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-701"></a>
 ### FLOW-701 · Jev phase 1
-- **Type:** PLAN FIRST · **Status:** ready (plan answered 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; parts 1-4 merged in #137, #143, #149, #160) · **Depends on:** —
 - **What:** The proposed first phase: (1) make Jev run after syncs and learn from confirmations, and produce the shadow accuracy report on approved lines; (2) faster review (reasons, "approve all sure ones", income suggestions); (3) anomalies v1 in one list (SQL detects, Jev scores only candidates); (4) recurring patterns in SQL that feed missing bills and expected months. Also a review of other features where Jev can help. The numbers always come from SQL; Jev never approves ([0084](../decisions/0084-jev-auto-prefill.md)). A daily call cap per company in SQL and a usage log, since the provider has no spend cap.
 - **Owner's answers (2026-10-08):** Jev runs after each bank sync, with a daily call cap per company; Jev's sure suggestions are reviewed one by one like every line, with no approve-all in the app (FLOW-324 dropped; MCP keeps `assign_expenses`); anomalies show as a flag on the review card, with no new screen; recurring patterns feed both missing-bill notices and expected future months.
 - **Acceptance:** owner answers the plan's open questions, then one PR per item.
