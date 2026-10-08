@@ -60,8 +60,7 @@ export function AddForm({ bank: sampleBank }: { bank?: AddBankState } = {}) {
           variant="button"
           title="חיבור בנק"
           icon={<BankIcon />}
-          meta={bank === "active" ? "מחובר" : undefined}
-          hint={bank === "reconnect" ? "צריך לחבר מחדש" : undefined}
+          hint={bank === "active" ? "מחובר" : bank === "reconnect" ? "צריך לחבר מחדש" : undefined}
           tone={bank === "reconnect" ? "warning" : undefined}
           chevron
           onClick={() => {
