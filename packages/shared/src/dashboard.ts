@@ -110,6 +110,8 @@ export const reviewRowSchema = z.object({
   project_id: z.string().nullable(),
   category_id: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  /** The customer on an income line. Optional: today's list_review does not send it yet. FLOW-327. */
+  customer_name: z.string().nullable().optional(),
   doc_kind: z.string().optional(),
   vat_agorot: agorotSchema.optional(),
   project_name: z.string().nullable().optional(),
@@ -146,6 +148,12 @@ export const categoryRowSchema = z.object({
   excluded_from_pnl: z.boolean().optional(),
   /** Set on the three loan categories. Omitted on older payloads. */
   loan_part: z.string().nullable().optional(),
+  /** Lines on the books in it, whole or by a split part: what delete_category sends back to review. */
+  lines: z.number().int().optional(),
+  /** How many of those lines have a split part in it (delete removes their whole split). */
+  split_lines: z.number().int().optional(),
+  /** A loan or a loan payment part uses it, so delete_category refuses. */
+  loan_used: z.boolean().optional(),
 });
 
 export const sumitStatusSchema = z.object({
@@ -274,6 +282,8 @@ export const transactionDetailSchema = z
     project_name: z.string().nullable(),
     category_id: z.string().nullable().optional(),
     review_status: z.enum(["open", "approved", "skipped", "changed"]).nullable().optional(),
+    /** The open review's id, when the server sends it. Optional: get_transaction does not yet. */
+    review_id: z.string().nullable().optional(),
     paid: z.boolean().nullable().optional(),
     open_gross_agorot: agorotOrNull.optional(),
     allocations: z

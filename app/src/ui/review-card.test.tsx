@@ -2,33 +2,101 @@ import { render, screen } from "@testing-library/react";
 import { fireEvent, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TxnMeta } from "../txn-meta";
-import { ReviewCard, type ReviewSuggestion } from "./review-card";
+import { lineSplitPartsLabel } from "../line-split-copy";
+import { jevReasonText, reviewFlagView } from "../review-copy";
+import { JEV_NO_PROJECT, REVIEW_MISMATCH_ID, REVIEW_MISSING_BOTH, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_LINE, type ReviewSuggestion } from "./review-card";
 
-describe("ReviewCard split_mismatch (FLOW-312, decision 0125)", () => {
-  it("says the split no longer matches the bank amount and opens the parts editor", () => {
-    const onFixSplit = vi.fn();
-    render(
+describe("ReviewCard split_mismatch (FLOW-333 C2, C8)", () => {
+  it("keeps the sentence, drops the link and shows one static row with the part count", () => {
+    const onProject = vi.fn();
+    const { container } = render(
       <ReviewCard
         supplier="ספק לדוגמה"
         sourceLine="הוצאה · 06/10/2026"
         netAgorot={-480_000n}
         reason="split_mismatch"
-        suggestion={{ project: "וילה רעננה", category: "חומרים" }}
-        onFixSplit={onFixSplit}
+        suggestion={{ project: "וילה רעננה", category: "חומרים", projectSuggested: true, categorySuggested: true }}
+        onProject={onProject}
+        onCategory={() => undefined}
+        splitParts={3}
       />,
     );
-    expect(screen.getByText("הפיצול לא תואם את סכום השורה בבנק.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
-    expect(onFixSplit).toHaveBeenCalledTimes(1);
+    const sentence = screen.getByText(SPLIT_MISMATCH_LINE);
+    expect(sentence).toHaveAttribute("id", REVIEW_MISMATCH_ID);
+    expect(screen.queryByRole("button", { name: SPLIT_MISMATCH_ACTION })).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(container.querySelector(".ui-review-split-row")?.textContent).toBe(lineSplitPartsLabel(3));
+    expect(container.querySelector(".ui-review-split-row bdi")?.textContent).toBe("3");
+    expect(screen.queryByText("וילה רעננה")).toBeNull();
+    expect(screen.queryByText("הצעה")).toBeNull();
+    expect(container.querySelector(".ui-row-chevron")).toBeNull();
   });
 
-  it("a viewer reads the line with no action, and other reasons show neither", () => {
-    const { unmount } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="split_mismatch" />);
-    expect(screen.getByText("הפיצול לא תואם את סכום השורה בבנק.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עדכון הפיצול" })).toBeNull();
-    unmount();
-    render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="missing_project" onFixSplit={() => undefined} />);
-    expect(screen.queryByText("הפיצול לא תואם את סכום השורה בבנק.")).toBeNull();
+  it("says חלק אחד for one part, a skeleton while loading, and מפוצל when the count is unknown", () => {
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="split_mismatch" splitParts={1} />);
+    expect(container.querySelector(".ui-review-split-row")?.textContent).toBe("מפוצל · חלק אחד");
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="split_mismatch" splitParts="loading" />);
+    expect(container.querySelector(".ui-review-split-row .ui-skeleton-bar")).not.toBeNull();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="split_mismatch" />);
+    expect(container.querySelector(".ui-review-split-row")?.textContent).toBe("מפוצל");
+  });
+
+  it("other reasons show neither the sentence nor the split row", () => {
+    const { container } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} reason="missing_project" splitParts={2} />);
+    expect(screen.queryByText(SPLIT_MISMATCH_LINE)).toBeNull();
+    expect(container.querySelector(".ui-review-split-row")).toBeNull();
+  });
+});
+
+describe("ReviewCard FLOW-327 additions", () => {
+  const jev = { project: "וילה רעננה", category: "חומרים", projectSuggested: true, categorySuggested: true, projectJev: true, categoryJev: true };
+
+  it("ends with בחרו פרויקט וקטגוריה when both fields are missing, and not otherwise", () => {
+    const { rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} missingBoth onProject={() => undefined} onCategory={() => undefined} />);
+    expect(screen.getByText(REVIEW_MISSING_BOTH)).toHaveAttribute("id", REVIEW_MISSING_ID);
+    expect(REVIEW_MISSING_BOTH).toBe("בחרו פרויקט וקטגוריה");
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} onProject={() => undefined} onCategory={() => undefined} />);
+    expect(screen.queryByText(REVIEW_MISSING_BOTH)).toBeNull();
+  });
+
+  it("shows the Jev reason line only with a הצעת Jev pill, numbers in bdi", () => {
+    const why = jevReasonText({ reason: "usual_for_party", partyFilings: 5, matchingFilings: 3 }, "expense");
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={why} onProject={() => undefined} onCategory={() => undefined} />);
+    const line = container.querySelector(".ui-review-reason");
+    expect(line?.textContent).toBe("✦כמו ב־3 מתוך 5 הפעמים האחרונות");
+    expect([...(line?.querySelectorAll("bdi.ui-num") ?? [])].map((node) => node.textContent)).toEqual(["3", "5"]);
+    expect(line?.querySelector("[aria-hidden='true']")?.textContent).toBe("✦");
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ ...jev, projectJev: false, categoryJev: false }} jevWhy={why} onProject={() => undefined} onCategory={() => undefined} />);
+    expect(container.querySelector(".ui-review-reason")).toBeNull();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={why} pending onProject={() => undefined} onCategory={() => undefined} />);
+    expect(container.querySelector(".ui-review-reason")).toBeNull();
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={jev} jevWhy={null} onProject={() => undefined} onCategory={() => undefined} />);
+    expect(container.querySelector(".ui-review-reason")).toBeNull();
+  });
+
+  it("draws a loud flag as a warning row and a quiet flag as a hint, both with a hidden לבדיקה", () => {
+    const loud = reviewFlagView([{ transaction_id: "t", kind: "duplicate", jev_score: 0.9, other_doc_date: "2026-10-03" }]);
+    const { container, rerender } = render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} flag={loud} />);
+    const row = container.querySelector(".ui-review-flag");
+    expect(row).toHaveClass("ui-row-tone-warning");
+    expect(row?.querySelector(".ui-row-title")?.textContent).toBe("לבדיקה: ייתכן שזה כפל");
+    expect(row?.querySelector(".ui-row-hint")?.textContent).toBe("אותו ספק ואותו סכום ב־03/10");
+    expect(container.querySelector(".ui-review")?.lastElementChild).toBe(row);
+    expect(screen.queryByRole("button")).toBeNull();
+    const quiet = reviewFlagView([{ transaction_id: "t", kind: "new_party_large", jev_score: null }], { direction: "income" });
+    rerender(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} flag={quiet} />);
+    const hint = container.querySelector(".ui-review-flag-quiet");
+    expect(hint).toHaveClass("t-hint");
+    expect(hint?.textContent).toBe("לבדיקה: לקוח חדש בסכום גבוה");
+    expect(container.querySelector(".ui-review-flag")).toBeNull();
+  });
+
+  it("shows Jev's no-project answer on the empty project row with הצעת Jev (FLOW-703)", () => {
+    render(<ReviewCard supplier="ספק" sourceLine="הוצאה" netAgorot={-100n} suggestion={{ category: "חומרים", projectNoneJev: true }} onProject={() => undefined} onCategory={() => undefined} />);
+    const row = screen.getByRole("button", { name: `פרויקט: ${JEV_NO_PROJECT}, הצעת Jev` });
+    expect(row.querySelector(".ui-row-title")).not.toHaveClass("ui-row-title-muted");
+    expect(row.querySelector(".ui-suggest-tag-jev")).not.toBeNull();
+    expect(JEV_NO_PROJECT).toBe("תקורה · ללא פרויקט");
   });
 });
 

@@ -51,6 +51,16 @@ const preview: Preview = {
           styles: { width: "320px", height: "844px" },
           type: "mobile",
         },
+        "flow375-se": {
+          name: "Flow 375 SE",
+          styles: { width: "375px", height: "667px" },
+          type: "mobile",
+        },
+        flow393: {
+          name: "Flow 393",
+          styles: { width: "393px", height: "852px" },
+          type: "mobile",
+        },
         "flow390-short": {
           name: "Flow 390 short",
           styles: { width: "390px", height: "700px" },

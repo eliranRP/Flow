@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `set_loan_rate`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `set_invoice_paid`, `detach_loan_payment`, `delete_category`, `move_category_lines`, `set_company_currency`, `undo_jev_prefill`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -38,6 +38,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "loan_detach"` | `id` | the transaction id `detach_loan_payment` used |
 | `delete_loan` | `loan_id` | `list_loans` `loans[].id` |
 | `reorder_loans` | `loan_ids` | every `list_loans` `loans[].id` (open and closed) |
+| `undo_jev_prefill` | `transaction_id` | `get_jev_suggestions` `suggestions[].transaction_id` with `prefilled` true |
 | `undo` `kind: "loan_delete"` | `id` | the loan id `delete_loan` used |
 | `undo` `kind: "loan_order"` | `id` | the company id `reorder_loans` returned |
 | `set_project_investment` | `project_id` | `list_projects` `projects[].id` |
@@ -100,7 +101,7 @@ On the company's overhead project (`is_overhead` true, see `set_overhead_project
 
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`), `lines` (lines on the books in it, whole or by a split part, not removed or void: what `delete_category` sends back to review), `split_lines` (how many of those have a split part in it; delete removes their whole split) and `loan_used` (a loan or a loan payment part uses it, so `delete_category` refuses). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
 
 ### list_review
 
@@ -333,7 +334,7 @@ Moves every line of one category to another of the same kind, and with them spli
 { "idempotency_key": "currency-1", "currency": "USD" }
 ```
 
-Sets the company's base currency (owner only), three capital letters. Nothing is converted. The base currency's row comes first in every `by_currency` list, it is the default for a new loan, a new project's investment currency and `get_breakdown`'s lines, and the base-currency twins of the ILS-only figures are in it: `by_currency[].prev_income_minor`, `prev_expense_minor`, `prev_net_profit_minor` (null without a period), `get_home` `net_profit_minor`, `get_project` `overhead_share_minor` and `get_profit_months` `months[].overhead_share_minor`. Each of those responses carries `base_currency`. Output `data`: `id` (the company), `base_currency`, `prior` and `undo_kind: "company_currency"`. A bad code is `validation`. Undo, with the company id, puts the prior currency back; it is `conflict` once the currency was changed again ([0146](../decisions/0146-company-currency.md)).
+Sets the company's base currency (owner only), three capital letters. Nothing is converted. The base currency's row comes first in every `by_currency` list, it is the default for a new loan, a new project's investment currency and `get_breakdown`'s lines, and the base-currency twins of the ILS-only figures are in it: `by_currency[].prev_income_minor`, `prev_expense_minor`, `prev_net_profit_minor` (null without a period), `get_home` `net_profit_minor`, `get_project` `overhead_share_minor` and `get_profit_months` `months[].overhead_share_minor`. Each of those responses carries `base_currency`. Output `data`: `id` (the company), `base_currency`, `prior` and `undo_kind: "company_currency"`. A bad code is `validation`. Undo, with the company id, puts the prior currency back; it is `conflict` once the currency was changed again ([0147](../decisions/0147-company-currency.md)).
 
 ### set_overhead_project
 
@@ -385,7 +386,7 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_jev_status
 
-`mcp_jev_status`, no arguments ([0124](../decisions/0124-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (the end of the latest run, or its start while it runs; null before the first), and `lines_without_suggestion` (open expense and income lines in לאישור with no Jev suggestion for the pinned model, including lines waiting to retry after a failure). Counts only; no line text.
+`mcp_jev_status`, no arguments ([0124](../decisions/0124-jev-after-sync.md)). Read tool. Output `data`: `enabled` (true only when the connector is on and `mode` is `shadow` or `auto`), `mode` (`off` when there is no setting), `threshold`, `daily_call_cap` (calls per UTC day), `calls_today` (used calls plus any open run's reservation), `last_run_at` (the end of the latest run, or its start while it runs; null before the first), `lines_without_suggestion` (open expense and income lines in לאישור with no Jev suggestion for the pinned model, including lines waiting to retry after a failure), `prefilled_today` (lines auto mode filled this UTC day and not undone, including ones approved since) and `prefilled_open` (lines still open in לאישור that hold an auto fill not undone) ([0145](../decisions/0145-jev-auto-mode.md)). Counts only; no line text.
 
 ### get_jev_accuracy
 
@@ -397,7 +398,15 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_jev_suggestions
 
-`mcp_jev_suggestions`, no arguments ([0134](../decisions/0134-jev-reasons-income-scores.md), [0139](../decisions/0139-jev-corrections.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `no_project` (true when Jev answered no project: overhead, or not one project), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). A `no_project` suggestion matches a filed line with no project, or filed as shared or overhead. Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
+`mcp_jev_suggestions`, no arguments ([0134](../decisions/0134-jev-reasons-income-scores.md), [0139](../decisions/0139-jev-corrections.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `no_project` (true when Jev answered no project: overhead, or not one project), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null), `prefilled` (auto mode filled this line and it was not undone, [0145](../decisions/0145-jev-auto-mode.md)). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). A `no_project` suggestion matches a filed line with no project, filed as shared or overhead, or filed to the company's overhead project. Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
+
+### undo_jev_prefill
+
+```json
+{ "idempotency_key": "jev-undo-1", "transaction_id": "<ledger id>" }
+```
+
+Takes back Jev's auto fill on one open review line ([FLOW-702](../backlog/TASKS.md#flow-702), [0145](../decisions/0145-jev-auto-mode.md)). Write tool, `mcp_undo_jev_prefill`. It puts back the project, the allocation (expense lines) and the category the line had before the fill, from the `jev_prefills` audit row. The line stays in לאישור; nothing is approved. `not_found` / `nothing to undo` when the line has no fill that is not undone; `conflict` / `line changed since` when the owner assigned the line or confirmed the filled field, or the project, its one allocation or the category no longer hold Jev's values; `already_closed` when the line is no longer open; `not_found` for an unknown line or another company's. Output `data`: `{ "transaction_id", "project_id", "category_id" }`, the values put back.
 
 ### get_missing_bills
 

@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReviewRow } from "@flow/shared";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { reviewHold, reviewPin } from "../review-pin";
 import { ToastProvider } from "../ui/toast";
 import { ReviewQueue } from "./flow-screens";
 import { bindJevConnectorScope, jevConnectorStorageKey, jevQueueQueryKey, type JevConnectorScope } from "./jev-review";
@@ -21,6 +22,11 @@ const db = vi.hoisted(() => ({
   writes: [] as Array<{ name: string; args?: Record<string, unknown> }>,
   rows: [] as ReviewRow[],
   closed: new Set<string>(),
+  reasons: [] as unknown[],
+  /** The reasons rpc never answers. */
+  stallReasons: false,
+  flags: [] as unknown[],
+  failReopen: false,
 }));
 
 function table(data: unknown, options?: { hold?: "integration" | "suggestions"; fail?: boolean }) {
@@ -72,7 +78,14 @@ vi.mock("../lib/supabase", () => ({
       if (name === "list_categories") return Promise.resolve({ data: [], error: null });
       // FLOW-304. The card's bank details are a read too.
       if (name === "get_line_meta") return Promise.resolve({ data: [], error: null });
+      // FLOW-327. Jev's reasons and the anomaly flags are reads too.
+      if (name === "jev_suggestions") {
+        if (db.stallReasons) return new Promise(() => undefined);
+        return Promise.resolve({ data: db.reasons, error: null });
+      }
+      if (name === "review_anomalies") return Promise.resolve({ data: db.flags, error: null });
       db.writes.push({ name, args });
+      if (name === "reopen_review" && db.failReopen) return Promise.resolve({ data: null, error: { message: "down" } });
       if (name === "approve_review_item" && args?.p_check_shown === true) {
         const id = typeof args.p_id === "string" ? args.p_id : "";
         const row = db.rows.find((item) => item.id === id);
@@ -151,6 +164,10 @@ describe("Jev review one tap", () => {
     db.writes = [];
     db.rows = [];
     db.closed = new Set();
+    db.reasons = [];
+    db.stallReasons = false;
+    db.failReopen = false;
+    db.flags = [];
     bindJevConnectorScope(scope);
     localStorage.removeItem("flow.jev-connector");
     localStorage.removeItem(jevConnectorStorageKey(scope));
@@ -177,7 +194,7 @@ describe("Jev review one tap", () => {
         </ToastProvider>
       </QueryClientProvider>,
     );
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
@@ -192,6 +209,106 @@ describe("Jev review one tap", () => {
     });
     expect(db.writes.some((call) => call.name === "record_jev_correction")).toBe(false);
     expect(db.seenIds.some((ids) => ids.includes("t1") && ids.includes("t2"))).toBe(true);
+  });
+
+  it("shows Jev's reason under the rows once the read settles (FLOW-327)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "same_as_last", party_filings: 4, matching_filings: 4 }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦כמו בפעם הקודמת");
+    });
+  });
+
+  it("names a new customer on an income line (FLOW-327 r1)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "new_party", party_filings: 0, matching_filings: 0 }];
+    renderQueue([{ ...open, direction: "income", amount_net: 2_200_000n, supplier_name: null, customer_name: "דירות הים בע״מ" }]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦לקוח חדש · בלי היסטוריה");
+    });
+  });
+
+  it("says בלי היסטוריה קודמת on an income line that names no customer", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "new_party", party_filings: 0, matching_filings: 0 }];
+    renderQueue([{ ...open, direction: "income", amount_net: 2_200_000n, supplier_name: null }]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-reason")?.textContent).toBe("✦בלי היסטוריה קודמת");
+    });
+  });
+
+  it("shows no reason line when the reasons read fails, and still prefills", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = "not an array" as unknown as unknown[];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-review-reason")).toBeNull();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+
+  it("still prefills when the reasons read never answers, with no reason line (FLOW-327 r1)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "p1", confidence: 0.9 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: "p1", category_id: "c1", reason: "same_as_last", party_filings: 4, matching_filings: 4 }];
+    db.stallReasons = true;
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(document.querySelector(".ui-review-reason")).toBeNull();
+    expect(document.querySelector(".ui-toast-bad")).toBeNull();
+  });
+
+  it("shows no reason line with the connector off, but still shows a flag, unscored and quiet", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.flags = [{ transaction_id: "t1", kind: "amount_spike", ratio: 3, typical_amount_minor: 100000, jev_score: null }];
+    renderQueue([stored]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-flag-quiet")?.textContent).toBe("לבדיקה: פי 3 מהרגיל לספק");
+    });
+    expect(document.querySelector(".ui-review-reason")).toBeNull();
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+  });
+
+  it("shows a loud flag from a Jev score of 0.7", async () => {
+    db.integration = { enabled: false, mode: "off" };
+    db.flags = [{ transaction_id: "t1", kind: "duplicate", other_doc_date: "2026-04-10", jev_score: 0.7 }];
+    renderQueue([stored]);
+    await waitFor(() => {
+      expect(document.querySelector(".ui-review-flag .ui-row-title")?.textContent).toBe("לבדיקה: ייתכן שזה כפל");
+    });
+  });
+
+  it("shows Jev's no-project answer on the project row and still asks for a project (FLOW-703)", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = [{ transaction_id: "t1", project_id: null, category_id: "c1", no_project: true, reason: "model_only", party_filings: 0, matching_filings: 0 }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+  });
+
+  it("shows the no-project answer from the real #177 shape, choice none, with the reasons read failing", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "none", confidence: 0.8 }, category: { choice: "c1", confidence: 0.9 } } }];
+    db.reasons = "not an array" as unknown as unknown[];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "בחירת פרויקט" })).toBeEnabled();
+  });
+
+  it("shows the no-project answer alone, when Jev named no category", async () => {
+    db.integration = { enabled: true, mode: "shadow" };
+    db.suggestions = [{ id: "s1", transaction_id: "t1", answers: { project: { choice: "none", confidence: 0.8 } } }];
+    db.reasons = [{ transaction_id: "t1", direction: "expense", project_id: null, project_name: null, no_project: true, category_id: null, category_name: null, confidence: 0.8, reason: "usual_for_party", party_filings: 4, matching_filings: 3, anomaly_score: null }];
+    renderQueue();
+    expect(await screen.findByRole("button", { name: "פרויקט: תקורה · ללא פרויקט, הצעת Jev" })).toBeInTheDocument();
   });
 
   it("approves a Jev-filled category with the stored shown ids", async () => {
@@ -236,7 +353,7 @@ describe("Jev review one tap", () => {
       },
     }];
     renderQueue([row]);
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: קטגוריה שמורה" })).toBeInTheDocument();
     expect(screen.getAllByText("הצעת Jev")).toHaveLength(1);
     expect(screen.queryByText("הצעה")).not.toBeInTheDocument();
@@ -303,7 +420,7 @@ describe("Jev review one tap", () => {
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "קטגוריה: חומרים, הצעת Jev" })).toBeInTheDocument();
     expect(screen.queryByText("אין הצעה, הקישו לבחירה")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
@@ -428,7 +545,7 @@ describe("Jev review one tap", () => {
     fireEvent.click(approve);
     expect(db.writes).toEqual([]);
     release();
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "פרויקט: וילה רעננה, הצעת Jev" }, { timeout: 3000 })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "אישור" }));
     await waitFor(() => {
       expect(db.writes.map((call) => call.name)).toContain("approve_review_item");
@@ -653,6 +770,81 @@ describe("review card pin (prod QA: אישור approved another line)", () => {
     expect(await screen.findByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("ביטול inside the 200ms swap (FLOW-327 r1)", () => {
+    const tick = async (ms: number) => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    };
+    beforeEach(() => {
+      vi.useFakeTimers();
+      db.writes = [];
+      db.failReopen = false;
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function skipThenUndoInsideSwap() {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(queue([open, other], client));
+      await tick(50);
+      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "דלג" }));
+      await tick(0);
+      expect(db.writes.some((call) => call.name === "resolve_review")).toBe(true);
+      // The skip's refetch: the card leaves and the 200ms swap starts.
+      view.rerender(queue([other], client));
+      await tick(50);
+      fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+      expect(reviewHold()).toBe("t1");
+      return { view, client };
+    }
+
+    it("shows the restored card when the reopen refetch is slower than the swap", async () => {
+      const { view, client } = await skipThenUndoInsideSwap();
+      // The swap lands the next card before the reopen's refetch comes back.
+      await tick(300);
+      expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
+      expect(reviewPin()).toBe("t1");
+      // The refetch brings the undone line back behind it in queue order.
+      view.rerender(queue([other, open], client));
+      await tick(300);
+      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+      expect(screen.queryByText("קבלן משנה בע״מ")).not.toBeInTheDocument();
+      expect(reviewHold()).toBeNull();
+      expect(reviewPin()).toBe("t1");
+      // The pin guarantee holds again: a reorder can't swap the card under אישור.
+      view.rerender(queue([other, open], client));
+      await tick(300);
+      expect(screen.getByText("חומרי בניין השרון בע״מ")).toBeInTheDocument();
+    });
+
+    it("drops the hold when the reopened line doesn't come back, and pins the card on screen", async () => {
+      const { view, client } = await skipThenUndoInsideSwap();
+      // The reopen lands, but the line was approved again elsewhere: the refetch has no t1.
+      view.rerender(queue([other], client));
+      await tick(300);
+      expect(reviewHold()).toBe("t1");
+      await tick(1000);
+      expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
+      expect(reviewHold()).toBeNull();
+      expect(reviewPin()).toBe("t2");
+    });
+
+    it("drops the hold when the reopen fails, and pins the card that stayed", async () => {
+      db.failReopen = true;
+      const { view, client } = await skipThenUndoInsideSwap();
+      await tick(300);
+      expect(screen.getByText("לא הצלחנו לבטל.")).toBeInTheDocument();
+      expect(reviewHold()).toBeNull();
+      expect(reviewPin()).toBe("t2");
+      view.rerender(queue([open, other], client));
+      await tick(300);
+      expect(screen.getByText("קבלן משנה בע״מ")).toBeInTheDocument();
     });
   });
 

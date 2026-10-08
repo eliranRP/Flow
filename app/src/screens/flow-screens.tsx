@@ -3,7 +3,7 @@ import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProfitMonths, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from "react";
 import { Navigate, NavigationType, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from "react-router-dom";
 import { LoanReadError, LoanTransactionSplit, ProjectLoanList, useLoanBalances, type LoanBalanceRow } from "./loan-match";
 import { loanRowProps, useLoanMarks, type LoanMark } from "./loan-marks";
@@ -63,7 +63,8 @@ import { ApproveNotice, isApproveRetry, readApproveOutcome } from "../approve-re
 import { LEDGER_FOCUS_KEYS } from "../books-focus";
 import { FILED_TODAY_EMPTY_BODY, FILED_TODAY_EMPTY_TITLE, filedTodayBannerTitle } from "../filed-today-copy";
 import { useHeldOrder } from "../list-hold";
-import { pinReviewHead, pinReviewLine, reviewPin } from "../review-pin";
+import { pinReviewHead, pinReviewLine, releaseReviewHold, reviewHold, reviewPin } from "../review-pin";
+import { reviewFocusPath } from "../review-paths";
 import { TxnNavButtons, txnListState, usePrefetchNeighbours, useAnnounceTxn, useTxnNav, useTxnNavKeys } from "../txn-nav";
 import { emptyVisit, noteHandled, notePresence, visitPlace } from "../visit-meter";
 import { assertNoError, isTransientWriteError, useWrite } from "../use-write";
@@ -77,7 +78,7 @@ import { SumitConnectSheet } from "../ui/sumit-connect-sheet";
 import { SAMPLE_TOAST } from "../setup/copy";
 import { AssistantSettings, useAssistantStatusQuery, type AssistantSample } from "./assistant-settings";
 import { COMPANY_NAME_MAX, RenameCompanySheet, companyNameError } from "./rename-company";
-import { useJevQueue, useJevReview } from "./jev-review-card";
+import { useJevQueue, useJevReview, useReviewFlags } from "./jev-review-card";
 import { bindJevConnectorScope, clearJevConnectorFlag, jevShown, withJev, type JevShown } from "./jev-review";
 import { JEV_DEFAULT, JevSettings, jevSwitchOn, useJevIntegrationQuery, type JevCardState } from "./jev-settings";
 import { LoanSettingsSection, type LoanCurrency, type LoanProjectChoice, type LoanRowsSample } from "./loan-setup";
@@ -106,7 +107,11 @@ import { MoneyField, PercentField } from "../ui/money-field";
 import { ConnectorRow } from "../ui/connector-row";
 import { BudgetBar, ProgressBar } from "../ui/progress-bar";
 import { RadioRow } from "../ui/radio-row";
-import { ReviewCard } from "../ui/review-card";
+import { REVIEW_MISMATCH_ID, REVIEW_MISSING_ID, ReviewCard, SPLIT_MISMATCH_ACTION, SPLIT_MISMATCH_KEEP } from "../ui/review-card";
+import { ActionBar, ActionBarRow } from "../ui/action-bar";
+import { jevReasonText, reviewFlagView } from "../review-copy";
+import { ReviewSkippedSection, skippedListPath, useSkippedReviewQuery } from "./review-skipped";
+import { ReviewSkippedLink } from "../ui/review-skipped-list";
 import { BankDetails } from "../ui/bank-details";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -134,11 +139,12 @@ function blockedPreview(preview: HomePreview, tell: (message: string) => void): 
   return true;
 }
 
-function useBlockedPreview(): (mode?: HomePreview) => boolean {
+/** `place: "bar"` puts the toast above a screen's pinned action bar (decision 0137). */
+function useBlockedPreview(place?: "bar"): (mode?: HomePreview) => boolean {
   const preview = useHomePreview();
   const toast = useToast();
   return (mode?: HomePreview) => blockedPreview(mode ?? preview, (message) => {
-    toast.show({ tone: "info", message });
+    toast.show({ tone: "info", message, ...(place == null ? {} : { place }) });
   });
 }
 
@@ -1080,14 +1086,7 @@ export function reviewListPath(search: string): string {
   return text === "" ? "/review/all" : `/review/all?${text}`;
 }
 
-export function reviewFocusPath(search: string, id: string): string {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  params.delete("pick");
-  params.delete("list");
-  params.set("item", id);
-  params.set("from", "all");
-  return `/review?${params.toString()}`;
-}
+export { reviewFocusPath };
 
 export function rotateReview<T extends { id: string }>(rows: T[], id: string): T[] {
   const index = rows.findIndex((row) => row.id === id);
@@ -1215,7 +1214,7 @@ export function ReviewScreen() {
       const ids = new Set(held.map((row) => row.review_id));
       const rows = source.filter((row) => ids.has(row.id));
       if (rows.length === 0) return <ReviewEmpty search={search} filtered backTo={back} homeTo={back} homeLabel="חזרה לפרויקט" />;
-      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} />;
+      if (listing) return <ReviewAllList rows={rows} search={search} backTo={`/review${search}`} skipped={false} />;
       const fromList = listFocusId(params) != null;
       const ordered = rowsForFocus(rows);
       return (
@@ -1244,7 +1243,9 @@ export function ReviewScreen() {
     );
   }
   if (phase.kind === "empty" || (phase.kind === "ready" && rows.length === 0)) {
-    return <ReviewEmpty search={search} backTo={listing || fromList ? `/review${search}` : undefined} />;
+    // FLOW-309: הצג הכול still lists the skipped cards when nothing waits.
+    if (listing) return <ReviewAllList rows={EMPTY_REVIEW} search={search} backTo={`/review${search}`} />;
+    return <ReviewEmpty search={search} backTo={fromList ? `/review${search}` : undefined} skippedLink />;
   }
   if (phase.kind !== "ready") {
     return <ScreenState title="לאישור" phase={phase} onRetry={() => { void review.refetch(); }} backTo={listing ? `/review${search}` : undefined} />;
@@ -1278,10 +1279,13 @@ export function ReviewAllList({
   rows,
   search,
   backTo,
+  skipped = true,
 }: {
   rows: ReviewRow[];
   search: string;
   backTo: string;
+  /** FLOW-309: the דולגו section at the end. A project's list leaves it out. */
+  skipped?: boolean;
 }) {
   useEffect(() => {
     const id = reviewReturnId;
@@ -1298,9 +1302,27 @@ export function ReviewAllList({
   // FLOW-305: one bank-details read for the bank lines on this page. A failed read keeps "בנק".
   const bankIds = useMemo(() => rows.filter((row) => row.source === "mercury").map((row) => row.transaction_id), [rows]);
   const lineMeta = useLineMetaPageQuery(bankIds);
+  const skippedRead = useSkippedReviewQuery(skipped && rows.length === 0);
+  const cardPath = useCallback((id: string) => reviewFocusPath(search, id), [search]);
+  if (rows.length === 0) {
+    const someSkipped = skipped && (skippedRead.isError || (skippedRead.data?.length ?? 0) > 0);
+    // FLOW-327 r1: while the skipped read loads, only the header shows, so הכל מאושר never flashes
+    // before the skipped rows land.
+    if (skipped && skippedRead.isLoading) {
+      return <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />;
+    }
+    if (!someSkipped) return <ReviewEmpty search={search} backTo={backTo} />;
+    return (
+      <div>
+        <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
+        <p className="t-hint ui-page-pad ui-review-none-waiting">{REVIEW_NONE_WAITING}</p>
+        <ReviewSkippedSection search={search} cardPath={cardPath} />
+      </div>
+    );
+  }
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="תנועות שמחכות לשיוך" backTo={backTo} layout="inline" />
       <MonthList
         rows={ordered}
         keyOf={(row) => row.id}
@@ -1323,9 +1345,13 @@ export function ReviewAllList({
           />
         )}
       />
+      {skipped ? <ReviewSkippedSection search={search} cardPath={cardPath} /> : null}
     </div>
   );
 }
+
+/** הצג הכול with nothing waiting, above the skipped section. */
+export const REVIEW_NONE_WAITING = "אין פריטים שמחכים לאישור.";
 
 /** "project · category" for the statement row's ✦ line: what the card shows (U11). FLOW-305. */
 export function statementSuggestion(row: ReviewRow): string | null {
@@ -1348,7 +1374,7 @@ export function ProjectWaitingList({
   const ordered = useHeldOrder(rows, (row) => row.transaction_id);
   return (
     <div>
-      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="הוצאות שמחכות לאישור בפרויקט הזה" backTo={backTo} layout="inline" />
       <MonthList
         rows={ordered}
         keyOf={(row) => row.transaction_id}
@@ -1439,7 +1465,7 @@ export function ReviewQueue({
   const [queueParams] = useSearchParams();
   const fromList = listFocusId(queueParams) != null;
   const toast = useToast();
-  const blocked = useBlockedPreview();
+  const blocked = useBlockedPreview("bar");
   const holdWrites = useHoldWrites();
   const invalidate = useInvalidateBooks();
   const kindRows = useCategoriesQuery(!sample && preview === "off" && previewWrite == null).data;
@@ -1450,8 +1476,31 @@ export function ReviewQueue({
   const [hideAuto, setHideAuto] = useState(false);
   const [shown, setShown] = useState<ReviewRow | null>(rows[0] ?? null);
   useEffect(() => {
+    // While ביטול holds the undone line, this pin of another card is ignored (review-pin.ts).
     if (!fromList && shown != null) pinReviewLine(shown.transaction_id);
   }, [fromList, shown]);
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  // A hold names a line this queue was bringing back; it does not outlive the queue. (Under
+  // StrictMode in dev, the mount-cleanup-mount cycle drops a hold set before mount; prod is not affected.)
+  useEffect(() => () => { releaseReviewHold(reviewHold()); }, []);
+  /** ביטול's reopen failed: drop the hold and pin the card that stayed on screen. */
+  const undoFailed = useCallback((line: string | null) => {
+    releaseReviewHold(line);
+    if (!fromList && shownRef.current != null) pinReviewLine(shownRef.current.transaction_id);
+  }, [fromList]);
+  // ביטול's reopen landed. If the line is still not in the queue a moment later (approved again
+  // elsewhere, or hidden by a filter), the hold would outlive its use and freeze the pin.
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const undoSettled = useCallback((line: string | null) => {
+    window.setTimeout(() => {
+      if (line == null || reviewHold() !== line) return;
+      if (rowsRef.current.some((row) => row.transaction_id === line)) return;
+      releaseReviewHold(line);
+      if (!fromList && shownRef.current != null) pinReviewLine(shownRef.current.transaction_id);
+    }, REVIEW_HOLD_SETTLE_MS);
+  }, [fromList]);
   const jevQueue = useJevQueue(
     rows.map((item) => item.transaction_id),
     !sample && preview === "off" && previewWrite == null,
@@ -1463,6 +1512,10 @@ export function ReviewQueue({
   // Warm the next card's bank details so its meta line paints with the card.
   useLineMetaQuery(rows.find((item) => item.transaction_id !== shownId)?.transaction_id, metaLive);
   const jev = jevQueue.stateFor(shownId);
+  const flagsFor = useReviewFlags(
+    rows.map((item) => item.transaction_id),
+    !sample && preview === "off" && previewWrite == null,
+  );
   const [motion, setMotion] = useState<"still" | "out" | "in">("still");
   const visit = useRef(emptyVisit());
   const approvedId = useRef<string | null>(null);
@@ -1528,6 +1581,7 @@ export function ReviewQueue({
       if (isApproveRetry(error) || isTransientWriteError(error)) return { message: "לא הצלחנו לאשר.", retry: true };
       return { message: "לא הצלחנו לאשר.", retry: false };
     },
+    place: "bar",
     keys: ["review", "dashboard", "unpaid", "project", "project-category", "project-waiting", "filed-today", "txn"],
     retryFocus: () => {
       approveSlot.current?.querySelector("button")?.focus();
@@ -1547,14 +1601,9 @@ export function ReviewQueue({
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
       if (reviewIsSplit(filled) && filled.reason !== "unallocated_shared") {
-        if (filled.category_id !== target.category_id && target.transaction_id) {
-          assertNoError(await supabase.rpc("set_transaction_category", {
-            p_id: target.transaction_id,
-            p_category_id: filled.category_id,
-            p_resolve: false,
-          }));
-        }
-        assertNoError(await supabase.rpc("approve_split_review", { p_id: filled.id }));
+        // #177: one call sets the category (when it changed) and approves, so a failure can't
+        // leave the category saved with the card still open.
+        assertNoError(await supabase.rpc("approve_split_review", { p_id: filled.id, p_category_id: filled.category_id }));
         markHandled(filled.id);
         return;
       }
@@ -1591,8 +1640,9 @@ export function ReviewQueue({
         toast.show({
           message: "הפריט אושר",
           action: "ביטול",
+          place: "bar",
           onAction: () => {
-            pinReviewLine(line);
+            pinReviewLine(line, { hold: true });
             previewWrite.onUndo(id);
           },
         });
@@ -1603,7 +1653,7 @@ export function ReviewQueue({
         toast.show({
           message: SAMPLE_TOAST,
           action: "המשך",
-          place: "page",
+          place: "bar",
           onAction: () => {
             void navigate(setupHandoff.fromCard ? "/" : "/setup/5");
           },
@@ -1613,16 +1663,18 @@ export function ReviewQueue({
       toast.show({
         message: "הפריט אושר",
         action: "ביטול",
+        place: "bar",
         onAction: () => {
-          pinReviewLine(line);
-          void reopenReview(id, invalidate, toast);
+          pinReviewLine(line, { hold: true });
+          void reopenReview(id, invalidate, toast, undefined, { line, failed: undoFailed, settled: undoSettled });
         },
       });
     },
   });
   const skip = useWrite({
     failure: previewWrite ? changeSaveFailure : "לא הצלחנו לדלג.",
-    keys: ["review", "project", "project-category", "project-waiting"],
+    keys: ["review", "review-skipped", "project", "project-category", "project-waiting"],
+    place: "bar",
     run: async () => {
       // The card on screen, like אישור; rows[0] can differ while the queue reorders.
       const target = shown;
@@ -1651,19 +1703,38 @@ export function ReviewQueue({
       toast.show({
         message: "דילגנו על הפריט",
         action: "ביטול",
+        place: "bar",
         onAction: () => {
-          pinReviewLine(line);
+          pinReviewLine(line, { hold: true });
           if (previewWrite) {
             previewWrite.onUndo(id);
             return;
           }
-          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.");
+          void reopenReview(id, invalidate, toast, "הפריט חזר לתור.", { line, failed: undoFailed, settled: undoSettled });
         },
       });
     },
   });
+  // FLOW-333 C8: the part count, read for a split_mismatch card only.
+  const mismatchLine = shown?.reason === "split_mismatch" ? shown.transaction_id : "";
+  // Focus that was in the bar must not fall to the page: the buttons go disabled while a card
+  // leaves (and remount when the next card switches between normal and split_mismatch). Once the
+  // next card has settled, focus moves to the bar's first button.
+  const queueRoot = useRef<HTMLDivElement>(null);
+  const barFocus = useRef(false);
+  const barKind = shown?.reason === "split_mismatch";
+  useLayoutEffect(() => {
+    if (!barFocus.current) return;
+    const active = document.activeElement;
+    if (active != null && active !== document.body && queueRoot.current?.contains(active)) return;
+    queueRoot.current?.querySelector<HTMLElement>(".ui-action-bar button, .ui-action-bar a[href]")?.focus({ preventScroll: true });
+  }, [barKind, shown?.id, leaving, jevLoading]);
+  const splitRead = useLineSplitQuery(mismatchLine, mismatchLine !== "" && !sample && previewWrite == null);
+  const splitParts: number | "loading" | undefined = splitRead.data != null
+    ? splitRead.data.parts.length
+    : splitRead.isPending && splitRead.fetchStatus === "fetching" ? "loading" : undefined;
   const card = shown;
-  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} />;
+  if (!card) return <ReviewEmpty search={search} homeTo={homeTo} homeLabel={homeLabel} backTo={backTo} skippedLink={homeTo == null && !sample && previewWrite == null} />;
   const current = card;
   const change = assignmentPath(changeTo, search, current.id, undefined, fromList);
   function openProject() {
@@ -1688,6 +1759,11 @@ export function ReviewQueue({
     isReversal(kindRows ?? [], view.category_id, view.direction === "income" ? "income" : "expense"),
     jevShown(card, jev),
   );
+  // FLOW-703: Jev's "no project / overhead" shows on an empty project row; it fills nothing.
+  const shownSuggestion = jev.prefill?.noProject === true && view.project_id == null && !reviewIsSplit(view)
+    && view.reason !== "unallocated_shared" && view.reason !== "split_mismatch"
+    ? { ...(suggestion ?? {}), projectNoneJev: true }
+    : suggestion;
   const place = visitPlace(visit.current, openIds);
   const total = listPlace?.total ?? place.total;
   const index = listPlace?.index ?? place.index;
@@ -1699,12 +1775,72 @@ export function ReviewQueue({
   const approvable = settled && nextPick == null && (view.reason === "unallocated_shared"
     || (splitCard ? view.category_id != null : view.project_id != null && view.category_id != null));
   const approveLabel = nextPick === "project" ? "בחירת פרויקט" : nextPick === "category" ? "בחירת קטגוריה" : "אישור";
+  // FLOW-327 1.5: with both fields missing the card says why, and the button points at it.
+  const missingBoth = settled && needProject && needCategory;
+  // FLOW-333 C2: a split whose bank amount changed leads with עדכון הפיצול; להשאיר כך approves it as it stands.
+  const mismatch = card.reason === "split_mismatch";
+  const jevWhy = jev.prefill?.why == null ? null : jevReasonText(jev.prefill.why, card.direction, reviewHasParty(card));
+  const flag = reviewFlagView(flagsFor(card.transaction_id), { direction: card.direction, currency: card.currency });
+  function runApprove() {
+    if (approveGuard.current || !settled) return;
+    if (nextPick === "project") {
+      openProject();
+      return;
+    }
+    if (nextPick === "category") {
+      openCategory();
+      return;
+    }
+    if (!approvable) return;
+    if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
+    if (current.reason === "unallocated_shared") {
+      if (!current.transaction_id) return;
+      if (onShared) {
+        onShared(current.transaction_id);
+        return;
+      }
+      void navigate(`/transactions/${current.transaction_id}/split${search}`);
+      return;
+    }
+    approveGuard.current = true;
+    approve.mutate(undefined, {
+      onSettled: () => {
+        approveGuard.current = false;
+      },
+    });
+  }
+  const skipButton = (
+    <Button
+      variant="ghost"
+      busy={skip.isPending}
+      disabled={leaving || approve.isPending}
+      onClick={() => {
+        if (leaving) return;
+        if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
+        skip.mutate();
+      }}
+    >
+      דלג
+    </Button>
+  );
   return (
     <ViewerScope>
-    <div className="ui-review-queue">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+    <div
+      className="ui-review-queue"
+      data-bar={holdWrites ? undefined : ""}
+      ref={queueRoot}
+      onFocusCapture={(event) => {
+        barFocus.current = event.target instanceof Element && event.target.closest(".ui-action-bar") != null;
+      }}
+    >
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
       {rows.length > 0 ? (
         <div className="ui-review-meter">
+          {/* FLOW-327 r1: on the start side, near the thumb. A card opened from the list leaves it
+              out: Back already goes to the list. */}
+          {changeTo == null && listPlace == null ? (
+            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
+          ) : null}
           {listPlace == null ? (
             <ProgressBar
               variant="thin"
@@ -1713,7 +1849,8 @@ export function ReviewQueue({
               max={total}
             />
           ) : null}
-          <span className="t-hint">
+          {holdWrites ? null : <span className="sr-only">פריט </span>}
+          <span className="t-hint ui-review-counter">
             {holdWrites ? (
               <bdi className="ui-num ui-review-count" dir="ltr">{String(total)}</bdi>
             ) : (
@@ -1724,9 +1861,6 @@ export function ReviewQueue({
               </>
             )}
           </span>
-          {changeTo == null ? (
-            <TextLink className="ui-review-show-all" to={reviewListPath(search)} chevron={false}>הצג הכול</TextLink>
-          ) : null}
         </div>
       ) : null}
       {auto > 0 && !hideAuto ? (
@@ -1743,12 +1877,12 @@ export function ReviewQueue({
       ) : null}
       <div className="ui-review-motion" data-motion={motion === "still" ? undefined : motion} key={card.id}>
         <ReviewCard
-          supplier={card.supplier_name ?? card.description}
+          supplier={card.supplier_name ?? card.customer_name ?? card.description}
           sourceLine={`${card.direction === "income" ? "הכנסה" : docKindLabel(card.doc_kind)} · ${invoiceDate(card.doc_date)}`}
           netAgorot={card.amount_net}
           currency={card.currency}
           vatLine={reviewVatLine(card.vat_agorot, card.currency)}
-          suggestion={suggestion}
+          suggestion={shownSuggestion}
           pending={jevLoading}
           reason={card.reason}
           direction={card.direction}
@@ -1757,67 +1891,62 @@ export function ReviewQueue({
           onProject={holdWrites ? undefined : openProject}
           onCategory={holdWrites ? undefined : openCategory}
           meta={lineMeta.data}
-          onFixSplit={holdWrites || !card.transaction_id ? undefined : () => {
-            void navigate(`/transactions/${card.transaction_id}/split-category${search}`);
-          }}
+          splitParts={mismatch ? splitParts : undefined}
+          jevWhy={jevWhy}
+          flag={flag}
+          missingBoth={missingBoth}
         />
       </div>
       {holdWrites ? <ViewerNote className="t-hint ui-viewer-note" /> : (
-      <div className="ui-review-actions">
-        <div className="ui-review-approve" ref={approveSlot}>
-          <Button
-            full
-            busy={approve.isPending}
-            disabled={!settled}
-            icon={approveLabel === "אישור" ? <CheckIcon /> : undefined}
-            onClick={() => {
-              if (approveGuard.current || !settled) return;
-              if (nextPick === "project") {
-                openProject();
-                return;
-              }
-              if (nextPick === "category") {
-                openCategory();
-                return;
-              }
-              if (!approvable) return;
-              if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
-              if (card.reason === "unallocated_shared") {
-                if (!card.transaction_id) return;
-                if (onShared) {
-                  onShared(card.transaction_id);
-                  return;
-                }
-                void navigate(`/transactions/${card.transaction_id}/split${search}`);
-                return;
-              }
-              approveGuard.current = true;
-              approve.mutate(undefined, {
-                onSettled: () => {
-                  approveGuard.current = false;
-                },
-              });
-            }}
-          >
-            {approveLabel}
-          </Button>
-        </div>
-        <div className="ui-review-actions-row">
-          <Button variant="secondary" to={change}>שינוי</Button>
-          <Button
-            variant="ghost"
-            busy={skip.isPending}
-            disabled={leaving}
-            onClick={() => {
-              if (leaving) return;
-              if (previewWrite == null && blocked(sample ? "empty" : preview)) return;
-              skip.mutate();
-            }}
-          >
-            דלג
-          </Button>
-        </div>
-      </div>
+      <ActionBar>
+        {mismatch ? (
+          <>
+            <Button
+              full
+              disabled={approve.isPending || !card.transaction_id}
+              onClick={() => {
+                if (!card.transaction_id || approve.isPending) return;
+                void navigate(`/transactions/${card.transaction_id}/split-category${search}`);
+              }}
+            >
+              {SPLIT_MISMATCH_ACTION}
+            </Button>
+            <ActionBarRow>
+              <div className="ui-review-approve" ref={approveSlot}>
+                <Button
+                  variant="secondary"
+                  busy={approve.isPending}
+                  disabled={!settled}
+                  aria-describedby={REVIEW_MISMATCH_ID}
+                  onClick={runApprove}
+                >
+                  {SPLIT_MISMATCH_KEEP}
+                </Button>
+              </div>
+              {skipButton}
+            </ActionBarRow>
+          </>
+        ) : (
+          <>
+            <div className="ui-review-approve" ref={approveSlot}>
+              <Button
+                full
+                busy={approve.isPending}
+                disabled={!settled}
+                icon={approveLabel === "אישור" ? <CheckIcon /> : undefined}
+                aria-describedby={missingBoth ? REVIEW_MISSING_ID : undefined}
+                onClick={runApprove}
+              >
+                {approveLabel}
+              </Button>
+            </div>
+            <ActionBarRow>
+              <Button variant="secondary" to={change}>שינוי</Button>
+              {skipButton}
+            </ActionBarRow>
+          </>
+        )}
+      </ActionBar>
       )}
     </div>
     </ViewerScope>
@@ -1873,25 +2002,34 @@ function reviewSuggestion(row: ReviewRow, reversal = false, jev?: JevShown) {
   };
 }
 
+/** How long after ביטול's reopen lands the queue waits for the line before it drops the hold. */
+const REVIEW_HOLD_SETTLE_MS = 1000;
+
 async function reopenReview(
   id: string,
   invalidate: (keys: string[]) => Promise<void>,
-  toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void }) => void },
+  toast: { show: (input: { message: string; tone?: "ok" | "bad"; action?: string; onAction?: () => void; place?: "bar" }) => void },
   done = "הפריט חזר לתור, והשיוך הקודם שוחזר.",
+  /** ביטול's held line (review-pin.ts): a failed reopen drops the hold, ניסיון חוזר sets it again. */
+  undo?: { line: string | null; failed: (line: string | null) => void; settled?: (line: string | null) => void },
 ) {
   try {
     const supabase = getSupabase();
     if (!supabase) throw new Error("supabase");
     assertNoError(await supabase.rpc("reopen_review", { p_id: id }));
-    await invalidate(["review", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
-    toast.show({ message: done });
+    await invalidate(["review", "review-skipped", "dashboard", "project", "project-category", "project-waiting", "filed-today", "txn"]);
+    undo?.settled?.(undo.line);
+    toast.show({ message: done, place: "bar" });
   } catch {
+    undo?.failed(undo.line);
     toast.show({
+      place: "bar",
       tone: "bad",
       message: "לא הצלחנו לבטל.",
       action: "ניסיון חוזר",
       onAction: () => {
-        void reopenReview(id, invalidate, toast, done);
+        if (undo != null) pinReviewLine(undo.line, { hold: true });
+        void reopenReview(id, invalidate, toast, done, undo);
       },
     });
   }
@@ -1903,21 +2041,31 @@ export function ReviewEmpty({
   homeTo,
   homeLabel,
   backTo,
+  skippedLink = false,
 }: {
   search: string;
   filtered?: boolean;
   homeTo?: string;
   homeLabel?: string;
   backTo?: string;
+  /** FLOW-309, owner pick 2026-10-08: "N פריטים דולגו" under the action when cards were skipped. */
+  skippedLink?: boolean;
 }) {
+  const skipped = useSkippedReviewQuery(skippedLink && !filtered);
+  const skippedCount = skippedLink && !filtered && !skipped.isError ? (skipped.data?.length ?? 0) : 0;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} />
+      <ScreenHeader title="לאישור" subtitle="מסמכים שמחכים לשיוך" backTo={backTo} layout="inline" />
       <EmptyState
         icon={<ReviewIcon />}
         title={filtered ? "אין פריטים לאישור בפרויקט הזה" : "הכל מאושר"}
         body={filtered ? "אין פריטים של הפרויקט הזה בתור." : "אין פריטים שמחכים לך. נעדכן כשיגיע משהו חדש."}
-        action={<Button variant="pill" to={homeTo ?? `/${search}`}>{homeLabel ?? "לדף הבית"}</Button>}
+        action={(
+          <>
+            <Button variant="pill" to={homeTo ?? `/${search}`}>{homeLabel ?? "לדף הבית"}</Button>
+            <ReviewSkippedLink count={skippedCount} to={skippedListPath(reviewListPath(search))} />
+          </>
+        )}
       />
     </div>
   );
@@ -2056,6 +2204,15 @@ function withChoice(options: ChangeChoice[], id: string, name: string | null | u
   return [{ id, name }, ...options];
 }
 
+/**
+ * FLOW-327 r1: the line names its party. An income line's party is its customer, so a new customer
+ * reads "לקוח חדש · בלי היסטוריה".
+ */
+export function reviewHasParty(row: Pick<ReviewRow, "direction" | "supplier_name"> & { customer_name?: string | null }): boolean {
+  const party = row.direction === "income" ? row.customer_name ?? row.supplier_name : row.supplier_name;
+  return party != null && party !== "";
+}
+
 export function reviewIsSplit(row: { reason?: string | null; pnl_role?: string | null; share_count?: number | null } | null | undefined): boolean {
   if (!row) return false;
   return row.pnl_role === "shared" || (row.share_count ?? 0) > 1 || row.reason === "unallocated_shared";
@@ -2130,9 +2287,15 @@ export function ChangeForm({ sample: given }: { sample?: ChangeSample } = {}) {
     const filled = withJev(row, jev);
     const nextProject = filled.project_id ?? "";
     const nextCategory = filled.category_id ?? "";
-    baseline.current = { projectId: nextProject, categoryId: nextCategory, remember: true };
+    // FLOW-703: a category seeded from Jev's guess is not a supplier rule until the owner says so.
+    const jevSeeded = filled.category_id !== row.category_id;
+    baseline.current = { projectId: nextProject, categoryId: nextCategory, remember: !jevSeeded };
     setProjectId(nextProject);
     setCategoryId(nextCategory);
+    if (jevSeeded) {
+      setRemember(false);
+      setSavedRemember(false);
+    }
   }, [sample, row, jev]);
   useEffect(() => {
     if (!sample?.saveError || toasted.current) return;

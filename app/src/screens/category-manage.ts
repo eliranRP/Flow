@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import {
   deletedToast,
@@ -18,52 +17,6 @@ import { assertNoError, useWrite } from "../use-write";
 const CATEGORY_WRITE_KEYS = ["categories", "dashboard", "review", "txn", "project", "project-category", "project-waiting"];
 
 export type CategoryTarget = { id: string; name: string };
-
-type CountClient = NonNullable<ReturnType<typeof getSupabase>>;
-
-/**
- * How many lines on the books use the category, whole or as a split part: the count
- * delete_category sends back to review. Removed and void lines don't count.
- */
-export async function countCategoryLines(supabase: CountClient, categoryId: string): Promise<number> {
-  const [whole, parts] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("id")
-      .eq("category_id", categoryId)
-      .is("removed_at", null)
-      .neq("line_status", "void"),
-    supabase.from("line_splits").select("transaction_id").eq("category_id", categoryId),
-  ]);
-  assertNoError(whole);
-  assertNoError(parts);
-  const ids = new Set((whole.data ?? []).map((row) => row.id));
-  const splitIds = [...new Set((parts.data ?? []).map((row) => row.transaction_id))].filter((id) => !ids.has(id));
-  if (splitIds.length > 0) {
-    const split = await supabase
-      .from("transactions")
-      .select("id")
-      .in("id", splitIds)
-      .is("removed_at", null)
-      .neq("line_status", "void");
-    assertNoError(split);
-    for (const row of split.data ?? []) ids.add(row.id);
-  }
-  return ids.size;
-}
-
-/** The delete confirm's count. A sample (stories, previews) passes its own and reads nothing. */
-export function useCategoryLineCount(categoryId: string | null, sample?: number) {
-  return useQuery({
-    queryKey: ["categories", "lines", categoryId],
-    enabled: categoryId != null && sample == null,
-    queryFn: async (): Promise<number> => {
-      const supabase = getSupabase();
-      if (!supabase || categoryId == null) throw new Error("supabase");
-      return countCategoryLines(supabase, categoryId);
-    },
-  });
-}
 
 /** delete_category, then a toast with the count and ביטול through restore_category. */
 export function useDeleteCategory(options: { onDeleted?: (target: CategoryTarget) => void } = {}) {
