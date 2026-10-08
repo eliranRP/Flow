@@ -32,8 +32,8 @@ export class JevError extends Error {
   }
 }
 
-type JsonObject = { [key: string]: JsonValue };
-type JsonValue = string | number | boolean | null | JsonValue[] | JsonObject;
+export type JsonObject = { [key: string]: JsonValue };
+export type JsonValue = string | number | boolean | null | JsonValue[] | JsonObject;
 
 export type NoulQuestion = {
   type: "noul";
