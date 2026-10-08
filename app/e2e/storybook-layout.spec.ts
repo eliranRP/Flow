@@ -158,7 +158,7 @@ test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW
         await expect(rows).toHaveCount(rowCount);
         const problems = await layoutProblems(page);
         const clipped = await page.locator(".ui-banner-row .ui-row-title").evaluateAll((nodes) =>
-          nodes.filter((node) => node.scrollHeight > node.clientHeight + 1).map((node) => node.textContent ?? ""));
+          nodes.filter((node) => node.scrollHeight > node.clientHeight + 1).map((node) => node.textContent));
         // The long-Hebrew story clamps on purpose; real Home titles must fit.
         if (id.startsWith("screens-routes")) problems.push(...clipped.map((title) => `row title clipped: ${title}`));
         if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
