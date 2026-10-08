@@ -1,5 +1,5 @@
 import { type CategoryRow } from "@flow/shared";
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useHoldWrites } from "../use-is-viewer";
 import { getSupabase } from "../lib/supabase";
@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 import { ConfirmSheet } from "../ui/confirm-sheet";
 import { EmptyState } from "../ui/empty-state";
 import { IconButton } from "../ui/icon-button";
-import { ChevronDownIcon, KeptOutIcon, LockIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
+import { ChevronDownIcon, KeptOutIcon, MoreIcon, PlusIcon, TagIcon } from "../ui/icons";
 import { List, ListRow } from "../ui/list-row";
 import { ScreenHeader } from "../ui/screen-header";
 import { ScreenState } from "../ui/screen-state";
@@ -21,6 +21,7 @@ import { Sheet } from "../ui/sheet";
 import { TextField } from "../ui/text-field";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
+import { CategoryMenuSheet } from "./category-sheet";
 import { KEPT_OUT, useBlockedPreview } from "./screen-shared";
 
 /** The three loan categories the server keeps fixed, by `loan_part`, and whether each counts in the P&L (decision 0099). */
@@ -101,7 +102,6 @@ export function CategoriesScreen({
   const [categoryName, setCategoryName] = useState("");
   const toast = useToast();
   const menuOpener = useRef<HTMLElement | null>(null);
-  const pnlHintId = useId();
   const pnl = useWrite<PnlChange>({
     failure: pnlFailureText,
     keys: ["categories", "dashboard", "project", "project-category"],
@@ -164,7 +164,6 @@ export function CategoriesScreen({
   const hiddenExpanded = showHidden && hiddenRows.length > 0;
   const anyKeptOut = rows.some((category) => category.kind === kind && category.excluded_from_pnl === true);
   const menuLoanLine = menu ? loanCategoryLine(menu) : null;
-  const menuKeptOut = menu?.excluded_from_pnl === true;
   const mergeTargets = rows.filter((category) => category.id !== mergeFrom && category.kind === kind && !category.hidden);
   const previewNoCompany = sample == null && params.get("preview") === "empty";
   const liveNoCompany = sample == null && preview === "off" && dashboard.isSuccess && dashboard.data.company_id == null;
@@ -274,65 +273,27 @@ export function CategoriesScreen({
           {KEPT_OUT}
         </p>
       ) : null}
-      <Sheet
-        open={menu != null}
-        onOpenChange={(open) => {
-          // A dismiss during the P&L write waits for it: success closes the sheet, failure keeps it.
-          if (open) return true;
-          if (pnl.isPending) return false;
-          setMenu(null);
-          return true;
-        }}
-        title={menu?.name ?? "קטגוריה"}
+      <CategoryMenuSheet
+        category={menu}
+        rows={rows}
+        loanLine={menuLoanLine}
+        pnlBusy={pnl.isPending}
+        blocked={blocked}
         returnFocusRef={menuOpener}
-      >
-        <div className="ui-stack">
-          <Button
-            variant="secondary"
-            disabled={pnl.isPending}
-            onClick={() => {
-              setHideTarget(menu);
-              setMenu(null);
-            }}
-          >
-            {menu?.hidden ? "החזרה לרשימה" : "הסתרה"}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={pnl.isPending}
-            onClick={() => {
-              setMergeFrom(menu?.id ?? "");
-              setMenu(null);
-              setPickOpen(true);
-            }}
-          >
-            מיזוג
-          </Button>
-          {menuLoanLine != null ? (
-            <p className="ui-cat-fixed">
-              <LockIcon size={18} />
-              {menuLoanLine}
-            </p>
-          ) : menu != null ? (
-            <>
-              <Button
-                variant="secondary"
-                busy={pnl.isPending}
-                aria-describedby={pnlHintId}
-                onClick={() => {
-                  if (pnl.isPending || blocked()) return;
-                  pnl.mutate({ id: menu.id, name: menu.name, excluded: !menuKeptOut, undo: false });
-                }}
-              >
-                {pnl.isPending ? "מעדכן…" : menuKeptOut ? "החזרה לרווח והפסד" : KEPT_OUT}
-              </Button>
-              <p id={pnlHintId} className="t-hint ui-cat-pnl-hint">
-                {menuKeptOut ? "הסכומים ייספרו שוב כהכנסה או הוצאה." : "הכסף נשאר בתזרים, ולא נספר כהכנסה או הוצאה."}
-              </p>
-            </>
-          ) : null}
-        </div>
-      </Sheet>
+        onClose={() => { setMenu(null); }}
+        onPnl={(category) => {
+          pnl.mutate({ id: category.id, name: category.name, excluded: category.excluded_from_pnl !== true, undo: false });
+        }}
+        onHide={(category) => {
+          setHideTarget(category);
+          setMenu(null);
+        }}
+        onMerge={(category) => {
+          setMergeFrom(category.id);
+          setMenu(null);
+          setPickOpen(true);
+        }}
+      />
       <Sheet open={pickOpen} onOpenChange={setPickOpen} title="מיזוג אל">
         <div className="ui-stack">
           {mergeTargets.map((category) => (

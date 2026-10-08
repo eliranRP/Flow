@@ -73,11 +73,11 @@ export function useMoveCategoryLines(options: { onMoved?: () => void } = {}) {
   const move = useWrite<{ from: CategoryTarget; into: CategoryTarget }>({
     failure: moveFailureText,
     keys: CATEGORY_WRITE_KEYS,
-    onSuccess: ({ into }) => {
+    onSuccess: ({ from, into }) => {
       const done = moved.current;
       const lines = done?.lines ?? 0;
       toast.show({
-        message: movedToast(lines, into.name),
+        message: movedToast(lines, from.name, into.name),
         ...(done != null && lines > 0 ? { action: "ביטול", onAction: () => { undo.mutate(done.moveId); } } : {}),
       });
       options.onMoved?.();
@@ -92,6 +92,33 @@ export function useMoveCategoryLines(options: { onMoved?: () => void } = {}) {
     },
   });
   return { move, undo };
+}
+
+/** FLOW-404: set_category_rehab, with a ביטול toast that puts back the old setting (null is the default). */
+export function useCategoryRehab() {
+  const toast = useToast();
+  const write = useWrite<{ target: CategoryTarget; rehab: boolean | null; before: boolean | null; undo: boolean; counts: boolean }>({
+    failure: "לא הצלחנו לעדכן את הקטגוריה.",
+    keys: ["categories", "project"],
+    onSuccess: (done) => {
+      toast.show({
+        message: `${done.target.name} · ${done.counts ? "נספרת בשיפוץ" : "לא נספרת בשיפוץ"}`,
+        ...(done.undo ? {} : {
+          action: "ביטול",
+          onAction: () => {
+            write.mutate({ ...done, rehab: done.before, before: done.rehab, undo: true, counts: !done.counts });
+          },
+        }),
+      });
+    },
+    run: async ({ target, rehab }) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      // The generated type says boolean; null puts the category back on the default (decision 0143).
+      assertNoError(await supabase.rpc("set_category_rehab", { p_category_id: target.id, p_rehab: rehab as boolean }));
+    },
+  });
+  return write;
 }
 
 function record(value: unknown): Record<string, unknown> {

@@ -17,19 +17,36 @@ export function mergeFailureText(error: Error): string {
   return "לא הצלחנו למזג.";
 }
 
-/** FLOW-405: the delete confirm's line, from how many lines on the books use the category. */
-export function deleteConsequence(lines: number): string {
-  if (lines === 0) return "אין בה תנועות.";
-  if (lines === 1) return "תנועה אחת תחזור לאישור בלי קטגוריה.";
-  return `${String(lines)} תנועות יחזרו לאישור בלי קטגוריה.`;
+/** FLOW-405: the delete confirm's item line, from how many lines on the books use the category. */
+export function deleteItem(name: string, lines: number | undefined): string {
+  if (lines == null) return name;
+  if (lines === 0) return `${name} · אין תנועות`;
+  if (lines === 1) return `${name} · תנועה אחת`;
+  return `${name} · ${String(lines)} תנועות`;
+}
+
+/** What happens to the lines. Unknown counts (an older payload) say the full sentence. */
+export function deleteConsequence(lines: number | undefined): string {
+  if (lines === 0) return "הקטגוריה תימחק מהרשימה.";
+  return "התנועות יישארו בלי קטגוריה ויחזרו ללשונית לאישור.";
+}
+
+/** The split side effect, only when some of the lines are split by category. */
+export function deleteDetail(splitLines: number | undefined): string | undefined {
+  if (splitLines == null || splitLines === 0) return undefined;
+  if (splitLines === 1) return "אחת מהן מפוצלת, והפיצול שלה יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.";
+  return `${String(splitLines)} מהן מפוצלות, והפיצול שלהן יימחק. ספקים שזכרו את הקטגוריה ישכחו אותה.`;
 }
 
 /** The toast after a delete, from delete_category's name and lines. */
 export function deletedToast(name: string, lines: number): string {
-  if (lines === 0) return `${name} נמחקה`;
-  if (lines === 1) return `${name} נמחקה · תנועה אחת חזרה לאישור`;
-  return `${name} נמחקה · ${String(lines)} תנועות חזרו לאישור`;
+  if (lines === 0) return `${name} נמחקה.`;
+  if (lines === 1) return `${name} נמחקה. תנועה אחת חזרה ללשונית לאישור`;
+  return `${name} נמחקה. ${String(lines)} תנועות חזרו ללשונית לאישור`;
 }
+
+/** Why the delete row is disabled, when the server would refuse it. */
+export const DELETE_LOAN_USED = "הלוואה משתמשת בקטגוריה. העבירו קודם את התנועות, או שנו את ההלוואה.";
 
 /** delete_category's refusals (decision 0144). */
 export function deleteFailureText(error: Error): string {
@@ -40,15 +57,28 @@ export function deleteFailureText(error: Error): string {
 
 /** restore_category's refusal: a line got a category again, or the name is taken. */
 export function restoreFailureText(error: Error): string {
-  if (error.message.includes("category cannot be restored")) return "אי אפשר לבטל: חלק מהתנועות כבר שויכו מחדש.";
+  if (error.message.includes("category cannot be restored")) return "אי אפשר לבטל: תנועה סווגה מחדש בינתיים.";
   return "לא הצלחנו לבטל את המחיקה.";
 }
 
 /** The toast after "העברת כל התנועות", from move_category_lines' lines. */
-export function movedToast(lines: number, into: string): string {
-  if (lines === 0) return "לא היו תנועות להעביר";
-  if (lines === 1) return `תנועה אחת עברה אל ${into}`;
-  return `${String(lines)} תנועות עברו אל ${into}`;
+export function movedToast(lines: number, from: string, into: string): string {
+  if (lines === 0) return `לא היו תנועות להעביר מ${from}`;
+  if (lines === 1) return `תנועה אחת הועברה מ${from} אל ${into}`;
+  return `${String(lines)} תנועות הועברו מ${from} אל ${into}`;
+}
+
+/** The move row's hint and the picker's title, from the source's line count. */
+export function moveHint(name: string, lines: number | undefined): string {
+  if (lines === 0) return "אין תנועות להעביר.";
+  const count = lines == null ? "התנועות" : lines === 1 ? "תנועה אחת" : `${String(lines)} תנועות`;
+  return `${count} ${lines === 1 ? "עוברת" : "עוברות"} לקטגוריה אחרת. ${name} נשארת.`;
+}
+
+export function moveTitle(lines: number | undefined): string {
+  if (lines == null) return "העברת התנועות אל";
+  if (lines === 1) return "העברת תנועה אחת אל";
+  return `העברת ${String(lines)} תנועות אל`;
 }
 
 /** move_category_lines' refusals, the same as merge's. */
@@ -64,6 +94,6 @@ export function moveFailureText(error: Error): string {
 
 /** undo_category_move's refusal: a moved line changed since. */
 export function undoMoveFailureText(error: Error): string {
-  if (error.message.includes("category move cannot be undone")) return "אי אפשר לבטל: חלק מהתנועות השתנו מאז.";
+  if (error.message.includes("category move cannot be undone")) return "אי אפשר לבטל: תנועה סווגה מחדש בינתיים.";
   return "לא הצלחנו לבטל את ההעברה.";
 }
