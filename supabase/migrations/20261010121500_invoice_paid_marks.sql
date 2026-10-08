@@ -1045,7 +1045,8 @@ $$;
 revoke all on function public.mcp_undo(text, text, uuid) from public, anon, authenticated, service_role;
 grant execute on function public.mcp_undo(text, text, uuid) to authenticated;
 
--- FLOW-412. list_project_category: as in 20261009120000_profit_by_month.sql, plus p_basis
+-- FLOW-412. list_project_category: as in 20261009120000_profit_by_month.sql, read for the owner
+-- or a viewer (20261010100000_viewer_reads.sql), plus p_basis
 -- (cash or invoiced, default invoiced as before). On the cash basis an unpaid supplier invoice
 -- or credit note is left out, as get_project's category rows leave it out (0118). The response
 -- echoes the basis.
@@ -1075,7 +1076,7 @@ declare
   listed jsonb;
   basis text;
 begin
-  cid := private.current_company_id();
+  cid := private.readable_company_id();
   if cid is null then
     return null;
   end if;

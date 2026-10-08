@@ -131,7 +131,8 @@ const ALLOWED: Record<string, Set<string>> = {
 };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const UUID_TEXT = z.string().regex(UUID);
+// Any case is accepted; the database compares ids in lower case (FLOW-205).
+const UUID_TEXT = z.string().regex(UUID).transform((id) => id.toLowerCase());
 const IDEMPOTENCY_KEY = z.string().min(1).max(128);
 // A batch key leaves room for ":" and a three-digit ordinal on each row key.
 const BATCH_KEY = z.string().min(1).max(124);
@@ -431,6 +432,10 @@ const batchItemSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
   if (item.project_id != null && item.category_id == null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+  // remember saves a project for the supplier, so a category-only row can't take it (FLOW-205).
+  if (item.project_id == null && item.remember === true) {
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
@@ -940,7 +945,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project (0 when none is here, null for an unsplit line). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project (0 when none is here, null for an unsplit line). kept_out is true when no part of the line counts in this project's P&L (a kept-out category, or the owner took the line out). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
       from: { type: "string" },
@@ -1071,7 +1076,7 @@ function writeTools() {
       category_id: { type: "string" },
       shares: SHARES_SPEC,
     }, true),
-    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. undo_batch with the returned batch_key undoes the rows that succeeded.", {
+    toolSpec("assign_expenses", "Assign up to 200 expenses in one write. Partial success is allowed. A row with shares[] splits that expense like assign_expense_split. A row with only transaction_id and parts[] runs split_line on that line (same parts; parts [] clears the split); its undo_kind is line_split. remember needs project_id on the same row. undo_batch with the returned batch_key undoes the rows that succeeded.", {
       idempotency_key: { type: "string" },
       items: {
         type: "array",
