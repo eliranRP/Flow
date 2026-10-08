@@ -226,6 +226,31 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"jev_outcomes": {
+                  Row: {
+                    "category_match": boolean | null,"company_id": string,"confidence": number,"final_category_id": string | null,"final_project_id": string | null,"model_version": string,"project_match": boolean | null,"resolved_at": string,"review_status": Database["public"]['Enums']["review_status"],"suggested_category_id": string | null,"suggested_project_id": string | null,"suggestion_id": string,"transaction_id": string
+                  }
+                  Insert: {
+                    "category_match"?: boolean | null,"company_id": string,"confidence": number,"final_category_id"?: string | null,"final_project_id"?: string | null,"model_version": string,"project_match"?: boolean | null,"resolved_at"?: string,"review_status": Database["public"]['Enums']["review_status"],"suggested_category_id"?: string | null,"suggested_project_id"?: string | null,"suggestion_id": string,"transaction_id": string
+                  }
+                  Update: {
+                    "category_match"?: boolean | null,"company_id"?: string,"confidence"?: number,"final_category_id"?: string | null,"final_project_id"?: string | null,"model_version"?: string,"project_match"?: boolean | null,"resolved_at"?: string,"review_status"?: Database["public"]['Enums']["review_status"],"suggested_category_id"?: string | null,"suggested_project_id"?: string | null,"suggestion_id"?: string,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jev_outcomes_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    },{
+      foreignKeyName: "jev_outcomes_suggestion_id_fkey"
+      columns: ["suggestion_id"]
+isOneToOne: false
+      referencedRelation: "tag_suggestions"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"jev_usage": {
                   Row: {
                     "calls": number,"company_id": string,"failed": number,"finished_at": string | null,"id": string,"input_tokens": number,"output_tokens": number,"reserved": number,"run_id": string,"started_at": string,"tagged": number,"usage_day": string
@@ -868,6 +893,9 @@ isOneToOne: false
                            },
 "mcp_hide_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string }; Returns: Json
+                           },
+"mcp_jev_accuracy":
+{ Args: { "p_from"?: string,"p_to"?: string }; Returns: Json
                            },
 "mcp_jev_status":
 { Args: Record<PropertyKey, never>; Returns: Json
