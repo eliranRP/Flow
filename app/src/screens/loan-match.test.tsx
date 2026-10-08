@@ -281,7 +281,7 @@ describe("LoanSplitPanel", () => {
         { id: "c", part: "principal", amountMinor: 300n, scheduledMinor: 300n, needsReview: true, loanId: "loan-1", inPnl: false },
       ],
     });
-    expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toBeInTheDocument();
     expect(screen.getByText("ריבית")).toBeInTheDocument();
     expect(screen.getByText("מסים וביטוח")).toBeInTheDocument();
     expect(screen.getByText("קרן")).toBeInTheDocument();
@@ -289,13 +289,13 @@ describe("LoanSplitPanel", () => {
     expect(screen.getByText("−₪2")).toBeInTheDocument();
     expect(screen.getByText("−₪3")).toBeInTheDocument();
     expect(screen.getByText("−₪10")).toBeInTheDocument();
-    expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
+    expect(screen.getByText("הפיצול ממתין לבדיקה.")).toBeInTheDocument();
     // FLOW-131: the flag cannot say why, so the hint names the busy loan as a maybe.
     expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "עדכון החלוקה" })).toHaveAccessibleDescription(LOAN_BUSY_HINT);
+    expect(screen.getByRole("button", { name: "עדכון הפיצול" })).toHaveAccessibleDescription(LOAN_BUSY_HINT);
     expect(screen.queryByText(/נספר ברווח/)).not.toBeInTheDocument();
     expect(screen.queryByText("מחוץ לרווח")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
     expect(onCorrect).toHaveBeenCalled();
   });
 
@@ -368,8 +368,8 @@ describe("LoanSplitPanel", () => {
       ],
     });
     expect(screen.getByText("ריבית")).toBeInTheDocument();
-    expect(screen.getByText("החלוקה ממתינה לבדיקה.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עדכון החלוקה" })).not.toBeInTheDocument();
+    expect(screen.getByText("הפיצול ממתין לבדיקה.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עדכון הפיצול" })).not.toBeInTheDocument();
     expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
   });
 
@@ -384,7 +384,7 @@ describe("LoanSplitPanel", () => {
       ],
     });
     expect(screen.getByText("המטבע של השורה לא מתאים להלוואה.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "עדכון החלוקה" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עדכון הפיצול" })).not.toBeInTheDocument();
     expect(screen.queryByText(LOAN_BUSY_HINT)).not.toBeInTheDocument();
   });
 
@@ -478,7 +478,7 @@ describe("LoanTransactionSplit", () => {
     ];
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
     await waitFor(() => { expect(screen.getByText("התשלום כבר שויך להלוואה.")).toBeInTheDocument(); });
-    await waitFor(() => { expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toBeInTheDocument(); });
     expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
   });
 
@@ -584,7 +584,7 @@ describe("LoanTransactionSplit", () => {
     renderSplit();
     await waitFor(() => { expect(screen.getByText("עמלות")).toBeInTheDocument(); });
     expect(screen.getByText("עמלות").closest(".ui-row")).toHaveTextContent("−₪2.50");
-    fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
     await waitFor(() => { expect(db.updates).toHaveLength(4); });
     // 14.50 less the 2.50 fees: interest 5, escrow 2, and principal takes the other 5.
     expect(db.updates).toEqual([
@@ -603,9 +603,9 @@ describe("LoanTransactionSplit", () => {
     ];
     db.updateError = { message: "denied", code: "42501" };
     renderSplit();
-    await waitFor(() => { expect(screen.getByRole("button", { name: "עדכון החלוקה" })).toBeInTheDocument(); });
-    fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
-    await waitFor(() => { expect(screen.getByText("אין הרשאה לעדכן את החלוקה.")).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("button", { name: "עדכון הפיצול" })).toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
+    await waitFor(() => { expect(screen.getByText("אין הרשאה לעדכן את הפיצול.")).toBeInTheDocument(); });
   });
 
   it("says the payment is above the balance when clearing re-checks it (FLOW-131)", async () => {
@@ -619,7 +619,7 @@ describe("LoanTransactionSplit", () => {
     db.txn = { company_id: "co-1", amount_original: 1_000, currency: "ILS" };
     renderSplit();
     await waitFor(() => { expect(screen.getByText(LOAN_BUSY_HINT)).toBeInTheDocument(); });
-    fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון הפיצול" }));
     await waitFor(() => { expect(screen.getByText("התשלום גבוה מיתרת ההלוואה.")).toBeInTheDocument(); });
   });
 
@@ -629,7 +629,7 @@ describe("LoanTransactionSplit", () => {
     fireEvent.click(matchButton());
     fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toHaveFocus();
+      expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toHaveFocus();
     });
   });
 
@@ -660,7 +660,7 @@ describe("LoanTransactionSplit", () => {
       ],
     };
     renderSplit();
-    await waitFor(() => { expect(screen.getByRole("heading", { name: "חלוקת התשלום" })).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByRole("heading", { name: "פיצול התשלום" })).toBeInTheDocument(); });
     expect(screen.getByText("−$5")).toBeInTheDocument();
     expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח $7");
     expect(screen.getByText("קרן").closest(".ui-row")).toHaveTextContent("מחוץ לרווח");

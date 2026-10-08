@@ -108,7 +108,9 @@ export function ListRow(props: ListRowProps) {
   const softDisabled = props.variant === "button" && props.ariaDisabled === true;
   const rowDisabled = ((props.variant === "button" || props.variant === "danger") && props.disabled === true) || softDisabled;
   const busyRow = props.variant === "button" && props.busy === true;
-  const showChevron = props.chevron === true && props.variant !== "static" && !rowDisabled && !busyRow;
+  // A linked transaction row opens its card, so it carries the chevron unless the caller opts out (FLOW-328).
+  const wantsChevron = props.chevron ?? (props.variant === "transaction" && props.href != null);
+  const showChevron = wantsChevron && props.variant !== "static" && !rowDisabled && !busyRow;
   const toneClass = props.tone === "warning" ? "ui-row-tone-warning" : props.tone === "muted" ? "ui-row-tone-muted" : false;
   const baseIcon =
     props.icon ??

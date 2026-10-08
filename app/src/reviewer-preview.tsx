@@ -101,12 +101,12 @@ function ReviewerHome() {
           {" תנועות שויכו היום, וזה מספר השורות ברשימה."}
         </p>
         <p className="t-hint">
-          חלוקה לפי הכנסות של העלות המשותפת:
+          פיצול לפי הכנסות של העלות המשותפת:
           {" "}
           <bdi className="ui-num" dir="ltr">{alon ? money(alon.agorot) : ""}</bdi>
           {" ו־"}
           <bdi className="ui-num" dir="ltr">{raanana ? money(raanana.agorot) : ""}</bdi>
-          {`. ${reviewerOtherProjectName} נכנס רק במשקל החלוקה, `}
+          {`. ${reviewerOtherProjectName} נכנס רק במשקל הפיצול, `}
           <bdi className="ui-num" dir="ltr">{money(books.otherIncome)}</bdi>
           .
         </p>
@@ -128,7 +128,7 @@ function ReviewerHome() {
         <Button full variant="secondary" to="/reviewer/save?save=offline">שמירה בלי חיבור</Button>
         <Button full variant="secondary" to="/reviewer/save?save=shared">שמירה, עלות משותפת</Button>
         <Button full variant="secondary" to="/reviewer/split-expense">הוצאה מפוצלת, שינוי קטגוריה</Button>
-        <Button full variant="secondary" to="/reviewer/unsplit">חלוקה חזרה לפרויקט אחד</Button>
+        <Button full variant="secondary" to="/reviewer/unsplit">חזרה מפיצול לפרויקט אחד</Button>
       </div>
     </>
   );
@@ -269,7 +269,7 @@ function ReviewerTransaction({ path }: { path: string }) {
         {row.project_name} · {row.category_name}
       </p>
       {shares ? (
-        <ul className="ui-page-pad" aria-label="חלוקה">
+        <ul className="ui-page-pad" aria-label="פיצול">
           {shares.map((share) => (
             <li className="t-body" key={share.name}>
               {share.name}
@@ -320,7 +320,7 @@ function ReviewerSave() {
       suggestionProjectId={split ? "" : (item?.project_id ?? "p-alon")}
       suggestionCategoryId={item?.category_id ?? ""}
       projectTitle={split && item ? reviewSplitTitle(item) : undefined}
-      projectNote={split ? "החלוקה תרד, והסכום כולו יעבור לפרויקט הזה." : undefined}
+      projectNote={split ? "הפיצול ירד, והסכום כולו יעבור לפרויקט הזה." : undefined}
       onProjectId={setProjectId}
       onCategoryId={setCategoryId}
       {...(split ? {} : { remember, onRemember: setRemember })}
@@ -420,7 +420,7 @@ function ReviewerUnsplit() {
           variant="secondary"
           onClick={() => { setShowSplit((open) => !open); }}
         >
-          {showSplit ? "שינוי שיוך" : "איך לחלק?"}
+          {showSplit ? "שינוי שיוך" : "איך לפצל?"}
         </Button>
       </div>
       <section aria-label="סכומי הפרויקטים">
@@ -550,7 +550,7 @@ function ReviewerSplit() {
   const navigate = useNavigate();
   const leasing = leasingSplit(location.state);
   const mode = sampleSaveMode(params.get("save"));
-  const write = useSampleWrite(mode, "החלוקה נשמרה", () => {
+  const write = useSampleWrite(mode, "הפיצול נשמר", () => {
     void navigate(`/reviewer/review?save=${mode}`);
   });
   return (

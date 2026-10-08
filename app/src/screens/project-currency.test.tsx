@@ -62,7 +62,9 @@ describe("ProjectDetailScreen currency", () => {
     renderProject(usdProject());
     expect(screen.getByText("$2,750")).toBeInTheDocument();
     expect(screen.queryByText("אין עדיין הוצאות מסווגות.")).not.toBeInTheDocument();
-    const categoryAmount = screen.getAllByText("−$1,250")[0];
+    // Rows under הוצאות לפי קטגוריה carry no minus (FLOW-328).
+    expect(screen.queryByText("−$1,250")).not.toBeInTheDocument();
+    const categoryAmount = screen.getAllByText("$1,250")[0];
     expect(categoryAmount?.closest("bdi")).toHaveAttribute("dir", "ltr");
     fireEvent.click(screen.getByText("תנועות אחרונות"));
     const txnAmount = screen.getByText("Sample vendor").closest(".ui-row")?.querySelector(".ui-num");
@@ -87,7 +89,7 @@ describe("ProjectDetailScreen currency", () => {
     });
     expect(screen.getAllByText("2 ממתינות לאישור")).toHaveLength(1);
     const pendingRow = screen.getByText("2 ממתינות לאישור").closest(".ui-row");
-    expect(pendingRow?.querySelector(".ui-num")?.textContent).toBe("−$35");
+    expect(pendingRow?.querySelector(".ui-num")?.textContent).toBe("$35");
     expect(screen.queryByText("₪0")).not.toBeInTheDocument();
   });
 
@@ -109,9 +111,9 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.getByText("$2,750")).toBeInTheDocument();
     expect(document.querySelectorAll(".ui-band-figures")).toHaveLength(2);
     const ilsRow = screen.getByText("1 ממתינה לאישור").closest(".ui-row");
-    expect(ilsRow?.querySelector(".ui-num")?.textContent).toBe("−₪10");
+    expect(ilsRow?.querySelector(".ui-num")?.textContent).toBe("₪10");
     const usdRow = screen.getByText("2 ממתינות לאישור").closest(".ui-row");
-    expect(usdRow?.querySelector(".ui-num")?.textContent).toBe("−$35");
+    expect(usdRow?.querySelector(".ui-num")?.textContent).toBe("$35");
   });
 
   it("keeps ILS rendering for older payloads", () => {

@@ -14,7 +14,7 @@ export type WriteFailure = string | {
   message: string;
   retry?: boolean;
   tone?: "bad" | "info";
-  /** A shared-cost refusal offers לחלוקה instead of a retry. */
+  /** A shared-cost refusal offers לפיצול instead of a retry. */
   action?: string;
 };
 
@@ -39,7 +39,7 @@ export function useWrite<T = void>(options: {
   success?: string;
   failure: string | ((error: Error) => WriteFailure);
   onSuccess?: (payload: T) => void;
-  /** Where לחלוקה goes when the database refuses one project on a shared cost. */
+  /** Where לפיצול goes when the database refuses one project on a shared cost. */
   onSplit?: () => void;
   /** Runs before a retry, while the toast action is still focused. */
   retryFocus?: () => void;

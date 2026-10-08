@@ -16,14 +16,20 @@ type HeaderChrome = {
   subtitleClassName?: string;
 };
 
-/** A title is required unless the header is only the bar. Stacked puts the title under that bar. */
+/**
+ * A title is required unless the header is only the bar. Stacked puts the title under that bar.
+ * With a back or leading control the title stacks by default (FLOW-326, mockups 07 and 14), so it
+ * starts on the start side under its kicker. A compact title and `layout="inline"` stay on the bar.
+ */
 export type ScreenHeaderProps =
   | (HeaderChrome & { title: string; barOnly?: false; layout?: "inline" })
   | (HeaderChrome & { barOnly: true; title?: undefined; layout?: undefined })
   | (HeaderChrome & { layout: "stacked"; title: string; barOnly?: false });
 
 function subtitleClass(extra: string | undefined, stacked: boolean): string {
-  if (stacked) return extra ? `t-label ${extra}` : "t-label text-text-secondary";
+  // A stacked subtitle keeps the secondary colour with an extra class too: the reviewer card's
+  // supplier line (`ui-party`) stacks now that Back stacks by default (FLOW-326).
+  if (stacked) return extra ? `t-label text-text-secondary ${extra}` : "t-label text-text-secondary";
   return extra ? `t-label mt-4 text-text-secondary ${extra}` : "t-label mt-4 text-text-secondary";
 }
 
@@ -40,12 +46,14 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     subtitleClassName,
   } = props;
   const barOnly = props.barOnly === true;
-  const stacked = props.layout === "stacked";
   const title = props.title;
   const start = leading ?? (backTo ? <BackButton fallback={backTo} /> : null);
+  const stacked = props.layout === "stacked"
+    || (props.layout == null && !barOnly && start != null && size !== "compact");
+  const kickerLine = kicker ? <p className="t-hint">{kicker}</p> : null;
   return (
     <header className={stacked ? "ui-page ui-page-stacked" : "ui-page"}>
-      {kicker ? <p className="t-hint">{kicker}</p> : null}
+      {stacked ? null : kickerLine}
       <div className="ui-page-title-row">
         {start}
         {barOnly || stacked || title == null ? null : (
@@ -53,6 +61,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         )}
         {trailing ?? action}
       </div>
+      {stacked ? kickerLine : null}
       {stacked && title != null ? <FocusTitle className="t-title-1">{title}</FocusTitle> : null}
       {subtitle ? <p className={subtitleClass(subtitleClassName, stacked)}>{subtitle}</p> : null}
     </header>
