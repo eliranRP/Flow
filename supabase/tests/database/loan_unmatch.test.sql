@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(26);
+select plan(31);
 
 do $users$
 begin
@@ -29,6 +29,12 @@ insert into public.loans (
 )
 values ((select id from lun where label = 'co'), 'Example mortgage', 12000000, 60000, 360, '2026-01-01', 100000, 20000, 'ILS');
 insert into lun (label, id) select 'loan', id from public.loans where company_id = (select id from lun where label = 'co');
+insert into public.loans (
+  company_id, name, principal_minor, annual_rate_ppm, term_months,
+  start_date, payment_minor, escrow_minor, currency, kind
+)
+values ((select id from lun where label = 'co'), 'Example demand loan', 5000000, 60000, null, '2026-01-01', null, 0, 'ILS', 'demand');
+insert into lun (label, id) select 'demand', id from public.loans where name = 'Example demand loan';
 
 -- Four payments of 1000.00 and one plain line; one line in the other company.
 insert into lun (label, id)
@@ -36,7 +42,8 @@ select 'txn_' || v.k, tests.fixture_line((select id from lun where label = 'co')
   p_category => (select id from lun where label = 'materials'), p_doc_date => v.d::date,
   p_doc_kind => 'expense', p_pnl_role => null)
 from (values ('app', '2026-06-01'), ('mcp', '2026-06-02'), ('again', '2026-06-03'),
-  ('gone', '2026-06-04'), ('plain', '2026-06-05')) as v(k, d);
+  ('gone', '2026-06-04'), ('plain', '2026-06-05'), ('fit', '2026-06-06'),
+  ('dem1', '2026-06-10'), ('dem2', '2026-06-20')) as v(k, d);
 insert into lun (label, id) values ('txn_other', tests.fixture_line(
   (select id from lun where label = 'other_co'), 'lun:other', 100000, p_doc_kind => 'expense', p_pnl_role => null));
 
@@ -47,17 +54,19 @@ as $$ select id from pg_temp.lun where label = p_label; $$;
 grant execute on function pg_temp.id(text) to authenticated, service_role;
 
 -- Interest 700.00, escrow 200.00, principal 100.00 on the company's loan-part categories.
-create or replace function pg_temp.attach(p_label text)
+-- A demand loan has no escrow, so its escrow part is zero and its principal 300.00.
+create or replace function pg_temp.attach(p_label text, p_loan text default 'loan')
 returns void
 language sql
 as $$
   insert into public.loan_splits (
     company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id, needs_review
   )
-  select pg_temp.id('co'), pg_temp.id('loan'), pg_temp.id(p_label), v.part::public.loan_split_part, v.amount, v.amount,
+  select pg_temp.id('co'), pg_temp.id(p_loan), pg_temp.id(p_label), v.part::public.loan_split_part, v.amount, v.amount,
     (select c.id from public.categories c where c.company_id = pg_temp.id('co') and c.loan_part = v.part::public.loan_split_part),
     false
-  from (values ('interest', 70000), ('escrow', 20000), ('principal', 10000)) as v(part, amount);
+  from (values ('interest', 70000), ('escrow', case when p_loan = 'demand' then 0 else 20000 end),
+    ('principal', case when p_loan = 'demand' then 30000 else 10000 end)) as v(part, amount);
 $$;
 
 create or replace function pg_temp.parts(p_label text)
@@ -73,6 +82,8 @@ select pg_temp.attach('txn_app');
 select pg_temp.attach('txn_mcp');
 select pg_temp.attach('txn_again');
 select pg_temp.attach('txn_gone');
+select pg_temp.attach('txn_fit');
+select pg_temp.attach('txn_dem1', 'demand');
 
 -- MCP tokens: write and read.
 select public.store_mcp_credential(tests.get_supabase_uid('lun_owner'), 'hash-lun-write01', array['read','write'],
@@ -154,6 +165,7 @@ select is(public.mcp_undo('lun-u1', 'loan_detach', pg_temp.id('txn_mcp'))->>'ok'
 select is(pg_temp.parts('txn_mcp'), 'interest:70000:false,escrow:20000:false,principal:10000:false',
   'with the same parts');
 select is((public.get_loan_split(pg_temp.id('txn_mcp'))->>'by_parts')::boolean, true, 'counted by parts again');
+select lives_ok('set constraints all immediate', 'the restored parts pass the deferred loan checks');
 select is(public.mcp_undo('lun-u2', 'loan_detach', pg_temp.id('txn_mcp'))->'error'->>'code', 'not_found',
   'a second undo finds nothing to undo');
 
@@ -172,6 +184,26 @@ update public.transactions set removed_at = now() where id = pg_temp.id('txn_gon
 do $$ begin perform pg_temp.as_mcp('write'); end $$;
 select is(public.mcp_undo('lun-u4', 'loan_detach', pg_temp.id('txn_gone'))->'error'->>'code', 'not_found',
   'undo after the line was removed is not found');
+
+-- The parts no longer fit the line: undo is a conflict and puts nothing back.
+select public.mcp_detach_loan_payment('lun-d5', pg_temp.id('txn_fit'));
+reset role;
+update public.transactions set amount_gross = -90000, amount_net = -90000, amount_original = 90000
+where id = pg_temp.id('txn_fit');
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+select is(public.mcp_undo('lun-u5', 'loan_detach', pg_temp.id('txn_fit'))->'error'->>'code', 'conflict',
+  'undo after the line amount changed is a conflict');
+select is(pg_temp.parts('txn_fit'), '', 'and puts no parts back');
+
+-- A demand loan takes its payments in date order: once a later payment is matched, the
+-- earlier one cannot come back.
+select public.mcp_detach_loan_payment('lun-d6', pg_temp.id('txn_dem1'));
+reset role;
+select pg_temp.attach('txn_dem2', 'demand');
+do $$ begin perform pg_temp.as_mcp('write'); end $$;
+select is(public.mcp_undo('lun-u6', 'loan_detach', pg_temp.id('txn_dem1'))->'error'->>'code', 'conflict',
+  'undo of an earlier demand-loan payment after a later one is matched is a conflict');
+select is(pg_temp.parts('txn_dem1'), '', 'and puts no parts back');
 
 -- A read token cannot detach.
 do $$ begin perform pg_temp.as_mcp('read'); end $$;

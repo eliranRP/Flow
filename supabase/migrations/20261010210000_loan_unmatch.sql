@@ -58,6 +58,13 @@ begin
   if not found then
     raise exception 'transaction not found';
   end if;
+  -- Attached or detached by another write while this one waited for the locks: the caller
+  -- retries (40001 is a retry, not a refusal, so MCP does not store it under its key).
+  if (select s.loan_id from public.loan_splits s
+      where s.transaction_id = p_transaction_id and s.company_id = cid limit 1)
+     is distinct from attached then
+    raise exception 'loan split changed' using errcode = '40001';
+  end if;
 
   with gone as (
     delete from public.loan_splits s
@@ -79,9 +86,6 @@ begin
   if removed is null then
     raise exception 'line has no loan split';
   end if;
-  -- A part added under another loan while this one waited would be left behind; the check
-  -- refuses a line with parts of two loans or a part missing.
-  perform private.loan_splits_check(p_transaction_id);
 
   return jsonb_build_object(
     'transaction_id', p_transaction_id,
@@ -138,7 +142,7 @@ begin
 
   begin
     removed := public.clear_loan_split(p_transaction_id);
-    -- clock_timestamp, so a detach after an attach in one transaction undoes newest first.
+    -- clock_timestamp, as the other writes, so two detaches of one line undo newest first.
     insert into private.mcp_writes (token_id, user_id, loan_id, transaction_id, kind, prior, created_at)
     values (
       token, auth.uid(), (removed->>'loan_id')::uuid, p_transaction_id, 'loan_detach',
@@ -232,15 +236,20 @@ begin
   end if;
   def := replace(def, anchor, $n$    elsif p_kind = 'loan_detach' then
       -- The loan first, then the line, as every loan split write.
-      perform 1 from public.loans l
+      select l.kind, l.start_date into cur_loan
+      from public.loans l
       where l.id = rec.loan_id and l.company_id = cid
       for update;
       cur_found := found;
       if cur_found then
-        perform 1 from public.transactions t
-        where t.id = p_id and t.company_id = cid and t.removed_at is null
-        for update;
-        cur_found := found;
+        select t.doc_date into written
+        from (
+          select to_jsonb(t.doc_date) as doc_date
+          from public.transactions t
+          where t.id = p_id and t.company_id = cid and t.removed_at is null
+          for update
+        ) t;
+        cur_found := written is not null;
       end if;
       if not cur_found then
         response := private.mcp_error('not_found', 'not found');
@@ -248,6 +257,23 @@ begin
         select 1 from public.loan_splits s where s.transaction_id = p_id and s.company_id = cid
       ) then
         -- Matched again since (to this loan or another): leave it.
+        response := private.mcp_error('conflict', 'conflict');
+      elsif cur_loan.kind = 'demand'::public.loan_kind and (
+        -- The demand order rules save_loan_split and attach_loan_payment apply (0132): interest
+        -- runs from the last payment, so a payment attached since with a later date, or a
+        -- start moved past this line, leaves no room to put this one back.
+        (written #>> '{}')::date < cur_loan.start_date
+        or exists (
+          select 1
+          from public.loan_splits s
+          join public.transactions t on t.id = s.transaction_id and t.company_id = s.company_id
+          where s.loan_id = rec.loan_id
+            and s.company_id = cid
+            and t.removed_at is null
+            and not s.needs_review
+            and t.doc_date > (written #>> '{}')::date
+        )
+      ) then
         response := private.mcp_error('conflict', 'conflict');
       else
         -- The line or the loan may have changed since (amount, balance, a part's category):

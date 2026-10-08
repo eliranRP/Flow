@@ -1293,7 +1293,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       paid: { type: "boolean" },
     }, true),
-    toolSpec("detach_loan_payment", "Take one line off the loan it was attached to (attach_loan_payment, or matched in the app): its interest, escrow, principal and fees parts are removed, so the line counts whole under its own category again and the loan balance no longer counts its principal. The line keeps its project and category. A line with no loan split is refused (line has no loan split). Returns the loan_id and the parts taken off, in cents. Undo is kind loan_detach with the transaction id: it puts the same parts back, and is a conflict when the line was matched again or the parts no longer fit (the line or the loan changed).", {
+    toolSpec("detach_loan_payment", "Take one line off the loan it was attached to (attach_loan_payment, or matched in the app): its interest, escrow, principal and fees parts are removed, so the line counts whole under its own category again and the loan balance no longer counts its principal. The line keeps its project and category (undo of loan_split gives back a project the attach filed, but only before the detach or after undoing it). A line with no loan split is refused (line has no loan split). Returns the loan_id and the parts taken off, in cents. Undo is kind loan_detach with the transaction id: it puts the same parts back, and is a conflict when the line was matched again, the parts no longer fit (the line or the loan changed), or a demand loan has a later payment matched since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
     }, true),

@@ -19,12 +19,12 @@ The loans review (FLOW-114) listed loan match gaps:
 - It removes every part of the split and returns them.
 - A viewer is `forbidden`. A line with no split is `line has no loan split`. A removed line, or another company's, is `transaction not found`.
 - The line keeps its project and category and counts whole again under its own category. The loan balance no longer counts its principal.
-- It does not undo a project the attach filed. That stays with the MCP `loan_split` undo, which checks nobody changed the line since.
+- It does not undo a project the attach filed. That stays with the MCP `loan_split` undo, which checks nobody changed the line since. That undo works before the detach, or after the detach is undone; on a detached line it is `conflict`, since the parts it would remove are gone.
 
 **MCP `detach_loan_payment`** does the same, with the usual idempotency key and write rate limit.
 - It records undo kind `loan_detach` with the removed parts: amounts, scheduled figures, categories and review flags.
-- Undo puts the same parts back and runs the split check.
-- Undo is `conflict` when the line was matched again, or when the parts no longer fit (the amount, the balance or a part's category changed). It is `not_found` when the line or the loan is gone.
+- Undo puts the same parts back and runs the split check. On a demand loan it also keeps the 0132 order: the line may not be dated before the loan starts, and no later payment of that loan may be matched since.
+- Undo is `conflict` when the line was matched again, or when the parts no longer fit (the amount, the balance or a part's category changed), or when a demand loan has a later payment matched. It is `not_found` when the line or the loan is gone.
 
 **`get_transaction` returns `loan_split`.** It is what `get_loan_split` returns, so the transaction screen and MCP `get_expense` need one read. `get_expense` still reads it on its own from a database without the field, for the gap between the migration and the edge deploy.
 
