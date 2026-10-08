@@ -185,11 +185,14 @@ async function syncCompany(
   const last = row.last_sync_at ? Date.parse(row.last_sync_at as string) : 0;
   const minGap = force ? FORCE_GAP_MS : QUIET_GAP_MS;
   if (last && Date.now() - last < minGap) return { ok: true, lines: 0, skipped: true };
+  // The stamp this run claims with: the release below clears only this stamp, so a run that
+  // outlives CLAIM_MS never clears a newer run's claim.
+  const claimStamp = new Date().toISOString();
   if (!alreadyClaimed) {
     const cutoff = new Date(Date.now() - CLAIM_MS).toISOString();
     const claim = await admin
       .from("connector_connections")
-      .update({ sync_claimed_at: new Date().toISOString() })
+      .update({ sync_claimed_at: claimStamp })
       .eq("company_id", companyId)
       .eq("provider", "mercury")
       .or(`sync_claimed_at.is.null,sync_claimed_at.lt.${cutoff}`)
@@ -361,7 +364,8 @@ async function syncCompany(
         .from("connector_connections")
         .update({ sync_claimed_at: null })
         .eq("company_id", companyId)
-        .eq("provider", "mercury");
+        .eq("provider", "mercury")
+        .eq("sync_claimed_at", claimStamp);
     }
   }
 }
