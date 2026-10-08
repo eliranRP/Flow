@@ -3687,7 +3687,8 @@ div.ui-check-row {
 
 .ui-lsplit-text {
   display: flex;
-  flex: 1 1 7rem;
+  /* Wide enough for a name, a החזר tag and ✕; below that the entry wraps to its own line. */
+  flex: 1 1 10rem;
   align-items: flex-start;
   gap: var(--space-1);
   min-inline-size: 0;
