@@ -54,6 +54,16 @@ describe("projectDetailSchema", () => {
     expect(parsed?.loans?.[0]?.balance_minor).toBe(12345n);
     expect(projectDetailSchema.parse({ ...project, categories: [] })?.loans).toBeUndefined();
   });
+
+  it("keeps a transaction's line_status, and drops a missing or unknown one", () => {
+    const line = { id: "t", description: "דוגמה", doc_date: "2026-06-10", amount_net: -100, direction: "expense", category: null };
+    const parsed = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      transactions: [{ ...line, line_status: "pending" }, line, { ...line, line_status: "held" }],
+    });
+    expect(parsed?.transactions.map((t) => t.line_status)).toEqual(["pending", undefined, undefined]);
+  });
 });
 
 describe("categoryRowSchema", () => {
