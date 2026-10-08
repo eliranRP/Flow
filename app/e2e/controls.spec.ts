@@ -485,7 +485,11 @@ test("the assistant row selects a scope and does not mint in preview", async ({ 
 test("settings connect, refresh, categories, and the account row", async ({ page }) => {
   await page.goto("/e2e/connections?preview=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
-  await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
+  const sumitSheet = page.getByRole("dialog", { name: "חיבור SUMIT" });
+  await expect(sumitSheet).toBeVisible();
+  // Empty fields are now checked in place (FLOW-508, #185), so fill them to reach the preview toast.
+  await sumitSheet.getByLabel("מספר חברה").fill("12345");
+  await sumitSheet.getByLabel("מפתח API").fill("preview-key");
   await page.getByRole("button", { name: "חיבור" }).click();
   await toast(page, previewToast);
   await page.getByRole("button", { name: "סגירה" }).click();
