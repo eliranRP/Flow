@@ -684,6 +684,38 @@ describe("LoanTransactionSplit", () => {
     expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
   });
 
+  it("does not offer a demand loan: it has no schedule to split by (decision 0132)", async () => {
+    const demand = { ...db.loans[0], kind: "demand", term_months: null, payment_minor: null };
+    db.loans = [demand as unknown as (typeof db.loans)[number]];
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).queryByText("הלוואת דוגמה")).not.toBeInTheDocument();
+    fireEvent.click(matchButton());
+    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+  });
+
+  it("splits an interest-only payment by its schedule and rate rows", async () => {
+    // 100,000.00 at 6%, 12 interest-only months; a rate row from 2026-02-01 makes it 12%.
+    db.loans = [{
+      ...db.loans[0],
+      kind: "interest_only",
+      interest_only_months: 12,
+      loan_rates: [{ effective_date: "2026-02-01", annual_rate_ppm: 120_000 }],
+    } as unknown as (typeof db.loans)[number]];
+    db.txn = { company_id: "co-1", amount_original: 100_000, currency: "ILS" };
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(db.inserts.length).toBe(1); });
+    const rows = db.inserts[0] as Array<{ part: string; amount_minor: number; scheduled_minor: number }>;
+    expect(rows.map((row) => [row.part, row.amount_minor, row.scheduled_minor])).toEqual([
+      ["interest", 100_000, 100_000],
+      ["escrow", 0, 0],
+      ["principal", 0, 0],
+    ]);
+  });
+
   it("hints the lone matching loan on the שיוך row", async () => {
     renderSplit();
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });

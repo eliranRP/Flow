@@ -7,15 +7,21 @@ import { z } from "zod";
 import { MERCURY_SYNC_FUNCTION } from "../_shared/connectors/mercury/capabilities.ts";
 import {
   buildLoanSchedule,
-  contractualPaymentMinor,
+  demandAccrual,
+  demandStatement,
   LoanScheduleError,
   LOAN_TERM_MONTHS_MAX,
+  regularPaymentMinor,
+  type DemandPayment,
+  type LoanKind,
+  type LoanRate,
   type LoanScheduleRow,
 } from "../../../packages/shared/src/loan-schedule.ts";
 import {
   allocateLoanSplitWithFees,
   firstUnpaidRowIndex,
   loanTakesPaymentOn,
+  paidInterestAndPrincipal,
   scheduleRowForDate,
   sumScheduleRows,
 } from "../../../packages/shared/src/loan-split.ts";
@@ -62,6 +68,7 @@ export const WRITE_TOOL_NAMES = [
   "add_loan",
   "update_loan",
   "attach_loan_payment",
+  "set_loan_rate",
   "split_line",
   "set_line_pnl",
   "set_lines_pnl",
@@ -82,7 +89,7 @@ const ALLOWED: Record<string, Set<string>> = {
   search_expenses: new Set(["scope", "query", "limit", "offset"]),
   get_totals: new Set(["from", "to", "basis"]),
   list_loans: new Set(["include_closed"]),
-  get_loan_schedule: new Set(["loan_id", "from", "limit"]),
+  get_loan_schedule: new Set(["loan_id", "from", "limit", "as_of"]),
   get_sync_status: new Set(["job_id"]),
   get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
   get_jev_status: new Set(),
@@ -107,9 +114,11 @@ const ALLOWED: Record<string, Set<string>> = {
   add_loan: new Set([
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
+    "kind", "interest_only_months", "amortization_months",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id", "kind", "interest_only_months", "amortization_months"]),
   attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id", "installments", "fees", "parts", "fees_category_id"]),
+  set_loan_rate: new Set(["idempotency_key", "loan_id", "effective_date", "annual_rate_percent"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
   set_lines_pnl: new Set(["idempotency_key", "items"]),
@@ -198,7 +207,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate"]),
   id: UUID_TEXT,
 }).strict();
 // Same rule as private.company_name_problem: 2 to 100 code points after trim()
@@ -224,18 +233,44 @@ function visibleName(min: number, max: number) {
 }
 const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
+const LOAN_KIND = z.enum(["amortizing", "interest_only", "balloon", "demand"]);
+const LOAN_MONTHS = z.number().int().min(1).max(LOAN_TERM_MONTHS_MAX);
+/**
+ * The kind fields go together (decision 0132): interest_only_months only with interest_only,
+ * amortization_months only with balloon, and a demand loan has no term, payment or escrow.
+ */
+function kindFieldsFit(body: {
+  kind?: LoanKind;
+  term_months?: number;
+  payment?: unknown;
+  escrow?: unknown;
+  interest_only_months?: number | null;
+  amortization_months?: number | null;
+}): boolean {
+  const kind = body.kind ?? "amortizing";
+  if ((kind === "interest_only") !== (body.interest_only_months != null)) return false;
+  if ((kind === "balloon") !== (body.amortization_months != null)) return false;
+  if (kind === "demand") return body.term_months === undefined && body.payment === undefined && body.escrow === undefined;
+  return body.term_months !== undefined;
+}
 const addLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: LOAN_NAME,
   principal: z.union([z.number(), z.string()]),
   annual_rate_percent: z.union([z.number(), z.string()]),
-  term_months: z.number().int().min(1).max(LOAN_TERM_MONTHS_MAX),
+  // Required unless kind is demand, which has none.
+  term_months: LOAN_MONTHS.optional(),
   start_date: z.string().regex(DATE),
   payment: z.union([z.number(), z.string()]).optional(),
   escrow: z.union([z.number(), z.string()]).optional(),
   currency: LOAN_CURRENCY.optional(),
   project_id: UUID_TEXT.optional(),
-}).strict();
+  kind: LOAN_KIND.optional(),
+  interest_only_months: LOAN_MONTHS.optional(),
+  amortization_months: LOAN_MONTHS.optional(),
+}).strict().superRefine((body, ctx) => {
+  if (!kindFieldsFit(body)) ctx.addIssue({ code: z.ZodIssueCode.custom });
+});
 const updateLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   loan_id: UUID_TEXT,
@@ -256,6 +291,30 @@ const updateLoanSchema = z.object({
   escrow_category_id: UUID_TEXT.nullable().optional(),
   principal_category_id: UUID_TEXT.nullable().optional(),
   fees_category_id: UUID_TEXT.nullable().optional(),
+  // The kind and its own field (decision 0132). A kind change clears the other kind's field;
+  // demand also clears the term, payment and escrow.
+  kind: LOAN_KIND.optional(),
+  interest_only_months: LOAN_MONTHS.optional(),
+  amortization_months: LOAN_MONTHS.optional(),
+}).strict().superRefine((body, ctx) => {
+  if (body.interest_only_months !== undefined && body.kind !== undefined && body.kind !== "interest_only") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+  if (body.amortization_months !== undefined && body.kind !== undefined && body.kind !== "balloon") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+  if (body.kind === "interest_only" && body.interest_only_months === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom });
+  if (body.kind === "balloon" && body.amortization_months === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom });
+  if (body.kind === "demand" && (body.term_months !== undefined || body.payment !== undefined || body.escrow !== undefined)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+});
+const setLoanRateSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  loan_id: UUID_TEXT,
+  effective_date: z.string().regex(DATE),
+  // null removes the rate row for that date.
+  annual_rate_percent: z.union([z.number(), z.string()]).nullable(),
 }).strict();
 const LOAN_MONEY = z.union([z.number(), z.string()]);
 /** Installments one payment may cover (decision 0130). */
@@ -599,9 +658,11 @@ type LoanRow = {
   currency: string;
   principal_minor: number;
   annual_rate_ppm: number;
-  term_months: number;
+  /** Null for a demand loan only. */
+  term_months: number | null;
   start_date: string;
-  payment_minor: number;
+  /** Null for a demand loan only. */
+  payment_minor: number | null;
   escrow_minor: number;
   balance_minor: number;
   flagged_parts?: number;
@@ -614,23 +675,39 @@ type LoanRow = {
   escrow_category_id?: string | null;
   principal_category_id?: string | null;
   fees_category_id?: string | null;
+  /** Absent on a row from before decision 0132: amortizing. */
+  kind?: LoanKind;
+  interest_only_months?: number | null;
+  amortization_months?: number | null;
+  rates?: Array<{ id?: string; effective_date: string; annual_rate_ppm: number }>;
 };
 
-function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
-  return {
-    principalMinor: BigInt(loan.principal_minor),
-    annualRatePpm: loan.annual_rate_ppm,
-    termMonths: loan.term_months,
-    startDate: loan.start_date,
-    paymentMinor,
-    escrowMinor,
-  };
+function loanKindOf(loan: LoanRow): LoanKind {
+  return loan.kind ?? "amortizing";
+}
+
+function loanRatesOf(loan: LoanRow): LoanRate[] {
+  return (loan.rates ?? []).map((rate) => ({ effectiveDate: rate.effective_date, annualRatePpm: rate.annual_rate_ppm }));
 }
 
 /** A stored loan whose terms no longer build a schedule, for example one saved before FLOW-111. */
 function storedLoanSchedule(loan: LoanRow): ReturnType<typeof buildLoanSchedule> | ToolResult {
+  if (loanKindOf(loan) === "demand" || loan.term_months == null || loan.payment_minor == null) {
+    return fail("refused", "a demand loan has no schedule rows");
+  }
   try {
-    return buildLoanSchedule(loanTermsOf(loan, BigInt(loan.payment_minor), BigInt(loan.escrow_minor)));
+    return buildLoanSchedule({
+      principalMinor: BigInt(loan.principal_minor),
+      annualRatePpm: loan.annual_rate_ppm,
+      termMonths: loan.term_months,
+      startDate: loan.start_date,
+      paymentMinor: BigInt(loan.payment_minor),
+      escrowMinor: BigInt(loan.escrow_minor),
+      kind: loanKindOf(loan),
+      interestOnlyMonths: loan.interest_only_months ?? null,
+      amortizationMonths: loan.amortization_months ?? null,
+      rates: loanRatesOf(loan),
+    });
   } catch (error) {
     if (error instanceof LoanScheduleError && error.code === "payment_below_interest") {
       return fail("refused", "payment below interest");
@@ -644,6 +721,60 @@ async function loadLoans(rpc: ToolRpc): Promise<ToolResult | LoanRow[]> {
   const result = await rpc("mcp_list_loans", {});
   if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
   return result.json as LoanRow[];
+}
+
+/** One attached payment of a loan, from `mcp_loan_payments` (oldest first). */
+type LoanPaymentRow = {
+  transaction_id: string;
+  doc_date: string;
+  line_status: string;
+  needs_review: boolean;
+  interest_minor: number;
+  escrow_minor: number;
+  principal_minor: number;
+  fees_minor: number;
+};
+
+async function loadLoanPayments(loanId: string, rpc: ToolRpc): Promise<ToolResult | LoanPaymentRow[]> {
+  const result = await rpc("mcp_loan_payments", { p_loan_id: loanId });
+  if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+  return result.json as LoanPaymentRow[];
+}
+
+/** Payments that count: not waiting for review, and not the line being attached. */
+function countedPayments(payments: LoanPaymentRow[], exceptTransactionId: string | null): LoanPaymentRow[] {
+  return payments.filter((row) => !row.needs_review && row.transaction_id !== exceptTransactionId);
+}
+
+function demandPaymentsOf(payments: LoanPaymentRow[]): DemandPayment[] {
+  return payments.map((row) => ({
+    date: row.doc_date,
+    interestMinor: BigInt(row.interest_minor),
+    escrowMinor: BigInt(row.escrow_minor),
+    principalMinor: BigInt(row.principal_minor),
+    feesMinor: BigInt(row.fees_minor),
+  }));
+}
+
+function demandTermsOf(loan: LoanRow) {
+  return {
+    principalMinor: BigInt(loan.principal_minor),
+    annualRatePpm: loan.annual_rate_ppm,
+    startDate: loan.start_date,
+    rates: loanRatesOf(loan),
+  };
+}
+
+/** A real calendar day as YYYY-MM-DD (2026-02-30 is not one). */
+function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== "string" || !DATE.test(value)) return false;
+  const time = Date.parse(`${value}T00:00:00Z`);
+  return !Number.isNaN(time) && new Date(time).toISOString().slice(0, 10) === value;
+}
+
+/** Today in UTC, as YYYY-MM-DD: a demand loan's interest accrues to it. */
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 async function defaultLoanCurrency(rpc: ToolRpc): Promise<string | ToolResult> {
@@ -788,13 +919,14 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one).", {
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
       include_closed: { type: "boolean" },
     }),
-    toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
+    toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left (for an amortizing loan whose payment is below the term annuity, over the months left in the amortization period that payment implies, so the balloon stays at the term). An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest due on as_of (YYYY-MM-DD, default today): carried (interest earlier payments left unpaid, simple interest) plus what accrued from the last one (or the start), daily on actual/365, with since, days, carried, interest and balance.", {
       loan_id: { type: "string" },
       from: { type: "integer" },
       limit: { type: "integer" },
+      as_of: { type: "string" },
     }),
     syncStatusSpec(),
     toolSpec("get_breakdown", "Income or expenses for a period, grouped by category, project, or payer (supplier or customer). Omit both dates for all time. basis is cash or invoiced (default cash, like get_totals). Without group: totals[], groups[] ({key, name, currency, amount_minor, count, shared}), excluded[] (kept-out categories, not in the totals), review_count. totals match get_totals. Under project, key is a project id, overhead, or unassigned; shared marks a project holding a share of a shared cost. A null name means no category, payer, or project. With group (a key from groups) and currency (default ILS): that group's lines, newest first, in rows[] with has_more. excluded true lists the kept-out lines instead. amount_minor is in minor units (agorot, cents), positive for income and for a normal expense. A loan payment with a valid split counts by part.", {
@@ -970,7 +1102,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       name: { type: "string" },
     }, true),
-    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set. project_id (optional) files the loan under a project of this company; another company's project is refused.", {
+    toolSpec("add_loan", "Create a loan with a computed level payment unless payment is set. project_id (optional) files the loan under a project of this company; another company's project is refused. kind (default amortizing): interest_only needs interest_only_months (1 to term_months; those months pay interest only, then it amortizes over the months left, and when they equal the term the principal is due in the last month); balloon needs amortization_months (term_months to 600; the payment is the annuity over them and the rest is due at the term); demand takes no term_months, payment or escrow (interest accrues daily on actual/365 between payments; a 0% rate is allowed).", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
       principal: { type: "string" },
@@ -981,8 +1113,11 @@ function writeTools() {
       escrow: { type: "string" },
       currency: { type: "string" },
       project_id: { type: "string" },
+      kind: { type: "string", enum: ["amortizing", "interest_only", "balloon", "demand"] },
+      interest_only_months: { type: "integer" },
+      amortization_months: { type: "integer" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). fees_category_id files the fees part of later payments when the attach names none: any expense category, counted in the P&L or kept out, that is not a built-in loan category, or the built-in interest one (category does not fit the loan part); null clears it, and there is no default. Payments already attached keep their categories. Undo restores the previous project, status, closed_on and categories.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). fees_category_id files the fees part of later payments when the attach names none: any expense category, counted in the P&L or kept out, that is not a built-in loan category, or the built-in interest one (category does not fit the loan part); null clears it, and there is no default. Payments already attached keep their categories. kind changes the loan's kind (interest_only needs interest_only_months, balloon amortization_months; demand clears the term, payment and escrow; another kind from demand needs term_months and payment); interest_only_months and amortization_months alone change that field. Undo restores the previous project, status, closed_on, categories and kind.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -999,8 +1134,11 @@ function writeTools() {
       escrow_category_id: { type: ["string", "null"] },
       principal_category_id: { type: ["string", "null"] },
       fees_category_id: { type: ["string", "null"] },
+      kind: { type: "string", enum: ["amortizing", "interest_only", "balloon", "demand"] },
+      interest_only_months: { type: "integer" },
+      amortization_months: { type: "integer" },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, plus an optional fees part. Interest, escrow and principal go under the loan's own category for that part or the default. Fees have no default: they go under this call's fees_category_id (allowed only with fees), else the loan's fees_category_id, else the attach is refused (fees category required). A fees category is any expense category, in or out of the P&L, that is not a built-in loan category or is the built-in interest one (category does not fit the loan part; category not found for another company's). By default the parts follow the schedule row for the line's date: principal takes what is left over, and a shortfall comes out of principal, then escrow, then interest. installments (1 to 12) makes the payment cover that many schedule rows from the first one not yet paid, using their sums (not enough schedule rows when they run past the schedule). fees (an amount above zero) comes off the line first, then the rest splits as usual (fees exceed the line when the line is smaller). parts {interest, escrow, principal, fees?} gives the exact amounts, used as given; they must add up to the line exactly (parts don't add up), fees must be above zero, and parts cannot be combined with installments or fees. Amounts take at most two decimals. The schedule figures are still kept for comparison. Principal above the loan balance is refused (loan balance exceeded). The response lists each part, the fees part too when there is one. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, plus an optional fees part. Interest, escrow and principal go under the loan's own category for that part or the default. Fees have no default: they go under this call's fees_category_id (allowed only with fees), else the loan's fees_category_id, else the attach is refused (fees category required). A fees category is any expense category, in or out of the P&L, that is not a built-in loan category or is the built-in interest one (category does not fit the loan part; category not found for another company's). By default the parts follow the schedule row for the line's date: principal takes what is left over, and a shortfall comes out of principal, then escrow, then interest. installments (1 to 12) makes the payment cover that many schedule rows from the first one not yet paid (the first row whose scheduled interest plus principal through it is more than the interest plus principal already attached, pending lines included), using their sums (not enough schedule rows when they run past the schedule). A demand loan has no rows: interest is the balance times the rate for the days since the last attached payment (or the start), on actual/365, rounded half to even, plus interest earlier payments left unpaid (carried, simple interest), and the rest is principal; installments are refused (a demand loan has no schedule rows), and so are a line dated before the loan start (payment before the loan start) and one dated before a payment already attached (a later payment is already attached; a replay of the same attach is not refused). fees (an amount above zero) comes off the line first, then the rest splits as usual (fees exceed the line when the line is smaller). parts {interest, escrow, principal, fees?} gives the exact amounts, used as given; they must add up to the line exactly (parts don't add up), fees must be above zero, and parts cannot be combined with installments or fees. Amounts take at most two decimals. The schedule figures are still kept for comparison (0 when no row fits the date). Principal above the loan balance is refused (loan balance exceeded). The response lists each part, the fees part too when there is one. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
@@ -1018,6 +1156,12 @@ function writeTools() {
         additionalProperties: false,
       },
       fees_category_id: { type: "string" },
+    }, true),
+    toolSpec("set_loan_rate", "Set a loan's rate from effective_date (YYYY-MM-DD) on: annual_rate_percent (0 to 100, up to 4 decimals) is the nominal rate, entered by hand when an index such as prime changes; null removes that date's rate row (rate not found when there is none). A date before the loan's start_date is refused (rate before the loan start). The rate in force on a schedule row's date, or on each day of a demand loan's interest, is the latest row on or before it, else the loan's own rate. A change recasts the payment over the months left; payments already attached keep their parts. Returns the rate row id; undo is kind loan_rate with that id and puts the row back as it was.", {
+      idempotency_key: { type: "string" },
+      loan_id: { type: "string" },
+      effective_date: { type: "string" },
+      annual_rate_percent: { type: ["number", "string", "null"] },
     }, true),
     toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
@@ -1046,7 +1190,7 @@ function writeTools() {
     }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1167,27 +1311,56 @@ async function syncBank(
 async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = addLoanSchema.safeParse(args);
   if (!parsed.success) return fail("validation", "validation");
+  const kind = parsed.data.kind ?? "amortizing";
   const principalMinor = minorFromMajor(parsed.data.principal);
   if (typeof principalMinor !== "bigint") return principalMinor;
   const ratePpm = ppmFromPercent(parsed.data.annual_rate_percent);
   if (typeof ratePpm !== "number") return ratePpm;
   const escrowMinor = minorFromMajorNonNegative(parsed.data.escrow, 0n);
   if (typeof escrowMinor !== "bigint") return escrowMinor;
-  let paymentMinor: bigint | ToolResult;
-  if (parsed.data.payment == null) {
+  // A demand loan has no term and no fixed payment (decision 0132).
+  let paymentMinor: bigint | null = null;
+  let preview: LoanScheduleRow[] = [];
+  if (kind === "demand") {
     try {
-      paymentMinor = contractualPaymentMinor({
-        principalMinor,
-        annualRatePpm: ratePpm,
-        termMonths: parsed.data.term_months,
-      }) + escrowMinor;
+      demandAccrual({ principalMinor, annualRatePpm: ratePpm, startDate: parsed.data.start_date }, [], parsed.data.start_date);
     } catch (error) {
       if (error instanceof LoanScheduleError) return fail("validation", error.code);
       return fail("validation", "validation");
     }
   } else {
-    paymentMinor = minorFromMajor(parsed.data.payment);
-    if (typeof paymentMinor !== "bigint") return paymentMinor;
+    const termMonths = parsed.data.term_months ?? 0;
+    const kindFields = {
+      kind,
+      interestOnlyMonths: parsed.data.interest_only_months ?? null,
+      amortizationMonths: parsed.data.amortization_months ?? null,
+    };
+    if (parsed.data.payment == null) {
+      try {
+        paymentMinor = regularPaymentMinor({ principalMinor, annualRatePpm: ratePpm, termMonths, escrowMinor, ...kindFields });
+      } catch (error) {
+        if (error instanceof LoanScheduleError) return fail("validation", error.code);
+        return fail("validation", "validation");
+      }
+    } else {
+      const given = minorFromMajor(parsed.data.payment);
+      if (typeof given !== "bigint") return given;
+      paymentMinor = given;
+    }
+    try {
+      preview = buildLoanSchedule({
+        principalMinor,
+        annualRatePpm: ratePpm,
+        termMonths,
+        startDate: parsed.data.start_date,
+        paymentMinor,
+        escrowMinor,
+        ...kindFields,
+      }).rows.slice(0, 3);
+    } catch (error) {
+      if (error instanceof LoanScheduleError) return fail("validation", error.code);
+      return fail("validation", "validation");
+    }
   }
   let currency = parsed.data.currency;
   if (currency == null) {
@@ -1195,38 +1368,23 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
     if (typeof defaulted !== "string") return defaulted;
     currency = defaulted;
   }
-  try {
-    buildLoanSchedule({
-      principalMinor,
-      annualRatePpm: ratePpm,
-      termMonths: parsed.data.term_months,
-      startDate: parsed.data.start_date,
-      paymentMinor,
-      escrowMinor,
-    });
-  } catch (error) {
-    if (error instanceof LoanScheduleError) return fail("validation", error.code);
-    return fail("validation", "validation");
-  }
-  const schedule = buildLoanSchedule({
-    principalMinor,
-    annualRatePpm: ratePpm,
-    termMonths: parsed.data.term_months,
-    startDate: parsed.data.start_date,
-    paymentMinor,
-    escrowMinor,
-  });
   const result = await rpc("mcp_add_loan", {
     p_idempotency_key: parsed.data.idempotency_key,
     p_name: parsed.data.name,
     p_principal_minor: Number(principalMinor),
     p_annual_rate_ppm: ratePpm,
-    p_term_months: parsed.data.term_months,
+    p_term_months: parsed.data.term_months ?? null,
     p_start_date: parsed.data.start_date,
-    p_payment_minor: Number(paymentMinor),
+    p_payment_minor: paymentMinor == null ? null : Number(paymentMinor),
     p_escrow_minor: Number(escrowMinor),
     p_currency: currency,
     ...(parsed.data.project_id == null ? {} : { p_project_id: parsed.data.project_id }),
+    // Sent only for a new kind, so an amortizing loan's call is the same as before.
+    ...(kind === "amortizing" ? {} : {
+      p_kind: kind,
+      p_interest_only_months: parsed.data.interest_only_months ?? null,
+      p_amortization_months: parsed.data.amortization_months ?? null,
+    }),
   });
   if (result.status >= 400) return fail("refused", WRITE_REFUSED);
   const wrapped = envelopeOf(result.json);
@@ -1234,9 +1392,9 @@ async function addLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promis
   const data = (wrapped.structuredContent as { ok: true; data: Record<string, unknown> }).data;
   return ok({
     ...data,
-    payment: majorString(paymentMinor),
-    payment_minor: Number(paymentMinor),
-    schedule_preview: schedule.rows.slice(0, 3).map(scheduleRowOut),
+    payment: paymentMinor == null ? null : majorString(paymentMinor),
+    payment_minor: paymentMinor == null ? null : Number(paymentMinor),
+    schedule_preview: preview.map(scheduleRowOut),
   });
 }
 
@@ -1272,6 +1430,19 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (parsed.data.closed_on !== undefined) patch.closed_on = parsed.data.closed_on;
   for (const key of ["interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id"] as const) {
     if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
+  }
+  // A kind change clears the fields the new kind does not have (decision 0132).
+  if (parsed.data.interest_only_months !== undefined) patch.interest_only_months = parsed.data.interest_only_months;
+  if (parsed.data.amortization_months !== undefined) patch.amortization_months = parsed.data.amortization_months;
+  if (parsed.data.kind != null) {
+    patch.kind = parsed.data.kind;
+    if (parsed.data.kind !== "interest_only") patch.interest_only_months = null;
+    if (parsed.data.kind !== "balloon") patch.amortization_months = null;
+    if (parsed.data.kind === "demand") {
+      patch.term_months = null;
+      patch.payment_minor = null;
+      patch.escrow_minor = 0;
+    }
   }
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
   const result = await rpc("mcp_update_loan", {
@@ -1316,27 +1487,29 @@ function exactLoanPartsOf(parts: {
 }
 
 /**
- * The principal this line already counts toward the loan's balance, when it is split on
- * this loan: a replay of the same attach then sees the balance as it was the first time,
- * so installments start on the same row and the payload rebuilds the same. A split that
- * needs review does not count in the balance, so it adds nothing.
+ * Whether this line is already split on this loan (`split`), and the principal it already
+ * counts toward the loan's balance: a replay of the same attach then sees the balance as it
+ * was the first time, so installments start on the same row and the payload rebuilds the
+ * same. A split that needs review does not count in the balance, so it adds nothing.
  */
 async function principalAlreadyAttached(
   transactionId: string,
   loanId: string,
   rpc: ToolRpc,
-): Promise<bigint | ToolResult> {
+): Promise<{ split: boolean; principalMinor: bigint } | ToolResult> {
   const result = await rpc("get_loan_split", { p_transaction_id: transactionId });
   if (result.status >= 400) return fail("refused", READ_REFUSED);
   const split = result.json as { loan_id?: unknown; needs_review?: unknown; parts?: unknown } | null;
-  if (split == null || typeof split !== "object" || split.loan_id !== loanId || split.needs_review === true) {
-    return 0n;
+  if (split == null || typeof split !== "object" || split.loan_id !== loanId) {
+    return { split: false, principalMinor: 0n };
   }
-  if (!Array.isArray(split.parts)) return 0n;
+  if (split.needs_review === true || !Array.isArray(split.parts)) return { split: true, principalMinor: 0n };
   for (const part of split.parts as Array<{ part?: unknown; amount_minor?: unknown }>) {
-    if (part.part === "principal" && typeof part.amount_minor === "number") return BigInt(part.amount_minor);
+    if (part.part === "principal" && typeof part.amount_minor === "number") {
+      return { split: true, principalMinor: BigInt(part.amount_minor) };
+    }
   }
-  return 0n;
+  return { split: true, principalMinor: 0n };
 }
 
 async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
@@ -1376,23 +1549,59 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (!loanTakesPaymentOn({ status: loan.status, closedOn: loan.closed_on }, docDate)) {
     return fail("refused", "loan closed");
   }
-  const attachedMinor = await principalAlreadyAttached(parsed.data.transaction_id, loan.id, rpc);
-  if (typeof attachedMinor !== "bigint") return attachedMinor;
+  const attached = await principalAlreadyAttached(parsed.data.transaction_id, loan.id, rpc);
+  if (!("split" in attached)) return attached;
   // The balance before this line's own split, if it is already attached (an idempotent replay).
-  const balanceMinor = BigInt(loan.balance_minor) + attachedMinor;
+  let balanceMinor = BigInt(loan.balance_minor) + attached.principalMinor;
   if (balanceMinor <= 0n) return fail("refused", "loan balance exceeded");
-  const schedule = storedLoanSchedule(loan);
-  if (!("rows" in schedule)) return schedule;
-  // The scheduled figures: several rows from the first unpaid one, or the row for the date.
+  // The scheduled figures: several rows from the first unpaid one, the row for the date, or
+  // for a demand loan the interest accrued since the last payment (decision 0132).
   let scheduled: ScheduledSum | null;
-  if (parsed.data.installments !== undefined) {
-    const paidMinor = BigInt(loan.principal_minor) - balanceMinor;
-    const start = firstUnpaidRowIndex(schedule.rows, paidMinor);
-    scheduled = start < 0 ? null : sumScheduleRows(schedule.rows, start, parsed.data.installments);
-    if (scheduled == null) return fail("refused", "not enough schedule rows");
+  if (loanKindOf(loan) === "demand") {
+    if (parsed.data.installments !== undefined) return fail("refused", "a demand loan has no schedule rows");
+    if (docDate < loan.start_date) return fail("refused", "payment before the loan start");
+    const payments = await loadLoanPayments(loan.id, rpc);
+    if (!Array.isArray(payments)) return payments;
+    const counted = countedPayments(payments, parsed.data.transaction_id);
+    // Interest runs from the last payment, so payments are attached in date order. A line
+    // already split on this loan is a replay (or a refused re-attach): the database answers
+    // it, and the payments dated after it do not change its accrual.
+    if (!attached.split && counted.some((row) => row.doc_date > docDate)) {
+      return fail("refused", "a later payment is already attached");
+    }
+    // The interest accrued since the last payment, plus what earlier payments left unpaid.
+    const accrual = demandAccrual(demandTermsOf(loan), demandPaymentsOf(counted), docDate);
+    // Pending payments lower it too, so two quick attaches do not both take the same principal.
+    if (accrual.balanceMinor < balanceMinor) balanceMinor = accrual.balanceMinor;
+    if (balanceMinor <= 0n) return fail("refused", "loan balance exceeded");
+    const left = lineMinor - feesMinor - accrual.interestMinor;
+    scheduled = {
+      interestMinor: accrual.interestMinor,
+      escrowMinor: 0n,
+      principalMinor: left < 0n ? 0n : left,
+    };
   } else {
-    scheduled = scheduleRowForDate(schedule.rows, docDate);
-    if (scheduled == null) return fail("refused", "no schedule row for this date");
+    const schedule = storedLoanSchedule(loan);
+    if (!("rows" in schedule)) return schedule;
+    if (parsed.data.installments !== undefined) {
+      // FLOW-135 N1: interest plus principal paid so far, pending lines too (decision 0132).
+      const payments = await loadLoanPayments(loan.id, rpc);
+      if (!Array.isArray(payments)) return payments;
+      const paidMinor = paidInterestAndPrincipal(payments.map((row) => ({
+        transactionId: row.transaction_id,
+        interestMinor: BigInt(row.interest_minor),
+        principalMinor: BigInt(row.principal_minor),
+        needsReview: row.needs_review,
+      })), parsed.data.transaction_id);
+      const start = firstUnpaidRowIndex(schedule.rows, paidMinor);
+      scheduled = start < 0 ? null : sumScheduleRows(schedule.rows, start, parsed.data.installments);
+      if (scheduled == null) return fail("refused", "not enough schedule rows");
+    } else {
+      scheduled = scheduleRowForDate(schedule.rows, docDate);
+      // FLOW-135 N3: exact parts need no row; their scheduled figures are then 0.
+      if (scheduled == null && exact != null) scheduled = { interestMinor: 0n, escrowMinor: 0n, principalMinor: 0n };
+      if (scheduled == null) return fail("refused", "no schedule row for this date");
+    }
   }
   let parts: readonly LoanSplitAmount[];
   if (exact != null) {
@@ -1571,6 +1780,22 @@ async function callWrite(
     return updateLoanWrite(args, rpc);
   } else if (name === "attach_loan_payment") {
     return attachLoanWrite(args, rpc);
+  } else if (name === "set_loan_rate") {
+    const parsed = setLoanRateSchema.safeParse(args);
+    if (!parsed.success || !isCalendarDate(parsed.data.effective_date)) return fail("validation", "validation");
+    let ratePpm: number | null = null;
+    if (parsed.data.annual_rate_percent !== null) {
+      const ppm = ppmFromPercent(parsed.data.annual_rate_percent);
+      if (typeof ppm !== "number") return ppm;
+      ratePpm = ppm;
+    }
+    rpcName = "mcp_set_loan_rate";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_loan_id: parsed.data.loan_id,
+      p_effective_date: parsed.data.effective_date,
+      p_annual_rate_ppm: ratePpm,
+    };
   } else if (name === "split_line") {
     const parsed = splitLineSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -1907,12 +2132,48 @@ export async function callTool(
     if (typeof limit !== "number") return limit;
     const loans = await loadLoans(rpc);
     if (!Array.isArray(loans)) return loans;
+    const asOf = args.as_of ?? todayIso();
+    if (!isCalendarDate(asOf)) return fail("validation", "validation");
     const loan = loans.find((row) => row.id === loanId);
     if (loan == null) return fail("not_found", "not found");
+    if (loanKindOf(loan) === "demand") {
+      // Nothing is scheduled ahead: the payments attached so far, then the interest accrued
+      // from the last one to as_of (default today), daily on actual/365 (decision 0132).
+      const payments = await loadLoanPayments(loan.id, rpc);
+      if (!Array.isArray(payments)) return payments;
+      const counted = countedPayments(payments, null).filter((row) => row.doc_date <= asOf);
+      let statement: ReturnType<typeof demandStatement>;
+      try {
+        statement = demandStatement(demandTermsOf(loan), demandPaymentsOf(counted), asOf);
+      } catch (error) {
+        if (error instanceof LoanScheduleError) return fail("validation", "validation");
+        throw error;
+      }
+      const accrued = statement.accrued;
+      return ok({
+        loan_id: loanId,
+        kind: "demand",
+        from: fromIndex,
+        limit,
+        total: statement.rows.length,
+        rows: statement.rows.slice(fromIndex, fromIndex + limit).map(scheduleRowOut),
+        accrued: {
+          as_of: asOf,
+          since: accrued.fromDate,
+          days: accrued.days,
+          carried: majorString(accrued.carriedMinor),
+          carried_minor: Number(accrued.carriedMinor),
+          interest: majorString(accrued.interestMinor),
+          interest_minor: Number(accrued.interestMinor),
+          balance: majorString(accrued.balanceMinor),
+          balance_minor: Number(accrued.balanceMinor),
+        },
+      });
+    }
     const schedule = storedLoanSchedule(loan);
     if (!("rows" in schedule)) return schedule;
     const rows = schedule.rows.slice(fromIndex, fromIndex + limit).map(scheduleRowOut);
-    return ok({ loan_id: loanId, from: fromIndex, limit, total: schedule.rows.length, rows });
+    return ok({ loan_id: loanId, kind: loanKindOf(loan), from: fromIndex, limit, total: schedule.rows.length, rows });
   }
 
   if (name !== "get_expense") return fail("validation", "validation");
