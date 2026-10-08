@@ -12,8 +12,14 @@ import {
   LOAN_TERM_MONTHS_MAX,
   type LoanScheduleRow,
 } from "../../../packages/shared/src/loan-schedule.ts";
-import { allocateLoanSplit, loanTakesPaymentOn, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
-import type { LoanStatus } from "../../../packages/shared/src/loan-split.ts";
+import {
+  allocateLoanSplitWithFees,
+  firstUnpaidRowIndex,
+  loanTakesPaymentOn,
+  scheduleRowForDate,
+  sumScheduleRows,
+} from "../../../packages/shared/src/loan-split.ts";
+import type { LoanSplitAmount, LoanStatus, ScheduledSum } from "../../../packages/shared/src/loan-split.ts";
 import { parseDecimalHalfEven } from "../../../packages/shared/src/money.ts";
 
 export const READ_TOOL_NAMES = [
@@ -96,8 +102,8 @@ const ALLOWED: Record<string, Set<string>> = {
     "idempotency_key", "name", "principal", "annual_rate_percent", "term_months",
     "start_date", "payment", "escrow", "currency", "project_id",
   ]),
-  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id"]),
-  attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id"]),
+  update_loan: new Set(["idempotency_key", "loan_id", "name", "principal", "annual_rate_percent", "term_months", "start_date", "payment", "escrow", "project_id", "status", "closed_on", "interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id"]),
+  attach_loan_payment: new Set(["idempotency_key", "transaction_id", "loan_id", "installments", "fees", "parts", "fees_category_id"]),
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
   set_lines_pnl: new Set(["idempotency_key", "items"]),
@@ -243,12 +249,34 @@ const updateLoanSchema = z.object({
   interest_category_id: UUID_TEXT.nullable().optional(),
   escrow_category_id: UUID_TEXT.nullable().optional(),
   principal_category_id: UUID_TEXT.nullable().optional(),
+  fees_category_id: UUID_TEXT.nullable().optional(),
 }).strict();
+const LOAN_MONEY = z.union([z.number(), z.string()]);
+/** Installments one payment may cover (decision 0130). */
+const LOAN_INSTALLMENTS_MAX = 12;
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   loan_id: UUID_TEXT,
-}).strict();
+  installments: z.number().int().min(1).max(LOAN_INSTALLMENTS_MAX).optional(),
+  fees: LOAN_MONEY.optional(),
+  // The exact split, used as given. It cannot be combined with installments or fees.
+  parts: z.object({
+    interest: LOAN_MONEY,
+    escrow: LOAN_MONEY,
+    principal: LOAN_MONEY,
+    fees: LOAN_MONEY.optional(),
+  }).strict().optional(),
+  // This payment's fees category; only with fees (top-level or in parts).
+  fees_category_id: UUID_TEXT.optional(),
+}).strict().superRefine((body, ctx) => {
+  if (body.parts !== undefined && (body.installments !== undefined || body.fees !== undefined)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+  if (body.fees_category_id !== undefined && body.fees === undefined && body.parts?.fees === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+  }
+});
 const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: visibleName(2, 120),
@@ -579,6 +607,7 @@ type LoanRow = {
   interest_category_id?: string | null;
   escrow_category_id?: string | null;
   principal_category_id?: string | null;
+  fees_category_id?: string | null;
 };
 
 function loanTermsOf(loan: LoanRow, paymentMinor: bigint, escrowMinor: bigint) {
@@ -753,7 +782,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults.", {
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one).", {
       include_closed: { type: "boolean" },
     }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan.", {
@@ -941,7 +970,7 @@ function writeTools() {
       currency: { type: "string" },
       project_id: { type: "string" },
     }, true),
-    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). Payments already attached keep their categories. Undo restores the previous project, status, closed_on and categories.", {
+    toolSpec("update_loan", "Patch loan terms. Currency cannot change. project_id files the loan under a project; null clears it; leaving it out keeps it. Payments already attached stay on the project they were filed under. status paid_off or closed needs closed_on (YYYY-MM-DD); a closed loan takes only payments dated on or before it, and closing before a payment already attached is refused (payments after closed_on). status open reopens the loan and clears closed_on. A loan that is not open returns balance_left, the principal Flow never saw paid. interest_category_id, escrow_category_id and principal_category_id file that part of later attached payments under a category of this company (null goes back to the default): interest and escrow need an expense category counted in the P&L, principal one kept out, and a built-in loan category takes only its own part (category does not fit the loan part). fees_category_id files the fees part of later payments when the attach names none: any expense category, counted in the P&L or kept out, that is not a built-in loan category, or the built-in interest one (category does not fit the loan part); null clears it, and there is no default. Payments already attached keep their categories. Undo restores the previous project, status, closed_on and categories.", {
       idempotency_key: { type: "string" },
       loan_id: { type: "string" },
       name: { type: "string" },
@@ -957,11 +986,26 @@ function writeTools() {
       interest_category_id: { type: ["string", "null"] },
       escrow_category_id: { type: ["string", "null"] },
       principal_category_id: { type: ["string", "null"] },
+      fees_category_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, each under the loan's own category for that part or the default. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
+    toolSpec("attach_loan_payment", "Split one expense line across interest, escrow, and principal, plus an optional fees part. Interest, escrow and principal go under the loan's own category for that part or the default. Fees have no default: they go under this call's fees_category_id (allowed only with fees), else the loan's fees_category_id, else the attach is refused (fees category required). A fees category is any expense category, in or out of the P&L, that is not a built-in loan category or is the built-in interest one (category does not fit the loan part; category not found for another company's). By default the parts follow the schedule row for the line's date: principal takes what is left over, and a shortfall comes out of principal, then escrow, then interest. installments (1 to 12) makes the payment cover that many schedule rows from the first one not yet paid, using their sums (not enough schedule rows when they run past the schedule). fees (an amount above zero) comes off the line first, then the rest splits as usual (fees exceed the line when the line is smaller). parts {interest, escrow, principal, fees?} gives the exact amounts, used as given; they must add up to the line exactly (parts don't add up), fees must be above zero, and parts cannot be combined with installments or fees. Amounts take at most two decimals. The schedule figures are still kept for comparison. Principal above the loan balance is refused (loan balance exceeded). The response lists each part, the fees part too when there is one. When the loan has a project and the line has no project, no shares and no role, the line is filed as a direct cost on that project, so interest and escrow count there and principal is kept out of the P&L (project_inherited true). Otherwise the line is left as it is and project_inherited_reason says why (a guessed category is not filed: confirm it with assign_expense; if filing fails the parts stay attached and the reason is project not set). A paid-off or closed loan takes only lines dated on or before its closed_on (loan closed). Undo of loan_split restores the line's previous project when nobody changed it since.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
+      installments: { type: "integer" },
+      fees: { type: "string" },
+      parts: {
+        type: "object",
+        properties: {
+          interest: { type: "string" },
+          escrow: { type: "string" },
+          principal: { type: "string" },
+          fees: { type: "string" },
+        },
+        required: ["interest", "escrow", "principal"],
+        additionalProperties: false,
+      },
+      fees_category_id: { type: "string" },
     }, true),
     toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. When the bank changes a split line's amount, it counts whole and list_review shows it with reason split_mismatch; that review does not block split_line, and new parts or parts [] close it. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
@@ -1214,7 +1258,7 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (parsed.data.project_id !== undefined) patch.project_id = parsed.data.project_id;
   if (parsed.data.status != null) patch.status = parsed.data.status;
   if (parsed.data.closed_on !== undefined) patch.closed_on = parsed.data.closed_on;
-  for (const key of ["interest_category_id", "escrow_category_id", "principal_category_id"] as const) {
+  for (const key of ["interest_category_id", "escrow_category_id", "principal_category_id", "fees_category_id"] as const) {
     if (parsed.data[key] !== undefined) patch[key] = parsed.data[key];
   }
   if (Object.keys(patch).length === 0) return fail("validation", "validation");
@@ -1227,9 +1271,78 @@ async function updateLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   return envelopeOf(result.json);
 }
 
+/** The exact parts of attach_loan_payment, in minor units. Fees, when given, are above zero. */
+type ExactLoanParts = { interest: bigint; escrow: bigint; principal: bigint; fees: bigint | null };
+
+/** More than two decimals: exact loan parts and fees are not rounded, they are refused. */
+function hasSubCent(value: number | string): boolean {
+  return /\.\d{3,}$/.test(decimalText(value).trim().replace(/[\s,]/g, ""));
+}
+
+/** An exact amount: two decimals at most, above zero when `positive`. */
+function exactMinorOf(value: number | string, positive: boolean): bigint | ToolResult {
+  if (hasSubCent(value)) return fail("validation", "validation");
+  return positive ? minorFromMajor(value) : minorFromMajorNonNegative(value);
+}
+
+function exactLoanPartsOf(parts: {
+  interest: number | string;
+  escrow: number | string;
+  principal: number | string;
+  fees?: number | string;
+}): ExactLoanParts | ToolResult {
+  const interest = exactMinorOf(parts.interest, false);
+  if (typeof interest !== "bigint") return interest;
+  const escrow = exactMinorOf(parts.escrow, false);
+  if (typeof escrow !== "bigint") return escrow;
+  const principal = exactMinorOf(parts.principal, false);
+  if (typeof principal !== "bigint") return principal;
+  if (parts.fees === undefined) return { interest, escrow, principal, fees: null };
+  const fees = exactMinorOf(parts.fees, true);
+  if (typeof fees !== "bigint") return fees;
+  return { interest, escrow, principal, fees };
+}
+
+/**
+ * The principal this line already counts toward the loan's balance, when it is split on
+ * this loan: a replay of the same attach then sees the balance as it was the first time,
+ * so installments start on the same row and the payload rebuilds the same. A split that
+ * needs review does not count in the balance, so it adds nothing.
+ */
+async function principalAlreadyAttached(
+  transactionId: string,
+  loanId: string,
+  rpc: ToolRpc,
+): Promise<bigint | ToolResult> {
+  const result = await rpc("get_loan_split", { p_transaction_id: transactionId });
+  if (result.status >= 400) return fail("refused", READ_REFUSED);
+  const split = result.json as { loan_id?: unknown; needs_review?: unknown; parts?: unknown } | null;
+  if (split == null || typeof split !== "object" || split.loan_id !== loanId || split.needs_review === true) {
+    return 0n;
+  }
+  if (!Array.isArray(split.parts)) return 0n;
+  for (const part of split.parts as Array<{ part?: unknown; amount_minor?: unknown }>) {
+    if (part.part === "principal" && typeof part.amount_minor === "number") return BigInt(part.amount_minor);
+  }
+  return 0n;
+}
+
 async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Promise<ToolResult> {
   const parsed = attachLoanSchema.safeParse(args);
   if (!parsed.success) return fail("validation", "validation");
+  // Amounts are checked before anything is read: fees above zero, exact parts zero or more.
+  let feesMinor = 0n;
+  if (parsed.data.fees !== undefined) {
+    const fees = exactMinorOf(parsed.data.fees, true);
+    if (typeof fees !== "bigint") return fees;
+    feesMinor = fees;
+  }
+  let exact: ExactLoanParts | null = null;
+  if (parsed.data.parts !== undefined) {
+    const given = exactLoanPartsOf(parsed.data.parts);
+    if (!("interest" in given)) return given;
+    exact = given;
+  }
   const txnResult = await rpc("get_transaction", { p_id: parsed.data.transaction_id });
   if (txnResult.status >= 400) return fail("refused", READ_REFUSED);
   if (txnResult.json == null || typeof txnResult.json !== "object" || Array.isArray(txnResult.json)) {
@@ -1251,23 +1364,59 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   if (!loanTakesPaymentOn({ status: loan.status, closedOn: loan.closed_on }, docDate)) {
     return fail("refused", "loan closed");
   }
-  if (BigInt(loan.balance_minor) <= 0n) return fail("refused", "loan balance exceeded");
+  const attachedMinor = await principalAlreadyAttached(parsed.data.transaction_id, loan.id, rpc);
+  if (typeof attachedMinor !== "bigint") return attachedMinor;
+  // The balance before this line's own split, if it is already attached (an idempotent replay).
+  const balanceMinor = BigInt(loan.balance_minor) + attachedMinor;
+  if (balanceMinor <= 0n) return fail("refused", "loan balance exceeded");
   const schedule = storedLoanSchedule(loan);
   if (!("rows" in schedule)) return schedule;
-  const row = scheduleRowForDate(schedule.rows, docDate);
-  if (row == null) return fail("refused", "no schedule row for this date");
-  const parts = allocateLoanSplit({
-    lineMinor,
-    interestMinor: row.interestMinor,
-    escrowMinor: row.escrowMinor,
-    principalMinor: row.principalMinor,
-  });
+  // The scheduled figures: several rows from the first unpaid one, or the row for the date.
+  let scheduled: ScheduledSum | null;
+  if (parsed.data.installments !== undefined) {
+    const paidMinor = BigInt(loan.principal_minor) - balanceMinor;
+    const start = firstUnpaidRowIndex(schedule.rows, paidMinor);
+    scheduled = start < 0 ? null : sumScheduleRows(schedule.rows, start, parsed.data.installments);
+    if (scheduled == null) return fail("refused", "not enough schedule rows");
+  } else {
+    scheduled = scheduleRowForDate(schedule.rows, docDate);
+    if (scheduled == null) return fail("refused", "no schedule row for this date");
+  }
+  let parts: readonly LoanSplitAmount[];
+  if (exact != null) {
+    if (exact.interest + exact.escrow + exact.principal + (exact.fees ?? 0n) !== lineMinor) {
+      return fail("refused", "parts don't add up");
+    }
+    parts = [
+      { part: "interest", amountMinor: exact.interest, scheduledMinor: scheduled.interestMinor },
+      { part: "escrow", amountMinor: exact.escrow, scheduledMinor: scheduled.escrowMinor },
+      { part: "principal", amountMinor: exact.principal, scheduledMinor: scheduled.principalMinor },
+      ...(exact.fees == null ? [] : [{ part: "fees" as const, amountMinor: exact.fees, scheduledMinor: exact.fees }]),
+    ];
+  } else {
+    const allocated = allocateLoanSplitWithFees({
+      lineMinor,
+      feesMinor,
+      interestMinor: scheduled.interestMinor,
+      escrowMinor: scheduled.escrowMinor,
+      principalMinor: scheduled.principalMinor,
+    });
+    if (allocated == null) return fail("refused", "fees exceed the line");
+    parts = allocated;
+  }
   const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
-  if (principalPart > BigInt(loan.balance_minor)) return fail("refused", "loan balance exceeded");
+  if (principalPart > balanceMinor) return fail("refused", "loan balance exceeded");
+  // Fees go to this call's category, else the loan's. There is no default (decision 0130).
+  const hasFees = parts.some((part) => part.part === "fees");
+  const callFeesCategory = parsed.data.fees_category_id ?? null;
+  if (hasFees && callFeesCategory == null && (loan.fees_category_id ?? null) == null) {
+    return fail("refused", "fees category required");
+  }
   const payload = parts.map((part) => ({
     part: part.part,
     amount_minor: Number(part.amountMinor),
     scheduled_minor: Number(part.scheduledMinor),
+    ...(part.part === "fees" && callFeesCategory != null ? { category_id: callFeesCategory } : {}),
   }));
   const result = await rpc("mcp_attach_loan_payment", {
     p_idempotency_key: parsed.data.idempotency_key,
@@ -1282,6 +1431,7 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
     ...(wrapped.structuredContent as { ok: true; data: Record<string, unknown> }).data,
     parts: payload.map((part) => ({
       part: part.part,
+      ...("category_id" in part ? { category_id: part.category_id } : {}),
       amount: majorString(BigInt(part.amount_minor)),
       scheduled: majorString(BigInt(part.scheduled_minor)),
       amount_minor: part.amount_minor,
