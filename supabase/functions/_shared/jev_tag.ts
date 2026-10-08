@@ -46,7 +46,7 @@ export type TagExpense = {
   companyId: string;
   description: string;
   docDate: string;
-  /** Expense when absent. Income lines are sent too (decision 0133). */
+  /** Expense when absent. Income lines are sent too (decision 0134). */
   direction?: TagDirection;
   /** The party's name and id: the supplier on an expense, the customer on income. */
   supplierName: string | null;
@@ -351,7 +351,7 @@ export function planTag(
   if (project !== undefined) parts.push(project?.confidence ?? 0);
   if (category !== undefined) parts.push(category?.confidence ?? 0);
   const confidence = parts.length === 0 ? 0 : Math.min(...parts);
-  // Auto does not pre-fill income: its suggestion shows on the card like shadow (decision 0133).
+  // Auto does not pre-fill income: its suggestion shows on the card like shadow (decision 0134).
   const gate = mode === "auto" && lineDirection(expense) === "expense" && parts.length > 0 && confidence >= threshold;
 
   const write: PrefillWrite = {
@@ -791,7 +791,7 @@ async function attachHistory(
   }
 }
 
-/** One SQL call per company: the anomaly flags of the lines in the run (decision 0133). A failed read skips scores. */
+/** One SQL call per company: the anomaly flags of the lines in the run (decision 0134). A failed read skips scores. */
 async function attachFlags(
   fetch: FetchLike,
   base: string,

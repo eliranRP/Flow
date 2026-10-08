@@ -144,7 +144,7 @@ select is(
    from jsh_out, jsonb_array_elements(result) with ordinality x(e, ord)
    where label = 'a' and e ->> 'supplier_id' = (select id::text from jsh_ref where label = 's1')),
   '["income line", "line 6", "line 3", "line 2", "line 1"]'::jsonb,
-  's1: filed lines newest first per direction, income before expense in the enum order (decision 0133); open, skipped, removed and reopened lines are left out'
+  's1: filed lines newest first per direction, income before expense in the enum order (decision 0134); open, skipped, removed and reopened lines are left out'
 );
 select is(
   (select jsonb_agg((e ->> 'split')::boolean order by ord)

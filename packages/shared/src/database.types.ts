@@ -207,6 +207,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"invoice_paid_marks": {
+                  Row: {
+                    "company_id": string,"marked_at": string,"marked_by": string | null,"transaction_id": string
+                  }
+                  Insert: {
+                    "company_id": string,"marked_at"?: string,"marked_by"?: string | null,"transaction_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"marked_at"?: string,"marked_by"?: string | null,"transaction_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoice_paid_marks_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoice_paid_marks_company_id_transaction_id_fkey"
+      columns: ["company_id","transaction_id"]
+isOneToOne: false
+      referencedRelation: "transactions"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"jev_line_failures": {
                   Row: {
                     "attempts": number,"company_id": string,"model_version": string,"retry_after": string,"transaction_id": string,"updated_at": string
@@ -914,7 +939,7 @@ isOneToOne: false
             }[]
                            },
 "list_project_category":
-{ Args: { "p_category": string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
+{ Args: { "p_basis"?: string,"p_category": string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
                            },
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -993,6 +1018,9 @@ isOneToOne: false
                            },
 "mcp_set_expense_category":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_transaction_id": string }; Returns: Json
+                           },
+"mcp_set_invoice_paid":
+{ Args: { "p_idempotency_key": string,"p_paid": boolean,"p_transaction_id": string }; Returns: Json
                            },
 "mcp_set_line_pnl":
 { Args: { "p_idempotency_key": string,"p_in_pnl": boolean,"p_transaction_id": string }; Returns: Json
@@ -1107,6 +1135,9 @@ isOneToOne: false
                            },
 "set_import_from":
 { Args: { "p_from": string,"p_provider": Database["public"]['Enums']["connector_provider"] }; Returns: undefined
+                           },
+"set_invoice_paid":
+{ Args: { "p_id": string,"p_paid": boolean }; Returns: Json
                            },
 "set_overhead_project":
 { Args: { "p_project_id": string }; Returns: undefined

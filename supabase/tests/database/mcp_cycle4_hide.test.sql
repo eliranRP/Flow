@@ -46,9 +46,9 @@ select is(
   'it is hidden'
 );
 select is(
-  public.mcp_hide_category('h-hide-2', (select id from mcp4h where label = 'cat'))->'error'->>'code',
-  'refused',
-  'a second open hide of the same category is refused'
+  public.mcp_hide_category('h-hide-2', (select id from mcp4h where label = 'cat'))->>'ok',
+  'true',
+  'a second hide of the same category succeeds and keeps the one undoable write (FLOW-205)'
 );
 select is(
   public.mcp_undo('h-undo-hide', 'category_hidden', (select id from mcp4h where label = 'cat'))->'data'->>'kind',

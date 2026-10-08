@@ -1,4 +1,4 @@
--- FLOW-701 part 5 (decision 0133). Jev's suggestions with a reason from SQL, Jev's score on
+-- FLOW-701 part 5 (decision 0134). Jev's suggestions with a reason from SQL, Jev's score on
 -- anomaly flags, income lines in the tagging reads, and the #160 review follow-ups.
 -- Helpers come from supabase/tests/helpers.sql.
 

@@ -160,6 +160,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_jev_suggestions",
     "get_missing_bills",
     "get_expected_months",
+    "list_unpaid",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -180,6 +181,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
+    "set_invoice_paid",
     "undo",
     "undo_batch",
   ], "read and write tools");
@@ -1003,6 +1005,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
+    "set_invoice_paid",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -1016,7 +1019,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 18, "eighteen reads");
+  assertEquals(readNames.length, 19, "nineteen reads");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {

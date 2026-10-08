@@ -11,6 +11,7 @@ import {
   demandStatement,
   LoanScheduleError,
   LOAN_TERM_MONTHS_MAX,
+  monthlyPaymentMinor,
   regularPaymentMinor,
   type DemandPayment,
   type LoanKind,
@@ -47,6 +48,7 @@ export const READ_TOOL_NAMES = [
   "get_jev_suggestions",
   "get_missing_bills",
   "get_expected_months",
+  "list_unpaid",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -73,6 +75,7 @@ export const WRITE_TOOL_NAMES = [
   "split_line",
   "set_line_pnl",
   "set_lines_pnl",
+  "set_invoice_paid",
   "undo",
   "undo_batch",
 ] as const;
@@ -100,6 +103,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_jev_suggestions: new Set(),
   get_missing_bills: new Set(),
   get_expected_months: new Set(["months", "project_id"]),
+  list_unpaid: new Set(),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -124,6 +128,7 @@ const ALLOWED: Record<string, Set<string>> = {
   split_line: new Set(["idempotency_key", "transaction_id", "parts"]),
   set_line_pnl: new Set(["idempotency_key", "transaction_id", "in_pnl"]),
   set_lines_pnl: new Set(["idempotency_key", "items"]),
+  set_invoice_paid: new Set(["idempotency_key", "transaction_id", "paid"]),
   undo: new Set(["idempotency_key", "kind", "id"]),
   undo_batch: new Set(["idempotency_key", "batch_key"]),
 };
@@ -210,7 +215,7 @@ const categorySchema = z.object({
 }).strict();
 const undoSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate"]),
+  kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"]),
   id: UUID_TEXT,
 }).strict();
 // Same rule as private.company_name_problem: 2 to 100 code points after trim()
@@ -472,6 +477,11 @@ const setLinesPnlSchema = z.object({
     seen.add(item.transaction_id);
   }
 });
+const setInvoicePaidSchema = z.object({
+  idempotency_key: IDEMPOTENCY_KEY,
+  transaction_id: UUID_TEXT,
+  paid: z.boolean(),
+}).strict();
 const undoBatchSchema = z.object({
   idempotency_key: BATCH_KEY,
   batch_key: UUID_TEXT,
@@ -486,6 +496,49 @@ type ToolResult = {
   isError: boolean;
   structuredContent: { ok: true; data: unknown } | { ok: false; error: { code: string; message: string } };
 };
+
+/**
+ * FLOW-330. list_unpaid rows in minor units, with open and marked totals per currency and
+ * direction: customer invoices (income) and supplier invoices (expense, negative) never mix.
+ */
+function unpaidReport(rows: unknown[]) {
+  const totals = new Map<string, { currency: string; direction: string; open_gross_minor: bigint; marked_gross_minor: bigint }>();
+  const invoices = rows.map((raw) => {
+    const row = (raw ?? {}) as Record<string, unknown>;
+    const currency = typeof row.currency === "string" ? row.currency : "ILS";
+    const direction = row.direction === "expense" ? "expense" : "income";
+    const gross = BigInt(String(row.open_gross_agorot ?? 0));
+    const markedAt = typeof row.marked_paid_at === "string" ? row.marked_paid_at : null;
+    const key = `${currency}|${direction}`;
+    const total = totals.get(key) ?? { currency, direction, open_gross_minor: 0n, marked_gross_minor: 0n };
+    if (markedAt == null) total.open_gross_minor += gross;
+    else total.marked_gross_minor += gross;
+    totals.set(key, total);
+    return {
+      id: row.id,
+      description: row.description ?? null,
+      doc_date: row.doc_date ?? null,
+      currency,
+      direction,
+      project_name: row.project_name ?? null,
+      customer_name: row.customer_name ?? null,
+      open_gross_minor: Number(gross),
+      open_net_minor: Number(BigInt(String(row.open_net_agorot ?? 0))),
+      marked_paid_at: markedAt,
+    };
+  });
+  return {
+    invoices,
+    totals: [...totals.values()]
+      .sort((x, y) => x.currency.localeCompare(y.currency) || x.direction.localeCompare(y.direction))
+      .map((t) => ({
+        currency: t.currency,
+        direction: t.direction,
+        open_gross_minor: Number(t.open_gross_minor),
+        marked_gross_minor: Number(t.marked_gross_minor),
+      })),
+  };
+}
 
 function fail(code: string, message: string): ToolResult {
   return { isError: true, structuredContent: { ok: false, error: { code, message } } };
@@ -724,6 +777,27 @@ function storedLoanSchedule(loan: LoanRow): ReturnType<typeof buildLoanSchedule>
   }
 }
 
+/**
+ * A loan as `list_loans` shows it. `payment_minor` is the monthly payment: on an
+ * interest_only loan whose interest-only months are the term, the interest at the rate
+ * in force today plus escrow, not the stored bullet the schedule pays at the term (FLOW-136).
+ */
+function listedLoan(loan: LoanRow): LoanRow {
+  if (loan.payment_minor == null || loan.term_months == null) return loan;
+  const paymentMinor = monthlyPaymentMinor({
+    principalMinor: BigInt(loan.principal_minor),
+    annualRatePpm: loan.annual_rate_ppm,
+    termMonths: loan.term_months,
+    paymentMinor: BigInt(loan.payment_minor),
+    escrowMinor: BigInt(loan.escrow_minor),
+    kind: loanKindOf(loan),
+    interestOnlyMonths: loan.interest_only_months ?? null,
+    rates: loanRatesOf(loan),
+    asOf: todayIso(),
+  });
+  return { ...loan, payment_minor: Number(paymentMinor) };
+}
+
 async function loadLoans(rpc: ToolRpc): Promise<ToolResult | LoanRow[]> {
   const result = await rpc("mcp_list_loans", {});
   if (result.status >= 400 || !Array.isArray(result.json)) return fail("refused", READ_REFUSED);
@@ -926,7 +1000,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines. project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
+    toolSpec("list_loans", "Loans in the company with current principal balance. flagged_parts counts loan parts waiting for review (they do not lower the balance) and flagged_transaction_ids names their lines, both leaving out removed or void lines. payment_minor is the monthly payment (for interest_only when its months are the term: interest plus escrow; the principal is due in the last schedule row). project_id and project_name show the project a loan is filed under, or null. status is open, paid_off or closed, and closed_on is the day it ended (null while open). include_closed false lists open loans only (default true). interest_category_id, escrow_category_id and principal_category_id (with *_name) are the loan's own categories for its payment parts, or null for the defaults. fees_category_id (with fees_category_name) is the category for a payment's fees part, or null when the loan names none (then each attach with fees must name one). kind is amortizing, interest_only (with interest_only_months), balloon (with amortization_months) or demand (term_months and payment_minor null); rates lists the loan's rate changes (id, effective_date, annual_rate_ppm), oldest first.", {
       include_closed: { type: "boolean" },
     }),
     toolSpec("get_loan_schedule", "Amortization rows for one loan (from and limit page them; kind says which kind it is). Interest uses the rate in force on each row's date (set_loan_rate); a rate change recasts the payment over the months left (for an amortizing loan whose payment is below the term annuity, over the months left in the amortization period that payment implies, so the balloon stays at the term). An interest_only loan's first interest_only_months rows pay interest and escrow only; a balloon loan's last row pays the rest of the balance. A demand loan has nothing scheduled ahead: rows are the payments attached so far (oldest first, with the balance after each), and accrued is the interest due on as_of (YYYY-MM-DD, default today): carried (interest earlier payments left unpaid, simple interest) plus what accrued from the last one (or the start), daily on actual/365, with since, days, carried, interest and balance.", {
@@ -966,6 +1040,7 @@ function readTools() {
       months: { type: "integer", minimum: 1, maximum: 12 },
       project_id: { type: "string" },
     }),
+    toolSpec("list_unpaid", "Open SUMIT invoices (an amount still open after linked receipts and credit notes), oldest first, as the Unpaid screen lists them: customer invoices (direction income, positive) and supplier invoices (direction expense, negative). Each has id (the transaction id), description, doc_date, currency, direction, project_name, customer_name, open_gross_minor, open_net_minor, and marked_paid_at: when the owner marked it paid while SUMIT has no receipt yet (null when not marked; set_invoice_paid). A marked one stays listed until a sync closes it. totals[] per currency and direction: open_gross_minor sums the rows not marked, marked_gross_minor the marked ones.", {}),
   ];
 }
 
@@ -1093,7 +1168,7 @@ function writeTools() {
     toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job.", {
       idempotency_key: { type: "string" },
     }, true),
-    toolSpec("hide_category", "Hide a category. Undo restores the prior hidden flag.", {
+    toolSpec("hide_category", "Hide a category. Undo restores the prior hidden flag. Hiding it again while this user's earlier hide can still be undone keeps that one undo.", {
       idempotency_key: { type: "string" },
       category_id: { type: "string" },
     }, true),
@@ -1196,9 +1271,14 @@ function writeTools() {
         },
       },
     }, true),
+    toolSpec("set_invoice_paid", "Mark one open invoice from list_unpaid as paid (paid true) while SUMIT has no receipt for it yet, or clear the mark (paid false). A marked document leaves the unpaid total but stays listed with marked_paid_at until a sync closes it; marking again keeps the first time. A line list_unpaid does not list is refused (invoice not found). Totals and the P&L do not change. Undo is kind invoice_paid with the transaction id.", {
+      idempotency_key: { type: "string" },
+      transaction_id: { type: "string" },
+      paid: { type: "boolean" },
+    }, true),
     toolSpec("undo", "Undo one assistant write recorded for this user.", {
       idempotency_key: { type: "string" },
-      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate"] },
+      kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl", "loan_rate", "invoice_paid"] },
       id: { type: "string" },
     }, true),
     toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
@@ -1828,6 +1908,15 @@ async function callWrite(
       p_transaction_id: parsed.data.transaction_id,
       p_in_pnl: parsed.data.in_pnl,
     };
+  } else if (name === "set_invoice_paid") {
+    const parsed = setInvoicePaidSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_set_invoice_paid";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_transaction_id: parsed.data.transaction_id,
+      p_paid: parsed.data.paid,
+    };
   } else if (name === "set_lines_pnl") {
     const parsed = setLinesPnlSchema.safeParse(args);
     if (!parsed.success) return fail("validation", "validation");
@@ -1981,6 +2070,13 @@ export async function callTool(
     return ok({ missing: data });
   }
 
+  if (name === "list_unpaid") {
+    const result = await rpc("list_unpaid", {});
+    const rows = result.json;
+    if (result.status >= 400 || !Array.isArray(rows)) return fail("refused", READ_REFUSED);
+    return ok(unpaidReport(rows));
+  }
+
   if (name === "get_expected_months") {
     const months = args.months == null ? 3 : args.months;
     if (typeof months !== "number" || !Number.isInteger(months) || months < 1 || months > 12) {
@@ -2131,7 +2227,8 @@ export async function callTool(
     if (typeof includeClosed !== "boolean") return fail("validation", "validation");
     const loans = await loadLoans(rpc);
     if (!Array.isArray(loans)) return loans;
-    return ok({ loans: includeClosed ? loans : loans.filter((loan) => (loan.status ?? "open") === "open") });
+    const listed = includeClosed ? loans : loans.filter((loan) => (loan.status ?? "open") === "open");
+    return ok({ loans: listed.map(listedLoan) });
   }
 
   if (name === "get_loan_schedule") {

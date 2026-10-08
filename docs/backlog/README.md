@@ -113,13 +113,13 @@ Work runs in **lanes**. A lane is one long-running agent thread that owns a kind
 | Lane | How many | Owns |
 | --- | --- | --- |
 | Dev task lane | **At most 2 at the same time** | Ready tasks from the [priority queue](TASKS.md#priority-queue) that are not UI building |
-| UI lane | 1 | **All** UI building: screens, shared components, Storybook. One PR at a time, in a collision-ordered queue |
-| UI/UX review cycle | 1 | Screenshots the app at phone sizes after each deploy batch, reviews pixels and one-handed use, and files findings as tasks for the UI lane ([runbook](../runbooks/ui-ux-review-cycle.md)) |
+| UI lanes | 2 | **All** UI building: screens, shared components, Storybook. Each lane owns whole areas and works one PR at a time ([design team](../design/DESIGN-TEAM.md)) |
+| UI/UX review cycle | 1 | The design lead. Screenshots the app at phone sizes after each deploy batch, reviews pixels and one-handed use, files findings as tasks for the UI lanes ([runbook](../runbooks/ui-ux-review-cycle.md)), and keeps DESIGN-RULES in step with the [design log](../design/log/README.md) |
 | Production QA | 1 | The deploy and prod checks, including write tests, only in the sandbox QA company |
 | Backlog bug fixes | 1 | Open `BUG` and `BACKLOG NIT` items, small and high-impact first |
 | MCP/data agent | 1 | Real data through the MCP tools. Never changes the repo |
 
-The UI lane, review cycle, Production QA, and bug-fix lanes have their own slots. They don't count against the 2 dev task lanes. Don't start a third dev task lane; wait for one to finish.
+The UI lanes, review cycle, Production QA, and bug-fix lanes have their own slots. They don't count against the 2 dev task lanes. Don't start a third dev task lane; wait for one to finish.
 
 ### Priority
 
@@ -133,10 +133,11 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 
 ### UI work
 
-- All UI building goes through the single UI lane, in the option C ("full Mercury") styles ([0120](../decisions/0120-income-green-type-scale.md), [DESIGN-RULES](../design/DESIGN-RULES.md)). Other lanes that find UI work file it as a task, or write a plan and hand it to the UI lane. They don't open their own UI PR.
-- The UI lane keeps one queue ordered so that PRs don't touch the same files, and works it one PR at a time. Large shared screen files are hotspots: two PRs never change the same one at once.
+- All UI building goes through the two UI lanes, in the option C ("full Mercury") styles ([0120](../decisions/0120-income-green-type-scale.md), [DESIGN-RULES](../design/DESIGN-RULES.md)). Other lanes that find UI work file it as a task, or write a plan and hand it to the UI lane that owns the area. They don't open their own UI PR. Roles, the design system's sources of truth, the design log, and how the two lanes split files are in [DESIGN-TEAM.md](../design/DESIGN-TEAM.md).
+- Each UI lane keeps one queue ordered so that PRs don't touch the same files, and works it one PR at a time. Large shared files (`flow-screens.tsx`, `screens.stories.tsx`, `ui.css`, and `ui/index.ts` as DESIGN-TEAM says) are hotspots: two open PRs may change one only when their `Claim` blocks name disjoint functions or CSS blocks ([how](../design/DESIGN-TEAM.md#splitting-work-between-the-two-ui-lanes)).
+- Every UI PR that changes a look or a behavior adds a [design log](../design/log/README.md) entry.
 - Every UI task updates the shared components in `app/src/ui` and adds or updates a Storybook story for every new or changed component, in the same PR.
-- For a UI task, run a design session with the design reviewer and build the option the designer recommends. `PLAN FIRST` UI tasks are the exception: they need the owner's approval first.
+- For a UI task, run a design session with the design reviewer (each UI lane runs its own; see [DESIGN-TEAM](../design/DESIGN-TEAM.md)) and build the option the designer recommends. `PLAN FIRST` UI tasks are the exception: they need the owner's approval first.
 
 ### Asking the owner
 
@@ -164,11 +165,11 @@ Bugs, features, and tasks are **batched by area**. A lane takes related items to
 2. **When you start**, open the draft PR right away (step 2 of [How to take a task](#how-to-take-a-task)) with a `Claim` block at the top of the body:
    ```text
    Claim
-   - Lane: <dev lane 1 | dev lane 2 | UI | UI/UX review | Production QA | bug fixes>
+   - Lane: <dev lane 1 | dev lane 2 | UI lane 1 | UI lane 2 | UI/UX review | Production QA | bug fixes>
    - Ids: FLOW-<id>, FLOW-<id>
    - Started: YYYY-MM-DD HH:MM UTC
    - Areas: <screens, tables, MCP tools>
-   - Files: <paths or folders this PR will change, including any migration name>
+   - Files: <paths or folders this PR will change, including any migration name; for `flow-screens.tsx`, `screens.stories.tsx` and `ui.css`, name the functions or CSS blocks, for example `flow-screens.tsx: ReviewQueue`>
    - Progress: claimed
    ```
    Each id's status line in TASKS.md becomes `claimed (<lane>, YYYY-MM-DD, <branch>)` in the first commit.
@@ -320,7 +321,7 @@ Say whether the PR counts as approved once your patches are applied and pushed t
 
 - **Purpose:** makes sure the screen matches the approved design and works on small phones, right to left.
 - **Involved:** in step 4b, and in step 5 if the fix changes the UI. Only for PRs that change the UI.
-- **Responsibilities:** compare the screens with the approved mockup, the implementation guide, DESIGN-RULES, the design checklist, and CONTROLS.md; check 320, 390, and 480px wide, light and dark; check right-to-left layout and numbers; check that amounts never wrap or get cut; run the clip check; check focus, loading, empty, error, and busy states; check tap targets of at least 44px; check the wording is short.
+- **Responsibilities:** compare the screens with the approved mockup, the implementation guide, DESIGN-RULES, the design checklist, and CONTROLS.md; check 320, 390, and 480px wide, and 375x667 for sticky bars, light and dark; check the PR adds a design log entry when it changes a look or a behavior; check right-to-left layout and numbers; check that amounts never wrap or get cut; run the clip check; check focus, loading, empty, error, and busy states; check tap targets of at least 44px; check the wording is short.
 - **Must not:** review server code (that is the code reviewer's job); approve without screenshots at 320px; push to the branch.
 - **Output:** a first line `#<n> design r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; findings marked Blocking, Should, or Nit with `file:line`, each with a patch that passes `git apply --check`; screenshots; a "Backlog" list for later items.
 
@@ -328,7 +329,8 @@ Say whether the PR counts as approved once your patches are applied and pushed t
 You are the Flow design reviewer. Review the UI in PR #<n> at head <sha>.
 Compare with: the approved mockup, design/system/implementation-guide.md, docs/design/DESIGN-RULES.md,
 docs/review/CHECKLIST-design.md, and docs/qa/CONTROLS.md.
-Check at 320, 390, and 480px wide, light and dark:
+Check at 320, 390, and 480px wide, and 375x667 for sticky bars, light and dark:
+- a PR that changes a look or a behavior adds docs/design/log/YYYY-MM-DD-flow-<id>.md with a Rule: line;
 - spacing and colours come from design tokens; one main button per screen;
 - right-to-left layout; numbers inside <bdi>; amounts never wrap or get cut;
 - clipping: run pnpm build-storybook && pnpm clip-check;
@@ -407,7 +409,7 @@ A brief is short. It points the builder to exactly what to read and change:
 | Backlog | [TASKS.md](TASKS.md) |
 | Contributing rules, MCP-first, review handoff | [CONTRIBUTING.md](../../CONTRIBUTING.md) |
 | Pitfalls and checklists | [PITFALLS](../review/PITFALLS.md), [code checklist](../review/CHECKLIST-code.md), [design checklist](../review/CHECKLIST-design.md) |
-| Design rules and controls | [DESIGN-RULES](../design/DESIGN-RULES.md), [CONTROLS.md](../qa/CONTROLS.md), [implementation guide](../../design/system/implementation-guide.md), screen sources in `design/src/` |
+| Design rules and controls | [DESIGN-TEAM](../design/DESIGN-TEAM.md), [design log](../design/log/README.md), [DESIGN-RULES](../design/DESIGN-RULES.md), [CONTROLS.md](../qa/CONTROLS.md), [implementation guide](../../design/system/implementation-guide.md), screen sources in `design/src/` |
 | MCP tools | [TOOLS.md](../mcp/TOOLS.md), code in `supabase/functions/flow-mcp/` |
 | Decisions | [docs/decisions](../decisions/README.md) |
 | Changelog | [docs/changelog.md](../changelog.md), and entries not yet folded in: [docs/changelog.d/](../changelog.d/README.md) |

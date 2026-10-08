@@ -1,4 +1,4 @@
--- FLOW-701 part 5 (Jev phase 1). Decision 0133.
+-- FLOW-701 part 5 (Jev phase 1). Decision 0134.
 -- 1. Income lines: the jev-tag job also sends open income lines (a project and an income
 --    category), so the party history below covers customers too. Auto mode does not pre-fill
 --    income; the suggestion shows on the card like any other.

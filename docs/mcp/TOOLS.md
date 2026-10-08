@@ -32,6 +32,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "overhead_project"` | `id` | the company id `set_overhead_project` returned |
 | `undo` `kind: "line_split"` | `id` | the transaction id `split_line` used |
 | `undo` `kind: "line_pnl"` | `id` | the transaction id `set_line_pnl` used |
+| `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
+| `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -220,7 +222,7 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 A project, category or loan name (`create_project`, `create_category`, `create_projects`, `create_categories`, `add_loan`, `update_loan`) with a control character, a line or paragraph separator, an invisible format character (zero-width, bidi marks and controls, BOM, soft hyphen, tag characters) or a blank filler is `validation`; ZWJ is allowed for emoji (FLOW-205).
 
-`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it. Otherwise undo is `conflict` and the row stays.
+`create_project` and `create_category` record undo rows. Undo deletes the row only when nothing in the company references it, including a review row, an open reassign undo or an open `split_line` undo that would restore it (FLOW-205). Otherwise undo is `conflict` and the row stays.
 
 ### create_project
 
@@ -260,7 +262,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "hide-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1" }
 ```
 
-Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the prior `hidden` flag.
+Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the prior `hidden` flag. Hiding a category again while this user's earlier hide can still be undone (a second hide, or a re-hide after the app showed it) hides it and keeps that one undo, which restores the flag from before the first hide. Undo of a hide the app already reversed succeeds and changes nothing (FLOW-205).
 
 ### set_category_pnl
 
@@ -326,11 +328,11 @@ The finish step stores a result only when it is exactly `added`, `duplicates`, `
 
 ### get_anomalies
 
-`mcp_review_anomalies`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days; not an invoice and its receipt, a cancelled invoice, or two loans' payments), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile posted line over the year up to the newest open line). Income is compared on invoices only, so a receipt paying several invoices is not a spike. Each flag also has `jev_score` (0 to 1: how likely Jev thinks the flag is a real problem, asked in the same call that labelled the line; null when Jev did not score it) ([0133](../decisions/0133-jev-reasons-income-scores.md)). A flag is a reason to look; it changes nothing.
+`mcp_review_anomalies`, no arguments ([0131](../decisions/0131-jev-patterns.md)). Read tool. Output `data.anomalies[]` for the open review lines (newest 500), each with `transaction_id` and `kind`: `duplicate` (`other_transaction_id`, `other_doc_date`: another posted line of the same supplier or customer, document kind, gross amount and currency, within 7 days; not an invoice and its receipt, a cancelled invoice, or two loans' payments), `amount_spike` (`typical_amount_minor`, `ratio`: at least 3 times the median of that party's last 12 lines in the year before, and at least 100.00 more), `new_party_large` (`company_p90_minor`: a party's first line at or above the company's 90th percentile posted line over the year up to the newest open line). Income is compared on invoices only, so a receipt paying several invoices is not a spike. Each flag also has `jev_score` (0 to 1: how likely Jev thinks the flag is a real problem, asked in the same call that labelled the line; null when Jev did not score it) ([0134](../decisions/0134-jev-reasons-income-scores.md)). A flag is a reason to look; it changes nothing.
 
 ### get_jev_suggestions
 
-`mcp_jev_suggestions`, no arguments ([0133](../decisions/0133-jev-reasons-income-scores.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
+`mcp_jev_suggestions`, no arguments ([0134](../decisions/0134-jev-reasons-income-scores.md)). Read tool. Output `data.suggestions[]` for the open review lines (newest 500) that have a Jev suggestion: `transaction_id`, `direction` (`expense` or `income`), `project_id`, `project_name`, `category_id`, `category_name` (null when Jev did not answer that field), `confidence`, `reason`, `party_filings`, `matching_filings`, `anomaly_score` (Jev's score of an anomaly flag on the line, or null). `reason` comes from SQL, from the supplier's or customer's last 5 filed lines of the same direction: `same_as_last` (the answered fields equal the last one), `usual_for_party` (they equal at least 2 of them), `new_party` (none filed yet), `model_only` (none of these). Jev only suggests; filing a line is still `assign_expense` or `assign_expenses`.
 
 ### get_missing_bills
 
@@ -348,7 +350,7 @@ Read tools use `mcp_list_loans` and shared schedule math. Writes use the same wr
 
 ### list_loans
 
-Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)).
+Input `{ "include_closed": true }` (optional, default `true`; `false` lists open loans only). Output `data.loans[]`: `id`, `name`, `currency`, `principal_minor`, `annual_rate_ppm`, `term_months`, `start_date`, `payment_minor`, `escrow_minor`, `balance_minor`, `flagged_parts`, `flagged_transaction_ids`, `project_id` and `project_name` (null when the loan has no project), `status` (`open`, `paid_off` or `closed`) and `closed_on` (the day it ended, null while open; [0122](../decisions/0122-loan-status.md)), and `interest_category_id`, `escrow_category_id`, `principal_category_id` with their `*_name` (the loan's own category per part, null for the default; [0128](../decisions/0128-loan-part-categories.md)), and `fees_category_id` with `fees_category_name` (the category for a payment's fees part when the attach names none, null when the loan names none; there is no default; [0130](../decisions/0130-loan-fees-installments.md)). `kind` (`amortizing`, `interest_only`, `balloon` or `demand`), `interest_only_months` (set only for `interest_only`), `amortization_months` (set only for `balloon`) and `rates[]` (`id`, `effective_date`, `annual_rate_ppm`, oldest first, `[]` when none; see `set_loan_rate`) ([0132](../decisions/0132-loan-kinds-rates.md)); a `demand` loan has `term_months` and `payment_minor` null. `payment_minor` is the monthly payment: on an `interest_only` loan whose `interest_only_months` equal the term it is the interest at the rate in force today (the latest `rates[]` row on or before it, else `annual_rate_ppm`) plus escrow, while the stored payment is the bullet the schedule's last row pays (FLOW-136). `flagged_parts` counts the loan parts waiting for review and `flagged_transaction_ids` lists their lines (sorted, each once, `[]` when none), leaving out lines that were removed or voided (FLOW-114); a flagged part does not lower `balance_minor` until the split is corrected in the app ([0121](../decisions/0121-loan-balance-checks.md)).
 
 ### get_loan_schedule
 
@@ -526,6 +528,30 @@ Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "l
 ```
 
 Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`, each result `{ "transaction_id", "ok": true, "in_pnl", "undo_kind": "line_pnl" }` or `{ "transaction_id", "ok": false, "code" }`. [undo_batch](#undo_batch) with `batch_key` undoes the rows that succeeded.
+
+## Unpaid · FLOW-330
+
+SUMIT invoices still open, and a mark the owner sets when one was paid before SUMIT has the receipt. Decision [0133](../decisions/0133-invoice-paid-marks.md).
+
+### list_unpaid
+
+Read. No arguments. The open documents the Unpaid screen shows: SUMIT invoices with an amount still open after their linked receipts and credit notes, oldest first. Customer invoices have `direction` `income` and a positive amount; supplier invoices have `direction` `expense` and a negative one.
+
+Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "direction", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at" }`; `id` is the transaction id, and `marked_paid_at` is when the document was marked paid (`null` when not). `totals` has one row per currency and direction, `{ "currency", "direction", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. Customer and supplier amounts never share a total. A marked document stays listed until a sync brings its open amount to zero.
+
+### set_invoice_paid
+
+Marks one open document paid while SUMIT has no receipt for it yet, or clears the mark.
+
+```json
+{ "idempotency_key": "paid-1", "transaction_id": "22222222-2222-4000-8000-000000000030", "paid": true }
+```
+
+- `paid: true` marks it (marking again keeps the first time), `false` clears it (clearing an unmarked one changes nothing).
+- The mark changes no total and no P&L figure: it only moves the document from `open_gross_minor` to `marked_gross_minor` in `list_unpaid`. The P&L follows the receipt when the sync brings it.
+- Refused: `invoice not found` (not a document `list_unpaid` lists, already closed, or another company's).
+
+Output `data`: `{ "transaction_id", "marked_paid", "marked_paid_at", "undo_kind": "invoice_paid", "id" }`. Undo `kind: "invoice_paid"` with the transaction id puts the mark back as it was before this write (with its first time and author) or takes it away. If the mark changed since (cleared, or cleared and set again, for example in the app), undo is `conflict`; a document removed since is `not_found`.
 
 ## Batch · cycle 6
 
