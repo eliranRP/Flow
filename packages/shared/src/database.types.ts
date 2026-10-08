@@ -828,10 +828,13 @@ isOneToOne: false
 "get_loan_split":
 { Args: { "p_transaction_id": string }; Returns: Json
                            },
+"get_profit_months":
+{ Args: { "p_basis"?: string,"p_from"?: string,"p_project_id"?: string,"p_to"?: string }; Returns: Json
+                           },
 "get_project":
 { Args: { "p_id": string }; Returns: Json
                            } |
-{ Args: { "p_basis": string,"p_id": string }; Returns: Json
+{ Args: { "p_basis": string,"p_from"?: string,"p_id": string,"p_to"?: string }; Returns: Json
                            },
 "get_transaction":
 { Args: { "p_id": string }; Returns: Json
@@ -871,7 +874,7 @@ isOneToOne: false
             }[]
                            },
 "list_project_category":
-{ Args: { "p_category": string,"p_limit"?: number,"p_offset"?: number,"p_project": string }; Returns: Json
+{ Args: { "p_category": string,"p_from"?: string,"p_limit"?: number,"p_offset"?: number,"p_project": string,"p_to"?: string }; Returns: Json
                            },
 "list_review":
 { Args: Record<PropertyKey, never>; Returns: Json

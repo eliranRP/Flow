@@ -1,6 +1,6 @@
 import type { LoanScheduleRow } from "./loan-schedule.ts";
 
-/** A payment's parts. `fees` is optional: at most one, above zero (decision 0129). */
+/** A payment's parts. `fees` is optional: at most one, above zero (decision 0130). */
 export type LoanSplitPart = "interest" | "escrow" | "principal" | "fees";
 
 export type LoanSplitAmount = {
@@ -54,7 +54,7 @@ export function allocateLoanSplit(input: {
 
 /**
  * Fees come off the line first, then `allocateLoanSplit` splits the rest
- * (decision 0129). Fees above zero add a fourth part whose scheduled figure is
+ * (decision 0130). Fees above zero add a fourth part whose scheduled figure is
  * the fees amount. Zero fees give the three parts alone. Returns null when the
  * line is smaller than the fees.
  */

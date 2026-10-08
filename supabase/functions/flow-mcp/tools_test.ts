@@ -377,6 +377,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",
+    "get_profit_months",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -747,6 +748,67 @@ Deno.test("assign_expense forwards project and category for an income review lin
   }
 });
 
+Deno.test("assign_expense without a project forwards null for a kept-out category", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { undo_kind: "review", id: REVIEW, closed_review: true } },
+  }));
+  for (const project_id of [undefined, null]) {
+    const assigned = await callTool("assign_expense", {
+      idempotency_key: "assign-kept-out",
+      transaction_id: INCOME_TXN,
+      ...(project_id === undefined ? {} : { project_id }),
+      category_id: INCOME_CATEGORY,
+    }, ["write"], rpc);
+    assertEquals(assigned.isError, false);
+  }
+  assertEquals(calls.length, 2);
+  for (const call of calls) {
+    assertEquals(call.name, "mcp_assign_expense");
+    assertEquals(call.body.p_project_id, null);
+  }
+  const bad = await callTool("assign_expense", {
+    idempotency_key: "assign-bad",
+    transaction_id: INCOME_TXN,
+    project_id: "not-a-uuid",
+    category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(bad.isError, true);
+  assertEquals(calls.length, 2);
+});
+
+Deno.test("names with control or invisible characters are refused before the RPC", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  for (
+    const name of [
+      "Site\u200bBeta", "Site\u0007Beta", "\u202eSite Beta", "Site\ufeffBeta", "Site\u00adBeta",
+      "Site\u200fBeta", "Site\u061cBeta", "Site\u2028Beta", "Site\u{e0041}Beta", "Site\u3164Beta",
+    ]
+  ) {
+    const project = await callTool("create_project", { idempotency_key: "k", name }, ["write"], rpc);
+    assertEquals(project.isError, true, JSON.stringify(name));
+    const category = await callTool("create_category", { idempotency_key: "k", name, kind: "expense" }, ["write"], rpc);
+    assertEquals(category.isError, true, JSON.stringify(name));
+    const batch = await callTool("create_projects", { idempotency_key: "k", items: [{ name }] }, ["write"], rpc);
+    assertEquals(batch.isError, true, JSON.stringify(name));
+    const loan = await callTool("update_loan", { idempotency_key: "k", loan_id: PROJECT, name }, ["write"], rpc);
+    assertEquals(loan.isError, true, JSON.stringify(name));
+    const categories = await callTool("create_categories", { idempotency_key: "k", items: [{ name, kind: "expense" }] }, ["write"], rpc);
+    assertEquals(categories.isError, true, JSON.stringify(name));
+    const added = await callTool("add_loan", {
+      idempotency_key: "k", name, principal: "1000", annual_rate_percent: 5, term_months: 12, start_date: "2026-01-01",
+    }, ["write"], rpc);
+    assertEquals(added.isError, true, JSON.stringify(name));
+  }
+  assertEquals(calls.length, 0);
+  // Hebrew and an emoji joined with ZWJ are fine.
+  const ok = await callTool("create_project", { idempotency_key: "k", name: "פרויקט 👨‍👩‍👧" }, ["write"], rpc);
+  assertEquals(ok.isError, false);
+  const marked = await callTool("create_project", { idempotency_key: "k2", name: "שָׁלוֹם ❤️ 🇮🇱" }, ["write"], rpc);
+  assertEquals(marked.isError, false);
+  assertEquals(calls.length, 2);
+});
+
 Deno.test("assign_expense and set_expense_category describe reversals", () => {
   const byName = new Map(toolsFor(["write"]).map((tool) => [tool.name, tool.description]));
   for (const name of ["assign_expense", "set_expense_category"]) {
@@ -755,7 +817,7 @@ Deno.test("assign_expense and set_expense_category describe reversals", () => {
     assertEquals(text.includes("negative income"), true, `${name} says an outflow can be negative income`);
     assertEquals(text.includes("negative expense"), true, `${name} says an inflow can be negative expense`);
   }
-  assertEquals((byName.get("assign_expense") ?? "").includes("Income needs a project"), true);
+  assertEquals((byName.get("assign_expense") ?? "").includes("project_id can be left out"), true);
 });
 
 Deno.test("a reversal is forwarded as given: an expense line under an income category and the reverse", async () => {
@@ -2024,10 +2086,67 @@ Deno.test("get_project is listed for a read scope only, as a read", () => {
     properties: {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
+      from: { type: "string" },
+      to: { type: "string" },
     },
     additionalProperties: false,
   });
   assertEquals(spec?.description.includes("cash"), true);
+});
+
+Deno.test("get_project passes a period, both dates or neither", async () => {
+  const { calls, rpc } = rpcOf((name) => name === "get_project" ? { status: 200, json: PROJECT_FIXTURE } : { status: 500, json: null });
+  const result = await callTool("get_project", { id: PROJECT, basis: "invoiced", from: "2026-08-01", to: "2026-08-31" }, ["read"], rpc);
+  assertEquals(result.isError, false);
+  assertEquals(calls, [{ name: "get_project", body: { p_id: PROJECT, p_basis: "invoiced", p_from: "2026-08-01", p_to: "2026-08-31" } }]);
+  for (const args of [
+    { id: PROJECT, to: "2026-08-31" },
+    { id: PROJECT, from: "2026-09-01", to: "2026-08-31" },
+    { id: PROJECT, from: "2026-8-1", to: "2026-08-31" },
+  ]) {
+    const refused = await callTool("get_project", args, ["read"], rpc);
+    assertEquals(refused.isError, true);
+    if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error, { code: "validation", message: "validation" });
+  }
+  assertEquals(calls.length, 1);
+});
+
+Deno.test("get_profit_months reads the company or one project by month", async () => {
+  const months = { basis: "cash", months: [{ month: "2026-09", by_currency: [{ currency: "ILS", income_minor: 100, expense_minor: 40, profit_minor: 60 }] }], by_currency: [] };
+  const { calls, rpc } = rpcOf((name, body) => name !== "get_profit_months"
+    ? { status: 500, json: null }
+    : body.p_project_id === PROJECT_B ? { status: 200, json: null } : { status: 200, json: months });
+  const company = await callTool("get_profit_months", { from: "2026-07-01", to: "2026-09-30" }, ["read"], rpc);
+  assertEquals(company.isError, false);
+  if (company.structuredContent.ok) assertEquals(company.structuredContent.data, months);
+  const project = await callTool("get_profit_months", { project_id: PROJECT, basis: "invoiced" }, ["read"], rpc);
+  assertEquals(project.isError, false);
+  const missing = await callTool("get_profit_months", { project_id: PROJECT_B }, ["read"], rpc);
+  assertEquals(missing.isError, true);
+  if (!missing.structuredContent.ok) assertEquals(missing.structuredContent.error.code, "not_found");
+  assertEquals(calls.map((call) => call.body), [
+    { p_from: "2026-07-01", p_to: "2026-09-30", p_basis: "cash", p_project_id: null },
+    { p_from: null, p_to: null, p_basis: "invoiced", p_project_id: PROJECT },
+    { p_from: null, p_to: null, p_basis: "cash", p_project_id: PROJECT_B },
+  ]);
+});
+
+Deno.test("get_profit_months rejects bad arguments before any read", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: {} }));
+  for (const args of [
+    { from: "2026-07-01" },
+    { from: "2026-09-01", to: "2026-08-31" },
+    { from: "2006-01-01", to: "2026-01-01" },
+    { basis: "accrual" },
+    { project_id: "not-a-uuid" },
+    { project_id: PROJECT, company_id: "other" },
+  ]) {
+    const result = await callTool("get_profit_months", args, ["read"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error, { code: "validation", message: "validation" });
+  }
+  assertEquals(calls.length, 0);
+  assertEquals((await callTool("get_profit_months", { from: "2006-02-01", to: "2026-01-31" }, ["read"], rpc)).isError, false);
 });
 
 Deno.test("get_project calls get_project with the id and each basis", async () => {
@@ -2677,7 +2796,7 @@ Deno.test("update_loan sends the part categories as uuids or null, and validates
   assertEquals(calls.length, 1);
 });
 
-// FLOW-106 part 3 (decision 0129): installments, a fees part, and exact parts.
+// FLOW-106 part 3 (decision 0130): installments, a fees part, and exact parts.
 const FEES_LOAN = {
   id: LOAN,
   name: "Example Bank",

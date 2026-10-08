@@ -1,5 +1,7 @@
 /** Unsaved split drafts live in sessionStorage under this prefix, one key per line. */
 const SPLIT_DRAFT_PREFIX = "flow-split:";
+/** FLOW-325: the split-by-category editor's drafts (line-split.ts writes them). */
+export const LINE_SPLIT_DRAFT_PREFIX = "flow-split-category:";
 /** The user the tab's drafts belong to. */
 const SPLIT_DRAFT_OWNER_KEY = "flow-split-owner";
 
@@ -20,7 +22,7 @@ export function keepSplitDraftsFor(userId: string | null): void {
       const drafts: string[] = [];
       for (let index = 0; index < sessionStorage.length; index += 1) {
         const key = sessionStorage.key(index);
-        if (key?.startsWith(SPLIT_DRAFT_PREFIX)) drafts.push(key);
+        if (key?.startsWith(SPLIT_DRAFT_PREFIX) || key?.startsWith(LINE_SPLIT_DRAFT_PREFIX)) drafts.push(key);
       }
       for (const key of drafts) sessionStorage.removeItem(key);
     }

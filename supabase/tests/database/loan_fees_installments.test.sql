@@ -1,4 +1,4 @@
--- FLOW-106 part 3: a loan payment can carry a fees part (decision 0129).
+-- FLOW-106 part 3: a loan payment can carry a fees part (decision 0130).
 -- A 4-part attach; the fees category (the call's, else the loan's, else refused; no
 -- default); the category rule for fees (any expense category, in or out of the P&L);
 -- fees at 0 or twice; the P&L; undo of a 4-part split; update_loan fees_category_id and

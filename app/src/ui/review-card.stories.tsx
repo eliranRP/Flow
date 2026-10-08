@@ -18,9 +18,11 @@ type CardArgs = {
   /** Jev filled the suggested project or category: הצעת Jev instead of הצעה. */
   projectJev?: boolean;
   categoryJev?: boolean;
+  /** FLOW-325: a split_mismatch card offers עדכון הפיצול. */
+  fixSplit?: boolean;
 };
 
-function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev }: CardArgs) {
+function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category, confidence, reason, meta, currency, projectJev, categoryJev, fixSplit }: CardArgs) {
   const shared = reason === "unallocated_shared";
   const suggestion = project || category
     ? {
@@ -45,6 +47,7 @@ function CardView({ supplier, sourceLine, netAgorot, vatLine, project, category,
       currency={currency}
       onProject={projectJev || categoryJev ? () => undefined : undefined}
       onCategory={projectJev || categoryJev ? () => undefined : undefined}
+      onFixSplit={fixSplit ? () => undefined : undefined}
     />
   );
 }
@@ -88,6 +91,27 @@ export const MissingCategory: Story = {
     ...OneCard.args,
     project: "וילה רעננה",
   },
+};
+
+/** FLOW-312 item 2 / 0125: the bank changed a split line's amount, so the parts no longer match. */
+export const SplitMismatch: Story = {
+  args: {
+    ...OneCard.args,
+    project: "וילה רעננה",
+    category: "חומרים",
+    reason: "split_mismatch",
+    fixSplit: true,
+  },
+};
+
+export const SplitMismatchDark: Story = {
+  args: SplitMismatch.args,
+  globals: { theme: "dark" },
+};
+
+export const SplitMismatch320: Story = {
+  args: SplitMismatch.args,
+  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 export const SharedCost: Story = {

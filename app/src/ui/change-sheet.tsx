@@ -115,6 +115,13 @@ type Shared = {
    */
   reversals?: ChangeChoice[];
   loading?: boolean;
+  /**
+   * FLOW-325 local picks: a project row with id "" and this label tops the project list,
+   * such as "בלי פרויקט". Omitted when a project is required (a reversal part).
+   */
+  noProjectLabel?: string;
+  /** FLOW-325: a category pick moves on to the project list instead of closing. */
+  chainProject?: boolean;
 };
 
 type Props = Shared & (
@@ -422,6 +429,11 @@ export function ChangeAssignment(props: Props) {
     setCreatingNew(false);
     const outcome = await commitChoice(kind, id, previous);
     if (kind === "category" && outcome !== "left") setOwnedCategory(true);
+    if (kind === "category" && outcome === "stay" && props.contained && props.chainProject === true) {
+      setQuery("");
+      setContainedView("project");
+      return;
+    }
     finishPick(outcome);
   }
 
@@ -642,6 +654,7 @@ export function ChangeAssignment(props: Props) {
           suggestionId={pickerKind === "project" ? (props.suggestionProjectId ?? "") : categorySuggestionId}
           savingId={savingId}
           note={pickerKind === "project" ? props.projectNote : undefined}
+          noneLabel={pickerKind === "project" ? props.noProjectLabel : undefined}
           reversal={pickerKind === "category" && reversalOptions.length > 0 ? {
             heading: REVERSAL_HEADING[props.direction],
             hint: REVERSAL_HINT[props.direction],
@@ -709,6 +722,7 @@ function Picker({
   suggestionId,
   savingId,
   note,
+  noneLabel,
   reversal,
   splitLink = true,
   onSelect,
@@ -725,6 +739,8 @@ function Picker({
   suggestionId: string;
   savingId: string | null;
   note?: string;
+  /** A first row with id "", such as "בלי פרויקט". Hidden while searching. */
+  noneLabel?: string;
   /** The other kind's section. Shown only when it has categories. */
   reversal?: {
     heading: string;
@@ -787,8 +803,21 @@ function Picker({
         </div>
       ) : (
         <>
-          {listed.length > 0 ? (
+          {listed.length > 0 || (noneLabel != null && needle === "") ? (
             <div role="radiogroup" aria-label={kind === "project" ? "פרויקט" : "קטגוריה"}>
+              {noneLabel != null && needle === "" ? (
+                <RadioRow
+                  key="none"
+                  layout="picker"
+                  label={noneLabel}
+                  selected={selectedId === ""}
+                  busy={savingId === ""}
+                  disabled={savingId != null && savingId !== ""}
+                  onSelect={() => {
+                    onSelect("");
+                  }}
+                />
+              ) : null}
               {listed.map(row)}
             </div>
           ) : null}

@@ -36,6 +36,7 @@ export const READ_TOOL_NAMES = [
   "get_breakdown",
   "get_jev_status",
   "get_jev_accuracy",
+  "get_profit_months",
 ] as const;
 
 /** Read tool that a write-only token may also call: it polls that token's own sync job. */
@@ -71,7 +72,7 @@ const WRITE_REFUSED = "The write was refused.";
 const TOOL_CODES = new Set(["forbidden", "validation", "not_found", "conflict", "already_closed", "refused", "unavailable"]);
 const ALLOWED: Record<string, Set<string>> = {
   list_projects: new Set(["from", "to", "basis"]),
-  get_project: new Set(["id", "basis"]),
+  get_project: new Set(["id", "basis", "from", "to"]),
   list_categories: new Set(),
   list_review: new Set(["direction", "reason", "supplier", "query", "from", "to", "limit", "offset"]),
   get_expense: new Set(["transaction_id"]),
@@ -83,6 +84,7 @@ const ALLOWED: Record<string, Set<string>> = {
   get_breakdown: new Set(["direction", "from", "to", "group_by", "basis", "group", "currency", "excluded", "limit", "offset"]),
   get_jev_status: new Set(),
   get_jev_accuracy: new Set(["from", "to"]),
+  get_profit_months: new Set(["from", "to", "basis", "project_id"]),
   assign_expense: new Set(["idempotency_key", "transaction_id", "project_id", "category_id", "remember"]),
   assign_expense_split: new Set(["idempotency_key", "transaction_id", "category_id", "shares"]),
   assign_expenses: new Set(["idempotency_key", "items"]),
@@ -117,7 +119,8 @@ const BATCH_KEY = z.string().min(1).max(124);
 const assignSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
-  project_id: UUID_TEXT,
+  // Optional: a line under a kept-out category needs no project (the RPC checks it).
+  project_id: UUID_TEXT.nullable().optional(),
   category_id: UUID_TEXT,
   remember: z.boolean().optional(),
 }).strict();
@@ -206,7 +209,14 @@ const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().refine(companyNameIsValid),
 }).strict();
-const LOAN_NAME = z.string().trim().min(1).max(80);
+// Control characters, line/paragraph separators, every format character (zero-width,
+// bidi marks and controls incl. U+061C, BOM, soft hyphen, tag characters) and blank
+// fillers make two names look the same. ZWJ (U+200D) stays for emoji sequences.
+const HIDDEN_CHARS = /[\p{Cc}\p{Zl}\p{Zp}\u034f\u115f\u1160\u3164\uffa0]|(?!\u200d)\p{Cf}/u;
+function visibleName(min: number, max: number) {
+  return z.string().trim().min(min).max(max).refine((name) => !HIDDEN_CHARS.test(name));
+}
+const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
 const addLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -242,7 +252,7 @@ const updateLoanSchema = z.object({
   fees_category_id: UUID_TEXT.nullable().optional(),
 }).strict();
 const LOAN_MONEY = z.union([z.number(), z.string()]);
-/** Installments one payment may cover (decision 0129). */
+/** Installments one payment may cover (decision 0130). */
 const LOAN_INSTALLMENTS_MAX = 12;
 const attachLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -269,21 +279,21 @@ const attachLoanSchema = z.object({
 });
 const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   status: z.enum(["active", "finished"]).optional(),
 }).strict();
 const createCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   kind: z.enum(["expense", "income"]),
 }).strict();
 // A setup batch: up to 100 rows, a name at most once (per kind for categories).
 const PROJECT_ROW = z.object({
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   status: z.enum(["active", "finished"]).optional(),
 }).strict();
 const CATEGORY_ROW = z.object({
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   kind: z.enum(["expense", "income"]),
 }).strict();
 function uniqueRows<T>(keyOf: (row: T) => string) {
@@ -487,6 +497,14 @@ function dateOf(value: unknown): string | null | ToolResult {
   if (value == null) return null;
   if (typeof value !== "string" || !DATE.test(value)) return fail("validation", "validation");
   return value;
+}
+
+/** get_profit_months refuses a range of this many calendar months or more, as the RPC does. */
+const PROFIT_MONTHS_MAX = 240;
+
+/** Calendar months from the month of `from` to the month of `to`, both YYYY-MM-DD. */
+function monthsBetween(from: string, to: string): number {
+  return (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 + Number(to.slice(5, 7)) - Number(from.slice(5, 7));
 }
 
 function textOf(value: unknown): string | null | ToolResult {
@@ -733,9 +751,11 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's all-time P&L, categories, and its 40 newest lines. It takes no dates, so it matches list_projects only when list_projects omits both dates. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project (0 when none is here, null for an unsplit line). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's P&L, categories, and its 40 newest lines, for all time or for a period (from and to, YYYY-MM-DD, both or neither). With the same dates and basis it matches the list_projects row. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency, its line_status (pending or posted) and its full line amount, including pending lines and the whole of a shared line. transactions also lists lines with a split_line part filed to this project; parts_minor is the sum of a split line's parts on this project (0 when none is here, null for an unsplit line). other_currencies count counts each bank line once. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
+      from: { type: "string" },
+      to: { type: "string" },
     }),
     toolSpec("list_categories", "The company's categories.", {}),
     toolSpec("list_review", "Open review items. id is the review id. transaction_id is the ledger id. meta is the line's bank details (see get_expense).", {
@@ -788,6 +808,12 @@ function readTools() {
       from: { type: "string" },
       to: { type: "string" },
     }),
+    toolSpec("get_profit_months", "Profit per calendar month, newest first, for the company or one project (project_id from list_projects). from and to are YYYY-MM-DD, both or neither (neither: from the first month with a line to this month); at most 240 months. basis is cash or invoiced (default cash). Each month has month (YYYY-MM), from and to (cut to the range), open (the current month), and by_currency[] (currency, income_minor, expense_minor, profit_minor; ILS first and always present). The company's months add up to get_totals for the range; a project's add up to get_project for the range (income less direct and shared cost). For a project, each month also has overhead_share_agorot, its ILS share of that month's overhead weighted by that month's income on the same basis (null when no project has income that month, 0 when only this one has none), and the output has after_overhead. by_currency[] at the top sums the months.", {
+      from: { type: "string" },
+      to: { type: "string" },
+      basis: { type: "string", enum: ["cash", "invoiced"] },
+      project_id: { type: "string" },
+    }),
   ];
 }
 
@@ -835,10 +861,10 @@ const LINE_PARTS_SPEC = {
 
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. A line needs a project unless its category is an income category kept out of the P&L; then project_id can be left out or null. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
-      project_id: { type: "string" },
+      project_id: { type: ["string", "null"] },
       category_id: { type: "string" },
       remember: { type: "boolean" },
     }, true),
@@ -1380,7 +1406,7 @@ async function attachLoanWrite(args: Record<string, unknown>, rpc: ToolRpc): Pro
   }
   const principalPart = parts.find((part) => part.part === "principal")?.amountMinor ?? 0n;
   if (principalPart > balanceMinor) return fail("refused", "loan balance exceeded");
-  // Fees go to this call's category, else the loan's. There is no default (decision 0129).
+  // Fees go to this call's category, else the loan's. There is no default (decision 0130).
   const hasFees = parts.some((part) => part.part === "fees");
   const callFeesCategory = parsed.data.fees_category_id ?? null;
   if (hasFees && callFeesCategory == null && (loan.fees_category_id ?? null) == null) {
@@ -1437,7 +1463,7 @@ async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
-      p_project_id: parsed.data.project_id,
+      p_project_id: parsed.data.project_id ?? null,
       p_category_id: parsed.data.category_id,
       p_remember: parsed.data.remember ?? false,
     };
@@ -1636,12 +1662,38 @@ export async function callTool(
     if (typeof projectId !== "string" || !UUID.test(projectId)) return fail("validation", "validation");
     const basis = args.basis == null ? "cash" : args.basis;
     if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
-    const result = await rpc("get_project", { p_id: projectId, p_basis: basis });
+    const from = dateOf(args.from);
+    if (typeof from !== "string" && from != null) return from;
+    const to = dateOf(args.to);
+    if (typeof to !== "string" && to != null) return to;
+    if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
+    const body: Record<string, unknown> = { p_id: projectId, p_basis: basis };
+    if (from != null) Object.assign(body, { p_from: from, p_to: to });
+    const result = await rpc("get_project", body);
     if (result.status >= 400) return fail("refused", READ_REFUSED);
     // The RPC returns null for an unknown id and for another company's project.
     if (result.json == null) return fail("not_found", "not found");
     if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
     return ok({ ...(result.json as Review), basis });
+  }
+
+  if (name === "get_profit_months") {
+    const from = dateOf(args.from);
+    if (typeof from !== "string" && from != null) return from;
+    const to = dateOf(args.to);
+    if (typeof to !== "string" && to != null) return to;
+    if ((from == null) !== (to == null) || (from != null && to != null && from > to)) return fail("validation", "validation");
+    if (from != null && to != null && monthsBetween(from, to) >= PROFIT_MONTHS_MAX) return fail("validation", "validation");
+    const basis = args.basis == null ? "cash" : args.basis;
+    if (basis !== "cash" && basis !== "invoiced") return fail("validation", "validation");
+    const projectId = args.project_id == null ? null : args.project_id;
+    if (projectId != null && (typeof projectId !== "string" || !UUID.test(projectId))) return fail("validation", "validation");
+    const result = await rpc("get_profit_months", { p_from: from, p_to: to, p_basis: basis, p_project_id: projectId });
+    if (result.status >= 400) return fail("refused", READ_REFUSED);
+    // The RPC returns null for a project of another company or an unknown one.
+    if (result.json == null) return projectId == null ? fail("refused", READ_REFUSED) : fail("not_found", "not found");
+    if (typeof result.json !== "object" || Array.isArray(result.json)) return fail("refused", READ_REFUSED);
+    return ok(result.json as Review);
   }
 
   if (name === "get_jev_status") {

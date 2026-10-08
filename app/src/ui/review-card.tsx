@@ -5,7 +5,12 @@ import { MethodIcon } from "./bank-details";
 import { ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
+import { TextLink } from "./text-link";
 import { JevTag, ReversalTag, SuggestTag } from "./suggest-tag";
+
+/** FLOW-312 item 2 / decision 0125: a split line whose bank amount changed. */
+export const SPLIT_MISMATCH_LINE = "הפיצול לא תואם את סכום השורה בבנק.";
+export const SPLIT_MISMATCH_ACTION = "עדכון הפיצול";
 
 export type ReviewSuggestion = {
   project?: string;
@@ -43,6 +48,11 @@ type ReviewCardProps = {
   pending?: boolean;
   /** FLOW-304. Bank details: a method line under the source line, and the memo. */
   meta?: TxnMeta | null;
+  /**
+   * FLOW-325 / 0125: on a `split_mismatch` review, opens the parts editor. Omitted for a viewer,
+   * who still reads the line.
+   */
+  onFixSplit?: () => void;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -61,6 +71,7 @@ export function ReviewCard({
   categoryButtonRef,
   pending = false,
   meta,
+  onFixSplit,
 }: ReviewCardProps) {
   const method = methodLabel(meta);
   const memo = meta?.memo ?? null;
@@ -103,6 +114,7 @@ export function ReviewCard({
     });
   }
   const note = shared ? "הוצאה משותפת · אישור יפתח\u00A0חלוקה" : null;
+  const mismatch = reason === "split_mismatch";
   return (
     <article className="ui-review" aria-busy={pending || undefined} data-jev-pending={pending ? "" : undefined}>
       <div className="ui-review-doc">
@@ -171,6 +183,14 @@ export function ReviewCard({
         ) : (
           <p className="t-label">{note}</p>
         )}
+        {mismatch ? (
+          <div className="ui-review-mismatch">
+            <p className="t-label">{SPLIT_MISMATCH_LINE}</p>
+            {onFixSplit ? (
+              <TextLink chevron={false} onClick={onFixSplit}>{SPLIT_MISMATCH_ACTION}</TextLink>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   );

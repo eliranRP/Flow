@@ -472,7 +472,7 @@ export function LoanTransactionSplit({
   }
   const loaded = query.data;
   if (!loaded) return null;
-  // Three parts, or four with fees (decision 0129; MCP attach_loan_payment writes those).
+  // Three parts, or four with fees (decision 0130; MCP attach_loan_payment writes those).
   const parts = loaded.splits.length === 3 || loaded.splits.length === 4 ? loaded.splits : null;
   if (parts == null && !offerMatch) return null;
   const loan = loaded.loans.find((item) => item.id === parts?.[0]?.loanId);
@@ -716,7 +716,7 @@ async function correctSplit(transactionId: string, loaded: LoadedMatch): Promise
     if (part.part === "principal") scheduled.principalMinor = part.scheduledMinor;
     if (part.part === "fees") feesMinor = part.amountMinor;
   }
-  // A fees part keeps its amount; the rest of the line splits as usual (decision 0129).
+  // A fees part keeps its amount; the rest of the line splits as usual (decision 0130).
   const next = allocateLoanSplitWithFees({ lineMinor: loaded.lineMinor, feesMinor, ...scheduled });
   if (next == null) throw new Error("loan_split_sum");
   for (const part of next) {
