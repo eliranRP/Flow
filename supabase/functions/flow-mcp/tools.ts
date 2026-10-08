@@ -777,8 +777,8 @@ function storedLoanSchedule(loan: LoanRow): ReturnType<typeof buildLoanSchedule>
 
 /**
  * A loan as `list_loans` shows it. `payment_minor` is the monthly payment: on an
- * interest_only loan whose interest-only months are the term, the interest at the loan's
- * own rate plus escrow, not the stored bullet the schedule pays at the term (FLOW-136).
+ * interest_only loan whose interest-only months are the term, the interest at the rate
+ * in force today plus escrow, not the stored bullet the schedule pays at the term (FLOW-136).
  */
 function listedLoan(loan: LoanRow): LoanRow {
   if (loan.payment_minor == null || loan.term_months == null) return loan;
@@ -790,6 +790,8 @@ function listedLoan(loan: LoanRow): LoanRow {
     escrowMinor: BigInt(loan.escrow_minor),
     kind: loanKindOf(loan),
     interestOnlyMonths: loan.interest_only_months ?? null,
+    rates: loanRatesOf(loan),
+    asOf: todayIso(),
   });
   return { ...loan, payment_minor: Number(paymentMinor) };
 }

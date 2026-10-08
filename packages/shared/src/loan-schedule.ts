@@ -280,9 +280,12 @@ function piBelowAnnuity(terms: LoanTerms, months: number = terms.termMonths): bo
  * like the test that sets the balloon, so a large escrow does not shrink it.
  */
 function balloonFrom(last: LoanScheduleRow, terms: LoanTerms): LoanBalloon {
+  // The regular payment is the monthly one: on an interest_only loan whose interest-only
+  // months are the term, the interest, not the stored bullet (so the ratio is not about 1).
+  const regular = monthlyPaymentMinor(terms) - terms.escrowMinor;
   return {
     amountMinor: last.paymentMinor,
-    ratioToPayment: Number(last.paymentMinor - last.escrowMinor) / Number(terms.paymentMinor - terms.escrowMinor),
+    ratioToPayment: Number(last.paymentMinor - last.escrowMinor) / Number(regular),
   };
 }
 
@@ -480,8 +483,9 @@ export function regularPaymentMinor(input: {
 /**
  * The monthly payment to show for a loan (FLOW-136): the stored payment, except on an
  * `interest_only` loan whose interest-only months are the term. Its stored payment is the
- * bullet due at the term (decision 0132), while every month before it pays the interest at
- * the loan's own rate, rounded half to even, plus escrow.
+ * bullet due at the term (decision 0132), while every month before it pays the interest,
+ * rounded half to even, plus escrow: at the rate in force on `asOf` when `rates` and `asOf`
+ * are given (as the schedule row on that date would), else at the loan's own rate.
  */
 export function monthlyPaymentMinor(input: {
   readonly principalMinor: bigint;
@@ -491,9 +495,14 @@ export function monthlyPaymentMinor(input: {
   readonly escrowMinor: bigint;
   readonly kind?: LoanKind;
   readonly interestOnlyMonths?: number | null;
+  readonly rates?: readonly LoanRate[];
+  readonly asOf?: string;
 }): bigint {
   if (input.kind !== "interest_only" || input.interestOnlyMonths !== input.termMonths) return input.paymentMinor;
-  return divHalfEven(input.principalMinor * BigInt(input.annualRatePpm), MONTHLY_DENOMINATOR) + input.escrowMinor;
+  const rate = input.asOf == null
+    ? input.annualRatePpm
+    : rateOnDate(input.annualRatePpm, sortedRates(input.rates ?? []), input.asOf);
+  return divHalfEven(input.principalMinor * BigInt(rate), MONTHLY_DENOMINATOR) + input.escrowMinor;
 }
 
 /** Demand-loan interest for a period, as an exact numerator over `365 × RATE_PPM_SCALE`. */

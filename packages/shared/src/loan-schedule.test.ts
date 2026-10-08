@@ -603,6 +603,13 @@ describe("loan kinds and rate changes (decision 0132)", () => {
     expect(monthlyPaymentMinor({ ...bullet, paymentMinor })).toBe(60_000n + 10_000n);
     expect(monthlyPaymentMinor({ ...io, paymentMinor: 123_456n })).toBe(123_456n);
     expect(monthlyPaymentMinor({ ...base, paymentMinor: 59_955n })).toBe(59_955n);
+    // A rate change in force on the day shows that month's interest.
+    const rates = [{ effectiveDate: "2026-06-01", annualRatePpm: 70_000 }];
+    expect(monthlyPaymentMinor({ ...bullet, paymentMinor, rates, asOf: "2026-05-31" })).toBe(60_000n + 10_000n);
+    expect(monthlyPaymentMinor({ ...bullet, paymentMinor, rates, asOf: "2026-06-01" })).toBe(70_000n + 10_000n);
+    // The bullet's balloon is measured against that monthly interest, not against itself.
+    const { balloon } = buildLoanSchedule({ ...bullet, paymentMinor });
+    expect(balloon?.ratioToPayment).toBe(Number(12_060_000n) / Number(60_000n));
   });
 
   it("a rate change recasts a low hand-entered payment to the annuity, so no balloon is left", () => {
