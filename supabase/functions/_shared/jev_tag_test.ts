@@ -444,7 +444,7 @@ Deno.test("prefill is one SQL call with the ids only, and reports a line that cl
   assertEquals(calls.length, 1);
   assert(calls[0].url.endsWith("/rest/v1/rpc/jev_prefill"));
   assertEquals(calls[0].method, "POST");
-  // No amount from the job: SQL reads the allocation amount from the line (decision 0137).
+  // No amount from the job: SQL reads the allocation amount from the line (decision 0138).
   assertEquals(calls[0].body, {
     p_company: COMPANY,
     p_transaction: EXPENSE,
@@ -1709,7 +1709,7 @@ Deno.test("expense-only runs do not read income categories, and a failed flag re
   assert(urls.every((url) => !url.includes("kind=eq.income")));
 });
 
-// FLOW-703, decision 0137.
+// FLOW-703, decision 0138.
 
 const FINISHED = "66666666-6666-4666-8666-66666666666f";
 const OVERHEAD = "77777777-7777-4777-8777-77777777777e";

@@ -1,4 +1,4 @@
--- FLOW-703 (decision 0137). Jev's corrections in the party history, the one-call prefill, the
+-- FLOW-703 (decision 0138). Jev's corrections in the party history, the one-call prefill, the
 -- one-call split approval, the no-project answer, and finished projects for older lines.
 -- Helpers come from supabase/tests/helpers.sql.
 

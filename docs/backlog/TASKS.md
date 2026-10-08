@@ -944,7 +944,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go 2026-10-08) · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
-- [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0137](../decisions/0137-jev-corrections.md)).
+- [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0138](../decisions/0138-jev-corrections.md)).
 - [x] Auto prefill in one SQL call, `jev_prefill` (#177).
 - [x] `approve_split_review(review, category)`: set the category and approve a split line in one call (#177).
 - [x] A `none` project answer, never pre-filled, and the overhead project labelled (#177).
