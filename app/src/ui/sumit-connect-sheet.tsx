@@ -1,4 +1,5 @@
 import { useRef, useState, type RefObject } from "react";
+import { flushSync } from "react-dom";
 import { ConnectSheet } from "./connect-sheet";
 import { TextField } from "./text-field";
 
@@ -90,7 +91,8 @@ export function SumitConnectSheet({
         if (busy) return;
         const next = { companyId: companyId.trim() === "", apiKey: apiKey.trim() === "" };
         if (next.companyId || next.apiKey) {
-          setMissing(next);
+          // Commit aria-invalid and the messages first, so focus announces them.
+          flushSync(() => { setMissing(next); });
           (next.companyId ? companyRef : keyRef).current?.focus();
           return;
         }

@@ -1,4 +1,5 @@
 import { useRef, useState, type RefObject } from "react";
+import { flushSync } from "react-dom";
 import { ConnectSheet } from "./connect-sheet";
 import { TextField } from "./text-field";
 
@@ -71,7 +72,8 @@ export function MercuryConnectSheet({
       onSubmit={() => {
         if (busy) return;
         if (apiKey.trim() === "") {
-          setMissing(true);
+          // Commit aria-invalid and the message first, so focus announces them.
+          flushSync(() => { setMissing(true); });
           keyRef.current?.focus();
           return;
         }

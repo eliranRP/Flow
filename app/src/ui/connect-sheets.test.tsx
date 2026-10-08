@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MercuryConnectSheet } from "./mercury-connect-sheet";
 import { SumitConnectSheet } from "./sumit-connect-sheet";
 
@@ -40,6 +40,22 @@ describe("connect sheets (FLOW-508)", () => {
     expect(within(dialog).queryByText("חסר מפתח.")).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("the message is on the field when it takes focus, and a closed sheet opens without it", async () => {
+    render(<Mercury onSubmit={() => undefined} />);
+    const dialog = await screen.findByRole("dialog", { name: "חיבור Mercury" });
+    const key = within(dialog).getByLabelText("מפתח API");
+    let invalidAtFocus: string | null = null;
+    key.addEventListener("focus", () => { invalidAtFocus = key.getAttribute("aria-invalid"); });
+    fireEvent.click(within(dialog).getByRole("button", { name: "חיבור" }));
+    expect(invalidAtFocus).toBe("true");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "חיבור Mercury" })).not.toBeInTheDocument(); });
+    fireEvent.click(screen.getByRole("button", { name: "פתיחה" }));
+    const again = await screen.findByRole("dialog", { name: "חיבור Mercury" });
+    expect(within(again).queryByText("חסר מפתח.")).not.toBeInTheDocument();
+    expect(within(again).getByLabelText("מפתח API")).not.toHaveAttribute("aria-invalid");
   });
 
   it("a blank-only key counts as empty", async () => {
