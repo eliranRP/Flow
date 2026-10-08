@@ -10,27 +10,32 @@ select plan(9);
 
 create extension if not exists dblink with schema extensions;
 
--- Local runs connect as a superuser over the socket; the Supabase CLI database needs the
--- password, which dblink requires from a role that is not a superuser.
+-- Local runs connect as a superuser over the socket. On the Supabase CLI database the
+-- postgres role is not a superuser, so dblink needs a password the server asks for:
+-- 127.0.0.1 is trust there, the container's own address (the one pg_prove came in on)
+-- asks for it.
 create or replace function pg_temp.connect(p_name text)
 returns text
 language plpgsql
 as $$
 declare
   candidate text;
+  errors text := '';
 begin
   foreach candidate in array array[
     format('dbname=%s', current_database()),
+    format('host=%s port=%s dbname=%s user=postgres password=postgres',
+      host(inet_server_addr()), inet_server_port(), current_database()),
     format('host=127.0.0.1 port=5432 dbname=%s user=postgres password=postgres', current_database())
   ] loop
     begin
       perform extensions.dblink_connect(p_name, candidate);
       return 'connected';
     exception when others then
-      null;
+      errors := errors || ' | ' || sqlerrm;
     end;
   end loop;
-  return 'no connection: ' || sqlerrm;
+  return 'no connection:' || errors;
 end;
 $$;
 
