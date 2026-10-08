@@ -1,0 +1,1 @@
+Each `list_review` row now carries its `company_id` (FLOW-704, server part), so the app can bind the remembered Jev flag to the company from the review payload when its company lookup fails; `companyIdFromReviewPayload` already reads it. MCP `list_review` and pending `search_expenses` rows carry it too ([TOOLS.md](mcp/TOOLS.md)).

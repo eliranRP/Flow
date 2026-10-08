@@ -31,6 +31,7 @@ import { IconButton } from "../ui/icon-button";
 import { CalendarIcon, CameraIcon, DocumentIcon, MoreIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
+import { rowSource } from "../ui/line-marks";
 import { MonthList } from "../ui/month-list";
 import { FocusTitle } from "../ui/focus-title";
 import { BudgetBar } from "../ui/progress-bar";
@@ -42,6 +43,7 @@ import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
+import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 import { ProjectCategories, withParam } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
 
@@ -127,10 +129,13 @@ export function ProjectDetailScreen({
   sampleMonths,
   example,
   categoryTo,
+  sampleInvestment,
   sampleCategories,
   sampleExpected,
 }: {
   sample?: NonNullable<ProjectDetail>;
+  /** FLOW-404. The השקעה card of a sample project; without it a sample project shows no card. */
+  sampleInvestment?: ProjectInvestment;
   /** The "לפי חודש" row's counts for a sample project (dev routes and Storybook). */
   sampleMonths?: ProfitMonths;
   example?: ReactNode;
@@ -315,6 +320,7 @@ export function ProjectDetailScreen({
           }}
         />
       </div>
+      <ProjectInvestmentSection project={project} sample={sampleInvestment} />
       <SectionHead title="תנועות">
         {/* FLOW-402: every line of the project, in the search with the project chip set. */}
         <TextLink to={`/search${withParam(search, "project", project.id)}`} tone="quiet">כל התנועות</TextLink>
@@ -336,7 +342,7 @@ export function ProjectDetailScreen({
               agorot={txn.amount_net}
               sign={txn.direction === "income" ? "in" : "out"}
               currency={txn.currency ?? "ILS"}
-              source="invoice"
+              source={rowSource(txn.source)}
               href={`/transactions/${txn.id}${search}`}
               state={txnListState(heldIds, txn.id, listFrom)}
             />

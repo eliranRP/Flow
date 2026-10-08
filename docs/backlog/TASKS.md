@@ -15,15 +15,15 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | Free: FLOW-802 reverted (owner: not now); FLOW-401 server merged in #233, category rename in #228 | The next non-UI item |
-| Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
-| UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #TBD on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
-| UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
-| UI lane 3 | FLOW-401 project categories UI (owner approved v5 "clean", 2026-10-08 21:44Z): groups fold, up mark, usual line, קבוצה in the category sheet | Settings and other areas outside the review and transaction screens |
+| Dev lane 2 | FLOW-211: Flow MCP agent requests (amount filter on search, accrued interest on list_loans, company_id note) | More Flow MCP agent requests and Jev server items |
+| UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #260 on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
+| UI lane 2 | FLOW-404 השקעה card on the project page (#223) | FLOW-114 loan match on the transaction card (owner picked B, one row), FLOW-333 editor items, the detail hint of 322, review card fit at 375x667 |
+| UI lane 3 | FLOW-124 item 1 + FLOW-125, PR #253: ⊘ and the bank icon on list rows, loan part count, Latin titles (FLOW-401 merged #244) | Settings, project screens, and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313 item 4 + FLOW-134 item 3 (#242) | Next small ready item |
-| File split | FLOW-807 follow-up: `_shared/jev_tag.ts` split into `jev_tag_plan.ts` and `jev_tag_rest.ts` (merged: screens #219, stories #225, CSS #227, review area #229, app files #232) | `supabase/functions/flow-mcp/tools.ts` after #221 and #233 merge |
+| File split | FLOW-807 follow-up, test files over the 1,200-line test limit (owner card, recommended option taken overnight): `flow-mcp/tools_test.ts` split by area (#251) into `tools_{reads,writes,setup,loans,loan_attach}_test.ts` with fixtures in `tools_test_support.ts`, then `_shared/jev_tag_test.ts` into `jev_tag_{plan,run,job,lines}_test.ts` with `jev_tag_test_support.ts` (#256), then `flow-mcp/handler_test.ts` into `handler_{auth,isolation,tools}_test.ts` with `handler_test_support.ts` (FLOW-807 itself done: #219, #225, #227, #229, #232, #235, #249) | the four app test files over 1,200 lines (books-states, review-all, round5-ui, sumit-row), one per PR, each when no open PR changes it |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -76,7 +76,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | done (#131) |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | done (#131, #134) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
-| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready for a UI lane (server parts done in #176) |
+| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | done (#253) |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
@@ -98,7 +98,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
 | 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | done (#165) |
-| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | in-progress (#175) |
+| 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | done (#175) |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | done (#165; whole-unit amounts item open, conflicts with 0120) |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
@@ -215,10 +215,10 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-125"></a>
 ### FLOW-125 · Loan split follow-ups (#83 review)
 - Renumbered from a second FLOW-121 (2026-10-07).
-- **Type:** BACKLOG NIT · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-107
-- [ ] (server done in #176: every list read returns `source`; the app still has to pass it on) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/project-category-screen.tsx`, `project-detail-screen.tsx`, `filed-today-screen.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
-- [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
-- [ ] "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
+- **Type:** BACKLOG NIT · **Status:** done (#253) · **Depends on:** FLOW-107
+- [x] (UI lane 3, 2026-10-08: the category drill-down, the project list, שויכו היום, a project's לאישור list and the breakdown lines pass the line's source through `rowSource`, so a Mercury line shows the bank icon) Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/project-category-screen.tsx`, `project-detail-screen.tsx`, `filed-today-screen.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
+- [x] (UI lane 3, 2026-10-08: `ListRow` runs a Latin string title LTR, aligned to the row's start side, with or without a tag) A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
+- [x] (UI lane 3, 2026-10-08: `useLoanMarks` counts the loan_splits rows of each line, and the hint says "2 חלקים", "3 חלקים", …) "3 חלקים" is a fixed string (`app/src/screens/loan-marks.tsx`). Carry the real part count in the mark if a split can ever have fewer or more parts.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
@@ -230,7 +230,7 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-124"></a>
 ### FLOW-124 · One line out of the P&L follow-ups (#105)
 - **Type:** SMALL UI · **Status:** ready for a UI lane (server parts done in #176) · **Depends on:** FLOW-108 (#105)
-- [ ] (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
+- [x] (UI lane 3, 2026-10-08, for the category drill-down, שויכו היום and a project's לאישור list: the shared `KeptOutTag` ⊘ through `ListRow` `tag`; the project list already says "מחוץ לרווח" in its hint, and every breakdown line in the excluded view is out, so it gets no ⊘) (server done in #176: the list reads return `kept_out`, [0135](../decisions/0135-line-state-in-lists.md); the ⊘ `tag` is the UI part) Transaction lists (project recent list, category drill-down, לאישור, שויכו היום, breakdown lines) don't mark a line taken out of the P&L. Return the flag from the list reads and show the ⊘ mark through `ListRow` `tag`, like the categories screen.
 - [ ] (server done in #176: `get_transaction` returns `pnl_state` `in`/`out`/`mixed`; driving the pill and hint from it is the UI part) A line split by category: `get_transaction`'s `in_pnl`, `category_excluded_from_pnl` and `pnl_fixed` read the line's own category, not its parts, and the card works out `out` from the override and that flag instead of the server's `in_pnl`. A split line whose parts are partly kept out shows no pill and the hint names the line's category. Return a per-line state for split lines (all in, all out, mixed) and drive the pill and hint from it.
 - [ ] Stories: open the עוד sheet with a play function so clip-check measures its text, and add the other states: category kept out (hint names it), a line forced back in ("ברווח והפסד" pill), the locked loan line, and the split-line hint.
 
@@ -426,6 +426,16 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-210 · Bulk setup follow-ups (#119 review)
 - **Type:** BACKLOG NIT · **Status:** done (#180) · **Depends on:** FLOW-206 (#119)
 - [x] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`. (`bulk_setup_followups.test.sql`.)
+
+<a id="flow-211"></a>
+### FLOW-211 · Flow MCP agent requests (2026-10-08)
+- **Type:** MCP · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) · **Depends on:** —
+- **What:** from the Flow MCP agent, most important first: (1) `search_expenses` (and `search_transactions`) find a line by its amount, an exact figure or a range, since a bank or HUD figure is the agent's most common lookup; (2) `list_loans` shows each demand loan's accrued unpaid interest as of today, so the agent need not call `get_loan_schedule` per loan; (3) `add_loan` and `update_loan` refuse `company_id` as every tool does (the token decides the company): say so in TOOLS.md.
+- **Acceptance:** pgTAP for the amount filter (exact, range, sign, currency); MCP tests for both tools; TOOLS.md.
+- [x] `search_transactions` `p_amount_min`/`p_amount_max` and rows with `amount_gross`; MCP `search_expenses` `amount`, `amount_min`, `amount_max` (decision [0155](../decisions/0155-review-list-speed-search-amount.md)).
+- [x] `list_loans` `accrued_interest_minor` and `accrued_as_of` for an open demand loan.
+- [x] TOOLS.md: no tool takes `company_id`.
+- [x] With it, the Production QA bug: `list_review` hit the statement timeout on a 586-line queue. `private.line_pnl_state` is security definer (the company checked in its where clause), `private.line_pnl_states` reads a set of lines at once, and `list_review` reads the lines filed today once.
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
@@ -653,7 +663,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-327"></a>
 ### FLOW-327 · Review card: actions in the thumb zone, tidy spacing
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
+- **Type:** SMALL UI · **Status:** done (#175) · **Depends on:** — · **Overlaps:** FLOW-309, FLOW-315 · **Source:** cycle 1 (U3, U6, D3, D9, D12)
 - **What:** Approving one card at a time is the most repeated job, and אישור moves between y=449 and y=584 depending on the card, with about 250px empty below; on a 375x667 phone with the banner, שינוי and דלג sit under the tab bar. Pin אישור / שינוי / דלג in a bar just above the tab bar; the card scrolls above it. Also: a gap of `--space-3`–`--space-4` between the auto-filed banner and the card (they touch today); label and value columns aligned on the card with tighter rows (mockup 03); the counter reads "1 מתוך 3" without padding spaces; a disabled אישור says why ("בחרו פרויקט וקטגוריה").
 - [x] (cycle 2, deploy 9ea1e9a) The "✦ הצעת Jev" pill trails each value, so on a card where Jev filled both fields the two pills start at different points; with values in an aligned column (above) the pills line up too.
 - [x] (cycle 2) At 320 the pill takes about 90px and long project or category names are cut to a few words ("וילה רעננה – …"). Let the name keep priority: wrap the pill under the value, or shorten it to "✦" with the full label as its accessible name.
@@ -807,7 +817,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Acceptance:** UX research, mockup and plan approved by the owner.
 - [x] Mockup approved as drawn (2026-10-08; the project's plans/flow-404-investment-mockup.html). The project page gets an "השקעה" card under the categories. Its head says מתחילת הפרויקט, and the screen's period and basis don't change it. It has three rows (מחיר קנייה, שווי אחרי שיפוץ, שווי היום with its date), each opening a bottom sheet with the number pad. Each sheet saves its own figure through `set_project_investment` (the שווי היום sheet also its date, which starts on today), on שמירה or when the sheet closes, and מחיקה clears the figure. Under the rows, הון מאולץ and הון נוכחי sit side by side with their formula. An equity that needs a missing figure names the figure; one that can't be worked out because of another currency says so; it never shows 0. Then come two rows: שיפוץ עד היום opens the rehab list by category, with the left-out categories under it, and יתרת הלוואות lists other-currency loans apart. A viewer sees no chevrons and no הוספה, and the overhead project has no card.
 - [x] The category ⋯ sheet gets a "נספרת בשיפוץ" switch showing `in_rehab`, with a one-line hint. A kept-out category's hint says why it is off by default. When the owner changed the default, the hint says so and "החזרה לברירת המחדל" sends null. A viewer sees the switch disabled, with its hint.
-- [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch.
+- [ ] Screen in a UI lane: a shared `InvestmentCard` in app/src/ui with stories (filled, missing, other currency, viewer, loading, error), the edit sheet, the rehab list and the switch (card and sheets in #223; switch is UI lane 3's).
+- [ ] Follow-up (server): `get_project().investment` returns `rehab_by_category` from the same CTE as `rehab_minor`, so the rehab list always adds up to the total. Today the app rebuilds it from the project's cash-basis categories and `list_categories().in_rehab`, and shows only the total when they differ: a loan fees part filed in an ordinary category (0130), suggested and in-review lines, shared lines with no category, and archived categories.
+- [ ] Open (UI): a counted category in the rehab list should open its lines. The category screen (`project-category-screen.tsx`) reads the period from the URL but always uses the books basis (invoiced), so `?period=all&basis=cash` would not match the rehab figure. Needs a `basis` query parameter on that screen, or the server list above.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
@@ -1044,7 +1056,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] If the flag read stalls past 1s while Jev is on, the card swaps back and writes the flag off; a flag that's off while Jev is on leaves one approvable read on the next launch; the 5-minute flag cache delays a server-side change; each next card waits about 0.8s again during a long stall.
 - [ ] A Jev-filled card still shrinks about 30px when it settles; reserve the note height with the text hidden.
 - [ ] When the Jev scope appears after mount, the card re-reads once; a queue-level test that the query key carries the scope; the scope binding is a side effect during render.
-- [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag.
+- [ ] A test that fails if the live-read wait is removed; a provider-level test for a user switch without sign-out; return `company_id` from `list_review` so a failed company lookup still uses the remembered flag. (Server part done: each `list_review` row has `company_id`, which `companyIdFromReviewPayload` already reads.)
 - [ ] Delete the old shared connector key once per launch, not on every read.
 - [ ] Jev Settings row: reserve the options slot only when the last known state was on; announce the switch state; mark the loading row busy; an open/closed chevron on אפשרויות; a "no key" status once a key-status RPC exists.
 - [x] Jev tagging job: a cron with a DB run lease, persisted usage per run. (FLOW-701 part 1, decision [0124](../decisions/0124-jev-after-sync.md).)
@@ -1099,7 +1111,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229, #232 merged; `jev_tag.ts` in review; `flow-mcp/tools.ts` last) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** done (#219, #225, #227, #229, #232, #235, then the `flow-mcp/tools.ts` split: no hand-written source file is over 800 lines; test files over the 1,200 test limit remain) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 
@@ -1141,6 +1153,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** SMALL CYCLE · **Status:** claimed (CI agent, 2026-10-07, claude/project-thread-uiob2d) · **Depends on:** —
 - **What:** A PR waits about 11 minutes for CI because one runner does every storybook step after the unit tests, and the static-story smoke opens every story in one serial test (about 6 minutes). Run the storybook smoke and the main Playwright suite as shards on parallel runners behind the `check` and `e2e` gate jobs. Start local Supabase while dependencies install.
 - **Acceptance:** Same tests run; the required check names stay `lint`, `check`, `e2e`; PR CI wall time drops by at least a third.
+
+<a id="flow-813"></a>
+### FLOW-813 · Faster pre-push local CI
+- **Type:** SMALL CYCLE · **Status:** done (this PR) · **Depends on:** —
+- **What:** The pre-push run (`scripts/local-ci.sh`) took 4–5 minutes on every push: app unit tests 147s, lint 48s, Storybook 43s, the two builds about 45s, typecheck 17s (measured 2026-10-08). The default run now skips the typecheck, the builds, the app unit tests and Storybook when their inputs (git trees of app, packages, design, `_shared`, the migrations, scripts, the root configs and `.env`) already passed in this clone, runs only the app tests related to the files changed since the last green commit when only `.ts`/`.tsx` sources or migrations changed (plus the tests that glob the migrations), and runs the server tests beside the static checks. `--full` and `FLOW_LOCAL_CI_NO_SKIP=1` run everything.
+- **Measured:** cold 247s; a push that leaves the app unchanged (server, docs, tests) 53s; a one-file app change 148s (39 related unit files, 17 story files).
+- **Next:** run the e2e specs for the screens a diff touches (needs local Supabase, so outside the 2-minute budget); lint (48s, type-aware) now bounds the fast path; a shared green cache (`FLOW_LOCAL_CI_CACHE`) would let one lane's pass count for another.
 
 ## Data hygiene (public repo)
 

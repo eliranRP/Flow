@@ -1,0 +1,1 @@
+FLOW-807 follow-up: the Flow MCP handler test file (1,539 lines) is split into `handler_auth_test.ts`, `handler_isolation_test.ts` and `handler_tools_test.ts`, with the shared env, pepper and fake deps in `handler_test_support.ts`. Every test moved unchanged; the same 29 tests run.

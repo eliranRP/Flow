@@ -4,8 +4,8 @@ import { getSupabase } from "../lib/supabase";
 import { assertNoError } from "../use-write";
 import { AlertIcon } from "../ui/icons";
 
-/** FLOW-107. A bank line with a loan split, as a transaction row shows it. */
-export type LoanMark = "split" | "review";
+/** FLOW-107. A bank line with a loan split, as a transaction row shows it: its part count (FLOW-125), and whether a part waits for review. */
+export type LoanMark = { parts: number; review: boolean };
 
 const CHUNK = 100;
 
@@ -37,22 +37,27 @@ async function readLoanMarks(ids: readonly string[]): Promise<ReadonlyMap<string
       .select("transaction_id, needs_review")
       .in("transaction_id", ids.slice(start, start + CHUNK));
     assertNoError(result);
+    // One loan_splits row per part.
     for (const row of result.data ?? []) {
-      if (row.needs_review) marks.set(row.transaction_id, "review");
-      else if (!marks.has(row.transaction_id)) marks.set(row.transaction_id, "split");
+      const mark = marks.get(row.transaction_id) ?? { parts: 0, review: false };
+      marks.set(row.transaction_id, { parts: mark.parts + 1, review: mark.review || row.needs_review });
     }
   }
   return marks;
 }
 
-/** The row props for a split line: "3 חלקים" in the hint, or a warning while a part waits for review. */
+/** The row props for a split line: its part count in the hint, or a warning while a part waits for review. */
 export function loanRowProps(
   mark: LoanMark | undefined,
   hint: ReactNode,
 ): { hint: ReactNode; tone?: "warning"; icon?: ReactNode } {
   if (mark == null) return { hint };
-  const words = mark === "review" ? "ממתין לבדיקה" : "3 חלקים";
+  const words = mark.review ? "ממתין לבדיקה" : partsLabel(mark.parts);
   const joined = hint == null || hint === "" ? words : <>{words} · {hint}</>;
-  if (mark === "review") return { hint: joined, tone: "warning", icon: <AlertIcon /> };
+  if (mark.review) return { hint: joined, tone: "warning", icon: <AlertIcon /> };
   return { hint: joined };
+}
+
+export function partsLabel(parts: number): string {
+  return parts === 1 ? "חלק אחד" : `${String(parts)} חלקים`;
 }

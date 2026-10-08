@@ -145,6 +145,10 @@ export const filedTodaySchema = z.object({
   supplier_name: z.string().nullable(),
   project_name: z.string().nullable(),
   category_name: z.string().nullable(),
+  /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
+  source: z.string().optional().catch(undefined),
+  /** The line is out of the P&L (FLOW-124, decision 0135). Older payloads omit it. */
+  kept_out: z.boolean().optional().catch(undefined),
 });
 
 export const categoryRowSchema = z.object({
@@ -211,6 +215,21 @@ export const mercuryStatusSchema = z.object({
   account_labels: z.unknown().nullable(),
   skip_count: z.number().nullable(),
   syncing: z.boolean().optional(),
+});
+
+/** FLOW-404 (decision 0143). In the project's investment currency; other currencies are listed apart. */
+export const projectInvestmentSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  purchase_minor: agorotOrNull,
+  arv_minor: agorotOrNull,
+  value_minor: agorotOrNull,
+  value_date: z.string().nullable(),
+  rehab_minor: agorotSchema,
+  rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: agorotSchema })).catch([]),
+  loan_balance_minor: agorotSchema,
+  loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: agorotSchema })).catch([]),
+  forced_equity_minor: agorotOrNull,
+  current_equity_minor: agorotOrNull,
 });
 
 export const projectDetailSchema = z
@@ -297,7 +316,13 @@ export const projectDetailSchema = z
       name: z.string(),
       currency: z.string(),
       balance_minor: agorotSchema,
+      /** FLOW-132. Omitted on older payloads. */
+      status: z.string().optional(),
     })).optional(),
+    /** The company's overhead project (0021). Omitted on older payloads. */
+    is_overhead: z.boolean().optional(),
+    /** FLOW-404. Purchase, ARV, value, rehab and equity (0143); not tied to the period or basis. Omitted on older payloads. */
+    investment: projectInvestmentSchema.nullable().optional(),
   })
   .nullable();
 
@@ -362,6 +387,10 @@ export const projectCategorySchema = z
         description: z.string(),
         doc_date: z.string(),
         amount_net: agorotSchema,
+        /** Where the line came from (FLOW-125, decision 0135). Older payloads omit it. */
+        source: z.string().optional().catch(undefined),
+        /** Its parts on this project and category are out of the P&L (FLOW-124). Older payloads omit it. */
+        kept_out: z.boolean().optional().catch(undefined),
       }),
     ),
     next_offset: z.number().int().nonnegative().nullable(),
@@ -381,6 +410,10 @@ export const projectWaitingRowSchema = z.object({
   category_id: z.string().nullable(),
   category_name: z.string().nullable(),
   supplier_name: z.string().nullable(),
+  /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
+  source: z.string().optional().catch(undefined),
+  /** Its parts on this project are out of the P&L (FLOW-124). Older payloads omit it. */
+  kept_out: z.boolean().optional().catch(undefined),
 });
 
 export const projectWaitingSchema = z.array(projectWaitingRowSchema);
@@ -429,6 +462,8 @@ export const breakdownLinesSchema = z
         currency: z.string().regex(/^[A-Z]{3}$/),
         amount_minor: agorotSchema,
         shared: z.boolean(),
+        /** Where the line came from; "mercury" shows the bank icon (FLOW-125). Older payloads omit it. */
+        source: z.string().optional().catch(undefined),
       }),
     ),
     has_more: z.boolean(),
@@ -518,6 +553,7 @@ export type ProjectCategoryMonths = z.infer<typeof projectCategoryMonthsSchema>;
 export type SumitStatus = z.infer<typeof sumitStatusSchema>;
 export type MercuryStatus = z.infer<typeof mercuryStatusSchema>;
 export type ProjectDetail = z.infer<typeof projectDetailSchema>;
+export type ProjectInvestmentData = z.infer<typeof projectInvestmentSchema>;
 export type ProjectCategoryPage = z.infer<typeof projectCategorySchema>;
 export type ProfitMonths = z.infer<typeof profitMonthsSchema>;
 export type ProfitMonth = NonNullable<ProfitMonths>["months"][number];
