@@ -86,7 +86,7 @@ import { HoldLine } from "../ui/hold-line";
 import { BackButton, historyIndex, popSheetLayers, sheetStack, transactionParent, useGoBack, useSheetHistory } from "../ui/back";
 import { useFocusRowAfterRetry } from "../ui/focus-retry";
 import { IconButton } from "../ui/icon-button";
-import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { AlertIcon, BankIcon, BuildingIcon, CameraIcon, CheckIcon, ChevronDownIcon, CloseIcon, DocumentIcon, DownloadIcon, GoogleIcon, KeptOutIcon, LoanIcon, LockIcon, LogoutIcon, MoreIcon, PencilIcon, PlugIcon, PlusIcon, ProjectsIcon, RefreshIcon, ReviewIcon, SearchIcon, SplitIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { BandFigures, BandHero, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { MonthList } from "../ui/month-list";
@@ -4078,11 +4078,10 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
           <SectionHead title="תצוגה" />
           <List>
             <ListRow variant="item" href={`/settings/categories${search}`} title="קטגוריות" icon={<TagIcon />} chevron />
-          </List>
-          <div className="ui-page-pad">
             <Toggle
               label="רווח אחרי כלליות"
               hint="חלק מהכלליות נכנס לכל פרויקט"
+              icon={<SplitIcon />}
               checked={overheadOn}
               disabled={holdWrites}
               onChange={(checked) => {
@@ -4098,7 +4097,7 @@ function SettingsHome({ sample }: { sample?: SettingsSample }) {
                 saveOverhead.mutate(undefined, { onError: () => { setOverheadOn(previous); } });
               }}
             />
-          </div>
+          </List>
         </>
       )}
       {showInstall || showSignOut || (setupEntry != null && !holdWrites) ? (

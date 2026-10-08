@@ -77,7 +77,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 47 | [FLOW-323](#flow-323) | Search and all transactions | PLAN FIRST | plan-first |
 | 48 | [FLOW-324](#flow-324) | Approve all suggestions in the review queue | PLAN FIRST | dropped (owner, 2026-10-08) |
 | 49 | [FLOW-325](#flow-325) | Split a refund across projects and categories by percent or amount | MCP | in-progress (server done; app screen first PR merged #150; follow-ups open) |
-| 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | ready |
+| 50 | [FLOW-326](#flow-326) | Screen titles and row text on the start side | SMALL UI | in progress (PR #TBD) |
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
@@ -593,7 +593,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-326"></a>
 ### FLOW-326 · Screen titles and row text on the start side
-- **Type:** SMALL UI · **Status:** ready · **Depends on:** — · **Source:** mobile UI/UX review cycle 1 (2026-10-08, D1, D2, D5, D16, D18)
+- **Type:** SMALL UI · **Status:** in progress (PR #TBD) · **Depends on:** — · **Source:** mobile UI/UX review cycle 1 (2026-10-08, D1, D2, D5, D16, D18)
 - **What:** (1) On every screen with a Back control the title is pushed to the far left, away from its kicker (categories, connections, loans, unpaid, filed, project category, notifications, onboarding). `ScreenHeader`'s `.ui-page-title-row` uses `space-between`; put the title on the start side, Back on its own row as in mockups 07 and 14 (the existing `layout="stacked"` option may already do this). (2) `ListRow` rows rendered as `<button>` centre their label and hint (transaction detail project/category labels, connections status, add sheet rows): add `text-align: start` to `.ui-row`. (3) The settings switch row has no icon slot and a 600 title; give `Toggle` the row icon slot and the 400 row-title weight everywhere. (4) Help's Back is plain text; use the shared Back.
 - **Acceptance:** shared components only (`screen-header.tsx`, `list-row.tsx`, `toggle.tsx`, `ui.css`); stories updated; clip-check at 320/360/390, light and dark; design review.
 

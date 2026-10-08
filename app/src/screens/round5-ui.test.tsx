@@ -604,6 +604,11 @@ describe("settings account", () => {
     expect(screen.getByRole("link", { name: /קטגוריות/ })).toBeInTheDocument();
     const overhead = screen.getByRole("switch", { name: "רווח אחרי כלליות" });
     expect(document.getElementById(overhead.getAttribute("aria-describedby") ?? "")).toHaveTextContent("חלק מהכלליות נכנס לכל פרויקט");
+    // FLOW-326: the switch is a grouped row with the icon in the same slot as קטגוריות.
+    const overheadRow = overhead.closest("label");
+    expect(overheadRow).toHaveClass("ui-row");
+    expect(overheadRow?.querySelector(".ui-row-icon svg")).not.toBeNull();
+    expect(overheadRow?.closest(".ui-project-list")).toContainElement(screen.getByRole("link", { name: /קטגוריות/ }));
     expect(screen.getByText("חלק מהכלליות נכנס לכל פרויקט")).toBeInTheDocument();
   });
 

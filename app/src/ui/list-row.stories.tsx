@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "@storybook/test";
 import type { ReactElement } from "react";
 import { BigNumber } from "./big-number";
 import { BankIcon } from "./icons";
@@ -68,6 +69,20 @@ export const Static: Story = {
 };
 export const ButtonRow: Story = {
   args: { variant: "button", title: "חיבור SUMIT", hint: "מספר חברה ומפתח API" },
+  // FLOW-326: a <button> row starts its title and hint on the start side instead of centring them.
+  play: async ({ canvasElement }) => {
+    const row = within(canvasElement).getByRole("button");
+    await expect(getComputedStyle(row).textAlign).toBe("start");
+    const title = row.querySelector(".ui-row-title");
+    const hint = row.querySelector(".ui-row-hint");
+    if (!(title instanceof HTMLElement) || !(hint instanceof HTMLElement)) throw new Error("row copy missing");
+    const range = document.createRange();
+    range.selectNodeContents(title);
+    const titleEdge = range.getBoundingClientRect().right;
+    range.selectNodeContents(hint);
+    const hintEdge = range.getBoundingClientRect().right;
+    await expect(Math.abs(titleEdge - hintEdge)).toBeLessThan(1.5);
+  },
 };
 export const Danger: Story = {
   args: { variant: "danger", title: "התנתקות" },
