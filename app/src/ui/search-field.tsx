@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type Ref } from "react";
 import { flowControlName } from "./field-name";
 import { holdFieldPointer } from "./field-pointer";
 import { CloseIcon, SearchIcon } from "./icons";
@@ -10,6 +10,9 @@ type SearchFieldProps = {
   placeholder?: string;
   autoFocus?: boolean;
   disabled?: boolean;
+  /** The transaction search moves focus here itself, after the title took it (FLOW-323). */
+  inputRef?: Ref<HTMLInputElement>;
+  maxLength?: number;
 };
 
 export function SearchField({
@@ -19,6 +22,8 @@ export function SearchField({
   placeholder = "למשל: הרצל",
   autoFocus = false,
   disabled = false,
+  inputRef,
+  maxLength,
 }: SearchFieldProps) {
   const generated = useId();
   const id = flowControlName("flow-search", generated);
@@ -30,6 +35,7 @@ export function SearchField({
         </span>
         <span className="sr-only">{label}</span>
         <input
+          ref={inputRef}
           id={id}
           name={id}
           type="search"
@@ -42,6 +48,7 @@ export function SearchField({
           placeholder={placeholder}
           autoFocus={autoFocus}
           disabled={disabled}
+          maxLength={maxLength}
           onPointerDown={holdFieldPointer}
           onChange={(event) => {
             onChange(event.target.value);

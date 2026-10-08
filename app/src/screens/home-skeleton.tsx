@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { BandHero, SectionHead } from "../ui/layout";
 import { PeriodBar } from "../ui/period-bar";
+import { SearchEntry } from "../ui/search-entry";
+import { usePreviewSearch } from "../preview";
 import { defaultPeriod, type PeriodChoice } from "../period";
 import { ListRow } from "../ui/list-row";
 import { Skeleton } from "../ui/skeleton";
@@ -22,6 +24,7 @@ export function HomeSkeleton({
   onPeriod?: (period: PeriodChoice) => void;
 }) {
   const [own, setOwn] = useState<PeriodChoice>(() => defaultPeriod());
+  const search = usePreviewSearch();
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col" aria-busy="true">
       <p className="sr-only" role="status">
@@ -31,8 +34,11 @@ export function HomeSkeleton({
         wordmark={false}
         preview={preview}
         example={example}
-        trailing={<PeriodBar period={period ?? own} onChange={onPeriod ?? setOwn} />}
+        trailing={<SearchEntry to={`/search${search}`} onBand />}
       >
+        <div className="ui-band-pbar">
+          <PeriodBar period={period ?? own} onChange={onPeriod ?? setOwn} />
+        </div>
         <BandHero>
           <div className="ui-hero" aria-hidden="true">
             <Skeleton tone="band" className="ui-skel-label" />
