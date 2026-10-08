@@ -183,7 +183,7 @@ Task statuses in [TASKS.md](TASKS.md):
 | Status | Meaning |
 | --- | --- |
 | `ready` | Can be built now. |
-| `claimed` | An agent owns it: `claimed (agent name, YYYY-MM-DD, branch)`. |
+| `claimed` | An agent owns it: `claimed (lane, YYYY-MM-DD, branch)`. |
 | `in-progress` | Built or in review. Add the PR number. |
 | `plan-first` | Needs a plan, a mockup, and the owner's approval before a build. The planning itself can be claimed. |
 | `on-hold` | Waits for the owner's go or decision. Don't claim it. |
@@ -199,7 +199,7 @@ Steps:
    ```
    If an open PR, a draft PR, or a branch names the id, the task is taken. Pick the next one. Also check that no open PR changes the files you need ([board](#tracking-progress-so-lanes-dont-collide)).
 2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only the status lines of the task (or every task in the batch) in TASKS.md to `claimed (your lane, date, branch)`. Push it and open a **draft PR** titled `FLOW-123: <task title>` (a batch lists every id) with the `Claim` block at the top of the body. The draft PR is the lock.
-3. **Build** on that branch, or brief a builder to. Keep the PR to this one task.
+3. **Build** on that branch, or brief a builder to. Keep the PR to this task or batch (related items in one area only).
 4. **Open it for review.** Mark the PR ready. Set the status to `in-progress (#PR)`. Put the id in the PR title and body.
 5. **Finish.** After the merge, and the deploy check and prod check of the batch that carries it, the coordinator moves the task to Done with the PR number. That edit goes in the next PR that touches TASKS.md (usually the next claim).
 
@@ -239,7 +239,7 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 
 ```text
 You are the Flow coordinator for this public repo.
-Your job: move one task at a time through the cycle in docs/backlog/README.md:
+Your job: move one task or batch at a time through the cycle in docs/backlog/README.md:
 claim -> brief -> build (the pre-push hook runs local CI) -> code review (+ design review if UI)
 -> one fix round -> merge -> per batch of 5 merges: deploy check (build.txt shows the last sha) -> prod check
 -> tell the MCP/data agent -> close.
