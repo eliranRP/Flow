@@ -105,15 +105,26 @@ begin
     and coalesce(line.pnl_role::text, '') not in ('shared', 'overhead')
     and (select count(*) from public.allocations a
          where a.company_id = p_company and a.transaction_id = p_transaction) <= 1
-    and (select count(distinct ls.project_id) from public.line_splits ls
-         where ls.company_id = p_company and ls.transaction_id = p_transaction) <= 1;
-  f_project := case when project_comparable then coalesce(line.project_id, (
+    -- A split part with no project stays on the line's project.
+    and (
+      not exists (
+        select 1 from public.line_splits ls
+        where ls.company_id = p_company and ls.transaction_id = p_transaction
+      )
+      or (
+        select bool_and(coalesce(ls.project_id, line.project_id) is not null)
+          and count(distinct coalesce(ls.project_id, line.project_id)) = 1
+        from public.line_splits ls
+        where ls.company_id = p_company and ls.transaction_id = p_transaction
+      )
+    );
+  f_project := case when project_comparable then coalesce((
+    select coalesce(ls.project_id, line.project_id) from public.line_splits ls
+    where ls.company_id = p_company and ls.transaction_id = p_transaction
+    limit 1
+  ), line.project_id, (
     select a.project_id from public.allocations a
     where a.company_id = p_company and a.transaction_id = p_transaction
-    limit 1
-  ), (
-    select ls.project_id from public.line_splits ls
-    where ls.company_id = p_company and ls.transaction_id = p_transaction and ls.project_id is not null
     limit 1
   )) end;
   category_comparable := s_category is not null
@@ -162,9 +173,21 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  cid uuid;
+  tid uuid;
 begin
-  if new.transaction_id is not null then
-    perform private.jev_outcome_sync(new.company_id, new.transaction_id);
+  if tg_op = 'DELETE' then
+    cid := old.company_id;
+    tid := old.transaction_id;
+  else
+    cid := new.company_id;
+    tid := new.transaction_id;
+  end if;
+  if tid is not null and exists (
+    select 1 from public.tag_suggestions s where s.company_id = cid and s.transaction_id = tid
+  ) then
+    perform private.jev_outcome_sync(cid, tid);
   end if;
   return null;
 end;
@@ -174,8 +197,9 @@ revoke all on function private.jev_outcome_review_trigger() from public, anon, a
 
 -- Deferred, so the approval's own writes to the line (project, category, splits) are in place.
 -- A new review row (a sync reopening the line) fires it too: the newest row is the current review.
+-- Deleting a row can make an older one current, so a delete fires it as well.
 create constraint trigger jev_outcome_review
-  after insert or update of status on public.review_queue
+  after insert or update of status or delete on public.review_queue
   deferrable initially deferred
   for each row
   execute function private.jev_outcome_review_trigger();

@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(40);
+select plan(43);
 
 do $users$
 begin
@@ -372,6 +372,42 @@ select ok(
   (select project_match is null and category_match
    from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't12')),
   'moving the line to overhead drops the project comparison'
+);
+
+-- t11 split again, every part on p2; t12 back on p1 and split {p2, no project}.
+delete from public.line_splits where transaction_id = (select id from jo_ref where label = 't11');
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+select t.company_id, t.id, n, (select id from jo_ref where label = case n when 1 then 'c1' else 'c2' end),
+  (select id from jo_ref where label = 'p2'), 5000
+from public.transactions t, generate_series(1, 2) n
+where t.id = (select id from jo_ref where label = 't11');
+update public.transactions set pnl_role = 'project', project_id = (select id from jo_ref where label = 'p1')
+where id = (select id from jo_ref where label = 't12');
+insert into public.line_splits (company_id, transaction_id, ordinal, category_id, project_id, amount_minor)
+select t.company_id, t.id, n, (select id from jo_ref where label = 'c1'),
+  case n when 1 then (select id from jo_ref where label = 'p2') end, 5000
+from public.transactions t, generate_series(1, 2) n
+where t.id = (select id from jo_ref where label = 't12');
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select project_match::text || '/' || (final_project_id = (select id from jo_ref where label = 'p2'))::text
+   from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't11')),
+  'false/true', 'every part on another project is a project miss on that project'
+);
+select ok(
+  (select project_match is null from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't12')),
+  'a part with no project keeps the line project, so a split with p2 spans two projects'
+);
+
+-- Deleting the newest review row makes the older one current again.
+delete from public.review_queue
+where transaction_id = (select id from jo_ref where label = 't9') and reason = 'test reopen';
+set constraints all immediate;
+set constraints all deferred;
+select is(
+  (select review_status::text from public.jev_outcomes where transaction_id = (select id from jo_ref where label = 't9')),
+  'approved', 'deleting the newer row brings back the approved outcome'
 );
 
 -- The suggestion row going away removes the outcome with it.

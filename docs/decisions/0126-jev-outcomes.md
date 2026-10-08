@@ -9,14 +9,14 @@ FLOW-701 part 1 asks Jev to learn from confirmations and to produce a shadow acc
 
 ## Decision
 
-The outcome is captured in the database, whatever path resolved the line. A deferred constraint trigger on `review_queue` (insert, or an update of `status`) calls `private.jev_outcome_sync` at commit. That means after every write of the approval, from `resolve_review`, an MCP tool or a batch. The line's review is its newest `review_queue` row, the same rule the sync uses, so a SUMIT sync that opens a new row takes the outcome away. Later edits that leave the review alone also resync, through deferred triggers on the line (removal, project, category, P&L role), on `line_splits` and on `allocations`; they run only for lines Jev suggested on. When the line's review is `approved` or `changed` and the line has a Jev suggestion, `jev_outcomes` holds one row per line with the following fields:
+The outcome is captured in the database, whatever path resolved the line. A deferred constraint trigger on `review_queue` (insert, an update of `status`, or delete) calls `private.jev_outcome_sync` at commit. That means after every write of the approval, from `resolve_review`, an MCP tool or a batch. The line's review is its newest `review_queue` row, the same rule the sync uses, so a SUMIT sync that opens a new row takes the outcome away. Later edits that leave the review alone also resync, through deferred triggers on the line (removal, project, category, P&L role), on `line_splits` and on `allocations`; they run only for lines Jev suggested on. When the line's review is `approved` or `changed` and the line has a Jev suggestion, `jev_outcomes` holds one row per line with the following fields:
 
 - the suggestion, its model and its confidence
 - the project and category Jev chose (its answer, when it is an id)
 - the project and category the line was filed as
 - `project_match` and `category_match`
 
-`project_match` is null when Jev gave no project, or when the line is shared, overhead, or split across more than one project (by allocations or by split parts). `category_match` is null when Jev gave no category, or when the line is split by category.
+`project_match` is null when Jev gave no project, or when the line is shared, overhead, or split across more than one project (by allocations, or by split parts, where a part with no project counts as the line's project). A line on the company's overhead project with the `project` role is still compared on project. `category_match` is null when Jev gave no category, or when the line is split by category.
 
 When the review goes back to `open` (undo) or is `skipped`, or the line is removed, the row is deleted. Approving again writes the new result. Deleting the suggestion deletes the row.
 
