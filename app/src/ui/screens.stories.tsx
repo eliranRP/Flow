@@ -20,6 +20,8 @@ import {
   ReviewEmpty as ReviewEmptyState,
   ReviewQueue,
   ReviewScreen,
+  ConnectionsScreen,
+  LoansScreen,
   SettingsScreen,
   SplitScreen,
   TransactionScreen,
@@ -27,6 +29,7 @@ import {
 } from "../screens/flow-screens";
 import { SignInScreen } from "../screens/SignInScreen";
 import { Banner } from "./banner";
+import { israelToday } from "./date-math";
 import { OfflineIcon } from "./icons";
 import { TextLink } from "./text-link";
 import { InstallScreen } from "./install-screen";
@@ -35,6 +38,8 @@ import {
   NotificationsLockFrame,
 } from "./reference-frames.stories-support";
 import { StoryRoute } from "./story-route";
+import { SeedLineMeta, storyMeta } from "./story-support";
+import type { TxnMeta } from "../txn-meta";
 import { TabBar } from "./tab-bar";
 import { ViewerPreview } from "../use-is-viewer";
 
@@ -149,6 +154,16 @@ const projectsList: Dashboard = {
   ],
 };
 
+/** FLOW-410: more active projects than one screen, and a finished one that shares a name with an active one. */
+const projectsSearch: Dashboard = {
+  ...sampleDashboard,
+  projects: [
+    ...["בית ארז", "בית אלון", "בית ברוש", "בית דקל", "בית הדס", "בית ורד", "בית תמר", "בית חצב", "בית כלנית"].map((name, index) => listedProject(`s${String(index)}`, name)),
+    listedProject("sf1", "מחסן תמר", "finished"),
+    listedProject("sf2", "חנות רימון", "finished"),
+  ],
+};
+
 const exampleLabel = "נתוני דוגמה · Example data";
 
 function ExampleBar() {
@@ -258,6 +273,53 @@ export const HomeBooksMonth: Story = {
   ),
 };
 
+// FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
+function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
+  return (
+    <StoryRoute entry="/" tabs reviewCount={pending}>
+      <HomeBooks
+        data={{ ...sampleDashboard, review_count: pending }}
+        previewing={false}
+        search=""
+        unpaidGross={unpaidGross}
+        unpaidCount={unpaidCount}
+        period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
+        onPeriod={() => undefined}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  );
+}
+
+const homeAt320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
+const homeDark = { globals: { theme: "dark" } };
+
+export const HomeAttentionBoth: Story = {
+  name: "Home attention, review and unpaid",
+  render: () => <AttentionHome pending={7} unpaidCount={3} unpaidGross={2_340_000n} />,
+};
+export const HomeAttentionBothDark: Story = { ...HomeAttentionBoth, name: "Home attention, review and unpaid, dark", ...homeDark };
+export const HomeAttentionBoth320: Story = { ...HomeAttentionBoth, name: "Home attention, review and unpaid, 320", ...homeAt320 };
+export const HomeAttentionBothDark320: Story = {
+  ...HomeAttentionBoth,
+  name: "Home attention, review and unpaid, dark, 320",
+  ...homeDark,
+  ...homeAt320,
+};
+export const HomeAttentionReviewOnly: Story = {
+  name: "Home attention, review only",
+  render: () => <AttentionHome pending={7} unpaidCount={0} unpaidGross={0n} />,
+};
+export const HomeAttentionUnpaidOnly: Story = {
+  name: "Home attention, unpaid only",
+  render: () => <AttentionHome pending={0} unpaidCount={3} unpaidGross={2_340_000n} />,
+};
+export const HomeAttentionSingular: Story = {
+  name: "Home attention, one of each",
+  render: () => <AttentionHome pending={1} unpaidCount={1} unpaidGross={468_000n} />,
+};
+export const HomeAttentionSingular320: Story = { ...HomeAttentionSingular, name: "Home attention, one of each, 320", ...homeAt320 };
+
 const bareReview: ReviewRow = {
   ...sampleReview,
   id: "r0",
@@ -294,7 +356,7 @@ export const ReviewAll: Story = {
         backTo="/review"
         search=""
         rows={[
-          sampleReview,
+          { ...sampleReview, source: "sumit", doc_kind: "invoice", line_status: "posted" },
           {
             ...sampleReview,
             id: "r2",
@@ -305,11 +367,56 @@ export const ReviewAll: Story = {
             supplier_name: "עגורני החוף בע״מ",
             project_name: null,
             category_name: "שינוע",
+            source: "mercury",
+            line_status: "pending",
           },
         ]}
       />
     </StoryRoute>
   ),
+};
+
+/** FLOW-305: the review list as a bank statement, two months, with היום / אתמול / date heads. Invented data. */
+function reviewDay(daysAgo: number): string {
+  const today = israelToday();
+  const date = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10)) - daysAgo));
+  return date.toISOString().slice(0, 10);
+}
+
+const statementReviews: ReviewRow[] = [
+  { ...sampleReview, id: "s1", transaction_id: "ts1", doc_date: reviewDay(0), supplier_name: null, description: "Northwind Traders", amount_net: -4_299n, currency: "USD", source: "mercury", line_status: "pending", project_name: null, category_name: null },
+  { ...sampleReview, id: "s2", transaction_id: "ts2", doc_date: reviewDay(0), supplier_name: "חשמל השרון בע״מ", amount_net: -120_050n, source: "mercury", line_status: "posted" },
+  { ...sampleReview, id: "s3", transaction_id: "ts3", doc_date: reviewDay(1), supplier_name: "לקוח לדוגמה", direction: "income", amount_net: 500_000n, source: "sumit", doc_kind: "invoice", project_name: "וילה רעננה", category_name: "מקדמות" },
+  { ...sampleReview, id: "s4", transaction_id: "ts4", doc_date: reviewDay(3), supplier_name: "שיש הגליל", amount_net: -345_000n, source: "sumit", doc_kind: "receipt" },
+  { ...sampleReview, id: "s5", transaction_id: "ts5", doc_date: reviewDay(40), supplier_name: "Contoso Building Supplies International", amount_net: -999_999_999n, currency: "USD", source: "mercury", line_status: "pending", category_name: "שיפוץ דירת הגג ברחוב הרצל, כולל הריסה וחשמל" },
+  { ...sampleReview, id: "s6", transaction_id: "ts6", doc_date: reviewDay(41), supplier_name: null, description: "4242-1234", amount_net: -10_000n, source: "mercury", project_name: null, category_name: null },
+];
+
+/** FLOW-304 bank details for the bank lines above, seeded so the rows show card, ACH, wire and no method. */
+const statementMeta: TxnMeta[] = [
+  storyMeta("ts1", { method: "card", card_last4: "4242" }),
+  storyMeta("ts2", { method: "ach" }),
+  storyMeta("ts5", { method: "wire" }),
+  storyMeta("ts6", {}),
+];
+
+function ReviewStatement() {
+  return (
+    <StoryRoute entry="/review/all" tabs reviewCount={statementReviews.length}>
+      <SeedLineMeta meta={statementMeta} />
+      <ExampleBar />
+      <ReviewAllList backTo="/review" search="" rows={statementReviews} />
+    </StoryRoute>
+  );
+}
+
+export const ReviewAllStatement: Story = { render: () => <ReviewStatement /> };
+export const ReviewAllStatementDark: Story = { render: () => <ReviewStatement />, globals: { theme: "dark" } };
+export const ReviewAllStatement320: Story = { render: () => <ReviewStatement />, parameters: { viewport: { defaultViewport: "flow320" } } };
+export const ReviewAllStatement320Dark: Story = {
+  render: () => <ReviewStatement />,
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
 };
 
 export const ReviewWithoutSuggestion: Story = {
@@ -657,6 +764,52 @@ export const ProjectsList: Story = {
   ),
 };
 
+/** FLOW-410: a query searches every project; the finished match reads הסתיים. */
+export const ProjectsSearch: Story = {
+  name: "Projects, search finds a finished project",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsSearch} initialQuery="תמר" />
+    </StoryRoute>
+  ),
+};
+export const ProjectsSearchDark: Story = { ...ProjectsSearch, name: "Projects, search finds a finished project, dark", globals: { theme: "dark" } };
+export const ProjectsSearch320: Story = {
+  ...ProjectsSearch,
+  name: "Projects, search finds a finished project, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const ProjectsSearchDark320: Story = {
+  ...ProjectsSearch,
+  name: "Projects, search finds a finished project, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
+/** FLOW-410: with no query every active project shows, past the first six. */
+export const ProjectsManyActive: Story = {
+  name: "Projects, every active project",
+  render: () => (
+    <StoryRoute entry="/projects" tabs>
+      <ExampleBar />
+      <ProjectsScreen sample={projectsSearch} />
+    </StoryRoute>
+  ),
+};
+export const ProjectsManyActiveDark: Story = { ...ProjectsManyActive, name: "Projects, every active project, dark", globals: { theme: "dark" } };
+export const ProjectsManyActive320: Story = {
+  ...ProjectsManyActive,
+  name: "Projects, every active project, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+export const ProjectsManyActiveDark320: Story = {
+  ...ProjectsManyActive,
+  name: "Projects, every active project, dark, 320",
+  globals: { theme: "dark" },
+  parameters: { viewport: { defaultViewport: "flow320" } },
+};
+
 export const ProjectsLoading: Story = {
   render: () => (
     <StoryRoute entry="/projects?preview=loading" tabs>
@@ -783,12 +936,12 @@ export const SettingsRenameSheet: Story = {
   },
 };
 
-export const SettingsAssistantConnected: Story = {
+export const ConnectionsAssistantConnected: Story = {
   name: "Assistant connected",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen
+      <ConnectionsScreen
         sample={{
           name: "בית הספר אלון",
           connected: true,
@@ -815,42 +968,42 @@ const assistantBusiness = {
   email: "owner@example.com",
 };
 
-export const SettingsAssistantEmpty: Story = {
+export const ConnectionsAssistantEmpty: Story = {
   name: "Assistant empty",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, connected: false, companyId: null, assistant: { state: "empty" } }} />
+      <ConnectionsScreen sample={{ ...assistantBusiness, connected: false, companyId: null, assistant: { state: "empty" } }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsAssistantLoading: Story = {
+export const ConnectionsAssistantLoading: Story = {
   name: "Assistant loading",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, assistant: { state: "loading" } }} />
+      <ConnectionsScreen sample={{ ...assistantBusiness, assistant: { state: "loading" } }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsAssistantError: Story = {
+export const ConnectionsAssistantError: Story = {
   name: "Assistant error",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, assistant: { state: "error" } }} />
+      <ConnectionsScreen sample={{ ...assistantBusiness, assistant: { state: "error" } }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsAssistantMixed: Story = {
+export const ConnectionsAssistantMixed: Story = {
   name: "Assistant mixed",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen
+      <ConnectionsScreen
         sample={{
           ...assistantBusiness,
           lastError: "sumit_auth",
@@ -861,22 +1014,22 @@ export const SettingsAssistantMixed: Story = {
   ),
 };
 
-export const SettingsAssistantExpired: Story = {
+export const ConnectionsAssistantExpired: Story = {
   name: "Assistant expired",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
+      <ConnectionsScreen sample={{ ...assistantBusiness, assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsAssistantNoCompany: Story = {
+export const ConnectionsAssistantNoCompany: Story = {
   name: "Assistant no company",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...assistantBusiness, name: null, connected: false, companyId: null, noCompany: true, assistant: { state: "no-company" } }} />
+      <ConnectionsScreen sample={{ ...assistantBusiness, name: null, connected: false, companyId: null, noCompany: true, assistant: { state: "no-company" } }} />
     </StoryRoute>
   ),
 };
@@ -965,11 +1118,11 @@ export const SettingsAssistantUnused: Story = {
   },
 };
 
-export const SettingsConnected: Story = {
+export const ConnectionsConnected: Story = {
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen
+      <ConnectionsScreen
         sample={{
           name: "בית הספר אלון",
           connected: true,
@@ -982,11 +1135,11 @@ export const SettingsConnected: Story = {
   ),
 };
 
-export const SettingsError: Story = {
+export const ConnectionsSyncError: Story = {
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen
+      <ConnectionsScreen
         sample={{
           name: "בית הספר אלון",
           connected: true,
@@ -999,12 +1152,12 @@ export const SettingsError: Story = {
   ),
 };
 
-export const SettingsBackoff: Story = {
+export const ConnectionsBackoff: Story = {
   name: "Backoff",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen
+      <ConnectionsScreen
         sample={{
           name: "בית הספר אלון",
           connected: true,
@@ -1018,12 +1171,12 @@ export const SettingsBackoff: Story = {
   ),
 };
 
-export const SettingsAuth: Story = {
+export const ConnectionsAuth: Story = {
   name: "Auth",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen
+      <ConnectionsScreen
         sample={{
           name: "בית הספר אלון",
           connected: true,
@@ -1043,62 +1196,62 @@ const sumitBusiness = {
   lastError: null,
 };
 
-export const SettingsSumitConnected: Story = {
+export const ConnectionsSumitConnected: Story = {
   name: "SUMIT connected",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, connected: true, lastSyncAt: "2026-10-03T09:05:00.000Z" }} />
+      <ConnectionsScreen sample={{ ...sumitBusiness, connected: true, lastSyncAt: "2026-10-03T09:05:00.000Z" }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsSumitDisconnected: Story = {
+export const ConnectionsSumitDisconnected: Story = {
   name: "SUMIT disconnected",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, connected: false, companyId: null }} />
+      <ConnectionsScreen sample={{ ...sumitBusiness, connected: false, companyId: null }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsSumitNoCompany: Story = {
+export const ConnectionsSumitNoCompany: Story = {
   name: "SUMIT no company",
   render: () => (
-    <StoryRoute entry="/settings?preview=empty" tabs>
+    <StoryRoute entry="/settings/connections?preview=empty" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, name: null, connected: false, companyId: null, noCompany: true }} />
+      <ConnectionsScreen sample={{ ...sumitBusiness, name: null, connected: false, companyId: null, noCompany: true }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsSumitReconnect: Story = {
+export const ConnectionsSumitReconnect: Story = {
   name: "SUMIT reconnect",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, connected: true, lastError: "sumit_auth" }} />
+      <ConnectionsScreen sample={{ ...sumitBusiness, connected: true, lastError: "sumit_auth" }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsSumitError: Story = {
+export const ConnectionsSumitError: Story = {
   name: "SUMIT error",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "error" }} />
+      <ConnectionsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "error" }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsSumitLoading: Story = {
+export const ConnectionsSumitLoading: Story = {
   name: "SUMIT loading",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "loading" }} />
+      <ConnectionsScreen sample={{ ...sumitBusiness, connected: false, companyId: null, sumit: "loading" }} />
     </StoryRoute>
   ),
 };
@@ -1113,52 +1266,267 @@ const mercuryBusiness = {
   mercuryLastError: null,
 };
 
-export const SettingsMercuryConnected: Story = {
+export const ConnectionsMercuryConnected: Story = {
   name: "Mercury connected",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: true, mercuryLastSyncAt: "2026-10-03T09:05:00.000Z" }} />
+      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: true, mercuryLastSyncAt: "2026-10-03T09:05:00.000Z" }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsMercuryDisconnected: Story = {
+export const ConnectionsMercuryDisconnected: Story = {
   name: "Mercury disconnected",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false }} />
+      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsMercuryReconnect: Story = {
+export const ConnectionsMercuryReconnect: Story = {
   name: "Mercury reconnect",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercuryLastError: "auth" }} />
+      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercuryLastError: "auth" }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsMercuryError: Story = {
+export const ConnectionsMercuryError: Story = {
   name: "Mercury error",
   render: () => (
-    <StoryRoute entry="/settings" tabs>
+    <StoryRoute entry="/settings/connections" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "error" }} />
+      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "error" }} />
     </StoryRoute>
   ),
 };
 
-export const SettingsMercuryLoading: Story = {
+export const ConnectionsMercuryLoading: Story = {
   name: "Mercury loading",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ConnectionsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "loading" }} />
+    </StoryRoute>
+  ),
+};
+
+// FLOW-501: Settings after the change, and the two pages it opens. Invented data only.
+const pagesBusiness = {
+  name: "אלפא בנייה בע״מ",
+  email: "owner@example.com",
+  companyId: 1000,
+  lastError: null,
+  connected: true,
+  mercuryConnected: true,
+  mercuryLastSyncAt: "2026-10-07T09:00:00.000Z",
+  jev: { enabled: false, mode: "shadow" as const, threshold: 0.9, status: "ready" as const },
+  assistant: { state: "connected" as const, scope: "read_write" as const, id: "mcp-1" },
+};
+
+const pagesLoans = [
+  { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "וילה אלון" },
+  { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: "p2", projectName: "פרויקט גפן" },
+];
+
+const at320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
+const dark = { globals: { theme: "dark" } };
+
+export const SettingsPages: Story = {
+  name: "Settings, connections and loans rows",
   render: () => (
     <StoryRoute entry="/settings" tabs>
       <ExampleBar />
-      <SettingsScreen sample={{ ...mercuryBusiness, mercuryConnected: false, mercury: "loading" }} />
+      <SettingsScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
+    </StoryRoute>
+  ),
+};
+export const SettingsPages320: Story = { ...SettingsPages, name: "Settings, connections and loans rows, 320", ...at320 };
+export const SettingsPagesDark: Story = { ...SettingsPages, name: "Settings, connections and loans rows, dark", ...dark };
+
+export const SettingsAttention: Story = {
+  name: "Settings, Mercury needs reconnecting",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...pagesBusiness, mercuryLastError: "auth", loans: pagesLoans }} />
+    </StoryRoute>
+  ),
+};
+export const SettingsAttention320: Story = { ...SettingsAttention, name: "Settings, Mercury needs reconnecting, 320", ...at320 };
+
+export const SettingsHintsLoading: Story = {
+  name: "Settings, hints loading",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <SettingsScreen sample={{ ...pagesBusiness, sumit: "loading", loans: "loading" }} />
+    </StoryRoute>
+  ),
+};
+
+export const SettingsViewer: Story = {
+  name: "Settings, viewer",
+  render: () => (
+    <StoryRoute entry="/settings" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <SettingsScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const Connections: Story = {
+  name: "Connections",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ConnectionsScreen sample={pagesBusiness} />
+    </StoryRoute>
+  ),
+};
+export const Connections320: Story = { ...Connections, name: "Connections, 320", ...at320 };
+export const ConnectionsDark: Story = { ...Connections, name: "Connections, dark", ...dark };
+
+export const ConnectionsReconnect: Story = {
+  name: "Connections, reconnect",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ConnectionsScreen sample={{ ...pagesBusiness, mercuryLastError: "auth", assistant: { state: "expired", scope: "read", id: "mcp-1" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const ConnectionsLoading: Story = {
+  name: "Connections, loading",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ConnectionsScreen
+        sample={{
+          ...pagesBusiness,
+          sumit: "loading",
+          mercury: "loading",
+          jev: { ...pagesBusiness.jev, status: "loading" },
+          assistant: { state: "loading" },
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const ConnectionsError: Story = {
+  name: "Connections, error",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ConnectionsScreen
+        sample={{
+          ...pagesBusiness,
+          sumit: "error",
+          mercury: "error",
+          jev: { ...pagesBusiness.jev, status: "error" },
+          assistant: { state: "error" },
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+export const ConnectionsError320: Story = { ...ConnectionsError, name: "Connections, error, 320", ...at320 };
+
+export const ConnectionsViewer: Story = {
+  name: "Connections, viewer",
+  render: () => (
+    <StoryRoute entry="/settings/connections" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <ConnectionsScreen sample={pagesBusiness} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+
+export const ConnectionsNoCompany: Story = {
+  name: "Connections, no company",
+  render: () => (
+    <StoryRoute entry="/settings/connections?preview=empty" tabs>
+      <ExampleBar />
+      <ConnectionsScreen sample={{ ...pagesBusiness, name: null, connected: false, companyId: null, mercuryConnected: false, noCompany: true, assistant: { state: "no-company" } }} />
+    </StoryRoute>
+  ),
+};
+
+export const Loans: Story = {
+  name: "Loans",
+  render: () => (
+    <StoryRoute entry="/settings/loans" tabs>
+      <ExampleBar />
+      <LoansScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
+    </StoryRoute>
+  ),
+};
+export const Loans320: Story = { ...Loans, name: "Loans, 320", ...at320 };
+export const LoansDark: Story = { ...Loans, name: "Loans, dark", ...dark };
+
+export const LoansEmpty: Story = {
+  name: "Loans, empty",
+  render: () => (
+    <StoryRoute entry="/settings/loans" tabs>
+      <ExampleBar />
+      <LoansScreen sample={{ ...pagesBusiness, loans: [] }} />
+    </StoryRoute>
+  ),
+};
+export const LoansEmpty320: Story = { ...LoansEmpty, name: "Loans, empty, 320", ...at320 };
+
+export const LoansLoading: Story = {
+  name: "Loans, loading",
+  render: () => (
+    <StoryRoute entry="/settings/loans" tabs>
+      <ExampleBar />
+      <LoansScreen sample={{ ...pagesBusiness, loans: "loading" }} />
+    </StoryRoute>
+  ),
+};
+
+export const LoansError: Story = {
+  name: "Loans, error",
+  render: () => (
+    <StoryRoute entry="/settings/loans" tabs>
+      <ExampleBar />
+      <LoansScreen sample={{ ...pagesBusiness, loans: "error" }} />
+    </StoryRoute>
+  ),
+};
+
+export const LoansViewer: Story = {
+  name: "Loans, viewer",
+  render: () => (
+    <StoryRoute entry="/settings/loans" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <LoansScreen sample={{ ...pagesBusiness, loans: pagesLoans }} />
+      </ViewerPreview>
+    </StoryRoute>
+  ),
+};
+export const LoansViewer320: Story = { ...LoansViewer, name: "Loans, viewer, 320", ...at320 };
+
+export const LoansEmptyViewer: Story = {
+  name: "Loans, empty, viewer",
+  render: () => (
+    <StoryRoute entry="/settings/loans" tabs>
+      <ExampleBar />
+      <ViewerPreview>
+        <LoansScreen sample={{ ...pagesBusiness, loans: [] }} />
+      </ViewerPreview>
     </StoryRoute>
   ),
 };
@@ -1231,8 +1599,8 @@ export const CategoriesLongHebrew: Story = {
 const keptOutCategories: Array<CategoryRow & { count?: number }> = [
   { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 42 },
   { id: "c6", name: "פיקדונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: true, count: 3 },
-  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, count: 12 },
-  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, count: 12 },
+  { id: "c7", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, loan_part: "interest", count: 12 },
+  { id: "c8", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal", count: 12 },
   { id: "c4", name: "עבודה", kind: "expense", hidden: true, is_default: true, excluded_from_pnl: true, count: 1 },
   { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false, count: 3 },
 ];
@@ -1453,8 +1821,8 @@ export const CategoriesError: Story = {
   ),
 };
 
-export const Transaction: Story = {
-  render: () => (
+function TransactionStory() {
+  return (
     <StoryRoute entry="/transactions/t1">
       <ExampleBar />
       <TransactionScreen
@@ -1488,6 +1856,135 @@ export const Transaction: Story = {
           { id: "c2", name: "ציוד והשכרה" },
           { id: "c3", name: "הובלה" },
         ]}
+      />
+    </StoryRoute>
+  );
+}
+
+export const Transaction: Story = {
+  render: () => <TransactionStory />,
+};
+
+/** FLOW-320: the project row opens the change sheet straight on the project picker. */
+export const TransactionProjectPicker: Story = {
+  name: "Project row opens the project picker",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <TransactionStory />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /בניין מגורים חולון/ }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "בחירת פרויקט" });
+  },
+};
+
+/** FLOW-320: the category row opens the change sheet straight on the category picker. */
+export const TransactionCategoryPicker: Story = {
+  name: "Category row opens the category picker",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <TransactionStory />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: /חומרים/ }));
+    await storyBody(canvasElement).findByRole("dialog", { name: "בחירת קטגוריה" });
+  },
+};
+
+export const TransactionOutOfPnl: Story = {
+  name: "Out of the P&L",
+  render: () => (
+    <StoryRoute entry="/transactions/t1">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "החזר פיקדון",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -120_000n,
+          amount_net: -120_000n,
+          vat_amount: 0n,
+          vat_status: "unknown",
+          doc_kind: "expense",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "ספק לדוגמה עם שם ארוך במיוחד לבדיקה",
+          customer_name: null,
+          review_status: "open",
+          paid: false,
+          open_gross_agorot: null,
+          in_pnl_override: false,
+          category_excluded_from_pnl: false,
+          in_pnl: false,
+          pnl_fixed: false,
+        }}
+        sampleCategories={[{ id: "c1", name: "חומרים" }]}
+      />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-303: opened from a list, so ˄ ˅ sit before ⋯. The middle row has both. */
+export const TransactionInList: Story = {
+  name: "In a list",
+  render: () => (
+    <StoryRoute entry="/transactions/t1" state={{ txnList: { ids: ["t0", "t1", "t2"], from: "/projects/holon" } }}>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t1",
+          description: "חשבונית חומרים",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -1_003_000n,
+          amount_net: -850_000n,
+          vat_amount: -153_000n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "חומרים",
+          supplier_name: "חומרי בניין השרון בע״מ",
+          customer_name: null,
+          review_status: "approved",
+          paid: true,
+          open_gross_agorot: null,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+/** The last row: ˅ stays in place, marked unavailable. */
+export const TransactionListEnd: Story = {
+  name: "Last in a list",
+  render: () => (
+    <StoryRoute entry="/transactions/t2" state={{ txnList: { ids: ["t0", "t1", "t2"], from: "/projects/holon" } }}>
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t2",
+          description: "הובלה",
+          direction: "income",
+          doc_date: "2026-09-22",
+          amount_gross: 12_345_678n,
+          amount_net: 10_462_439n,
+          vat_amount: 1_883_239n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_id: "holon",
+          project_name: "בניין מגורים חולון",
+          category_id: "c1",
+          category_name: "הכנסות מפרויקט",
+          supplier_name: null,
+          customer_name: "לקוח לדוגמה עם שם ארוך מאוד לבדיקה",
+          review_status: "open",
+          paid: false,
+          open_gross_agorot: 12_345_678n,
+        }}
       />
     </StoryRoute>
   ),
@@ -1782,6 +2279,48 @@ export const ChangeCategoryPicker: Story = {
   name: "Category picker",
   parameters: { viewport: { defaultViewport: "flow390-short" } },
   render: () => <ChangeStory entry="/review/change?item=r1&pick=category" />,
+};
+
+const reversalCategories = [
+  ...changeCategories,
+  { id: "i1", name: "שכירות", hidden: false, kind: "income" },
+  { id: "i2", name: "דמי ניהול", hidden: false, kind: "income" },
+];
+
+export const ChangeReversalPicker: Story = {
+  name: "Category picker with reversals",
+  parameters: { viewport: { defaultViewport: "flow390-short" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} />,
+};
+
+export const ChangeReversalPicked: Story = {
+  name: "Reversal picked, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
+};
+
+export const ChangeReversalSummary: Story = {
+  name: "Reversal on the summary, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory categories={reversalCategories} categoryId="i1" suggestionCategoryId="" />,
+};
+
+/** FLOW-118: a kept-out income category filed through MCP stays marked החזר and sits in the reversal section. */
+const keptOutReversalCategories = [
+  ...reversalCategories,
+  { id: "i3", name: "העברות בין חשבונות", hidden: false, kind: "income", excluded_from_pnl: true },
+];
+
+export const ChangeReversalKeptOutSummary: Story = {
+  name: "Kept-out reversal on the summary, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
+};
+
+export const ChangeReversalKeptOutPicker: Story = {
+  name: "Kept-out reversal in the picker, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <ChangeStory entry="/review/change?item=r1&pick=category" categories={keptOutReversalCategories} categoryId="i3" suggestionCategoryId="" />,
 };
 
 export const ChangeSaveError: Story = {
@@ -2117,6 +2656,218 @@ export const TransactionUsdExpense: Story = {
           customer_name: null,
         }}
       />
+    </StoryRoute>
+  ),
+};
+
+/** FLOW-307: the largest detail amounts step down from 36px until they fit the side padding. */
+export const TransactionLargestExpense: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t-large">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-large",
+          description: "חשבונית חומרים",
+          direction: "expense",
+          doc_date: "2026-09-21",
+          amount_gross: -9_999_999_999n,
+          amount_net: -9_999_999_999n,
+          vat_amount: 0n,
+          vat_status: "source",
+          doc_kind: "invoice",
+          source: "sumit",
+          project_name: "בניין מגורים חולון",
+          category_name: "חומרים",
+          supplier_name: "חומרי בניין השרון בע״מ",
+          customer_name: null,
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+export const TransactionLargestUsdIncome: Story = {
+  render: () => (
+    <StoryRoute entry="/transactions/t-large-usd">
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-large-usd",
+          description: "Sample customer",
+          direction: "income",
+          doc_date: "2026-09-10",
+          amount_gross: 9_999_999_999n,
+          amount_net: 9_999_999_999n,
+          vat_amount: 0n,
+          currency: "USD",
+          vat_status: "source",
+          source: "mercury",
+          project_name: "Cedar Lot",
+          category_name: "Rent",
+          supplier_name: null,
+          customer_name: "Sample customer",
+        }}
+      />
+    </StoryRoute>
+  ),
+};
+
+/* FLOW-304. Bank details on the transaction screen and the review card. Invented data only. */
+function MercuryTransaction({ meta, income = false }: { meta: TxnMeta; income?: boolean }) {
+  return (
+    <StoryRoute entry="/transactions/t-meta" tabs>
+      <SeedLineMeta meta={[meta]} />
+      <ExampleBar />
+      <TransactionScreen
+        sample={{
+          id: "t-meta",
+          description: "EXAMPLE OFFICE SUITE",
+          direction: income ? "income" : "expense",
+          doc_date: "2026-09-10",
+          amount_gross: income ? 480_000n : -125_000n,
+          amount_net: income ? 480_000n : -125_000n,
+          vat_amount: 0n,
+          currency: "USD",
+          vat_status: "source",
+          source: "mercury",
+          project_name: "Cedar Lot",
+          category_name: income ? "Rent" : "Office",
+          supplier_name: income ? null : "Example Office Suite",
+          customer_name: income ? "Sample Tenant LLC" : null,
+        }}
+      />
+    </StoryRoute>
+  );
+}
+
+export const TransactionMetaNone: Story = {
+  name: "Transaction bank details: none",
+  render: () => <MercuryTransaction meta={storyMeta("t-meta", {})} />,
+};
+
+export const TransactionMetaCard: Story = {
+  name: "Transaction bank details: card",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "card",
+        card_last4: "4242",
+        account: "Mercury Checking (1)",
+        counterparty: "Example Office Suite",
+        bank_description: "EXAMPLE OFFICE SUITE ••6789",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaAchMemo: Story = {
+  name: "Transaction bank details: ACH and memo",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "ach",
+        account: "Mercury Checking ••1234",
+        counterparty: "Example Office Suite Holdings",
+        memo: "Invoice 1042 for the September office lease, parking, and storage",
+        bank_description: "ACH EXAMPLE OFFICE SUITE HOLDINGS PPD",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaLongMemoOpen: Story = {
+  name: "Transaction bank details: long memo, open",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "ach",
+        memo: "Invoice 1042 for the September office lease, parking for two cars, storage unit B, after-hours cleaning, the shared kitchen supplies, the lobby badge reissue, and the late fee that was waived by the landlord in August after the elevator repair",
+      })}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const toggle = await within(canvasElement).findByRole("button", { name: /הערה/ });
+    await userEvent.click(toggle);
+    // Route stories open with the title focused (storybook-layout's focus check); the click moved it.
+    canvasElement.querySelector<HTMLElement>(".ui-focus-title")?.focus();
+  },
+};
+
+export const TransactionMetaWire: Story = {
+  name: "Transaction bank details: wire income",
+  render: () => (
+    <MercuryTransaction
+      income
+      meta={storyMeta("t-meta", {
+        method: "wire",
+        account: "Mercury Savings ••5678",
+        counterparty: "Sample Tenant Holdings LLC",
+        bank_description: "WIRE FROM SAMPLE TENANT HOLDINGS ••4321",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaHebrewMemo: Story = {
+  name: "Transaction bank details: Hebrew memo",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "transfer",
+        account: "Mercury Checking ••1234",
+        memo: "העברה לחשבון החיסכון לפני תשלום המע״מ של חודש ספטמבר",
+      })}
+    />
+  ),
+};
+
+export const TransactionMetaLongAccount: Story = {
+  name: "Transaction bank details: long account name",
+  render: () => (
+    <MercuryTransaction
+      meta={storyMeta("t-meta", {
+        method: "check",
+        account: "Mercury Operating Reserve for Cedar Lot Construction ••1234",
+        counterparty: "Example Construction Supply and Equipment Rental Company",
+      })}
+    />
+  ),
+};
+
+const metaReviewRow: ReviewRow = {
+  ...sampleReview,
+  id: "q-meta",
+  transaction_id: "t-meta",
+  description: "EXAMPLE OFFICE SUITE",
+  supplier_name: "Example Office Suite Holdings",
+  amount_net: -125_000n,
+  vat_agorot: 0n,
+  currency: "USD",
+  project_name: "Cedar Lot",
+  category_name: "Office",
+};
+
+export const ReviewMetaFold: Story = {
+  name: "Review bank details: fold with memo",
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={15}>
+      <SeedLineMeta
+        meta={[storyMeta("t-meta", { method: "wire", memo: "Invoice 1042 for the September office lease, parking, and storage" })]}
+      />
+      <ExampleBar />
+      <ReviewQueue rows={[metaReviewRow]} search="" sample listPlace={{ index: 14, total: 15 }} />
+    </StoryRoute>
+  ),
+};
+
+export const ReviewMetaCard: Story = {
+  name: "Review bank details: card",
+  render: () => (
+    <StoryRoute entry="/review" tabs reviewCount={15}>
+      <SeedLineMeta meta={[storyMeta("t-meta", { method: "card", card_last4: "4242" })]} />
+      <ExampleBar />
+      <ReviewQueue rows={[metaReviewRow]} search="" sample />
     </StoryRoute>
   ),
 };

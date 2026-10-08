@@ -3,13 +3,11 @@ import { useRef, useState, type ReactNode, type RefObject } from "react";
 import {
   allocateLoanSplit,
   buildLoanSchedule,
-  LOAN_ESCROW_CATEGORY,
-  LOAN_INTEREST_CATEGORY,
-  LOAN_PRINCIPAL_CATEGORY,
   scheduleRowForDate,
   type LoanSplitPart,
 } from "@flow/shared";
 import { BankIcon, AlertIcon, EyeOffIcon, HomeIcon, PercentIcon } from "../ui/icons";
+import { splitCents, withCents } from "../ui/big-number";
 import { List, ListRow } from "../ui/list-row";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
@@ -31,12 +29,6 @@ const PART_ICON: Record<LoanSplitPart, () => ReactNode> = {
   interest: () => <PercentIcon />,
   escrow: () => <HomeIcon />,
   principal: () => <BankIcon />,
-};
-
-const PART_CATEGORY: Record<LoanSplitPart, string> = {
-  interest: LOAN_INTEREST_CATEGORY,
-  escrow: LOAN_ESCROW_CATEGORY,
-  principal: LOAN_PRINCIPAL_CATEGORY,
 };
 
 type SplitRow = {
@@ -69,6 +61,9 @@ export type LoanBalanceRow = {
   currency: string;
   balanceMinor: bigint;
   flaggedParts: number;
+  /** FLOW-119. */
+  projectId?: string | null;
+  projectName?: string | null;
 };
 
 function asCurrency(currency: string): LoanCurrency | null {
@@ -157,7 +152,7 @@ export function LoanSplitPanel({
                 hint={showCounted && part.inPnl === false ? (
                   <span className="ui-loan-out"><EyeOffIcon size={16} />מחוץ לרווח</span>
                 ) : undefined}
-                meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
+                meta={<bdi className="ui-num ui-loan-amount t-amount" dir="ltr">{showMoney(-part.amountMinor, displayCurrency)}</bdi>}
               />
             ))}
             <ListRow
@@ -165,7 +160,7 @@ export function LoanSplitPanel({
               className="ui-loan-total"
               icon={<span className="ui-loan-spacer" aria-hidden="true" />}
               title="סה״כ"
-              meta={<bdi className="ui-num ui-loan-amount t-title-3" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
+              meta={<bdi className="ui-num ui-loan-amount t-amount" dir="ltr">{showMoney(-totalMinor, displayCurrency)}</bdi>}
             />
           </List>
         </>
@@ -219,7 +214,68 @@ export function LoanSplitPanel({
   );
 }
 
-export function LoanBalanceList({ rows }: { rows: readonly LoanBalanceRow[] }) {
+function loanRowHint(row: LoanBalanceRow): string | undefined {
+  const project = row.projectName ?? null;
+  if (row.flaggedParts > 0) return project == null ? "ממתין לבדיקה" : `ממתין לבדיקה · ${project}`;
+  return project ?? undefined;
+}
+
+/** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
+function LoanBalance({ minor, currency }: { minor: bigint; currency: string }) {
+  const { whole, cents } = splitCents(withCents(showMoney(minor, currency)), "detail");
+  return (
+    <bdi className="ui-num ui-loan-amount" dir="ltr">
+      {whole}
+      {cents != null ? <span className="ui-num-cents">{cents}</span> : null}
+    </bdi>
+  );
+}
+
+export function LoanBalanceList({
+  rows,
+  onOpen,
+  rowRef,
+}: {
+  rows: readonly LoanBalanceRow[];
+  /** FLOW-119. The owner opens a loan's project. A viewer gets static rows. */
+  onOpen?: (row: LoanBalanceRow) => void;
+  rowRef?: (id: string, node: HTMLButtonElement | null) => void;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <List>
+      {rows.map((row) => {
+        const common = {
+          title: row.name,
+          icon: <BankIcon />,
+          tone: row.flaggedParts > 0 ? ("warning" as const) : undefined,
+          hint: loanRowHint(row),
+          meta: <LoanBalance minor={row.balanceMinor} currency={row.currency} />,
+        };
+        return onOpen ? (
+          <ListRow
+            key={row.id}
+            variant="button"
+            {...common}
+            label={`${row.name}, ${withCents(showMoney(row.balanceMinor, row.currency))}${row.flaggedParts > 0 ? ", ממתין לבדיקה" : ""}, פרויקט: ${row.projectName ?? "ללא פרויקט"}`}
+            chevron
+            buttonRef={(node) => { rowRef?.(row.id, node); }}
+            onClick={() => { onOpen(row); }}
+          />
+        ) : (
+          <ListRow key={row.id} variant="static" {...common} />
+        );
+      })}
+    </List>
+  );
+}
+
+/** FLOW-119. The loans under a project, on the project screen. Static for everyone. */
+export function ProjectLoanList({
+  rows,
+}: {
+  rows: ReadonlyArray<{ id: string; name: string; currency: string; balance_minor: bigint }>;
+}) {
   if (rows.length === 0) return null;
   return (
     <List>
@@ -229,9 +285,8 @@ export function LoanBalanceList({ rows }: { rows: readonly LoanBalanceRow[] }) {
           variant="static"
           title={row.name}
           icon={<BankIcon />}
-          tone={row.flaggedParts > 0 ? "warning" : undefined}
-          hint={row.flaggedParts > 0 ? "ממתין לבדיקה" : undefined}
-          meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balanceMinor, row.currency)}</bdi>}
+          hint={row.balance_minor <= 0n ? "נפרעה" : undefined}
+          meta={<bdi className="ui-num ui-loan-amount" dir="ltr">{showMoney(row.balance_minor, row.currency)}</bdi>}
         />
       ))}
     </List>
@@ -289,14 +344,15 @@ function correctFailureText(error: Error): string {
 export function LoanTransactionSplit({
   transactionId,
   docDate,
-  categoryName,
+  loanPart,
   direction,
   active,
   readOnly = false,
 }: {
   transactionId: string;
   docDate: string;
-  categoryName: string;
+  /** `categories.loan_part` of the line's category; null for any other category. */
+  loanPart: string | null;
   direction: string;
   active: boolean;
   /** From the transaction screen. A viewer, and a role that is still loading, pass true. */
@@ -305,7 +361,7 @@ export function LoanTransactionSplit({
   const queryClient = useQueryClient();
   const holdWrites = useHoldWrites();
   const writesHeld = readOnly || holdWrites;
-  const offerMatch = direction !== "income" && categoryName === LOAN_PRINCIPAL_CATEGORY;
+  const offerMatch = direction !== "income" && loanPart === "principal";
   const [sheetOpen, setSheetOpen] = useState(false);
   const setSheet = useSheetHistory("loan-match", sheetOpen, setSheetOpen);
   const splitSectionRef = useRef<HTMLHeadingElement>(null);
@@ -437,11 +493,18 @@ export function useLoanBalances(companyId: string | null) {
     queryFn: async (): Promise<LoanBalanceRow[]> => {
       const supabase = getSupabase();
       if (!supabase || companyId == null) return [];
-      const loans = await supabase.from("loans").select("id, name, currency").eq("company_id", companyId);
+      const loans = await supabase.from("loans").select("id, name, currency, project_id").eq("company_id", companyId);
       assertNoError(loans);
       const balances = await supabase.from("loan_balances").select("loan_id, balance_minor, flagged_parts, currency");
       assertNoError(balances);
       const byLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, row]));
+      const projectIds = [...new Set((loans.data ?? []).flatMap((loan) => (loan.project_id == null ? [] : [loan.project_id])))];
+      const projectNames = new Map<string, string>();
+      if (projectIds.length > 0) {
+        const projects = await supabase.from("projects").select("id, name").in("id", projectIds);
+        assertNoError(projects);
+        for (const project of projects.data ?? []) projectNames.set(project.id, project.name);
+      }
       return (loans.data ?? []).map((loan) => {
         const balance = byLoan.get(loan.id);
         return {
@@ -450,6 +513,8 @@ export function useLoanBalances(companyId: string | null) {
           currency: balance?.currency ?? loan.currency,
           balanceMinor: BigInt(balance?.balance_minor ?? 0),
           flaggedParts: balance?.flagged_parts ?? 0,
+          projectId: loan.project_id,
+          projectName: loan.project_id == null ? null : (projectNames.get(loan.project_id) ?? null),
         };
       });
     },
@@ -488,10 +553,10 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .eq("company_id", companyId),
     supabase
       .from("categories")
-      .select("id, name")
+      .select("id, loan_part")
       .eq("company_id", companyId)
       .eq("kind", "expense")
-      .in("name", [LOAN_INTEREST_CATEGORY, LOAN_ESCROW_CATEGORY, LOAN_PRINCIPAL_CATEGORY]),
+      .not("loan_part", "is", null),
     supabase
       .from("loan_balances")
       .select("loan_id, balance_minor")
@@ -507,8 +572,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
   const balanceByLoan = new Map((balances.data ?? []).map((row) => [row.loan_id, BigInt(row.balance_minor ?? 0)]));
   const categoryIds: Partial<Record<LoanSplitPart, string>> = {};
   for (const category of categories.data ?? []) {
-    const part = (Object.keys(PART_CATEGORY) as LoanSplitPart[]).find((key) => PART_CATEGORY[key] === category.name);
-    if (part) categoryIds[part] = category.id;
+    if (category.loan_part) categoryIds[category.loan_part] = category.id;
   }
   return {
     companyId,

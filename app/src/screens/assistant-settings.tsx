@@ -15,7 +15,7 @@ import { FormError, SectionHead } from "../ui/layout";
 import { List, ListRow } from "../ui/list-row";
 import { RadioRow } from "../ui/radio-row";
 import { Sheet } from "../ui/sheet";
-import { Skeleton } from "../ui/skeleton";
+import { ConnectorRow } from "../ui/connector-row";
 import { TextLink } from "../ui/text-link";
 import { useToast } from "../ui/toast";
 
@@ -81,6 +81,15 @@ async function readStatus(): Promise<Status> {
   return response.data;
 }
 
+/** The assistant's status, shared by the Connections page and the Settings חיבורים hint (FLOW-501). */
+export function useAssistantStatusQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: ["mcp-status"],
+    enabled,
+    queryFn: readStatus,
+  });
+}
+
 async function mintCode(scope: AssistantScope): Promise<Minted> {
   const supabase = getSupabase();
   if (!supabase) throw new Error("supabase");
@@ -127,11 +136,7 @@ export function AssistantSettings({
   const toast = useToast();
   const navigate = useNavigate();
   const client = useQueryClient();
-  const status = useQuery({
-    queryKey: ["mcp-status"],
-    enabled: sample == null,
-    queryFn: readStatus,
-  });
+  const status = useAssistantStatusQuery(sample == null);
   const [open, setOpen] = useState(initialSecret != null || initialOpen);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -341,93 +346,39 @@ export function AssistantSettings({
   const command = secret != null && urlReady ? claudeCodeCommand(mcpUrl, secret.secret) : "";
   const useLine = view.lastUsedAt ? israelUsePhrase(view.lastUsedAt, now) : null;
   const spark = <SparkIcon size={24} />;
-  const row = view.state === "loading" ? (
-    <ListRow variant="static" title="עוזר AI" icon={spark} hint={<Skeleton width="sm" />} skelHint busy />
-  ) : view.state === "no-company" ? (
-    <ListRow variant="button" title="עוזר AI" hint="אין עסק עדיין" icon={spark} wrapHint describeHint clearHint ariaDisabled className="ui-row-ring" buttonRef={rowRef} />
-  ) : view.state === "error" ? (
-    <ListRow
-      variant="static"
+  const rowHint: ReactNode = view.state === "no-company"
+    ? "אין עסק עדיין"
+    : view.state === "connected"
+      ? connectedHint(scope)
+      : view.state === "expired"
+        ? (readOnly ? (viewerCopy ? "לא מחובר כרגע" : "לא מחובר") : "צריך לחבר מחדש")
+        : "לא מחובר";
+  const row = (
+    <ConnectorRow
       title="עוזר AI"
-      icon={<AlertIcon size={24} />}
-      tone="muted"
-      describeHint
-      hintStatus
-      hint={(
-        <>
-          {hint}
-          {offlineNote > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
-        </>
-      )}
-      action={(
-        <TextLink
-          size="label"
-          chevron={false}
-          label="ניסיון חוזר: עוזר AI"
-          busy={retrying}
-          buttonRef={retryRef}
-          onClick={retryStatus}
-        >
-          ניסיון חוזר
-        </TextLink>
-      )}
-    />
-  ) : view.state === "connected" ? (
-    readOnly ? (
-      <ListRow variant="static" title="עוזר AI" hint={connectedHint(scope)} icon={spark} wrapHint describeHint />
-    ) : (
-      <ListRow
-        variant="button"
-        title="עוזר AI"
-        hint={connectedHint(scope)}
-        icon={spark}
-        wrapHint
-        describeHint
-        chevron
-        className="ui-row-ring"
-        buttonRef={rowRef}
-        onClick={() => { setDetailsSheet(true); }}
-      />
-    )
-  ) : view.state === "expired" ? (
-    readOnly ? (
-      <ListRow
-        variant="static"
-        title="עוזר AI"
-        hint={viewerCopy ? "לא מחובר כרגע" : "לא מחובר"}
-        icon={spark}
-        wrapHint
-        describeHint
-      />
-    ) : (
-      <ListRow
-        variant="button"
-        title="עוזר AI"
-        hint="צריך לחבר מחדש"
-        icon={<AlertIcon size={24} />}
-        tone="warning"
-        wrapHint
-        describeHint
-        chevron
-        className="ui-row-ring"
-        buttonRef={rowRef}
-        onClick={() => { setIntro(true); setConnectSheet(true); }}
-      />
-    )
-  ) : readOnly ? (
-    <ListRow variant="static" title="עוזר AI" hint="לא מחובר" icon={spark} wrapHint describeHint />
-  ) : (
-    <ListRow
-      variant="button"
-      title="עוזר AI"
-      hint="לא מחובר"
       icon={spark}
-      wrapHint
-      describeHint
-      chevron
-      className="ui-row-ring"
-      buttonRef={rowRef}
-      onClick={() => { setIntro(false); setConnectSheet(true); }}
+      state={view.state === "loading" ? "loading" : view.state === "error" ? "error" : "ready"}
+      hint={rowHint}
+      warning={view.state === "expired" && !readOnly}
+      ariaDisabled={view.state === "no-company"}
+      rowRef={rowRef}
+      retry={{
+        hint: (
+          <>
+            {hint}
+            {offlineNote > 0 ? <span className="sr-only">אין חיבור לאינטרנט</span> : null}
+          </>
+        ),
+        label: "ניסיון חוזר: עוזר AI",
+        busy: retrying,
+        retryRef,
+        onRetry: retryStatus,
+      }}
+      onOpen={readOnly ? undefined : view.state === "connected"
+        ? () => { setDetailsSheet(true); }
+        : view.state === "expired"
+          ? () => { setIntro(true); setConnectSheet(true); }
+          : () => { setIntro(false); setConnectSheet(true); }}
     />
   );
 

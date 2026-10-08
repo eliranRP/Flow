@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page, type Request, type Response } from "@playwright/test";
 
 // List screens only. Detail RPCs stay on the owner and are not called.
-const readRpcs = new Set(["get_dashboard", "list_review", "list_unpaid", "sumit_status"]);
+const readRpcs = new Set(["get_dashboard", "get_line_meta", "list_categories", "list_review", "list_unpaid", "sumit_status"]);
 
 const email = process.env.SMOKE_EMAIL ?? "";
 const password = process.env.SMOKE_PASSWORD ?? "";
@@ -288,6 +288,9 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   expect(typeof sumitStatus.connected).toBe("boolean");
   await expect(page.getByRole("heading", { name: "הגדרות" })).toBeVisible();
   await expect(page.getByText(companyName, { exact: true })).toBeVisible();
+  // FLOW-501: the connector rows live on the Connections page, which a viewer can open.
+  await page.getByRole("link", { name: "חיבורים" }).click();
+  await expect(page.getByRole("heading", { name: "חיבורים" })).toBeVisible();
   await expect(page.getByText("תיוג חכם (Jev)", { exact: true })).toBeVisible();
   const sumitWord = sumitStatus.connected === true ? "מחובר" : "לא מחובר";
   await expect(page.getByRole("button", { name: "SUMIT", exact: true })).toHaveCount(0);

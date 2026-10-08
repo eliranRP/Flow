@@ -6,7 +6,17 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../auth";
 import { BooksProvider } from "../use-books";
 import { ToastProvider } from "../ui/toast";
-import { CategoriesScreen, SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
+import { CategoriesScreen, ConnectionsScreen, SettingsScreen, SplitScreen, TransactionScreen } from "./flow-screens";
+
+/** FLOW-501 moved the connector rows to their own page. These account tests read both. */
+function SettingsAndConnections(props: Parameters<typeof ConnectionsScreen>[0]) {
+  return (
+    <>
+      <SettingsScreen sample={props?.sample} />
+      <ConnectionsScreen {...props} />
+    </>
+  );
+}
 
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
@@ -112,6 +122,17 @@ describe("transaction status chips", () => {
     expect(screen.getByText("טרם נגבה")).toBeInTheDocument();
   });
 
+  it("shows the VAT as a plain line, with no empty invoice row", () => {
+    renderTxn(expense);
+    expect(screen.getByText(/^מע״מ /)).toHaveTextContent("מע״מ −₪1,800 · מע״מ משוער 18%");
+    expect(screen.queryByRole("button", { name: "חשבונית ותשלום" })).not.toBeInTheDocument();
+  });
+
+  it("hides the VAT line when a shekel line has no VAT", () => {
+    renderTxn({ ...expense, amount_gross: -1_000_000n, vat_amount: 0n, vat_status: "source" });
+    expect(screen.queryByText(/^מע״מ /)).not.toBeInTheDocument();
+  });
+
   it("hides VAT and invoice rows for a USD expense", () => {
     renderTxn({
       ...expense,
@@ -141,7 +162,8 @@ describe("transaction status chips", () => {
       customer_name: "לקוח",
       supplier_name: null,
     });
-    expect(screen.getByText("$12.34")).toBeInTheDocument();
+    // The cents sit in their own span, drawn smaller; the figure still reads as one text.
+    expect(screen.getByText((_, node) => node?.tagName === "BDI" && node.textContent === "$12.34")).toBeInTheDocument();
   });
 
   it("draws no status chip when the review and payment are unknown", () => {
@@ -153,86 +175,98 @@ describe("transaction status chips", () => {
   });
 });
 
-describe("transaction reassignment", () => {
-  it("saves through reassign_transaction and invalidates the books", async () => {
-    rpc.calls.length = 0;
-    rpc.impl = (name) => {
-      if (name === "get_transaction") {
-        return Promise.resolve({
-          data: {
-            ...expense,
-            amount_gross: -1_180_000,
-            amount_net: -1_000_000,
-            vat_amount: -180_000,
-            review_status: "open",
-            paid: false,
-            open_gross_agorot: null,
-          },
-          error: null,
-        });
-      }
-      if (name === "get_dashboard") {
-        return Promise.resolve({
-          data: {
-            company_id: "c",
-            name: "אלפא",
-            vat_registered: true,
-            basis: "invoiced",
-            from: "2026-09-01",
-            to: "2026-09-28",
-            income_agorot: 0,
-            direct_agorot: 0,
-            shared_agorot: 0,
-            overhead_agorot: 0,
-            expense_agorot: 0,
-            net_profit_agorot: 0,
-            prev_income_agorot: null,
-            prev_expense_agorot: null,
-            prev_net_agorot: null,
-            active_projects: 2,
-            review_count: 1,
-            projects: [
-              project("p1", "חולון"),
-              project("p2", "וילה"),
-            ],
-          },
-          error: null,
-        });
-      }
-      if (name === "list_categories") {
-        return Promise.resolve({
-          data: [
-            { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
-            { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+function mockTxnBooks(txn: Record<string, unknown> = {}) {
+  rpc.calls.length = 0;
+  rpc.impl = (name) => {
+    if (name === "get_transaction") {
+      return Promise.resolve({
+        data: {
+          ...expense,
+          amount_gross: -1_180_000,
+          amount_net: -1_000_000,
+          vat_amount: -180_000,
+          review_status: "open",
+          ...txn,
+          paid: false,
+          open_gross_agorot: null,
+        },
+        error: null,
+      });
+    }
+    if (name === "get_dashboard") {
+      return Promise.resolve({
+        data: {
+          company_id: "c",
+          name: "אלפא",
+          vat_registered: true,
+          basis: "invoiced",
+          from: "2026-09-01",
+          to: "2026-09-28",
+          income_agorot: 0,
+          direct_agorot: 0,
+          shared_agorot: 0,
+          overhead_agorot: 0,
+          expense_agorot: 0,
+          net_profit_agorot: 0,
+          prev_income_agorot: null,
+          prev_expense_agorot: null,
+          prev_net_agorot: null,
+          active_projects: 2,
+          review_count: 1,
+          projects: [
+            project("p1", "חולון"),
+            project("p2", "וילה"),
           ],
-          error: null,
-        });
-      }
-      if (name === "reassign_transaction") return Promise.resolve({ data: "undo-1", error: null });
-      return Promise.resolve({ data: null, error: null });
-    };
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ToastProvider>
-          <BooksProvider>
+        },
+        error: null,
+      });
+    }
+    if (name === "list_categories") {
+      return Promise.resolve({
+        data: [
+          { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: false },
+          { id: "c2", name: "הובלה", kind: "expense", hidden: false, is_default: false },
+        ],
+        error: null,
+      });
+    }
+    if (name === "reassign_transaction") return Promise.resolve({ data: "undo-1", error: null });
+    return Promise.resolve({ data: null, error: null });
+  };
+}
+
+function mountTxn() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <BooksProvider>
           <MemoryRouter initialEntries={["/transactions/tx"]}>
             <Routes>
               <Route path="/transactions/:transactionId" element={<TransactionScreen />} />
             </Routes>
           </MemoryRouter>
-          </BooksProvider>
-        </ToastProvider>
-      </QueryClientProvider>,
-    );
+        </BooksProvider>
+      </ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("transaction reassignment", () => {
+  it("saves through reassign_transaction and invalidates the books", async () => {
+    mockTxnBooks();
+    mountTxn();
     expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
+    // FLOW-320: each row opens its own picker, and a pick closes the sheet.
     fireEvent.click(screen.getByRole("button", { name: /חולון/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "פרויקט: חולון, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(true);
     });
-    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     await waitFor(() => {
       const saved = rpc.calls.filter((call) => call.name === "reassign_transaction");
@@ -241,6 +275,86 @@ describe("transaction reassignment", () => {
     expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
     expect(rpc.calls.filter((call) => call.name === "get_transaction").length).toBeGreaterThan(1);
     expect(await screen.findByText("השיוך נשמר")).toBeInTheDocument();
+  });
+});
+
+describe("transaction detail pickers (FLOW-320)", () => {
+  it("opens the project row on the project picker and returns focus to it on חזרה", async () => {
+    mockTxnBooks();
+    mountTxn();
+    const row = await screen.findByRole("button", { name: /חולון/ });
+    row.focus();
+    fireEvent.click(row);
+    expect(await screen.findByRole("dialog", { name: "בחירת פרויקט" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(row).toHaveFocus();
+    }, { timeout: 2000 });
+    expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
+  });
+
+  it("opens the category row on the category picker and returns focus to it on Escape", async () => {
+    mockTxnBooks();
+    mountTxn();
+    const row = await screen.findByRole("button", { name: /חומרים/ });
+    row.focus();
+    fireEvent.click(row);
+    const dialog = await screen.findByRole("dialog", { name: "בחירת קטגוריה" });
+    expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(row).toHaveFocus();
+    }, { timeout: 2000 });
+  });
+
+  it("closes a picker on Back with no stop at the summary", async () => {
+    mockTxnBooks();
+    mountTxn();
+    fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
+    expect(await screen.findByRole("dialog", { name: "בחירת קטגוריה" })).toBeInTheDocument();
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole("heading", { name: "שינוי שיוך" })).not.toBeInTheDocument();
+  });
+
+  it("re-files the category in two taps and returns focus to the row", async () => {
+    mockTxnBooks();
+    mountTxn();
+    const row = await screen.findByRole("button", { name: /חומרים/ });
+    row.focus();
+    fireEvent.click(row);
+    fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
+    await waitFor(() => {
+      expect(rpc.calls.find((call) => call.name === "reassign_transaction")?.args).toEqual({ p_id: "tx", p_project_id: "p1", p_category_id: "c2" });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /הובלה/ })).toHaveFocus();
+    }, { timeout: 2000 });
+  });
+
+  it("stops at the summary when a project pick still needs a category", async () => {
+    mockTxnBooks({ category_id: null, category_name: null });
+    mountTxn();
+    fireEvent.click(await screen.findByRole("button", { name: /חולון/ }));
+    fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
+    expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
+    expect(screen.getByText("בחרו קטגוריה.")).toBeInTheDocument();
+    expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
 });
 
@@ -478,7 +592,9 @@ describe("settings account", () => {
     for (const name of ["סיכום שבועי", "תזכורת לפריטים ממתינים", "אישור אוטומטי בביטחון גבוה"]) {
       expect(screen.queryByRole("switch", { name })).not.toBeInTheDocument();
     }
-    expect(screen.getByRole("heading", { name: "חיבורים" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "חיבורים" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חיבורים" })).toHaveAttribute("href", "/settings/connections");
+    expect(screen.getByRole("link", { name: "הלוואות" })).toHaveAttribute("href", "/settings/loans");
     expect(screen.getByRole("heading", { name: "תצוגה" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "עוד" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "עוזר" })).not.toBeInTheDocument();
@@ -498,7 +614,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
           <MemoryRouter>
-            <SettingsScreen
+            <SettingsAndConnections
               sample={{
                 name: null,
                 connected: false,
@@ -547,7 +663,7 @@ describe("settings account", () => {
     expect(within(sumitSheet).queryByLabelText("מפתח API")).not.toBeInTheDocument();
     expect(within(sumitSheet).queryByRole("button", { name: "חיבור" })).not.toBeInTheDocument();
     expect(sumitSheet).toHaveTextContent("כדי לחבר את SUMIT צריך עסק.");
-    expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%3Fsheet%3Dsumit");
+    expect(within(sumitSheet).getByRole("link", { name: "פרטי העסק" })).toHaveAttribute("href", "/onboarding?return=%2Fsettings%2Fconnections%3Fsheet%3Dsumit");
     expect(calls.some((name) => name.includes("sumit-connect"))).toBe(false);
     unmount();
 
@@ -556,7 +672,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
           <MemoryRouter initialEntries={["/settings?preview=empty"]}>
-            <SettingsScreen
+            <SettingsAndConnections
               sample={{
                 name: null,
                 connected: false,
@@ -623,7 +739,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings"]}>
               <AuthProvider>
-                <SettingsScreen />
+                <SettingsAndConnections />
               </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
@@ -661,7 +777,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -703,7 +819,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter>
               <Layer />
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -736,7 +852,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings?preview=1"]}>
               <AuthProvider>
-                <SettingsScreen />
+                <SettingsAndConnections />
               </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
@@ -806,7 +922,7 @@ describe("settings account", () => {
           <BooksProvider>
             <MemoryRouter initialEntries={["/settings"]}>
               <AuthProvider>
-                <SettingsScreen />
+                <SettingsAndConnections />
               </AuthProvider>
             </MemoryRouter>
           </BooksProvider>
@@ -974,7 +1090,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: false,
@@ -1004,7 +1120,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: false,
@@ -1032,7 +1148,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -1079,7 +1195,7 @@ describe("settings account", () => {
           <ToastProvider>
             <BooksProvider>
               <MemoryRouter>
-                <SettingsScreen
+                <ConnectionsScreen
                   sample={{
                     name: "אלפא",
                     connected: true,
@@ -1109,7 +1225,7 @@ describe("settings account", () => {
         <ToastProvider>
           <BooksProvider>
             <MemoryRouter>
-              <SettingsScreen
+              <ConnectionsScreen
                 sample={{
                   name: "אלפא",
                   connected: true,
@@ -1301,18 +1417,14 @@ describe("shared transaction category", () => {
     );
     expect(await screen.findByRole("heading", { name: "הוצאה" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
-    expect(await screen.findByRole("button", { name: "קטגוריה: הובלה, שינוי" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(rpc.calls.find((call) => call.name === "set_transaction_category")?.args).toEqual({
+        p_id: "tx",
+        p_category_id: "c2",
+      });
+    });
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
-    expect(rpc.calls.find((call) => call.name === "set_transaction_category")?.args).toEqual({
-      p_id: "tx",
-      p_category_id: "c2",
-    });
-    await act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "סגירה" }));
-      return Promise.resolve();
-    });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
@@ -1359,7 +1471,6 @@ describe("shared transaction category", () => {
     fireEvent.click(screen.getByRole("button", { name: /בלי קטגוריה/ }));
     expect(screen.queryByRole("button", { name: "שמירה" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "שמירה ואישור" })).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: לא נבחר, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     await waitFor(() => {
       expect(rpc.calls.some((call) => call.name === "set_transaction_category" && (call.args as { p_category_id?: string }).p_category_id === "c2")).toBe(true);
@@ -1450,7 +1561,6 @@ describe("shared transaction category", () => {
       </QueryClientProvider>,
     );
     fireEvent.click(await screen.findByRole("button", { name: /חומרים/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "קטגוריה: חומרים, שינוי" }));
     fireEvent.click(await screen.findByRole("radio", { name: "הובלה" }));
     const saving = await screen.findByRole("radio", { name: "הובלה" });
     expect(saving).toHaveAttribute("aria-busy", "true");
@@ -1477,7 +1587,7 @@ describe("shared transaction category", () => {
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
 
-  it("unsplits from the change-sheet project picker and can undo", async () => {
+  it("opens a split's category row on the category picker, with no unsplit step", async () => {
     rpc.calls.length = 0;
     rpc.impl = (name) => {
       if (name === "get_transaction") {
@@ -1532,8 +1642,6 @@ describe("shared transaction category", () => {
           error: null,
         });
       }
-      if (name === "collapse_split") return Promise.resolve({ data: "undo-collapse", error: null });
-      if (name === "undo_reassign") return Promise.resolve({ data: null, error: null });
       return Promise.resolve({ data: null, error: null });
     };
     render(
@@ -1550,22 +1658,16 @@ describe("shared transaction category", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByText("מפוצל · 2 פרויקטים")).toBeInTheDocument();
+    // FLOW-320: the split's own row opens the split. Unsplitting is לפרויקט אחד there.
     fireEvent.click(screen.getByRole("button", { name: /חומרים/ }));
-    fireEvent.click(await screen.findByRole("button", { name: /פרויקט: מפוצל · 2 פרויקטים/ }));
-    expect(await screen.findByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: "וילה" }));
+    expect(await screen.findByRole("heading", { name: "בחירת קטגוריה" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /פרויקט: מפוצל · 2 פרויקטים/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("החלוקה תרד, והסכום כולו יעבור לפרויקט הזה.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "חזרה" }));
     await waitFor(() => {
-      expect(rpc.calls.find((call) => call.name === "collapse_split")?.args).toEqual({
-        p_id: "tx",
-        p_project_id: "p2",
-      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
-    expect(rpc.calls.some((call) => call.name === "save_split" || call.name === "reassign_transaction")).toBe(false);
-    expect(await screen.findByRole("button", { name: "פרויקט: וילה, שינוי" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
-    await waitFor(() => {
-      expect(rpc.calls.some((call) => call.name === "undo_reassign" && (call.args as { p_id?: string }).p_id === "undo-collapse")).toBe(true);
-    });
+    expect(rpc.calls.some((call) => call.name === "set_transaction_category" || call.name === "collapse_split")).toBe(false);
   });
 
   it("collapses a split from לפרויקט אחד and does not call save_split", async () => {

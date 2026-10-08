@@ -142,6 +142,11 @@ function scrollToSaved(y: number): void {
   scrollToWarned = true;
 }
 
+/** Prev and next on the card start each card at the top. */
+export function scrollPageToTop(): void {
+  scrollToSaved(0);
+}
+
 /** Restores the scroll of a history entry. The period and the tab live elsewhere. */
 export function ScrollMemory() {
   const location = useLocation();

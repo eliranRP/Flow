@@ -136,6 +136,38 @@ async function layoutProblems(page: Page): Promise<string[]> {
   });
 }
 
+test("the Home attention card rows stay inside 320 and 390, light and dark (FLOW-321)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const cases = [
+    ["screens-routes--home-attention-both", ["7 פריטים ממתינים לאישור", "3 חשבוניות לא שולמו"], 2],
+    ["screens-routes--home-attention-singular", ["פריט אחד ממתין לאישור", "חשבונית אחת לא שולמה"], 2],
+    ["screens-routes--home-attention-review-only", ["7 פריטים ממתינים לאישור"], 0],
+    ["screens-routes--home-attention-unpaid-only", ["3 חשבוניות לא שולמו"], 0],
+    ["components-banner--rows-long-hebrew", [], 2],
+  ] as const;
+  const failures: string[] = [];
+  for (const theme of ["light", "dark"]) {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const [id, names, rowCount] of cases) {
+        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
+        await page.locator("#storybook-root").waitFor({ state: "attached" });
+        for (const name of names) await expect(page.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
+        const rows = page.locator(".ui-banner-rows a");
+        await expect(rows).toHaveCount(rowCount);
+        const problems = await layoutProblems(page);
+        const clipped = await page.locator(".ui-banner-row .ui-row-title").evaluateAll((nodes) =>
+          nodes.filter((node) => node.scrollHeight > node.clientHeight + 1).map((node) => node.textContent));
+        // The long-Hebrew story clamps on purpose; real Home titles must fit.
+        if (id.startsWith("screens-routes")) problems.push(...clipped.map((title) => `row title clipped: ${title}`));
+        if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
+      }
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("the closed period picker is only the band and the on-band pill", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/iframe.html?id=components-periodpicker--closed&viewMode=story", { waitUntil: "domcontentloaded" });
@@ -173,15 +205,42 @@ test("long hebrew and large amount stories stay inside 390 and 320", async ({ pa
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
+test("the project search stories stay inside 320 and 390, light and dark", async ({ page }) => {
+  test.setTimeout(120_000);
+  const failures: string[] = [];
+  for (const theme of ["light", "dark"]) {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const id of ["screens-routes--projects-search", "screens-routes--projects-many-active"]) {
+        const globals = theme === "dark" ? "&globals=theme:dark" : "";
+        await page.goto(`/iframe.html?id=${id}&viewMode=story${globals}`, { waitUntil: "domcontentloaded" });
+        await page.locator("#storybook-root").waitFor({ state: "attached" });
+        if (id.endsWith("search")) {
+          // The play types תמר: the active and the finished match both show, and the finished one says so.
+          await expect(page.getByRole("link", { name: /^בית תמר/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^מחסן תמר/ })).toContainText("הסתיים");
+          await expect(page.getByRole("link", { name: /^בית ארז/ })).toHaveCount(0);
+        } else {
+          await expect(page.getByRole("link", { name: /^בית כלנית/ })).toBeVisible();
+          await expect(page.getByRole("link", { name: /^מחסן תמר/ })).toHaveCount(0);
+        }
+        const problems = await layoutProblems(page);
+        if (problems.length > 0) failures.push(`${theme} ${String(width)} ${id}: ${problems.join(" | ")}`);
+      }
+    }
+  }
+  expect(failures, failures.join("\n")).toEqual([]);
+});
+
 test("the assistant settings stories stay inside 320, 360, and 390", async ({ page }) => {
   test.setTimeout(180_000);
   const stories = [
-    "screens-routes--settings-assistant-empty",
-    "screens-routes--settings-assistant-loading",
-    "screens-routes--settings-assistant-error",
-    "screens-routes--settings-assistant-expired",
-    "screens-routes--settings-assistant-no-company",
-    "screens-routes--settings-assistant-connected",
+    "screens-routes--connections-assistant-empty",
+    "screens-routes--connections-assistant-loading",
+    "screens-routes--connections-assistant-error",
+    "screens-routes--connections-assistant-expired",
+    "screens-routes--connections-assistant-no-company",
+    "screens-routes--connections-assistant-connected",
     "screens-routes--settings-assistant-scope",
     "screens-routes--settings-assistant-secret",
     "screens-routes--settings-assistant-help",
@@ -424,7 +483,7 @@ test("a row tint is wider than its content by the spacing token on both sides", 
     { id: "components-radiorow--idle", selector: ".ui-radio-row", hover: true },
     { id: "components-radiorow--selected", selector: ".ui-radio-row", hover: false },
     { id: "components-reviewcard--suggestion", selector: ".ui-review-ai .ui-row", hover: true },
-    { id: "screens-routes--settings-connected", selector: "a.ui-row", name: "קטגוריות", hover: true },
+    { id: "screens-routes--settings-business-row", selector: "a.ui-row", name: "קטגוריות", hover: true },
   ];
   const failures: string[] = [];
   for (const item of cases) {
@@ -789,7 +848,7 @@ test("hebrew counts keep their reading order around the numbers", async ({ page 
     }
     return parts.sort((left, right) => right.x - left.x).map((part) => part.text);
   });
-  expect(order.slice(0, 3)).toEqual(["עוד", "4", "פעילים"]);
+  expect(order.slice(0, 3)).toEqual(["עוד", "2", "שהסתיימו"]);
   const used = await page.locator(".ui-row-hint").evaluate((node) => {
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
     let word: DOMRect | null = null;

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Button } from "./button";
 import { EmptyState } from "./empty-state";
-import { ChartIcon } from "./icons";
+import { ChartIcon, LoanIcon, PlusIcon } from "./icons";
 import { longHebrew, padded } from "./story-support";
 
 const meta = {
@@ -30,6 +30,27 @@ export const WithoutAction: Story = {
     icon: <ChartIcon />,
     title: "אין פריטים לאישור",
     body: "כשחסר פרויקט או קטגוריה, הפריט מופיע כאן.",
+  },
+};
+/** FLOW-501: the Loans page with no loans. The owner gets one primary action. */
+export const Loans: Story = {
+  args: {
+    icon: <LoanIcon />,
+    title: "אין הלוואות עדיין",
+    body: "הוסיפו הלוואה כדי לפצל כל תשלום לריבית, מסים וביטוח וקרן.",
+    action: (
+      <Button variant="pill" icon={<PlusIcon />}>
+        הלוואה חדשה
+      </Button>
+    ),
+  },
+};
+/** A viewer reads the page and cannot add. */
+export const LoansViewer: Story = {
+  args: {
+    icon: <LoanIcon />,
+    title: "אין הלוואות עדיין",
+    body: "כשיתווספו הלוואות הן יופיעו כאן.",
   },
 };
 export const LongHebrew: Story = {

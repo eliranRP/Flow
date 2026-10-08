@@ -1,9 +1,11 @@
-import type { Ref } from "react";
+import { useLayoutEffect, useState, type Ref } from "react";
 import { formatAmountText } from "@flow/shared";
-import { DocumentIcon } from "./icons";
+import { methodLabel, type TxnMeta } from "../txn-meta";
+import { MethodIcon } from "./bank-details";
+import { ChevronDownIcon, DocumentIcon, NoteIcon } from "./icons";
 import { ListRow } from "./list-row";
 import { Skeleton } from "./skeleton";
-import { SuggestTag } from "./suggest-tag";
+import { ReversalTag, SuggestTag } from "./suggest-tag";
 
 export type ReviewSuggestion = {
   project?: string;
@@ -13,6 +15,8 @@ export type ReviewSuggestion = {
   projectSuggested?: boolean;
   /** This category line is a guess. A rule or an owner pick is not. */
   categorySuggested?: boolean;
+  /** The category is of the other kind: a bounced payment or a refund. Shows החזר. */
+  categoryReversal?: boolean;
 };
 
 type ReviewCardProps = {
@@ -33,6 +37,8 @@ type ReviewCardProps = {
   categoryButtonRef?: Ref<HTMLButtonElement>;
   /** Suggested fields hold their row height until the queue's Jev read settles. */
   pending?: boolean;
+  /** FLOW-304. Bank details: a method line under the source line, and the memo. */
+  meta?: TxnMeta | null;
 };
 
 /** The document, the amount, and the suggestion. Actions sit outside this card. */
@@ -50,7 +56,10 @@ export function ReviewCard({
   projectButtonRef,
   categoryButtonRef,
   pending = false,
+  meta,
 }: ReviewCardProps) {
+  const method = methodLabel(meta);
+  const memo = meta?.memo ?? null;
   const shown = netAgorot < 0n ? -netAgorot : netAgorot;
   const amountText = formatAmountText(shown, currency, {
     detail: true,
@@ -64,6 +73,7 @@ export function ReviewCard({
     label: string;
     value: string;
     suggested: boolean;
+    reversal?: boolean;
     onOpen?: () => void;
   }> = [];
   if (projectValue || onProject) {
@@ -81,6 +91,7 @@ export function ReviewCard({
       label: "קטגוריה",
       value: categoryValue ?? "לא נבחר",
       suggested: suggestion?.categorySuggested === true && categoryValue != null,
+      reversal: suggestion?.categoryReversal === true && categoryValue != null,
       onOpen: onCategory,
     });
   }
@@ -96,12 +107,26 @@ export function ReviewCard({
             {supplier}
           </h2>
           <p className="t-hint">{sourceLine}</p>
+          {method ? (
+            <p className="t-hint ui-review-meta">
+              <MethodIcon kind={method.icon} />
+              {method.icon === "card" && method.short !== method.spoken ? (
+                <>
+                  <span className="ui-num" dir="ltr" aria-hidden="true">{method.short}</span>
+                  <span className="sr-only">{method.spoken}</span>
+                </>
+              ) : (
+                <bdi dir="auto">{method.short}</bdi>
+              )}
+            </p>
+          ) : null}
         </div>
       </div>
       <p className="t-display">
         <bdi dir="ltr">{amountText}</bdi>
       </p>
       {vatLine ? <p className="t-hint">{vatLine}</p> : null}
+      {memo ? <ReviewMemo memo={memo} /> : null}
       <div className="ui-review-ai">
         {lines.map((line) => pending && (line.value === "לא נבחר" || line.suggested) ? (
           <div className="ui-row ui-hit" aria-hidden="true" key={line.key}>
@@ -119,8 +144,8 @@ export function ReviewCard({
             eyebrow={line.label}
             title={line.value}
             muted={line.value === "לא נבחר"}
-            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : ""}`}
-            tag={line.suggested ? <SuggestTag /> : undefined}
+            label={`${line.label}: ${line.value}${line.suggested ? ", הצעה" : line.reversal ? ", החזר" : ""}`}
+            tag={line.suggested ? <SuggestTag /> : line.reversal ? <ReversalTag /> : undefined}
             chevron
             buttonRef={line.key === "project" ? projectButtonRef : categoryButtonRef}
             onClick={line.onOpen}
@@ -131,7 +156,7 @@ export function ReviewCard({
             variant="static"
             eyebrow={line.label}
             title={line.value}
-            tag={line.suggested ? <SuggestTag /> : undefined}
+            tag={line.suggested ? <SuggestTag /> : line.reversal ? <ReversalTag /> : undefined}
           />
         ))}
         {note == null ? null : pending ? (
@@ -141,5 +166,56 @@ export function ReviewCard({
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * One memo line with an ellipsis. It is a button only when the text is clipped;
+ * a tap shows the whole memo in place. The card remounts per line, so it resets.
+ */
+function ReviewMemo({ memo }: { memo: string }) {
+  const [box, setBox] = useState<HTMLSpanElement | null>(null);
+  const [clipped, setClipped] = useState(false);
+  const [open, setOpen] = useState(false);
+  useLayoutEffect(() => {
+    if (box == null || open) return;
+    const measure = () => {
+      setClipped(box.scrollWidth > box.clientWidth + 1);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => {
+      observer.disconnect();
+    };
+  }, [box, open, memo]);
+  const body = (
+    <>
+      <span className="ui-review-memo-icon" aria-hidden="true">
+        <NoteIcon size={16} />
+      </span>
+      <span className="sr-only">הערה:</span>{" "}
+      <span ref={setBox} className="ui-review-memo-text" dir="auto" data-clip-ok="">
+        {memo}
+      </span>
+    </>
+  );
+  if (!clipped) return <p className="t-hint ui-review-memo">{body}</p>;
+  return (
+    <button
+      type="button"
+      className="t-hint ui-review-memo ui-review-memo-button ui-hit"
+      aria-expanded={open}
+      data-open={open ? "" : undefined}
+      onClick={() => {
+        setOpen((value) => !value);
+      }}
+    >
+      {body}
+      <span className="ui-review-memo-chevron" aria-hidden="true">
+        <ChevronDownIcon size={16} />
+      </span>
+    </button>
   );
 }

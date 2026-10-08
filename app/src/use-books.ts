@@ -33,7 +33,8 @@ import { createContext, createElement, useCallback, useContext, useMemo, useStat
 import { getSupabase } from "./lib/supabase";
 import { waitForAccessToken } from "./wait-for-session";
 import { thisMonth, type PeriodChoice } from "./period";
-import { useHomePreview } from "./preview";
+import { useHomePreview, type HomePreview } from "./preview";
+import { parseTxnMetaList, type TxnMeta } from "./txn-meta";
 import {
   JEV_CONNECTOR_STALE_MS,
   beginJevScopeLookup,
@@ -442,11 +443,10 @@ export function useProjectWaitingQuery(projectId: string) {
   });
 }
 
-export function useTransactionQuery(transactionId: string) {
-  const preview = useHomePreview();
-  return useQuery({
+/** The card's read. Prev and next prefetch the neighbours with the same key. */
+export function transactionQueryOptions(preview: HomePreview, transactionId: string) {
+  return {
     queryKey: ["txn", preview, transactionId],
-    enabled: preview === "off" && transactionId !== "",
     queryFn: async (): Promise<TransactionDetail> => {
       const supabase = getSupabase();
       if (!supabase) throw new Error("supabase");
@@ -455,12 +455,93 @@ export function useTransactionQuery(transactionId: string) {
       if (error) throw error;
       return transactionDetailSchema.parse(data);
     },
+  };
+}
+
+export function useTransactionQuery(transactionId: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    ...transactionQueryOptions(preview, transactionId),
+    enabled: preview === "off" && transactionId !== "",
   });
+}
+
+export function lineMetaQueryKey(preview: string, transactionId: string) {
+  return ["line-meta", preview, transactionId] as const;
+}
+
+/**
+ * FLOW-304. Bank details for one line. Supplementary: a failed read leaves `data`
+ * undefined and the card and detail render as before. No read in preview or sample.
+ */
+export function useLineMetaQuery(transactionId: string | null | undefined, enabled = true) {
+  const preview = useHomePreview();
+  const id = transactionId ?? "";
+  return useQuery({
+    queryKey: lineMetaQueryKey(preview, id),
+    enabled: enabled && preview === "off" && id !== "",
+    staleTime: 5 * 60_000,
+    retry: 1,
+    queryFn: async (): Promise<TxnMeta | null> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("get_line_meta", { p_ids: [id] });
+      if (error) throw error;
+      return parseTxnMetaList(data).find((row) => row.transaction_id === id) ?? null;
+    },
+  });
+}
+
+/**
+ * FLOW-305. Bank details for a page of review rows, in one `get_line_meta` read. Ids already in
+ * the per-line cache are not read again, and each result fills that cache so the card reuses it.
+ * Supplementary: a failed read leaves `data` undefined and the rows keep their fallback.
+ */
+export function useLineMetaPageQuery(transactionIds: readonly string[], enabled = true) {
+  const preview = useHomePreview();
+  const client = useQueryClient();
+  const ids = useMemo(() => [...new Set(transactionIds.filter((id) => id !== ""))].sort(), [transactionIds]);
+  return useQuery({
+    queryKey: lineMetaPageQueryKey(preview, ids),
+    enabled: enabled && preview === "off" && ids.length > 0,
+    staleTime: 5 * 60_000,
+    retry: 1,
+    queryFn: () => readLineMetaPage(client, preview, ids),
+  });
+}
+
+export function lineMetaPageQueryKey(preview: string, ids: readonly string[]) {
+  return ["line-meta", preview, "page", ids.join(",")] as const;
+}
+
+export async function readLineMetaPage(client: QueryClient, preview: string, ids: readonly string[]): Promise<Map<string, TxnMeta>> {
+  const out = new Map<string, TxnMeta>();
+  const missing: string[] = [];
+  for (const id of ids) {
+    const state = client.getQueryState<TxnMeta | null>(lineMetaQueryKey(preview, id));
+    if (state?.data !== undefined && !state.isInvalidated) {
+      if (state.data) out.set(id, state.data);
+    } else {
+      missing.push(id);
+    }
+  }
+  if (missing.length === 0) return out;
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("supabase");
+  await waitForAccessToken(supabase);
+  const { data, error } = await supabase.rpc("get_line_meta", { p_ids: missing });
+  if (error) throw error;
+  const asked = new Set(missing);
+  const rows = parseTxnMetaList(data).filter((row) => asked.has(row.transaction_id));
+  for (const row of rows) out.set(row.transaction_id, row);
+  for (const id of missing) client.setQueryData(lineMetaQueryKey(preview, id), out.get(id) ?? null);
+  return out;
 }
 
 export function useInvalidateBooks() {
   const client = useQueryClient();
-  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines"]) => {
+  return async (keys: readonly string[] = ["dashboard", "review", "unpaid", "categories", "sumit", "project", "project-category", "project-waiting", "filed-today", "txn", "home", "breakdown", "breakdown-lines", "line-meta"]) => {
     await Promise.all(keys.map((key) => client.invalidateQueries({ queryKey: [key] })));
   };
 }

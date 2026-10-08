@@ -21,6 +21,15 @@ const PROJECT_B = "8c1a0b2e-1111-4000-8000-000000000002";
 
 type Rpc = { name: string; body: Record<string, unknown> };
 
+const NO_META = {
+  method: null,
+  card_last4: null,
+  memo: null,
+  account: null,
+  counterparty: null,
+  bank_description: null,
+};
+
 function rpcOf(handler: (name: string, body: Record<string, unknown>) => { status: number; json: unknown }) {
   const calls: Rpc[] = [];
   const rpc = (name: string, body: Record<string, unknown>) => {
@@ -31,18 +40,20 @@ function rpcOf(handler: (name: string, body: Record<string, unknown>) => { statu
 }
 
 Deno.test("search_expenses filed and all call search_transactions", async () => {
-  const { calls, rpc } = rpcOf(() => ({
-    status: 200,
-    json: { total: 1, expenses: [{ id: "11111111-1111-4000-8000-000000000001" }] },
-  }));
+  const { calls, rpc } = rpcOf((name) => name === "get_line_meta"
+    ? { status: 200, json: [] }
+    : {
+      status: 200,
+      json: { total: 1, expenses: [{ id: "11111111-1111-4000-8000-000000000001" }] },
+    });
   const filed = await callTool("search_expenses", { scope: "filed", query: "אלפא" }, ["read"], rpc);
   assertEquals(filed.isError, false);
   assertEquals(calls[0]?.name, "search_transactions");
   assertEquals(calls[0]?.body.p_scope, "filed");
   const all = await callTool("search_expenses", { scope: "all" }, ["read"], rpc);
   assertEquals(all.isError, false);
-  assertEquals(calls[1]?.name, "search_transactions");
-  assertEquals(calls[1]?.body.p_scope, "all");
+  assertEquals(calls[2]?.name, "search_transactions");
+  assertEquals(calls[2]?.body.p_scope, "all");
 });
 
 Deno.test("the eight read tools call their own functions", async () => {
@@ -72,6 +83,7 @@ Deno.test("the eight read tools call their own functions", async () => {
     if (name === "get_transaction") return { status: 200, json: { id: "11111111-1111-4000-8000-000000000001", description: "אלפא" } };
     if (name === "get_line_split") return { status: 200, json: null };
     if (name === "get_loan_split") return { status: 200, json: null };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     if (name === "mcp_list_loans") {
       return { status: 200, json: [{
         id: LOAN,
@@ -84,6 +96,8 @@ Deno.test("the eight read tools call their own functions", async () => {
         payment_minor: 100000,
         escrow_minor: 10000,
         balance_minor: 12000000,
+        flagged_parts: 3,
+        flagged_transaction_ids: ["11111111-1111-4000-8000-000000000001"],
       }] };
     }
     return { status: 500, json: null };
@@ -107,15 +121,23 @@ Deno.test("the eight read tools call their own functions", async () => {
     assertEquals(data.by_currency[0]?.currency, "USD");
   }
   assertEquals(loans.isError, false);
+  if (loans.structuredContent.ok) {
+    const data = loans.structuredContent.data as { loans: { flagged_parts: number; flagged_transaction_ids: string[] }[] };
+    assertEquals(data.loans[0]?.flagged_parts, 3);
+    assertEquals(data.loans[0]?.flagged_transaction_ids, ["11111111-1111-4000-8000-000000000001"]);
+  }
   assertEquals(schedule.isError, false);
   assertEquals(calls.map((call) => call.name), [
     "get_dashboard",
     "list_categories",
     "list_review",
+    "get_line_meta",
     "get_transaction",
+    "get_line_meta",
     "get_line_split",
     "get_loan_split",
     "list_review",
+    "get_line_meta",
     "get_dashboard",
     "mcp_list_loans",
     "mcp_list_loans",
@@ -173,6 +195,7 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "get_line_split") return { status: 200, json: null };
     if (name === "get_loan_split") return { status: 200, json: null };
     if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
   const dates = { from: "2026-09-01", to: "2026-09-30", basis: "invoiced" };
@@ -260,6 +283,7 @@ Deno.test("get_expense returns the loan split parts, and skips the read for inco
     if (name === "get_transaction") return { status: 200, json: { id, direction: "expense", amount_net: -100000 } };
     if (name === "get_loan_split") return { status: 200, json: split };
     if (name === "get_line_split") return { status: 200, json: null };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
   const expense = await callTool("get_expense", { transaction_id: id }, ["read"], rpc);
@@ -274,18 +298,21 @@ Deno.test("get_expense returns the loan split parts, and skips the read for inco
   assertEquals(calls.find((call) => call.name === "get_loan_split")?.body, { p_transaction_id: id });
 
   const plain = await callTool("get_expense", { transaction_id: id }, ["read"], rpcOf((name) => (
-    name === "get_transaction" ? { status: 200, json: { id, direction: "expense" } } : { status: 200, json: null }
+    name === "get_transaction"
+      ? { status: 200, json: { id, direction: "expense" } }
+      : name === "get_line_meta" ? { status: 200, json: [] } : { status: 200, json: null }
   )).rpc);
   if (plain.structuredContent.ok) assertEquals((plain.structuredContent.data as { loan_split: unknown }).loan_split, null);
 
   const income = rpcOf((name) => (
     name === "get_transaction"
       ? { status: 200, json: { id, direction: "income" } }
-      : name === "get_line_split" ? { status: 200, json: null } : { status: 500, json: null }
+      : name === "get_line_split" ? { status: 200, json: null }
+      : name === "get_line_meta" ? { status: 200, json: [] } : { status: 500, json: null }
   ));
   const incomeRow = await callTool("get_expense", { transaction_id: id }, ["read"], income.rpc);
   assertEquals(incomeRow.isError, false);
-  assertEquals(income.calls.map((call) => call.name), ["get_transaction", "get_line_split"]);
+  assertEquals(income.calls.map((call) => call.name), ["get_transaction", "get_line_meta", "get_line_split"]);
 
   const failed = await callTool("get_expense", { transaction_id: id }, ["read"], rpcOf((name) => (
     name === "get_transaction"
@@ -313,6 +340,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -322,6 +351,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -350,6 +381,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -359,6 +392,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
   ]);
@@ -439,6 +474,105 @@ Deno.test("split_line forwards parts in order with null projects", async () => {
   assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_split", p_id: TXN } });
 });
 
+Deno.test("set_line_pnl and set_lines_pnl forward in_pnl, null included", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, in_pnl: false, undo_kind: "line_pnl", id: TXN } },
+  }));
+  const out = await callTool("set_line_pnl", { idempotency_key: "p-1", transaction_id: TXN, in_pnl: false }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_line_pnl",
+    body: { p_idempotency_key: "p-1", p_transaction_id: TXN, p_in_pnl: false },
+  });
+  const cleared = await callTool("set_line_pnl", { idempotency_key: "p-2", transaction_id: TXN, in_pnl: null }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1]?.body.p_in_pnl, null);
+  const batch = await callTool("set_lines_pnl", {
+    idempotency_key: "b-1",
+    items: [{ transaction_id: TXN, in_pnl: true }, { transaction_id: PROJECT, in_pnl: null }],
+  }, ["write"], rpc);
+  assertEquals(batch.isError, false);
+  assertEquals(calls[2], {
+    name: "mcp_set_lines_pnl",
+    body: { p_idempotency_key: "b-1", p_items: [{ transaction_id: TXN, in_pnl: true }, { transaction_id: PROJECT, in_pnl: null }] },
+  });
+  const undo = await callTool("undo", { idempotency_key: "u-1", kind: "line_pnl", id: TXN }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[3], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "line_pnl", p_id: TXN } });
+});
+
+Deno.test("set_line_pnl and set_lines_pnl validate input and refuse read tokens", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const denied = await callTool("set_line_pnl", { idempotency_key: "k", transaction_id: TXN, in_pnl: false }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const badOne: unknown[] = [
+    { idempotency_key: "k", transaction_id: TXN },
+    { idempotency_key: "k", transaction_id: TXN, in_pnl: "no" },
+    { idempotency_key: "k", transaction_id: "not-a-uuid", in_pnl: false },
+    { idempotency_key: "", transaction_id: TXN, in_pnl: false },
+    { idempotency_key: "k", transaction_id: TXN, in_pnl: false, company_id: TXN },
+  ];
+  for (const input of badOne) {
+    const result = await callTool("set_line_pnl", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const badMany: unknown[] = [
+    { idempotency_key: "k", items: [] },
+    { idempotency_key: "k", items: [{ transaction_id: TXN, in_pnl: false }, { transaction_id: TXN, in_pnl: true }] },
+    { idempotency_key: "k", items: [{ transaction_id: TXN }] },
+    { idempotency_key: "k", items: [{ transaction_id: TXN, in_pnl: false, project_id: PROJECT }] },
+    { idempotency_key: "k".repeat(125), items: [{ transaction_id: TXN, in_pnl: false }] },
+    { idempotency_key: "k", items: Array.from({ length: 201 }, () => ({ transaction_id: TXN, in_pnl: false })) },
+  ];
+  for (const input of badMany) {
+    const result = await callTool("set_lines_pnl", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("split_line forwards percent and rest parts", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, parts: [], undo_kind: "line_split", id: TXN } },
+  }));
+  const split = await callTool("split_line", {
+    idempotency_key: "line-pct",
+    transaction_id: TXN,
+    parts: [
+      { category_id: CATEGORY, project_id: PROJECT, percent: 33.3333 },
+      { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 500 },
+      { rest: true },
+    ],
+  }, ["write"], rpc);
+  assertEquals(split.isError, false);
+  assertEquals(calls[0]?.body.p_parts, [
+    { category_id: CATEGORY, project_id: PROJECT, percent: 33.3333 },
+    { category_id: CATEGORY, project_id: PROJECT_B, amount_minor: 500 },
+    { project_id: null, rest: true },
+  ]);
+  const bad: unknown[] = [
+    [{ category_id: CATEGORY, percent: 0 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 100.5 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 1.00001 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 10, amount_minor: 5 }, { rest: true }],
+    [{ category_id: CATEGORY }, { rest: true }],
+    [{ percent: 10 }, { rest: true }],
+    [{ category_id: CATEGORY, percent: 10 }, { rest: false }],
+    [{ category_id: CATEGORY, percent: 10 }, { rest: true }, { category_id: INCOME_CATEGORY, rest: true }],
+  ];
+  for (const parts of bad) {
+    const result = await callTool("split_line", { idempotency_key: "k", transaction_id: TXN, parts }, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 1);
+});
+
 Deno.test("split_line validates parts and refuses read tokens", async () => {
   const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
   const two = [
@@ -477,6 +611,7 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
       return { status: 200, json: { transaction_id: TXN, currency: "USD", line_minor: 300, parts, parts_match: false } };
     }
     if (name === "get_loan_split") return { status: 200, json: null };
+    if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
   const split = await callTool("get_expense", { transaction_id: TXN }, ["read"], rpc);
@@ -485,17 +620,19 @@ Deno.test("get_expense adds line_split parts only when the line is split", async
     assertEquals(split.structuredContent.data, {
       id: TXN,
       amount_net: -300,
+      meta: NO_META,
       line_split: { currency: "USD", line_minor: 300, parts, parts_match: false },
       loan_split: null,
     });
   }
-  assertEquals(calls[1], { name: "get_line_split", body: { p_transaction_id: TXN } });
+  assertEquals(calls[2], { name: "get_line_split", body: { p_transaction_id: TXN } });
   const whole = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction"
       ? { status: 200, json: { id: TXN } }
-      : name === "get_loan_split" ? { status: 200, json: null } : { status: 200, json: { transaction_id: TXN, parts: [] } }));
+      : name === "get_loan_split" ? { status: 200, json: null }
+      : name === "get_line_meta" ? { status: 200, json: [] } : { status: 200, json: { transaction_id: TXN, parts: [] } }));
   assertEquals(whole.isError, false);
-  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN, loan_split: null });
+  if (whole.structuredContent.ok) assertEquals(whole.structuredContent.data, { id: TXN, meta: NO_META, loan_split: null });
   const failed = await callTool("get_expense", { transaction_id: TXN }, ["read"], (name) =>
     Promise.resolve(name === "get_transaction" ? { status: 200, json: { id: TXN } } : { status: 500, json: null }));
   assertEquals(failed.isError, true);
@@ -856,6 +993,82 @@ Deno.test("create_project and create_category send exact p_* bodies", async () =
     name: "mcp_create_category",
     body: { p_idempotency_key: "cat-new-1", p_name: "Tools", p_kind: "expense" },
   });
+});
+
+Deno.test("create_projects and create_categories send one batch write each", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: "cccccccc-cccc-4000-8000-0000000000c1",
+        ok_count: 1,
+        error_count: 1,
+        results: [
+          { name: "Site Alpha", ok: true, id: PROJECT_NEW, undo_kind: "project" },
+          { name: "Site Beta", ok: false, code: "refused", existing_id: PROJECT_NEW },
+        ],
+      },
+    },
+  }));
+  const projects = await callTool("create_projects", {
+    idempotency_key: "setup-p",
+    items: [{ name: "  Site Alpha " }, { name: "Site Beta", status: "finished" }],
+  }, ["write"], rpc);
+  assertEquals(projects.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_create_projects",
+    body: {
+      p_idempotency_key: "setup-p",
+      p_items: [{ name: "Site Alpha" }, { name: "Site Beta", status: "finished" }],
+    },
+  });
+  if (projects.structuredContent.ok) {
+    assertEquals((projects.structuredContent.data as { error_count: number }).error_count, 1);
+  }
+  const categories = await callTool("create_categories", {
+    idempotency_key: "setup-c",
+    items: [{ name: "Tools", kind: "expense" }, { name: "Tools", kind: "income" }],
+  }, ["write"], rpc);
+  assertEquals(categories.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_create_categories",
+    body: {
+      p_idempotency_key: "setup-c",
+      p_items: [{ name: "Tools", kind: "expense" }, { name: "Tools", kind: "income" }],
+    },
+  });
+});
+
+Deno.test("setup batches refuse bad rows before any write", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const many = Array.from({ length: 101 }, (_, index) => ({ name: `Site ${index}` }));
+  const cases = [
+    callTool("create_projects", { idempotency_key: "k", items: [] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: many }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "x" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "Site A" }, { name: " Site A" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "Site A", company_id: "forged" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k".repeat(125), items: [{ name: "Site A" }] }, ["write"], rpc),
+    callTool("create_categories", { idempotency_key: "k", items: [{ name: "Tools" }] }, ["write"], rpc),
+    callTool("create_categories", { idempotency_key: "k", items: [{ name: "Tools", kind: "asset" }] }, ["write"], rpc),
+    callTool("create_categories", {
+      idempotency_key: "k",
+      items: [{ name: "Tools", kind: "expense" }, { name: "Tools ", kind: "expense" }],
+    }, ["write"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("create_categories", {
+    idempotency_key: "k",
+    items: [{ name: "Tools", kind: "expense" }],
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 0);
 });
 
 Deno.test("cycle 4 write validation and read-token forbidden", async () => {
@@ -1622,7 +1835,7 @@ Deno.test("set_category_pnl forwards excluded false, rejects bad input, and refu
   assertEquals(calls.length, 1);
 });
 
-Deno.test("rename_company trims, forwards p_* args, validates, refuses a read token, and undo accepts company", async () => {
+Deno.test("rename_company trims, counts code points, refuses control characters and a read token, and undo accepts company", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,
     json: { ok: true, data: { id: PROJECT, name: "Example North", prior_name: "Example Co", undo_kind: "company" } },
@@ -1643,18 +1856,32 @@ Deno.test("rename_company trims, forwards p_* args, validates, refuses a read to
     callTool("rename_company", { idempotency_key: "k", name: "a".repeat(101) }, ["write"], rpc),
     callTool("rename_company", { idempotency_key: "k", name: 42 }, ["write"], rpc),
     callTool("rename_company", { idempotency_key: "k", name: "Example North", company_id: PROJECT }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example\u0007North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example\u0085North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "\u{1F600}".repeat(101) }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "\u00a0x\u3000" }, ["write"], rpc),
   ];
   for (const result of await Promise.all(cases)) {
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
+  // Code points, like char_length: 100 emoji are 200 UTF-16 units and still pass.
+  const emoji = await callTool("rename_company", { idempotency_key: "rename-emoji", name: "\u{1F600}".repeat(100) }, ["write"], rpc);
+  assertEquals(emoji.isError, false);
+  // trim() strips every whitespace, as private.trim_name does in SQL.
+  const spaced = await callTool("rename_company", {
+    idempotency_key: "rename-spaced",
+    name: "\u00a0\tExample North\u2003\ufeff",
+  }, ["write"], rpc);
+  assertEquals(spaced.isError, false);
+  assertEquals(calls[2].body, { p_idempotency_key: "rename-spaced", p_name: "Example North" });
   const denied = await callTool("rename_company", { idempotency_key: "rename-read", name: "Example North" }, ["read"], rpc);
   assertEquals(denied.isError, true);
   if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
-  assertEquals(calls.length, 1);
+  assertEquals(calls.length, 3);
   const undo = await callTool("undo", { idempotency_key: "rename-undo", kind: "company", id: PROJECT }, ["write"], rpc);
   assertEquals(undo.isError, false);
-  assertEquals(calls[1], {
+  assertEquals(calls[3], {
     name: "mcp_undo",
     body: { p_idempotency_key: "rename-undo", p_kind: "company", p_id: PROJECT },
   });
@@ -1679,6 +1906,9 @@ const PROJECT_FIXTURE = {
   ],
   excluded_categories_by_currency: [
     { currency: "USD", id: CATEGORY_NEW, name: "Example Loan Principal", amount_minor: 50000, has_shared_share: false },
+  ],
+  excluded_income_by_currency: [
+    { currency: "USD", id: CATEGORY, name: "Example Owner Money", amount_minor: 3000, count: 1 },
   ],
   other_currencies: [{ currency: "USD", income_minor: 250000, expense_minor: -1250, count: 2 }],
   pending_count: 0,
@@ -1745,6 +1975,7 @@ Deno.test("get_project calls get_project with the id and each basis", async () =
       assertEquals(data.categories_by_currency, PROJECT_FIXTURE.categories_by_currency);
       assertEquals(data.excluded_categories_by_currency, PROJECT_FIXTURE.excluded_categories_by_currency);
       assertEquals(data.excluded_categories_by_currency[0]?.amount_minor, 50000);
+      assertEquals(data.excluded_income_by_currency, PROJECT_FIXTURE.excluded_income_by_currency);
       assertEquals(data.transactions, PROJECT_FIXTURE.transactions);
       assertEquals(data.transactions.map((row) => row.currency), ["USD", "USD"]);
       assertEquals(data.budget_agorot, null);
@@ -2145,5 +2376,98 @@ Deno.test("get_project passes the loans of the project through next to the P&L",
     const data = result.structuredContent.data as typeof PROJECT_FIXTURE & { loans: typeof loans };
     assertEquals(data.loans, loans);
     assertEquals(data.by_currency, PROJECT_FIXTURE.by_currency);
+  }
+});
+
+Deno.test("list_review and pending search_expenses pass line_status and source through (FLOW-305)", async () => {
+  const row = {
+    id: "rev-305",
+    transaction_id: "11111111-1111-4000-8000-000000000305",
+    description: "חשמל השרון",
+    direction: "expense",
+    reason: "missing_project",
+    supplier_name: null,
+    doc_date: "2026-10-05",
+    line_status: "pending",
+    source: "mercury",
+  };
+  // FLOW-304: list_review also reads the lines' bank details; none here.
+  const { rpc } = rpcOf((name) =>
+    name === "list_review" ? { status: 200, json: [row] } : name === "get_line_meta" ? { status: 200, json: [] } : { status: 500, json: null }
+  );
+  const listed = await callTool("list_review", {}, ["read"], rpc);
+  const pending = await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
+  assertEquals(listed.structuredContent.ok, true);
+  assertEquals(pending.structuredContent.ok, true);
+  if (listed.structuredContent.ok) {
+    const first = (listed.structuredContent.data as { reviews: Record<string, unknown>[] }).reviews[0];
+    assertEquals(first?.line_status, "pending");
+    assertEquals(first?.source, "mercury");
+  }
+  if (pending.structuredContent.ok) {
+    const first = (pending.structuredContent.data as { expenses: Record<string, unknown>[] }).expenses[0];
+    assertEquals(first?.line_status, "pending");
+    assertEquals(first?.source, "mercury");
+  }
+});
+
+Deno.test("FLOW-304: get_expense, list_review and search_expenses carry the line's bank details", async () => {
+  const id = "11111111-1111-4000-8000-000000000001";
+  const other = "11111111-1111-4000-8000-000000000002";
+  const card = {
+    method: "card",
+    card_last4: "4242",
+    memo: null,
+    account: "Example Checking",
+    counterparty: "Example Office Suite",
+    bank_description: "Example Office Suite",
+  };
+  const { calls, rpc } = rpcOf((name, body) => {
+    if (name === "get_transaction") return { status: 200, json: { id, description: "Example Office Suite" } };
+    if (name === "get_line_split") return { status: 200, json: null };
+    if (name === "get_loan_split") return { status: 200, json: null };
+    if (name === "list_review") {
+      return { status: 200, json: [
+        { id: "r1", transaction_id: id, description: "א", direction: "expense", doc_date: "2026-09-01" },
+        { id: "r2", transaction_id: other, description: "ב", direction: "expense", doc_date: "2026-09-02" },
+      ] };
+    }
+    if (name === "search_transactions") return { status: 200, json: { total: 1, expenses: [{ id }] } };
+    if (name === "get_line_meta") {
+      assertEquals(Array.isArray(body.p_ids), true);
+      return { status: 200, json: [{ transaction_id: id, ...card }] };
+    }
+    return { status: 500, json: null };
+  });
+  const expense = await callTool("get_expense", { transaction_id: id }, ["read"], rpc);
+  assertEquals(expense.structuredContent.ok, true);
+  if (expense.structuredContent.ok) assertEquals((expense.structuredContent.data as { meta: unknown }).meta, card);
+  const review = await callTool("list_review", {}, ["read"], rpc);
+  if (!review.structuredContent.ok) throw new Error("list_review failed");
+  const reviews = (review.structuredContent.data as { reviews: Array<{ transaction_id: string; meta: Record<string, unknown> }> }).reviews;
+  assertEquals(reviews.find((row) => row.transaction_id === id)?.meta, card);
+  // A line with no bank details still carries meta, with every field null.
+  assertEquals(reviews.find((row) => row.transaction_id === other)?.meta, NO_META);
+  const filed = await callTool("search_expenses", { scope: "filed" }, ["read"], rpc);
+  if (!filed.structuredContent.ok) throw new Error("search_expenses failed");
+  assertEquals((filed.structuredContent.data as { expenses: Array<{ meta: unknown }> }).expenses[0]?.meta, card);
+  const metaCalls = calls.filter((call) => call.name === "get_line_meta");
+  assertEquals(metaCalls.length, 3);
+  assertEquals(metaCalls[1]?.body.p_ids, [id, other]);
+});
+
+Deno.test("FLOW-304: a refused bank-details read fails the read instead of dropping meta", async () => {
+  const id = "11111111-1111-4000-8000-000000000001";
+  const { rpc } = rpcOf((name) => {
+    if (name === "get_transaction") return { status: 200, json: { id } };
+    if (name === "list_review") return { status: 200, json: [{ id: "r1", transaction_id: id }] };
+    return { status: 500, json: null };
+  });
+  for (const result of [
+    await callTool("get_expense", { transaction_id: id }, ["read"], rpc),
+    await callTool("list_review", {}, ["read"], rpc),
+  ]) {
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "refused");
   }
 });

@@ -1,10 +1,13 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { afterSignInMessage, afterSignInPath, peekSignInReturn, rememberSignInReturn, signInPathFor } from "./safe-return";
 import { homeSummarySchema, type Dashboard } from "@flow/shared";
 import { thisMonth } from "./period";
-import { AuthProvider, useAuth } from "./auth";
+import { useAuth } from "./auth";
+import { SessionProviders } from "./session-providers";
 import { HomeSkeleton } from "./screens/home-skeleton";
 import { TabBar } from "./ui/tab-bar";
+import { AuthCallbackView } from "./ui/auth-callback-view";
 import { ThemeColor } from "./components/ThemeColor";
 import { SAMPLE_ASSISTANT_SECRET as assistantSampleSecret } from "./assistant-sample";
 import { getSupabase } from "./lib/supabase";
@@ -12,6 +15,7 @@ import { usePreviewMode } from "./preview";
 import { readSheetBackground } from "./sheet-background";
 import { LedgerFocusRefresh } from "./books-focus";
 import { ListHoldRoot } from "./list-hold";
+import { TxnAnnouncer } from "./txn-nav";
 import { BooksProvider } from "./use-books";
 import { useCompanyRole, useHoldWrites, useIsViewer } from "./use-is-viewer";
 import { detectInstallMode, isStandalone, listenForInstallPrompt } from "./ui/install-prompt";
@@ -23,7 +27,7 @@ import { CheckIcon } from "./ui/icons";
 import { ProgressBar } from "./ui/progress-bar";
 import { ReviewCard } from "./ui/review-card";
 import { ScreenHeader } from "./ui/screen-header";
-import { ToastProvider, useToast } from "./ui/toast";
+import { useToast } from "./ui/toast";
 import { HelpScreen } from "./screens/HelpScreen";
 import { HomeBooks, HomeScreen } from "./screens/HomeScreen";
 import { LegalScreen } from "./screens/PlaceholderScreen";
@@ -31,6 +35,8 @@ import {
   AddForm,
   CategoriesScreen,
   ChangeForm,
+  ConnectionsScreen,
+  LoansScreen,
   NotificationsScreen,
   ReviewQueue,
   OnboardingScreen,
@@ -68,8 +74,7 @@ export function App() {
     };
   }, []);
   return (
-    <ToastProvider>
-    <AuthProvider>
+    <SessionProviders>
       <BooksProvider>
         <ThemeColor />
         <LedgerFocusRefresh />
@@ -80,8 +85,7 @@ export function App() {
           <AppRoutes />
         </div>
       </BooksProvider>
-    </AuthProvider>
-    </ToastProvider>
+    </SessionProviders>
   );
 }
 
@@ -122,9 +126,12 @@ function AppRoutes() {
               <Route path="/e2e/jev-review" element={<JevReviewE2e />} />
               <Route path="/e2e/review-banner" element={<DevReviewBanner />} />
               <Route path="/e2e/filed" element={<DevFiled />} />
+              <Route path="/e2e/txn-list" element={<DevTxnList />} />
               <Route path="/e2e/home" element={<DevHome />} />
               <Route path="/e2e/projects" element={<DevProjects />} />
               <Route path="/e2e/settings" element={<DevSettings />} />
+              <Route path="/e2e/connections" element={<DevConnections />} />
+              <Route path="/e2e/loans" element={<DevLoans />} />
               <Route path="/e2e/categories" element={<DevCategories />} />
               <Route path="/e2e/unpaid" element={<DevUnpaid />} />
               <Route path="/e2e/txn" element={<DevTransaction />} />
@@ -169,6 +176,9 @@ function AppRoutes() {
               <Route path="notifications" element={<NotificationsScreen />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="settings/categories" element={<CategoriesScreen />} />
+              <Route path="settings/connections" element={<ConnectionsScreen />} />
+              {/* FLOW-110 adds settings/loans/:loanId, a loan's detail page. */}
+              <Route path="settings/loans" element={<LoansScreen />} />
             </Route>
           </Route>
         </Routes>
@@ -185,9 +195,10 @@ function AppRoutes() {
 function RequireAuth() {
   const preview = usePreviewMode();
   const { status } = useAuth();
+  const location = useLocation();
   if (preview) return <Outlet />;
   if (status === "loading") return <HomeSkeleton />;
-  if (status !== "authed") return <Navigate to="/sign-in" replace />;
+  if (status !== "authed") return <Navigate to={signInPathFor(`${location.pathname}${location.search}`)} replace />;
   return <Outlet />;
 }
 
@@ -230,6 +241,8 @@ const devLinks: Array<[string, string]> = [
   ["/transactions/1?preview=1", "תנועה לדוגמה"],
   ["/transactions/1/split?preview=1", "פיצול לדוגמה"],
   ["/settings/categories?preview=1", "קטגוריות לדוגמה"],
+  ["/settings/connections?preview=1", "חיבורים לדוגמה"],
+  ["/settings/loans?preview=1", "הלוואות לדוגמה"],
   ["/notifications?preview=1", "התראות לדוגמה"],
   ["/unpaid?preview=1", "חשבוניות לדוגמה"],
   ["/onboarding?preview=1", "הצטרפות לדוגמה"],
@@ -485,6 +498,19 @@ function DevProjects() {
 const devAssistantSecret = import.meta.env.DEV ? assistantSampleSecret : undefined;
 
 function DevSettings() {
+  return <SettingsScreen sample={useDevSettingsSample()} />;
+}
+
+function DevConnections() {
+  return <ConnectionsScreen sample={useDevSettingsSample()} sampleSecret={devAssistantSecret} />;
+}
+
+function DevLoans() {
+  return <LoansScreen sample={useDevSettingsSample()} />;
+}
+
+/** The dev Settings fixture. `?connected=1|auth`, `?assistant=…`, `?nocompany=1`, `?email=none|long`, `?loans=none`. */
+function useDevSettingsSample(): NonNullable<Parameters<typeof SettingsScreen>[0]>["sample"] {
   const [params] = useSearchParams();
   const mode = params.get("connected");
   const connected = mode === "1" || mode === "auth";
@@ -496,9 +522,7 @@ function DevSettings() {
     : emailParam === "long"
       ? "owner.with.a.very.long.mailbox.name@example.com"
       : "owner@example.com";
-  return (
-    <SettingsScreen
-      sample={{
+  return {
         name: noCompany ? null : "בדיקה",
         connected: noCompany ? false : connected,
         companyId: connected ? 1001 : null,
@@ -518,10 +542,15 @@ function DevSettings() {
                 : assistant === "nocompany"
                   ? { state: "no-company" }
                   : { state: "empty" },
-      }}
-      sampleSecret={devAssistantSecret}
-    />
-  );
+        loanProjects: [
+          { id: "p1", name: "שיפוץ הרצל 12", status: "active" },
+          { id: "p2", name: "פרגולה בית כהן", status: "active" },
+        ],
+        loans: params.get("loans") === "none" ? [] : [
+          { id: "l1", name: "משכנתא אלון", currency: "USD", balanceMinor: 20_000_000n, flaggedParts: 0, projectId: "p1", projectName: "שיפוץ הרצל 12" },
+          { id: "l2", name: "הלוואת ציוד", currency: "ILS", balanceMinor: 5_000_000n, flaggedParts: 1, projectId: null, projectName: null },
+        ],
+  };
 }
 
 function DevCategories() {
@@ -553,14 +582,69 @@ function DevUnpaid() {
 }
 
 function TransactionRoute() {
-  if (import.meta.env.DEV) return <DevTransactionGate />;
-  return <TransactionScreen />;
+  const { transactionId = "" } = useParams();
+  // A new card per id: prev and next keep this route mounted, and the card holds per-row state.
+  return (
+    <TxnAnnouncer>
+      {import.meta.env.DEV ? <DevTransactionGate key={transactionId} /> : <TransactionScreen key={transactionId} />}
+    </TxnAnnouncer>
+  );
 }
 
 function DevTransactionGate() {
-  const { transactionId } = useParams();
+  const { transactionId = "" } = useParams();
   if (transactionId === "t-filed") return <DevTransaction />;
+  const step = /^t-step-(\d+)$/.exec(transactionId);
+  if (step) return <DevStepTransaction n={Number(step[1])} />;
   return <TransactionScreen />;
+}
+
+/** A tall list whose rows open sample cards, for the prev and next e2e. */
+function DevTxnList() {
+  return (
+    <FiledTodayScreen
+      backTo="/e2e/project"
+      sample={Array.from({ length: 24 }, (_, i) => ({
+        id: `t-step-${String(i + 1)}`,
+        description: `תנועה ${String(i + 1)}`,
+        doc_date: "2026-09-29",
+        amount_net: BigInt(-(i + 1) * 10_000),
+        direction: "expense" as const,
+        supplier_name: `ספק ${String(i + 1)}`,
+        project_name: "שיפוץ הרצל 12",
+        category_name: "חומרים",
+      }))}
+    />
+  );
+}
+
+function DevStepTransaction({ n }: { n: number }) {
+  return (
+    <TransactionScreen
+      sample={{
+        id: `t-step-${String(n)}`,
+        description: `תנועה ${String(n)}`,
+        direction: "expense",
+        doc_date: "2026-09-29",
+        amount_gross: BigInt(-n * 11_800),
+        amount_net: BigInt(-n * 10_000),
+        vat_amount: BigInt(-n * 1_800),
+        vat_status: "assumed",
+        source: "manual",
+        project_id: "p1",
+        project_name: "שיפוץ הרצל 12",
+        category_id: "c1",
+        category_name: "חומרים",
+        supplier_name: `ספק ${String(n)}`,
+        customer_name: null,
+        paid: true,
+        open_gross_agorot: null,
+        allocations: [],
+      }}
+      sampleProjects={[{ id: "p1", name: "שיפוץ הרצל 12" }]}
+      sampleCategories={[{ id: "c1", name: "חומרים" }]}
+    />
+  );
 }
 
 function DevProjectDetail() {
@@ -753,6 +837,8 @@ function AuthCallback() {
     }
     cancelled.current = false;
     const stopped = (): boolean => cancelled.current;
+    const stored = peekSignInReturn();
+    const back = stored ? `&return=${encodeURIComponent(stored)}` : "";
     client.auth
       .getSession()
       .then(async ({ data, error }) => {
@@ -761,33 +847,30 @@ function AuthCallback() {
           const params = new URLSearchParams(window.location.search);
           const code = params.get("error") ?? "server_error";
           console.error("Auth callback session error", code);
-          void navigate(`/sign-in?error=${encodeURIComponent(code)}`, { replace: true });
+          void navigate(`/sign-in?error=${encodeURIComponent(code)}${back}`, { replace: true });
           return;
         }
         const home = await client.rpc("get_home");
         if (stopped()) return;
         if (home.error) {
           console.error("Auth callback get_home failed", home.error.message);
-          void navigate("/sign-in?error=server_error", { replace: true });
+          void navigate(`/sign-in?error=server_error${back}`, { replace: true });
           return;
         }
         const summary = homeSummarySchema.parse(home.data);
-        setMessage(summary.company_id ? "נכנסתם. עוברים לבית." : "נכנסתם. ממשיכים לפרטי העסק.");
-        void navigate(summary.company_id ? "/" : "/setup/0", { replace: true });
+        rememberSignInReturn(null);
+        setMessage(afterSignInMessage(Boolean(summary.company_id), stored));
+        void navigate(afterSignInPath(Boolean(summary.company_id), stored), { replace: true });
       })
       .catch((error: unknown) => {
         console.error("Auth callback failed", error);
         if (stopped()) return;
-        void navigate("/sign-in?error=server_error", { replace: true });
+        void navigate(`/sign-in?error=server_error${back}`, { replace: true });
       });
     return () => {
       cancelled.current = true;
     };
   }, [navigate]);
 
-  return (
-    <main className="flex min-h-dvh items-center justify-center px-side">
-      <p className="t-title-3">{message}</p>
-    </main>
-  );
+  return <AuthCallbackView message={message} />;
 }

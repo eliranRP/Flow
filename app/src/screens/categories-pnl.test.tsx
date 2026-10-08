@@ -11,6 +11,7 @@ import { CategoriesScreen } from "./flow-screens";
 const rpc = vi.hoisted(() => ({
   calls: [] as Array<{ name: string; args: unknown }>,
   failPnl: false,
+  renamedLoan: false,
   holdPnl: null as Promise<void> | null,
 }));
 
@@ -23,8 +24,8 @@ vi.mock("../lib/supabase", () => ({
           data: [
             { id: "c1", name: "חומרים", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false },
             { id: "c2", name: "פיקדונות", kind: "expense", hidden: false, is_default: false, excluded_from_pnl: true },
-            { id: "c3", name: "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true },
-            { id: "c4", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false },
+            { id: "c3", name: rpc.renamedLoan ? "החזר הלוואה" : "תשלומי הלוואה", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: true, loan_part: "principal" },
+            { id: "c4", name: "ריבית משכנתא", kind: "expense", hidden: false, is_default: true, excluded_from_pnl: false, loan_part: "interest" },
             { id: "c5", name: "תקבול", kind: "income", hidden: false, is_default: true, excluded_from_pnl: false },
           ],
           error: null,
@@ -61,6 +62,7 @@ function pnlCalls() {
 beforeEach(() => {
   rpc.calls.length = 0;
   rpc.failPnl = false;
+  rpc.renamedLoan = false;
   rpc.holdPnl = null;
 });
 
@@ -130,6 +132,15 @@ describe("categories kept out of the P&L", () => {
     fireEvent.click(screen.getByRole("button", { name: "עוד, ריבית משכנתא" }));
     sheet = await screen.findByRole("dialog", { name: "ריבית משכנתא" });
     expect(within(sheet).getByText("חלק מתשלום הלוואה · תמיד ברווח והפסד")).toBeInTheDocument();
+    expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
+  });
+
+  it("finds loan categories by loan_part, not by name", async () => {
+    rpc.renamedLoan = true;
+    renderScreen(<CategoriesScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: "עוד, החזר הלוואה" }));
+    const sheet = await screen.findByRole("dialog", { name: "החזר הלוואה" });
+    expect(within(sheet).getByText("קטגוריית הלוואה · תמיד מחוץ לרווח והפסד")).toBeInTheDocument();
     expect(within(sheet).queryByRole("button", { name: /רווח והפסד/ })).not.toBeInTheDocument();
   });
 

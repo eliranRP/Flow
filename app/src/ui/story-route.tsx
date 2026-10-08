@@ -1,20 +1,22 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
-import { AuthProvider } from "../auth";
+import { MemoryRouter, parsePath } from "react-router-dom";
+import { SessionProviders } from "../session-providers";
 import { ViewerPreview } from "../use-is-viewer";
 import { BooksProvider } from "../use-books";
 import { TabBar } from "./tab-bar";
-import { ToastProvider } from "./toast";
 
 export function StoryRoute({
   entry,
   tabs = false,
   reviewCount = 0,
   viewer = false,
+  state,
   children,
 }: {
   entry: string;
+  /** Location state, such as the list a transaction card was opened from. */
+  state?: unknown;
   tabs?: boolean;
   reviewCount?: number;
   /** Hides write controls the way a viewer session does. */
@@ -24,9 +26,8 @@ export function StoryRoute({
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider>
-      <MemoryRouter initialEntries={[entry]}>
-        <AuthProvider>
+      <MemoryRouter initialEntries={[state === undefined ? entry : { ...parsePath(entry), state }]}>
+        <SessionProviders>
           <BooksProvider>
             <div className="flex min-h-dvh w-full min-w-0 flex-col">
               <div className={tabs ? "below-tabbar flex min-h-0 min-w-0 flex-1 flex-col" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
@@ -35,9 +36,8 @@ export function StoryRoute({
               {tabs ? <TabBar reviewCount={reviewCount} allowAdd={!viewer} /> : null}
             </div>
           </BooksProvider>
-        </AuthProvider>
+        </SessionProviders>
       </MemoryRouter>
-      </ToastProvider>
     </QueryClientProvider>
   );
 }

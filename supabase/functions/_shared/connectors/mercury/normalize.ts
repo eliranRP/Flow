@@ -19,6 +19,8 @@ import {
   type CanonicalLine,
   type NormalizeContext,
   type NormalizeResult,
+  type PaymentMethod,
+  type ProviderMeta,
 } from "../types.ts";
 
 const KNOWN_STATUSES = new Set(["sent", "pending", "cancelled", "failed", "reversed", "blocked"]);
@@ -67,6 +69,57 @@ function bounded(value: string | null): string | null {
   if (!value) return null;
   if (value.length > TEXT_LIMITS.externalId) return null;
   return value;
+}
+
+const CARD_INFO_KEYS = ["creditCardInfo", "debitCardInfo"] as const;
+const WIRE_INFO_KEYS = ["domesticWireRoutingInfo", "internationalWireRoutingInfo"] as const;
+
+/**
+ * How the money moved, from the kind and which routing block `details` carries.
+ * Only the block's presence is read: its routing and account fields never leave here.
+ */
+export function mercuryPaymentMethod(kind: string, raw: Record<string, unknown>): PaymentMethod {
+  const details = isRecord(raw.details) ? raw.details : {};
+  if (/card/i.test(kind) || CARD_INFO_KEYS.some((key) => isRecord(details[key]))) return "card";
+  if (/wire/i.test(kind) || WIRE_INFO_KEYS.some((key) => isRecord(details[key]))) return "wire";
+  if (/check/i.test(kind) || stringField(raw.checkNumber) != null) return "check";
+  if (kind === "internalTransfer" || kind === "treasuryTransfer") return "transfer";
+  if (/ach/i.test(kind) || kind === "externalTransfer" || kind === "outgoingPayment" || isRecord(details.electronicRoutingInfo)) {
+    return "ach";
+  }
+  return "other";
+}
+
+/** The card's last 4, read from the "Credit Card ••1234" label. Nothing else of the card is kept. */
+export function mercuryCardLast4(raw: Record<string, unknown>): string | null {
+  const details = isRecord(raw.details) ? raw.details : {};
+  for (const key of CARD_INFO_KEYS) {
+    const info = details[key];
+    if (!isRecord(info)) continue;
+    const label = stringField(info.paymentMethod);
+    const match = label ? /(?:••|\*\*|\.\.)\s?([0-9]{4})\s*$/.exec(label) : null;
+    if (match) return match[1] ?? null;
+  }
+  return null;
+}
+
+/** The memo the sender wrote, else the team's note. Redacted and capped. */
+export function mercuryMemo(raw: Record<string, unknown>): string | null {
+  const source = stringField(raw.externalMemo) ?? stringField(raw.note);
+  if (!source) return null;
+  const memo = String(redactMercury(source)).trim().slice(0, TEXT_LIMITS.hint);
+  return memo.length > 0 ? memo : null;
+}
+
+function paymentMeta(kind: string, raw: Record<string, unknown>, accountId: string | null): ProviderMeta {
+  const method = mercuryPaymentMethod(kind, raw);
+  const meta: ProviderMeta = { method };
+  const last4 = method === "card" ? mercuryCardLast4(raw) : null;
+  if (last4) meta.card_last4 = last4;
+  const memo = mercuryMemo(raw);
+  if (memo) meta.memo = memo;
+  if (accountId) meta.account_id = accountId;
+  return meta;
 }
 
 /**
@@ -197,7 +250,7 @@ export function normalizeMercury(raw: unknown, ctx: NormalizeContext): Normalize
     project_hint: null,
     category_hint: category,
     linked_external_id: null,
-    provider_meta: { kind, providerCategory },
+    provider_meta: { kind, providerCategory, ...paymentMeta(kind, raw, accountId) },
   };
 
   const parsed = canonicalLineSchema.safeParse(line);
@@ -346,7 +399,7 @@ function normalizeTreasuryLedger(raw: Record<string, unknown>, ctx: NormalizeCon
     project_hint: null,
     category_hint: income ? MERCURY_CASHBACK_CATEGORY : null,
     linked_external_id: null,
-    provider_meta: { kind: type, providerCategory: null },
+    provider_meta: { kind: type, providerCategory: null, method: "other", ...(accountId ? { account_id: accountId } : {}) },
   };
   const parsed = canonicalLineSchema.safeParse(line);
   if (!parsed.success) return skip("not_a_line");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryRowSchema, dashboardSchema, projectDetailSchema } from "./dashboard";
+import { categoryRowSchema, dashboardSchema, projectDetailSchema, reviewRowSchema } from "./dashboard";
 
 const project = {
   id: "p",
@@ -43,6 +43,26 @@ describe("projectDetailSchema", () => {
       }],
     });
     expect(parsed?.excluded_categories_by_currency?.[0]?.amount_minor).toBe(1000n);
+  });
+
+  it("parses the project's loans with a bigint balance, and a payload without them", () => {
+    const parsed = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      loans: [{ id: "l", name: "הלוואת דוגמה", currency: "USD", balance_minor: "12345" }],
+    });
+    expect(parsed?.loans?.[0]?.balance_minor).toBe(12345n);
+    expect(projectDetailSchema.parse({ ...project, categories: [] })?.loans).toBeUndefined();
+  });
+
+  it("keeps a transaction's line_status, and drops a missing or unknown one", () => {
+    const line = { id: "t", description: "דוגמה", doc_date: "2026-06-10", amount_net: -100, direction: "expense", category: null };
+    const parsed = projectDetailSchema.parse({
+      ...project,
+      categories: [],
+      transactions: [{ ...line, line_status: "pending" }, line, { ...line, line_status: "held" }],
+    });
+    expect(parsed?.transactions.map((t) => t.line_status)).toEqual(["pending", undefined, undefined]);
   });
 });
 
@@ -109,5 +129,38 @@ describe("dashboardSchema", () => {
       }],
     });
     expect(parsed.excluded_income_agorot).toBe(100n);
+  });
+});
+
+describe("reviewRowSchema (FLOW-305)", () => {
+  const row = {
+    id: "r",
+    transaction_id: "t",
+    description: "חשמל השרון",
+    doc_date: "2026-10-05",
+    amount_net: -120050,
+    direction: "expense",
+    reason: "missing_project",
+    project_id: null,
+    category_id: null,
+    supplier_name: null,
+  };
+
+  it("keeps line_status and source", () => {
+    const parsed = reviewRowSchema.parse({ ...row, line_status: "pending", source: "mercury" });
+    expect(parsed.line_status).toBe("pending");
+    expect(parsed.source).toBe("mercury");
+  });
+
+  it("parses an older payload without the fields", () => {
+    const parsed = reviewRowSchema.parse(row);
+    expect(parsed.line_status).toBeUndefined();
+    expect(parsed.source).toBeUndefined();
+  });
+
+  it("drops an unknown value instead of failing the whole list", () => {
+    const parsed = reviewRowSchema.parse({ ...row, line_status: "held", source: "hapoalim" });
+    expect(parsed.line_status).toBeUndefined();
+    expect(parsed.source).toBeUndefined();
   });
 });

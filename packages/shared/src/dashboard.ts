@@ -38,6 +38,8 @@ export const projectRowSchema = z.object({
   name: z.string(),
   status: z.enum(["active", "finished"]),
   state_label: z.string().nullable().optional(),
+  /** A short project code (P-12), once the server sends one. */
+  code: z.string().nullable().optional(),
   budget_agorot: agorotOrNull.nullish(),
   sumit_budget_section_id: z.number().nullable().optional(),
   income_agorot: agorotSchema,
@@ -91,6 +93,10 @@ export const reviewRowSchema = z.object({
   amount_net: agorotSchema,
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
   direction: z.enum(["income", "expense"]),
+  /** Bank state of the line. A pending line may still change; the statement row shows a chip. FLOW-305. */
+  line_status: z.enum(["pending", "posted", "void"]).optional().catch(undefined),
+  /** Where the line came from. Older payloads omit it. FLOW-305. */
+  source: z.enum(["sumit", "mercury", "manual", "photo"]).optional().catch(undefined),
   reason: z.string().nullable(),
   /** Set by list_review so a split is not treated as a single project. */
   pnl_role: z.enum(["project", "shared", "overhead"]).nullable().optional(),
@@ -132,6 +138,8 @@ export const categoryRowSchema = z.object({
   hidden: z.boolean(),
   is_default: z.boolean(),
   excluded_from_pnl: z.boolean().optional(),
+  /** Set on the three loan categories. Omitted on older payloads. */
+  loan_part: z.string().nullable().optional(),
 });
 
 export const sumitStatusSchema = z.object({
@@ -222,9 +230,18 @@ export const projectDetailSchema = z
         direction: z.string(),
         source: z.string().optional(),
         doc_kind: z.string().optional(),
+        /** FLOW-209. A pending line is an unsettled bank line that no total counts yet. Omitted on older payloads. */
+        line_status: z.enum(["pending", "posted", "void"]).optional().catch(undefined),
         category: z.string().nullable(),
       }),
     ),
+    /** FLOW-119. Loans filed under the project (decision 0105). Omitted on older payloads. */
+    loans: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      currency: z.string(),
+      balance_minor: agorotSchema,
+    })).optional(),
   })
   .nullable();
 
@@ -262,6 +279,14 @@ export const transactionDetailSchema = z
     category_name: z.string().nullable(),
     supplier_name: z.string().nullable(),
     customer_name: z.string().nullable(),
+    /** FLOW-108: false keeps the line out of the P&L, true counts it, null follows the category. */
+    in_pnl_override: z.boolean().nullable().optional(),
+    category_excluded_from_pnl: z.boolean().optional(),
+    /** FLOW-121: a guessed category. A guessed kept-out category still counts in the P&L. */
+    category_suggested: z.boolean().optional(),
+    in_pnl: z.boolean().optional(),
+    /** A loan line: its parts decide what counts, so the override is refused. */
+    pnl_fixed: z.boolean().optional(),
   })
   .nullable();
 

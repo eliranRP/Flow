@@ -106,6 +106,18 @@ describe("TabBar", () => {
     expect(screen.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("keeps settings active on the Connections and Loans pages (FLOW-501)", () => {
+    for (const path of ["/settings/connections", "/settings/loans", "/settings/loans/loan-1"]) {
+      const { unmount } = render(
+        <MemoryRouter initialEntries={[path]}>
+          <TabBar />
+        </MemoryRouter>,
+      );
+      expect(screen.getByRole("link", { name: "הגדרות" })).toHaveAttribute("aria-current", "page");
+      unmount();
+    }
+  });
+
   it("highlights no tab on add and closes the sheet from +", async () => {
     render(
       <MemoryRouter initialEntries={["/add"]}>

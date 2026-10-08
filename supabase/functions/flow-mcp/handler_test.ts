@@ -159,6 +159,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -168,6 +170,8 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
   ], "read and write tools");
@@ -757,6 +761,7 @@ Deno.test("get_expense and list_review stay inside the token company", async () 
       }
       if (name === "get_line_split") return Promise.resolve(new Response("null"));
       if (name === "get_loan_split") return Promise.resolve(new Response("null"));
+      if (name === "get_line_meta") return Promise.resolve(new Response("[]"));
       return Promise.resolve(new Response("{}", { status: 500 }));
     },
   };
@@ -976,6 +981,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -985,6 +992,8 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "update_loan",
     "attach_loan_payment",
     "split_line",
+    "set_line_pnl",
+    "set_lines_pnl",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -1074,6 +1083,159 @@ Deno.test("assign_expenses is one write rate hit for many rows", async () => {
   assertEquals(response.status, 200, "batch call succeeds");
   assertEquals(payload.result.isError, false, "batch tool result");
   assertEquals(kinds, ["write"], "one write bucket hit for the whole batch");
+});
+
+Deno.test("a 30-row company setup is two write rate hits", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "setup-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"g".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const kinds: string[] = [];
+  const rows: Record<string, number> = {};
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      const name = input.split("/").pop() ?? "";
+      if (name === "lookup_mcp_credential") {
+        const asked = typeof body?.p_token_hash === "string" ? body.p_token_hash : "";
+        if (asked !== hash) return Promise.resolve(new Response(JSON.stringify({ found: false })));
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "88888888-8888-4000-8000-000000000009",
+          user_id: "aaaaaaaa-aaaa-4000-8000-00000000000b",
+          company_id: "cccccccc-cccc-4000-8000-00000000000b",
+          scope: ["write"],
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") {
+        kinds.push(String(body?.p_kind));
+        // The write bucket allows 20 a minute; a call per row would pass it.
+        const writes = kinds.filter((kind) => kind === "write").length;
+        return Promise.resolve(new Response(JSON.stringify({ allowed: writes <= 20, retry_after_seconds: 30 })));
+      }
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      if (name === "mcp_create_projects" || name === "mcp_create_categories") {
+        const items = Array.isArray(body?.p_items) ? body.p_items : [];
+        rows[name] = items.length;
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: { batch_key: "33333333-3333-4000-8000-000000000004", ok_count: items.length, error_count: 0, results: [] },
+        })));
+      }
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  const call = (id: number, name: string, items: unknown[]) =>
+    handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id,
+        method: "tools/call",
+        params: { name, arguments: { idempotency_key: `setup-${id}`, items } },
+      }),
+    }), localDeps);
+  const projects = await call(1, "create_projects", Array.from({ length: 15 }, (_, i) => ({ name: `Site ${i + 1}` })));
+  const categories = await call(
+    2,
+    "create_categories",
+    Array.from({ length: 15 }, (_, i) => ({ name: `Cost ${i + 1}`, kind: "expense" })),
+  );
+  for (const response of [projects, categories]) {
+    assertEquals(response.status, 200, "no 429");
+    assertEquals((await response.json()).result.isError, false, "setup batch result");
+  }
+  assertEquals(kinds, ["write", "write"], "one write bucket hit per batch");
+  assertEquals(rows, { mcp_create_projects: 15, mcp_create_categories: 15 }, "every row reached the database");
+});
+
+Deno.test("initialize stamps the tool list, and a stale session hears list_changed", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "list-changed-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"h".repeat(43)}`;
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string) => {
+      const name = input.split("/").pop() ?? "";
+      if (name === "lookup_mcp_credential") {
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "88888888-8888-4000-8000-00000000000a",
+          user_id: "aaaaaaaa-aaaa-4000-8000-00000000000c",
+          company_id: "cccccccc-cccc-4000-8000-00000000000c",
+          scope: ["write"],
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") {
+        return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      }
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  const post = (body: unknown, headers: Record<string, string> = {}) =>
+    handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    }), localDeps);
+  const init = await post({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });
+  assertEquals((await init.json()).result.capabilities, { tools: { listChanged: true } }, "capability");
+  const session = init.headers.get("mcp-session-id") ?? "";
+  assert(/^[0-9a-f-]{36}\.[0-9a-f]{16}$/.test(session), `session id shape: ${session}`);
+  const again = await post({ jsonrpc: "2.0", id: 2, method: "initialize", params: {} });
+  const second = again.headers.get("mcp-session-id") ?? "";
+  assert(second !== session, "each session id is new");
+  assertEquals(second.split(".")[1], session.split(".")[1], "same tools, same stamp");
+
+  // A validation refusal needs no database call, so it shows the framing alone.
+  const call = { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "create_projects", arguments: {} } };
+  const stream = "application/json, text/event-stream";
+  const current = await post(call, { "mcp-session-id": session, accept: stream });
+  assertEquals(current.headers.get("content-type"), "application/json", "a current session gets JSON");
+  assertEquals((await current.json()).result.isError, true, "the refusal is the reply");
+
+  const stale = `${session.split(".")[0]}.0000000000000000`;
+  const notified = await post(call, { "mcp-session-id": stale, accept: stream });
+  assertEquals(notified.status, 200, "stream status");
+  assertEquals(notified.headers.get("content-type"), "text/event-stream", "a stale session gets a stream");
+  const events = (await notified.text()).split("\n\n").filter((part) => part.length > 0);
+  assertEquals(events.length, 2, "notification then reply");
+  assertEquals(JSON.parse(events[0].replace("event: message\ndata: ", "")), {
+    jsonrpc: "2.0",
+    method: "notifications/tools/list_changed",
+  }, "list_changed first");
+  const reply = JSON.parse(events[1].replace("event: message\ndata: ", ""));
+  assertEquals([reply.id, reply.result.isError], [3, true], "then the same reply");
+
+  const noStream = await post(call, { "mcp-session-id": stale, accept: "application/json" });
+  assertEquals(noStream.headers.get("content-type"), "application/json", "no stream accepted, plain JSON");
+  const noSession = await post(call, { accept: stream });
+  assertEquals(noSession.headers.get("content-type"), "application/json", "no session id, plain JSON");
+
+  // Without a signing key tools/list is empty, so the stamp differs and the key's arrival is announced.
+  const keyless = { ...localDeps, env: (name: string) => name === "FLOW_MCP_SIGNING_KEY" ? undefined : localEnv[name] };
+  const bare = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "initialize", params: {} }),
+  }), keyless);
+  const bareSession = bare.headers.get("mcp-session-id") ?? "";
+  assert(bareSession.split(".")[1] !== session.split(".")[1], "an empty list has its own stamp");
+  const afterKey = await post(call, { "mcp-session-id": bareSession, accept: stream });
+  assertEquals(afterKey.headers.get("content-type"), "text/event-stream", "the key's arrival is announced");
 });
 
 const SYNC_JOB = "abababab-abab-4000-8000-0000000000ab";

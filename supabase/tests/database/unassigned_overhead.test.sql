@@ -149,8 +149,8 @@ select is(
   'ILS top level matches the ILS by_currency row'
 );
 select is((pg_temp.out_of('before:cash') ->> 'overhead_agorot')::bigint, 5000::bigint, 'overhead before: only the overhead role');
-select is((pg_temp.out_of('before:cash') ->> 'direct_agorot')::bigint, 49000::bigint,
-  'direct before: alpha 30000 + office 15000 + unpaid alpha 4000; a project line with no project is not direct');
+select is((pg_temp.out_of('before:cash') ->> 'direct_agorot')::bigint, 45000::bigint,
+  'direct before: alpha 30000 + office 15000 (the unpaid alpha invoice is out of cash); a project line with no project is not direct');
 select is((pg_temp.out_of('before:cash') ->> 'shared_agorot')::bigint, 10000::bigint,
   'a shared line with no split is unassigned, not shared');
 select is(pg_temp.split_gap(pg_temp.out_of('before:cash'), 'ILS'), 0::bigint,
@@ -163,12 +163,13 @@ select is((pg_temp.proj(pg_temp.out_of('before:cash'), 'Office') ->> 'is_overhea
   'no overhead project yet');
 select is(pg_temp.out_of('before:cash') -> 'overhead_project_id', 'null'::jsonb, 'overhead_project_id is null');
 
--- (3) The unpaid-row rule. A posted unpaid supplier invoice counts by doc date on both bases.
--- A pending (unsettled) line counts on neither (decision 0086).
+-- (3) The unpaid-row rule. A posted unpaid supplier invoice counts by doc date on the invoiced
+-- basis and not on the cash basis (decision 0118, FLOW-128). A pending (unsettled) line counts
+-- on neither (decision 0086).
 select is((pg_temp.proj(pg_temp.out_of('before:invoiced'), 'Site Alpha') ->> 'direct_agorot')::bigint, 34000::bigint,
   'invoiced basis: alpha direct includes the unpaid supplier invoice, not the pending line');
-select is((pg_temp.proj(pg_temp.out_of('before:cash'), 'Site Alpha') ->> 'direct_agorot')::bigint, 34000::bigint,
-  'cash basis: same expense rule');
+select is((pg_temp.proj(pg_temp.out_of('before:cash'), 'Site Alpha') ->> 'direct_agorot')::bigint, 30000::bigint,
+  'cash basis: the unpaid supplier invoice is out');
 select is((pg_temp.out_of('before:invoiced') ->> 'income_agorot')::bigint, 160000::bigint,
   'invoiced basis counts the open income invoice');
 select is((pg_temp.out_of('before:cash') ->> 'income_agorot')::bigint, 120000::bigint,
@@ -243,7 +244,7 @@ select pg_temp.snap('set');
 
 select is((pg_temp.out_of('set:cash') ->> 'overhead_agorot')::bigint, 20000::bigint,
   'office lines move to overhead: 5000 + 15000');
-select is((pg_temp.out_of('set:cash') ->> 'direct_agorot')::bigint, 34000::bigint, 'and out of direct');
+select is((pg_temp.out_of('set:cash') ->> 'direct_agorot')::bigint, 30000::bigint, 'and out of direct (alpha only; its unpaid invoice is out of cash)');
 select is(pg_temp.split_gap(pg_temp.out_of('set:cash'), 'USD'), 0::bigint,
   'expense parts still add up with an overhead project');
 select is((pg_temp.cur(pg_temp.out_of('set:invoiced'), 'USD') ->> 'overhead_minor')::bigint, 20000::bigint,
@@ -279,7 +280,7 @@ select is(
 );
 select pg_temp.snap('undone');
 select is((pg_temp.out_of('undone:cash') ->> 'overhead_agorot')::bigint, 5000::bigint, 'undo moves the lines back out of overhead');
-select is((pg_temp.out_of('undone:cash') ->> 'direct_agorot')::bigint, 49000::bigint, 'and back into direct');
+select is((pg_temp.out_of('undone:cash') ->> 'direct_agorot')::bigint, 45000::bigint, 'and back into direct');
 select is(
   public.mcp_undo('uo-undo-2', 'overhead_project', (select id from uo_ref where label = 'co'))->'error'->>'code',
   'not_found',

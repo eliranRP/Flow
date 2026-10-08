@@ -48,6 +48,8 @@ test("each screen returns to where it was opened, and a fresh visit uses its par
     ["תנועה לדוגמה", "חזרה", "/transactions/1?preview=1", /\/projects\?preview=1$/],
     ["פיצול לדוגמה", "חזרה", "/transactions/1/split?preview=1", /\/transactions\/1\?preview=1$/],
     ["קטגוריות לדוגמה", "חזרה", "/settings/categories?preview=1", /\/settings\?preview=1$/],
+    ["חיבורים לדוגמה", "חזרה", "/settings/connections?preview=1", /\/settings\?preview=1$/],
+    ["הלוואות לדוגמה", "חזרה", "/settings/loans?preview=1", /\/settings\?preview=1$/],
     ["התראות לדוגמה", "חזרה", "/notifications?preview=1", /\/settings\?preview=1$/],
     ["חשבוניות לדוגמה", "חזרה", "/unpaid?preview=1", /\/\?preview=1$/],
     ["הצטרפות לדוגמה", "חזרה", "/onboarding?preview=1", /\/\?preview=1$/],
@@ -81,14 +83,14 @@ test("the period sheet closes on browser back and on its own close", async ({ pa
 });
 
 test("the connect sheet closes on browser back and on its own close", async ({ page }) => {
-  await page.goto("/settings?preview=1");
+  await page.goto("/settings/connections?preview=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
   await expect(page.getByRole("dialog", { name: "חיבור SUMIT" })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page).toHaveURL(/\/settings\?preview=1$/);
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await page.goto("/e2e/project");
-  await page.goto("/settings?preview=1");
+  await page.goto("/settings/connections?preview=1");
   await page.getByRole("button", { name: "SUMIT" }).click();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -97,14 +99,14 @@ test("the connect sheet closes on browser back and on its own close", async ({ p
 });
 
 test("the assistant sheet closes on browser back and on its own close", async ({ page }) => {
-  await page.goto("/settings?preview=1");
+  await page.goto("/settings/connections?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "חיבור עוזר AI" })).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page).toHaveURL(/\/settings\?preview=1$/);
+  await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
   await page.goto("/e2e/project");
-  await page.goto("/settings?preview=1");
+  await page.goto("/settings/connections?preview=1");
   await page.getByRole("button", { name: "עוזר AI", exact: true }).click();
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -123,4 +125,29 @@ test("the add sheet closes back to the screen that opened it", async ({ page }) 
   await page.getByRole("button", { name: "סגירה" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).toHaveURL(/\/\?preview=1$/);
+});
+
+test("a transaction row opens its picker, and Back, Escape and חזרה return to the detail", async ({ page }) => {
+  await page.goto("/e2e/project");
+  await page.goto("/reviewer/split-expense");
+  const row = page.getByRole("button", { name: /מלט/ });
+  const picker = page.getByRole("dialog", { name: "בחירת קטגוריה" });
+  await row.click();
+  await expect(picker).toBeVisible();
+  await expect(page.getByRole("heading", { name: "שינוי שיוך" })).toHaveCount(0);
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/reviewer\/split-expense$/);
+  await expect(row).toBeFocused();
+  await row.click();
+  await expect(picker).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toBeFocused();
+  await row.click();
+  await picker.getByRole("button", { name: "חזרה" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/e2e\/project$/);
 });

@@ -133,6 +133,7 @@
 .ui-toggle,
 .ui-tab-slot,
 .ui-banner,
+.ui-banner-row,
 a.ui-row,
 .ui-toast button {
   cursor: pointer;
@@ -308,6 +309,18 @@ a.ui-row,
   color: var(--color-bad);
 }
 
+/* Money in: income rows, income totals, Home נכנס, an income detail. Only on a figure with no
+   minus, never on the band, and always with words beside it (decision 0120). */
+.ui-income {
+  color: var(--color-income);
+}
+
+/* Detail amounts draw agorot smaller and raised; the dot and digits stay real text. */
+.ui-num-cents {
+  font-size: 0.6em;
+  vertical-align: 0.62em;
+}
+
 .ui-row {
   display: flex;
   align-items: center;
@@ -321,13 +334,15 @@ a.ui-row,
   min-height: var(--touch-min);
   padding-block: var(--row-pad);
   padding-inline: 0;
-  border-bottom: 1px solid var(--color-line);
+  /* No row hairlines anywhere: rows are separated by their padding (decision 0120, option C). */
+  border-bottom: 0;
   color: inherit;
   text-decoration: none;
 }
 
 .ui-row > .ui-num,
-.ui-row > .t-title-3 {
+.ui-row > .t-title-3,
+.ui-row > .t-amount {
   flex: none;
 }
 
@@ -389,12 +404,14 @@ a.ui-row,
   flex-direction: column;
 }
 
+/* Row titles 17/400 like Mercury (decision 0120, option C): title-3 size and line at the 400 weight.
+   Inputs stay body 16/500. */
 .ui-row-title {
   overflow: hidden;
   margin: 0;
-  font-size: var(--type-body-size);
-  font-weight: var(--type-body-weight);
-  line-height: var(--type-body-line);
+  font-size: var(--type-title-3-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-title-3-line);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -417,12 +434,6 @@ a.ui-row,
 
 .ui-row-title-muted {
   color: var(--color-text-muted);
-}
-
-.ui-row-project .ui-row-title {
-  font-size: var(--type-title-3-size);
-  font-weight: 500;
-  line-height: var(--type-title-3-line);
 }
 
 .t-hint {
@@ -487,15 +498,36 @@ a.ui-row,
   cursor: not-allowed;
 }
 
+/* FLOW-119. The loan's project: one line, the empty value muted. */
+.ui-pick-value {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-pick-value[data-empty="true"] {
+  color: var(--color-text-muted);
+}
+
 .ui-row-hint {
   display: block;
   overflow-wrap: anywhere;
   color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+/* A hint tied with aria-describedby is a field hint and stays `hint` 13 (decision 0120 moves only
+   the row secondary line to `meta`). Matches the skeleton and status reserve. */
+.ui-row-hint.t-hint {
   font-size: var(--type-hint-size);
   font-weight: var(--type-hint-weight);
   line-height: var(--type-hint-line);
-  white-space: normal;
-  text-wrap: pretty;
 }
 
 .ui-row-hint-wrap {
@@ -950,6 +982,12 @@ a.ui-row,
   font-weight: var(--type-micro-weight);
 }
 
+.ui-status-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-muted);
+}
+
 .ui-bar {
   height: var(--bar-h);
   overflow: hidden;
@@ -1055,6 +1093,45 @@ a.ui-row,
   background: var(--color-tint-pressed);
 }
 
+/*
+  FLOW-321. Two or more rows share the one tinted pending card. Each row is its own
+  link with its own pressed state; padding, not a hairline, separates them (0120).
+*/
+.ui-banner-rows {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  margin: var(--space-6) var(--space-card-inset) 0;
+  padding: var(--space-1);
+  list-style: none;
+  border-radius: var(--radius-card);
+  background: var(--color-tint);
+}
+
+.ui-banner-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  box-sizing: border-box;
+  min-height: var(--touch-min);
+  padding: var(--space-3);
+  border-radius: calc(var(--radius-card) - var(--space-1));
+  color: inherit;
+  text-decoration: none;
+}
+
+.ui-banner-row .ui-row-text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.ui-banner-row:active {
+  background: var(--color-tint-pressed);
+}
+
 .ui-banner-quiet {
   background: transparent;
   border-radius: 0;
@@ -1122,7 +1199,6 @@ a.ui-row,
   justify-content: space-between;
   gap: var(--space-3);
   padding-block: var(--space-2);
-  border-bottom: 1px solid var(--color-line);
 }
 
 .ui-notice {
@@ -1564,7 +1640,6 @@ a.ui-row,
 }
 
 .ui-review-ai .ui-row {
-  border-bottom: 0;
   padding-block: 0;
   min-height: var(--touch-min);
 }
@@ -1642,6 +1717,74 @@ a.ui-row,
 
 .ui-review-doc .t-hint {
   color: var(--color-text-secondary);
+}
+
+/* FLOW-304. The payment method under the source line: icon and a few words, one line. */
+.ui-review-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.ui-method-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* The memo: one line with an ellipsis; a button only when clipped. */
+.ui-review-memo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--type-hint-size);
+  line-height: var(--type-hint-line);
+  text-align: start;
+}
+
+.ui-review-memo-icon,
+.ui-review-memo-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.ui-review-memo-text {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 44px hit area; the negative block margin keeps the line its hint height. */
+.ui-review-memo-button {
+  min-block-size: var(--touch-min);
+  margin-block: calc((var(--type-hint-size) * var(--type-hint-line) - var(--touch-min)) / 2);
+}
+
+.ui-review-memo-button[data-open] {
+  align-items: flex-start;
+  margin-block: 0;
+}
+
+.ui-review-memo-button[data-open] .ui-review-memo-text {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ui-review-memo-button[data-open] .ui-review-memo-chevron {
+  transform: rotate(180deg);
 }
 
 .ui-review-tile {
@@ -1756,7 +1899,8 @@ a.ui-row,
   .ui-chip-choice:hover,
   .ui-btn-ghost:hover,
   .ui-text-link:hover,
-  .ui-banner:hover {
+  .ui-banner:hover,
+  .ui-banner-row:hover {
     background: var(--surface-hover);
   }
 }
@@ -1884,6 +2028,8 @@ a.ui-row,
 
 .ui-flow-label {
   color: var(--color-text-secondary);
+  /* נכנס / יצא labels read quiet, at 400 (decision 0120, option C). */
+  font-weight: var(--type-meta-weight);
 }
 
 /* FLOW-301. A Home row that opens its breakdown: the whole block is the target. */
@@ -1919,12 +2065,8 @@ a.ui-row,
 
 /* Rows beside the counted groups: the waiting count and the kept-out lines read quieter. */
 .ui-breakdown-quiet .ui-row-title,
-.ui-breakdown-quiet .t-title-3 {
+.ui-breakdown-quiet .t-amount {
   color: var(--color-text-secondary);
-}
-
-.ui-breakdown-quiet .t-title-3 {
-  font-weight: var(--type-body-weight);
 }
 
 /* Groups from the previous grouping or period while the new ones load. */
@@ -2273,6 +2415,7 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-band-hero .t-title-2,
+.ui-band-hero .t-band-title,
 .ui-notice-title {
   display: -webkit-box;
   min-width: 0;
@@ -2541,11 +2684,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  border-bottom: 1px solid var(--color-line);
-}
-
-.ui-row-stack > .ui-row {
-  border-bottom: 0;
 }
 
 .ui-row-action {
@@ -2776,8 +2914,11 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   margin: var(--space-2) 0 var(--space-4);
 }
 
+/* At 34px (decision 0120) a one-word title and its action pill can pass 320 together; the action
+   then wraps under the title instead of clipping it. */
 .ui-page-title-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -2793,7 +2934,9 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 }
 
 .ui-banner .ui-row-title,
-.ui-banner .ui-row-hint {
+.ui-banner .ui-row-hint,
+.ui-banner-row .ui-row-title,
+.ui-banner-row .ui-row-hint {
   display: -webkit-box;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -2802,7 +2945,8 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   -webkit-line-clamp: 2;
 }
 
-.ui-banner bdi {
+.ui-banner bdi,
+.ui-banner-row bdi {
   white-space: nowrap;
 }
 
@@ -2905,6 +3049,10 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   color: var(--color-accent-text);
 }
 
+.ui-page .t-title-1 {
+  letter-spacing: var(--type-title-1-tracking);
+}
+
 .ui-page .t-title-1,
 .ui-page .t-label {
   display: -webkit-box;
@@ -2942,11 +3090,12 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   padding-block: var(--space-2);
   padding-inline: var(--space-side);
   background: var(--color-bg);
-  border-bottom: 1px solid var(--color-line);
 }
 
+/* Month groups are 32px apart (decision 0120). Rows carry no hairline anywhere; the pressed and
+   focus tint is drawn by ::before, so it is unaffected. */
 .ui-month + .ui-month .ui-month-head {
-  margin-block-start: var(--space-4);
+  margin-block-start: var(--space-8);
 }
 
 /* A row reached by Tab or scrolled into view stops below the pinned month bar (up to three
@@ -2975,6 +3124,80 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
   column-gap: var(--space-2);
 }
 
+/* FLOW-305: quiet day heads inside a month (היום, אתמול, יום ב׳ · 05/10). 15/1.4/500 text-secondary,
+   16px above and 4px below, not sticky (one pinned bar is enough at 320), no hairline. */
+.ui-day-head {
+  margin: var(--space-4) 0 var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-meta-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-meta-line);
+}
+
+/* FLOW-305: statement row (ListRow variant="statement"). A 40px initials circle in the tint, the
+   counterparty over a pending chip and "✦ project · category", and the amount over the method. */
+.ui-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-10);
+  block-size: var(--space-10);
+  border-radius: 50%;
+  background: var(--color-tint);
+  color: var(--color-accent-text);
+  font-size: var(--type-meta-size);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.ui-statement-title[dir="ltr"] {
+  text-align: end;
+}
+
+.ui-statement-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.ui-statement-line > .ui-status {
+  flex: none;
+}
+
+.ui-statement-suggest {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-statement-spark {
+  color: var(--color-accent-text);
+}
+
+.ui-statement-end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ui-statement-method {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ui-statement-method-icon {
+  display: inline-flex;
+  color: var(--color-text-secondary);
+}
+
 .ui-section-head,
 .ui-page-pad {
   padding-inline: var(--space-side);
@@ -2986,10 +3209,6 @@ body:not(:has(.vaul-dragging)) [data-vaul-overlay][data-state="open"] {
 
 .ui-cat-list {
   margin-top: var(--space-2);
-}
-
-.ui-cat-list > .ui-row:last-child {
-  border-bottom: 0;
 }
 
 .ui-cat-list.ui-cat-hidden {
@@ -4039,4 +4258,108 @@ div.ui-check-row {
   margin-inline: auto;
   border-radius: 999px;
   background: var(--color-text);
+}
+
+/* FLOW-303: prev and next on the transaction card, before ⋯ in the top bar. */
+.ui-txn-end,
+.ui-txn-nav {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* An icon button that stays focusable at a list end. The cursor comes from the shared disabled rule. */
+.ui-icon-btn[aria-disabled="true"],
+.ui-icon-btn[aria-disabled="true"]:active {
+  background: transparent;
+  color: var(--color-disabled-text);
+}
+
+/* FLOW-117: the other kind's categories under the category picker. */
+.ui-reversal {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-line);
+}
+
+.ui-reversal > .ui-text-link {
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.ui-reversal-head {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.ui-reversal-hint {
+  margin: 0 0 var(--space-2);
+}
+
+/* FLOW-501: the Settings rows that open a page. The wrapper only marks the row for focus return. */
+.ui-settings-page-row {
+  display: contents;
+}
+
+/* FLOW-304. "פרטי הבנק" on the transaction screen. Static rows; text stays selectable. */
+.ui-bank .ui-row {
+  user-select: text;
+}
+
+.ui-bank-account {
+  display: inline-flex;
+  max-inline-size: 100%;
+  gap: var(--space-1);
+  vertical-align: bottom;
+}
+
+.ui-bank-account-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bank-last4 {
+  flex: none;
+}
+
+/* The clipping box takes the name's own direction, so a Latin name loses its end, not its start. */
+.ui-bank-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-bank-wrap .ui-row-title {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.ui-bank-memo {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.ui-bank-memo[data-open] {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+.ui-bank-text {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-hint-weight);
 }

@@ -15,13 +15,13 @@ import { useHeldOrder } from "../list-hold";
 import { useNavigate } from "react-router-dom";
 import { absAgorot } from "../agorot";
 import { useAuth } from "../auth";
-import { Banner } from "../ui/banner";
+import { BannerRows, type BannerRow } from "../ui/banner";
 import { Button } from "../ui/button";
 import { ChangePill } from "../ui/change-pill";
 import { EmptyState } from "../ui/empty-state";
 import { ErrorState } from "../ui/error-state";
 import { FlowLines, Hero } from "../ui/hero";
-import { ChartIcon } from "../ui/icons";
+import { ChartIcon, DocumentIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodPicker, RangeSheet } from "../ui/period-picker";
@@ -115,7 +115,7 @@ export function HomeScreen({ example }: { example?: ReactNode } = {}) {
           title="עוד אין נתונים"
           body="הרווח יופיע כאן אחרי ש־SUMIT מחובר."
           action={holdWrites ? undefined : (
-            <Button variant="pill" to={previewing ? `/settings${search}` : "/setup/1?from=card"}>
+            <Button variant="pill" to={previewing ? `/settings/connections${search}` : "/setup/1?from=card"}>
               חיבור SUMIT
             </Button>
           )}
@@ -205,14 +205,12 @@ export function HomeBooks({
       : data.prev_net_agorot;
   const percent = ilsOnly ? changePercent(heroFigures[0]?.agorot ?? 0n, previous) : null;
   const comparison = comparisonWords(period);
-  const pending = data.review_count;
-  const unpaidReady = unpaidPhase === "ready";
-  const showCard = pending > 0 || (unpaidReady && unpaidCount > 0);
-  const cardTo = pending > 0 ? `/review${search}` : `/unpaid${search}`;
-  const cardTitle = pending > 0
-    ? <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>
-    : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות לא שולמו</>;
-  const cardHint = unpaidHint(pending, unpaidCount, unpaidGross, unpaidReady);
+  const attention = attentionRows({
+    pending: data.review_count,
+    unpaidCount: unpaidPhase === "ready" ? unpaidCount : 0,
+    unpaidGross,
+    search,
+  });
 
   const choices = [thisMonth(), lastMonth(), yearToDate(), allTime()];
 
@@ -286,7 +284,7 @@ export function HomeBooks({
         </div>
       ) : null}
 
-      {showCard ? <Banner to={cardTo} title={cardTitle} hint={cardHint} /> : null}
+      <BannerRows rows={attention} />
 
       <SectionHead title="פרויקטים מובילים" />
       <ul className="ui-project-list">
@@ -312,11 +310,39 @@ export function HomeBooks({
   );
 }
 
-function unpaidHint(pending: number, unpaidCount: number, unpaidGross: bigint, ready: boolean): ReactNode {
-  if (!ready || unpaidCount === 0) return undefined;
-  const amount = <bdi dir="ltr">{formatIls(unpaidGross)}</bdi>;
-  if (pending > 0) return <>{String(unpaidCount)} חשבוניות לא שולמו · {amount}</>;
-  return <>{amount} · טרם נגבה</>;
+/**
+ * FLOW-321. The Home pending card: one row to Review and one to Unpaid with its
+ * total, each only when it has something. A count of 1 reads singular.
+ */
+export function attentionRows({
+  pending,
+  unpaidCount,
+  unpaidGross,
+  search,
+}: {
+  pending: number;
+  unpaidCount: number;
+  unpaidGross: bigint;
+  search: string;
+}): BannerRow[] {
+  const rows: BannerRow[] = [];
+  if (pending > 0) {
+    rows.push({
+      id: "review",
+      to: `/review${search}`,
+      title: pending === 1 ? "פריט אחד ממתין לאישור" : <><bdi dir="ltr">{String(pending)}</bdi> פריטים ממתינים לאישור</>,
+    });
+  }
+  if (unpaidCount > 0) {
+    rows.push({
+      id: "unpaid",
+      to: `/unpaid${search}`,
+      icon: <DocumentIcon size={24} stroke={1.9} />,
+      title: unpaidCount === 1 ? "חשבונית אחת לא שולמה" : <><bdi dir="ltr">{String(unpaidCount)}</bdi> חשבוניות לא שולמו</>,
+      hint: <><bdi dir="ltr">{formatIls(unpaidGross)}</bdi> · טרם נגבה</>,
+    });
+  }
+  return rows;
 }
 
 function ProjectLine({ project, search }: { project: ProjectRow; search: string }) {

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ListRow } from "./list-row";
+import { ListRow, type StatementRowProps } from "./list-row";
 import { SuggestTag } from "./suggest-tag";
 import { expectRtl, expectTarget } from "./test-support";
 
@@ -23,7 +23,7 @@ describe("ListRow", () => {
     expect(screen.getByText("ספק · פטור ממע״מ")).toBeInTheDocument();
     const txnAmount = screen.getByText("−₪12,000");
     expect(txnAmount.closest("bdi")).toHaveAttribute("dir", "ltr");
-    expect(txnAmount.textContent).toBe("−₪12,000");
+    expect(txnAmount.textContent).toBe("−₪12,000.00");
   });
 
   it("renders a USD transaction amount inside one bdi and honours project currency", () => {
@@ -36,8 +36,10 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     const usdTxn = screen.getByText("−$1,250");
-    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250");
-    expect(screen.getByText("$2,000")).toBeInTheDocument();
+    expect(usdTxn.closest("bdi")?.textContent).toBe("−$1,250.00");
+    // Project rows stay whole units.
+    expect(screen.getByText("$2,000").textContent).toBe("$2,000");
+    expect(screen.getByText("$2,000").querySelector(".ui-num-cents")).toBeNull();
   });
 
   it("renders static, button, danger, and selectable rows", () => {
@@ -237,5 +239,149 @@ describe("ListRow", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("link", { name: /משכנתא/ })).toHaveClass("ui-row-tone-warning");
+  });
+
+  it("draws an income row green with a hidden הכנסה and no plus, an expense row with a minus in text", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="לקוח לדוגמה" agorot={350000n} sign="in" source="invoice" href="/transactions/9" />
+          <ListRow variant="transaction" title="ספק לדוגמה" agorot={120000n} sign="out" source="bank" />
+        </>
+      </MemoryRouter>,
+    );
+    const income = screen.getByText("₪3,500");
+    expect(income).toHaveClass("ui-income");
+    expect(income.textContent).not.toContain("+");
+    expect(screen.getByRole("link", { name: /הכנסה/ })).toHaveTextContent("הכנסה ₪3,500.00");
+    expect(container.querySelector(".sr-only")?.textContent).toBe("הכנסה ");
+    const expense = screen.getByText("−₪1,200");
+    expect(expense).not.toHaveClass("ui-income");
+    expect(expense.closest(".t-amount")).not.toBeNull();
+  });
+
+  it("shows transaction cents small and raised, .00 included, and keeps project rows whole (decision 0120, option C)", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="לקוח לדוגמה" agorot={123_456n} sign="in" source="invoice" />
+          <ListRow variant="transaction" title="ספק לדוגמה" agorot={50_000n} sign="out" source="bank" />
+          <ListRow variant="project" title="פרויקט לדוגמה" agorot={98_765n} />
+        </>
+      </MemoryRouter>,
+    );
+    const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
+    expect(figures.map((node) => node.textContent)).toEqual(["₪1,234.56", "−₪500.00", "₪988"]);
+    expect(figures.map((node) => node.querySelector(".ui-num-cents")?.textContent ?? null)).toEqual([".56", ".00", null]);
+  });
+
+  it("draws no hairline under a row", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="transaction" title="ספק לדוגמה" agorot={50_000n} sign="out" source="bank" />
+      </MemoryRouter>,
+    );
+    const row = screen.getByText("ספק לדוגמה").closest(".ui-row");
+    expect(row).not.toBeNull();
+    if (row instanceof HTMLElement) expect(getComputedStyle(row).borderBottomWidth).toMatch(/^(0px|0|)$/);
+  });
+
+  it("shows a negative income with its minus and no green, and names a refund זיכוי", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <>
+          <ListRow variant="transaction" title="זיכוי לקוח" agorot={-20_000n} sign="in" source="invoice" />
+          <ListRow variant="transaction" title="זיכוי ספק" agorot={19_400n} sign="in" inWord="זיכוי" source="invoice" />
+          <ListRow variant="transaction" title="אפס" agorot={0n} sign="in" source="invoice" />
+        </>
+      </MemoryRouter>,
+    );
+    const figures = Array.from(container.querySelectorAll("bdi.ui-num"));
+    expect(figures[0]?.textContent).toBe("−₪200.00");
+    expect(figures[0]).not.toHaveClass("ui-income");
+    expect(figures[1]).toHaveClass("ui-income");
+    expect(figures[2]).not.toHaveClass("ui-income");
+    expect(Array.from(container.querySelectorAll(".sr-only")).map((node) => node.textContent)).toEqual(["זיכוי ", "הכנסה "]);
+  });
+
+  it("keeps a described field hint at the hint size", () => {
+    render(
+      <MemoryRouter>
+        <ListRow variant="button" title="חיבור לדוגמה" hint="מחובר" describeHint onClick={() => undefined} />
+      </MemoryRouter>,
+    );
+    const hint = screen.getByText("מחובר");
+    expect(hint).toHaveClass("t-hint");
+    // jsdom keeps the custom property unresolved, so the token name is what is compared.
+    expect(getComputedStyle(hint).fontSize).toBe("var(--type-hint-size)");
+  });
+});
+
+describe("ListRow statement (FLOW-305)", () => {
+  function renderRow(props: Partial<StatementRowProps>) {
+    return render(
+      <MemoryRouter>
+        <ListRow
+          variant="statement"
+          title="חשמל השרון בע״מ"
+          fallback="invoice"
+          agorot={-120_050n}
+          sign="out"
+          href="/review/all?item=1"
+          {...props}
+        />
+      </MemoryRouter>,
+    );
+  }
+
+  it("is one link with a 40px-class avatar, the title, and the amount with cents", () => {
+    renderRow({});
+    const link = screen.getByRole("link");
+    expectTarget(link);
+    expect(link).toHaveClass("ui-row", "ui-hit");
+    const avatar = link.querySelector(".ui-avatar");
+    expect(avatar?.textContent).toBe("חה");
+    expect(avatar).toHaveAttribute("dir", "rtl");
+    expect(avatar).toHaveAttribute("aria-hidden", "true");
+    expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "rtl");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("−₪1,200.50");
+    expect(link.querySelector(".ui-num-cents")?.textContent).toBe(".50");
+    // No suggestion and not pending: no second line, no method unless one is passed.
+    expect(link.querySelector(".ui-statement-line")).toBeNull();
+    expect(link.querySelector(".ui-statement-method")).toBeNull();
+    expect(link).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הוצאה −₪1,200.50");
+  });
+
+  it("puts the pending chip before the suggestion and hides the ✦ mark", () => {
+    renderRow({ pending: true, suggestion: "וילה לדוגמה · חומרים" });
+    const line = screen.getByRole("link").querySelector(".ui-statement-line");
+    expect(line?.firstElementChild).toHaveClass("ui-status");
+    expect(line?.querySelector(".ui-statement-suggest")).toHaveAttribute("data-clip-ok");
+    expect(line?.querySelector(".ui-statement-spark")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("link")).toHaveAttribute("aria-label", "חשמל השרון בע״מ, הצעה: וילה לדוגמה · חומרים, הוצאה −₪1,200.50, בהמתנה");
+  });
+
+  it("draws a passed method under the amount, isolating a Latin label, and speaks its words", () => {
+    renderRow({ method: { icon: null, text: "••4242", spoken: "כרטיס שמסתיים ב־4242", ltr: true } });
+    const method = screen.getByRole("link").querySelector(".ui-statement-method");
+    expect(method?.querySelector("bdi")).toHaveAttribute("dir", "ltr");
+    expect(method?.textContent).toBe("••4242");
+    expect(screen.getByRole("link").getAttribute("aria-label")).toContain("כרטיס שמסתיים ב־4242");
+  });
+
+  it("shows income green with no plus and the hidden word", () => {
+    renderRow({ title: "Northwind Traders", agorot: 500_000n, sign: "in", currency: "USD" });
+    const link = screen.getByRole("link");
+    expect(link.querySelector(".ui-income")?.textContent).toBe("$5,000.00");
+    expect(link.querySelector(".t-amount")?.textContent).toBe("הכנסה $5,000.00");
+    expect(link.querySelector(".ui-avatar")?.textContent).toBe("NT");
+    expect(link.querySelector(".ui-row-title")).toHaveAttribute("dir", "ltr");
+  });
+
+  it("falls back to the source icon when the name has no letter", () => {
+    renderRow({ title: "4242-1234", fallback: "bank" });
+    const avatar = screen.getByRole("link").querySelector(".ui-avatar");
+    expect(avatar).toHaveAttribute("data-avatar", "icon");
+    expect(avatar?.querySelector("svg")).not.toBeNull();
   });
 });

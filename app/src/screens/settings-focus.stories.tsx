@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
-import { SettingsScreen } from "./flow-screens";
+import { Route, Routes, useNavigate } from "react-router-dom";
+import { ConnectionsScreen, LoansScreen, SettingsScreen } from "./flow-screens";
 import { StoryRoute } from "../ui/story-route";
 
 const meta = {
@@ -24,11 +25,11 @@ function bodyOf(canvasElement: HTMLElement) {
   return within(canvasElement.ownerDocument.body);
 }
 
-/** ✕ and Escape on a Settings sheet return focus to the control that opened it. */
+/** ✕ and Escape on a Connections sheet return focus to the control that opened it (FLOW-501 moved them here). */
 export const ReturnFocus: Story = {
   render: () => (
-    <StoryRoute entry="/settings">
-      <SettingsScreen
+    <StoryRoute entry="/settings/connections">
+      <ConnectionsScreen
         sample={{
           ...business,
           connected: false,
@@ -67,8 +68,8 @@ export const ReturnFocus: Story = {
 /** Escape on the confirm sheet returns to the ניתוק row that opened it. */
 export const ConfirmFocus: Story = {
   render: () => (
-    <StoryRoute entry="/settings">
-      <SettingsScreen
+    <StoryRoute entry="/settings/connections">
+      <ConnectionsScreen
         sample={{
           ...business,
           assistant: { state: "connected", scope: "read_write", id: "mcp-1" },
@@ -118,5 +119,40 @@ export const RenameTooShort: Story = {
     await userEvent.tab();
     await expect(field).toHaveAttribute("aria-invalid", "true");
     await within(sheet).findByText("שם קצר מדי – לפחות 2 תווים");
+  },
+};
+
+function BackLink() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => { void navigate(-1); }}>
+      חזרה בדפדפן
+    </button>
+  );
+}
+
+/** FLOW-501. Back from the Connections and Loans pages puts focus on the Settings row that opened them. */
+export const BackFocus: Story = {
+  name: "Back returns focus to the Settings row",
+  render: () => (
+    <StoryRoute entry="/settings">
+      <BackLink />
+      <Routes>
+        <Route path="/settings" element={<SettingsScreen sample={{ ...business, loans: [] }} />} />
+        <Route path="/settings/connections" element={<ConnectionsScreen sample={{ ...business, assistant: { state: "empty" } }} />} />
+        <Route path="/settings/loans" element={<LoansScreen sample={{ ...business, loans: [] }} />} />
+      </Routes>
+    </StoryRoute>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("link", { name: "חיבורים" }));
+    await canvas.findByRole("heading", { name: "חיבורים" });
+    await userEvent.click(canvas.getByRole("button", { name: "חזרה בדפדפן" }));
+    await waitFor(() => expect(canvas.getByRole("link", { name: "חיבורים" })).toHaveFocus());
+    await userEvent.click(canvas.getByRole("link", { name: "הלוואות" }));
+    await canvas.findByRole("heading", { name: "הלוואות" });
+    await userEvent.click(canvas.getByRole("button", { name: "חזרה בדפדפן" }));
+    await waitFor(() => expect(canvas.getByRole("link", { name: "הלוואות" })).toHaveFocus());
   },
 };
