@@ -14,59 +14,60 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 
 | # | Id | Title | Type | Status |
 | --- | --- | --- | --- | --- |
-| 1 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE | in-progress (#71) |
-| 2 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | in-progress (#74) |
-| 3 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | in-progress (#72) |
-| 4 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | in-progress (#73) |
-| 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | in-progress (#75) |
-| 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | in-progress (#89) |
-| 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | in-progress (#87) |
-| 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP merged; screen next) | SMALL CYCLE | in-progress (#82) |
-| 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
-| 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
-| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | in-progress (#113) |
-| 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | in-progress (#112) |
+| 1 | [FLOW-102](#flow-102) | Unassigned bucket, overhead project, unpaid row on the invoiced basis | SMALL CYCLE | done (#71) |
+| 2 | [FLOW-109](#flow-109) | Income assigned to a project: confirm it counts in that project | BUG | done (#74) |
+| 3 | [FLOW-111](#flow-111) | update_loan can store a payment below the interest | BUG | done (#72) |
+| 4 | [FLOW-201](#flow-201) | Split rows inside the assign_expenses batch | MCP | done (#73) |
+| 5 | [FLOW-202](#flow-202) | sync_bank returns before slow MCP clients time out | MCP | done (#75) |
+| 6 | [FLOW-105](#flow-105) | Link a loan to a project (server and MCP) | SMALL CYCLE | done (#89) |
+| 7 | [FLOW-311](#flow-311) | Split one bank line across several categories | MCP | done (#87) |
+| 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP merged; screen next) | SMALL CYCLE | done (#82) |
+| 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | done (#79) |
+| 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | done (#81) |
+| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | done (#113) |
+| 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | done (#112) |
 | 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | done (#114) |
 | 10e | [FLOW-127](#flow-127) | Kept-out income and overhead undo review follow-ups (#114, #116 reviews) | BACKLOG NIT | done (#117) |
-| 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
-| 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
+| 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | done (#88) |
+| 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | done (#90) |
 | 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | done (#116) |
 | 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | done (#118) |
 | 13c | [FLOW-206](#flow-206) | Bulk setup without rate-limit stalls | MCP | done (#119) |
-| 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
+| 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | done (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
-| 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | in-progress (#83) |
-| 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | in-progress (#95) |
-| 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | in-progress (#86) |
+| 17 | [FLOW-107](#flow-107) | Loan split breakdown on the transaction | SMALL UI | done (#83) |
+| 18 | [FLOW-511](#flow-511) | Easy opt-out from the Home setup card | PLAN FIRST | done (#95) |
+| 19 | [FLOW-113](#flow-113) | Kept-out toggle on the categories screen | SMALL UI | done (#86) |
 | 20 | [FLOW-301](#flow-301) | Income and expense drill-down from Home | PLAN FIRST | done (PR #85, 2026-10-07; option A approved by the owner) |
-| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | in-progress (#98) |
-| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | in-progress (#100) |
-| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | in-progress (#105) |
+| 21 | [FLOW-302](#flow-302) | Month dividers in every transaction list | SMALL UI | done (#98) |
+| 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
+| 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
-| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | in-progress (#111) |
+| 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
-| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
-| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | in-progress (#122) |
-| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
+| 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | done (#101) |
+| 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | done (#122) |
+| 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | done (#104) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | done (#121; UI items go to the design PR, #121 review items to FLOW-129) |
-| 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | in-progress (#123) |
+| 32b | [FLOW-129](#flow-129) | Loan attach follow-ups (#121 review) | BACKLOG NIT | done (#123) |
 | 32c | [FLOW-130](#flow-130) | Lock timeouts return retry in every MCP write (#123 review) | BACKLOG NIT | done (#124) |
-| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
+| 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | done (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | done (#131) |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | in-progress (#131 did the server half; the sheet's field error goes to the Mercury thread) |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | done (#126) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129; the review UI hint goes to the Mercury thread) |
+| 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | in-progress (items 1 and 6) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
-| 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | in-progress (#111) |
-| 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | in-progress |
-| 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | in-progress |
+| 41 | [FLOW-319](#flow-319) | Type sizes, headers and text colours, income in green | SMALL UI | done (#111) |
+| 42 | [FLOW-320](#flow-320) | Open the picker that was tapped on the transaction detail | SMALL UI | done (#125) |
+| 43 | [FLOW-410](#flow-410) | Find every project in project search | BUG | done (#128) |
 | 44 | [FLOW-321](#flow-321) | Two rows in Home's attention card (review and unpaid) | SMALL UI | ready |
 | 45 | [FLOW-322](#flow-322) | Copy and dead-end fixes from the UX review | SMALL UI | ready |
 | 46 | [FLOW-411](#flow-411) | Project screen: lines on open, honest period label | SMALL UI | ready |
@@ -79,20 +80,20 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-102"></a>
 ### FLOW-102 · Unassigned bucket, overhead project, unpaid row on the invoiced basis
-- **Type:** SMALL CYCLE · **Status:** in-progress (#71) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#71) · **Depends on:** —
 - **What:** Three P&L gaps found while cleaning real data. (1) Lines with no project, shared split or overhead role drop out of direct + shared + overhead, so the parts don't add up to the company total. Return an `unassigned` bucket in `company_pnl`, `get_project` callers and the MCP totals. (2) Let a company mark one project as its overhead project, so lines filed there count as overhead, not as direct cost (today overhead reads 0 for a company that files overhead into a project). (3) An unpaid expense row is left out on the invoiced basis; review the rule against [calculations](../module-1-project-pnl/calculations.md) and fix or document it.
 - **MCP:** totals tools return the unassigned bucket; a write tool to set or clear the overhead project (idempotency key, write bucket, undo).
 - **Acceptance:** pgTAP: projects + overhead + unassigned = company total on both bases, ILS and USD; the overhead project's lines move from direct to overhead and back on undo; cross-tenant refusal with a positive control; the unpaid-row rule has a test either way. Decision and changelog.
 
 <a id="flow-109"></a>
 ### FLOW-109 · Income assigned to a project: confirm it counts in that project
-- **Type:** BUG · **Status:** in-progress (#74) · **Depends on:** —
+- **Type:** BUG · **Status:** done (#74) · **Depends on:** —
 - **What:** Income filed to a project through MCP `assign_expense` gets no allocation row and a null `pnl_role`, while expenses filed the same way get a 100% allocation with role `project`. Verify whether that income counts in the project's P&L; if not, fix `assign_expense` (and the batch path) for income.
 - **Acceptance:** pgTAP: income assigned to project A shows in A's `get_project` income and in the company total exactly once; undo removes it; MCP test for the income path.
 
 <a id="flow-111"></a>
 ### FLOW-111 · update_loan can store a payment below the interest
-- **Type:** BUG · **Status:** in-progress (#72) · **Depends on:** —
+- **Type:** BUG · **Status:** done (#72) · **Depends on:** —
 - **What:** MCP `update_loan` doesn't re-check the schedule, so a client can store a payment smaller than the interest, after which `get_loan_schedule` and `attach_loan_payment` throw uncaught. Validate in SQL and return a fixed refusal. In the same PR: trim the name and treat explicit nulls correctly, give a specific refusal for bad parts, add a DB balance check for the app split path, make `loan_split` undo refuse (conflict) when the split was corrected in the app afterwards, cap the currency-default read (the app reads at most 1000 lines), and add `set local lock_timeout` to the migration.
 - **Acceptance:** tests for each refusal and for undo after an app correction; existing loan tests unchanged.
 
@@ -111,7 +112,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-112"></a>
 ### FLOW-112 · Kept-out categories follow-ups (#67 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#81) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#81) · **Depends on:** —
 - [x] Default names: near-variant category names aren't matched, and a rename doesn't re-check the default. (#81: `private.pnl_name_key`; the trigger also runs on a rename into a default name.)
 - [ ] A merely suggested kept-out category already removes the line from the P&L. Moved to [FLOW-121](#flow-121).
 - [ ] `get_project` doesn't report kept-out project income. Moved to [FLOW-121](#flow-121).
@@ -121,7 +122,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-121"></a>
 ### FLOW-121 · Kept-out lines: guessed categories and project income
-- **Type:** SMALL CYCLE · **Status:** in-progress (#113) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
+- **Type:** SMALL CYCLE · **Status:** done (#113) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
 - **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
 - **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
 - **Answer to (a):** built as recommended, a guess counts until confirmed (decision [0114](../decisions/0114-kept-out-guesses.md)); the owner was asked again on 2026-10-07 and can still pick the other way.
@@ -143,13 +144,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
-- **Type:** SMALL CYCLE · **Status:** in-progress (#112) · **Depends on:** FLOW-112 (#81); FLOW-304 (#107), whose `upsert_connector_lines` this PR's migration builds on
+- **Type:** SMALL CYCLE · **Status:** done (#112) · **Depends on:** FLOW-112 (#81); FLOW-304 (#107), whose `upsert_connector_lines` this PR's migration builds on
 - **What:** Follow-up from FLOW-112. `app/src/screens/loan-match.tsx` reads the three loan categories with `.in("name", ...)` and offers a match when the line's category name equals the principal name; the Mercury connector's loan hint resolves `תשלומי הלוואה` by name; the categories screen's locked loan line (`loanCategoryLine` in `app/src/screens/flow-screens.tsx`, FLOW-113) matches the Hebrew names too. Read `categories.loan_part` instead. No visible change.
 - **Acceptance:** app unit test with a renamed loan category; connector test; no design review needed.
 
 <a id="flow-113"></a>
 ### FLOW-113 · Kept-out toggle on the categories screen
-- **Type:** SMALL UI · **Status:** in-progress (#86) · **Depends on:** FLOW-101 (merged)
+- **Type:** SMALL UI · **Status:** done (#86) · **Depends on:** FLOW-101 (merged)
 - **Owner approval:** 2026-10-07, option A (row sheet button, ⊘ mark, save on tap with ביטול). Decision [0106](../decisions/0106-kept-out-toggle.md).
 - **What:** The per-category P&L flag exists only through the API and MCP. Smallest option: one secondary action in the category row's "עוד" sheet next to הסתרה ("מחוץ לרווח והפסד" / "החזרה לרווח והפסד") plus a muted icon on kept-out rows with a Hebrew aria-label. On `/settings/categories`, not on Settings itself. The three loan categories stay fixed.
 - **Acceptance:** mockup approved; CONTROLS.md row; design review.
@@ -170,7 +171,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-107"></a>
 ### FLOW-107 · Loan split breakdown on the transaction
-- **Type:** SMALL UI · **Status:** in-progress (#83) · **Depends on:** FLOW-101 (merged, #70)
+- **Type:** SMALL UI · **Status:** done (#83) · **Depends on:** FLOW-101 (merged, #70)
 - **Approved:** owner chose option A of the [mockups](https://claude.ai/artifact/MSVfZhxN56T2V6epZaQ25v) on 2026-10-07 (parts list with icons, minus, total, "מחוץ לרווח", "נספר ברווח"; list rows "3 חלקים"). Decision [0107](../decisions/0107-loan-split-on-the-transaction.md).
 - **What:** When a bank line is a split loan payment, show its parts (principal, interest, escrow) on the transaction row and in the detail, so the expense makes sense. Icon-based, minimal wording, expenses with a minus. MCP: `get_expense` returns the split parts.
 - **Acceptance:** quick mockup approved; parts add up to the line amount on screen; MCP test; design review.
@@ -185,7 +186,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-108"></a>
 ### FLOW-108 · Take a single transaction out of the P&L, with an MCP batch
-- **Type:** PLAN FIRST · **Status:** in-progress (#105) · **Depends on:** #67 (merged)
+- **Type:** PLAN FIRST · **Status:** done (#105) · **Depends on:** #67 (merged)
 - **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/QPLXZjbEdoy8x2H49EEuYS) (עוד sheet button, ⊘ pill, save on tap with ביטול; loan lines locked), under the owner's standing rule for UI tasks. Decision [0112](../decisions/0112-line-out-of-pnl.md).
 - **What:** Let the user move one expense or income line out of the P&L. It then shows in a visible "out expenses" / "out income" group (not hidden), and can move back anytime. A per-transaction override wins over the category default. MCP: a single tool and a batch tool to take out or restore many lines at once, with idempotency, the write bucket, `undo` and `undo_batch`; plus an API. Icon-based, minimal wording.
 - **Acceptance:** plan and mockup approved by the owner, then: pgTAP for override precedence on both bases, totals moved to the excluded side, batch partial success and batch undo.
@@ -205,21 +206,21 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-105"></a>
 ### FLOW-105 · Link a loan to a project
-- **Type:** SMALL CYCLE · **Status:** in-progress (#89, server and MCP); the loan sheet picker is [FLOW-119](#flow-119) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#89, server and MCP); the loan sheet picker is [FLOW-119](#flow-119) · **Depends on:** —
 - **Owner's go:** 2026-10-07, in the project thread (taken off hold).
 - **What:** Optional `loans.project_id` (FK, RLS, migration), settable in MCP `add_loan` / `update_loan` (idempotency, undo, RPC). Show the loan under its project; attached payment splits inherit the loan's project.
 - **Acceptance:** cross-tenant project refusal with a positive control; split inheritance tested; undo restores.
 
 <a id="flow-117"></a>
 ### FLOW-117 · Reversal section in the category picker
-- **Type:** SMALL UI · **Status:** in-progress (#101) · **Depends on:** FLOW-104 (done, #76)
+- **Type:** SMALL UI · **Status:** done (#101) · **Depends on:** FLOW-104 (done, #76)
 - **Approval:** 2026-10-07, design reviewer's option A (a closed section under the list), built under the owner's standing rule for UI tasks.
 - **What:** The server accepts the other kind's category since FLOW-104. In the app category picker, list the other kind's categories under a "reversal" section, so a bounced rent payment or a supplier refund can be filed from the app.
 - **Acceptance:** mockup approved; e2e picks a reversal category both ways; design review.
 
 <a id="flow-118"></a>
 ### FLOW-118 · Reversals follow-ups (#76 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#122) · **Depends on:** FLOW-104
+- **Type:** BACKLOG NIT · **Status:** done (#122) · **Depends on:** FLOW-104
 - [x] `approve_split_review` still raises 'category kind must match the direction' for a null kind; the branch is unreachable after 'category is required'. Drop it or give it its own message. (#122: 'category not found'; the composite foreign key keeps it unreachable.)
 - [x] The `private.mcp_refused` whitelist still carries that message; remove it when the whitelist is next edited. (#122: kept. `mcp_assign_expense_split` and `save_line_split` still raise it.)
 - [ ] A reversal on a line with shares counts as company income with no project. Owner call: spread it over the shares, or refuse an income-kind category on a shared line.
@@ -230,7 +231,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-119"></a>
 ### FLOW-119 · Project picker in the loan sheet
-- **Type:** SMALL UI · **Status:** in-progress (#104; design reviewer's option A, built under the owner's standing UI rule; plan in the PR body) · **Depends on:** FLOW-105
+- **Type:** SMALL UI · **Status:** done (#104; design reviewer's option A, built under the owner's standing UI rule; plan in the PR body) · **Depends on:** FLOW-105
 - **What:** Pick or clear the loan's project in the loan sheet, and show the loan under its project.
 - **Acceptance:** mockup approved; e2e sets and clears the project; design review.
 
@@ -250,7 +251,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-129"></a>
 ### FLOW-129 · Loan attach follow-ups (#121 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#123) · **Depends on:** FLOW-120
+- **Type:** BACKLOG NIT · **Status:** done (#123) · **Depends on:** FLOW-120
 - [x] `mcp_attach_loan_payment` and `mcp_undo` send `lock_not_available` to `others`, so the refusal is stored under the idempotency key and a retry replays it. Map it to `unavailable` / `retry` like a deadlock. (Migration `20261008043000`, tested in `loan_project_followups_reraise.test.sql`.)
 - [x] `loan_project_followups.test.sql` queues g1's review item only if the trigger did not; assert what the trigger does instead. (No trigger queues it; the test asserts that and inserts the item.)
 
@@ -297,26 +298,26 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-201"></a>
 ### FLOW-201 · Split rows inside the assign_expenses batch
-- **Type:** MCP · **Status:** in-progress (#73) · **Depends on:** #68 (merged)
+- **Type:** MCP · **Status:** done (#73) · **Depends on:** #68 (merged)
 - **What:** `assign_expense_split` files one line at a time. Allow split rows (`category_id`, `shares[]`) inside `assign_expenses`, counted as one write hit, with per-row results and `undo_batch` restoring the pre-split state (including lines that were in review).
 - **Acceptance:** pgTAP and Deno tests for a mixed batch, partial success, replay, and batch undo of a split that closed a review.
 
 <a id="flow-202"></a>
 ### FLOW-202 · sync_bank returns before slow MCP clients time out
-- **Type:** MCP · **Status:** in-progress (#75) · **Depends on:** —
+- **Type:** MCP · **Status:** done (#75) · **Depends on:** —
 - **What:** A bank pull through `sync_bank` can take about 45 seconds, and clients with a 30-second timeout cut it off. The MCP token also lives 60 seconds while a pull can take 120, so the finish step can fail silently. Start the sync and return a job id, plus a read tool for the job status (or stream progress).
 - **Acceptance:** tool returns within a few seconds; status tool reports added, skipped and newest date; the finish step validates the response shape before storing.
 
 <a id="flow-203"></a>
 ### FLOW-203 · get_project docs and list_projects basis echo (#66 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#90) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#90) · **Depends on:** —
 - [x] TOOLS.md: `get_project` is all-time (matches `list_projects` only without dates); `transactions[]` includes pending lines and shows shared lines at full amount; the Mercury both-bases note; `other_currencies` sub-fields with negative expenses.
 - [x] `list_projects` should echo `basis`.
 - [x] The `get_project` transaction sort needs an id tiebreaker (equal dates sort non-deterministically).
 
 <a id="flow-204"></a>
 ### FLOW-204 · assign_expense_split follow-ups (#68 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#88) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#88) · **Depends on:** —
 - [x] Undo turns a suggested category into a confirmed one (the existing undo functions do this too).
 - [x] `closed_review` is reported false when the split closes an `unallocated_shared` review.
 - [x] No `lock_timeout` in the migration.
@@ -362,7 +363,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-208"></a>
 ### FLOW-208 · Split and undo follow-ups (#88 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#122) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#122) · **Depends on:** —
 - [x] `assign_expenses` still hashes `p_items` as sent, so a retried batch with one row's shares in another order is `conflict`; sort split shares before hashing, like `assign_expense_split`. (#122)
 - [x] Undo snapshots have no `prior_category_assigned`: a category that was neither a suggestion nor confirmed (supplier rule or provider category) stays confirmed after undo. Add the column to `reassign_undo` and `review_queue` and restore it (see FLOW-205 item 1). (#122; older snapshots keep the old rule. `save_split` still stores no flags.)
 - [x] A pgTAP test that undo of a write onto a line with no category lets the trigger fill a fresh guess. (#122, `review_undo_followups.test.sql`.)
@@ -377,14 +378,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-311"></a>
 ### FLOW-311 · Split one bank line across several categories
-- **Type:** MCP · **Status:** in-progress (#87) · **Depends on:** — · **Owner's go:** 2026-10-07 (bookkeeping requests first: FLOW-104, FLOW-311, FLOW-105, FLOW-106)
+- **Type:** MCP · **Status:** done (#87) · **Depends on:** — · **Owner's go:** 2026-10-07 (bookkeeping requests first: FLOW-104, FLOW-311, FLOW-105, FLOW-106)
 - **What:** Today `assign_expense_split` splits a line across projects with one category. Let one bank line split into several parts, each with its own amount (whole minor units), category and project. Needed for a closing wire that mixes a purchase, loan fees, tax prorations and insurance; an inflow that mixes rent and a security deposit (two income categories); and a reimbursement inside a larger payment. Exact minor-unit amounts must be possible, not only whole percents (today a percent split can land a few minor units off the intended amounts). Parts must sum exactly to the line. Parts in kept-out categories stay out of the P&L, the same way loan split parts do ([0100](../decisions/0100-loan-split-pnl.md)).
 - **MCP:** a write tool (idempotency key, write rate limit, `undo`) plus the RPC; list it in TOOLS.md. The app screen is a later SMALL UI task.
 - **Acceptance:** pgTAP: parts sum to the line or the call is refused; each part counts under its own category and project on both bases, ILS and USD; a kept-out part goes to the excluded totals; mixed income categories on one inflow; undo restores the previous state or refuses if it changed; cross-tenant refusal with a positive control. Decision and changelog.
 
 <a id="flow-312"></a>
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-311
+- **Type:** BACKLOG NIT · **Status:** in-progress (claude/project-thread-zq7bnv; items 1 and 6) · **Depends on:** FLOW-311
 - [ ] `get_project.transactions` lists only lines filed to or shared with the project, not lines that reach it through a part.
 - [ ] A bank re-sync that changes a split line's amount makes it count whole silently; open a review item (like the loan split `needs_review` flag) instead.
 - [ ] After FLOW-104: let a part take the other kind as a reversal, like a whole line.
@@ -401,7 +402,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-302"></a>
 ### FLOW-302 · Month dividers in every transaction list
-- **Type:** SMALL UI · **Status:** in-progress (#98) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#98) · **Depends on:** —
 - **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/AHkHqk9WgUeCXb9wHYwdVB) (compact sticky header, month name, +income −expenses per currency), under the owner's standing rule for UI tasks.
 - **What:** One list, no new page: a sticky month header (for example "יולי 2026") between months, with that month's income and expenses (expenses with a minus, `$` for USD). Built once in the shared list component so every list gets it (project lists, recent transactions, review lists).
 - **Acceptance:** mockup approved; subtotals match the rows; RTL and 320px checks; design review.
@@ -417,7 +418,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-303"></a>
 ### FLOW-303 · Previous and next on the transaction card
-- **Type:** SMALL UI · **Status:** in-progress (#100) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#100) · **Depends on:** —
 - **Approval:** 2026-10-07, the design reviewer's option A (˄ ˅ in the card's top bar, ArrowLeft/ArrowRight, replace on move), built under the owner's standing rule for UI tasks. Swipe moved to [FLOW-314](#flow-314).
 - **What:** Swipe (RTL-aware) or tap small arrows in the header to move to the previous or next transaction, in the same list and order the card was opened from (project list, review queue, recent, filtered). Keep the list position on return; prefetch neighbours.
 - **Acceptance:** mockup approved; Back returns to the same scroll spot; keyboard and screen-reader access; design review.
@@ -431,7 +432,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-304"></a>
 ### FLOW-304 · Record metadata and richer transaction detail
-- **Type:** PLAN FIRST · **Status:** in-progress (#107) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#107) · **Depends on:** —
 - **Approved:** 2026-10-07, the design reviewer's option A of the [mockups](https://claude.ai/artifact/4Wsob4i3XEuLcMgX4SRj3M) (one meta line on the review card, a static "פרטי הבנק" section on the detail), under the owner's standing rule for UI tasks. Decision [0113](../decisions/0113-bank-details-per-line.md).
 - **What:** Show the bank or provider metadata per line on the review card and the detail: payment method (card and last 4, ACH, wire, check), memo, counterparty, bank account, original bank description. Icon-based (a card icon and ••1234, a memo on tap). Source: `transactions.provider_meta`. Also a better detail screen for what isn't shown at first glance. MCP: `get_expense`, `list_review` and `search_expenses` return the normalized fields.
 - **Acceptance:** mockup approved; no account numbers beyond the last 4 anywhere.
@@ -448,7 +449,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-305"></a>
 ### FLOW-305 · Review list in a bank-statement style
-- **Type:** PLAN FIRST · **Status:** in-progress (#111) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#111) · **Depends on:** —
 - **What:** Rows grouped by day headers (today, yesterday, date), a round initials avatar, the counterparty in bold with the payment method under it, the amount at the end with small cents, income in green, a pending chip, dense rows without card borders.
 - **Acceptance:** mockup approved; design review.
 
@@ -460,13 +461,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-307"></a>
 ### FLOW-307 · Large amounts on the transaction detail at 320px
-- **Type:** SMALL UI · **Status:** in-progress (#111; design reviewer's option A, stepped fit for display amounts) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#111; design reviewer's option A, stepped fit for display amounts) · **Depends on:** —
 - **What:** The detail amount (36px display) doesn't step down, so a 10-digit amount with cents starts past the side padding at 320px (also on main). Reuse the hero step-down logic.
 - **Acceptance:** clip-check story at 320 with the largest amount; design review.
 
 <a id="flow-308"></a>
 ### FLOW-308 · Return to the intended route after sign-in
-- **Type:** SMALL UI · **Status:** in-progress (#111; design reviewer's option C, built under the owner's standing UI rule) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#111; design reviewer's option C, built under the owner's standing UI rule) · **Depends on:** —
 - **What:** Sign-in always lands on Home, so a deep link (for example the evening review nudge to `/review`) is lost. Return to the requested route after sign-in, through a strict allowlist like the existing `?return=` handling.
 - **Acceptance:** e2e for a signed-out deep link to `/review`; an off-list route still goes Home.
 
@@ -499,13 +500,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-319"></a>
 ### FLOW-319 · Type sizes, headers and text colours, income in green
-- **Type:** SMALL UI · **Status:** in-progress (#111) · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#111) · **Depends on:** —
 - **What:** The owner's ask (2026-10-07), with a bank app's transaction list as the reference: clean up type sizes and header sizes, review text colours and sizes across screens, and show income amounts in green. Done at the token and shared-component level (type scale, page titles, section and month headers, row title and secondary line, list amounts), so one PR moves every screen. Income green replaces the "green only with ▲" rule for amounts, through a new decision. Row layout changes (avatars, bank-statement rows) stay in FLOW-305.
 - **Acceptance:** the design reviewer's recommended option built; WCAG AA for the income colour in light and dark; decision record; clip-check at 320; design review.
 
 <a id="flow-320"></a>
 ### FLOW-320 · Open the picker that was tapped on the transaction detail
-- **Type:** SMALL UI · **Status:** in-progress · **Depends on:** —
+- **Type:** SMALL UI · **Status:** done (#125) · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. On the transaction detail, the project row opens the change sheet straight on the project picker and the category row on the category picker, instead of the summary sheet. The review card's שינוי keeps the summary. A split row keeps opening the split.
 - **MCP:** none new; `assign_expense` and `set_expense_category` cover the write.
 - **Acceptance:** re-filing a project or category from the detail is 2 taps; Back from the picker returns to the detail with no dead history step; focus returns to the tapped row; tests for both rows; design review.
@@ -596,7 +597,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-410"></a>
 ### FLOW-410 · Find every project in project search
-- **Type:** BUG · **Status:** in-progress · **Depends on:** —
+- **Type:** BUG · **Status:** done (#128) · **Depends on:** —
 - **What:** From the 2026-10-07 tap-count review. Project search doesn't find an active project past the first six or a finished one, so those take 3 taps or more. Search filters all projects, finished included, whenever the query is not empty; every active project shows by default, finished ones stay behind their link.
 - **MCP:** none (`list_projects` exists).
 - **Acceptance:** tests: a seventh active project and a finished project are found by name; 320px check; design review.
@@ -612,7 +613,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-501"></a>
 ### FLOW-501 · Tabs reorg: connectors and loans pages
-- **Type:** PLAN FIRST · **Status:** in-progress (#111) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#111) · **Depends on:** —
 - **What:** Dedicated pages for connectors (SUMIT, Mercury, Jev, עוזר AI) and for loans, so Settings keeps only the account, display and "more" rows. The owner approved option A on 2026-10-07: two rows in Settings (חיבורים, הלוואות) open `/settings/connections` and `/settings/loans`; the tab bar and Home stay as they are; viewers can read loans ([0116](../decisions/0116-settings-connections-and-loans-pages.md)).
 - **Acceptance:** owner picks the option; mockup approved; shared `ConnectorRow`, `PlugIcon`, `LoanIcon` and stories; old `/settings?sheet=` links redirect.
 
@@ -680,7 +681,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-509"></a>
 ### FLOW-509 · Mercury connector hardening
-- **Type:** BACKLOG NIT · **Status:** in-progress (#91) · **Depends on:** —
+- **Type:** BACKLOG NIT · **Status:** done (#91) · **Depends on:** —
 - [x] After a 429 the sync keeps calling; back off and stop. (#91: a 429 on a recheck stops the rechecks and holds the next run until Retry-After, else 15 minutes.)
 - [ ] Skip records aren't written atomically with the lines and duplicate on partial runs; writes after the import aren't atomic with it; the checked-at stamp is still one write per row (#91 made it one read for all rows; full atomicity needs an RPC).
 - [x] Reconnecting keeps the old cursor when the token or account changes. (#91: a reconnect to a different set of accounts clears the cursor; a new token for the same accounts keeps it, since the cursor is still valid.)
@@ -697,7 +698,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-511"></a>
 ### FLOW-511 · Easy opt-out from the Home setup card
-- **Type:** PLAN FIRST · **Status:** in-progress (#95) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** done (#95) · **Depends on:** —
 - **What:** A UX review of the setup flow and its Home card ("הגדרה • 4 מתוך 5"). The owner finds it sticky: the only way out is the small quiet הסתרה link, and it's not clear that it stops the card for good. Review the whole flow (setup runner, Home card, the "ההגדרה זמינה בהגדרות." toast, re-entry from Settings, skip flags per [0089](../decisions/0089-setup-runner.md)) and propose one clear button that opts out of setup in a single tap, with the way back from Settings. Mock up the options with Claude Design for the owner.
 - **Acceptance:** written plan and mockup; owner picks an option and the approval is written here before any build; then one SMALL UI PR with design review and a CONTROLS row.
 - **Approval:** 2026-10-07, under the owner's standing rule for UI tasks, given in the project chat on 2026-10-07 at 16:15 UTC: the next UI tasks run a design session with the design reviewer and build the reviewer's recommended option without waiting for the owner. Option A: a ✕ in the card head that also stops the auto-resume. Decision [0111](../decisions/0111-setup-card-close.md).
@@ -718,7 +719,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-602"></a>
 ### FLOW-602 · Rename a company
-- **Type:** SMALL CYCLE · **Status:** RPC and MCP merged (#77); the screen is in-progress (#82) (option A approved by the owner on 2026-10-07: the business name is its own Settings row that opens a one-field rename sheet, decision [0108](../decisions/0108-rename-company-row.md)) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** done (#77 RPC and MCP, #82 screen; option A approved by the owner on 2026-10-07: the business name is its own Settings row that opens a one-field rename sheet, decision [0108](../decisions/0108-rename-company-row.md)) · **Depends on:** —
 - **What:** An owner-only RPC and MCP tool `rename_company` (idempotency key, write bucket, undo). The in-app place is a small focused screen or sheet, not a Settings catch-all; it needs a quick mockup and can ship in a second PR.
 - **Acceptance:** viewer refused, other company refused with a positive control, undo restores, TOOLS.md.
 
@@ -731,7 +732,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device
-- **Type:** BUG · **Status:** in-progress (#79) · **Depends on:** —
+- **Type:** BUG · **Status:** done (#79) · **Depends on:** —
 - **What:** Query cache keys are shared across users and the cache isn't cleared on sign-out; saved roles stay in localStorage after sign-out; the dashboard cache isn't user-scoped, so a user switch without a reload could show the wrong company's flag. Scope keys by user and company and clear on sign-out (including an expired session or another tab).
 - **Acceptance:** tests for sign-out, a user switch without reload, and an expired session.
 
