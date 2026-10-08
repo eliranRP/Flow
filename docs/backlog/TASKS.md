@@ -697,8 +697,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The overhead split weights by invoiced income even on the cash form of `get_project`.
+- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
 - [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
 
 <a id="flow-410"></a>
