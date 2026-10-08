@@ -11,14 +11,13 @@ test("the Jev switch turns on and off, and off hides the options", async ({ page
 
   await toggle.click();
   await expect(toggle).toBeChecked();
+  // FLOW-702 (#231): on means suggestions only until auto fill is chosen under אפשרויות.
   await expect(page.getByText("פעיל · הצעות בלבד")).toBeVisible();
   const options = page.getByRole("button", { name: "אפשרויות" });
   await options.click();
   await expect(options).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeVisible();
-  // FLOW-702: the mode control shows; the threshold appears in auto mode only.
-  await expect(page.getByRole("radio")).toHaveCount(2);
   await expect(page.getByRole("radio", { name: "הצעות בלבד" })).toBeChecked();
+  await expect(page.getByText("ההצעות נשמרות לבדיקה ולא ממולאות אוטומטית.")).toBeVisible();
   await expect(page.getByRole("radiogroup", { name: "סף ביטחון" })).toHaveCount(0);
 
   await toggle.click();

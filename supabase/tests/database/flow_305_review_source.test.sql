@@ -1,12 +1,14 @@
 -- FLOW-305. list_review returns each line's source and line_status for the statement row.
+-- FLOW-704. Each row also carries its company_id, so the app can bind the Jev flag to it.
 
 begin;
 
-select plan(4);
+select plan(6);
 
 do $users$
 begin
   perform tests.create_supabase_user('f305_owner', 'f305-owner@test.flow');
+  perform tests.create_supabase_user('f305_other', 'f305-other@test.flow');
 end
 $users$;
 
@@ -54,6 +56,15 @@ select ok(
   (public.list_review() -> 0) ? 'auto_approved_today',
   'the other keys are unchanged'
 );
+
+select is(
+  (select public.list_review() -> 0 ->> 'company_id'),
+  (select id::text from f305 where label = 'company'),
+  'a review row carries its company id'
+);
+
+select tests.authenticate_as('f305_other');
+select is(public.list_review(), '[]'::jsonb, 'another user lists no rows and no company');
 
 select * from finish();
 rollback;

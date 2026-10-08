@@ -129,11 +129,25 @@ export function ListRow(props: ListRowProps) {
   const blockCopy = props.variant === "static";
   const CopyMain = blockCopy ? "div" : "span";
   const CopyText = blockCopy ? "div" : "span";
-  const titleClass = cx("ui-row-title", props.muted && "ui-row-title-muted", props.tag ? "ui-row-title-with-tag" : false);
-  const titleDir = props.ltrTitle ? "ltr" : undefined;
+  // FLOW-125: a Latin-only title in an RTL row runs LTR, so a long one is cut at its end, not its start.
+  // A title with any Hebrew keeps the row's direction.
+  const autoLtr = !props.ltrTitle && typeof props.title === "string" && textDir(props.title) === "ltr" && !/[א-ת]/.test(props.title);
+  const titleClass = cx(
+    "ui-row-title",
+    props.muted && "ui-row-title-muted",
+    props.tag ? "ui-row-title-with-tag" : false,
+    autoLtr && !props.tag && "ui-row-title-ltr",
+  );
+  const titleDir = props.ltrTitle || (autoLtr && !props.tag) ? "ltr" : undefined;
+  // A transaction row's hint stays on one line and ends in an ellipsis, so a line never ends on a "·".
+  const oneLineHint = props.variant === "transaction" && !props.wrapHint;
   const titleBody = (
     <>
-      {props.tag ? <span className="ui-row-title-text" data-clip-ok="">{titleText(props)}</span> : titleText(props)}
+      {props.tag ? (
+        <span className={cx("ui-row-title-text", autoLtr && "ui-row-title-ltr")} dir={autoLtr ? "ltr" : undefined} data-clip-ok="">
+          {titleText(props)}
+        </span>
+      ) : titleText(props)}
       {props.tag}
     </>
   );
@@ -157,9 +171,16 @@ export function ListRow(props: ListRowProps) {
             <span
               id={described}
               role={props.hintStatus ? "status" : undefined}
-              className={cx("ui-row-hint", props.describeHint === true && "t-hint", props.wrapHint && "ui-row-hint-wrap", props.skelHint && "ui-row-hint-skel")}
+              className={cx(
+                "ui-row-hint",
+                props.describeHint === true && "t-hint",
+                props.wrapHint && "ui-row-hint-wrap",
+                props.skelHint && "ui-row-hint-skel",
+                oneLineHint && "ui-row-hint-line",
+              )}
+              data-clip-ok={oneLineHint ? "" : undefined}
             >
-              {props.hint}
+              {oneLineHint ? hintParts(props.hint) : props.hint}
             </span>
           ) : null}
         </CopyText>
@@ -264,6 +285,28 @@ export function ListRow(props: ListRowProps) {
 function rowName(props: { label?: string; title: ReactNode }): string | undefined {
   if (props.label) return props.label;
   return typeof props.title === "string" ? props.title : undefined;
+}
+
+const HINT_SEPARATOR = " · ";
+
+/**
+ * A one-line hint "מגדל הים · 03/10 · חלק משותף": whole parts, in order, as many as fit. A part
+ * that does not fit drops to a hidden second line with its separator, so a line never ends on
+ * "·" and a date is never cut. Only a first part that is too long on its own ends in an ellipsis.
+ * Screen readers still read every part.
+ */
+function hintParts(hint: ReactNode): ReactNode {
+  if (typeof hint !== "string" || !hint.includes(HINT_SEPARATOR)) return hint;
+  return (
+    <span className="ui-hint-parts">
+      {hint.split(HINT_SEPARATOR).map((part, index) => (
+        <span key={index} className="ui-hint-part" data-clip-ok="">
+          {index > 0 ? HINT_SEPARATOR : null}
+          {part}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function titleText(props: Common): ReactNode {
