@@ -1,0 +1,141 @@
+/* FLOW-404. The השקעה card on the project page: three figure rows, the two equities side by side
+   with their formula, then rehab and the loan balance. Rows keep the no-hairline rule (0120); the
+   card edge and the equity block carry the mockup's 1px lines. */
+.ui-invest-scope {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ui-invest-card {
+  margin: var(--space-3) var(--space-card-inset) 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+/* The pressed tint grows --space-3 each side of a row, so the card pads at least that much. */
+.ui-invest-card .ui-invest-rows {
+  padding-inline: var(--space-4);
+}
+
+.ui-invest-row .ui-row-title {
+  white-space: normal;
+}
+
+.ui-invest-value {
+  flex: none;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.ui-invest-add {
+  flex: none;
+  color: var(--color-accent-text);
+  white-space: nowrap;
+}
+
+.ui-invest-empty {
+  flex: none;
+  color: var(--color-text-muted);
+  font-weight: var(--type-meta-weight);
+  white-space: nowrap;
+}
+
+.ui-invest-equities {
+  container: invest / inline-size;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block: 1px solid var(--color-line);
+}
+
+.ui-invest-equity {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+}
+
+.ui-invest-equity + .ui-invest-equity {
+  border-inline-start: 1px solid var(--color-line);
+}
+
+.ui-invest-equity-label,
+.ui-invest-equity-formula {
+  color: var(--color-text-muted);
+}
+
+.ui-invest-equity-figure {
+  color: var(--color-text);
+  font-size: var(--type-heading-size);
+  font-weight: var(--type-heading-weight);
+  line-height: var(--type-heading-line);
+  white-space: nowrap;
+}
+
+.ui-invest-equity-note {
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-meta-weight);
+  line-height: var(--type-meta-line);
+  text-wrap: pretty;
+}
+
+/* A missing figure is the next step, so it reads in the link colour. A viewer's stays muted. */
+.ui-invest-equity-missing {
+  color: var(--color-accent-text);
+  font-weight: var(--type-label-weight);
+}
+
+/* Narrow phones stack the equities, so a seven-figure amount never wraps or clips. */
+@container invest (inline-size < 19rem) {
+  .ui-invest-equities .ui-invest-equity {
+    grid-column: 1 / -1;
+  }
+
+  .ui-invest-equities .ui-invest-equity + .ui-invest-equity {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--color-line);
+  }
+}
+
+.ui-invest-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-invest-actions > .ui-btn-full {
+  flex: 1 1 auto;
+}
+
+.ui-invest-actions > .ui-btn-danger {
+  flex: none;
+  padding-inline: var(--space-4);
+}
+
+.ui-invest-total {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ui-invest-total p,
+.ui-invest-other {
+  margin: 0;
+}
+
+.ui-invest-list {
+  padding-inline: 0;
+}
+
+.ui-invest-list-head {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+}
+
+.ui-invest-left .ui-row-title,
+.ui-invest-left .ui-num {
+  color: var(--color-text-secondary);
+}

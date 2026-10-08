@@ -43,6 +43,7 @@ import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
 import { categoryHref } from "./project-category-screen";
+import { ProjectInvestmentSection, type ProjectInvestment } from "./project-investment";
 
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
   const holdWrites = useHoldWrites();
@@ -218,8 +219,11 @@ export function ProjectDetailScreen({
   sampleMonths,
   example,
   categoryTo,
+  sampleInvestment,
 }: {
   sample?: NonNullable<ProjectDetail>;
+  /** FLOW-404. The השקעה card of a sample project; without it a sample project shows no card. */
+  sampleInvestment?: ProjectInvestment;
   /** The "לפי חודש" row's counts for a sample project (dev routes and Storybook). */
   sampleMonths?: ProfitMonths;
   example?: ReactNode;
@@ -382,6 +386,7 @@ export function ProjectDetailScreen({
         categorySearch={periodQuery}
         categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
       />
+      {sample == null || sampleInvestment != null ? <ProjectInvestmentSection projectId={project.id} sample={sampleInvestment} /> : null}
       <SectionHead title="תנועות">
         {/* FLOW-402: every line of the project, in the search with the project chip set. */}
         <TextLink to={`/search${withParam(search, "project", project.id)}`} tone="quiet">כל התנועות</TextLink>

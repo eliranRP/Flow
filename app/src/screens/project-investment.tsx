@@ -1,0 +1,778 @@
+import { useQuery } from "@tanstack/react-query";
+import { parseDecimalHalfEven } from "@flow/shared";
+import { useCallback, useEffect, useId, useRef, useState, type RefObject } from "react";
+import { z } from "zod";
+import { getSupabase } from "../lib/supabase";
+import { usePreviewSearch, useHomePreview } from "../preview";
+import { BigNumber } from "../ui/big-number";
+import { useSheetHistory } from "../ui/back";
+import { Button } from "../ui/button";
+import { DateSheet } from "../ui/date-sheet";
+import { formatDisplay, israelToday } from "../ui/date-math";
+import { HoldLine } from "../ui/hold-line";
+import { CalendarIcon } from "../ui/icons";
+import {
+  INVESTMENT_LABELS,
+  InvestmentCard,
+  LOANS_LABEL,
+  currencyWord,
+  type InvestmentField,
+  type InvestmentFigures,
+  type InvestmentRow,
+  type MinorInCurrency,
+} from "../ui/investment-card";
+import { List, ListRow } from "../ui/list-row";
+import { MoneyField } from "../ui/money-field";
+import { Sheet } from "../ui/sheet";
+import { TextLink } from "../ui/text-link";
+import { useHoldWrites } from "../use-is-viewer";
+import { assertNoError, useWrite, type WriteFailure } from "../use-write";
+import { waitForAccessToken } from "../wait-for-session";
+import { ProjectLoanList } from "./loan-match";
+
+/* ------------------------------------------------------------------------------------------------
+ * Data. get_project returns `investment` (decision 0143). The shared project schema does not carry
+ * it yet, so this file reads the project once more on the cash basis for all time: rehab is "what
+ * the property has cost so far", and the screen's period and basis never change the card.
+ * ---------------------------------------------------------------------------------------------- */
+
+const minorInput = z.union([z.number().int(), z.string().regex(/^-?\d+$/)]);
+const minor = minorInput.transform((value) => BigInt(value));
+const minorOrNull = z.union([minorInput, z.null()]).transform((value) => (value == null ? null : BigInt(value)));
+
+const investmentSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  purchase_minor: minorOrNull,
+  arv_minor: minorOrNull,
+  value_minor: minorOrNull,
+  value_date: z.string().nullable(),
+  rehab_minor: minor,
+  rehab_other_currencies: z.array(z.object({ currency: z.string(), amount_minor: minor })).catch([]),
+  loan_balance_minor: minor,
+  loan_balance_other_currencies: z.array(z.object({ currency: z.string(), balance_minor: minor })).catch([]),
+  forced_equity_minor: minorOrNull,
+  current_equity_minor: minorOrNull,
+});
+
+const categoryAmountSchema = z.object({
+  currency: z.string(),
+  id: z.string().nullable(),
+  name: z.string().nullable(),
+  amount_minor: minor,
+});
+
+const projectInvestmentSchema = z
+  .object({
+    id: z.string(),
+    is_overhead: z.boolean().optional(),
+    investment: investmentSchema.nullable().optional(),
+    categories_by_currency: z.array(categoryAmountSchema).optional(),
+    excluded_categories_by_currency: z.array(categoryAmountSchema).optional(),
+    loans: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      currency: z.string(),
+      balance_minor: minor,
+      status: z.string().optional(),
+    })).optional(),
+  })
+  .nullable();
+
+const rehabCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  excluded_from_pnl: z.boolean().optional(),
+  loan_part: z.string().nullable().optional(),
+  rehab: z.boolean().nullable().optional(),
+  in_rehab: z.boolean().optional(),
+});
+
+export type CategoryAmount = { id: string | null; name: string | null; currency: string; minor: bigint };
+export type InvestmentLoan = { id: string; name: string; currency: string; balance_minor: bigint };
+export type RehabCategory = z.infer<typeof rehabCategorySchema>;
+
+/** One project's investment, ready for the card and its sheets. */
+export type ProjectInvestment = {
+  isOverhead: boolean;
+  figures: InvestmentFigures | null;
+  /** All-time, cash-basis project costs by category, in and out of the P&L. */
+  categories: CategoryAmount[];
+  /** Open loans filed under the project. */
+  loans: InvestmentLoan[];
+};
+
+export function toProjectInvestment(data: z.infer<typeof projectInvestmentSchema>): ProjectInvestment | null {
+  if (data == null) return null;
+  const inv = data.investment ?? null;
+  const figures: InvestmentFigures | null = inv == null ? null : {
+    currency: inv.currency,
+    purchaseMinor: inv.purchase_minor,
+    arvMinor: inv.arv_minor,
+    valueMinor: inv.value_minor,
+    valueDate: inv.value_date,
+    rehabMinor: inv.rehab_minor,
+    rehabOther: inv.rehab_other_currencies.map((row) => ({ currency: row.currency, minor: row.amount_minor })),
+    loanMinor: inv.loan_balance_minor,
+    loanOther: inv.loan_balance_other_currencies.map((row) => ({ currency: row.currency, minor: row.balance_minor })),
+    forcedEquityMinor: inv.forced_equity_minor,
+    currentEquityMinor: inv.current_equity_minor,
+  };
+  const categories = [...(data.categories_by_currency ?? []), ...(data.excluded_categories_by_currency ?? [])].map((row) => ({
+    id: row.id,
+    name: row.name,
+    currency: row.currency,
+    minor: row.amount_minor,
+  }));
+  const loans = (data.loans ?? [])
+    .filter((loan) => loan.status == null || loan.status === "open")
+    .map(({ id, name, currency, balance_minor }) => ({ id, name, currency, balance_minor }));
+  return { isOverhead: data.is_overhead === true, figures, categories, loans };
+}
+
+/** Under "project", so every write that refreshes the project page refreshes the card too. */
+export function investmentQueryKey(preview: string, projectId: string) {
+  return ["project", preview, projectId, "investment"] as const;
+}
+
+export function useProjectInvestmentQuery(projectId: string) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: investmentQueryKey(preview, projectId),
+    enabled: preview === "off" && projectId !== "",
+    queryFn: async (): Promise<ProjectInvestment | null> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      // Cash basis, no range: rehab's own rule (0143), so the category list adds up to it.
+      const { data, error } = await supabase.rpc("get_project", { p_id: projectId, p_basis: "cash" });
+      if (error) throw error;
+      return toProjectInvestment(projectInvestmentSchema.parse(data));
+    },
+  });
+}
+
+/** What each category counts as in rehab. Under "categories", so the rehab switch refreshes it. */
+export function useRehabCategoriesQuery(active: boolean) {
+  const preview = useHomePreview();
+  return useQuery({
+    queryKey: ["categories", preview, "rehab"],
+    enabled: active && preview === "off",
+    queryFn: async (): Promise<RehabCategory[]> => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("supabase");
+      await waitForAccessToken(supabase);
+      const { data, error } = await supabase.rpc("list_categories");
+      if (error) throw error;
+      return rehabCategorySchema.array().parse(data);
+    },
+  });
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * The rehab list: the categories that make the total, then the ones left out (FLOW-404).
+ * ---------------------------------------------------------------------------------------------- */
+
+export type RehabLine = { key: string; id: string | null; name: string; minor: bigint; reason?: string };
+export type RehabBreakdown = { counted: RehabLine[]; left: RehabLine[]; addsUp: boolean };
+
+export const NO_CATEGORY = "בלי קטגוריה";
+
+function leftOutReason(category: RehabCategory | undefined): string | undefined {
+  if (category == null) return undefined;
+  if (category.rehab === false) return "הוצאה מהשיפוץ בהגדרות";
+  if (category.loan_part != null && category.loan_part !== "") return "חלק מתשלום הלוואה";
+  if (category.excluded_from_pnl === true) return "מחוץ לרווח והפסד";
+  return undefined;
+}
+
+/**
+ * Splits the project's costs in its currency by what each category counts as. A line with no
+ * category counts (0143). `addsUp` is false when the counted rows do not make the server's total,
+ * for example a loan part filed in an ordinary category; the sheet then shows only the total.
+ */
+export function rehabBreakdown(
+  costs: readonly CategoryAmount[],
+  categories: readonly RehabCategory[],
+  currency: string,
+  rehabMinor: bigint,
+): RehabBreakdown {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const merged = new Map<string, RehabLine>();
+  for (const row of costs) {
+    if (row.currency !== currency) continue;
+    const key = row.id ?? "";
+    const line = merged.get(key);
+    if (line) line.minor += row.minor;
+    else merged.set(key, { key, id: row.id, name: row.name ?? NO_CATEGORY, minor: row.minor });
+  }
+  const counted: RehabLine[] = [];
+  const left: RehabLine[] = [];
+  for (const line of merged.values()) {
+    if (line.minor === 0n) continue;
+    const category = line.id == null ? undefined : byId.get(line.id);
+    const inRehab = line.id == null || (category?.in_rehab ?? false);
+    if (inRehab) counted.push(line);
+    else left.push({ ...line, reason: leftOutReason(category) });
+  }
+  const byAmount = (a: RehabLine, b: RehabLine) => {
+    if (a.id == null && b.id != null) return 1;
+    if (b.id == null && a.id != null) return -1;
+    return a.minor === b.minor ? 0 : a.minor > b.minor ? -1 : 1;
+  };
+  counted.sort(byAmount);
+  left.sort(byAmount);
+  const sum = counted.reduce((total, line) => total + line.minor, 0n);
+  return { counted, left, addsUp: sum === rehabMinor };
+}
+
+function OtherLines({ list, note }: { list: readonly MinorInCurrency[]; note: string }) {
+  if (list.length === 0) return null;
+  return (
+    <>
+      {list.map((item) => (
+        <p key={item.currency} className="ui-invest-other t-hint">
+          {"ועוד "}
+          <BigNumber agorot={item.minor} currency={item.currency} />
+          {` ${currencyWord(item.currency)}, ${note}`}
+        </p>
+      ))}
+    </>
+  );
+}
+
+export function RehabSheet({
+  open,
+  onOpenChange,
+  figures,
+  costs,
+  categories,
+  loading,
+  failed,
+  onRetry,
+  returnFocusRef,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  figures: InvestmentFigures;
+  costs: readonly CategoryAmount[];
+  categories: readonly RehabCategory[] | null;
+  loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}) {
+  const search = usePreviewSearch();
+  const breakdown = categories == null ? null : rehabBreakdown(costs, categories, figures.currency, figures.rehabMinor);
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title="שיפוץ" returnFocusRef={returnFocusRef}>
+      <div className="ui-invest-total">
+        <span className="t-title-2">
+          <BigNumber agorot={figures.rehabMinor} currency={figures.currency} />
+        </span>
+        <p className="t-hint">כל העלויות מתחילת הפרויקט, בלי חלקי הלוואה</p>
+        <OtherLines list={figures.rehabOther} note="לא נכנס להון המאולץ" />
+      </div>
+      {loading ? (
+        <List className="ui-invest-list">
+          <p className="sr-only" role="status">טוען…</p>
+          <ListRow variant="skeleton" />
+          <ListRow variant="skeleton" />
+          <ListRow variant="skeleton" />
+        </List>
+      ) : failed || breakdown == null ? (
+        <p className="t-hint" role="status">
+          {"לא הצלחנו לטעון את הפירוט. "}
+          <TextLink size="hint" chevron={false} onClick={onRetry}>ניסיון חוזר</TextLink>
+        </p>
+      ) : !breakdown.addsUp ? (
+        <p className="t-hint">הפירוט לפי קטגוריה לא זמין לסכום הזה כרגע.</p>
+      ) : (
+        <>
+          {breakdown.counted.length === 0 ? (
+            <p className="t-hint">אין עדיין עלויות שנספרות בשיפוץ.</p>
+          ) : (
+            <List className="ui-invest-list">
+              {breakdown.counted.map((line) => (
+                <ListRow
+                  key={line.key}
+                  variant="project"
+                  title={line.name}
+                  agorot={line.minor}
+                  currency={figures.currency}
+                  loss={false}
+                />
+              ))}
+            </List>
+          )}
+          {breakdown.left.length > 0 ? (
+            <>
+              <h3 className="ui-invest-list-head t-label">לא נספרות בשיפוץ</h3>
+              <List className="ui-invest-list ui-invest-left">
+                {breakdown.left.map((line) => (
+                  <ListRow
+                    key={line.key}
+                    variant="project"
+                    title={line.name}
+                    hint={line.reason}
+                    agorot={line.minor}
+                    currency={figures.currency}
+                    loss={false}
+                  />
+                ))}
+              </List>
+            </>
+          ) : null}
+        </>
+      )}
+      <TextLink to={`/settings/categories${search}`} size="hint" chevron={false}>
+        מה נספר בשיפוץ? בהגדרות הקטגוריות
+      </TextLink>
+    </Sheet>
+  );
+}
+
+export function LoansSheet({
+  open,
+  onOpenChange,
+  figures,
+  loans,
+  returnFocusRef,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  figures: InvestmentFigures;
+  loans: readonly InvestmentLoan[];
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}) {
+  const own = loans.filter((loan) => loan.currency === figures.currency);
+  const other = loans.filter((loan) => loan.currency !== figures.currency);
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title={LOANS_LABEL} returnFocusRef={returnFocusRef}>
+      <div className="ui-invest-total">
+        <span className="t-title-2">
+          <BigNumber agorot={figures.loanMinor} currency={figures.currency} />
+        </span>
+        <p className="t-hint">ההלוואות הפתוחות בפרויקט</p>
+      </div>
+      {own.length === 0 ? <p className="t-hint">אין הלוואות פתוחות {currencyWord(figures.currency)}.</p> : <ProjectLoanList rows={own} />}
+      {other.length > 0 ? (
+        <>
+          <h3 className="ui-invest-list-head t-label">במטבע אחר</h3>
+          <p className="t-hint">לא נכנסות להון הנוכחי.</p>
+          <ProjectLoanList rows={other} />
+        </>
+      ) : null}
+    </Sheet>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * The edit sheet: one figure, saved on שמירה or when the sheet closes (0075). מחיקה clears it.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type InvestmentPatch = Partial<{
+  purchase_minor: number | null;
+  arv_minor: number | null;
+  value_minor: number | null;
+  value_date: string | null;
+}>;
+
+const PATCH_KEY: Record<InvestmentField, "purchase_minor" | "arv_minor" | "value_minor"> = {
+  purchase: "purchase_minor",
+  arv: "arv_minor",
+  value: "value_minor",
+};
+
+export const EMPTY_HOLD = "הסכום ריק. כדי למחוק אותו, הקישו מחיקה.";
+
+function currencyMark(currency: string): string {
+  if (currency === "ILS") return "₪";
+  if (currency === "USD") return "$";
+  return currency;
+}
+
+/** 125000050n → "1250000.5" (the field's own digits). */
+export function minorToRaw(value: bigint | null): string {
+  if (value == null) return "";
+  const negative = value < 0n;
+  const abs = negative ? -value : value;
+  const whole = (abs / 100n).toString();
+  const cents = abs % 100n;
+  const body = cents === 0n ? whole : `${whole}.${cents.toString().padStart(2, "0").replace(/0$/, "")}`;
+  return negative ? `-${body}` : body;
+}
+
+/** The field's digits to minor units; null when there is no amount. */
+export function rawToMinor(raw: string): bigint | null {
+  const clean = raw.replace(/\.$/, "");
+  if (clean === "" || clean === ".") return null;
+  return parseDecimalHalfEven(clean.startsWith(".") ? `0${clean}` : clean, 2);
+}
+
+type Verdict = { kind: "clean" } | { kind: "hold" } | { kind: "save"; patch: InvestmentPatch };
+
+export function editVerdict(
+  field: InvestmentField,
+  base: { minor: bigint | null; date: string | null },
+  draft: { raw: string; date: string; dateTouched: boolean },
+): Verdict {
+  const amount = rawToMinor(draft.raw);
+  const amountChanged = amount !== base.minor;
+  if (amountChanged && amount == null) return { kind: "hold" };
+  if (field !== "value") {
+    return amountChanged && amount != null ? { kind: "save", patch: { [PATCH_KEY[field]]: Number(amount) } } : { kind: "clean" };
+  }
+  if (amountChanged && amount != null) return { kind: "save", patch: { value_minor: Number(amount), value_date: draft.date } };
+  if (draft.dateTouched && draft.date !== base.date) return { kind: "save", patch: { value_date: draft.date } };
+  return { kind: "clean" };
+}
+
+export function clearPatch(field: InvestmentField): InvestmentPatch {
+  if (field === "value") return { value_minor: null, value_date: null };
+  return { [PATCH_KEY[field]]: null };
+}
+
+export function InvestmentEditSheet({
+  field,
+  open,
+  onOpenChange,
+  currency,
+  minor: baseMinor,
+  date: baseDate,
+  onSave,
+  returnFocusRef,
+}: {
+  field: InvestmentField;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  currency: string;
+  minor: bigint | null;
+  date: string | null;
+  /** Resolves true once saved. A failure toasts and keeps the sheet open. */
+  onSave: (patch: InvestmentPatch, kind: "save" | "clear") => Promise<boolean>;
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}) {
+  const label = INVESTMENT_LABELS[field];
+  const today = israelToday();
+  const [raw, setRaw] = useState(() => minorToRaw(baseMinor));
+  const [date, setDate] = useState(today);
+  const [dateTouched, setDateTouched] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [hold, setHold] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const base = useRef({ minor: baseMinor, date: baseDate });
+  const draft = useRef({ raw, date, dateTouched });
+  draft.current = { raw, date, dateTouched };
+  const holdShown = useRef(false);
+  const saving = useRef<Promise<boolean> | null>(null);
+  const dateLabelId = useId();
+
+  // Each open starts from the stored figure; שווי היום's date starts on today (FLOW-404).
+  useEffect(() => {
+    if (!open) return;
+    base.current = { minor: baseMinor, date: baseDate };
+    setRaw(minorToRaw(baseMinor));
+    setDate(israelToday());
+    setDateTouched(false);
+    setHold(false);
+    holdShown.current = false;
+    // Only a new open resets the draft; a refetch while it is open must not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const run = useCallback(async (patch: InvestmentPatch, kind: "save" | "clear"): Promise<boolean> => {
+    setBusy(true);
+    const pending = onSave(patch, kind);
+    saving.current = pending;
+    try {
+      const ok = await pending;
+      if (ok) {
+        const nextMinor = kind === "clear" ? null : rawToMinor(draft.current.raw);
+        base.current = field === "value"
+          ? { minor: kind === "clear" ? null : (nextMinor ?? base.current.minor), date: kind === "clear" ? null : (patch.value_date ?? base.current.date) }
+          : { minor: nextMinor, date: null };
+        setRaw(minorToRaw(base.current.minor));
+        setDateTouched(false);
+        setHold(false);
+      }
+      return ok;
+    } finally {
+      saving.current = null;
+      setBusy(false);
+    }
+  }, [field, onSave]);
+
+  /** ✕, scrim, swipe and back save a valid change first; an empty amount holds once (0075). */
+  const guard = useCallback(async (): Promise<boolean> => {
+    if (saving.current) {
+      await saving.current;
+      return true;
+    }
+    const verdict = editVerdict(field, base.current, draft.current);
+    if (verdict.kind === "clean") return true;
+    if (verdict.kind === "hold") {
+      if (holdShown.current) {
+        setRaw(minorToRaw(base.current.minor));
+        return true;
+      }
+      holdShown.current = true;
+      setHold(true);
+      return false;
+    }
+    return run(verdict.patch, "save");
+  }, [field, run]);
+
+  const setSheet = useSheetHistory("investment-edit", open, onOpenChange, guard);
+
+  function discard() {
+    setRaw(minorToRaw(base.current.minor));
+    setDate(israelToday());
+    setDateTouched(false);
+    setHold(false);
+    holdShown.current = false;
+  }
+
+  async function submit() {
+    if (busy) return;
+    const verdict = editVerdict(field, base.current, draft.current);
+    if (verdict.kind === "hold") {
+      holdShown.current = true;
+      setHold(true);
+      return;
+    }
+    if (verdict.kind === "save" && !(await run(verdict.patch, "save"))) return;
+    setSheet(false);
+  }
+
+  async function clear() {
+    if (busy) return;
+    if (await run(clearPatch(field), "clear")) setSheet(false);
+  }
+
+  const canClear = base.current.minor != null || (field === "value" && base.current.date != null);
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={setSheet}
+      title={label}
+      returnFocusRef={returnFocusRef}
+      onBeforeClose={guard}
+      action={(
+        <div className="ui-invest-actions">
+          <Button full busy={busy} onClick={() => { void submit(); }}>
+            שמירה
+          </Button>
+          {canClear ? (
+            <Button variant="danger" disabled={busy} onClick={() => { void clear(); }}>
+              מחיקה
+            </Button>
+          ) : null}
+        </div>
+      )}
+    >
+      <MoneyField
+        label={label}
+        hideLabel
+        value={raw}
+        prefix={currencyMark(currency)}
+        disabled={busy}
+        enterKeyHint="done"
+        onValueChange={(next) => {
+          setRaw(next);
+          if (hold) {
+            setHold(false);
+            holdShown.current = false;
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void submit();
+          }
+        }}
+      />
+      {hold ? <HoldLine onDiscard={discard}>{EMPTY_HOLD}</HoldLine> : null}
+      {field === "value" ? (
+        <>
+          <div className="ui-field">
+            <span id={dateLabelId} className="ui-field-label">נכון לתאריך</span>
+            <button
+              type="button"
+              className="ui-field-control ui-date-field"
+              aria-labelledby={dateLabelId}
+              aria-haspopup="dialog"
+              disabled={busy}
+              onClick={() => { setDateOpen(true); }}
+            >
+              <span>
+                {date === today ? "היום · " : null}
+                <bdi className="ui-num" dir="ltr">{formatDisplay(date)}</bdi>
+              </span>
+              <CalendarIcon size={20} />
+            </button>
+          </div>
+          <DateSheet
+            open={dateOpen}
+            onOpenChange={setDateOpen}
+            title="נכון לתאריך"
+            value={date}
+            disabled={busy}
+            onApply={(iso) => {
+              setDate(iso);
+              setDateTouched(true);
+            }}
+          />
+        </>
+      ) : null}
+    </Sheet>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * The section the project page mounts under its categories.
+ * ---------------------------------------------------------------------------------------------- */
+
+function failureFor(label: string) {
+  return (error: Error): WriteFailure => {
+    const code = (error as { code?: string }).code;
+    if (code === "42501") return { message: "אין הרשאה לשנות את ההשקעה.", retry: false };
+    return `לא הצלחנו לשמור את ${label}.`;
+  };
+}
+
+/** Sample mode works the figures out the way the server does (0143). */
+function applySample(figures: InvestmentFigures, patch: InvestmentPatch): InvestmentFigures {
+  const next: InvestmentFigures = { ...figures };
+  if ("purchase_minor" in patch) next.purchaseMinor = patch.purchase_minor == null ? null : BigInt(patch.purchase_minor);
+  if ("arv_minor" in patch) next.arvMinor = patch.arv_minor == null ? null : BigInt(patch.arv_minor);
+  if ("value_minor" in patch) next.valueMinor = patch.value_minor == null ? null : BigInt(patch.value_minor);
+  if ("value_date" in patch) next.valueDate = patch.value_date ?? null;
+  next.forcedEquityMinor = next.arvMinor != null && next.purchaseMinor != null && next.rehabOther.length === 0
+    ? next.arvMinor - next.purchaseMinor - next.rehabMinor
+    : null;
+  next.currentEquityMinor = next.valueMinor != null && next.loanOther.length === 0 ? next.valueMinor - next.loanMinor : null;
+  return next;
+}
+
+type OpenSheet = InvestmentField | "rehab" | "loans" | null;
+
+/**
+ * FLOW-404. The השקעה card with its sheets. Mount it under the project's categories. The overhead
+ * project has no card; a viewer sees it read-only. `sample` draws it with no network (stories).
+ */
+export function ProjectInvestmentSection({
+  projectId,
+  sample,
+  sampleCategories,
+  sampleState,
+  initialSheet = null,
+}: {
+  projectId: string;
+  sample?: ProjectInvestment;
+  sampleCategories?: RehabCategory[];
+  sampleState?: "loading" | "error";
+  /** Stories open a sheet on first draw. */
+  initialSheet?: OpenSheet;
+}) {
+  const preview = useHomePreview();
+  const readOnly = useHoldWrites();
+  const sampled = sample != null || sampleState != null;
+  const query = useProjectInvestmentQuery(sampled ? "" : projectId);
+  const [sampleData, setSampleData] = useState(sample);
+  const [sheet, setSheet] = useState<OpenSheet>(readOnly ? null : initialSheet);
+  const [editField, setEditField] = useState<InvestmentField>(
+    initialSheet === "purchase" || initialSheet === "arv" || initialSheet === "value" ? initialSheet : "purchase",
+  );
+  const rows = {
+    purchase: useRef<HTMLButtonElement>(null),
+    arv: useRef<HTMLButtonElement>(null),
+    value: useRef<HTMLButtonElement>(null),
+    rehab: useRef<HTMLButtonElement>(null),
+    loans: useRef<HTMLButtonElement>(null),
+  } satisfies Record<InvestmentRow, RefObject<HTMLButtonElement | null>>;
+  const rehabOpen = sheet === "rehab";
+  const categories = useRehabCategoriesQuery(rehabOpen && !sampled);
+  const setRehabSheet = useSheetHistory("investment-rehab", rehabOpen, (next) => { setSheet(next ? "rehab" : null); });
+  const setLoansSheet = useSheetHistory("investment-loans", sheet === "loans", (next) => { setSheet(next ? "loans" : null); });
+  const label = INVESTMENT_LABELS[editField];
+  const save = useWrite<{ patch: InvestmentPatch; kind: "save" | "clear" }>({
+    failure: failureFor(label),
+    keys: ["project"],
+    run: async ({ patch }) => {
+      const supabase = getSupabase();
+      if (!supabase || projectId === "") throw new Error("supabase");
+      assertNoError(await supabase.rpc("set_project_investment", { p_project_id: projectId, p_patch: patch }));
+    },
+  });
+  const onSave = useCallback(async (patch: InvestmentPatch, kind: "save" | "clear"): Promise<boolean> => {
+    if (sampleData != null) {
+      setSampleData((current) => current == null || current.figures == null ? current : { ...current, figures: applySample(current.figures, patch) });
+      return true;
+    }
+    try {
+      await save.mutateAsync({ patch, kind });
+      return true;
+    } catch {
+      return false;
+    }
+  }, [sampleData, save]);
+
+  if (!sampled && preview !== "off") return null;
+  const data = sampleData ?? query.data;
+  const state = sampleState ?? (sampled ? "ready" : query.isPending ? "loading" : query.isError ? "error" : "ready");
+  if (state === "ready" && (data == null || data.isOverhead || data.figures == null)) return null;
+  const figures = data?.figures ?? null;
+  const editMinor = figures == null ? null : editField === "purchase" ? figures.purchaseMinor : editField === "arv" ? figures.arvMinor : figures.valueMinor;
+
+  return (
+    <>
+      <InvestmentCard
+        state={state}
+        figures={figures}
+        readOnly={readOnly}
+        rowRefs={rows}
+        retrying={query.isFetching}
+        onRetry={sampled ? undefined : () => { void query.refetch(); }}
+        onEdit={(field) => {
+          setEditField(field);
+          setSheet(field);
+        }}
+        onRehab={() => { setRehabSheet(true); }}
+        onLoans={() => { setLoansSheet(true); }}
+      />
+      {readOnly || figures == null ? null : (
+        <>
+          <InvestmentEditSheet
+            key={editField}
+            field={editField}
+            open={sheet === editField}
+            onOpenChange={(next) => { setSheet(next ? editField : null); }}
+            currency={figures.currency}
+            minor={editMinor}
+            date={figures.valueDate}
+            returnFocusRef={rows[editField]}
+            onSave={onSave}
+          />
+          <RehabSheet
+            open={rehabOpen}
+            onOpenChange={setRehabSheet}
+            figures={figures}
+            costs={data?.categories ?? []}
+            categories={sampled ? (sampleCategories ?? []) : (categories.data ?? null)}
+            loading={!sampled && categories.isPending}
+            failed={!sampled && categories.isError}
+            onRetry={() => { void categories.refetch(); }}
+            returnFocusRef={rows.rehab}
+          />
+          <LoansSheet
+            open={sheet === "loans"}
+            onOpenChange={setLoansSheet}
+            figures={figures}
+            loans={data?.loans ?? []}
+            returnFocusRef={rows.loans}
+          />
+        </>
+      )}
+    </>
+  );
+}
