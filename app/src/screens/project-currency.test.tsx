@@ -75,6 +75,12 @@ describe("ProjectDetailScreen currency", () => {
     expect(screen.queryByRole("link", { name: /categories/ })).not.toBeInTheDocument();
   });
 
+  it("links a USD category to its drill-down in dollars", () => {
+    renderProject(usdProject());
+    const row = screen.getByText("Utilities").closest("a");
+    expect(row).toHaveAttribute("href", "/projects/p-usd/categories/cat-1?currency=USD");
+  });
+
   it("shows waiting USD lines once, in dollars, with no ₪0 row", () => {
     renderProject({
       ...usdProject(),

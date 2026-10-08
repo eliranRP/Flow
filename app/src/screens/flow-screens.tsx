@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { formatAmountText, formatIls, formatMoney, shekelsToAgorot, type CategoryRow, type Dashboard, type FiledTodayRow, type ProfitMonths, type ProjectDetail, type ProjectRow, type ProjectWaitingRow, type ReviewRow, type TransactionDetail, type UnpaidRow } from "@flow/shared";
 import { projectAmountFigures, projectExpenseMinor, projectMarginHint, projectRows, type ProjectCurrencyRow } from "../by-currency";
@@ -207,7 +208,8 @@ export function OnboardingScreen({ initialName }: { initialName?: string } = {})
     if (holdWrites || save.isPending) return;
     // The create_company rule (FLOW-606), on the field instead of a save toast.
     const problem = companyNameError(name);
-    setNameError(problem);
+    // Commit the message before focus, so the field is announced with it.
+    flushSync(() => { setNameError(problem); });
     if (problem) {
       nameRef.current?.focus();
       return;
@@ -588,8 +590,8 @@ function ProjectCategories({
           agorot={absAgorot(category.amount_minor)}
           currency={currency}
           loss={false}
-          chevron={currency === "ILS" && category.id != null}
-          href={currency === "ILS" && category.id != null ? (categoryTo ?? `/projects/${project.id}/categories/${category.id}${categorySearch}`) : undefined}
+          chevron={category.id != null}
+          href={category.id != null ? (categoryTo ?? categoryHref(project.id, category.id, currency, categorySearch)) : undefined}
           wrapHint={category.has_shared_share === true}
           hint={category.has_shared_share === true ? (
             <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
@@ -1900,12 +1902,21 @@ export function ReviewEmpty({
 type CategorySample = {
   categoryName: string;
   projectName: string;
+  /** The rows' currency. Default ILS. */
+  currency?: string;
   rows: Array<{ id: string; description: string; doc_date: string; amount_net: bigint }>;
   /** Shows עוד תנועות until the rest of the sample rows are revealed. */
   pageSize?: number;
   /** FLOW-107. Loan split marks by row id, for stories. */
   loanMarks?: Record<string, LoanMark>;
 };
+
+/** The drill-down for one category row; a row in another currency names it (`?currency=`). */
+function categoryHref(projectId: string, categoryId: string, currency: string, search: string): string {
+  const path = `/projects/${projectId}/categories/${categoryId}`;
+  if (currency === "ILS") return `${path}${search}`;
+  return `${path}${search}${search === "" ? "?" : "&"}currency=${encodeURIComponent(currency)}`;
+}
 
 export function ProjectCategoryScreen({
   sample,
@@ -1917,12 +1928,13 @@ export function ProjectCategoryScreen({
   rowHref?: (row: { id: string }) => string;
 } = {}) {
   const { projectId = "", categoryId = "" } = useParams();
+  const [params] = useSearchParams();
   const search = usePreviewSearch();
   const preview = useHomePreview();
   const location = useLocation();
   // The project's period travels in the URL, so the lines match the category row that opened them.
   const period = periodFromSearch(new URLSearchParams(location.search));
-  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, period);
+  const category = useProjectCategoryQuery(sample ? "" : projectId, sample ? "" : categoryId, params.get("currency") ?? "", period);
   const phase = sample ? ({ kind: "ready" } as const) : screenPhase(preview, category);
   const [sampleOpen, setSampleOpen] = useState(false);
   const loadedRows = sample?.rows ?? (category.data?.pages.flatMap((page) => page?.rows ?? []) ?? []);
@@ -1940,6 +1952,7 @@ export function ProjectCategoryScreen({
   const projectName = [sample?.projectName ?? first?.project_name ?? "", period ? periodLabel(period, undefined, "project") : ""]
     .filter((part) => part !== "")
     .join(" · ");
+  const rowCurrency = sample?.currency ?? first?.currency ?? "ILS";
   const allRows = heldRows;
   const rows = sample?.pageSize != null && !sampleOpen ? allRows.slice(0, sample.pageSize) : allRows;
   const rowIds = rows.map((row) => row.id);
@@ -1954,7 +1967,7 @@ export function ProjectCategoryScreen({
           rows={rows}
           keyOf={(txn) => txn.id}
           dateOf={(txn) => txn.doc_date}
-          amountOf={(txn) => ({ minor: txn.amount_net, currency: "ILS", direction: "expense" })}
+          amountOf={(txn) => ({ minor: txn.amount_net, currency: rowCurrency, direction: "expense" })}
           complete={!more}
           renderRow={(txn) => (
             <ListRow
@@ -1962,6 +1975,7 @@ export function ProjectCategoryScreen({
               title={txn.description}
               {...loanRowProps(sample ? sample.loanMarks?.[txn.id] : liveMarks.get(txn.id), formatDayMonth(txn.doc_date))}
               agorot={txn.amount_net}
+              currency={rowCurrency}
               sign="out"
               source="invoice"
               href={rowHref ? rowHref(txn) : `/transactions/${txn.id}${search}`}

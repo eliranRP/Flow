@@ -269,6 +269,22 @@ export function useCategoriesQuery(active = true) {
   });
 }
 
+// syncing is the server claim of a running refresh: poll every 3s until it clears. A failing
+// read keeps the last data (still syncing), so back off instead of polling a failing endpoint
+// every 3s. fetchFailureCount cannot drive this: React Query resets it at the start of every
+// fetch, so with retry: 1 it never passes 2 (a flat 12s). The time since the last good read
+// grows by each interval, so using it as the next interval doubles the gap, up to a minute.
+export function syncPollInterval(
+  q: {
+    state: { data?: { syncing?: boolean } | undefined; dataUpdatedAt: number; errorUpdatedAt: number };
+  },
+  now: number = Date.now(),
+): number | false {
+  if (q.state.data?.syncing !== true) return false;
+  if (q.state.errorUpdatedAt <= q.state.dataUpdatedAt) return 3000;
+  return Math.min(Math.max(now - q.state.dataUpdatedAt, 3000), 60_000);
+}
+
 export function useSumitStatusQuery(active = true) {
   const preview = useHomePreview();
   return useQuery({
@@ -282,8 +298,7 @@ export function useSumitStatusQuery(active = true) {
       if (error) throw error;
       return sumitStatusSchema.parse(data);
     },
-    // syncing is the server claim of a running refresh. Poll until it clears.
-    refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    refetchInterval: syncPollInterval,
     // Another tab may have started a run: re-read the claim when this tab is shown again.
     refetchOnWindowFocus: true,
   });
@@ -324,8 +339,7 @@ export function useMercuryStatusQuery(active = true) {
       });
       return parsed;
     },
-    // syncing is the server claim of a running refresh. Poll until it clears.
-    refetchInterval: (q) => (q.state.data?.syncing === true ? 3000 : false),
+    refetchInterval: syncPollInterval,
     // Another tab may have started a run: re-read the claim when this tab is shown again.
     refetchOnWindowFocus: true,
   });
@@ -353,11 +367,15 @@ export function useProjectQuery(projectId: string, period: PeriodChoice | null =
 
 const CATEGORY_PAGE = 40;
 
-export function useProjectCategoryQuery(projectId: string, categoryId: string, period: PeriodChoice | null = null) {
+/**
+ * `currency` is the bucket the project page row was in; empty lets the server pick (ILS first).
+ * `period` is the project's period, so the lines match the row that opened them (FLOW-411).
+ */
+export function useProjectCategoryQuery(projectId: string, categoryId: string, currency = "", period: PeriodChoice | null = null) {
   const preview = useHomePreview();
   const range = period ? rangeOf(period) : null;
   return useInfiniteQuery({
-    queryKey: ["project-category", preview, projectId, categoryId, range?.p_from ?? null, range?.p_to ?? null],
+    queryKey: ["project-category", preview, projectId, categoryId, currency, range?.p_from ?? null, range?.p_to ?? null],
     enabled: preview === "off" && projectId !== "" && categoryId !== "",
     initialPageParam: 0,
     queryFn: async ({ pageParam }): Promise<ProjectCategoryPage> => {
@@ -370,6 +388,7 @@ export function useProjectCategoryQuery(projectId: string, categoryId: string, p
         p_offset: pageParam,
         p_limit: CATEGORY_PAGE,
         p_basis: BOOKS_BASIS,
+        ...(currency === "" ? {} : { p_currency: currency }),
         ...(range ?? {}),
       });
       if (error) throw error;
