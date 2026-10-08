@@ -1790,7 +1790,7 @@ Deno.test("set_category_pnl forwards excluded false, rejects bad input, and refu
   assertEquals(calls.length, 1);
 });
 
-Deno.test("rename_company trims, forwards p_* args, validates, refuses a read token, and undo accepts company", async () => {
+Deno.test("rename_company trims, counts code points, refuses control characters and a read token, and undo accepts company", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,
     json: { ok: true, data: { id: PROJECT, name: "Example North", prior_name: "Example Co", undo_kind: "company" } },
@@ -1811,18 +1811,32 @@ Deno.test("rename_company trims, forwards p_* args, validates, refuses a read to
     callTool("rename_company", { idempotency_key: "k", name: "a".repeat(101) }, ["write"], rpc),
     callTool("rename_company", { idempotency_key: "k", name: 42 }, ["write"], rpc),
     callTool("rename_company", { idempotency_key: "k", name: "Example North", company_id: PROJECT }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example\u0007North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example\u0085North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "\u{1F600}".repeat(101) }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "\u00a0x\u3000" }, ["write"], rpc),
   ];
   for (const result of await Promise.all(cases)) {
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
+  // Code points, like char_length: 100 emoji are 200 UTF-16 units and still pass.
+  const emoji = await callTool("rename_company", { idempotency_key: "rename-emoji", name: "\u{1F600}".repeat(100) }, ["write"], rpc);
+  assertEquals(emoji.isError, false);
+  // trim() strips every whitespace, as private.trim_name does in SQL.
+  const spaced = await callTool("rename_company", {
+    idempotency_key: "rename-spaced",
+    name: "\u00a0\tExample North\u2003\ufeff",
+  }, ["write"], rpc);
+  assertEquals(spaced.isError, false);
+  assertEquals(calls[2].body, { p_idempotency_key: "rename-spaced", p_name: "Example North" });
   const denied = await callTool("rename_company", { idempotency_key: "rename-read", name: "Example North" }, ["read"], rpc);
   assertEquals(denied.isError, true);
   if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
-  assertEquals(calls.length, 1);
+  assertEquals(calls.length, 3);
   const undo = await callTool("undo", { idempotency_key: "rename-undo", kind: "company", id: PROJECT }, ["write"], rpc);
   assertEquals(undo.isError, false);
-  assertEquals(calls[1], {
+  assertEquals(calls[3], {
     name: "mcp_undo",
     body: { p_idempotency_key: "rename-undo", p_kind: "company", p_id: PROJECT },
   });

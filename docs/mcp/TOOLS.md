@@ -267,7 +267,7 @@ Marks one project as the company's overhead project. Expense lines filed to it w
 
 ### rename_company
 
-Renames the token's company. The owner only: a viewer or a read token is `forbidden`. There is no company argument, so another company cannot be named. The name is trimmed and must be 2 to 100 characters, or the call is `validation`. The app calls the same rule through `public.rename_company(p_company_id, p_name)`, which refuses any id but the caller's own company.
+Renames the token's company. The owner only: a viewer or a read token is `forbidden`. There is no company argument, so another company cannot be named. The name is trimmed of all whitespace (the characters JavaScript `trim()` removes, such as tabs, line breaks and no-break spaces) and must be 2 to 100 characters, counted as code points so an emoji counts once, with no control character; otherwise the call is `validation`. The app calls the same rule through `public.rename_company(p_company_id, p_name)`, which refuses any id but the caller's own company, and a direct update of `companies.name` is held to it too (`23514`), so the MCP, the RPC and the table accept and refuse the same names. Each rename and each undo writes one `audit_log` row (`update` on `companies`).
 
 ```json
 { "idempotency_key": "rename-1", "name": "Example Holdings" }
