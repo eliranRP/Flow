@@ -57,7 +57,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | in-progress (#122) |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
 | 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
-| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | in-progress (#PRNUM) |
+| 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | in-progress (#126) |
 | 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
@@ -360,9 +360,9 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-209"></a>
 ### FLOW-209 · get_project follow-ups (#90 review)
-- **Type:** BACKLOG NIT · **Status:** in-progress (#PRNUM) · **Depends on:** —
-- [x] `transactions[]` rows carry no `line_status`, so a pending row looks the same as a posted one. Add it. (#PRNUM)
-- [x] `other_currencies` leaves out a shared line whose own `project_id` is this project (`l.project_id is distinct from p.id`), while `by_currency` and `shared_agorot` count it. Check whether any write path stores such rows, then align or document. (#PRNUM: no write path stores one, since the app and MCP splits clear `project_id`; aligned anyway.)
+- **Type:** BACKLOG NIT · **Status:** in-progress (#126) · **Depends on:** —
+- [x] `transactions[]` rows carry no `line_status`, so a pending row looks the same as a posted one. Add it. (#126)
+- [x] `other_currencies` leaves out a shared line whose own `project_id` is this project (`l.project_id is distinct from p.id`), while `by_currency` and `shared_agorot` count it. Check whether any write path stores such rows, then align or document. (#126: no write path stores one, since the app and MCP splits clear `project_id`; aligned anyway.)
 
 ## Transactions and app UX
 
