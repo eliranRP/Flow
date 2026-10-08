@@ -884,6 +884,7 @@ export function ReviewQueue({
       ) : null}
       {auto > 0 && !hideAuto ? (
         <Banner
+          slim
           icon={<ReviewIcon />}
           title={filedTodayBannerTitle(auto)}
           hint={<TextLink to={filedTo ?? `/review/filed${search}`}>לרשימה</TextLink>}

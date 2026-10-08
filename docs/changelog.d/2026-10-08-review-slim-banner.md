@@ -1,0 +1,1 @@
+On לאישור the auto-filed note is now one slim line ("12 שויכו אוטומטית היום · לרשימה ›" with ×), so on a 375x667 phone the whole review card, category row included, sits above the pinned אישור / שינוי / דלג bar instead of sliding under it. The Banner component has a new `slim` variant.

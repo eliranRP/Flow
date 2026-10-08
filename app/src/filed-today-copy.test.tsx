@@ -11,13 +11,14 @@ describe("שויכו היום copy", () => {
   it("uses the plural auto-filed copy with an LTR count", () => {
     render(<p>{filedTodayBannerTitle(4)}</p>);
     expect(screen.getByText("4")).toBeInTheDocument();
-    expect(screen.getByText(/תנועות שויכו אוטומטית היום/)).toBeInTheDocument();
+    expect(screen.getByText(/^שויכו אוטומטית היום$/)).toBeInTheDocument();
+    expect(screen.queryByText(/תנועות/)).not.toBeInTheDocument();
     expect(screen.queryByText(/בלי להמתין/)).not.toBeInTheDocument();
   });
 
   it("uses the singular auto-filed copy with no digit", () => {
     render(<p>{filedTodayBannerTitle(1)}</p>);
-    expect(screen.getByText("תנועה אחת שויכה אוטומטית היום")).toBeInTheDocument();
+    expect(screen.getByText("אחת שויכה אוטומטית היום")).toBeInTheDocument();
     expect(screen.queryByText(/בלי להמתין/)).not.toBeInTheDocument();
   });
 });

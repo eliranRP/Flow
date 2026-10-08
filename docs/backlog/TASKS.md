@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807: split the big files, one PR per file (#219: `flow-screens.tsx` minus the review area) | Review screens out of `flow-screens.tsx`, then `screens.stories.tsx`, then `ui.css`; `split-screen.tsx` and `connections-screen.tsx` are near 800 lines |
+| File split | FLOW-807: split the big files, one PR per file. Part 1 (#219) merged: one file per screen; part 2: `screens.stories.tsx` into one stories file per screen | `ui.css`, then the review area out of `flow-screens.tsx` (after #204); `split-screen.tsx` and `connections-screen.tsx` are near 800 lines |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -810,9 +810,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** in-progress (#207: server and MCP, dev lane 1; the owner chose "Server now", 2026-10-08; decision [0144](../decisions/0144-category-delete-and-move.md); the Settings → Categories screen goes to a UI lane) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup, 2026-10-08) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
+- [x] Mockup approved (2026-10-08; the project's plans/flow-405-category-mockup.html). The category ⋯ sheet gets two rows, drawn with the FLOW-404 switch. "העברת כל התנועות" shows the line count on the row and a hint that the category stays, and sits above מיזוג (whose hint says the category is hidden) and הסתרה. מחיקה comes last, after a line. A hidden category's sheet shows החזרה לרשימה, the move row and מחיקה.
+- [x] Move opens the merge picker titled "העברת N תנועות אל". It lists same-kind categories with their line counts, without the source or a category a loan part can't go to. One tap moves, with no confirm, then a toast naming the count and the target, with ביטול, which moves exactly those lines back.
+- [x] Delete uses ConfirmSheet. The item names the line count. The consequence says the lines go back to לאישור, counts the split lines that lose their split (a sentence only when there are some), and says remembered suppliers forget the category. When the category has lines, a new optional link, "להעביר את התנועות לקטגוריה אחרת במקום", opens the move picker. An empty category's confirm has no count and no link, and one line: "הקטגוריה תימחק מהרשימה." The toast says the lines went back to לאישור and carries ביטול, which restores the category, its lines, splits and rules. An undo conflict shows "אי אפשר לבטל: תנועה סווגה מחדש בינתיים", and a delete the server refuses anyway shows the server's sentence.
+- [x] While a loan uses the category, מחיקה stays visible but disabled, with the reason. The built-in loan categories keep their locked line and get neither row.
+- [ ] Screen in a UI lane: the two sheet rows, the picker title and counts, ConfirmSheet's optional alternative link with a story, the toasts and the undo conflict error.
 
 <a id="flow-406"></a>
 ### FLOW-406 · Sub-categories and project groups
@@ -1093,7 +1098,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219, part 1: every screen but the review area; review screens, `screens.stories.tsx` and `ui.css` next) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (part 1 #219 merged; part 2 splits `screens.stories.tsx`; then `ui.css` and the review area) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 
