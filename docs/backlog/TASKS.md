@@ -44,7 +44,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-2 done #132 #151; part 3 in review) |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-3 done #132 #151 #157; part 4 in review) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -63,9 +63,9 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
 | 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) |
-| 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | ready |
-| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready |
-| 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | ready |
+| 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | in review (FLOW-106 part 4) |
+| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready (items 1 and 4 in review, FLOW-106 part 4) |
+| 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | in review (FLOW-106 part 4) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -274,28 +274,28 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-132"></a>
 ### FLOW-132 · Closed loan follow-ups (#132 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 1 (#132)
-- [ ] A removed line dated after a loan's `closed_on` keeps its parts; if it comes back it counts against the closed loan without a check. Check it when the line is restored, as decision 0121 does for the balance.
-- [ ] Changing an attached line's `doc_date` to after its loan's `closed_on` is not checked.
-- [ ] `get_project`'s `loans[]` has no `status`, so a project lists paid-off and closed loans next to open ones.
+- **Type:** BACKLOG NIT · **Status:** in review (FLOW-106 part 4) · **Depends on:** FLOW-106 part 1 (#132)
+- [x] A removed line dated after a loan's `closed_on` keeps its parts; if it comes back it counts against the closed loan without a check. Check it when the line is restored, as decision 0121 does for the balance. (Its parts are flagged for review, and clearing the review checks again: migration `20261010090000`, decision 0131.)
+- [x] Changing an attached line's `doc_date` to after its loan's `closed_on` is not checked. (Flagged for review the same way: migration `20261010090000`, decision 0131.)
+- [x] `get_project`'s `loans[]` has no `status`, so a project lists paid-off and closed loans next to open ones. (`loans[]` has `status`, `closed_on` and `kind`: migration `20261010090000`, decision 0131.)
 
 <a id="flow-134"></a>
 ### FLOW-134 · Loan part categories follow-ups (FLOW-106 part 2 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 2
-- [ ] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge.
+- **Type:** BACKLOG NIT · **Status:** ready (items 1 and 4 in review, FLOW-106 part 4; items 2 and 3 for the Mercury UI thread) · **Depends on:** FLOW-106 part 2
+- [x] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge. (Moved when the target fits, else the merge is refused: migration `20261010090000`, decision 0131.)
 - [ ] The categories screen shows a generic error when a flip is refused with `loan category is fixed` for a category a loan uses; give it copy (Mercury UI thread).
 - [ ] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread).
-- [ ] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns.
+- [x] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns. (One loop over the four keys; the update trigger runs only when a part category changes: migration `20261010090000`, decision 0131.)
 
 <a id="flow-135"></a>
 ### FLOW-135 · Loan installments follow-ups (FLOW-106 part 3 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 3
-- [ ] N1. `attach_loan_payment` `installments` finds the first unpaid row from the principal already paid: a part-paid row counts as unpaid; extra principal paid ahead skips rows; a row with zero scheduled principal always counts as paid; and pending lines do not lower the balance, so two quick installment attaches before the first line posts start on the same row.
-- [ ] N3. Exact `parts` still need a schedule row for the line's date (`no schedule row for this date`), although the scheduled figures are only kept for comparison.
+- **Type:** BACKLOG NIT · **Status:** in review (FLOW-106 part 4) · **Depends on:** FLOW-106 part 3
+- [x] N1. `attach_loan_payment` `installments` finds the first unpaid row from the principal already paid: a part-paid row counts as unpaid; extra principal paid ahead skips rows; a row with zero scheduled principal always counts as paid; and pending lines do not lower the balance, so two quick installment attaches before the first line posts start on the same row. (The first unpaid row now compares interest plus principal attached, pending lines included: `paidInterestAndPrincipal` in `loan-split.ts`, decision 0131.)
+- [x] N3. Exact `parts` still need a schedule row for the line's date (`no schedule row for this date`), although the scheduled figures are only kept for comparison. (Accepted with scheduled figures of 0, decision 0131.)
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** in-progress (parts 1-2 done #132 #151; part 3 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
+- **Type:** PLAN FIRST · **Status:** in-progress (parts 1-3 done #132 #151 #157; part 4 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
 - **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
   1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.

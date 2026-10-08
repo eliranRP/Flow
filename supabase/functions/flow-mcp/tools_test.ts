@@ -6,6 +6,7 @@ import {
 import {
   buildLoanSchedule,
   contractualPaymentMinor,
+  regularPaymentMinor,
 } from "../../../packages/shared/src/loan-schedule.ts";
 import { callTool, toolsFor } from "./tools.ts";
 
@@ -350,6 +351,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "set_loan_rate",
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
@@ -394,6 +396,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "set_loan_rate",
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
@@ -2820,9 +2823,31 @@ const FEES_SCHEDULE = buildLoanSchedule({
   escrowMinor: BigInt(FEES_LOAN.escrow_minor),
 });
 
-function feesRpc(loan: Record<string, unknown>, lineMinor: number, docDate = "2026-01-01", split: unknown = null) {
+/** A payment already on the loan, as mcp_loan_payments lists it. */
+function paidRow(transactionId: string, row: { interestMinor: bigint; principalMinor: bigint; escrowMinor?: bigint }, extra: Record<string, unknown> = {}) {
+  return {
+    transaction_id: transactionId,
+    doc_date: "2026-01-01",
+    line_status: "posted",
+    needs_review: false,
+    interest_minor: Number(row.interestMinor),
+    escrow_minor: Number(row.escrowMinor ?? 0n),
+    principal_minor: Number(row.principalMinor),
+    fees_minor: 0,
+    ...extra,
+  };
+}
+
+function feesRpc(
+  loan: Record<string, unknown>,
+  lineMinor: number,
+  docDate = "2026-01-01",
+  split: unknown = null,
+  payments: unknown[] = [],
+) {
   return rpcOf((name) => {
     if (name === "get_loan_split") return { status: 200, json: split };
+    if (name === "mcp_loan_payments") return { status: 200, json: payments };
     if (name === "get_transaction") {
       return { status: 200, json: { id: LOAN_TXN, doc_date: docDate, amount_original: lineMinor, currency: "USD" } };
     }
@@ -2853,8 +2878,10 @@ Deno.test("attach_loan_payment installments cover several rows from the first un
     escrowMinor: sum("escrowMinor"),
     principalMinor: sum("principalMinor"),
   });
-  // The line's date is ignored: the rows start at the first one not yet paid.
-  const { calls, rpc } = feesRpc(loan, lineMinor, "2027-06-01");
+  // The line's date is ignored: the rows start at the first one not yet paid, found from the
+  // interest and principal of the payments already attached (decision 0131).
+  const payments = [paidRow("ffffffff-ffff-4000-8000-0000000000f1", rows[0] ?? { interestMinor: 0n, principalMinor: 0n }), paidRow("ffffffff-ffff-4000-8000-0000000000f2", rows[1] ?? { interestMinor: 0n, principalMinor: 0n })];
+  const { calls, rpc } = feesRpc(loan, lineMinor, "2027-06-01", null, payments);
   const out = await callTool("attach_loan_payment", {
     idempotency_key: "inst-1",
     transaction_id: LOAN_TXN,
@@ -2881,7 +2908,7 @@ Deno.test("attach_loan_payment refuses installments that run past the schedule",
     // The first row is paid (300.00 of principal), so two rows are left.
     balance_minor: 70000,
   };
-  const { calls, rpc } = feesRpc(short, 60200);
+  const { calls, rpc } = feesRpc(short, 60200, "2026-01-01", null, [paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 0n, principalMinor: 30000n })]);
   const over = await callTool("attach_loan_payment", {
     idempotency_key: "inst-over",
     transaction_id: LOAN_TXN,
@@ -3079,29 +3106,60 @@ Deno.test("update_loan sends fees_category_id, and the loan tool descriptions na
 Deno.test("an installments attach replayed with the same key rebuilds the same parts", async () => {
   const rows = FEES_SCHEDULE.rows;
   const paid = rows[0]?.principalMinor ?? 0n;
+  const earlier = paidRow("ffffffff-ffff-4000-8000-0000000000f1", rows[0] ?? { interestMinor: 0n, principalMinor: 0n });
   const before = { ...FEES_LOAN, balance_minor: Number(BigInt(FEES_LOAN.principal_minor) - paid) };
   const args = { idempotency_key: "inst-replay", transaction_id: LOAN_TXN, loan_id: LOAN, installments: 2, fees: "10.00" };
-  const first = feesRpc(before, 201000);
+  const first = feesRpc(before, 201000, "2026-01-01", null, [earlier]);
   assertEquals((await callTool("attach_loan_payment", args, ["write"], first.rpc)).isError, false);
   const sent = attachedParts(first.calls) as Array<{ part: string; amount_minor: number }>;
-  const principal = sent.find((part) => part.part === "principal")?.amount_minor ?? 0;
-  // The first attach lowered the balance, so the first unpaid row moved on. The line's own
-  // split is read back and its principal added again, so the replay sends the same parts.
+  const amount = (part: string) => BigInt(sent.find((row) => row.part === part)?.amount_minor ?? 0);
+  const principal = Number(amount("principal"));
+  // The first attach is now on the loan. The replay leaves the line's own payment out of what
+  // was paid, and adds its principal back to the balance, so it sends the same parts.
   const after = { ...before, balance_minor: before.balance_minor - principal };
   const split = { loan_id: LOAN, needs_review: false, by_parts: true, parts: sent.map((part) => ({ ...part, in_pnl: part.part !== "principal" })) };
-  const replay = feesRpc(after, 201000, "2026-01-01", split);
+  const own = paidRow(LOAN_TXN, { interestMinor: amount("interest"), principalMinor: amount("principal") });
+  const replay = feesRpc(after, 201000, "2026-01-01", split, [earlier, own]);
   assertEquals((await callTool("attach_loan_payment", args, ["write"], replay.rpc)).isError, false);
   assertEquals(attachedParts(replay.calls), sent);
-  // Without the read-back the start row would move, and the database would answer conflict.
-  const unaware = feesRpc(after, 201000);
-  await callTool("attach_loan_payment", args, ["write"], unaware.rpc);
-  assertEquals(JSON.stringify(attachedParts(unaware.calls)) === JSON.stringify(sent), false);
-  // A split on another loan, or one waiting for review, adds nothing back.
-  for (const other of [{ ...split, loan_id: "dddddddd-dddd-4000-8000-0000000000d9" }, { ...split, needs_review: true }]) {
-    const ignored = feesRpc(after, 201000, "2026-01-01", other);
-    await callTool("attach_loan_payment", args, ["write"], ignored.rpc);
-    assertEquals(attachedParts(ignored.calls), attachedParts(unaware.calls));
-  }
+  // Another line's payment does move the start row on.
+  const other = feesRpc(after, 201000, "2026-01-01", null, [earlier, { ...own, transaction_id: "ffffffff-ffff-4000-8000-0000000000f3" }]);
+  await callTool("attach_loan_payment", args, ["write"], other.rpc);
+  assertEquals(JSON.stringify(attachedParts(other.calls)) === JSON.stringify(sent), false);
+  // A payment waiting for review counts nowhere, so it does not.
+  const flagged = feesRpc(before, 201000, "2026-01-01", null, [earlier, { ...own, transaction_id: "ffffffff-ffff-4000-8000-0000000000f3", needs_review: true }]);
+  await callTool("attach_loan_payment", args, ["write"], flagged.rpc);
+  assertEquals(attachedParts(flagged.calls), sent);
+});
+
+Deno.test("installments: an interest-only loan's rows are found by the interest paid, pending lines too", async () => {
+  // 120,000.00 at 6%, 12 interest-only months of 600.00 then 12 amortizing.
+  const io = {
+    ...FEES_LOAN,
+    principal_minor: 12_000_000,
+    annual_rate_ppm: 60_000,
+    term_months: 24,
+    payment_minor: 1_032_797,
+    escrow_minor: 0,
+    balance_minor: 12_000_000,
+    kind: "interest_only",
+    interest_only_months: 12,
+  };
+  // Two interest-only months already attached (one still pending): no principal was paid.
+  const payments = [
+    paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 60_000n, principalMinor: 0n }),
+    paidRow("ffffffff-ffff-4000-8000-0000000000f2", { interestMinor: 60_000n, principalMinor: 0n }, { line_status: "pending" }),
+  ];
+  const { calls, rpc } = feesRpc(io, 120_000, "2026-03-01", null, payments);
+  const out = await callTool("attach_loan_payment", { idempotency_key: "io-inst", transaction_id: LOAN_TXN, loan_id: LOAN, installments: 2 }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  // Rows 3 and 4: interest only, so the scheduled principal is 0 and the line is all interest.
+  assertEquals(attachedParts(calls), [
+    { part: "interest", amount_minor: 120_000, scheduled_minor: 120_000 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 0, scheduled_minor: 0 },
+  ]);
+  assertEquals(calls.find((call) => call.name === "mcp_loan_payments")?.body, { p_loan_id: LOAN });
 });
 
 Deno.test("attach_loan_payment refuses when the line's loan split cannot be read", async () => {
@@ -3173,4 +3231,298 @@ Deno.test("attach_loan_payment files fees under the call's category, else the lo
     }, ["write"], rpc);
     assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
   }
+});
+
+// FLOW-106 part 4: loan kinds and a variable rate (decision 0131).
+
+function addLoanRpc() {
+  return rpcOf((name) => {
+    if (name === "mcp_company_loan_currency") return { status: 200, json: "USD" };
+    if (name === "mcp_add_loan") return { status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan" } } };
+    return { status: 500, json: null };
+  });
+}
+
+Deno.test("add_loan takes the kind fields and computes each kind's payment", async () => {
+  const io = addLoanRpc();
+  const out = await callTool("add_loan", {
+    idempotency_key: "k-io", name: "Example Note", principal: "120000", annual_rate_percent: 6,
+    term_months: 24, start_date: "2026-01-01", kind: "interest_only", interest_only_months: 12,
+  }, ["write"], io.rpc);
+  assertEquals(out.isError, false);
+  const ioPayment = regularPaymentMinor({
+    principalMinor: 12_000_000n, annualRatePpm: 60_000, termMonths: 24, escrowMinor: 0n, kind: "interest_only", interestOnlyMonths: 12,
+  });
+  const ioBody = io.calls.find((call) => call.name === "mcp_add_loan")?.body;
+  assertEquals(ioBody?.p_payment_minor, Number(ioPayment));
+  assertEquals([ioBody?.p_kind, ioBody?.p_interest_only_months, ioBody?.p_amortization_months], ["interest_only", 12, null]);
+  if (out.structuredContent.ok) {
+    const preview = (out.structuredContent.data as { schedule_preview: Array<{ principal_minor: number; interest_minor: number }> }).schedule_preview;
+    assertEquals(preview[0], { ...preview[0], principal_minor: 0, interest_minor: 60_000 });
+  }
+
+  const balloon = addLoanRpc();
+  assertEquals((await callTool("add_loan", {
+    idempotency_key: "k-b", name: "Example Note", principal: "100000", annual_rate_percent: 6,
+    term_months: 60, start_date: "2026-01-01", kind: "balloon", amortization_months: 360,
+  }, ["write"], balloon.rpc)).isError, false);
+  const balloonBody = balloon.calls.find((call) => call.name === "mcp_add_loan")?.body;
+  assertEquals(balloonBody?.p_payment_minor, 59_955);
+  assertEquals([balloonBody?.p_kind, balloonBody?.p_amortization_months], ["balloon", 360]);
+
+  const demand = addLoanRpc();
+  const added = await callTool("add_loan", {
+    idempotency_key: "k-d", name: "Example Partner", principal: "50000", annual_rate_percent: 0,
+    start_date: "2026-01-01", kind: "demand",
+  }, ["write"], demand.rpc);
+  assertEquals(added.isError, false);
+  const demandBody = demand.calls.find((call) => call.name === "mcp_add_loan")?.body;
+  assertEquals([demandBody?.p_term_months, demandBody?.p_payment_minor, demandBody?.p_escrow_minor, demandBody?.p_kind], [null, null, 0, "demand"]);
+  if (added.structuredContent.ok) {
+    const data = added.structuredContent.data as { payment: unknown; schedule_preview: unknown[] };
+    assertEquals([data.payment, data.schedule_preview], [null, []]);
+  }
+});
+
+Deno.test("add_loan refuses kind fields that do not go together", async () => {
+  const { calls, rpc } = addLoanRpc();
+  const base = { idempotency_key: "k-bad", name: "Example Note", principal: "1000", annual_rate_percent: 5, start_date: "2026-01-01" };
+  for (const [extra, message] of [
+    [{ term_months: 12, interest_only_months: 3 }, "validation"],
+    [{ term_months: 12, kind: "interest_only" }, "validation"],
+    [{ term_months: 12, kind: "balloon" }, "validation"],
+    [{ term_months: 12, kind: "balloon", amortization_months: 6 }, "amortization_months"],
+    [{ term_months: 12, kind: "interest_only", interest_only_months: 13 }, "interest_only_months"],
+    [{ kind: "demand", term_months: 12 }, "validation"],
+    [{ kind: "demand", payment: "10" }, "validation"],
+    [{ kind: "demand", escrow: "1" }, "validation"],
+    [{}, "validation"],
+    [{ kind: "revolving", term_months: 12 }, "validation"],
+  ] as const) {
+    const out = await callTool("add_loan", { ...base, ...extra }, ["write"], rpc);
+    assertEquals(out.structuredContent, { ok: false, error: { code: "validation", message } }, JSON.stringify(extra));
+  }
+  assertEquals(calls.length, 0);
+});
+
+Deno.test("update_loan sets the kind and clears what the new kind does not have", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: { id: LOAN, undo_kind: "loan_update" } } }));
+  const patchOf = async (args: Record<string, unknown>) => {
+    const out = await callTool("update_loan", { idempotency_key: "k-u", loan_id: LOAN, ...args }, ["write"], rpc);
+    return out.isError ? out.structuredContent : calls.at(-1)?.body.p_patch;
+  };
+  assertEquals(await patchOf({ kind: "demand" }), {
+    kind: "demand", interest_only_months: null, amortization_months: null, term_months: null, payment_minor: null, escrow_minor: 0,
+  });
+  assertEquals(await patchOf({ kind: "interest_only", interest_only_months: 6 }), { kind: "interest_only", interest_only_months: 6, amortization_months: null });
+  assertEquals(await patchOf({ kind: "balloon", amortization_months: 360, term_months: 60 }), { term_months: 60, kind: "balloon", interest_only_months: null, amortization_months: 360 });
+  assertEquals(await patchOf({ interest_only_months: 3 }), { interest_only_months: 3 });
+  const before = calls.length;
+  for (const bad of [
+    { kind: "interest_only" },
+    { kind: "balloon" },
+    { kind: "amortizing", interest_only_months: 3 },
+    { kind: "demand", term_months: 12 },
+    { kind: "nope" },
+  ]) {
+    assertEquals(await patchOf(bad), { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before);
+});
+
+Deno.test("set_loan_rate forwards the rate in ppm, null removes it, and undo takes loan_rate", async () => {
+  const { calls, rpc } = rpcOf((name) => name === "mcp_set_loan_rate"
+    ? { status: 200, json: { ok: true, data: { id: CATEGORY, loan_id: LOAN, undo_kind: "loan_rate" } } }
+    : { status: 200, json: { ok: true, data: { kind: "loan_rate", id: CATEGORY } } });
+  const out = await callTool("set_loan_rate", { idempotency_key: "r-1", loan_id: LOAN, effective_date: "2027-01-01", annual_rate_percent: "8.25" }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls.at(-1), {
+    name: "mcp_set_loan_rate",
+    body: { p_idempotency_key: "r-1", p_loan_id: LOAN, p_effective_date: "2027-01-01", p_annual_rate_ppm: 82_500 },
+  });
+  await callTool("set_loan_rate", { idempotency_key: "r-2", loan_id: LOAN, effective_date: "2027-01-01", annual_rate_percent: null }, ["write"], rpc);
+  assertEquals(calls.at(-1)?.body.p_annual_rate_ppm, null);
+  const undo = await callTool("undo", { idempotency_key: "r-3", kind: "loan_rate", id: CATEGORY }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls.at(-1), { name: "mcp_undo", body: { p_idempotency_key: "r-3", p_kind: "loan_rate", p_id: CATEGORY } });
+  const before = calls.length;
+  for (const bad of [
+    { effective_date: "2027-02-30", annual_rate_percent: 5 },
+    { effective_date: "2027-01-01", annual_rate_percent: 101 },
+    { effective_date: "2027-01-01", annual_rate_percent: -1 },
+    { effective_date: "2027-01-01" },
+    { effective_date: "20270101", annual_rate_percent: 5 },
+  ]) {
+    const refused = await callTool("set_loan_rate", { idempotency_key: "r-bad", loan_id: LOAN, ...bad }, ["write"], rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "validation", message: "validation" } }, JSON.stringify(bad));
+  }
+  assertEquals(calls.length, before);
+  // The database's refusals pass through.
+  for (const message of ["rate before the loan start", "rate not found", "loan not found"]) {
+    const db = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message } } }));
+    const refused = await callTool("set_loan_rate", { idempotency_key: "r-db", loan_id: LOAN, effective_date: "2027-01-01", annual_rate_percent: 5 }, ["write"], db.rpc);
+    assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message } });
+  }
+});
+
+const DEMAND_LOAN = {
+  id: LOAN,
+  name: "Example Partner",
+  currency: "USD",
+  principal_minor: 5_000_000,
+  // 7.3%: 10.00 a day on 50,000.00.
+  annual_rate_ppm: 73_000,
+  term_months: null,
+  start_date: "2026-01-01",
+  payment_minor: null,
+  escrow_minor: 0,
+  balance_minor: 5_000_000,
+  kind: "demand",
+  rates: [],
+};
+
+Deno.test("attach_loan_payment on a demand loan: interest for the days since the last payment, the rest principal", async () => {
+  const earlier = paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 0n, principalMinor: 1_000_000n }, { doc_date: "2026-01-31" });
+  const loan = { ...DEMAND_LOAN, balance_minor: 4_000_000 };
+  // 40,000.00 for 10 days at 7.3%: 80.00 of interest.
+  const { calls, rpc } = feesRpc(loan, 108_000, "2026-02-10", null, [earlier]);
+  const out = await callTool("attach_loan_payment", { idempotency_key: "d-1", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(attachedParts(calls), [
+    { part: "interest", amount_minor: 8_000, scheduled_minor: 8_000 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 100_000, scheduled_minor: 100_000 },
+  ]);
+
+  // From the start when nothing is attached; at 0% the whole line is principal.
+  const zero = feesRpc({ ...DEMAND_LOAN, annual_rate_ppm: 0 }, 250_000, "2026-06-01");
+  assertEquals((await callTool("attach_loan_payment", { idempotency_key: "d-0", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], zero.rpc)).isError, false);
+  assertEquals(attachedParts(zero.calls), [
+    { part: "interest", amount_minor: 0, scheduled_minor: 0 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 250_000, scheduled_minor: 250_000 },
+  ]);
+
+  // A rate row in the period splits the days.
+  const rated = feesRpc({ ...DEMAND_LOAN, rates: [{ effective_date: "2026-01-11", annual_rate_ppm: 146_000 }] }, 100_000, "2026-01-31");
+  await callTool("attach_loan_payment", { idempotency_key: "d-r", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rated.rpc);
+  assertEquals((attachedParts(rated.calls) as Array<{ amount_minor: number }>)[0]?.amount_minor, 50_000);
+
+  // A line smaller than the interest pays interest only (the shortfall comes out of principal first).
+  const short = feesRpc(DEMAND_LOAN, 20_000, "2026-01-31");
+  await callTool("attach_loan_payment", { idempotency_key: "d-s", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], short.rpc);
+  assertEquals(attachedParts(short.calls), [
+    { part: "interest", amount_minor: 20_000, scheduled_minor: 30_000 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 0, scheduled_minor: 0 },
+  ]);
+});
+
+Deno.test("attach_loan_payment on a demand loan refuses installments, a date before the start or before an attached payment, and more than the balance", async () => {
+  const later = paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 0n, principalMinor: 100_000n }, { doc_date: "2026-03-01" });
+  for (const [args, docDate, payments, message] of [
+    [{ installments: 1 }, "2026-02-01", [], "a demand loan has no schedule rows"],
+    [{}, "2025-12-31", [], "payment before the loan start"],
+    [{}, "2026-02-01", [later], "a later payment is already attached"],
+    [{}, "2026-02-01", [paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 0n, principalMinor: 4_990_000n }, { doc_date: "2026-01-15", line_status: "pending" })], "loan balance exceeded"],
+  ] as const) {
+    const { calls, rpc } = feesRpc(DEMAND_LOAN, 100_000, docDate, null, [...payments]);
+    const out = await callTool("attach_loan_payment", { idempotency_key: "d-bad", transaction_id: LOAN_TXN, loan_id: LOAN, ...args }, ["write"], rpc);
+    assertEquals(out.structuredContent, { ok: false, error: { code: "refused", message } }, message);
+    assertEquals(calls.some((call) => call.name === "mcp_attach_loan_payment"), false);
+  }
+  // The line's own earlier attach (a replay) and a payment waiting for review do not count.
+  const own = paidRow(LOAN_TXN, { interestMinor: 0n, principalMinor: 100_000n }, { doc_date: "2026-03-01" });
+  const flagged = { ...later, needs_review: true };
+  const { calls, rpc } = feesRpc(DEMAND_LOAN, 100_000, "2026-02-01", null, [own, flagged]);
+  assertEquals((await callTool("attach_loan_payment", { idempotency_key: "d-ok", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rpc)).isError, false);
+  assertEquals(calls.some((call) => call.name === "mcp_attach_loan_payment"), true);
+});
+
+Deno.test("attach_loan_payment exact parts need no schedule row for the date (FLOW-135 N3)", async () => {
+  // Before the first due date there is no row: exact parts still attach, with scheduled 0.
+  const { calls, rpc } = feesRpc(FEES_LOAN, 100_000, "2025-12-15");
+  const out = await callTool("attach_loan_payment", {
+    idempotency_key: "n3", transaction_id: LOAN_TXN, loan_id: LOAN, parts: { interest: "400", escrow: "100", principal: "500" },
+  }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(attachedParts(calls), [
+    { part: "interest", amount_minor: 40_000, scheduled_minor: 0 },
+    { part: "escrow", amount_minor: 10_000, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 50_000, scheduled_minor: 0 },
+  ]);
+  // Without exact parts it is still refused.
+  const plain = feesRpc(FEES_LOAN, 100_000, "2025-12-15");
+  const refused = await callTool("attach_loan_payment", { idempotency_key: "n3-b", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], plain.rpc);
+  assertEquals(refused.structuredContent, { ok: false, error: { code: "refused", message: "no schedule row for this date" } });
+});
+
+Deno.test("attach_loan_payment and get_loan_schedule follow an interest-only loan and its rate rows", async () => {
+  const io = {
+    ...FEES_LOAN,
+    principal_minor: 12_000_000,
+    annual_rate_ppm: 60_000,
+    term_months: 24,
+    payment_minor: 1_032_797,
+    escrow_minor: 0,
+    balance_minor: 12_000_000,
+    kind: "interest_only",
+    interest_only_months: 12,
+    rates: [{ id: CATEGORY, effective_date: "2026-07-01", annual_rate_ppm: 120_000 }],
+  };
+  const { calls, rpc } = feesRpc(io, 120_000, "2026-07-01");
+  await callTool("attach_loan_payment", { idempotency_key: "io-r", transaction_id: LOAN_TXN, loan_id: LOAN }, ["write"], rpc);
+  // July is still interest only, at the new 12%: 1,200.00.
+  assertEquals(attachedParts(calls), [
+    { part: "interest", amount_minor: 120_000, scheduled_minor: 120_000 },
+    { part: "escrow", amount_minor: 0, scheduled_minor: 0 },
+    { part: "principal", amount_minor: 0, scheduled_minor: 0 },
+  ]);
+  const page = await callTool("get_loan_schedule", { loan_id: LOAN, from: 11, limit: 2 }, ["read"], rpc);
+  if (!page.structuredContent.ok) throw new Error("schedule failed");
+  const data = page.structuredContent.data as { kind: string; total: number; rows: Array<{ date: string; principal_minor: number; payment_minor: number }> };
+  assertEquals([data.kind, data.total], ["interest_only", 24]);
+  assertEquals(data.rows[0]?.principal_minor, 0);
+  const recast = contractualPaymentMinor({ principalMinor: 12_000_000n, annualRatePpm: 120_000, termMonths: 12 });
+  assertEquals(data.rows[1], { ...data.rows[1], date: "2027-01-01", payment_minor: Number(recast) });
+});
+
+Deno.test("get_loan_schedule on a demand loan lists the payments and the interest accrued to as_of", async () => {
+  const payments = [
+    paidRow("ffffffff-ffff-4000-8000-0000000000f1", { interestMinor: 30_000n, principalMinor: 1_000_000n }, { doc_date: "2026-01-31" }),
+    paidRow("ffffffff-ffff-4000-8000-0000000000f2", { interestMinor: 5_000n, principalMinor: 5_000n }, { doc_date: "2026-02-15", needs_review: true }),
+  ];
+  const { calls, rpc } = feesRpc(DEMAND_LOAN, 0, "2026-01-01", null, payments);
+  const out = await callTool("get_loan_schedule", { loan_id: LOAN, as_of: "2026-03-02" }, ["read"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls.find((call) => call.name === "mcp_loan_payments")?.body, { p_loan_id: LOAN });
+  if (!out.structuredContent.ok) throw new Error("schedule failed");
+  const data = out.structuredContent.data as Record<string, unknown> & { rows: Array<Record<string, unknown>> };
+  assertEquals([data.kind, data.total, data.rows.length], ["demand", 1, 1]);
+  assertEquals(data.rows[0], { ...data.rows[0], date: "2026-01-31", interest_minor: 30_000, principal_minor: 1_000_000, payment_minor: 1_030_000, balance_minor: 4_000_000 });
+  // 40,000.00 for 30 days at 7.3%: 240.00.
+  assertEquals(data.accrued, {
+    as_of: "2026-03-02", since: "2026-01-31", days: 30, interest: "240", interest_minor: 24_000, balance: "40000", balance_minor: 4_000_000,
+  });
+  const bad = await callTool("get_loan_schedule", { loan_id: LOAN, as_of: "2026-02-30" }, ["read"], rpc);
+  assertEquals(bad.structuredContent, { ok: false, error: { code: "validation", message: "validation" } });
+});
+
+Deno.test("loan kind tools are described", () => {
+  const write = toolsFor(["write"]);
+  const read = toolsFor(["read"]);
+  const spec = (list: ReturnType<typeof toolsFor>, name: string) => list.find((tool) => tool.name === name);
+  assertEquals(Object.keys(spec(write, "set_loan_rate")?.inputSchema.properties ?? {}), ["idempotency_key", "loan_id", "effective_date", "annual_rate_percent"]);
+  for (const words of ["rate before the loan start", "undo is kind loan_rate", "recasts the payment"]) {
+    assertEquals(spec(write, "set_loan_rate")?.description.includes(words), true, words);
+  }
+  for (const name of ["add_loan", "update_loan"]) {
+    assertEquals(Object.keys(spec(write, name)?.inputSchema.properties ?? {}).slice(-3), ["kind", "interest_only_months", "amortization_months"]);
+  }
+  for (const words of ["a demand loan has no schedule rows", "a later payment is already attached", "payment before the loan start", "0 when no row fits the date"]) {
+    assertEquals(spec(write, "attach_loan_payment")?.description.includes(words), true, words);
+  }
+  assertEquals(Object.keys(spec(read, "get_loan_schedule")?.inputSchema.properties ?? {}), ["loan_id", "from", "limit", "as_of"]);
+  assertEquals(spec(read, "list_loans")?.description.includes("rates lists"), true);
+  assertEquals((spec(write, "undo")?.inputSchema.properties.kind as { enum: string[] }).enum.includes("loan_rate"), true);
 });

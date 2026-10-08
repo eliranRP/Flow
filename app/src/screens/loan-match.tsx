@@ -6,6 +6,8 @@ import {
   buildLoanSchedule,
   loanTakesPaymentOn,
   scheduleRowForDate,
+  type LoanKind,
+  type LoanRate,
   type LoanSplitPart,
   type LoanStatus,
 } from "@flow/shared";
@@ -53,11 +55,18 @@ type LoanChoice = {
   currency: string;
   principalMinor: number;
   annualRatePpm: number;
-  termMonths: number;
+  /** Null for a demand loan only (decision 0131). */
+  termMonths: number | null;
   startDate: string;
-  paymentMinor: number;
+  /** Null for a demand loan only. */
+  paymentMinor: number | null;
   escrowMinor: number;
   balanceMinor: bigint;
+  /** Missing reads as amortizing. */
+  kind?: LoanKind;
+  interestOnlyMonths?: number | null;
+  amortizationMonths?: number | null;
+  rates?: readonly LoanRate[];
   status?: LoanStatus;
   closedOn?: string | null;
   /** The loan's own category per part (decision 0128). A missing one uses the keyed default. */
@@ -477,7 +486,9 @@ export function LoanTransactionSplit({
   if (parts == null && !offerMatch) return null;
   const loan = loaded.loans.find((item) => item.id === parts?.[0]?.loanId);
   // A paid-off or closed loan is offered only for payments on or before the day it ended.
-  const offered = loaded.loans.filter((item) => item.id === loan?.id || loanTakesPaymentOn(item, docDate));
+  // A demand loan has no schedule to split by; MCP attach_loan_payment splits it (0131).
+  const offered = loaded.loans.filter((item) =>
+    item.id === loan?.id || (loanTakesPaymentOn(item, docDate) && item.kind !== "demand"));
   const lineCurrency = loaded.currency;
   const displayCurrency = loan?.currency ?? lineCurrency;
   const currencyLoans = offered.filter((item) => item.currency === lineCurrency);
@@ -585,7 +596,7 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       .eq("transaction_id", transactionId),
     supabase
       .from("loans")
-      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id")
+      .select("id, name, currency, principal_minor, annual_rate_ppm, term_months, start_date, payment_minor, escrow_minor, status, closed_on, interest_category_id, escrow_category_id, principal_category_id, kind, interest_only_months, amortization_months, loan_rates(effective_date, annual_rate_ppm)")
       .eq("company_id", companyId),
     supabase
       .from("categories")
@@ -635,6 +646,11 @@ async function readLoanMatch(transactionId: string): Promise<LoadedMatch> {
       paymentMinor: loan.payment_minor,
       escrowMinor: loan.escrow_minor,
       balanceMinor: balanceByLoan.get(loan.id) ?? 0n,
+      kind: loan.kind,
+      interestOnlyMonths: loan.interest_only_months,
+      amortizationMonths: loan.amortization_months,
+      // Test doubles and older rows may leave the embed out.
+      rates: (Array.isArray(loan.loan_rates) ? loan.loan_rates : []).map((rate) => ({ effectiveDate: rate.effective_date, annualRatePpm: rate.annual_rate_ppm })),
       status: loan.status,
       closedOn: loan.closed_on,
       categoryIds: {
@@ -665,6 +681,7 @@ async function writeSplit(transactionId: string, docDate: string, loaded: Loaded
   if (!supabase) throw new Error("supabase");
   if (loan.currency !== loaded.currency) throw new Error("loan_split_currency");
   if (loan.balanceMinor <= 0n) throw new Error("loan_split_over_balance");
+  if (loan.kind === "demand" || loan.termMonths == null || loan.paymentMinor == null) throw new Error("date");
   const schedule = buildLoanSchedule({
     principalMinor: BigInt(loan.principalMinor),
     annualRatePpm: loan.annualRatePpm,
@@ -672,6 +689,10 @@ async function writeSplit(transactionId: string, docDate: string, loaded: Loaded
     startDate: loan.startDate,
     paymentMinor: BigInt(loan.paymentMinor),
     escrowMinor: BigInt(loan.escrowMinor),
+    kind: loan.kind,
+    interestOnlyMonths: loan.interestOnlyMonths ?? null,
+    amortizationMonths: loan.amortizationMonths ?? null,
+    rates: loan.rates ?? [],
   });
   const row = scheduleRowForDate(schedule.rows, docDate);
   if (!row) throw new Error("date");

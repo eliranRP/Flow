@@ -307,6 +307,37 @@ isOneToOne: false
       referencedColumns: ["company_id","id"]
     }
                   ]
+                },"loan_rates": {
+                  Row: {
+                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"effective_date": string,"id": string,"loan_id": string,"updated_at": string
+                  }
+                  Insert: {
+                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"effective_date": string,"id"?: string,"loan_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"effective_date"?: string,"id"?: string,"loan_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "loan_rates_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "loan_rates_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loan_balances"
+      referencedColumns: ["company_id","loan_id"]
+    },{
+      foreignKeyName: "loan_rates_company_id_loan_id_fkey"
+      columns: ["company_id","loan_id"]
+isOneToOne: false
+      referencedRelation: "loans"
+      referencedColumns: ["company_id","id"]
+    }
+                  ]
                 },"loan_splits": {
                   Row: {
                     "amount_minor": number,"category_id": string,"company_id": string,"created_at": string,"id": string,"loan_id": string,"needs_review": boolean,"part": Database["public"]['Enums']["loan_split_part"],"scheduled_minor": number,"transaction_id": string,"updated_at": string
@@ -352,13 +383,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"fees_category_id": string | null,"id": string,"interest_category_id": string | null,"name": string,"payment_minor": number,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at": string
+                    "amortization_months": number | null,"annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_category_id": string | null,"escrow_minor": number,"fees_category_id": string | null,"id": string,"interest_category_id": string | null,"interest_only_months": number | null,"kind": Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor": number | null,"principal_category_id": string | null,"principal_minor": number,"project_id": string | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number | null,"updated_at": string
                   }
                   Insert: {
-                    "annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_category_id"?: string | null,"escrow_minor": number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"name": string,"payment_minor": number,"principal_category_id"?: string | null,"principal_minor": number,"project_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at"?: string
+                    "amortization_months"?: number | null,"annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_category_id"?: string | null,"escrow_minor": number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"interest_only_months"?: number | null,"kind"?: Database["public"]['Enums']["loan_kind"],"name": string,"payment_minor"?: number | null,"principal_category_id"?: string | null,"principal_minor": number,"project_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number | null,"updated_at"?: string
                   }
                   Update: {
-                    "annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_category_id"?: string | null,"escrow_minor"?: number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"name"?: string,"payment_minor"?: number,"principal_category_id"?: string | null,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number,"updated_at"?: string
+                    "amortization_months"?: number | null,"annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_category_id"?: string | null,"escrow_minor"?: number,"fees_category_id"?: string | null,"id"?: string,"interest_category_id"?: string | null,"interest_only_months"?: number | null,"kind"?: Database["public"]['Enums']["loan_kind"],"name"?: string,"payment_minor"?: number | null,"principal_category_id"?: string | null,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -889,7 +920,7 @@ isOneToOne: false
 { Args: { "p_name"?: string,"p_project_id"?: string,"p_section_id": number }; Returns: string
                            },
 "mcp_add_loan":
-{ Args: { "p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
+{ Args: { "p_amortization_months"?: number,"p_annual_rate_ppm": number,"p_currency": string,"p_escrow_minor": number,"p_idempotency_key": string,"p_interest_only_months"?: number,"p_kind"?: string,"p_name": string,"p_payment_minor": number,"p_principal_minor": number,"p_project_id"?: string,"p_start_date": string,"p_term_months": number }; Returns: Json
                            },
 "mcp_assign_expense":
 { Args: { "p_category_id": string,"p_idempotency_key": string,"p_project_id": string,"p_remember"?: boolean,"p_transaction_id": string }; Returns: Json
@@ -933,6 +964,9 @@ isOneToOne: false
 "mcp_list_loans":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"mcp_loan_payments":
+{ Args: { "p_loan_id": string }; Returns: Json
+                           },
 "mcp_rename_company":
 { Args: { "p_idempotency_key": string,"p_name": string }; Returns: Json
                            },
@@ -947,6 +981,9 @@ isOneToOne: false
                            },
 "mcp_set_lines_pnl":
 { Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
+                           },
+"mcp_set_loan_rate":
+{ Args: { "p_annual_rate_ppm": number,"p_effective_date": string,"p_idempotency_key": string,"p_loan_id": string }; Returns: Json
                            },
 "mcp_set_overhead_project":
 { Args: { "p_idempotency_key": string,"p_project_id": string }; Returns: Json
@@ -1093,7 +1130,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal"|"fees","loan_status": "open"|"paid_off"|"closed","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
+            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_kind": "amortizing"|"interest_only"|"balloon"|"demand","loan_split_part": "interest"|"escrow"|"principal"|"fees","loan_status": "open"|"paid_off"|"closed","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
             "connector_upsert_result": {
@@ -1211,7 +1248,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal", "fees"],"loan_status": ["open", "paid_off", "closed"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
+            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_kind": ["amortizing", "interest_only", "balloon", "demand"],"loan_split_part": ["interest", "escrow", "principal", "fees"],"loan_status": ["open", "paid_off", "closed"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
           }
         }
 } as const

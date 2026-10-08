@@ -107,20 +107,53 @@ export function sumScheduleRows(
 }
 
 /**
- * The index of the first schedule row not yet paid: the first row where the
- * scheduled principal through that row is more than the principal already paid
- * (the loan's principal minus its current balance). -1 when every row is paid.
+ * The index of the first schedule row not yet paid (decision 0131, FLOW-135 N1): the first
+ * row where the scheduled interest plus principal through that row is more than the
+ * interest plus principal already paid on the loan. Escrow and fees are left out: they
+ * do not pay the loan down, and escrow often drifts from the schedule. So a part-paid
+ * row is unpaid, an interest-only row (zero principal) counts once its interest is paid,
+ * and principal paid ahead moves the start on by what it covers. A row with no interest
+ * and no principal (a 0% interest-only month) is paid as soon as the rows before it are.
+ * -1 when every row is paid.
  */
 export function firstUnpaidRowIndex(
   rows: readonly LoanScheduleRow[],
-  paidPrincipalMinor: bigint,
+  paidInterestAndPrincipalMinor: bigint,
 ): number {
   let through = 0n;
   for (const [index, row] of rows.entries()) {
-    through += row.principalMinor;
-    if (through > paidPrincipalMinor) return index;
+    through += row.interestMinor + row.principalMinor;
+    if (through > paidInterestAndPrincipalMinor) return index;
   }
   return -1;
+}
+
+/** A payment already on the loan, for `paidInterestAndPrincipal`. */
+export type AttachedLoanPayment = {
+  readonly transactionId: string;
+  readonly interestMinor: bigint;
+  readonly principalMinor: bigint;
+  /** A payment waiting for review counts nowhere until it is corrected. */
+  readonly needsReview: boolean;
+};
+
+/**
+ * Interest plus principal already paid on a loan, for `firstUnpaidRowIndex`: every attached
+ * payment on a line still on the books that is not waiting for review, pending lines too
+ * (so two installment attaches before the first line posts do not start on the same row).
+ * `exceptTransactionId` leaves out the line being attached, so a replay sees the loan as
+ * the first attach did.
+ */
+export function paidInterestAndPrincipal(
+  payments: readonly AttachedLoanPayment[],
+  exceptTransactionId: string | null = null,
+): bigint {
+  let paid = 0n;
+  for (const payment of payments) {
+    if (payment.needsReview || payment.transactionId === exceptTransactionId) continue;
+    paid += payment.interestMinor + payment.principalMinor;
+  }
+  return paid;
 }
 
 /**

@@ -4,6 +4,7 @@ import {
   allocateLoanSplit,
   allocateLoanSplitWithFees,
   firstUnpaidRowIndex,
+  paidInterestAndPrincipal,
   loanTakesPaymentOn,
   scheduleRowForDate,
   sumScheduleRows,
@@ -218,5 +219,40 @@ describe("sumScheduleRows and firstUnpaidRowIndex", () => {
 
   it("returns -1 when every row is paid", () => {
     expect(firstUnpaidRowIndex(rows, 100_000n)).toBe(-1);
+  });
+
+  it("counts interest too, so interest-only rows (no principal) are found", () => {
+    // 120,000.00 at 6%, three interest-only months then 3 amortizing: 600.00 interest a month.
+    const io = buildLoanSchedule({
+      principalMinor: 12_000_000n,
+      annualRatePpm: 60_000,
+      termMonths: 6,
+      startDate: "2026-01-01",
+      paymentMinor: 4_060_100n,
+      escrowMinor: 0n,
+      kind: "interest_only",
+      interestOnlyMonths: 3,
+    }).rows;
+    expect(io[0]?.principalMinor).toBe(0n);
+    expect(firstUnpaidRowIndex(io, 0n)).toBe(0);
+    expect(firstUnpaidRowIndex(io, 59_999n)).toBe(0);
+    expect(firstUnpaidRowIndex(io, 60_000n)).toBe(1);
+    expect(firstUnpaidRowIndex(io, 180_000n)).toBe(3);
+  });
+});
+
+describe("paidInterestAndPrincipal", () => {
+  const payments = [
+    { transactionId: "a", interestMinor: 500n, principalMinor: 100n, needsReview: false },
+    { transactionId: "b", interestMinor: 400n, principalMinor: 200n, needsReview: false },
+    { transactionId: "c", interestMinor: 1_000n, principalMinor: 1_000n, needsReview: true },
+  ];
+
+  it("adds interest and principal of every payment that is not waiting for review", () => {
+    expect(paidInterestAndPrincipal(payments)).toBe(1_200n);
+  });
+
+  it("leaves out the line being attached, so a replay starts on the same row", () => {
+    expect(paidInterestAndPrincipal(payments, "b")).toBe(600n);
   });
 });
