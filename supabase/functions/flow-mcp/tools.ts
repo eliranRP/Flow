@@ -137,20 +137,33 @@ const assignExpenseSplitSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom });
   }
 });
+// Each part gives exactly one of amount_minor (cents), percent (of the whole line, up to 4
+// decimals) or rest: true (what the other parts leave). Only a rest part may omit
+// category_id: it then keeps the line's own category.
 const linePartSchema = z.object({
-  category_id: UUID_TEXT,
+  category_id: UUID_TEXT.optional(),
   project_id: UUID_TEXT.nullable().optional(),
-  amount_minor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
-}).strict();
-// Two to 50 parts, or none to clear the split. A category and project pair appears once.
-// The database checks that the parts sum to the line.
+  amount_minor: z.number().int().min(1).max(999_999_999_999_999).optional(),
+  percent: z.number().gt(0).max(100).refine((n) => Math.round(n * 10000) / 10000 === n).optional(),
+  rest: z.literal(true).optional(),
+}).strict().refine((part) =>
+  [part.amount_minor, part.percent, part.rest].filter((v) => v !== undefined).length === 1 &&
+  (part.rest === true || part.category_id !== undefined)
+);
+// Two to 50 parts, or none to clear the split. A category and project pair appears once, and
+// at most one part is the rest. The database rounds percents and checks the sum.
 const splitLineSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
   parts: z.array(linePartSchema).max(50).refine((parts) => parts.length !== 1),
 }).strict().superRefine((body, ctx) => {
+  if (body.parts.filter((part) => part.rest).length > 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom });
+    return;
+  }
   const seen = new Set<string>();
   for (const part of body.parts) {
+    if (part.category_id === undefined) continue;
     const pair = `${part.category_id.toLowerCase()}|${(part.project_id ?? "").toLowerCase()}`;
     if (seen.has(pair)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom });
@@ -878,7 +891,7 @@ function writeTools() {
       transaction_id: { type: "string" },
       loan_id: { type: "string" },
     }, true),
-    toolSpec("split_line", "Split one bank line into parts, each with its own category, optional project, and exact amount in minor units (cents). Parts must sum to the line. A part without project_id keeps the line's project. parts [] clears the split. Undo is kind line_split with the transaction id.", {
+    toolSpec("split_line", "Split one bank line into parts, each with its own category and optional project, and exactly one of: amount_minor (exact cents), percent (of the whole line, above 0 up to 100, at most 4 decimals), or rest: true (whatever the other parts leave; at most one; without category_id it keeps the line's own category). Percent parts are rounded together so they hit the line to the cent; a rest with nothing left is dropped. Without a rest part the parts must sum to the line. A part without project_id keeps the line's project. A part whose category is the other kind (an expense category on a refund inflow, an income category on an outflow) is a reversal and needs project_id. Returns the stored parts in cents. parts [] clears the split. Undo is kind line_split with the transaction id.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       parts: {
@@ -889,8 +902,9 @@ function writeTools() {
             category_id: { type: "string" },
             project_id: { type: ["string", "null"] },
             amount_minor: { type: "integer" },
+            percent: { type: "number" },
+            rest: { type: "boolean", enum: [true] },
           },
-          required: ["category_id", "amount_minor"],
           additionalProperties: false,
         },
       },
@@ -1341,9 +1355,11 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
       p_parts: parsed.data.parts.map((part) => ({
-        category_id: part.category_id,
+        ...(part.category_id === undefined ? {} : { category_id: part.category_id }),
         project_id: part.project_id ?? null,
-        amount_minor: part.amount_minor,
+        ...(part.amount_minor === undefined ? {} : { amount_minor: part.amount_minor }),
+        ...(part.percent === undefined ? {} : { percent: part.percent }),
+        ...(part.rest === undefined ? {} : { rest: true }),
       })),
     };
   } else if (name === "set_line_pnl") {

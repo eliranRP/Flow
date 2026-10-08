@@ -103,61 +103,8 @@ create trigger loan_splits_closed_check
   before insert or update of loan_id, transaction_id on public.loan_splits
   for each row execute function private.loan_splits_closed_check();
 
--- private.mcp_refused: as in 20261007210000_line_pnl_override.sql, plus the refusals of a
--- closed loan.
-create or replace function private.mcp_refused(p_message text)
-returns jsonb
-language sql
-immutable
-set search_path = ''
-as $$
-  select private.mcp_error(
-    'refused',
-    case
-      when p_message in (
-        'no company',
-        'unknown review action',
-        'review item not found',
-        'shared costs are split, not assigned to one project',
-        'category is required',
-        'project or category not found',
-        'category kind must match the direction',
-        'project and category are required',
-        'transaction not found',
-        'category not found',
-        'project name is too short',
-        'project already exists',
-        'category name is too short',
-        'category already exists',
-        'unknown category kind',
-        'in use',
-        'loan not found',
-        'loan currency mismatch',
-        'loan already attached',
-        'loan balance exceeded',
-        'no schedule row for this date',
-        'loan categories missing',
-        'invalid loan terms',
-        'loan category is fixed',
-        'project not found',
-        'parts must sum to the line',
-        'line has a loan split',
-        'line has a split by category',
-        'line has an open review',
-        'payment below interest',
-        'invalid loan parts',
-        'loan line is fixed',
-        'closed_on required',
-        'loan is open',
-        'payments after closed_on',
-        'loan closed'
-      ) then p_message
-      -- The trigger on loan_splits raises this from the attach and the app alike.
-      when p_message = 'loan_closed' then 'loan closed'
-      else 'The write was refused.'
-    end
-  );
-$$;
+-- private.mcp_refused already lets the closed-loan refusals through (and maps loan_closed):
+-- 20261008110000_line_split_percent_rest.sql added them ahead of this change.
 
 
 -- mcp_update_loan: as in 20261008050000_mcp_lock_retry.sql, plus status and closed_on.
