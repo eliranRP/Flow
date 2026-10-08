@@ -18,7 +18,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | FLOW-403 + Jev missing bills (owner's option A, 2026-10-08), PR #TBD on `claude/project-thread-0wt3o6`: Home's late-bills row, `/missing-bills`, the project's צפוי months and sheet; plus the Unpaid row opening its SUMIT document (FLOW-335 add-on) | Navigation (331, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
-| UI lane 3 | FLOW-332 swipe back from the start edge on pushed screens (taken from lane 1's queue) | FLOW-401 project categories UI (mockup tonight, owner card at 09:00 Israel), then Settings and other areas outside the review and transaction screens |
+| UI lane 3 | FLOW-401 project categories UI (owner approved v5 "clean", 2026-10-08 21:44Z): groups fold, up mark, usual line, קבוצה in the category sheet | Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -103,7 +103,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
 | 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | done (#199; server and MCP #163) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
-| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | in-progress (UI lane 3) |
+| 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | merged (#238) |
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | claimed: review card items C2, C6, C8 (UI lane 2, 2026-10-08, claude/project-thread-ybrzpc); editor items next |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | done (#239) |
@@ -704,7 +704,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-332"></a>
 ### FLOW-332 · Swipe back from the edge on pushed screens
-- **Type:** SMALL UI · **Status:** in-progress (UI lane 3) · **Owner (2026-10-08):** approved · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
+- **Type:** SMALL UI · **Status:** merged (#238, UI lane 3) · **Owner (2026-10-08):** approved · **Depends on:** — · **Overlaps:** FLOW-314 (gesture rules) · **Source:** cycle 1 (U2)
 - **What:** In the installed iOS app there is no system back gesture, so the only way back from a pushed screen is the chevron at the top corner (y≈12–43). Add a swipe from the start (right) edge on pushed screens, with the same gesture rules as FLOW-314, so it never fights horizontal scrolling or the transaction swipe.
 - **Acceptance:** works on every pushed screen; doesn't trigger inside sheets or horizontal lists; e2e test with touch.
 
@@ -784,7 +784,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-401"></a>
 ### FLOW-401 · Project view by category
-- **Type:** PLAN FIRST · **Status:** ready for a UI lane (server and MCP done in #233, [0149](../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08; plan: the project's plans/flow-401-project-categories.md; the screen needs a mockup and the owner's approval) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (UI lane 3; server and MCP done in #233, [0149](../decisions/0149-project-category-months.md); the owner chose "With groups", 2026-10-08, and approved mockup v5 "clean" at 21:44Z: name and amount only, groups fold in place, an amber up arrow in the month view, "—" for a bill not in yet, a "בד״כ" line on the category page, and קבוצה in the category ⋯ sheet; the project's plans/flow-401-project-categories-light.html) · **Depends on:** —
 - **What:** Per project, expenses broken down by category with every line visible under its category (no extra taps or "show more"), category consolidation (for example all utilities under one group), a monthly expected amount per category from earlier months, and an alert when a month looks off (a new or missing recurring expense, or an amount well above usual). The math is plain SQL (median of the last 3–6 months, threshold rules); Jev only phrases. MCP: tools for the breakdown, the expected amounts and the anomaly list.
 - **Acceptance:** plan and mockup approved.
 

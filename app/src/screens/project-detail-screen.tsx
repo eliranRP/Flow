@@ -1,4 +1,4 @@
-import { formatAmountText, type ExpectedMonths, type ProfitMonths, type ProjectDetail } from "@flow/shared";
+import { formatAmountText, type ExpectedMonths, type ProfitMonths, type ProjectCategoryMonthRow, type ProjectDetail } from "@flow/shared";
 import { useCompanyCurrency } from "../company-currency";
 import { projectExpenseMinor, projectRows, type ProjectCurrencyRow } from "../by-currency";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -42,7 +42,7 @@ import { Toggle } from "../ui/toggle";
 import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { KEPT_OUT_SHORT, ReservedMenuSlot, useBlockedPreview } from "./screen-shared";
-import { categoryHref } from "./project-category-screen";
+import { ProjectCategories, withParam } from "./project-categories";
 import { ProjectExpectedMonths } from "./project-expected-months";
 
 function ProjectLoading({ search, example }: { search: string; example?: ReactNode }) {
@@ -95,10 +95,6 @@ function ProjectLoading({ search, example }: { search: string; example?: ReactNo
   );
 }
 
-function pendingApprovalTitle(count: number): string {
-  return count === 1 ? "1 ממתינה לאישור" : `${String(count)} ממתינות לאישור`;
-}
-
 function projectRowProfit(
   project: NonNullable<ProjectDetail>,
   row: ProjectCurrencyRow,
@@ -126,106 +122,12 @@ function projectRowProfit(
   return row.profit_minor;
 }
 
-function withParam(search: string, key: string, value: string): string {
-  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
-  params.set(key, value);
-  return `?${params.toString()}`;
-}
-
-/** Confirmed categories, then the amount still waiting, so the lines match the project's expenses. */
-function ProjectCategories({
-  project,
-  search,
-  categorySearch = search,
-  categoryTo,
-}: {
-  project: NonNullable<ProjectDetail>;
-  search: string;
-  /** The category list opens on the project's period. */
-  categorySearch?: string;
-  categoryTo?: string;
-}) {
-  const pendingOther = project.pending_other_currencies ?? [];
-  // pending_count counts every waiting line; the non-ILS ones get their own rows below.
-  const pendingOtherCount = pendingOther.reduce((sum, bucket) => sum + bucket.count, 0);
-  const pending = Math.max(0, (project.pending_count ?? 0) - pendingOtherCount);
-  const waiting = pending > 0;
-  const categoryRows = project.categories_by_currency ?? project.categories.map((category) => ({
-    currency: "ILS" as const,
-    id: category.id,
-    name: category.name,
-    amount_minor: category.amount_agorot,
-    has_shared_share: category.has_shared_share,
-  }));
-  const grouped = new Map<string, typeof categoryRows>();
-  for (const row of categoryRows) {
-    const list = grouped.get(row.currency) ?? [];
-    list.push(row);
-    grouped.set(row.currency, list);
-  }
-  const currencies = [...grouped.keys()].sort((a, b) => {
-    if (a === b) return 0;
-    if (a === "ILS") return -1;
-    if (b === "ILS") return 1;
-    return a.localeCompare(b);
-  });
-  const hasCategories = currencies.some((currency) => (grouped.get(currency)?.length ?? 0) > 0);
-  if (!hasCategories && !waiting && pendingOther.length === 0) {
-    return <p className="ui-page-pad t-hint">אין עדיין הוצאות מסווגות.</p>;
-  }
-  // The section is titled הוצאות, so the figures carry no minus (FLOW-328).
-  return (
-    <>
-      <List>
-      {currencies.flatMap((currency) => (grouped.get(currency) ?? []).map((category) => (
-        <ListRow
-          key={`${currency}:${category.id ?? category.name ?? ""}`}
-          variant="project"
-          title={category.name ?? "בלי קטגוריה"}
-          agorot={absAgorot(category.amount_minor)}
-          currency={currency}
-          loss={false}
-          chevron={category.id != null}
-          href={category.id != null ? (categoryTo ?? categoryHref(project.id, category.id, currency, categorySearch)) : undefined}
-          wrapHint={category.has_shared_share === true}
-          hint={category.has_shared_share === true ? (
-            <span className="ui-shared-note t-hint">כולל חלק מהוצאות משותפות</span>
-          ) : undefined}
-        />
-      )))}
-      {waiting ? (
-        <ListRow
-          variant="project"
-          title={pendingApprovalTitle(pending)}
-          agorot={absAgorot(project.pending_agorot ?? 0n)}
-          currency="ILS"
-          loss={false}
-          chevron
-          href={`/review${withParam(search, "project", project.id)}`}
-        />
-      ) : null}
-      {pendingOther.map((bucket) => (
-        <ListRow
-          key={bucket.currency}
-          variant="project"
-          title={pendingApprovalTitle(bucket.count)}
-          agorot={absAgorot(bucket.expense_minor)}
-          currency={bucket.currency}
-          loss={false}
-          chevron
-          href={`/review${withParam(search, "project", project.id)}`}
-        />
-      ))}
-    </List>
-    </>
-  );
-}
-
 export function ProjectDetailScreen({
   sample,
   sampleMonths,
   example,
   categoryTo,
+  sampleCategories,
   sampleExpected,
 }: {
   sample?: NonNullable<ProjectDetail>;
@@ -234,6 +136,8 @@ export function ProjectDetailScreen({
   example?: ReactNode;
   /** Dev fixtures send a category row here. Production builds the project route. */
   categoryTo?: string;
+  /** FLOW-401. A sample project's category groups and month marks (stories). */
+  sampleCategories?: { groups: Record<string, string>; months: ProjectCategoryMonthRow[] };
   /** FLOW-403. The "צפוי" months of a sample project (dev routes and Storybook). */
   sampleExpected?: ExpectedMonths;
 } = {}) {
@@ -378,6 +282,9 @@ export function ProjectDetailScreen({
         search={search}
         categorySearch={periodQuery}
         categoryTo={categoryTo == null ? undefined : `${categoryTo}${search}`}
+        period={sample ? undefined : period}
+        sampleGroups={sampleCategories?.groups}
+        sampleMonths={sampleCategories?.months}
       />
       {/* FLOW-403: expected months under the categories (plan option A3); its own block, one line here. */}
       <ProjectExpectedMonths projectId={project.id} live={sample == null} sample={sampleExpected} />
