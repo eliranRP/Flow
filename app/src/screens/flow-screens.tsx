@@ -2458,17 +2458,12 @@ export function TransactionScreen({
   sampleProjects,
   sampleCategories,
   onOpenSplit,
-  onSampleUnsplit,
-  onSampleUndo,
 }: {
   sample?: NonNullable<TransactionDetail>;
   sampleProjects?: Array<{ id: string; name: string; code?: string }>;
   sampleCategories?: Array<{ id: string; name: string }>;
   /** Reviewer preview stays on its own split instead of the ledger route. */
   onOpenSplit?: () => void;
-  /** Sample books update when a split becomes one project. */
-  onSampleUnsplit?: (projectId: string) => void;
-  onSampleUndo?: () => void;
 } = {}) {
   const { transactionId = "" } = useParams();
   const preview = useHomePreview();
@@ -2552,7 +2547,6 @@ export function TransactionScreen({
   const [projectId, setProjectId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [hold, setHold] = useState("");
-  const [collapsedTo, setCollapsedTo] = useState<{ id: string; name: string } | null>(null);
   const writeTarget = useRef({ projectId: "", categoryId: "" });
   const committed = useRef({ projectId: "", categoryId: "" });
   const namesRef = useRef({
@@ -2583,10 +2577,10 @@ export function TransactionScreen({
   }, [changeOpen, txn]);
   useEffect(() => {
     if (hold === "" || !txn) return;
-    const splitLike = collapsedTo == null && (txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1);
+    const splitLike = txn.pnl_role === "shared" || txn.review_reason === "unallocated_shared" || (txn.allocations?.length ?? 0) > 1;
     const complete = splitLike ? categoryId !== "" : projectId !== "" && categoryId !== "";
     if (complete) setHold("");
-  }, [hold, txn, categoryId, projectId, collapsedTo]);
+  }, [hold, txn, categoryId, projectId]);
   const undoId = useRef<string | null>(null);
   const undo = useWrite({
     failure: "לא הצלחנו לבטל את השיוך.",
@@ -2596,8 +2590,6 @@ export function TransactionScreen({
       committed.current = { projectId: "", categoryId: "" };
       setProjectName("");
       setCategoryName("");
-      setCollapsedTo(null);
-      onSampleUndo?.();
     },
     run: async () => {
       const supabase = getSupabase();
@@ -2666,26 +2658,6 @@ export function TransactionScreen({
       undoId.current = typeof saved.data === "string" ? saved.data : null;
     },
   });
-  const collapse = useWrite({
-    failure: changeSaveFailure,
-    keys: ["txn", "dashboard", "project", "project-category", "project-waiting", "review"],
-    onSuccess: () => {
-      applyRef.current();
-      const nextId = writeTarget.current.projectId;
-      const named = namesRef.current.projects.find((project) => project.id === nextId);
-      setCollapsedTo({ id: nextId, name: named?.name ?? "" });
-      const id = undoId.current;
-      toast.show({
-        message: "השיוך נשמר",
-        ...(id ? { action: "ביטול", onAction: () => { undo.mutate(); } } : {}),
-      });
-    },
-    run: async () => {
-      const current = sample ?? detail.data;
-      if (!current) throw new Error("supabase");
-      undoId.current = await collapseSplit(current.id, writeTarget.current.projectId);
-    },
-  });
   // While a card loads or fails, ⋯ keeps its slot so ˄ ˅ stay under the finger,
   // and the long title sits under the bar so it fits at 320.
   const navEnd = nav ? (
@@ -2704,8 +2676,8 @@ export function TransactionScreen({
   }
   const detailRow = txn;
   const serverSplit = detailRow.pnl_role === "shared" || detailRow.review_reason === "unallocated_shared" || (detailRow.allocations?.length ?? 0) > 1;
-  const splitRow = collapsedTo == null && serverSplit;
-  const shownProject = collapsedTo?.name || splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
+  const splitRow = serverSplit;
+  const shownProject = splitProjectLabel(txn, splitRow, projectName || txn.project_name || "בלי פרויקט");
   const shownCategory = categoryName || txn.category_name || "בלי קטגוריה";
   const shownCategoryId = categoryId || txn.category_id || "";
   const shownLoanPart = categories.data?.find((category) => category.id === shownCategoryId)?.loan_part ?? null;
@@ -2718,48 +2690,28 @@ export function TransactionScreen({
   }
   async function commitPick(kind: "project" | "category", id: string) {
     const previous = { projectId, categoryId };
-    const collapsing = kind === "project" && splitRow;
+    // A split's project row opens the split screen, so a split only picks a category here.
+    const categoryOnly = splitRow && kind === "category";
     const next = {
       projectId: kind === "project" ? id : previous.projectId,
       categoryId: kind === "category" ? id : previous.categoryId,
     };
     writeTarget.current = next;
-    const complete = collapsing
-      ? next.projectId !== ""
-      : splitRow
-        ? next.categoryId !== ""
-        : next.projectId !== "" && next.categoryId !== "";
+    const complete = categoryOnly ? next.categoryId !== "" : next.projectId !== "" && next.categoryId !== "";
     if (!complete) {
-      setHold(collapsing ? COLLAPSE_PICK_HOLD : splitRow ? "בחרו קטגוריה." : "בחרו פרויקט וקטגוריה.");
+      // Name only what is still missing.
+      setHold(categoryOnly || next.projectId !== "" ? "בחרו קטגוריה." : next.categoryId === "" ? "בחרו פרויקט וקטגוריה." : "בחרו פרויקט.");
       return "hold" as const;
     }
     setHold("");
     try {
       if (sample) {
         applyRef.current();
-        if (collapsing) {
-          const named = namesRef.current.projects.find((project) => project.id === id);
-          setCollapsedTo({ id, name: named?.name ?? "" });
-          onSampleUnsplit?.(id);
-          toast.show({
-            message: "השיוך נשמר",
-            action: "ביטול",
-            onAction: () => {
-              setCollapsedTo(null);
-              committed.current = { projectId: "", categoryId: committed.current.categoryId };
-              setProjectId("");
-              setProjectName("");
-              onSampleUndo?.();
-            },
-          });
-          return undefined;
-        }
         toast.show({ message: "השיוך נשמר" });
         return undefined;
       }
       if (blocked()) throw new Error("preview");
-      if (collapsing) await collapse.mutateAsync();
-      else if (splitRow) await setCategory.mutateAsync();
+      if (categoryOnly) await setCategory.mutateAsync();
       else await reassign.mutateAsync();
     } catch (error) {
       setProjectId(previous.projectId);
@@ -2907,8 +2859,6 @@ export function TransactionScreen({
         categoryId={categoryId}
         onProjectId={setProjectId}
         onCategoryId={setCategoryId}
-        projectNote={splitRow ? COLLAPSE_SPLIT_NOTE : undefined}
-        projectTitle={splitRow ? shownProject : undefined}
         hold={hold}
         leave={leaveChange}
         onDiscard={() => {

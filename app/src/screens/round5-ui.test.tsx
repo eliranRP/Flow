@@ -353,7 +353,7 @@ describe("transaction detail pickers (FLOW-320)", () => {
     fireEvent.click(await screen.findByRole("button", { name: /חולון/ }));
     fireEvent.click(await screen.findByRole("radio", { name: "וילה" }));
     expect(await screen.findByRole("heading", { name: "שינוי שיוך" })).toBeInTheDocument();
-    expect(screen.getByText("בחרו פרויקט וקטגוריה.")).toBeInTheDocument();
+    expect(screen.getByText("בחרו קטגוריה.")).toBeInTheDocument();
     expect(rpc.calls.some((call) => call.name === "reassign_transaction")).toBe(false);
   });
 });
