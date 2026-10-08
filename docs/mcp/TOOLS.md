@@ -32,6 +32,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `undo` `kind: "overhead_project"` | `id` | the company id `set_overhead_project` returned |
 | `undo` `kind: "line_split"` | `id` | the transaction id `split_line` used |
 | `undo` `kind: "line_pnl"` | `id` | the transaction id `set_line_pnl` used |
+| `set_invoice_paid` | `transaction_id` | `list_unpaid` `invoices[].id` |
+| `undo` `kind: "invoice_paid"` | `id` | the transaction id `set_invoice_paid` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -522,6 +524,30 @@ Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "l
 ```
 
 Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`, each result `{ "transaction_id", "ok": true, "in_pnl", "undo_kind": "line_pnl" }` or `{ "transaction_id", "ok": false, "code" }`. [undo_batch](#undo_batch) with `batch_key` undoes the rows that succeeded.
+
+## Unpaid · FLOW-330
+
+Customer documents still open, and a mark the owner sets when one was paid before SUMIT has the receipt. Decision [0133](../decisions/0133-invoice-paid-marks.md).
+
+### list_unpaid
+
+Read. No arguments. The open documents the Unpaid screen shows: SUMIT invoices with an amount still open after their linked receipts and credit notes, oldest first.
+
+Output `data`: `{ "invoices", "totals" }`. Each invoice is `{ "id", "description", "doc_date", "currency", "project_name", "customer_name", "open_gross_minor", "open_net_minor", "marked_paid_at" }`; `id` is the transaction id, and `marked_paid_at` is when the document was marked paid (`null` when not). `totals` has one row per currency, `{ "currency", "open_gross_minor", "marked_gross_minor" }`: the rows not marked, and the marked ones. A marked document stays listed until a sync brings its open amount to zero.
+
+### set_invoice_paid
+
+Marks one open document paid while SUMIT has no receipt for it yet, or clears the mark.
+
+```json
+{ "idempotency_key": "paid-1", "transaction_id": "22222222-2222-4000-8000-000000000030", "paid": true }
+```
+
+- `paid: true` marks it (marking again keeps the first time), `false` clears it (clearing an unmarked one changes nothing).
+- The mark changes no total and no P&L figure: it only moves the document from `open_gross_minor` to `marked_gross_minor` in `list_unpaid`. The P&L follows the receipt when the sync brings it.
+- Refused: `invoice not found` (not a document `list_unpaid` lists, already closed, or another company's).
+
+Output `data`: `{ "transaction_id", "marked_paid", "marked_paid_at", "undo_kind": "invoice_paid", "id" }`. Undo `kind: "invoice_paid"` with the transaction id puts the mark back as it was before this write (with its first time) or takes it away. If the mark changed since (for example in the app), undo is `conflict`.
 
 ## Batch · cycle 6
 

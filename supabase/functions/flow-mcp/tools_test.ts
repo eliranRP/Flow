@@ -355,6 +355,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
+    "set_invoice_paid",
     "undo",
     "undo_batch",
     "get_sync_status",
@@ -383,6 +384,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "get_anomalies",
     "get_missing_bills",
     "get_expected_months",
+    "list_unpaid",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -403,6 +405,7 @@ Deno.test("write tools are listed only for a write scope", () => {
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
+    "set_invoice_paid",
     "undo",
     "undo_batch",
   ]);
@@ -3618,4 +3621,73 @@ Deno.test("loan kind tools are described", () => {
   assertEquals(Object.keys(spec(read, "get_loan_schedule")?.inputSchema.properties ?? {}), ["loan_id", "from", "limit", "as_of"]);
   assertEquals(spec(read, "list_loans")?.description.includes("rates lists"), true);
   assertEquals((spec(write, "undo")?.inputSchema.properties.kind as { enum: string[] }).enum.includes("loan_rate"), true);
+});
+
+Deno.test("list_unpaid returns minor units and open and marked totals per currency", async () => {
+  const rows = [
+    { id: TXN, description: "Invoice 1", doc_date: "2026-06-01", currency: "ILS", project_name: "North", customer_name: "Client A", open_gross_agorot: 11800, open_net_agorot: 10000, marked_paid_at: null },
+    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00" },
+    { id: PROJECT_B, description: "Invoice 3", doc_date: "2026-06-03", currency: "USD", project_name: null, customer_name: null, open_gross_agorot: 2500, open_net_agorot: 2500, marked_paid_at: null },
+  ];
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: rows }));
+  const out = await callTool("list_unpaid", {}, ["read"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], { name: "list_unpaid", body: {} });
+  if (!out.structuredContent.ok) throw new Error("expected ok");
+  const data = out.structuredContent.data as { invoices: Record<string, unknown>[]; totals: unknown[] };
+  assertEquals(data.invoices[1], {
+    id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", project_name: null,
+    customer_name: "Client B", open_gross_minor: 5900, open_net_minor: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00",
+  });
+  assertEquals(data.totals, [
+    { currency: "ILS", open_gross_minor: 11800, marked_gross_minor: 5900 },
+    { currency: "USD", open_gross_minor: 2500, marked_gross_minor: 0 },
+  ]);
+  assertEquals((await callTool("list_unpaid", { company_id: TXN }, ["read"], rpc)).isError, true);
+  assertEquals((await callTool("list_unpaid", {}, ["read"], () => Promise.resolve({ status: 403, json: null }))).isError, true);
+  assertEquals((await callTool("list_unpaid", {}, ["read"], () => Promise.resolve({ status: 200, json: { rows } }))).isError, true);
+  assertEquals((await callTool("list_unpaid", {}, ["write"], rpc)).isError, true);
+});
+
+Deno.test("set_invoice_paid forwards paid and undo takes kind invoice_paid", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { transaction_id: TXN, marked_paid: true, undo_kind: "invoice_paid", id: TXN } },
+  }));
+  const out = await callTool("set_invoice_paid", { idempotency_key: "m-1", transaction_id: TXN, paid: true }, ["write"], rpc);
+  assertEquals(out.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_set_invoice_paid",
+    body: { p_idempotency_key: "m-1", p_transaction_id: TXN, p_paid: true },
+  });
+  const cleared = await callTool("set_invoice_paid", { idempotency_key: "m-2", transaction_id: TXN, paid: false }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[1]?.body.p_paid, false);
+  const undo = await callTool("undo", { idempotency_key: "u-1", kind: "invoice_paid", id: TXN }, ["write"], rpc);
+  assertEquals(undo.isError, false);
+  assertEquals(calls[2], { name: "mcp_undo", body: { p_idempotency_key: "u-1", p_kind: "invoice_paid", p_id: TXN } });
+});
+
+Deno.test("set_invoice_paid validates input, refuses read tokens and passes the fixed refusal", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: false, error: { code: "refused", message: "invoice not found" } } }));
+  const denied = await callTool("set_invoice_paid", { idempotency_key: "k", transaction_id: TXN, paid: true }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  const bad: unknown[] = [
+    { idempotency_key: "k", transaction_id: TXN },
+    { idempotency_key: "k", transaction_id: TXN, paid: null },
+    { idempotency_key: "k", transaction_id: TXN, paid: "yes" },
+    { idempotency_key: "k", transaction_id: "not-a-uuid", paid: true },
+    { idempotency_key: "", transaction_id: TXN, paid: true },
+    { idempotency_key: "k", transaction_id: TXN, paid: true, company_id: TXN },
+  ];
+  for (const input of bad) {
+    const result = await callTool("set_invoice_paid", input, ["write"], rpc);
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 0);
+  const refused = await callTool("set_invoice_paid", { idempotency_key: "k", transaction_id: TXN, paid: true }, ["write"], rpc);
+  assertEquals(refused.isError, true);
+  if (!refused.structuredContent.ok) assertEquals(refused.structuredContent.error.message, "invoice not found");
 });

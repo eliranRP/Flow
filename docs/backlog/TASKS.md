@@ -97,7 +97,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 51 | [FLOW-327](#flow-327) | Review card: actions in the thumb zone, tidy spacing | SMALL UI | ready |
 | 52 | [FLOW-328](#flow-328) | Mobile UI consistency pass (cycle 1) | SMALL UI | ready |
 | 53 | [FLOW-329](#flow-329) | Out of the P&L as a visible row on the transaction | SMALL UI | ready |
-| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll) (owner chose: store it; screen with the UI lane) |
+| 54 | [FLOW-330](#flow-330) | Mark paid that stays marked | SMALL CYCLE | in-progress (#163 server and MCP; the screen goes to the UI lane) |
 | 55 | [FLOW-331](#flow-331) | A useful + tab while capture is not built | SMALL UI | ready (owner chose: quick actions) |
 | 56 | [FLOW-332](#flow-332) | Swipe back from the edge on pushed screens | SMALL UI | ready (owner approved) |
 
@@ -668,10 +668,12 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-330"></a>
 ### FLOW-330 · Mark paid that stays marked
-- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll) · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#163 server and MCP; the screen goes to the UI lane) · **Owner (2026-10-08):** option (a), store it · **Depends on:** — · **Source:** cycle 1 (U4)
 - **What:** On Unpaid, "סימון כשולם" takes 2 taps (the button, then הבנתי) and then only hides the row in screen state (`flow-screens.tsx` `setHidden`): the unpaid total never drops (it sums every row), and after a reload the row is back. Options: (a) store a "marked paid, waiting for SUMIT" flag on the server; the row leaves the total and shows "סומן כשולם · ממתין לסנכרון" until the next sync; (b) keep it as a reminder and rename the button to say so, showing the explainer once.
 - **MCP:** for (a), the unpaid tools return and can set the flag.
 - **Acceptance:** a marked row stays marked after reload; total matches the list; tenant isolation test on any new RPC.
+- [x] Server and MCP (#163, decision [0133](../decisions/0133-invoice-paid-marks.md)): `set_invoice_paid(id, paid)` stores the mark, `list_unpaid` keeps the row with `marked_paid_at`; MCP `list_unpaid` and `set_invoice_paid` (undo `invoice_paid`).
+- [ ] Screen (UI lane): "סימון כשולם" calls `set_invoice_paid` in one tap (no explainer step) instead of `setHidden`; a marked row shows "סומן כשולם · ממתין לסנכרון" with a way to clear it; Unpaid's total and Home's unpaid row sum only rows with `marked_paid_at` null; add `marked_paid_at` and `currency` to `unpaidRowSchema`.
 
 <a id="flow-331"></a>
 ### FLOW-331 · A useful + tab while capture is not built
@@ -757,8 +759,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-412"></a>
 ### FLOW-412 · Category drill-down on the cash basis
-- **Type:** BACKLOG NIT · **Status:** claimed (dev lane 1, 2026-10-08, claude/project-thread-qenhll) · **Depends on:** —
-- [ ] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review.
+- **Type:** BACKLOG NIT · **Status:** in-progress (#163) · **Depends on:** —
+- [x] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review. (#163: `p_basis`, default invoiced; the app passes its basis.)
 
 ## Onboarding, Settings and connectors
 
