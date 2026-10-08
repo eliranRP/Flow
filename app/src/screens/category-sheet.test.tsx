@@ -34,6 +34,9 @@ vi.mock("../lib/supabase", () => ({
         rpc.rehabOff = (args as { p_rehab: boolean | null }).p_rehab === false;
         return Promise.resolve({ data: null, error: null });
       }
+      if (name === "rename_category" && (args as { p_name: string }).p_name === "קבלנים") {
+        return Promise.resolve({ data: null, error: { message: "category already exists", code: "23505" } });
+      }
       if (name === "delete_category") return Promise.resolve({ data: { deletion_id: "d1", name: "חומרים", lines: 42 }, error: null });
       if (name === "move_category_lines") return Promise.resolve({ data: { move_id: "m1", lines: 42 }, error: null });
       if (name === "restore_category" && rpc.restoreRefusal) {
@@ -163,5 +166,56 @@ describe("category sheet: move all lines and delete (FLOW-405)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "עוד, תקבול" }));
     const sheet = await screen.findByRole("dialog", { name: "תקבול" });
     expect(within(sheet).queryByRole("switch", { name: "נספרת בשיפוץ" })).not.toBeInTheDocument();
+  });
+});
+
+describe("category sheet: rename", () => {
+  it("puts שינוי שם after the P&L row and before the move row", async () => {
+    const sheet = await openSheet("חומרים");
+    const names = within(sheet).getAllByRole("button").map((button) => button.getAttribute("aria-label") ?? button.textContent);
+    const rename = names.findIndex((name) => name.includes("שינוי שם"));
+    const move = names.findIndex((name) => name.includes("העברת כל התנועות"));
+    expect(rename).toBeGreaterThan(-1);
+    expect(rename).toBeLessThan(move);
+  });
+
+  it("saves a trimmed name, then ביטול writes the old one back", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: "שינוי שם" }));
+    const form = await screen.findByRole("dialog", { name: "שינוי שם" });
+    const field = within(form).getByLabelText("שם הקטגוריה");
+    expect(field).toHaveValue("חומרים");
+    fireEvent.change(field, { target: { value: "  חומרי בניין " } });
+    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(calls("rename_category")).toEqual([{ p_category_id: "c1", p_name: "חומרי בניין" }]); });
+    expect(await screen.findByText("השם נשמר")).toBeInTheDocument();
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שינוי שם" })).toBeNull(); });
+    fireEvent.click(screen.getByRole("button", { name: "ביטול", hidden: true }));
+    await waitFor(() => { expect(calls("rename_category")).toHaveLength(2); });
+    expect(calls("rename_category")[1]).toEqual({ p_category_id: "c1", p_name: "חומרים" });
+  });
+
+  it("refuses a short name without a write and keeps the sheet on a taken name", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: "שינוי שם" }));
+    const form = await screen.findByRole("dialog", { name: "שינוי שם" });
+    const field = within(form).getByLabelText("שם הקטגוריה");
+    fireEvent.change(field, { target: { value: "א" } });
+    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    expect(await within(form).findByText("שם קצר מדי – לפחות 2 תווים")).toBeInTheDocument();
+    expect(calls("rename_category")).toHaveLength(0);
+    fireEvent.change(field, { target: { value: "קבלנים" } });
+    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    expect(await screen.findByText("יש כבר קטגוריה בשם הזה.", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "שינוי שם" })).toBeInTheDocument();
+  });
+
+  it("closes without a write when the name is unchanged", async () => {
+    const sheet = await openSheet("חומרים");
+    fireEvent.click(within(sheet).getByRole("button", { name: "שינוי שם" }));
+    const form = await screen.findByRole("dialog", { name: "שינוי שם" });
+    fireEvent.click(within(form).getByRole("button", { name: "שמירה" }));
+    await waitFor(() => { expect(screen.queryByRole("dialog", { name: "שינוי שם" })).toBeNull(); });
+    expect(calls("rename_category")).toHaveLength(0);
   });
 });

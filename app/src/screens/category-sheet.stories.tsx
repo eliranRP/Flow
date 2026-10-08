@@ -100,3 +100,15 @@ export const DeleteEmpty: Story = {
     await body(canvasElement).findByRole("dialog", { name: "למחוק את הקטגוריה?" });
   },
 };
+
+export const Rename: Story = {
+  name: "Rename, the name sheet",
+  render: () => <Screen />,
+  play: async ({ canvasElement }) => {
+    const sheet = await openMenu(canvasElement, "חומרים");
+    await userEvent.click(within(sheet).getByRole("button", { name: "שינוי שם" }));
+    await body(canvasElement).findByRole("dialog", { name: "שינוי שם" });
+  },
+};
+export const Rename320: Story = { ...Rename, name: "Rename, 320", ...at320 };
+export const RenameDark: Story = { ...Rename, name: "Rename, dark", ...dark };
