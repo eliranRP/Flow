@@ -60,7 +60,8 @@ The reviewer preview at the end is the dev server, or a reviewers-only build wit
 | Home | range confirm | Applies the custom range and closes. | never | no | pill shows the range, hero explanation updates | none | pass |
 | Home | month chevrons | Move the visible month. The next month is disabled when it would pass today. | the forward chevron when the cursor is the current month | no | the grid month changes | none | pass |
 | Home | a day | Sets one end of the range. Future days are disabled. | a day after today | no | the day is in the range | none | pass |
-| Home | pending or unpaid banner | Opens review when items are waiting, otherwise unpaid. | never | no | route `/review` or `/unpaid` | none | pass |
+| Home | pending card, review row | Opens review. Shown when items are waiting. Name "N פריטים ממתינים לאישור", or "פריט אחד ממתין לאישור" for 1 (FLOW-321). | never | no | route `/review` | none | unit |
+| Home | pending card, unpaid row | Opens unpaid. Shown when invoices are unpaid, also while items are waiting, so unpaid is one tap from Home. Name "N חשבוניות לא שולמו ₪x · טרם נגבה", or "חשבונית אחת לא שולמה ₪x · טרם נגבה" for 1. Both rows share one tinted card; one row alone is the plain banner (FLOW-321). | while the unpaid list is loading or failed (the row is hidden) | no | route `/unpaid` | the unpaid error state with ניסיון חוזר | unit |
 | Home | a leading project | Opens that project. | never | no | route `/projects/:id` | none | pass |
 | Home | לכל הפרויקטים | Opens the project list. | never | no | route `/projects` | none | pass |
 | Home | נכנס / יצא | The whole row opens that side's breakdown for Home's period. Name "יצא החודש −₪x – פירוט", reading every currency; a month where refunds beat costs reads "₪x" with no minus, like its breakdown. The change pill stays outside the link. | never | no | route `/flow/income` or `/flow/expense` | none | unit |
