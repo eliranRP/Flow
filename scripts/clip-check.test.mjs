@@ -276,6 +276,52 @@ test("a sheet panel that never shows is skipped, not a crash (#231 follow-up)", 
   }
 });
 
+test("a sheet panel that fails for another reason still crashes the run (#231 follow-up)", { skip: playwrightSkip }, async () => {
+  const { execute } = await import("./clip-check.mjs");
+  const dir = staticSite("<div id=\"storybook-root\"><span>שלום</span></div>", {
+    swap: { type: "story", id: "swap", title: "Swap", name: "Swap" },
+  });
+  try {
+    const code = await execute({
+      staticDir: dir,
+      widths: [320],
+      themes: ["light"],
+      reportDir: dir,
+      log: () => undefined,
+      launch: async () => ({
+        async newPage() {
+          return {
+            async setViewportSize() {},
+            async goto() {},
+            locator(selector) {
+              const panels = selector === ".ui-sheet-panel";
+              return {
+                waitFor: async () => {},
+                count: async () => (panels ? 1 : 0),
+                nth: () => ({
+                  waitFor: async () => {
+                    if (panels) throw new Error("Target page, context or browser has been closed");
+                  },
+                }),
+              };
+            },
+            async waitForFunction() {},
+            async evaluate() {
+              return undefined;
+            },
+          };
+        },
+        async close() {},
+      }),
+    });
+    assert.equal(code, 3);
+    const crash = JSON.parse(readFileSync(join(dir, "clip-report.json"), "utf8"));
+    assert.match(crash.note, /has been closed/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("the clip report sits at the repo root", async () => {
   const { clipReportDir } = await import("./clip-check.mjs");
   assert.equal(clipReportDir(), fileURLToPath(new URL("..", import.meta.url)));

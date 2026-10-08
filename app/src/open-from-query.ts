@@ -21,7 +21,13 @@ export function useOpenFromQuery(what: QuickNew, ready: boolean, open: () => voi
   const openRef = useRef(open);
   openRef.current = open;
   useEffect(() => {
-    if (!asked || !ready || done.current) return;
+    // The screen stays mounted under the + sheet, so a second + → new lands on the same
+    // instance: re-arm once the param is gone.
+    if (!asked) {
+      done.current = false;
+      return;
+    }
+    if (!ready || done.current) return;
     done.current = true;
     const next = new URLSearchParams(params);
     next.delete("new");

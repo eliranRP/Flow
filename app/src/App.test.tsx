@@ -104,6 +104,19 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "פרויקטים", hidden: true })).toBeInTheDocument();
   });
 
+  it("opens the project sheet again on a second + → פרויקט חדש from Projects", async () => {
+    renderAt("/projects?preview=1");
+    for (let round = 0; round < 2; round += 1) {
+      fireEvent.click(within(screen.getByRole("navigation", { name: "ניווט ראשי" })).getByRole("link", { name: "הוספה" }));
+      fireEvent.click(await screen.findByRole("button", { name: /פרויקט חדש/ }));
+      const dialog = await screen.findByRole("dialog", { name: "פרויקט" });
+      fireEvent.click(within(dialog).getByRole("button", { name: "ביטול" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "פרויקט" })).not.toBeInTheDocument();
+      });
+    }
+  });
+
   it("opens the new-loan sheet from + → הלוואה חדשה", async () => {
     renderAt("/add?preview=1");
     fireEvent.click(screen.getByRole("button", { name: /הלוואה חדשה/ }));
