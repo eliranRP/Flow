@@ -21,7 +21,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807: split the big files, one PR per file. Merged: one file per screen (#219), one stories file per screen (#225); now `ui.css` into `app/src/ui/css/` | The review area out of `flow-screens.tsx` (after #204); `split-screen.tsx` and `connections-screen.tsx` are near 800 lines |
+| File split | FLOW-807: last PR, the review area out of `flow-screens.tsx` (merged: screens #219, stories #225, CSS #227) | Stops after this; `review-queue.tsx` (about 640 lines) and `split-screen.tsx` are the biggest screen files left |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -1097,7 +1097,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219 screens and #225 stories merged; now `ui.css`; then the review area) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#219 screens, #225 stories, #227 CSS merged; the review area is the last part) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 
