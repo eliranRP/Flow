@@ -18,6 +18,7 @@ const db = vi.hoisted(() => ({
     loan_id: string;
   }>,
   inserts: [] as unknown[],
+  updates: [] as Array<{ id: unknown; values: unknown }>,
   counted: null as Record<string, unknown> | null,
   insertError: null as { message: string; code?: string } | null,
   insertHold: null as Promise<void> | null,
@@ -114,8 +115,11 @@ vi.mock("../lib/supabase", () => ({
             if (db.insertHold) return db.insertHold.then(() => finish());
             return Promise.resolve(finish());
           },
-          update: () => ({
-            eq: () => Promise.resolve({ data: null, error: db.updateError }),
+          update: (values: unknown) => ({
+            eq: (_column: string, id: unknown) => {
+              db.updates.push({ id, values });
+              return Promise.resolve({ data: null, error: db.updateError });
+            },
           }),
         };
       }
@@ -219,6 +223,7 @@ beforeEach(() => {
   db.txn = { company_id: "co-1", amount_original: 100_000, currency: "ILS" };
   db.splits = [];
   db.inserts = [];
+  db.updates = [];
   db.counted = null;
   db.insertError = null;
   db.insertHold = null;
@@ -312,6 +317,25 @@ describe("LoanSplitPanel", () => {
     expect(total).toHaveTextContent("−₪2,450");
     const titles = [...document.querySelectorAll(".ui-row-title")].map((node) => node.textContent);
     expect(titles).toEqual(["ריבית", "מסים וביטוח", "קרן", "סה״כ"]);
+  });
+
+  it("shows a fees part as a fourth row, counted in profit, after the principal", () => {
+    panel({
+      byParts: true,
+      parts: [
+        { id: "d", part: "fees", amountMinor: 30_000n, scheduledMinor: 30_000n, needsReview: false, loanId: "loan-1", inPnl: true },
+        { id: "c", part: "principal", amountMinor: 100_000n, scheduledMinor: 100_000n, needsReview: false, loanId: "loan-1", inPnl: false },
+        { id: "a", part: "interest", amountMinor: 0n, scheduledMinor: 0n, needsReview: false, loanId: "loan-1", inPnl: true },
+        { id: "b", part: "escrow", amountMinor: 40_000n, scheduledMinor: 40_000n, needsReview: false, loanId: "loan-1", inPnl: true },
+      ],
+    });
+    const titles = [...document.querySelectorAll(".ui-row-title")].map((node) => node.textContent);
+    expect(titles).toEqual(["ריבית", "מסים וביטוח", "קרן", "עמלות", "סה״כ"]);
+    const fees = screen.getByText("עמלות").closest(".ui-row");
+    expect(fees).toHaveTextContent("−₪300");
+    expect(fees).not.toHaveTextContent("מחוץ לרווח");
+    expect(screen.getByText(/נספר ברווח/)).toHaveTextContent("נספר ברווח ₪700");
+    expect(screen.getByText("סה״כ").closest(".ui-row")).toHaveTextContent("−₪1,700");
   });
 
   it("counts the whole line when the P&L does not count by parts", () => {
@@ -549,6 +573,28 @@ describe("LoanTransactionSplit", () => {
     expect(db.inserts).toHaveLength(0);
   });
 
+  it("reads a four-part split with fees and keeps the fees when correcting it", async () => {
+    db.splits = [
+      { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: true, loan_id: "loan-1" },
+      { id: "b", part: "escrow", amount_minor: 200, scheduled_minor: 200, needs_review: true, loan_id: "loan-1" },
+      { id: "c", part: "principal", amount_minor: 300, scheduled_minor: 300, needs_review: true, loan_id: "loan-1" },
+      { id: "d", part: "fees", amount_minor: 250, scheduled_minor: 250, needs_review: true, loan_id: "loan-1" },
+    ];
+    db.txn = { company_id: "co-1", amount_original: 1_450, currency: "ILS" };
+    renderSplit();
+    await waitFor(() => { expect(screen.getByText("עמלות")).toBeInTheDocument(); });
+    expect(screen.getByText("עמלות").closest(".ui-row")).toHaveTextContent("−₪2.50");
+    fireEvent.click(screen.getByRole("button", { name: "עדכון החלוקה" }));
+    await waitFor(() => { expect(db.updates).toHaveLength(4); });
+    // 14.50 less the 2.50 fees: interest 5, escrow 2, and principal takes the other 5.
+    expect(db.updates).toEqual([
+      { id: "a", values: { amount_minor: 500 } },
+      { id: "b", values: { amount_minor: 200 } },
+      { id: "c", values: { amount_minor: 500 } },
+      { id: "d", values: { amount_minor: 250 } },
+    ]);
+  });
+
   it("uses correction failure copy", async () => {
     db.splits = [
       { id: "a", part: "interest", amount_minor: 500, scheduled_minor: 500, needs_review: true, loan_id: "loan-1" },
@@ -636,6 +682,38 @@ describe("LoanTransactionSplit", () => {
     renderSplit({ docDate: "2026-02-01" });
     await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
     expect(within(matchButton()).getByText("הלוואת דוגמה")).toBeInTheDocument();
+  });
+
+  it("does not offer a demand loan: it has no schedule to split by (decision 0132)", async () => {
+    const demand = { ...db.loans[0], kind: "demand", term_months: null, payment_minor: null };
+    db.loans = [demand as unknown as (typeof db.loans)[number]];
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    expect(within(matchButton()).queryByText("הלוואת דוגמה")).not.toBeInTheDocument();
+    fireEvent.click(matchButton());
+    expect(screen.queryByRole("radio", { name: "הלוואת דוגמה" })).not.toBeInTheDocument();
+  });
+
+  it("splits an interest-only payment by its schedule and rate rows", async () => {
+    // 100,000.00 at 6%, 12 interest-only months; a rate row from 2026-02-01 makes it 12%.
+    db.loans = [{
+      ...db.loans[0],
+      kind: "interest_only",
+      interest_only_months: 12,
+      loan_rates: [{ effective_date: "2026-02-01", annual_rate_ppm: 120_000 }],
+    } as unknown as (typeof db.loans)[number]];
+    db.txn = { company_id: "co-1", amount_original: 100_000, currency: "ILS" };
+    renderSplit({ docDate: "2026-02-01" });
+    await waitFor(() => { expect(matchButton()).toBeInTheDocument(); });
+    fireEvent.click(matchButton());
+    fireEvent.click(screen.getByRole("radio", { name: "הלוואת דוגמה" }));
+    await waitFor(() => { expect(db.inserts.length).toBe(1); });
+    const rows = db.inserts[0] as Array<{ part: string; amount_minor: number; scheduled_minor: number }>;
+    expect(rows.map((row) => [row.part, row.amount_minor, row.scheduled_minor])).toEqual([
+      ["interest", 100_000, 100_000],
+      ["escrow", 0, 0],
+      ["principal", 0, 0],
+    ]);
   });
 
   it("hints the lone matching loan on the שיוך row", async () => {

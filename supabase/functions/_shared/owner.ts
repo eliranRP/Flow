@@ -3,6 +3,10 @@
 // that flow-mcp signs. The fallback asks PostgREST (which verifies the JWT
 // signature and expiry) for the companies RLS lets this token read, and keeps
 // only the one owned by the token's own `sub`. Viewers never pass.
+// The fallback is only for a flow-mcp token (FLOW-205): it must carry `mcp_tid`,
+// and the company must be the token's own `company_id` claim.
+
+import { jwtClaims } from "./jwt.ts";
 
 type Row = { id: string; owner_id: string };
 export type OwnerDeps = {
@@ -12,16 +16,18 @@ export type OwnerDeps = {
 };
 
 export function jwtSub(header: string): string | null {
-  const token = header.replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    const padded = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
-    const claims = JSON.parse(atob(padded)) as { sub?: unknown };
-    return typeof claims.sub === "string" && claims.sub.length > 0 ? claims.sub : null;
-  } catch {
-    return null;
-  }
+  const sub = jwtClaims(header)?.sub;
+  return typeof sub === "string" && sub.length > 0 ? sub : null;
+}
+
+/** A flow-mcp token's `mcp_tid` and `company_id`, or null for any other token. */
+function mcpClaims(header: string): { companyId: string } | null {
+  const claims = jwtClaims(header);
+  const tid = claims?.mcp_tid;
+  const companyId = claims?.company_id;
+  if (typeof tid !== "string" || tid.length === 0) return null;
+  if (typeof companyId !== "string" || companyId.length === 0) return null;
+  return { companyId };
 }
 
 export async function resolveOwnerCompany(
@@ -34,9 +40,10 @@ export async function resolveOwnerCompany(
     return companyId ? { companyId } : { error: "no company" };
   }
   const sub = jwtSub(header);
-  if (!sub) return { error: "unauthorized" };
+  const mcp = mcpClaims(header);
+  if (!sub || !mcp) return { error: "unauthorized" };
   const rows = await deps.readableCompanies().catch(() => null);
   if (!rows) return { error: "unauthorized" };
-  const own = rows.find((row) => row.owner_id === sub);
+  const own = rows.find((row) => row.owner_id === sub && row.id === mcp.companyId);
   return own ? { companyId: own.id } : { error: "no company" };
 }

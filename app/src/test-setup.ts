@@ -2,6 +2,7 @@ import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { resetSheetHistoryLock } from "./ui/back";
+import { pinReviewLine } from "./review-pin";
 import "../../design/system/implementation-tokens.css";
 import "./ui/ui.css";
 
@@ -32,6 +33,8 @@ document.documentElement.dir = "rtl";
 afterEach(() => {
   cleanup();
   resetSheetHistoryLock();
+  // The review pin is module state; a pin from one test must not reorder the next queue.
+  pinReviewLine(null);
   // Tests stamp a fake browser index. A leftover idx makes the next test pop
   // the memory stack as if it were the browser.
   window.history.replaceState(null, "");

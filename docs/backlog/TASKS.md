@@ -1,12 +1,26 @@
 # Flow backlog
 
-Open tasks only. How to claim and finish a task is in the [backlog guide](README.md). Keep each task's status line current; a claim lives in an open draft PR titled `FLOW-<id>: <title>`.
+Open tasks only. How to claim and finish a task is in the [backlog guide](README.md). Keep each task's status line current; a claim lives in an open draft PR titled `FLOW-<id>: <title>` with a `Claim` block in its body ([how](README.md#tracking-progress-so-lanes-dont-collide)). Before you start, read the open PRs and the table below.
 
 Types: `SMALL CYCLE` (one PR, no new screen), `SMALL UI` (one PR with a UI change, design review), `PLAN FIRST` (plan and mockup, owner approval before any build), `BUG`, `MCP` (flow-mcp work), `BACKLOG NIT` (reviewer follow-ups, batch several per PR).
 
 Statuses: `ready`, `claimed`, `in-progress`, `plan-first`, `on-hold` (owner's go needed), `blocked`, `done`.
 
 Last full sync: 2026-10-07.
+
+## Lanes now
+
+Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-run-at-once)). At most 2 dev task lanes at once. The open PRs and their `Claim` blocks say exactly which files are taken; this table says who owns what. Update it in the next PR that touches TASKS.md when a lane starts, stops, or changes what it owns.
+
+| Lane | Owns now | Next |
+| --- | --- | --- |
+| Dev lane 1 | FLOW-106 part 4 batched with FLOW-132, FLOW-134, FLOW-135 (in review) | FLOW-106 screen fields go to the UI lane |
+| Dev lane 2 | Free | Next `ready` task in the queue |
+| UI | Collision-ordered UI queue, one PR at a time | FLOW-326, then 329 with part of 322, 327, the profit-by-month summary, the rest of 322, 328, 331, 332, 330 |
+| UI/UX review cycle | Runs after each deploy batch | Next deploy batch |
+| Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
+| Backlog bug fixes | Security batch: viewer reads, owner fallback, MCP batch ids (FLOW-507, FLOW-315, FLOW-205) | FLOW-205 undo items, then the kept-out month header after FLOW-106 part 4 |
+| MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
 
@@ -44,7 +58,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (part 1 done #132, part 2 in review; plan approved by the owner 2026-10-08) |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (parts 1-3 done #132 #151 #157; part 4 in review) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -62,9 +76,11 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | done (#127) |
 | 37b | [FLOW-131](#flow-131) | Loan balance checks follow-ups (#127 review) | BACKLOG NIT | done (#129, #134) |
 | 37c | [FLOW-312](#flow-312) | Split-by-category follow-ups (FLOW-311) | BACKLOG NIT | done (#133, #136, #145) |
-| 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | ready |
-| 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | ready |
-| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready |
+| 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | done (#155) |
+| 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | in review (FLOW-106 part 4) |
+| 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready (items 1 and 4 in review, FLOW-106 part 4) |
+| 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | in review (FLOW-106 part 4) |
+| 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -273,22 +289,36 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-132"></a>
 ### FLOW-132 · Closed loan follow-ups (#132 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 1 (#132)
-- [ ] A removed line dated after a loan's `closed_on` keeps its parts; if it comes back it counts against the closed loan without a check. Check it when the line is restored, as decision 0121 does for the balance.
-- [ ] Changing an attached line's `doc_date` to after its loan's `closed_on` is not checked.
-- [ ] `get_project`'s `loans[]` has no `status`, so a project lists paid-off and closed loans next to open ones.
+- **Type:** BACKLOG NIT · **Status:** in review (FLOW-106 part 4) · **Depends on:** FLOW-106 part 1 (#132)
+- [x] A removed line dated after a loan's `closed_on` keeps its parts; if it comes back it counts against the closed loan without a check. Check it when the line is restored, as decision 0121 does for the balance. (Its parts are flagged for review, and clearing the review checks again: migration `20261010090000`, decision 0132.)
+- [x] Changing an attached line's `doc_date` to after its loan's `closed_on` is not checked. (Flagged for review the same way: migration `20261010090000`, decision 0132.)
+- [x] `get_project`'s `loans[]` has no `status`, so a project lists paid-off and closed loans next to open ones. (`loans[]` has `status`, `closed_on` and `kind`: migration `20261010090000`, decision 0132.)
 
 <a id="flow-134"></a>
 ### FLOW-134 · Loan part categories follow-ups (FLOW-106 part 2 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 2
-- [ ] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge.
+- **Type:** BACKLOG NIT · **Status:** ready (items 1 and 4 in review, FLOW-106 part 4; items 2 and 3 for the Mercury UI thread) · **Depends on:** FLOW-106 part 2
+- [x] `merge_category` does not move `loans.*_category_id`, so a loan keeps filing new parts under the hidden source category. Move them in the merge (the target must fit the part) or refuse the merge. (Moved when the target fits, else the merge is refused: migration `20261010090000`, decision 0132.)
 - [ ] The categories screen shows a generic error when a flip is refused with `loan category is fixed` for a category a loan uses; give it copy (Mercury UI thread).
 - [ ] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread).
-- [ ] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns.
+- [x] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns. (One loop over the four keys; the update trigger runs only when a part category changes: migration `20261010090000`, decision 0132.)
+
+<a id="flow-135"></a>
+### FLOW-135 · Loan installments follow-ups (FLOW-106 part 3 review)
+- **Type:** BACKLOG NIT · **Status:** in review (FLOW-106 part 4) · **Depends on:** FLOW-106 part 3
+- [x] N1. `attach_loan_payment` `installments` finds the first unpaid row from the principal already paid: a part-paid row counts as unpaid; extra principal paid ahead skips rows; a row with zero scheduled principal always counts as paid; and pending lines do not lower the balance, so two quick installment attaches before the first line posts start on the same row. (The first unpaid row now compares interest plus principal attached, pending lines included: `paidInterestAndPrincipal` in `loan-split.ts`, decision 0132.)
+- [x] N3. Exact `parts` still need a schedule row for the line's date (`no schedule row for this date`), although the scheduled figures are only kept for comparison. (Accepted with scheduled figures of 0, decision 0132.)
+
+<a id="flow-136"></a>
+### FLOW-136 · Loan kinds follow-ups (part 4 review)
+- **Type:** BACKLOG NIT · **Status:** ready (item d for the Mercury UI thread) · **Depends on:** FLOW-106 part 4
+- [ ] `private.loan_line_closed_check` flags an open loan's line parts when another write holds the loan lock (skip locked finds nothing). The new `doc_date` trigger widens this to pending lines and any date change. Read the status without a lock first, and return when the loan is open.
+- [ ] `balloon` in the schedule ignores a payment entered by hand below the annuity on `interest_only` and `balloon` loans. Also, when `interest_only_months` equals the term, `list_loans` shows the bullet amount as `payment_minor`.
+- [ ] Nothing in the database checks that `loan_rates.effective_date` is on or after the loan's start: row level security lets an authenticated user insert a row directly. Add a check (a trigger, since the start is on `loans`).
+- [ ] The app's `correctFailureText` in `loan-match.tsx` does not map `loan_closed` or the `merge_category` refusal; give both copy (Mercury UI thread).
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** in-progress (part 1 done #132; part 2 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
+- **Type:** PLAN FIRST · **Status:** in-progress (parts 1-3 done #132 #151 #157; part 4 in review) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
 - **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
   1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.
@@ -368,9 +398,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] TOOLS.md conflict wording, and document the `sync_bank` errors.
 - [ ] `mercury-sync` `deno check` doesn't resolve imports (also on main).
 - [ ] A post-deploy smoke for `mercury-sync` `auth.getUser()` with an MCP token.
-- [ ] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows.
+- [x] `private.mcp_batches` token FK lacks `ON DELETE CASCADE`; the SQL uuid check is lowercase-only while zod accepts any case; `remember` is silently ignored on category-only batch rows. (Cascade added; flow-mcp lowercases ids; `remember: true` on a category-only row is `validation`.)
 - [ ] A race test (dblink pgTAP or e2e) for the undo row lock.
-- [ ] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`.
+- [x] Owner fallback in `_shared/owner.ts`: accept it only for flow-mcp tokens, match the token's company claim, share one JWT decoder with `flow-mcp/sign.ts`. (`_shared/jwt.ts`.)
 - [x] The MCP review schema still requires `project_id` for kept-out income that doesn't need one. (FLOW-205 part 1: `assign_expense` takes no project for a kept-out income category; any other category without one is `validation`.)
 - [ ] From the FLOW-205 part 1 review: company names (`rename_company`, `private.company_name_problem`) still accept invisible format characters; the name rule lives only in the MCP layer, so the app RPCs can store look-alike names (a database check would cover both); a refused name says only `validation`, so an agent can't tell to strip a pasted RLM; inner NBSP and other wide spaces look like a normal space.
 
@@ -387,11 +417,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] `mcp_sync_bank_finish` accepts any 1–200 character failure message for a known code; allow-list the fixed strings the edge sends, like `mcp_refused`.
-- [ ] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs.
-- [ ] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
-- [ ] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
+- **Type:** BACKLOG NIT · **Status:** done (#156) · **Depends on:** —
+- [x] `mcp_sync_bank_finish` accepts any 1–200 character failure message for a known code; allow-list the fixed strings the edge sends, like `mcp_refused`. (Only the fixed pairs `pullBank` sends.)
+- [x] `private.mcp_sync_jobs` has no retention; add a cleanup for finished jobs. (`mcp_sync_bank_begin` drops the user's jobs finished over 7 days ago, or running over a day.)
+- [x] A handler-level test that `get_sync_status` takes the read rate bucket and that a write-only token can call it through `handle()`.
+- [x] Deploy order: between the migration and the edge deploy, a pull's result is lost (the job reads retry after 5 minutes) or `sync_bank` is refused. Note it in the deploy steps.
 
 <a id="flow-208"></a>
 ### FLOW-208 · Split and undo follow-ups (#88 review)
@@ -417,10 +447,11 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-133"></a>
 ### FLOW-133 · Batch undo by write id; split undo keeps percent and rest (#145 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-312 (#145)
-- [ ] `undo_batch` undoes a `line_split` (an `assign_expenses` `parts[]` row) or `line_pnl` (`set_lines_pnl`) row through `mcp_undo(kind, transaction_id)`, which picks the newest live write on that line, not the batch's own. A later `split_line` / `set_line_pnl` on the same line is undone instead and the row reads ok. Return the `private.mcp_writes` id from `mcp_split_line` and `mcp_set_line_pnl`, store it in `row_writes`, and make the batch row `conflict` when a newer live write of that kind exists on the line.
-- [ ] `mcp_undo('line_split')` and `private.line_split_parts` drop `percent` and `is_rest` (added in `20261008140000`), so an undone split comes back without its percent and rest markers.
-- [ ] An `assign_expenses` `parts[]` row returns no stored parts; consider returning the cents as `split_line` does.
+- **Type:** BACKLOG NIT · **Status:** done (#155) · **Depends on:** FLOW-312 (#145)
+- [x] `undo_batch` undoes a `line_split` (an `assign_expenses` `parts[]` row) or `line_pnl` (`set_lines_pnl`) row through `mcp_undo(kind, transaction_id)`, which picks the newest live write on that line, not the batch's own. A later `split_line` / `set_line_pnl` on the same line is undone instead and the row reads ok. Return the `private.mcp_writes` id from `mcp_split_line` and `mcp_set_line_pnl`, store it in `row_writes`, and make the batch row `conflict` when a newer live write of that kind exists on the line.
+- [x] `mcp_undo('line_split')` and `private.line_split_parts` drop `percent` and `is_rest` (added in `20261008140000`), so an undone split comes back without its percent and rest markers.
+- [x] An `assign_expenses` `parts[]` row returns no stored parts; consider returning the cents as `split_line` does.
+- [ ] From the #155 review: no dblink test for `undo_batch` and `undo` on the same line at once (the lock order), and none for a newer `split_line` on the line by another user or token.
 
 <a id="flow-312"></a>
 ### FLOW-312 · Split-by-category follow-ups (FLOW-311)
@@ -481,8 +512,8 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-304 (#107)
 - [ ] The first review card grows 19 to 38px when its bank details arrive, so אישור moves. Read the whole queue's details in one `get_line_meta` call with the list.
 - [ ] The detail memo row that clamps past 4 lines has no visible expand cue (the card memo has ▾).
-- [ ] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
-- [ ] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read.
+- [x] `private.mask_long_digits` misses digit runs split by spaces or dashes; only matters if a writer other than Mercury's redactor stores a memo.
+- [x] `get_line_meta` uses `current_company_id`, so demo viewers get an empty list (same as `get_transaction`); re-check `card_last4` as 4 digits on read. (`20261010100000_viewer_reads.sql` also moves list_review, list_skipped_review, list_categories, list_project_category, project_waiting and search_transactions back to the readable company; a pgTAP guard fails when a later redefinition drops it. `get_project` still filters on `owner_id`, so a viewer's project page is empty: follow-up.)
 - [ ] Stored Mercury account labels lose their digits at import, so the account row never shows a last 4. Keep the label's last 4 at import if the owner wants it.
 - [ ] The review queue warms the first other row's details, not the next card's.
 
@@ -522,7 +553,13 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] e2e for the plural title at 320 and for אישור clearing the tab bar at 320×693.
 - [ ] A card returning mid-swap sticks with אישור disabled; same-card changes outside the key aren't shown; a ref is written during render.
 - [ ] Tests: the project-picker toast pad path; click through from 'בחירת קטגוריה' to the picker; assert `open.search` is empty; a test that fails if the effect deps revert.
-- [ ] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued; income always reports `missing_project` even when the category is missing too; a connector invoice and its receipt both land in review.
+- [x] A posted pending-income line leaves an open row with a null reason; a row marked changed still gets re-queued. (Server part, #158: the row takes the income reason or leaves review; `changed` counts as settled.)
+- [ ] Income always reports `missing_project` even when the category is missing too. (The guessed income category fills the line, so `category_suggested` carries the guess; pick the reason label for a guessed category with no project. When income can show `missing_category`, `set_transaction_category` with the default `p_resolve` resolves it as changed while the project is still empty; queue `missing_project` then.)
+- [ ] A connector invoice and its receipt both land in review. (Needs a design for pairing them.)
+- [x] Prod QA: after a project pick a refetch could reorder the queue and put another line under אישור; skip also used the queue head, not the card on screen. (The card on screen is pinned by its line until handled, `review-pin.ts`.)
+- [x] Filed-today banner counted the owner's own picks as automatic. (Automatic only, Eliran 2026-10-08.)
+- [x] Skipped cards had no list and no undo. (Skip toast ביטול; server read `list_skipped_review`; reopen of a skipped card keeps later edits.)
+- [ ] App: a דולגו section under הצג הכול that lists `list_skipped_review` with החזרה לתור (`reopen_review`). Mercury UI thread. Also drop the reviewer preview's approved split from its filed-today sample (`fileReviewerApproval`).
 
 <a id="flow-310"></a>
 ### FLOW-310 · Sheets, focus, keyboard and shared controls
@@ -700,8 +737,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-409"></a>
 ### FLOW-409 · Overhead weights on the cash basis
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The overhead split weights by invoiced income even on the cash form of `get_project`.
+- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, 0129) · **Depends on:** —
+- [x] The overhead split weights by invoiced income even on the cash form of `get_project`. Done in 0129: it weights by the basis' own income.
 - [ ] No pgTAP for the ILS filter in `get_home` and `get_project`.
 
 <a id="flow-410"></a>
@@ -717,6 +754,11 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** From the 2026-10-07 tap-count review. Show a project's recent lines (the month list, capped) under its categories without the extra "תנועות אחרונות" tap; the band says the figure is since the project started; the "כל הקטגוריות" link that jumps to Settings goes. FLOW-402 keeps the full page with filters; FLOW-403 adds a period.
 - **MCP:** none (`get_project` returns the lines).
 - **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.
+
+<a id="flow-412"></a>
+### FLOW-412 · Category drill-down on the cash basis
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] `list_project_category` has no basis, so on cash its `total_agorot` and rows include unpaid supplier invoices that the `get_project` category row leaves out (0118). Add `p_basis` and the `line_unpaid` filter, as `get_project` does. From the #154 review.
 
 ## Onboarding, Settings and connectors
 
@@ -773,7 +815,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The disabled-on switch track is almost the enabled-off colour; use a muted violet.
 - [ ] The viewer note also sits under the project overhead switch; owner to confirm or drop.
 - [ ] Inner write gates are untested behind the outer gate (deep-link sheets, SUMIT connect/refresh/disconnect, the add button, category menus, form submits, Jev save, overhead toggle).
-- [ ] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log.
+- [x] After a failed read the role cache is looked up by user only, not company; the viewer can read the demo audit log. (The user-only key stays, documented in `use-is-viewer.tsx`: a user reads one company and the server refuses viewer writes. The audit log is owner-only in `20261010100000_viewer_reads.sql`.)
 
 <a id="flow-508"></a>
 ### FLOW-508 · Settings and connect sheet follow-ups
@@ -814,8 +856,8 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-510"></a>
 ### FLOW-510 · SUMIT sync follow-ups
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] The cron path doesn't take the connector claim, so cron and manual runs can overlap; the Mercury cron path doesn't release its claim when it skips.
+- **Type:** BACKLOG NIT · **Status:** ready (item 1 done, #156) · **Depends on:** —
+- [x] The cron path doesn't take the connector claim, so cron and manual runs can overlap; the Mercury cron path doesn't release its claim when it skips. (Both cron paths claim; a skip or a throw releases it, `_shared/cron_claim.ts`; a SUMIT request that finds a manual run busy goes back to the queue.)
 - [ ] From the original plan: a schema-drift check on the SUMIT payload with a fallback and alert, and an optional debounced webhook behind a flag.
 
 ## Multi-company and team
@@ -893,6 +935,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 ## Infra and CI
 
+
+<a id="flow-705"></a>
+### FLOW-705 · Jev anomalies follow-ups (#160 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
+- [ ] A voided credit note still suppresses a duplicate flag.
+- [ ] An income receipt that pays several invoices can be flagged as a spike.
+- [ ] pgTAP cases for a pending line, two loans and an uneven median.
+- [ ] `mcp_review_anomalies` scans many rows when few lines are open.
 <a id="flow-801"></a>
 ### FLOW-801 · Backups and restore tests
 - **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —

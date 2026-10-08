@@ -75,10 +75,21 @@ export type {
 export {
   buildLoanSchedule,
   contractualPaymentMinor,
+  DEMAND_DAYS_IN_YEAR,
+  demandAccrual,
+  demandStatement,
+  LOAN_KINDS,
   LOAN_TERM_MONTHS_MAX,
   LoanScheduleError,
+  rateOnDate,
+  regularPaymentMinor,
 } from "./loan-schedule.ts";
 export type {
+  DemandAccrual,
+  DemandPayment,
+  DemandTerms,
+  LoanKind,
+  LoanRate,
   LoanBalloon,
   LoanFinalAdjustment,
   LoanSchedule,
@@ -91,9 +102,17 @@ export {
   LOAN_INTEREST_CATEGORY,
   LOAN_PRINCIPAL_CATEGORY,
 } from "./categories.ts";
-export { allocateLoanSplit, loanTakesPaymentOn, scheduleRowForDate } from "./loan-split.ts";
+export {
+  allocateLoanSplit,
+  allocateLoanSplitWithFees,
+  firstUnpaidRowIndex,
+  loanTakesPaymentOn,
+  paidInterestAndPrincipal,
+  scheduleRowForDate,
+  sumScheduleRows,
+} from "./loan-split.ts";
 export { initialsOf } from "./initials.ts";
 export type { Initials } from "./initials.ts";
-export type { LoanSplitAmount, LoanSplitPart, LoanStatus } from "./loan-split.ts";
+export type { AttachedLoanPayment, LoanSplitAmount, LoanSplitPart, LoanStatus, ScheduledSum } from "./loan-split.ts";
 export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";

@@ -5,6 +5,7 @@ import { getSupabase } from "./lib/supabase";
 import { dropJevConnectorForAuthChange, noteJevAuthUser } from "./screens/jev-review";
 import { forgetCompanyRole, keepOnlyCompanyRole } from "./company-role-cache";
 import { keepSplitDraftsFor } from "./split-drafts";
+import { pinReviewLine } from "./review-pin";
 
 export type AuthStatus = "loading" | "anon" | "authed" | "unconfigured";
 
@@ -45,6 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Sign-out, an expired session, another tab, or a user switch. The
         // query keys don't name the user, so nothing cached may outlive them.
         dropJevConnectorForAuthChange();
+        // The review pin names a line of the previous user's books.
+        pinReviewLine(null);
         forgetCompanyRole(previous);
         queryClient.clear();
         setGeneration((count) => count + 1);

@@ -407,15 +407,15 @@ select is(
 
 select is(
   (
-    select q.reason is null
+    select q.reason::text
     from public.review_queue q
     join public.transactions t on t.id = q.transaction_id
     where t.company_id = (select id from ils_co)
       and t.external_id = 'usd-posts'
       and q.status = 'open'
   ),
-  true,
-  'a posted line clears the pending income label'
+  'missing_project',
+  'a posted line trades the pending income label for a real reason (FLOW-309)'
 );
 
 select is(

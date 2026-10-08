@@ -155,6 +155,10 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "get_breakdown",
     "get_jev_status",
     "get_jev_accuracy",
+    "get_profit_months",
+    "get_anomalies",
+    "get_missing_bills",
+    "get_expected_months",
     "assign_expense",
     "assign_expense_split",
     "assign_expenses",
@@ -171,6 +175,7 @@ Deno.test("tools/list returns the read and write tools and does not throttle a v
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "set_loan_rate",
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
@@ -993,6 +998,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
     "add_loan",
     "update_loan",
     "attach_loan_payment",
+    "set_loan_rate",
     "split_line",
     "set_line_pnl",
     "set_lines_pnl",
@@ -1009,7 +1015,7 @@ Deno.test("a write tool counts as a write, and a read-only token cannot call it"
   }), localDeps);
   const readNames = ((await readList.json()).result.tools as { name: string }[]).map((tool) => tool.name);
   assertEquals(readNames.includes("assign_expense"), false, "read token hides writes");
-  assertEquals(readNames.length, 13, "thirteen reads");
+  assertEquals(readNames.length, 17, "seventeen reads");
 });
 
 Deno.test("assign_expenses is one write rate hit for many rows", async () => {
@@ -1085,6 +1091,67 @@ Deno.test("assign_expenses is one write rate hit for many rows", async () => {
   assertEquals(response.status, 200, "batch call succeeds");
   assertEquals(payload.result.isError, false, "batch tool result");
   assertEquals(kinds, ["write"], "one write bucket hit for the whole batch");
+});
+
+Deno.test("get_sync_status takes the read bucket and a write-only token can call it", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey) as SigningKey;
+  jwk.kid = "sync-status-kid";
+  jwk.alg = "ES256";
+  const token = `flow_mcp_${"s".repeat(43)}`;
+  const hash = await hmacSecret(token, new TextEncoder().encode(pepperSecret));
+  const kinds: string[] = [];
+  const called: string[] = [];
+  const job = "44444444-4444-4000-8000-000000000004";
+  const localEnv: Record<string, string> = { ...env, FLOW_MCP_SIGNING_KEY: JSON.stringify(jwk) };
+  const localDeps = {
+    env: (name: string) => localEnv[name],
+    fetch: (input: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : null;
+      const name = input.split("/").pop() ?? "";
+      if (name === "lookup_mcp_credential") {
+        const asked = typeof body?.p_token_hash === "string" ? body.p_token_hash : "";
+        if (asked !== hash) return Promise.resolve(new Response(JSON.stringify({ found: false })));
+        return Promise.resolve(new Response(JSON.stringify({
+          found: true,
+          id: "88888888-8888-4000-8000-000000000009",
+          user_id: "aaaaaaaa-aaaa-4000-8000-00000000000b",
+          company_id: "cccccccc-cccc-4000-8000-00000000000b",
+          scope: ["write"],
+          expires_at: "2099-01-01T00:00:00.000Z",
+          revoked_at: null,
+        })));
+      }
+      if (name === "bump_mcp_rate") {
+        kinds.push(String(body?.p_kind));
+        return Promise.resolve(new Response(JSON.stringify({ allowed: true, retry_after_seconds: 0 })));
+      }
+      if (name === "touch_mcp_credential") return Promise.resolve(new Response("null"));
+      if (name === "mcp_sync_status") {
+        called.push(String(body?.p_job_id));
+        return Promise.resolve(new Response(JSON.stringify({
+          ok: true,
+          data: { job_id: job, state: "running", started_at: "2026-10-08T08:00:00Z", finished_at: null },
+        })));
+      }
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    },
+  };
+  const response = await handle(new Request("http://127.0.0.1:54321/functions/v1/flow-mcp", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 8,
+      method: "tools/call",
+      params: { name: "get_sync_status", arguments: { job_id: job } },
+    }),
+  }), localDeps);
+  const payload = await response.json();
+  assertEquals(response.status, 200, "status call succeeds");
+  assertEquals(payload.result.isError, false, "a write-only token reads its sync status");
+  assertEquals(called, [job], "the status read reaches mcp_sync_status");
+  assertEquals(kinds, ["read"], "polling takes the read bucket, not the write bucket");
 });
 
 Deno.test("a 30-row company setup is two write rate hits", async () => {
