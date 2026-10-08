@@ -211,8 +211,10 @@ $$;
 -- One ledger line. p_key is both its idempotency key and its description. p_amount is the
 -- size in minor units; an expense is stored negative, income positive. The line is paid
 -- (cash date = doc date), has no VAT, and is filed by the owner unless p_suggested, which
--- leaves the category a guess (set after the insert: the insert trigger clears it). A Mercury
--- line must be USD.
+-- leaves the category and the project a guess (category_suggested is set after the insert:
+-- the insert trigger clears it). A filed line with no category stays without one (the default
+-- category fill is skipped), and pnl_role is 'project' even with no project unless given. A
+-- Mercury line must be USD.
 create or replace function tests.fixture_line(
   p_company uuid,
   p_key text,
