@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  categoryNameError,
+  renameCategoryFailureText,
   deleteConsequence,
   deleteDetail,
   deleteItem,
@@ -73,5 +75,16 @@ describe("delete and move all lines (FLOW-405)", () => {
     expect(moveFailureText(new Error("validation"))).toBe("לא הצלחנו להעביר את התנועות.");
     expect(undoMoveFailureText(new Error("category move cannot be undone"))).toBe("אי אפשר לבטל: תנועה סווגה מחדש בינתיים.");
     expect(undoMoveFailureText(new Error("move not found"))).toBe("לא הצלחנו לבטל את ההעברה.");
+  });
+
+  it("words the category rename", () => {
+    expect(categoryNameError(" א ")).toBe("שם קצר מדי – לפחות 2 תווים");
+    expect(categoryNameError("חומרי בניין")).toBeUndefined();
+    expect(categoryNameError("א".repeat(121))).toBe("שם ארוך מדי – עד 120 תווים");
+    expect(categoryNameError("א".repeat(120))).toBeUndefined();
+    expect(renameCategoryFailureText(new Error("category already exists"))).toBe("יש כבר קטגוריה בשם הזה.");
+    expect(renameCategoryFailureText(new Error("category name is too short"))).toBe("השם לא תקין.");
+    expect(renameCategoryFailureText(Object.assign(new Error("forbidden"), { code: "42501" }))).toBe("רק בעלי העסק יכולים לשנות שם.");
+    expect(renameCategoryFailureText(new Error("boom"))).toBe("השם לא נשמר.");
   });
 });

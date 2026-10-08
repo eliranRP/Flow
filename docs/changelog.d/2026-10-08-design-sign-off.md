@@ -1,0 +1,1 @@
+The design lead now signs off small UI, so a UI lane doesn't wait for the owner ([DESIGN-TEAM](design/DESIGN-TEAM.md#owner-approvals)). `PLAN FIRST` UI still waits for the owner's card, with no timeout, and none starts between 00:00 and 09:00 Israel time.

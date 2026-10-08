@@ -14,16 +14,16 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Category rename (MCP agent request, first), then FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups | The next plan-first server item |
+| Dev lane 1 | FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups (category rename merged in #228) | The next plan-first server item |
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | FLOW-404 השקעה card on the project page (#175 review card batch merged) | The transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
-| UI lane 3 | FLOW-405 screen: the Settings → Categories ⋯ sheet (move all lines, delete with undo, the FLOW-404 "נספרת בשיפוץ" switch), PR #217 | Settings and other areas outside the review and transaction screens |
+| UI lane 3 | Category rename: the "שינוי שם" row and sheet in Settings → Categories (owner priority; server in #228), PR #230 | Settings and other areas outside the review and transaction screens |
 | UI lane 4 | FLOW-504 screen part: currency choice in Settings, base currency on Home, overhead share and loan default | FLOW-702 app part: Jev mode and threshold chips in Settings; the card part with UI lane 2 |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
 | Backlog bug fixes | FLOW-313: month list pauses, focus, className | Next small ready item |
-| File split | FLOW-807 follow-up (owner's pick "App files next"): `line-split.tsx`, `toast.tsx`, `change-sheet.tsx`, `loan-setup.tsx` and `App.tsx` under 800 lines (merged: screens #219, stories #225, CSS #227, review area #229) | `supabase/functions/flow-mcp/tools.ts` and `_shared/jev_tag.ts` after their open PRs merge |
+| File split | FLOW-807 follow-up: `_shared/jev_tag.ts` split into `jev_tag_plan.ts` and `jev_tag_rest.ts` (merged: screens #219, stories #225, CSS #227, review area #229, app files #232) | `supabase/functions/flow-mcp/tools.ts` after #221 and #233 merge |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -811,7 +811,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** in-progress (#217, UI lane 3: the Settings → Categories screen; server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** merged (#217, UI lane 3: the Settings → Categories screen; waits on the deploy check; server and MCP done in #207 and #222, decision [0144](../decisions/0144-category-delete-and-move.md); owner approved the mockup v2, 2026-10-08) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 - [x] Mockup approved (2026-10-08; the project's plans/flow-405-category-mockup.html). The category ⋯ sheet gets two rows, drawn with the FLOW-404 switch. "העברת כל התנועות" shows the line count on the row and a hint that the category stays, and sits above מיזוג (whose hint says the category is hidden) and הסתרה. מחיקה comes last, after a line. A hidden category's sheet shows החזרה לרשימה, the move row and מחיקה.
@@ -1099,7 +1099,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-807"></a>
 ### FLOW-807 · Split the big screens file
-- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229 merged; follow-up: the five app files over 800 lines, then the two server files) · **Depends on:** — (best between feature PRs, it conflicts with everything)
+- **Type:** SMALL CYCLE · **Status:** in-progress (#219, #225, #227, #229, #232 merged; `jev_tag.ts` in review; `flow-mcp/tools.ts` last) · **Depends on:** — (best between feature PRs, it conflicts with everything)
 - **What:** `app/src/screens/flow-screens.tsx` holds most screens in one file, so builders read too much and PRs conflict. Move each screen to its own file with no behaviour change.
 - **Acceptance:** no snapshot or test changes besides imports; bundle size unchanged within noise.
 
