@@ -8,7 +8,8 @@ import { allTime, presetPeriod, stepPeriod, type PeriodChoice } from "../period"
 import { PeriodBar } from "../ui/period-bar";
 import { ToastProvider } from "../ui/toast";
 import { BooksProvider } from "../use-books";
-import { ProjectDetailScreen, UnpaidScreen, projectStateLine } from "./flow-screens";
+import { ProjectDetailScreen, UnpaidScreen } from "./flow-screens";
+import { projectStateLine } from "./project-detail-screen";
 import { ProfitMonthsScreen } from "./profit-months";
 
 const months = vi.hoisted(() => ({ periods: [] as unknown[] }));
