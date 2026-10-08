@@ -68,7 +68,7 @@ type PeriodSheetProps = {
 
 /**
  * The period sheet (16): radio rows that apply on tap, then "טווח מותאם". The pill opens it, and
- * so does the period bar's label (decision 0135). The range sheet opens only after this one closed.
+ * so does the period bar's label (decision 0137). The range sheet opens only after this one closed.
  */
 export function PeriodSheet({ open, onOpenChange, options, onCustom, selectedLabel }: PeriodSheetProps) {
   const custom = useRef(false);

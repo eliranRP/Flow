@@ -16,7 +16,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | --- | --- | --- |
 | Dev lane 1 | Free (FLOW-114 loan match server items done in #184; the screen parts go to a UI lane) | FLOW-903 |
 | Dev lane 2 | FLOW-701 part 5: Jev income suggestions, suggestion reasons, Jev scores on flagged lines (#168) | Next `ready` task in the queue |
-| UI lane 1 | Profit by period (option A, decision 0135) with FLOW-411 and the FLOW-330 screen, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, rest of 322), loans page, company "לפי חודש" |
+| UI lane 1 | Profit by period (option A, decision 0137) with FLOW-411 and the FLOW-330 screen, one PR (PR #TBD) | Jev bills and forecast, navigation (331, 332, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
@@ -774,7 +774,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-411"></a>
 ### FLOW-411 · Project screen: lines on open, honest period label
-- **Type:** SMALL UI · **Status:** in progress (PR #TBD, with profit by period, decision 0135) · **Depends on:** FLOW-302
+- **Type:** SMALL UI · **Status:** in progress (PR #TBD, with profit by period, decision 0137) · **Depends on:** FLOW-302
 - **What:** From the 2026-10-07 tap-count review. Show a project's recent lines (the month list, capped) under its categories without the extra "תנועות אחרונות" tap; the band says the figure is since the project started; the "כל הקטגוריות" link that jumps to Settings goes. FLOW-402 keeps the full page with filters; FLOW-403 adds a period.
 - **MCP:** none (`get_project` returns the lines).
 - **Acceptance:** a project's lines are 2 taps from the Projects tab; the band names its period; empty and loading states; design review.

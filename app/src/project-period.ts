@@ -22,7 +22,7 @@ function remember(key: string, period: PeriodChoice) {
 }
 
 /**
- * A project's own period (profit by period, plan §3, decision 0135). A fresh visit starts from
+ * A project's own period (profit by period, plan §3, decision 0137). A fresh visit starts from
  * the URL's period (a month opened from "לפי חודש") or else Home's period. Changing it never
  * changes Home. Back to the same entry restores what it showed.
  */

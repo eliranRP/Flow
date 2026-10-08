@@ -1,7 +1,7 @@
 import { HEBREW_MONTHS, formatDisplay, israelToday, pad } from "./ui/date-math";
 
 /**
- * The period presets on the period bar (profit by period, option A, decision 0135), plus a
+ * The period presets on the period bar (profit by period, option A, decision 0137), plus a
  * custom range from the period sheet. "month", "months3" and "months6" end with their anchor
  * month; "year" is a calendar year. Every window is cut at today, so the open month counts.
  */

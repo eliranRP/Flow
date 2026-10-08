@@ -2905,7 +2905,7 @@ export const ReviewMetaCard: Story = {
   ),
 };
 
-// Profit by period (decision 0135, plan option A): Home on the period bar, the project with its own
+// Profit by period (decision 0137, plan option A): Home on the period bar, the project with its own
 // period and the summary first, the "לפי חודש" page, and Unpaid with a mark that stays (FLOW-330).
 
 const periodDashboard: Dashboard = {

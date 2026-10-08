@@ -4616,7 +4616,7 @@ div.ui-check-row {
 }
 
 /*
-  Profit by period (decision 0135): the period bar on Home's band, on the project band, or on a page.
+  Profit by period (decision 0137): the period bar on Home's band, on the project band, or on a page.
   Five presets on a segmented control, then a stepper whose SVG chevrons point outward.
 */
 .ui-band-row > .ui-pbar {
