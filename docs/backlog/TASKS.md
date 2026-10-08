@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | Category rename (MCP agent request, first), then FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups | The next plan-first server item |
+| Dev lane 1 | FLOW-401 server and MCP: expected monthly cost per project category, high/new/missing flags, category groups (category rename merged in #228) | The next plan-first server item |
 | Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Review card batch (#175): FLOW-327, 333 card items, Jev reasons and flags, skipped list, FLOW-703 app items | FLOW-404 השקעה card on the project page, then the transaction batch: FLOW-329, 333 editor items, the detail hint of 322, FLOW-124 and 125 list rows, FLOW-114 loan match on the card |
