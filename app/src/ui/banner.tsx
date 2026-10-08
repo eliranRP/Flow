@@ -43,6 +43,49 @@ export function Banner({ title, hint, to, action, icon }: BannerProps) {
   return <div className={className}>{body}</div>;
 }
 
+export type BannerRow = {
+  /** Stable React key, and the row's place in the card. */
+  id: string;
+  to: string;
+  title: ReactNode;
+  hint?: ReactNode;
+  icon?: ReactNode;
+};
+
+/**
+ * The pending card with one linked row per destination (FLOW-321). One row draws
+ * the plain Banner; two or more share one tinted card, each row its own link and
+ * accessible name, separated by padding (no hairline, decision 0120).
+ */
+export function BannerRows({ rows }: { rows: readonly BannerRow[] }) {
+  if (rows.length === 0) return null;
+  if (rows.length === 1) {
+    const [row] = rows;
+    if (!row) return null;
+    return <Banner to={row.to} title={row.title} hint={row.hint} icon={row.icon} />;
+  }
+  return (
+    <ul className="ui-banner-rows">
+      {rows.map((row) => (
+        <li key={row.id}>
+          <Link to={row.to} className="ui-banner-row ui-hit">
+            <span className="ui-banner-icon">{row.icon ?? <InboxIcon />}</span>
+            <span className="ui-row-text">
+              <span className="ui-row-title" dir="rtl">
+                {row.title}
+              </span>
+              {row.hint ? <span className="ui-row-hint">{row.hint}</span> : null}
+            </span>
+            <span className="ui-banner-chevron">
+              <ChevronIcon />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 type NoticeProps = {
   title: string;
   body: string;

@@ -273,6 +273,53 @@ export const HomeBooksMonth: Story = {
   ),
 };
 
+// FLOW-321. The pending card on Home: a row to Review and a row to Unpaid, each only when it has items.
+function AttentionHome({ pending, unpaidCount, unpaidGross }: { pending: number; unpaidCount: number; unpaidGross: bigint }) {
+  return (
+    <StoryRoute entry="/" tabs reviewCount={pending}>
+      <HomeBooks
+        data={{ ...sampleDashboard, review_count: pending }}
+        previewing={false}
+        search=""
+        unpaidGross={unpaidGross}
+        unpaidCount={unpaidCount}
+        period={{ kind: "month", from: "2026-09-01", to: "2026-09-28" }}
+        onPeriod={() => undefined}
+        example={exampleOnBand}
+      />
+    </StoryRoute>
+  );
+}
+
+const homeAt320 = { parameters: { viewport: { defaultViewport: "flow320" } } };
+const homeDark = { globals: { theme: "dark" } };
+
+export const HomeAttentionBoth: Story = {
+  name: "Home attention, review and unpaid",
+  render: () => <AttentionHome pending={7} unpaidCount={3} unpaidGross={2_340_000n} />,
+};
+export const HomeAttentionBothDark: Story = { ...HomeAttentionBoth, name: "Home attention, review and unpaid, dark", ...homeDark };
+export const HomeAttentionBoth320: Story = { ...HomeAttentionBoth, name: "Home attention, review and unpaid, 320", ...homeAt320 };
+export const HomeAttentionBothDark320: Story = {
+  ...HomeAttentionBoth,
+  name: "Home attention, review and unpaid, dark, 320",
+  ...homeDark,
+  ...homeAt320,
+};
+export const HomeAttentionReviewOnly: Story = {
+  name: "Home attention, review only",
+  render: () => <AttentionHome pending={7} unpaidCount={0} unpaidGross={0n} />,
+};
+export const HomeAttentionUnpaidOnly: Story = {
+  name: "Home attention, unpaid only",
+  render: () => <AttentionHome pending={0} unpaidCount={3} unpaidGross={2_340_000n} />,
+};
+export const HomeAttentionSingular: Story = {
+  name: "Home attention, one of each",
+  render: () => <AttentionHome pending={1} unpaidCount={1} unpaidGross={468_000n} />,
+};
+export const HomeAttentionSingular320: Story = { ...HomeAttentionSingular, name: "Home attention, one of each, 320", ...homeAt320 };
+
 const bareReview: ReviewRow = {
   ...sampleReview,
   id: "r0",
