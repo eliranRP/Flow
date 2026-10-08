@@ -5126,3 +5126,34 @@ html[data-kb="open"] .ui-search-dock {
   gap: var(--space-2);
   margin-inline-start: auto;
 }
+
+/*
+  Slim banner: one line, the hint (לרשימה ›) after the title instead of under it; on a 320 phone
+  the title may take a second line rather than be cut. On לאישור it
+  frees the room the card needs above the pinned action bar on a 375×667 phone (owner's pick,
+  2026-10-08).
+*/
+.ui-banner.ui-banner-slim {
+  gap: var(--space-2);
+  padding-block: 0;
+  padding-inline: var(--space-3) var(--space-1);
+}
+
+.ui-banner.ui-banner-slim .ui-row-text {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-banner.ui-banner-slim .ui-row-title {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  -webkit-line-clamp: 2;
+}
+
+.ui-banner.ui-banner-slim .ui-row-hint {
+  flex: none;
+  margin: 0;
+  -webkit-line-clamp: 1;
+}

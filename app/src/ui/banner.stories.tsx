@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Banner, BannerRows, Notice, type BannerRow } from "./banner";
-import { DocumentIcon, ReviewIcon } from "./icons";
+import { CloseIcon, DocumentIcon, ReviewIcon } from "./icons";
+import { IconButton } from "./icon-button";
+import { filedTodayBannerTitle } from "../filed-today-copy";
 import { longHebrew, padded } from "./story-support";
 import { TextLink } from "./text-link";
 
@@ -98,6 +100,31 @@ export const LongHebrew: Story = {
 export const WithAction: Story = {
   args: { title: "3 תנועות שויכו אוטומטית היום" },
   render: (args) => <Banner {...args} icon={<ReviewIcon />} action={<TextLink to="/review">לרשימה</TextLink>} />,
+};
+// The one-line banner on לאישור: the hint sits after the title, the close button at the end.
+function SlimFiled({ count }: { count: number }) {
+  return (
+    <Banner
+      slim
+      icon={<ReviewIcon />}
+      title={filedTodayBannerTitle(count)}
+      hint={<TextLink to="/review/filed">לרשימה</TextLink>}
+      action={
+        <IconButton label="סגירה" onClick={() => undefined}>
+          <CloseIcon />
+        </IconButton>
+      }
+    />
+  );
+}
+export const Slim: Story = { args: { title: "" }, render: () => <SlimFiled count={12} /> };
+export const SlimDark: Story = { ...Slim, name: "Slim, dark", globals: { theme: "dark" } };
+export const SlimSingular: Story = { args: { title: "" }, render: () => <SlimFiled count={1} /> };
+export const Slim320: Story = {
+  ...Slim,
+  name: "Slim, 320",
+  parameters: { viewport: { defaultViewport: "flow320" } },
+  render: () => <SlimFiled count={1234} />,
 };
 export const NoticeNeutral: Story = {
   args: { title: "מצב תצוגה" },
