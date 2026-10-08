@@ -25,6 +25,7 @@ import { ChartIcon, DocumentIcon } from "../ui/icons";
 import { SectionHead } from "../ui/layout";
 import { ListRow } from "../ui/list-row";
 import { PeriodBar } from "../ui/period-bar";
+import { PeriodSwipe } from "../ui/period-swipe";
 import { ProfitMark } from "../ui/profit-mark";
 import { SearchEntry } from "../ui/search-entry";
 import { HomeSkeleton } from "./home-skeleton";
@@ -230,11 +231,14 @@ export function HomeBooks({
         <div className="ui-band-pbar">
           <PeriodBar period={period} onChange={onPeriod} />
         </div>
-        <Hero
-          label={heroProfitLabel(period, hero)}
-          figures={heroFigures}
-          explanation={heroExplanation(period)}
-        />
+        {/* FLOW-336: a sideways swipe on the figure steps the period, as the arrows do (decision 0150). */}
+        <PeriodSwipe period={period} onChange={onPeriod}>
+          <Hero
+            label={heroProfitLabel(period, hero)}
+            figures={heroFigures}
+            explanation={heroExplanation()}
+          />
+        </PeriodSwipe>
       </TopBand>
 
       {notice}

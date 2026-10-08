@@ -3761,7 +3761,7 @@ Deno.test("loan kind tools are described", () => {
 Deno.test("list_unpaid returns minor units and open and marked totals per currency and direction", async () => {
   const rows = [
     { id: TXN, description: "Invoice 1", doc_date: "2026-06-01", currency: "ILS", direction: "income", project_name: "North", customer_name: "Client A", open_gross_agorot: 11800, open_net_agorot: 10000, marked_paid_at: null },
-    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00" },
+    { id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null, customer_name: "Client B", open_gross_agorot: 5900, open_net_agorot: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00", document_url: "https://pay.sumit.co.il/example/doc-2" },
     { id: PROJECT_B, description: "Invoice 3", doc_date: "2026-06-03", currency: "USD", direction: "income", project_name: null, customer_name: null, open_gross_agorot: 2500, open_net_agorot: 2500, marked_paid_at: null },
     { id: CATEGORY, description: "Supplier bill", doc_date: "2026-06-04", currency: "ILS", direction: "expense", project_name: null, customer_name: null, open_gross_agorot: -5000, open_net_agorot: -5000, marked_paid_at: null },
   ];
@@ -3774,7 +3774,9 @@ Deno.test("list_unpaid returns minor units and open and marked totals per curren
   assertEquals(data.invoices[1], {
     id: PROJECT, description: "Invoice 2", doc_date: "2026-06-02", currency: "ILS", direction: "income", project_name: null,
     customer_name: "Client B", open_gross_minor: 5900, open_net_minor: 5000, marked_paid_at: "2026-06-10T08:00:00+00:00",
+    document_url: "https://pay.sumit.co.il/example/doc-2",
   });
+  assertEquals(data.invoices[0].document_url, null);
   assertEquals(data.totals, [
     { currency: "ILS", direction: "expense", open_gross_minor: -5000, marked_gross_minor: 0 },
     { currency: "ILS", direction: "income", open_gross_minor: 11800, marked_gross_minor: 5900 },

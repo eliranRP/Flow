@@ -13,6 +13,7 @@ import { useDashboardQuery, useMercuryStatusQuery, useSumitStatusQuery } from ".
 import { assertNoError, useWrite } from "../use-write";
 import { useSyncSettled } from "../use-sync-settled";
 import { invokeEdge } from "../edge";
+import { REFRESH_DONE, SUMIT_REFRESH_KEYS, useSumitRefresh } from "../use-sumit-refresh";
 import { useMercuryConnect } from "../use-mercury-connect";
 import { useSumitConnect } from "../use-sumit-connect";
 import { MercuryConnectSheet } from "../ui/mercury-connect-sheet";
@@ -61,8 +62,6 @@ function onboardingFromSettings(search: string, sheet: "sumit" | "mercury"): str
   return `/onboarding?${params.toString()}`;
 }
 
-const REFRESH_DONE = "הרענון הסתיים.";
-const SUMIT_REFRESH_KEYS = ["sumit", "dashboard", "unpaid", "review", "project"];
 const MERCURY_REFRESH_KEYS = ["mercury", "dashboard", "unpaid", "review", "project"];
 
 /** A connector's one-word status (0082 §3). */
@@ -169,21 +168,7 @@ export function ConnectionsScreen({
       setMercuryConnectSheet(false);
     },
   });
-  const refresh = useWrite({
-    failure: (error) => hebrewSumitError(error.message) ?? "הרענון נכשל.",
-    silent: (error) => error.message === "sync_held",
-    success: REFRESH_DONE,
-    keys: SUMIT_REFRESH_KEYS,
-    run: async () => {
-      const data = await invokeEdge("sumit-sync", { force: true });
-      if (data != null && typeof data === "object" && "skipped" in data && data.skipped === true) {
-        // Another tab or an earlier load holds the claim: show it as syncing, without a skip toast.
-        await queryClient.refetchQueries({ queryKey: ["sumit"] });
-        const held = queryClient.getQueriesData<{ syncing?: boolean }>({ queryKey: ["sumit"] }).some(([, d]) => d?.syncing === true);
-        throw new Error(held ? "sync_held" : "sync_skipped");
-      }
-    },
-  });
+  const refresh = useSumitRefresh();
   const disconnect = useWrite({
     failure: "לא הצלחנו לנתק.",
     success: "החיבור נותק. הספרים נשארו.",
@@ -655,6 +640,9 @@ export function ConnectionsScreen({
               refresh.mutate();
             }}
           />
+        </List>
+        {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
+        <List className="ui-sheet-danger-group">
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={sumitDisconnectRef} onClick={() => { if (holdWrites) return; setDisconnectSheet(true); }} />
         </List>
       </Sheet>
@@ -726,6 +714,9 @@ export function ConnectionsScreen({
               mercuryRefresh.mutate();
             }}
           />
+        </List>
+        {/* FLOW-335: ניתוק in its own group, a section away from where the thumb lands for רענון. */}
+        <List className="ui-sheet-danger-group">
           <ListRow variant="danger" title="ניתוק" icon={<LogoutIcon />} buttonRef={mercuryDisconnectRef} onClick={() => { if (holdWrites) return; setMercuryDisconnectSheet(true); }} />
         </List>
       </Sheet>

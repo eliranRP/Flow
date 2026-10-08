@@ -21,7 +21,7 @@ type Common = {
   href?: string;
   state?: unknown;
   action?: ReactNode;
-  /** The action sits under the row, on the end side. */
+  /** The action sits under the row, on the start side under the name (FLOW-335). */
   actionBelow?: boolean;
   icon?: ReactNode;
   chevron?: boolean;
@@ -269,7 +269,7 @@ function titleText(props: Common): ReactNode {
 function withAction(props: { actionBelow?: boolean; action?: ReactNode }, row: ReactNode) {
   if (!props.actionBelow || props.action == null) return row;
   return (
-    <div className="ui-row-stack">
+    <div className="ui-row-stack ui-row-stack-action">
       {row}
       <div className="ui-row-action">{props.action}</div>
     </div>
