@@ -81,7 +81,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | done (#162) |
 | 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready (item 3 left) |
 | 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | done (#162) |
-| 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#192) |
+| 37h | [FLOW-136](#flow-136) | Loan kinds follow-ups (part 4 review) | BACKLOG NIT | done (#193) |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready for a UI lane (server parts done in #176) |
@@ -313,7 +313,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-136"></a>
 ### FLOW-136 · Loan kinds follow-ups (part 4 review)
-- **Type:** BACKLOG NIT · **Status:** done (#192) · **Depends on:** FLOW-106 part 4
+- **Type:** BACKLOG NIT · **Status:** done (#193) · **Depends on:** FLOW-106 part 4
 - [x] `private.loan_line_closed_check` flags an open loan's line parts when another write holds the loan lock (skip locked finds nothing). The new `doc_date` trigger widens this to pending lines and any date change. Read the status without a lock first, and return when the loan is open. (Migration `20261010120000`.)
 - [x] `balloon` in the schedule ignores a payment entered by hand below the annuity on `interest_only` and `balloon` loans. Also, when `interest_only_months` equals the term, `list_loans` shows the bullet amount as `payment_minor`. (Flagged unless a rate change recast it; `list_loans` shows interest plus escrow.)
 - [x] Nothing in the database checks that `loan_rates.effective_date` is on or after the loan's start: row level security lets an authenticated user insert a row directly. Add a check (a trigger, since the start is on `loans`). (Triggers on `loan_rates` and on a later `loans.start_date`: migration `20261010120000`.)
