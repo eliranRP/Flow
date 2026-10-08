@@ -113,6 +113,7 @@ import { TopBand } from "../ui/top-band";
 import { ListSkeleton, Skeleton } from "../ui/skeleton";
 import { isReversal, reversalChoices } from "../reversal";
 import { ReversalTag } from "../ui/suggest-tag";
+import { splitDraftKey } from "../split-drafts";
 
 function blockedPreview(preview: HomePreview, tell: (message: string) => void): boolean {
   if (preview === "off") return false;
@@ -2992,10 +2993,6 @@ if (typeof window !== "undefined" && !(window as Window & { __flowSplitPop?: boo
   window.addEventListener("popstate", (event) => {
     splitPop?.(event);
   }, true);
-}
-
-function splitDraftKey(id: string): string {
-  return `flow-split:${id}`;
 }
 
 function readSplitDraft(id: string): SplitDraft | null {

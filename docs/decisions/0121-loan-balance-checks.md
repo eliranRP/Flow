@@ -24,4 +24,6 @@
 
 ## Consequences
 
-A line flagged this way shows in the loans list as waiting for review, with no change to the P&L rule for flagged splits ([0100](../decisions/0100-loan-split-pnl.md): a split that needs review counts whole).
+A line flagged this way shows in the loans list as waiting for review (MCP `list_loans` returns `flagged_parts` and `flagged_transaction_ids` since FLOW-131), with no change to the P&L rule for flagged splits ([0100](../decisions/0100-loan-split-pnl.md): a split that needs review counts whole).
+
+The lock order above is tested with two real sessions in `supabase/tests/database/loan_lock_order.test.sql` (dblink, FLOW-131): an app split waits while another session holds the loan, and the bank sync posts without waiting and flags the parts.
