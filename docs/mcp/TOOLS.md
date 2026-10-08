@@ -404,7 +404,7 @@ A refund of $100 filed as North rent, with 30% going back against South's repair
 - A part whose category is the other kind (an expense category on an inflow, such as a supplier refund; an income category on an outflow) is a reversal: it lowers that side of the P&L, like a whole reversal line, and needs its own `project_id` unless it is the line's own category. A category and project pair appears once.
 - `project_id` is optional. A part without it keeps the line's project and P&L role; on a shared line it is shared by the line's allocations in proportion. A part with a project counts as that project's direct cost (or overhead, for the overhead project).
 - `parts: []` clears the split, and the line counts whole again.
-- Refused: `transaction not found`, `category not found`, `project not found`, `a reversal part needs a project`, `parts must sum to the line`, `parts exceed the line`, `a part rounds to zero`, `nothing is left for the rest` (one part would remain), `line has no category for the rest`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first).
+- Refused: `transaction not found`, `category not found`, `project not found`, `a reversal part needs a project`, `same category and project twice`, `line amount is zero`, `parts must sum to the line`, `parts exceed the line`, `a part rounds to zero`, `nothing is left for the rest` (one part would remain), `line has no category for the rest`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first).
 - VAT stays on the line. The parts split the net amount.
 - While a split is in place, `set_expense_category` and `assign_expense` change only the line's own category and project, which the P&L does not read for a split line. Clear the split with `parts: []` first, or send new parts.
 
@@ -412,7 +412,7 @@ Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "am
 
 Once split, the line counts by part in `get_totals`, `list_projects`, `get_project` and `list_project_category`: each part under its own category and project, a part in a kept-out category in the `excluded_*` totals, and the line's own category gets nothing. `count` still counts the line once. If a bank re-sync changes the line amount so the parts no longer sum, the line counts whole until it is split again; `get_expense` shows `line_split.parts_match: false`.
 
-`get_expense` on a split line adds `line_split`: `{ "currency", "line_minor", "parts": [{ "category_id", "category_name", "project_id", "project_name", "amount_minor" }], "parts_match" }`.
+`get_expense` on a split line adds `line_split`: `{ "currency", "line_minor", "parts": [{ "category_id", "category_name", "project_id", "project_name", "amount_minor", "percent", "rest" }], "parts_match" }`. `percent` is the percent the part was given (null for an amount or the rest) and `rest` marks the part that took what was left; both are informational, `amount_minor` is what counts, and a part put back by undo shows neither.
 
 ### set_line_pnl
 
