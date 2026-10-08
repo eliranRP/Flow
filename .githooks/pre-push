@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Pull requests have no GitHub CI. This hook runs scripts/local-ci.sh, the same suite, before a push.
+# It skips a branch delete, and a commit that already passed (the stamp local-ci.sh writes).
+# FLOW_LOCAL_CI=full runs the full suite (scripts/local-ci.sh --full) instead of the fast gate.
+# Turn it on once per clone: git config core.hooksPath .githooks
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+stamp="$(git rev-parse --git-dir)/flow-local-ci"
+zero="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ "$local_sha" == "$zero" ]] && continue
+  if [[ -f "$stamp" && "$(cat "$stamp")" == "$local_sha" ]]; then
+    echo "pre-push: local CI already passed on ${local_sha:0:7}."
+    continue
+  fi
+  if [[ "$local_sha" != "$(git rev-parse HEAD)" ]]; then
+    echo "pre-push: ${local_ref} is not checked out. Check it out and push again, so local CI tests it." >&2
+    exit 1
+  fi
+  if [[ "${FLOW_LOCAL_CI:-}" == "full" ]]; then
+    bash "$root/scripts/local-ci.sh" --full </dev/null
+  else
+    bash "$root/scripts/local-ci.sh" </dev/null
+  fi
+done
