@@ -134,7 +134,7 @@ test("the current tab stays put and capture rows stay disabled", async ({ page }
 
 test("home connects, filters the period, and opens a project", async ({ page }) => {
   await page.goto("/?preview=1");
-  await page.getByRole("link", { name: "חיבור SUMIT" }).click();
+  await page.getByRole("link", { name: "חיבור בנק או SUMIT" }).click();
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");

@@ -224,7 +224,7 @@ test("home, projects, review, and settings load from list reads", async ({ page 
   }
   await expect(page.getByRole("link", { name: "הוספה" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "הוספה" })).toHaveCount(0);
-  if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור SUMIT" })).toHaveCount(0);
+  if (!hasBooks) await expect(page.getByRole("link", { name: "חיבור בנק או SUMIT" })).toHaveCount(0);
   await expect(page.getByText("לא הצלחנו לטעון את הנתונים")).toHaveCount(0);
 
   const projectResponses = await openList(page, "/projects", ["get_dashboard"], watched.inflight);
