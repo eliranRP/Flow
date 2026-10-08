@@ -243,7 +243,7 @@ Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior 
 { "idempotency_key": "oh-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000002" }
 ```
 
-Marks one project as the company's overhead project. Expense lines filed to it with a project role count as overhead in `get_totals`, `list_projects`, and `get_project`, not as direct cost, and the overhead share of the after-overhead view includes them. `project_id: null` clears it. `project_id` is required. Output `data`: `{ "id", "overhead_project_id", "undo_kind": "overhead_project" }`, where `id` is the company id. Undo restores the prior overhead project, or is `conflict` if it changed since. A project in another company is `refused` / `project not found`. `list_projects` and `get_project` return `is_overhead`, and `get_totals` returns `overhead_project_id`.
+Marks one project as the company's overhead project. Expense lines filed to it with a project role count as overhead in `get_totals`, `list_projects`, and `get_project`, not as direct cost, and the overhead share of the after-overhead view includes them. `project_id: null` clears it. `project_id` is required. Output `data`: `{ "id", "overhead_project_id", "undo_kind": "overhead_project" }`, where `id` is the company id. Undo restores the prior overhead project, or is `conflict` if it changed since or the prior project was deleted. In `get_project`, the overhead project's `overhead_share_agorot` is 0 and its income is left out of the other projects' weights ([0117](../decisions/0117-overhead-project-weights.md)). A project in another company is `refused` / `project not found`. `list_projects` and `get_project` return `is_overhead`, and `get_totals` returns `overhead_project_id`.
 
 ### rename_company
 
