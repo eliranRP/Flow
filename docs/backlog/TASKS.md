@@ -764,7 +764,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-404"></a>
 ### FLOW-404 · Project as an investment
-- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP, dev lane 1; the owner picked rehab = all project costs but loan parts, with a switch per category) · **Depends on:** FLOW-105
+- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP done in #201, [0143](../decisions/0143-project-investment.md): rehab is every project cost but loan parts and kept-out categories, with a switch per category; the investment card on the project page and the rehab switch in category settings wait for a UI lane, after a mockup) · **Depends on:** FLOW-105
 - **What:** Per property or project: purchase price, after-repair value, and from Flow's actual costs, forced equity (ARV − purchase − rehab) and current equity (value − loan balance). MCP tools to set and read purchase price, ARV and value.
 - **Acceptance:** UX research, mockup and plan approved by the owner.
 

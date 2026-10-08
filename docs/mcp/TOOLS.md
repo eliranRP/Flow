@@ -40,6 +40,10 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `reorder_loans` | `loan_ids` | every `list_loans` `loans[].id` (open and closed) |
 | `undo` `kind: "loan_delete"` | `id` | the loan id `delete_loan` used |
 | `undo` `kind: "loan_order"` | `id` | the company id `reorder_loans` returned |
+| `set_project_investment` | `project_id` | `list_projects` `projects[].id` |
+| `set_category_rehab` | `category_id` | `list_categories` `categories[].id` |
+| `undo` `kind: "project_investment"` | `id` | the project id `set_project_investment` used |
+| `undo` `kind: "category_rehab"` | `id` | the category id `set_category_rehab` used |
 
 A review-queue id in a transaction argument is `validation` and the message is `id is not a transaction; list_review.id is the review id`.
 
@@ -77,7 +81,7 @@ Output `data`: `basis` (the basis used, `cash` when omitted) and `projects[]`: `
 
 Input: `{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "basis": "cash", "from": "2026-09-01", "to": "2026-09-30" }`.
 
-Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `excluded_income_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `count`; FLOW-121), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `line_status`, `category`, `parts_minor`, `kept_out`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`, `status`, `closed_on`, `kind`), the loans filed under this project (FLOW-105; empty when none; `status`, `closed_on` and `kind` since [0132](../decisions/0132-loan-kinds-rates.md), as in `list_loans`). `loans` is read apart from the P&L and changes none of its numbers. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
+Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `excluded_income_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `count`; FLOW-121), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `line_status`, `category`, `parts_minor`, `kept_out`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`, `status`, `closed_on`, `kind`), the loans filed under this project (FLOW-105; empty when none; `status`, `closed_on` and `kind` since [0132](../decisions/0132-loan-kinds-rates.md), as in `list_loans`). `loans` is read apart from the P&L and changes none of its numbers. `investment` (FLOW-404, [0143](../decisions/0143-project-investment.md)) has `purchase_agorot`, `arv_agorot`, `value_agorot` and `value_date` (see `set_project_investment`; null until set), `rehab_agorot`, `loan_balance_agorot`, `loan_balance_other_currencies[]` (`currency`, `balance_minor`), `forced_equity_agorot` (ARV − purchase − rehab) and `current_equity_agorot` (value − loan balance); each equity is null while a figure it needs is null. `rehab_agorot` is all time on the cash basis in ILS, whatever `from`, `to` and `basis` say: posted, paid expense lines filed to the project, plus its share of shared lines, whose category counts as rehab (`list_categories` `in_rehab`, see `set_category_rehab`); a line with no category counts, and a line's own `set_line_pnl` switch does not change it. `loan_balance_agorot` sums the open ILS loans filed under the project; open loans in another currency are in `loan_balance_other_currencies` and not added in. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
 
 Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Income filed to the project that is out of the P&L (a kept-out income category, or a line taken out with `set_line_pnl`) is left out of `income_*` and listed by category in `excluded_income_by_currency`, on the same basis as `income_agorot`, in positive minor units with its line `count`. A line whose category is only a guess (`category_suggested`) counts in the P&L even when that category is kept out, until the category is confirmed; a loan category stays kept out either way ([0114](../decisions/0114-kept-out-guesses.md)). `categories`, `categories_by_currency` and `excluded_categories_by_currency` list only confirmed lines, so a guessed line is in `direct_*` but in none of the category lists until it is confirmed. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category. Each `count` in `other_currencies[]` and `pending_other_currencies[]` counts only lines in the P&L.
 
@@ -91,7 +95,7 @@ On the company's overhead project (`is_overhead` true, see `set_overhead_project
 
 ### list_categories
 
-Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`. `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
+Input `{}`. Output `data.categories[]`: `id`, `name`, `kind`, `hidden`, `is_default`, `excluded_from_pnl`, `loan_part`, `rehab` (the category's rehab switch: `true`, `false`, or null for the default) and `in_rehab` (whether it counts as rehab on a project; see `set_category_rehab`). `loan_part` is `interest`, `escrow`, or `principal` on the three loan categories and null on every other category. It stays the same if a loan category is renamed, so match loan categories by `loan_part`, not by name.
 
 ### list_review
 
@@ -285,6 +289,22 @@ Output `data`: `{ "id", "undo_kind": "category_hidden" }`. Undo restores the pri
 ```
 
 Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior `excluded_from_pnl` value. `refused` / `loan category is fixed` for the three loan categories (any category with a `loan_part` in `list_categories`, seeded as `ריבית משכנתא`, `מסים וביטוח`, and `תשלומי הלוואה`), whatever their current name. Since [0128](../decisions/0128-loan-part-categories.md) it is also refused for any other category that holds a loan part or that a loan names, when the flip would put interest or escrow outside the P&L or principal inside it. A fees part, or a loan's `fees_category_id`, does not hold a category: fees may sit on either side ([0130](../decisions/0130-loan-fees-installments.md)). A new category whose English name matches a default kept-out name ([0099](../decisions/0099-categories-outside-pnl.md); case, spaces, punctuation, `&` or `and`, and a plural `s` are ignored, so `Owner distribution` and `CapEx/Rehab` match) starts kept out, and so does a category renamed into one. Other refusals match `category not found` and the usual write envelope.
+
+### set_project_investment
+
+```json
+{ "idempotency_key": "inv-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "purchase_agorot": 100000000, "arv_agorot": 150000000, "value_date": null }
+```
+
+Sets a project's investment figures in agorot (ILS): `purchase_agorot`, `arv_agorot` (after-repair value), `value_agorot` (worth today) and `value_date` (YYYY-MM-DD). Name at least one; a key left out keeps its figure and `null` clears it. An amount must be a whole number of agorot, 0 or more; anything else, an impossible date, another key or none of the four is `validation`. Output `data`: the four figures after, `project_id`, `undo_kind: "project_investment"` and `id`. Undo puts back the figures before, and is `conflict` when any of them changed since. Another company's project is `refused` / `project not found`. `get_project` returns the figures with rehab and equity in `investment` ([0143](../decisions/0143-project-investment.md)).
+
+### set_category_rehab
+
+```json
+{ "idempotency_key": "rehab-1", "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "rehab": true }
+```
+
+`rehab` is required: `true` counts the category as rehab on projects, `false` leaves it out, `null` follows the default. By default every category counts except those kept out of the P&L (`excluded_from_pnl`) and the loan parts (`loan_part` set), so the purchase and the loan payments stay out. Output `data`: `category_id`, `rehab`, `in_rehab` (what the category comes to), `undo_kind: "category_rehab"` and `id`. Undo puts back the setting before, and is `conflict` when it changed since. Another company's category is `refused` / `category not found` ([0143](../decisions/0143-project-investment.md)).
 
 ### set_overhead_project
 
