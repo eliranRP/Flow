@@ -113,7 +113,10 @@ function MonthSection<T>({
           <h2 className="ui-month-title t-heading" id={id}>{group.title}</h2>
           {showTotals ? (
             <p className="ui-month-totals t-label">
-              {group.totals.map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} first={index === 0} />)}
+              {group.totals
+                // A currency that rounds to zero draws no line, so it can't take the first slot.
+                .filter((total) => total.incomeMinor > 0n || total.expenseMinor > 0n)
+                .map((total, index) => <MonthTotalLine key={total.currency} total={total} cents={cents} first={index === 0} />)}
             </p>
           ) : null}
         </div>
