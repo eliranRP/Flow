@@ -55,6 +55,7 @@ const businessNameError = {
       <StepBusiness userId={null} onDone={() => undefined} initialName={"סטודיו אלפא\tלעיצוב"} />
     </StoryRoute>
   ),
+  parameters: { flowRouter: false },
 };
 
 export const BusinessNameError: Story = { ...businessNameError, name: "Business step, name error" };
@@ -66,5 +67,5 @@ export const BusinessNameErrorDark: Story = {
 export const BusinessNameError320: Story = {
   ...businessNameError,
   name: "Business step, name error, 320",
-  parameters: { viewport: { defaultViewport: "flow320" } },
+  parameters: { ...businessNameError.parameters, viewport: { defaultViewport: "flow320" } },
 };
