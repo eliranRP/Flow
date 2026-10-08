@@ -26,14 +26,14 @@ Every task goes through these steps, in this order. Work on one small task per c
 | --- | --- | --- | --- | --- | --- |
 | 1 | Claim | Coordinator | A `ready` task in TASKS.md | A branch and a draft PR titled `FLOW-<id>: <title>` | The draft PR exists and the task's status says `claimed` |
 | 2 | Brief | Coordinator | The task | A short brief (see [Writing a brief](#writing-a-brief)) | Every open question is answered in the brief |
-| 3 | Build | Builder | The brief and the branch | Commits pushed to the branch, PR marked ready | Lint, typecheck, and the touched tests pass locally, and the builder has stopped |
-| 4 | Code review | Code reviewer | The PR and its head commit, as soon as it is pushed. CI runs at the same time | A verdict, a findings report, and patches | The verdict is APPROVED or CHANGES REQUESTED |
+| 3 | Build | Builder | The brief and the branch | Commits pushed to the branch, PR marked ready | Lint, typecheck, and the touched tests pass locally, the push passed the pre-push check, and the builder has stopped |
+| 4 | Code review | Code reviewer | The PR and its head commit, as soon as it is pushed | A verdict, a findings report, and patches | The verdict is APPROVED or CHANGES REQUESTED |
 | 4b | Design review (only if the UI changes) | Design reviewer | The PR, the approved mockup, screenshots, as soon as it is pushed | A verdict, findings, and patches | The verdict is APPROVED or CHANGES REQUESTED |
 | 5 | Fix round (only if changes were requested) | Coordinator | The reviewers' patches | The patches applied and pushed | Tests pass and the reviewers approve the new head. One round only |
-| 6 | CI | GitHub Actions, watched by the coordinator | Every pushed head. It starts at the push and runs alongside steps 4 and 5 | Results of the `lint`, `check`, and `e2e` jobs | All three jobs are green on the latest head |
-| 7 | Auto-merge | Coordinator | A PR whose reviewers approved its current head | Auto-merge (squash) turned on | GitHub merges the PR once `lint`, `check`, and `e2e` are green on that head. The branch does not need to be up to date with `main` |
-| 8 | Deploy check | Coordinator | The merge commit | The `deploy` job result and `build.txt` on the Pages site | The last line of `build.txt` is the merge commit sha, and any migration is recorded |
-| 9 | Prod check | Coordinator | The live app and the MCP tools | A short note of what was checked | The changed screen or tool works on a real company, read-only, and the numbers match the PR |
+| 6 | Local CI | The pre-push hook, on whoever pushes | Every push to a PR branch (steps 3 and 5) | `scripts/local-ci.sh`: lint, the `check (core)` steps, and `pnpm test:storybook`, in about 4 minutes | The push went through. The hook stops a push that fails, and GitHub runs no CI on pull requests |
+| 7 | Merge | Coordinator | A PR whose reviewers approved its current head | A squash merge | The PR is merged right after the approval. The branch does not need to be up to date with `main` |
+| 8 | Deploy check (per batch) | Coordinator | The `ci` run on `main` that deploys the batch: after every 5 merges, or a manual run | The `deploy` job result and `build.txt` on the Pages site | The last line of `build.txt` is the batch's last merge sha, and any migration is recorded |
+| 9 | Prod check (per batch) | Coordinator | The live app and the MCP tools, for every task in the batch | A short note of what was checked | The changed screen or tool works on a real company, read-only, and the numbers match the PR |
 | 10 | Tell the data agent | Coordinator | What went live | A message to the MCP/data agent | The message is sent, with the new or changed tools |
 | 11 | Close the task | Coordinator | The merged PR | The task moved to Done; follow-ups added as new tasks | TASKS.md is updated in the next PR that touches it |
 
@@ -42,13 +42,10 @@ flowchart TD
   A["1. Claim: draft PR"] --> B["2. Brief"]
   B --> C["3. Build, push, stop"]
   C --> D["4. Code review (4b. design review if UI)"]
-  C --> F["6. CI: lint, check, e2e"]
   D -->|"changes requested"| E["5. Coordinator applies patches (one round)"]
   E --> D
-  E --> F
-  D -->|"approved"| G["7. Auto-merge on: GitHub merges when CI is green"]
-  F -->|"green"| G
-  G --> H["8. Deploy check: build.txt shows the merge sha"]
+  D -->|"approved"| G["7. Merge"]
+  G -->|"5th merge since the last deploy, or a manual run"| H["8. main runs the full suite and deploys; build.txt shows the batch's last sha"]
   H --> I["9. Prod check, read-only"]
   I --> J["10. Tell the MCP/data agent"]
   J --> K["11. Close the task, take the next"]
@@ -56,14 +53,16 @@ flowchart TD
 
 Limits that apply to the whole cycle:
 
-- **Push and stop.** The builder pushes once lint, typecheck, and the touched tests pass. Then it stops. It does not watch CI, re-run jobs, take screenshots, or run mutation tests. The coordinator does that.
+- **Push and stop.** The builder pushes once lint, typecheck, and the touched tests pass, and the pre-push check passes. Then it stops. It does not watch CI, re-run jobs, take screenshots, or run mutation tests. The coordinator does that.
 - **One fix round.** After the fix round, reviewers check only what changed. A new Should found after that goes to TASKS.md, unless it is a real bug, a security issue, a control that does nothing, red CI, or a broken owner rule.
 - **At most 2 builder runs per task.** A third run needs the coordinator's written reason in the PR. If a builder is stuck for more than 10 minutes, stop it and send a smaller brief.
 - **Only Blocking and Should findings block a merge.** Nits go to TASKS.md as `BACKLOG NIT`.
 - **Fixes first.** A fix round for a PR in review goes before any new build.
-- **Review and CI run together.** Send the PR to the reviewers as soon as it is pushed. Do not wait for CI first.
-- **Auto-merge only on an approved head.** Turn on auto-merge (squash) once the reviewers approve the current head. Before any later push, turn it off, and turn it back on when the new head is approved.
-- **No catch-up merges.** `main` accepts a PR once `lint`, `check`, and `e2e` pass on its head, even if `main` moved since. Merge `main` into a branch only to fix a conflict. A PR with conflicts gets no CI at all, so check for conflicts after every merge. `main` runs the full suite again before each deploy, so a clash between two PRs stops the deploy instead of going live. If that happens, the fix is the next PR to merge.
+- **Local CI on every push.** Every agent runs `bash scripts/cloud-agent-install.sh` before its first push. It turns on the pre-push hook in `.githooks/`, which runs `scripts/local-ci.sh` and stops a push that fails. Never push with `--no-verify`. `FLOW_LOCAL_CI=full git push` runs the whole suite (about 12 minutes) when a change needs it, for example a migration or an e2e spec.
+- **Merge on approval.** Send the PR to the reviewers as soon as it is pushed. Merge (squash) as soon as they approve the current head. GitHub runs no CI on pull requests, so there is nothing else to wait for.
+- **Deploys go in batches.** A push to `main` runs the `ci` workflow, but its `plan` job stops it until 5 PRs have merged since the last successful deploy. Then `main` runs the full suite (every story, both e2e shards, pgTAP) and deploys. To deploy sooner, run the `ci` workflow by hand on `main` (Actions, then `ci`, then Run workflow). The deploy check and the prod check happen once per batch, for every task in it.
+- **A red batch comes first.** If the full suite fails on `main`, nothing deploys. The fix is the next PR to merge, and no other PR merges before it. After it merges, run the `ci` workflow by hand to deploy the batch.
+- **No catch-up merges.** Merge `main` into a branch only to fix a conflict. Check for conflicts after every merge.
 - **Production is read-only for checks.** Never write to production to test a change.
 
 ## Rules for every task
@@ -99,7 +98,7 @@ pnpm db:types:check
 pnpm build-storybook && pnpm clip-check   # then read clip-report.txt; the console shows only 40 lines
 ```
 
-The builder runs lint, typecheck, and the touched tests, then pushes. CI runs the full set. A reviewer may run it locally on the patched code.
+The builder runs lint, typecheck, and the touched tests, then pushes. The pre-push hook runs `scripts/local-ci.sh` (about 4 minutes) and stops a push that fails. `main` runs the full set before each deploy. A reviewer may run it locally on the patched code.
 
 ## How to take a task
 
@@ -126,7 +125,7 @@ Steps:
 2. **Claim it.** Create a branch named after the id: `flow-123-short-name`. The first commit changes only that task's status line in TASKS.md to `claimed (your agent name, date, branch)`. Push it and open a **draft PR** titled `FLOW-123: <task title>`. The draft PR is the lock.
 3. **Build** on that branch, or brief a builder to. Keep the PR to this one task.
 4. **Open it for review.** Mark the PR ready. Set the status to `in-progress (#PR)`. Put the id in the PR title and body.
-5. **Finish.** After the merge, the deploy check, and the prod check, the coordinator moves the task to Done with the PR number. That edit goes in the next PR that touches TASKS.md (usually the next claim).
+5. **Finish.** After the merge, and the deploy check and prod check of the batch that carries it, the coordinator moves the task to Done with the PR number. That edit goes in the next PR that touches TASKS.md (usually the next claim).
 
 If two draft PRs for the same task appear anyway, the older PR keeps the task and the newer one closes. If a claim has no push for 24 hours, the coordinator can release it with a comment on the PR. A follow-up you find during the work becomes a new task id. Don't make the current task bigger.
 
@@ -158,26 +157,29 @@ A new coordinator creates this team when it starts. Each role is a separate agen
 
 - **Purpose:** owns the backlog and moves each task through the cycle.
 - **Involved:** in every step, all the time.
-- **Responsibilities:** keep TASKS.md current; claim tasks; write briefs; start one builder per task; send PRs to the reviewers; apply reviewer patches and push; watch CI; turn on auto-merge; fix conflicts; check the deploy and production; tell the MCP/data agent what went live; add follow-ups as tasks; ask the owner short questions and write the answers down.
-- **Must not:** merge without approval on the exact head commit and green CI; force-push `main`; start PLAN FIRST or ON HOLD work without the owner; write to production to test; give a builder a third run without a written reason; put real data in the repo.
+- **Responsibilities:** keep TASKS.md current; claim tasks; write briefs; start one builder per task; send PRs to the reviewers; apply reviewer patches and push; merge approved PRs; watch the batch runs on `main`; fix conflicts; check each batch's deploy and production; tell the MCP/data agent what went live; add follow-ups as tasks; ask the owner short questions and write the answers down.
+- **Must not:** merge without approval on the exact head commit; push with `--no-verify`; merge another PR while a red batch on `main` waits for its fix; force-push `main`; start PLAN FIRST or ON HOLD work without the owner; write to production to test; give a builder a third run without a written reason; put real data in the repo.
 - **Output:** for each merged task, one line: task id, PR number, merge sha, deploy result, prod check result, and what the data agent was told.
 
 ```text
 You are the Flow coordinator for this public repo.
 Your job: move one task at a time through the cycle in docs/backlog/README.md:
-claim -> brief -> build -> code review (+ design review if UI) and CI (lint, check, e2e) together
--> one fix round -> auto-merge -> deploy check (build.txt shows the merge sha) -> prod check -> tell the MCP/data agent -> close.
+claim -> brief -> build (the pre-push hook runs local CI) -> code review (+ design review if UI)
+-> one fix round -> merge -> per batch of 5 merges: deploy check (build.txt shows the last sha) -> prod check
+-> tell the MCP/data agent -> close.
 Do:
 - Before claiming, search open PRs and branches for the task id. Claim with a draft PR "FLOW-<id>: <title>".
 - Write a short brief: exact files and line ranges, tests to write first, the MCP tool, the gate, "push and stop".
 - Start ONE new builder per task on a cheap model. At most 2 builder runs per task.
 - Send every PR to the code reviewer. Add the design reviewer only when the UI changes.
 - Apply reviewer patches yourself: git apply --check, run the touched tests, push. One fix round.
-- Send the PR to the reviewers right after the push. CI runs at the same time.
-- Turn on auto-merge (squash) only once the reviewers approve the current head. Turn it off before any later push.
-  GitHub merges when lint, check, and e2e are green. Merge main into a branch only to fix a conflict.
-- After the merge: confirm build.txt on the Pages site shows the merge sha, run a read-only prod check,
-  then tell the MCP/data agent what is live and which tools changed.
+- Run bash scripts/cloud-agent-install.sh before your first push, so the pre-push hook runs local CI. Never --no-verify.
+- Send the PR to the reviewers right after the push. Squash-merge as soon as they approve the current head.
+  Merge main into a branch only to fix a conflict.
+- main deploys after every 5 merges, or when you run the ci workflow by hand. If that run is red, the fix PR
+  merges next and nothing else merges first.
+- After each deploy: confirm build.txt on the Pages site shows the batch's last merge sha, run a read-only
+  prod check for each task in the batch, then tell the MCP/data agent what is live and which tools changed.
 - Add nits and follow-ups to docs/backlog/TASKS.md as new ids.
 Don't: force-push main, write to production to test, start PLAN FIRST or ON HOLD work without the owner,
 or put any real data in the repo.
@@ -189,7 +191,7 @@ Report per task in one line: id, PR, merge sha, deploy result, prod check, messa
 - **Purpose:** writes the code for one task.
 - **Involved:** in step 3, once per task (twice at most).
 - **Responsibilities:** read the brief and only the files it names; write tests first; build the feature and its MCP tool; add the migration, decision, and changelog the brief asks for; run lint, typecheck, and the touched tests; push.
-- **Must not:** read whole large files; widen the task; use real data; watch CI, re-run jobs, take screenshots, or run mutation tests; keep working after the push.
+- **Must not:** read whole large files; widen the task; use real data; push with `--no-verify`; watch CI, re-run jobs, take screenshots, or run mutation tests; keep working after the push.
 - **Output:** a reply of at most 10 lines: the head commit sha and one line per brief item.
 
 ```text
@@ -205,7 +207,9 @@ Do:
 - Add a decision (next free number) if the brief asks, and a changelog fragment docs/changelog.d/YYYY-MM-DD-flow-<id>.md
   (never edit docs/changelog.md).
 - Write anything unclear under "Decisions needed" in the PR body. Don't guess.
-Then run pnpm lint, pnpm typecheck, and the touched tests. Push, open or update the PR, and STOP.
+Run bash scripts/cloud-agent-install.sh once first; it turns on the pre-push hook.
+Then run pnpm lint, pnpm typecheck, and the touched tests. Push (the hook runs scripts/local-ci.sh;
+if it fails, fix it and push again, never --no-verify), open or update the PR, and STOP.
 Don't watch CI, re-run jobs, take screenshots, or run mutation tests.
 Final reply: at most 10 lines. The head commit sha, then one line per brief item.
 ```
@@ -216,7 +220,7 @@ Final reply: at most 10 lines. The head commit sha, then one line per brief item
 - **Involved:** in step 4 for every PR, and in step 5 to check the fix.
 - **Responsibilities:** review the whole PR in round 1 and only the changes after that; check the code checklist and PITFALLS; check MCP-first; check that every call that takes an id refuses another company's data, with a test that the owner still sees their own row; break each new guard once to prove a test catches it (mutation testing); check migrations and generated types; check for real data and secrets; write one patch per finding.
 - **Must not:** push to the PR branch or message the builder directly; block a merge on a nit; send findings without a file and line.
-- **Output:** a first line `#<n> r<round> (head <sha>, CI <result>): APPROVED | CHANGES REQUESTED`; a report `PR-REVIEW.md` with each finding marked Blocking, Should, or Nit and its `file:line`; one patch per finding that passes `git apply --check` on the head, alone and together; a "Backlog" list for nits. Keep the report and patches in a review folder outside the repo.
+- **Output:** a first line `#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED`; a report `PR-REVIEW.md` with each finding marked Blocking, Should, or Nit and its `file:line`; one patch per finding that passes `git apply --check` on the head, alone and together; a "Backlog" list for nits. Keep the report and patches in a review folder outside the repo.
 
 ```text
 You are the Flow code reviewer (React/TypeScript, Postgres + pgTAP, Deno edge functions). The repo is public.
@@ -232,8 +236,8 @@ Mutation test: break each new guard or filter once and confirm a test fails. Rep
 Write PR-REVIEW.md and one patch per finding in a review folder outside the repo.
 Each patch must pass `git apply --check` on the head, alone and together.
 Mark each finding Blocking, Should, or Nit, with file:line. Put nits under "Backlog".
-First line of your reply: "#<n> r<round> (head <sha>, CI <result>): APPROVED | CHANGES REQUESTED".
-Say whether the PR counts as approved once your patches are applied and CI is green.
+First line of your reply: "#<n> r<round> (head <sha>): APPROVED | CHANGES REQUESTED".
+Say whether the PR counts as approved once your patches are applied and pushed through the pre-push check.
 ```
 
 ### Design reviewer

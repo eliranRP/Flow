@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth";
 import { getSupabase } from "../lib/supabase";
 import { JEV_DEFAULT, saveJevIntegration } from "../screens/jev-settings";
+import { COMPANY_NAME_MAX, companyNameError } from "../screens/rename-company";
 import { Notice } from "../ui/banner";
 import { Button } from "../ui/button";
 import { useSheetHistory } from "../ui/back";
@@ -44,11 +45,22 @@ function displayName(metadata: unknown): string {
   return "";
 }
 
-export function StepBusiness({ userId, onDone }: { userId: string | null; onDone: (companyId: string) => void }) {
+export function StepBusiness({
+  userId,
+  onDone,
+  initialName,
+}: {
+  userId: string | null;
+  onDone: (companyId: string) => void;
+  /** A story opens on a typed name, checked as if the field had been left. */
+  initialName?: string;
+}) {
   const { session } = useAuth();
   const client = useQueryClient();
   const seeded = displayName(session?.user.user_metadata);
-  const [name, setName] = useState(seeded);
+  const [name, setName] = useState(initialName ?? seeded);
+  const [error, setError] = useState(() => (initialName == null ? undefined : companyNameError(initialName)));
+  const fieldRef = useRef<HTMLInputElement>(null);
   const [vat, setVat] = useState<"registered" | "exempt">("registered");
   const hintId = useId();
   const created = useRef<string | null>(null);
@@ -73,6 +85,14 @@ export function StepBusiness({ userId, onDone }: { userId: string | null; onDone
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (save.isPending) return;
+    // The create_company rule (FLOW-606), on the field instead of a save toast.
+    const problem = companyNameError(name);
+    setError(problem);
+    if (problem) {
+      fieldRef.current?.focus();
+      return;
+    }
     save.mutate();
   }
 
@@ -85,13 +105,19 @@ export function StepBusiness({ userId, onDone }: { userId: string | null; onDone
       primary={<Button type="submit" full busy={save.isPending}>המשך</Button>}
     >
       <TextField
+        ref={fieldRef}
         label="שם העסק"
         value={name}
+        maxLength={COMPANY_NAME_MAX * 2 + 20}
+        aria-required="true"
+        error={error}
         onChange={(event) => {
           setName(event.target.value);
+          if (error) setError(undefined);
         }}
-        required
-        minLength={2}
+        onBlur={() => {
+          setError(companyNameError(name));
+        }}
       />
       <SegmentedControl
         label="סוג העסק"

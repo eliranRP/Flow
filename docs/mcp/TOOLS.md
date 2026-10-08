@@ -366,7 +366,7 @@ Refused messages add `loan not found`, `loan currency mismatch`, `loan already a
 
 ### split_line
 
-Splits one bank line into parts, each with its own category, optional project, and exact amount in minor units of the line's currency (cents for USD, agorot for ILS). Decision [0104](../decisions/0104-line-split-by-category.md).
+Splits one bank line into parts, each with its own category, optional project, and an exact amount in minor units of the line's currency (cents for USD, agorot for ILS), a percent of the line, or the rest. Decisions [0104](../decisions/0104-line-split-by-category.md) and [0123](../decisions/0123-line-split-percent-rest-reversal.md).
 
 ```json
 {
@@ -379,16 +379,33 @@ Splits one bank line into parts, each with its own category, optional project, a
 }
 ```
 
-- Two to 50 parts. `amount_minor` is a whole number above zero. The parts must sum exactly to the line's net amount, or the write is `refused` with `parts must sum to the line`.
-- Each category must be of the line's kind (an expense category on an outflow, an income category on an inflow). A category and project pair appears once.
+A refund of $100 filed as North rent, with 30% going back against South's repairs, $20 against North's insurance, and the rest staying on the line:
+
+```json
+{
+  "idempotency_key": "refund-1",
+  "transaction_id": "22222222-2222-4000-8000-000000000021",
+  "parts": [
+    { "category_id": "c0ffee00-1111-4000-8000-0000000000a1", "project_id": "8c1a0b2e-1111-4000-8000-000000000002", "percent": 30 },
+    { "category_id": "c0ffee00-1111-4000-8000-0000000000a2", "project_id": "8c1a0b2e-1111-4000-8000-000000000001", "amount_minor": 2000 },
+    { "rest": true }
+  ]
+}
+```
+
+- Two to 50 parts. Each gives exactly one of `amount_minor` (a whole number above zero), `percent` (above 0, up to 100, at most 4 decimals, of the whole line) or `rest: true`.
+- Percent parts are rounded together so they hit the line to the cent: each takes the floor of its share and the missing cents go to the largest remainders, the first part first on a tie. 50/50 of $100.01 is $50.01 and $50.00.
+- At most one part is the rest: it takes what the other parts leave. Without `category_id` it keeps the line's own category; without `project_id` the line's project. A rest with nothing left is dropped.
+- Without a rest part the parts must sum exactly to the line's net amount, or the write is `refused` with `parts must sum to the line`.
+- A part whose category is the other kind (an expense category on an inflow, such as a supplier refund; an income category on an outflow) is a reversal: it lowers that side of the P&L, like a whole reversal line, and needs its own `project_id` unless it is the line's own category. A category and project pair appears once.
 - `project_id` is optional. A part without it keeps the line's project and P&L role; on a shared line it is shared by the line's allocations in proportion. A part with a project counts as that project's direct cost (or overhead, for the overhead project).
 - `parts: []` clears the split, and the line counts whole again.
-- Refused: `transaction not found`, `category not found`, `project not found`, `category kind must match the direction`, `parts must sum to the line`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first). A `split_mismatch` review does not block the call.
-- When the bank sync changes the amount of a split line so the parts no longer sum to it, the line counts whole and gets an open review item with `reason` `split_mismatch` in `list_review` (unless it already has an open review). Send new parts that sum to the new amount, or `parts: []`, and the review closes; it also closes by itself if the amount comes back to match. Approving or skipping it in the review queue keeps the line counting whole. Undo of a fix brings back the old parts and the review. [FLOW-312](../backlog/TASKS.md#flow-312), [0123](../decisions/0123-split-line-resync-review.md).
+- Refused: `transaction not found`, `category not found`, `project not found`, `a reversal part needs a project`, `parts must sum to the line`, `parts exceed the line`, `a part rounds to zero`, `nothing is left for the rest` (one part would remain), `line has no category for the rest`, `line has a loan split` (use one or the other), and `line has an open review` (resolve the review with `assign_expense` first). A `split_mismatch` review does not block the call.
+- When the bank sync changes the amount of a split line so the parts no longer sum to it, the line counts whole and gets an open review item with `reason` `split_mismatch` in `list_review` (unless it already has an open review). Send new parts that sum to the new amount, or `parts: []`, and the review closes; it also closes by itself if the amount comes back to match. Approving or skipping it in the review queue keeps the line counting whole. Undo of a fix brings back the old parts and the review. [FLOW-312](../backlog/TASKS.md#flow-312), [0124](../decisions/0124-split-line-resync-review.md).
 - VAT stays on the line. The parts split the net amount.
 - While a split is in place, `set_expense_category` and `assign_expense` change only the line's own category and project, which the P&L does not read for a split line. Clear the split with `parts: []` first, or send new parts.
 
-Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "amount_minor" }], "undo_kind": "line_split", "id" }`. Undo `kind: "line_split"` with the transaction id puts back the parts from before this write (none, or an earlier split) and the line's assignment flags. If the parts changed since, undo is `conflict`.
+Output `data`: `{ "transaction_id", "parts": [{ "category_id", "project_id", "amount_minor" }], "undo_kind": "line_split", "id" }`, with every part in minor units as stored (percents and the rest resolved). Undo `kind: "line_split"` with the transaction id puts back the parts from before this write (none, or an earlier split) and the line's assignment flags. If the parts changed since, undo is `conflict`.
 
 Once split, the line counts by part in `get_totals`, `list_projects`, `get_project` and `list_project_category`: each part under its own category and project, a part in a kept-out category in the `excluded_*` totals, and the line's own category gets nothing. `count` still counts the line once. If a bank re-sync changes the line amount so the parts no longer sum, the line counts whole until it is split again; `get_expense` shows `line_split.parts_match: false`.
 

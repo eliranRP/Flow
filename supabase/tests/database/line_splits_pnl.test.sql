@@ -136,8 +136,8 @@ select throws_ok(
   'validation', 'the same category and project twice is refused');
 select throws_ok(
   $$select public.save_line_split((select id from lsp where label = 'txn_repair'),
-    jsonb_build_array(pg_temp.part('repairs', 17000, 'north'), pg_temp.part('rent', 300000, 'north')))$$,
-  'category kind must match the direction', 'an income category on a bill is refused');
+    jsonb_build_array(pg_temp.part('repairs', 17000, 'north'), pg_temp.part('rent', 300000)))$$,
+  'a reversal part needs a project', 'an income part on a bill with no project of its own is refused');
 select throws_ok(
   $$select public.save_line_split((select id from lsp where label = 'txn_repair'),
     jsonb_build_array(pg_temp.part('repairs', 17000, 'north'), pg_temp.part('repairs', 300000, 'foreign')))$$,
