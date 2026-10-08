@@ -14,7 +14,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 
 | Lane | Owns now | Next |
 | --- | --- | --- |
-| Dev lane 1 | FLOW-404 follow-up: investment figures in the project's currency (USD companies) | FLOW-405 server and MCP (the owner chose "Server now"; FLOW-510 waits for its design call) |
+| Dev lane 1 | FLOW-405 server and MCP: delete a category (lines back to review) and move all its lines, with undo | Next `ready` non-UI task (FLOW-510 waits for its design call) |
 | Dev lane 2 | FLOW-703 server side: Jev learns from corrections, atomic prefill, overhead choice, finished projects | FLOW-702 plan card for the owner |
 | UI lane 1 | Profit by period (option A, decision 0141) with FLOW-411 and the FLOW-330 screen, one PR (PR #199) | Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
@@ -773,7 +773,7 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-405"></a>
 ### FLOW-405 · Category management
-- **Type:** PLAN FIRST · **Status:** plan-first · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (server and MCP, dev lane 1; the owner chose "Server now", 2026-10-08; plan: the project's plans/flow-405-category-management.md) · **Depends on:** —
 - **What:** A clear place for a new user to set up their own categories. Deleting a category that has lines is allowed: warn with the count, then move its lines to untagged (back to review). A bulk "move all to another category". Replaces [0008](../decisions/0008-flat-categories-hide-or-merge.md)'s "delete only when empty" (new decision).
 - **Acceptance:** mockup approved; MCP tools for delete and bulk move with undo.
 
