@@ -3,7 +3,17 @@ import { assertEquals } from "jsr:@std/assert@1";
 import { allocateLoanSplit, scheduleRowForDate } from "../../../packages/shared/src/loan-split.ts";
 import { buildLoanSchedule, contractualPaymentMinor } from "../../../packages/shared/src/loan-schedule.ts";
 import { callTool } from "./tools.ts";
-import { CATEGORY, DEMAND_LOAN, feesRpc, INCOME_CATEGORY, LOAN, LOAN_TXN, paidRow, type Rpc, rpcOf } from "./tools_test_support.ts";
+import {
+  CATEGORY,
+  DEMAND_LOAN,
+  feesRpc,
+  INCOME_CATEGORY,
+  LOAN,
+  LOAN_TXN,
+  paidRow,
+  type Rpc,
+  rpcOf,
+} from "./tools_test_support.ts";
 
 Deno.test("attach_loan_payment matches writeSplit parts and schedule paging works", async () => {
   const loanRow = {

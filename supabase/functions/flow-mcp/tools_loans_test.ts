@@ -2,7 +2,18 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import { contractualPaymentMinor, regularPaymentMinor } from "../../../packages/shared/src/loan-schedule.ts";
 import { callTool, toolsFor } from "./tools.ts";
-import { CATEGORY, DEMAND_LOAN, feesRpc, LOAN, LOAN_TXN, paidRow, PROJECT, PROJECT_FIXTURE, rpcOf, TXN } from "./tools_test_support.ts";
+import {
+  CATEGORY,
+  DEMAND_LOAN,
+  feesRpc,
+  LOAN,
+  LOAN_TXN,
+  paidRow,
+  PROJECT,
+  PROJECT_FIXTURE,
+  rpcOf,
+  TXN,
+} from "./tools_test_support.ts";
 
 Deno.test("get_expense returns the loan split parts, and skips the read for income", async () => {
   const id = "11111111-1111-4000-8000-000000000001";

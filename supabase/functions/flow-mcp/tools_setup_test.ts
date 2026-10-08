@@ -1,7 +1,19 @@
-// Flow MCP tools tests: projects, categories, company, invoices and Jev writes. Fixtures: tools_test_support.ts.
+// Flow MCP tools tests: projects, categories, company, invoices and Jev writes, plus single-line assign and split
+// forwarding. Fixtures: tools_test_support.ts.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool, toolsFor } from "./tools.ts";
-import { CATEGORY, CATEGORY_NEW, INCOME_CATEGORY, INCOME_TXN, LOAN, PROJECT, PROJECT_B, REVIEW, rpcOf, TXN } from "./tools_test_support.ts";
+import {
+  CATEGORY,
+  CATEGORY_NEW,
+  INCOME_CATEGORY,
+  INCOME_TXN,
+  LOAN,
+  PROJECT,
+  PROJECT_B,
+  REVIEW,
+  rpcOf,
+  TXN,
+} from "./tools_test_support.ts";
 
 Deno.test("assign_expense_split forwards shares and optional category", async () => {
   const { calls, rpc } = rpcOf(() => ({

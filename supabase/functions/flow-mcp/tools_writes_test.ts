@@ -1,7 +1,18 @@
 // Flow MCP tools tests: line writes (assign, split, P&L switches, batches), scopes, refusals and sync_bank.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool, toolsFor } from "./tools.ts";
-import { BATCH_KEY, CATEGORY, INCOME_CATEGORY, JOB, PROJECT, PROJECT_B, REVIEW, type Rpc, rpcOf, TXN } from "./tools_test_support.ts";
+import {
+  BATCH_KEY,
+  CATEGORY,
+  INCOME_CATEGORY,
+  JOB,
+  PROJECT,
+  PROJECT_B,
+  REVIEW,
+  type Rpc,
+  rpcOf,
+  TXN,
+} from "./tools_test_support.ts";
 
 Deno.test("a read failure does not say the write was refused", async () => {
   const { rpc } = rpcOf(() => ({ status: 500, json: null }));

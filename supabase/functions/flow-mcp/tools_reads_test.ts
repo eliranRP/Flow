@@ -1,7 +1,20 @@
 // Flow MCP tools tests: read tools (searches, lists, project and totals reads). Fixtures: tools_test_support.ts.
 import { assertEquals } from "jsr:@std/assert@1";
 import { callTool, toolsFor } from "./tools.ts";
-import { BATCH_KEY, CATEGORY, INCOME_CATEGORY, INCOME_TXN, JOB, LOAN, PROJECT, PROJECT_B, PROJECT_FIXTURE, REVIEW, rpcOf, TXN } from "./tools_test_support.ts";
+import {
+  BATCH_KEY,
+  CATEGORY,
+  INCOME_CATEGORY,
+  INCOME_TXN,
+  JOB,
+  LOAN,
+  PROJECT,
+  PROJECT_B,
+  PROJECT_FIXTURE,
+  REVIEW,
+  rpcOf,
+  TXN,
+} from "./tools_test_support.ts";
 
 const NO_META = {
   method: null,

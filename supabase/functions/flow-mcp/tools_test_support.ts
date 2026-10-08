@@ -1,6 +1,5 @@
 // Shared ids, fixtures and the fake RPC for the Flow MCP tools tests (split out of tools_test.ts, FLOW-807).
 
-
 export const LOAN = "dddddddd-dddd-4000-8000-0000000000d1";
 export const LOAN_TXN = "eeeeeeee-eeee-4000-8000-0000000000e1";
 export const TXN = "22222222-2222-4000-8000-000000000020";
