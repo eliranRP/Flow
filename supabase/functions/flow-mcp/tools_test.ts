@@ -91,6 +91,13 @@ Deno.test("search_expenses passes its filters to search_transactions (FLOW-323)"
     assertEquals(data.expenses.map((row) => [row.id, row.reason]), [[line, "missing_project"]]);
   }
 
+  // A query alone also goes to search_transactions, which matches the supplier and the customer
+  // in any case, not only the description.
+  const queried = await callTool("search_expenses", { scope: "pending", query: "Example Tenant" }, ["read"], rpc);
+  assertEquals(queried.isError, false);
+  const byQuery = calls.filter((call) => call.name === "search_transactions").at(-1);
+  assertEquals([byQuery?.body.p_scope, byQuery?.body.p_query], ["pending", "Example Tenant"]);
+
   // Without a filter, pending still filters list_review and filed sends no filter arguments.
   const before = calls.length;
   await callTool("search_expenses", { scope: "pending" }, ["read"], rpc);
@@ -250,7 +257,8 @@ Deno.test("each tool accepts its arguments and rejects a bad one", async () => {
     if (name === "get_transaction") return { status: 200, json: { id: review.transaction_id, description: "אלפא" } };
     if (name === "get_line_split") return { status: 200, json: null };
     if (name === "get_loan_split") return { status: 200, json: null };
-    if (name === "search_transactions") return { status: 200, json: { total: 0, expenses: [] } };
+    // A pending query goes through search_transactions, which picks the line; the row is list_review's.
+    if (name === "search_transactions") return { status: 200, json: { total: 1, expenses: [{ id: review.transaction_id }] } };
     if (name === "get_line_meta") return { status: 200, json: [] };
     return { status: 500, json: null };
   });
