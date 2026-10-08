@@ -15,7 +15,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | Lane | Owns now | Next |
 | --- | --- | --- |
 | Dev lane 1 | FLOW-504 server and MCP: a stored company currency (no exchange rates) | The next ready non-UI task or plan card (FLOW-801 and FLOW-407 on hold) |
-| Dev lane 2 | Free: FLOW-702 server side done (#200) | Next `ready` non-UI task; FLOW-702 Settings and card UI goes to a UI lane |
+| Dev lane 2 | FLOW-211: Flow MCP agent requests (amount filter on search, accrued interest on list_loans, company_id note) | More Flow MCP agent requests and Jev server items |
 | UI lane 1 | Search screen (FLOW-323 option A, decision 0146) with FLOW-402 from the project page, one PR (PR #210) | FLOW-335 (period bar contrast and the Unpaid total first), Jev bills and forecast, navigation (331, 332, 334, rest of 322), loans page, company "לפי חודש" |
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
@@ -423,6 +423,12 @@ Everything else follows by area, roughly in priority order inside each area.
 ### FLOW-210 · Bulk setup follow-ups (#119 review)
 - **Type:** BACKLOG NIT · **Status:** done (#180) · **Depends on:** FLOW-206 (#119)
 - [x] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`. (`bulk_setup_followups.test.sql`.)
+
+<a id="flow-211"></a>
+### FLOW-211 · Flow MCP agent requests (2026-10-08)
+- **Type:** MCP · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n) · **Depends on:** —
+- **What:** from the Flow MCP agent, most important first: (1) `search_expenses` (and `search_transactions`) find a line by its amount, an exact figure or a range, since a bank or HUD figure is the agent's most common lookup; (2) `list_loans` shows each demand loan's accrued unpaid interest as of today, so the agent need not call `get_loan_schedule` per loan; (3) `add_loan` and `update_loan` refuse `company_id` as every tool does (the token decides the company): say so in TOOLS.md.
+- **Acceptance:** pgTAP for the amount filter (exact, range, sign, currency); MCP tests for both tools; TOOLS.md.
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
