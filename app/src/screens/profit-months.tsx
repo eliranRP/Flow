@@ -17,7 +17,7 @@ import { ScreenState } from "../ui/screen-state";
 type MonthCurrency = ProfitMonth["by_currency"][number];
 
 /**
- * The currencies the period has figures in, ILS first (the server's order). A period with no
+ * The currencies the period has figures in, the company currency first (the server's order). A period with no
  * figures at all falls back to the company's currency, so a USD company never reads ₪0.
  */
 export function rangeCurrencies(data: Pick<NonNullable<ProfitMonths>, "by_currency" | "months">, emptyCurrency: string): string[] {
@@ -35,16 +35,22 @@ export function rangeCurrencies(data: Pick<NonNullable<ProfitMonths>, "by_curren
   return ordered.length > 0 ? ordered : [emptyCurrency];
 }
 
+/** The month's overhead share in the company currency (0147). An older payload has it in ILS only. */
+function monthShare(month: ProfitMonth, baseCurrency: string): bigint | null {
+  if (month.overhead_share_minor !== undefined) return month.overhead_share_minor;
+  return baseCurrency === "ILS" ? (month.overhead_share_agorot ?? null) : null;
+}
+
 /**
  * A month's figures as the row shows them: every currency the period uses, in order, a zero row
- * when the month has none in it. Only the ILS row takes the overhead share.
+ * when the month has none in it. Only the company currency's row takes the overhead share.
  */
-function shownCurrencies(month: ProfitMonth, afterOverhead: boolean, currencies: readonly string[]): MonthCurrency[] {
+function shownCurrencies(month: ProfitMonth, afterOverhead: boolean, currencies: readonly string[], baseCurrency: string): MonthCurrency[] {
   const rows = currencies.map((currency) => month.by_currency.find((row) => row.currency === currency)
     ?? { currency, income_minor: 0n, expense_minor: 0n, profit_minor: 0n });
+  const share = monthShare(month, baseCurrency);
   return rows.map((row) => {
-    if (row.currency !== "ILS" || !afterOverhead || month.overhead_weighted !== true || month.overhead_share_agorot == null) return row;
-    const share = month.overhead_share_agorot;
+    if (row.currency !== baseCurrency || !afterOverhead || month.overhead_weighted !== true || share == null) return row;
     return { ...row, expense_minor: row.expense_minor + share, profit_minor: row.profit_minor - share };
   });
 }
@@ -76,7 +82,7 @@ export function profitMonthsSummary(data: ProfitMonths | null, emptyCurrency = "
   let open = 0;
   const currencies = rangeCurrencies(data, emptyCurrency);
   for (const month of data.months) {
-    const main = shownCurrencies(month, data.after_overhead === true, currencies)[0];
+    const main = shownCurrencies(month, data.after_overhead === true, currencies, data.base_currency ?? "ILS")[0];
     if (month.open) open += 1;
     else if (main != null && main.profit_minor > 0n) profit += 1;
     else if (main != null && main.profit_minor < 0n) loss += 1;
@@ -111,10 +117,11 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   const data = sample?.data ?? months.data ?? null;
   const projectName = sample?.projectName ?? project.data?.name ?? undefined;
   const afterOverhead = data?.after_overhead === true;
+  const baseCurrency = data?.base_currency ?? "ILS";
   const rows = data?.months ?? [];
   const newestYear = rows[0]?.month.slice(0, 4) ?? "";
-  const currencies = data == null ? [companyCurrency] : rangeCurrencies(data, companyCurrency);
-  const shownTotal = rows.reduce((sum, month) => sum + (shownCurrencies(month, afterOverhead, currencies)[0]?.profit_minor ?? 0n), 0n);
+  const currencies = data == null ? [companyCurrency] : rangeCurrencies(data, data.base_currency ?? companyCurrency);
+  const shownTotal = rows.reduce((sum, month) => sum + (shownCurrencies(month, afterOverhead, currencies, baseCurrency)[0]?.profit_minor ?? 0n), 0n);
   const mainCurrency = currencies[0] ?? companyCurrency;
   const subtitle = data == null
     ? undefined
@@ -142,6 +149,7 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
                 title={monthTitle(month.month, newestYear)}
                 afterOverhead={afterOverhead}
                 currencies={currencies}
+                baseCurrency={baseCurrency}
                 href={`${projectPath}${withPeriodSearch(search, monthPeriod(month.month))}`}
               />
             ))}
@@ -153,8 +161,8 @@ export function ProfitMonthsScreen({ sample }: { sample?: ProfitMonthsSample } =
   );
 }
 
-function MonthRow({ month, title, afterOverhead, currencies: rangeShown, href }: { month: ProfitMonth; title: string; afterOverhead: boolean; currencies: readonly string[]; href: string }) {
-  const currencies = shownCurrencies(month, afterOverhead, rangeShown);
+function MonthRow({ month, title, afterOverhead, currencies: rangeShown, baseCurrency, href }: { month: ProfitMonth; title: string; afterOverhead: boolean; currencies: readonly string[]; baseCurrency: string; href: string }) {
+  const currencies = shownCurrencies(month, afterOverhead, rangeShown, baseCurrency);
   const main = currencies[0];
   const profit = main?.profit_minor ?? 0n;
   const loss = profit < 0n;
