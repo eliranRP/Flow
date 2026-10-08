@@ -20,7 +20,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 2 | Design team plan ([DESIGN-TEAM](../design/DESIGN-TEAM.md)) | Review card and transaction batch: FLOW-327, 329, 333, the TransactionScreen part of 322, the Jev anomaly flag on the review card, and the skipped section under הצג הכול |
 | UI/UX review cycle | Design lead; runs after each deploy batch | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-508 connector sync: release only the run's own claim, back off status polling on error | Next ready bug |
+| Backlog bug fixes | FLOW-508 connect sheets: inline empty-field check, read-only key while connecting | Next ready bug |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
 ## Priority queue
@@ -844,10 +844,10 @@ Everything else follows by area, roughly in priority order inside each area.
 <a id="flow-508"></a>
 ### FLOW-508 · Settings and connect sheet follow-ups
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] Token and key fields render RTL; add `dir="ltr"` (Mercury and SUMIT).
-- [ ] An empty token goes to the server and comes back as a toast; add an inline client check with a reserved message line (both connectors).
-- [ ] The busy refresh row shows no spinner; keep the token field read-only while connect is busy.
-- [ ] A reloaded tab gets no message when a run fails; show the stored last error in the sheet.
+- [x] Token and key fields render RTL; add `dir="ltr"` (Mercury and SUMIT). (Already in both sheets.)
+- [x] An empty token goes to the server and comes back as a toast; add an inline client check with a reserved message line (both connectors). ("חסר מפתח.", "חסר מספר חברה."; focus moves to the first empty field.)
+- [x] The busy refresh row shows no spinner; keep the token field read-only while connect is busy. (The row already has `busy`; the key fields are read-only while connecting.)
+- [x] A reloaded tab gets no message when a run fails; show the stored last error in the sheet. (Already: the status sheet shows the stored `last_error`.)
 - [ ] Refresh completion is announced only by the toast; add a status text update.
 - [ ] Share one Settings block for Mercury and SUMIT; the Mercury status schema duplicates the DB type.
 - [x] Back off status polling on error (3s doubling to a minute, `syncPollInterval`); a run releases only its own claim (mercury-sync, sumit-sync).
