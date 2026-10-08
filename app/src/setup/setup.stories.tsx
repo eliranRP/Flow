@@ -67,5 +67,5 @@ export const BusinessNameErrorDark: Story = {
 export const BusinessNameError320: Story = {
   ...businessNameError,
   name: "Business step, name error, 320",
-  parameters: { ...businessNameError.parameters, viewport: { defaultViewport: "flow320" } },
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };
