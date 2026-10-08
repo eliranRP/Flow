@@ -934,13 +934,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-702"></a>
 ### FLOW-702 · Jev auto mode
-- **Type:** PLAN FIRST · **Status:** on-hold · **Depends on:** FLOW-701
+- **Type:** PLAN FIRST · **Status:** ready to plan (owner's go 2026-10-08: plan card after FLOW-703, dev lane 2; build waits on the plan's approval) · **Depends on:** FLOW-703
 - **What:** When the mode is `auto` and confidence is at or above the threshold, pre-fill the tag marked as AI and undoable in one tap; anomalies above a level always go to review; the toggle is the kill switch. Needs atomic allocation writes first. Show the threshold as a percent choice only in auto mode.
 - **Acceptance:** threshold edge tests; undo restores; audit trail.
 
 <a id="flow-703"></a>
 ### FLOW-703 · Jev corrections write-back
-- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go asked on a card) · **Depends on:** —
+- **Type:** SMALL CYCLE · **Status:** claimed (dev lane 2, 2026-10-08, claude/project-thread-pz6l1n; server side, owner's go 2026-10-08) · **Depends on:** —
 - **What:** Write the owner's corrections back as training signal; confirm on main that saving a change sheet seeded with a Jev guess never turns that guess into a supplier rule by default; make the split approve path atomic; expose a "no project / overhead" choice to the model; consider finished projects for lines dated before the finish.
 - **Acceptance:** tests for the seeded change sheet and the correction write.
 - [x] Corrections as signal: the party history carries Jev's earlier suggestion and whether the owner corrected it (#177, decision [0136](../decisions/0136-jev-corrections.md)).
