@@ -111,7 +111,8 @@ const BATCH_KEY = z.string().min(1).max(124);
 const assignSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   transaction_id: UUID_TEXT,
-  project_id: UUID_TEXT,
+  // Optional: a line under a kept-out category needs no project (the RPC checks it).
+  project_id: UUID_TEXT.nullable().optional(),
   category_id: UUID_TEXT,
   remember: z.boolean().optional(),
 }).strict();
@@ -200,7 +201,13 @@ const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
   name: z.string().trim().refine(companyNameIsValid),
 }).strict();
-const LOAN_NAME = z.string().trim().min(1).max(80);
+// Control characters and invisible format characters (zero-width, bidi controls, BOM,
+// soft hyphen) make two names look the same. ZWJ (U+200D) stays for emoji sequences.
+const HIDDEN_CHARS = /[\u0000-\u001f\u007f-\u009f\u00ad\u200b\u200c\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
+function visibleName(min: number, max: number) {
+  return z.string().trim().min(min).max(max).refine((name) => !HIDDEN_CHARS.test(name));
+}
+const LOAN_NAME = visibleName(1, 80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
 const addLoanSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
@@ -241,21 +248,21 @@ const attachLoanSchema = z.object({
 }).strict();
 const createProjectSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   status: z.enum(["active", "finished"]).optional(),
 }).strict();
 const createCategorySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   kind: z.enum(["expense", "income"]),
 }).strict();
 // A setup batch: up to 100 rows, a name at most once (per kind for categories).
 const PROJECT_ROW = z.object({
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   status: z.enum(["active", "finished"]).optional(),
 }).strict();
 const CATEGORY_ROW = z.object({
-  name: z.string().trim().min(2).max(120),
+  name: visibleName(2, 120),
   kind: z.enum(["expense", "income"]),
 }).strict();
 function uniqueRows<T>(keyOf: (row: T) => string) {
@@ -806,7 +813,7 @@ const LINE_PARTS_SPEC = {
 
 function writeTools() {
   return [
-    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. Income needs a project unless the category is off-P&L. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
+    toolSpec("assign_expense", "Assign one expense or income line to a project and category. An open review is closed. A line needs a project unless the category is kept out of the P&L; then project_id can be left out. The category kind decides the P&L side, so an outflow under an income category is a reversal (negative income) and an inflow under an expense category is a reversal (negative expense). An income-kind category needs a project, also on an outflow.", {
       idempotency_key: { type: "string" },
       transaction_id: { type: "string" },
       project_id: { type: "string" },
@@ -1287,7 +1294,7 @@ async function callWrite(
     body = {
       p_idempotency_key: parsed.data.idempotency_key,
       p_transaction_id: parsed.data.transaction_id,
-      p_project_id: parsed.data.project_id,
+      p_project_id: parsed.data.project_id ?? null,
       p_category_id: parsed.data.category_id,
       p_remember: parsed.data.remember ?? false,
     };

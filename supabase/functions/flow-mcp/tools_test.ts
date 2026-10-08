@@ -747,6 +747,54 @@ Deno.test("assign_expense forwards project and category for an income review lin
   }
 });
 
+Deno.test("assign_expense without a project forwards null for a kept-out category", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: { ok: true, data: { undo_kind: "review", id: REVIEW, closed_review: true } },
+  }));
+  for (const project_id of [undefined, null]) {
+    const assigned = await callTool("assign_expense", {
+      idempotency_key: "assign-kept-out",
+      transaction_id: INCOME_TXN,
+      ...(project_id === undefined ? {} : { project_id }),
+      category_id: INCOME_CATEGORY,
+    }, ["write"], rpc);
+    assertEquals(assigned.isError, false);
+  }
+  assertEquals(calls.length, 2);
+  for (const call of calls) {
+    assertEquals(call.name, "mcp_assign_expense");
+    assertEquals(call.body.p_project_id, null);
+  }
+  const bad = await callTool("assign_expense", {
+    idempotency_key: "assign-bad",
+    transaction_id: INCOME_TXN,
+    project_id: "not-a-uuid",
+    category_id: INCOME_CATEGORY,
+  }, ["write"], rpc);
+  assertEquals(bad.isError, true);
+  assertEquals(calls.length, 2);
+});
+
+Deno.test("names with control or invisible characters are refused before the RPC", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  for (const name of ["Site\u200bBeta", "Site\u0007Beta", "\u202eSite Beta", "Site\ufeffBeta", "Site\u00adBeta"]) {
+    const project = await callTool("create_project", { idempotency_key: "k", name }, ["write"], rpc);
+    assertEquals(project.isError, true, JSON.stringify(name));
+    const category = await callTool("create_category", { idempotency_key: "k", name, kind: "expense" }, ["write"], rpc);
+    assertEquals(category.isError, true, JSON.stringify(name));
+    const batch = await callTool("create_projects", { idempotency_key: "k", items: [{ name }] }, ["write"], rpc);
+    assertEquals(batch.isError, true, JSON.stringify(name));
+    const loan = await callTool("update_loan", { idempotency_key: "k", loan_id: PROJECT, name }, ["write"], rpc);
+    assertEquals(loan.isError, true, JSON.stringify(name));
+  }
+  assertEquals(calls.length, 0);
+  // Hebrew and an emoji joined with ZWJ are fine.
+  const ok = await callTool("create_project", { idempotency_key: "k", name: "פרויקט 👨‍👩‍👧" }, ["write"], rpc);
+  assertEquals(ok.isError, false);
+  assertEquals(calls.length, 1);
+});
+
 Deno.test("assign_expense and set_expense_category describe reversals", () => {
   const byName = new Map(toolsFor(["write"]).map((tool) => [tool.name, tool.description]));
   for (const name of ["assign_expense", "set_expense_category"]) {
@@ -755,7 +803,7 @@ Deno.test("assign_expense and set_expense_category describe reversals", () => {
     assertEquals(text.includes("negative income"), true, `${name} says an outflow can be negative income`);
     assertEquals(text.includes("negative expense"), true, `${name} says an inflow can be negative expense`);
   }
-  assertEquals((byName.get("assign_expense") ?? "").includes("Income needs a project"), true);
+  assertEquals((byName.get("assign_expense") ?? "").includes("project_id can be left out"), true);
 });
 
 Deno.test("a reversal is forwarded as given: an expense line under an income category and the reverse", async () => {
