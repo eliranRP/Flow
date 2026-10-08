@@ -16,6 +16,7 @@ import { decodeKek, openApiKey, type Envelope } from "../_shared/envelope.ts";
 import { empty, json } from "../_shared/http.ts";
 import type { ConnectorSession } from "../_shared/connectors/types.ts";
 import { resolveOwnerCompany } from "../_shared/owner.ts";
+import { runWithClaim } from "../_shared/cron_claim.ts";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -60,7 +61,13 @@ Deno.serve(async (req) => {
       for (const row of (due.data ?? []) as Array<{ id: number; company_id: string; provider: string }>) {
         if (row.provider !== "mercury") continue;
         try {
-          results.push(await syncCompany(admin, row.company_id, decodeKek(kekSecret), false, true));
+          // claim_connector_refreshes took the connection claim; an early skip or throw
+          // inside syncCompany returns before its own release (FLOW-510).
+          results.push(await runWithClaim(
+            () => syncCompany(admin, row.company_id, decodeKek(kekSecret), false, true),
+            () => admin.from("connector_connections").update({ sync_claimed_at: null })
+              .eq("company_id", row.company_id).eq("provider", "mercury"),
+          ));
         } catch (error) {
           await admin.from("connector_refresh_requests").update({ claimed_at: null }).eq("id", row.id);
           logFailure("mercury-sync cron", error, "");
