@@ -31,7 +31,7 @@ The implementation guide is mandatory, including its definition of done. [0025](
 | [0025](../decisions/0025-implementation-guide-is-mandatory.md) | [implementation-guide.md](../../design/system/implementation-guide.md) is the definition of done. |
 | [0026](../decisions/0026-empty-loading-error-states.md) | Every screen has empty, loading, and error states, in light and in dark. |
 | [0027](../decisions/0027-date-picker.md) | Week starts Sunday. Dates are dd/mm/yyyy. Single-date and range pickers, both with shortcuts. |
-| [0028](../decisions/0028-period-sheet-with-custom-range.md) | The period is a sheet opened from the band pill, including a custom range. This replaces only the "no custom range" sentence in 0019. |
+| [0028](../decisions/0028-period-sheet-with-custom-range.md) | The period is a sheet opened from the band pill, including a custom range. This replaces only the "no custom range" sentence in 0019. On Home and the project band the sheet opens from the period bar's label ([0141](../decisions/0141-period-bar.md)). |
 | [0029](../decisions/0029-pwa-install-prompt.md) | After the first successful report, offer install. Android uses `beforeinstallprompt`. iPhone shows three Safari steps. Do not show it inside the installed app. |
 | [0030](../decisions/0030-confirmation-sheets.md) | Delete, archive, hide, and merge use a confirmation sheet. Merge is two steps. The confirm control is a soft bad-tint button, then an undo toast. |
 | [0031](../decisions/0031-logo.md) | Wordmark "Flow", Rubik 700, letter-spacing −0.01em. App icon is S1, the straight F. |
@@ -248,7 +248,7 @@ Source: [implementation-guide.md](../../design/system/implementation-guide.md). 
 |---|---|---|---|
 | A | Review, Projects, Categories, Upload results, Unpaid, Settings | yes | no |
 | A+band | Home, Project | yes | yes |
-| B sheet | Add, Change, mark as paid, period, date, confirms | underneath, dimmed | no |
+| B sheet | Add, Change, period, date, confirms | underneath, dimmed | no |
 | C full screen | Onboarding, Transaction detail, Split, install | no | no |
 
 Notifications (`13`) is a lock-screen reference, not an app screen. Guide §3.
@@ -300,7 +300,7 @@ Guide §6.4 and §11.3. Do not use `Intl.NumberFormat('he-IL', {style:'currency'
 
 Figures read in a row get a spoken pause between them (hidden text, not a visible separator). A list that changes its grouping keeps its rows mounted where it can, so focus is not lost (FLOW-313).
 
-Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, נכנס, יצא, the comparison under those rows, the pending count, the unpaid total, and up to 3 projects. [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
+Home rounding: whole shekels, never "1.3M" or "אלף". The visible profit is rounded income minus rounded expenses, so the line adds up. If the hero does not fit, step to `display` (36px). Do not scale continuously. The hero number stays the on-band white, including a minus. A loss is named "הפסד" in the label, because red on the violet band does not read. Figure budget on Home: the label, the profit, one explanation, נכנס, יצא, the comparison under those rows, the pending count, the unpaid total, and up to 5 projects (FLOW-411). [0069](../decisions/0069-back-and-one-tap-review.md). [guide §1 P2](../../design/system/implementation-guide.md), §11.3.
 
 P&L figures are before VAT. [0041](../decisions/0041-amounts-before-vat.md), [0043](../decisions/0043-assumed-vat-on-expenses.md).
 

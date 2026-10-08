@@ -104,8 +104,8 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 57 | [FLOW-333](#flow-333) | Split editor and split review card follow-ups (cycle 3) | SMALL UI | ready (owner chose 2026-10-08) |
 | 58 | [FLOW-334](#flow-334) | Stacked header follow-ups and phone polish (cycle 4) | SMALL UI | ready (owner chose 2026-10-08) |
 | 59 | [FLOW-335](#flow-335) | Period bar, by-month page and Unpaid polish (cycle 5) | SMALL UI | ready |
-| 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | waiting for the owner's card |
-| 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | waiting for the owner's card |
+| 60 | [FLOW-336](#flow-336) | Step the period one-handed | PLAN FIRST | plan-first (waiting for the owner's card) |
+| 61 | [FLOW-337](#flow-337) | A period on the "לפי חודש" page | PLAN FIRST | plan-first (waiting for the owner's card) |
 
 Everything else follows by area, roughly in priority order inside each area.
 
@@ -755,7 +755,7 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The period label is the only way to the period sheet and a custom range, but it reads as plain text. Add a small ▼ (or calendar) icon after it, sized like the band pill's. When the window isn't the current one, the label's hint reads "חזרה להיום" and tapping the selected preset (which already jumps back) gets the same `aria-label`.
 - [ ] Home's band names the window three or four times (the preset, the label, "רווח נקי ב־3 חודשים" and "מ־1 באוגוסט עד היום"). The explanation line reads only "הכנסות פחות הוצאות" (`heroExplanation`).
 - [ ] Project band: Back and the "earlier" arrow are the same right-pointing chevron in the same 44px column, about 150px apart. FLOW-334 H2's labelled Back tells them apart; until then give the stepper `--space-2` more inset than Back.
-- [ ] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectScreen` ~751).
+- [ ] Project: "לפי חודש" uses the tinted pending-card `Banner` with an empty hint; use a plain `ListRow` with the calendar icon and chevron (`ProjectDetailScreen`, `flow-screens.tsx` ~752).
 - [ ] "לפי חודש": drop the `.ui-months-note` explainer (rows carry chevrons, as FLOW-328 did elsewhere), and keep the hint's "נכנס ₪…" muted: green is for an income amount in the amount slot only (0120).
 - [ ] "לפי חודש" empty state ("אין חודשים בתקופה הזו") is a dead end: add the tint button "כל התקופה" that sets הכול, and an empty-state story.
 - [ ] Unpaid: "סימון כשולם" sits on the end side under the amount (x 24–180); put it on the start side under the name (`.ui-row-stack { align-items:flex-start }` for this row). The row opens the invoice (its document or the SUMIT link) so the owner can check which invoice it is before marking it.
@@ -767,13 +767,13 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-336"></a>
 ### FLOW-336 · Step the period one-handed
-- **Type:** PLAN FIRST · **Status:** waiting for the owner's card · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** plan-first (waiting for the owner's card) · **Depends on:** FLOW-411 (#199) · **Overlaps:** FLOW-314 and FLOW-332 (gestures), [0141](../decisions/0141-period-bar.md) · **Source:** mobile UI/UX review cycle 5
 - **What:** The period bar sits in the top third on Home (presets y≈15–51, stepper y≈62–111 at 375x667) and on the project band (y≈162–258). Stepping a month from Home's default takes 2 taps at the top edge and each further month another, about 550px above a resting thumb. Proposal: keep the bar where the owner put it, and add a sideways swipe on the band's hero figure that steps the window by the preset's length (same rules as the stepper: the later step stops at the current window), with a short haptic and the label updating. Swipe is the one-handed path; the arrows stay for accessibility.
 - **Acceptance:** owner's choice on a card; works in RTL (swipe toward the start side goes earlier); does not fight the edge swipe-back (FLOW-332) or vertical scroll; a decision record.
 
 <a id="flow-337"></a>
 ### FLOW-337 · A period on the "לפי חודש" page
-- **Type:** PLAN FIRST · **Status:** waiting for the owner's card · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
+- **Type:** PLAN FIRST · **Status:** plan-first (waiting for the owner's card) · **Depends on:** FLOW-411 (#199) · **Source:** mobile UI/UX review cycle 5
 - **What:** "לפי חודש" follows the project's period, so at the default 3 חודשים it lists three months with about 300px empty, and seeing the year takes Back, שנה and לפי חודש again (two of them in the top third). Options: the page opens on the whole project ("מתחילת הפרויקט") whatever the band shows, or it gets a compact preset row of its own (`PeriodBar tone="page"`).
 - **Acceptance:** owner's choice on a card; Back returns to the project with its own period unchanged.
 
