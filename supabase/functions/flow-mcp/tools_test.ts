@@ -2539,6 +2539,73 @@ Deno.test("FLOW-304: a refused bank-details read fails the read instead of dropp
   }
 });
 
+Deno.test("update_loan sends status and closed_on, and validates them first", async () => {
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_update_loan") {
+      return { status: 200, json: { ok: true, data: { id: LOAN, status: "paid_off", closed_on: "2026-02-01", balance_left: 500, undo_kind: "loan_update" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const closed = await callTool("update_loan", { idempotency_key: "ls-1", loan_id: LOAN, status: "paid_off", closed_on: "2026-02-01" }, ["write"], rpc);
+  assertEquals(closed.isError, false);
+  assertEquals(calls[0]?.body.p_patch, { status: "paid_off", closed_on: "2026-02-01" });
+  const reopened = await callTool("update_loan", { idempotency_key: "ls-2", loan_id: LOAN, status: "open" }, ["write"], rpc);
+  assertEquals(reopened.isError, false);
+  assertEquals(calls[1]?.body.p_patch, { status: "open" });
+  const cleared = await callTool("update_loan", { idempotency_key: "ls-3", loan_id: LOAN, closed_on: null }, ["write"], rpc);
+  assertEquals(cleared.isError, false);
+  assertEquals(calls[2]?.body.p_patch, { closed_on: null });
+  for (const bad of [{ status: "done" }, { status: null }, { closed_on: "2026-2-1" }, { closed_on: 20260201 }]) {
+    const out = await callTool("update_loan", { idempotency_key: "ls-bad", loan_id: LOAN, ...bad }, ["write"], rpc);
+    assertEquals(out.isError, true);
+    if (!out.structuredContent.ok) assertEquals(out.structuredContent.error.code, "validation");
+  }
+  assertEquals(calls.length, 3);
+});
+
+Deno.test("list_loans hides closed loans only when asked, and attach refuses a line after closed_on", async () => {
+  const base = {
+    name: "Example Bank",
+    currency: "USD",
+    principal_minor: 10000000,
+    annual_rate_ppm: 60000,
+    term_months: 360,
+    start_date: "2026-01-01",
+    payment_minor: 100000,
+    escrow_minor: 10000,
+    balance_minor: 9000000,
+  };
+  const open = { ...base, id: LOAN, status: "open", closed_on: null };
+  const paid = { ...base, id: "dddddddd-dddd-4000-8000-0000000000d2", status: "paid_off", closed_on: "2026-02-01" };
+  let docDate = "2026-03-01";
+  const { calls, rpc } = rpcOf((name) => {
+    if (name === "mcp_list_loans") return { status: 200, json: [open, paid] };
+    if (name === "get_transaction") {
+      return { status: 200, json: { id: LOAN_TXN, doc_date: docDate, amount_original: 100000, currency: "USD" } };
+    }
+    if (name === "mcp_attach_loan_payment") {
+      return { status: 200, json: { ok: true, data: { loan_id: paid.id, transaction_id: LOAN_TXN, undo_kind: "loan_split" } } };
+    }
+    return { status: 500, json: null };
+  });
+  const all = await callTool("list_loans", {}, ["read"], rpc);
+  if (all.structuredContent.ok) assertEquals((all.structuredContent.data as { loans: unknown[] }).loans.length, 2);
+  const openOnly = await callTool("list_loans", { include_closed: false }, ["read"], rpc);
+  if (openOnly.structuredContent.ok) {
+    assertEquals((openOnly.structuredContent.data as { loans: Array<{ id: string }> }).loans.map((loan) => loan.id), [LOAN]);
+  }
+  const bad = await callTool("list_loans", { include_closed: "no" }, ["read"], rpc);
+  assertEquals(bad.isError, true);
+
+  const late = await callTool("attach_loan_payment", { idempotency_key: "ls-a1", transaction_id: LOAN_TXN, loan_id: paid.id }, ["write"], rpc);
+  assertEquals(late.structuredContent, { ok: false, error: { code: "refused", message: "loan closed" } });
+  assertEquals(calls.some((call) => call.name === "mcp_attach_loan_payment"), false);
+
+  docDate = "2026-02-01";
+  const onTheDay = await callTool("attach_loan_payment", { idempotency_key: "ls-a2", transaction_id: LOAN_TXN, loan_id: paid.id }, ["write"], rpc);
+  assertEquals(onTheDay.isError, false);
+});
+
 Deno.test("get_jev_status passes the status through and refuses a failed read", async () => {
   const status = {
     enabled: true,

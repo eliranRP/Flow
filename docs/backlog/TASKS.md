@@ -44,7 +44,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 22 | [FLOW-303](#flow-303) | Previous and next on the transaction card | SMALL UI | done (#100) |
 | 23 | [FLOW-108](#flow-108) | Take a single transaction out of the P&L, with an MCP batch | PLAN FIRST | done (#105) |
 | 24 | [FLOW-103](#flow-103) | One P&L basis for the app and MCP totals | SMALL CYCLE | on-hold |
-| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
+| 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | in-progress (#132, part 1 of 4; plan approved by the owner 2026-10-08) |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | ready |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | done (#111) |
 | 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | done (#120) |
@@ -269,10 +269,21 @@ Everything else follows by area, roughly in priority order inside each area.
 - **Type:** BACKLOG NIT · **Status:** done (#124) · **Depends on:** FLOW-129
 - [x] The other `mcp_*` write functions still send `lock_not_available` to `others`, so a lock timeout is stored as a refusal under the idempotency key. Map it to `unavailable` / `retry` in each, as #123 did for `attach_loan_payment` and `undo`, and update TOOLS.md. (Migration `20261008050000`, 18 tools, tested in `mcp_lock_retry.test.sql`.)
 
+<a id="flow-132"></a>
+### FLOW-132 · Closed loan follow-ups (#132 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 1 (#132)
+- [ ] A removed line dated after a loan's `closed_on` keeps its parts; if it comes back it counts against the closed loan without a check. Check it when the line is restored, as decision 0121 does for the balance.
+- [ ] Changing an attached line's `doc_date` to after its loan's `closed_on` is not checked.
+
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields
-- **Type:** PLAN FIRST · **Status:** plan-first (the screen part needs the owner's approval) · **Depends on:** —
+- **Type:** PLAN FIRST · **Status:** in-progress (#132, part 1 of 4) · **Depends on:** — · **Owner's approval:** 2026-10-08, the whole plan ("Approve all")
 - **What:** Gaps found while setting up real mortgages: (a) balloon, interest-only and demand notes (no term, variable prime-linked rate); (b) a closed or paid-off status for historical loans; (c) attach a payment that includes fees and several missed installments; (d) per-loan category mapping for the split parts instead of the Hebrew defaults. MCP-first for each.
+- **Plan (approved):** one PR at a time, MCP first, in this order. Screen fields go to the Mercury UI thread once the MCP side is merged.
+  1. (b) `loans.status` (`open`, `paid_off`, `closed`) and `closed_on`, set with `update_loan`; a closed loan takes only payments dated on or before `closed_on`.
+  2. (d) Per-loan categories for the parts (null keeps the defaults); interest, escrow and fees go to any expense category in the P&L, principal to one kept out.
+  3. (c) A fourth part `fees`; `attach_loan_payment` takes `installments` (1 to 12) or exact `parts` that add up to the line.
+  4. (a) `loans.kind` (`amortizing`, `interest_only`, `balloon`, `demand`), a `loan_rates` table and `set_loan_rate`. Demand interest is daily on actual/365; rates are entered by hand. Loan draws are out of scope.
 - **Acceptance:** plan approved, then one PR per item with schedule tests at the boundaries.
 
 <a id="flow-110"></a>

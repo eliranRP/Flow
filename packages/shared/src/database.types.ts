@@ -352,13 +352,13 @@ isOneToOne: false
                   ]
                 },"loans": {
                   Row: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"project_id": string | null,"start_date": string,"term_months": number,"updated_at": string
+                    "annual_rate_ppm": number,"closed_on": string | null,"company_id": string,"created_at": string,"currency": string,"escrow_minor": number,"id": string,"name": string,"payment_minor": number,"principal_minor": number,"project_id": string | null,"start_date": string,"status": Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at": string
                   }
                   Insert: {
-                    "annual_rate_ppm": number,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"project_id"?: string | null,"start_date": string,"term_months": number,"updated_at"?: string
+                    "annual_rate_ppm": number,"closed_on"?: string | null,"company_id": string,"created_at"?: string,"currency": string,"escrow_minor": number,"id"?: string,"name": string,"payment_minor": number,"principal_minor": number,"project_id"?: string | null,"start_date": string,"status"?: Database["public"]['Enums']["loan_status"],"term_months": number,"updated_at"?: string
                   }
                   Update: {
-                    "annual_rate_ppm"?: number,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"term_months"?: number,"updated_at"?: string
+                    "annual_rate_ppm"?: number,"closed_on"?: string | null,"company_id"?: string,"created_at"?: string,"currency"?: string,"escrow_minor"?: number,"id"?: string,"name"?: string,"payment_minor"?: number,"principal_minor"?: number,"project_id"?: string | null,"start_date"?: string,"status"?: Database["public"]['Enums']["loan_status"],"term_months"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1063,7 +1063,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
+            "category_kind": "expense"|"income","connector_provider": "sumit"|"mercury","doc_kind": "invoice"|"receipt"|"invoice_receipt"|"credit"|"expense"|"other","line_status": "pending"|"posted"|"void","loan_split_part": "interest"|"escrow"|"principal","loan_status": "open"|"paid_off"|"closed","pnl_role": "project"|"shared"|"overhead","project_status": "active"|"finished","review_status": "open"|"approved"|"skipped"|"changed","split_method": "equal"|"income_share"|"manual"|"worker_days","txn_direction": "income"|"expense","txn_source": "sumit"|"manual"|"photo"|"mercury","vat_status": "source"|"derived"|"assumed"|"unknown"
           }
           CompositeTypes: {
             "connector_upsert_result": {
@@ -1181,7 +1181,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
+            "category_kind": ["expense", "income"],"connector_provider": ["sumit", "mercury"],"doc_kind": ["invoice", "receipt", "invoice_receipt", "credit", "expense", "other"],"line_status": ["pending", "posted", "void"],"loan_split_part": ["interest", "escrow", "principal"],"loan_status": ["open", "paid_off", "closed"],"pnl_role": ["project", "shared", "overhead"],"project_status": ["active", "finished"],"review_status": ["open", "approved", "skipped", "changed"],"split_method": ["equal", "income_share", "manual", "worker_days"],"txn_direction": ["income", "expense"],"txn_source": ["sumit", "manual", "photo", "mercury"],"vat_status": ["source", "derived", "assumed", "unknown"]
           }
         }
 } as const

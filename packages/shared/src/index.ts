@@ -91,9 +91,9 @@ export {
   LOAN_INTEREST_CATEGORY,
   LOAN_PRINCIPAL_CATEGORY,
 } from "./categories.ts";
-export { allocateLoanSplit, scheduleRowForDate } from "./loan-split.ts";
+export { allocateLoanSplit, loanTakesPaymentOn, scheduleRowForDate } from "./loan-split.ts";
 export { initialsOf } from "./initials.ts";
 export type { Initials } from "./initials.ts";
-export type { LoanSplitAmount, LoanSplitPart } from "./loan-split.ts";
+export type { LoanSplitAmount, LoanSplitPart, LoanStatus } from "./loan-split.ts";
 export type { Json } from "./database.types.ts";
 export type { Database } from "./database.ts";
