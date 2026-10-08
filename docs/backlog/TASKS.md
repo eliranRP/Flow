@@ -22,7 +22,7 @@ Which lanes run and what each one is on ([lanes](README.md#lanes-and-how-many-ru
 | UI lane 4 | FLOW-702 app part, PR #231: Settings → Jev mode (הצעות בלבד / מילוי אוטומטי) and threshold, the server switch that stores auto, and "✦ מולא ע״י Jev" + בטל on the review card (agreed with UI lane 2) | Next unclaimed UI task |
 | UI/UX review cycle | Design lead; runs after each deploy batch (cycle 5 reviewed 89b9dc5) | Next deploy batch |
 | Production QA | Deploy and prod check after each deploy, sandbox QA company only | Next deploy batch |
-| Backlog bug fixes | FLOW-313 item 4 + FLOW-134 item 3 (#242) | Next small ready item |
+| Backlog bug fixes | FLOW-329 + FLOW-124 item 2: P&L switch row on the transaction card | Design lead sign-off, then review |
 | File split | FLOW-807 follow-up: `_shared/jev_tag.ts` split into `jev_tag_plan.ts` and `jev_tag_rest.ts` (merged: screens #219, stories #225, CSS #227, review area #229, app files #232) | `supabase/functions/flow-mcp/tools.ts` after #221 and #233 merge |
 | MCP/data agent | Real data through the MCP tools; never changes the repo | Requests go to the top of the queue |
 
