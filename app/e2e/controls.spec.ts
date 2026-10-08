@@ -138,7 +138,7 @@ test("home connects, filters the period, and opens a project", async ({ page }) 
   await expect(page).toHaveURL(/\/settings\/connections\?preview=1$/);
 
   await page.goto("/e2e/home?preview=1");
-  // The period bar (decision 0140): a preset is one tap, the arrows step by its length.
+  // The period bar (decision 0141): a preset is one tap, the arrows step by its length.
   const presets = page.locator(".ui-band").getByRole("radiogroup", { name: "תקופה" });
   await presets.getByRole("radio", { name: "חודש", exact: true }).click();
   await expect(presets.getByRole("radio", { name: "חודש", exact: true })).toHaveAttribute("aria-checked", "true");

@@ -128,7 +128,15 @@ Output also has `meta` ([FLOW-304](../backlog/TASKS.md#flow-304)), the line's ba
 
 `scope` is `pending` (default), `filed`, or `all`. `pending` filters `list_review`. `filed` and `all` call `public.search_transactions`. `id` on an expense is the transaction id. Each expense also has `meta` (see [get_expense](#get_expense)).
 
-Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
+Filters, all optional ([FLOW-323](../backlog/TASKS.md#flow-323), [0140](../decisions/0140-search-filters.md)):
+- `from` and `to` (`YYYY-MM-DD`) bound the document date, both ends included.
+- `direction` is `income` or `expense`.
+- `project_id` matches the line's project, a share of a shared cost on it, or a split part on it. `none` lists lines on no project.
+- `category_id` matches the line's category, or a split or loan split part in it. `none` lists lines with no category and no parts.
+
+`query` matches the description, the supplier or the customer, in any case. `filed` and `all` rows come newest first. They also carry `currency`, `amount_original`, `line_status`, `customer_name`, `waiting_review`, `kept_out` (as in [0135](../decisions/0135-line-state-in-lists.md)), `split_parts` (the line split's part count, 0 when whole) and `loan_matched`. With a filter, `pending` lets `search_transactions` pick the page, and the rows stay `list_review` rows, newest first. Without one, it filters `list_review` as before.
+
+Input: `{ "scope": "all", "query": "מלט", "from": "2026-06-01", "to": "2026-06-30", "project_id": "…", "limit": 50, "offset": 0 }`.
 
 ### get_totals
 

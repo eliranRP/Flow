@@ -642,7 +642,7 @@ export function ProjectDetailScreen({
 } = {}) {
   const { projectId = "" } = useParams();
   const search = usePreviewSearch();
-  // The project's own period (decision 0140): it starts as Home's, and changing it leaves Home alone.
+  // The project's own period (decision 0141): it starts as Home's, and changing it leaves Home alone.
   const [period, setPeriod] = useProjectPeriod();
   const detail = useProjectQuery(sample ? "" : projectId, period);
   const months = useProfitMonthsQuery(sample || !spansMonths(period) ? "" : projectId, period);

@@ -69,7 +69,7 @@ function PeriodControl({ sheet, setSheet }: { sheet: boolean; setSheet: (open: b
           setRange(true);
         }}
         options={PRESET_KINDS.map((kind) => {
-          // The same presets as Home's period bar (decision 0140): each window that ends now.
+          // The same presets as Home's period bar (decision 0141): each window that ends now.
           const choice = presetPeriod(kind);
           return {
             label: presetLabel(kind),
