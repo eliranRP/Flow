@@ -220,7 +220,7 @@ function loanRowHint(row: LoanBalanceRow): string | undefined {
   return project ?? undefined;
 }
 
-/** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0114). */
+/** A balance with its cents drawn small, ".00" included (FLOW-501, decision 0120). */
 function LoanBalance({ minor, currency }: { minor: bigint; currency: string }) {
   const { whole, cents } = splitCents(withCents(showMoney(minor, currency)), "detail");
   return (

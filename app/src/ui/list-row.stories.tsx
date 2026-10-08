@@ -127,7 +127,7 @@ export const ListOfRows: Story = {
   ),
 };
 
-/** Option C (decision 0114): income green with no plus and small cents (".00" included), expense with − and cents,
+/** Option C (decision 0120): income green with no plus and small cents (".00" included), expense with − and cents,
     a negative income with its minus and never green, and a project row in whole units. No hairlines. */
 function MercuryRows() {
   return (

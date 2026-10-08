@@ -58,6 +58,15 @@ describe("linePnlState", () => {
     expect(linePnlState({ category_excluded_from_pnl: true }, null)).toMatchObject({ out: true, next: true });
     expect(linePnlState({ category_excluded_from_pnl: true }, true)).toMatchObject({ out: false, forcedIn: true, next: null });
   });
+
+  it("a guessed kept-out category counts until it is confirmed", () => {
+    expect(linePnlState({ category_excluded_from_pnl: true, category_suggested: true }, null)).toMatchObject({ out: false, forcedIn: false, next: false });
+    expect(linePnlState({ category_excluded_from_pnl: true, category_suggested: true }, false)).toMatchObject({ out: true, next: null });
+    expect(linePnlState({ category_excluded_from_pnl: true, category_suggested: false }, null)).toMatchObject({ out: true, next: true });
+    expect(linePnlState({ category_excluded_from_pnl: true, category_suggested: true, pnl_fixed: true, in_pnl: false }, null)).toMatchObject({ out: true });
+    // A loan-split line whose own category is a guessed kept-out one counts, as the server says.
+    expect(linePnlState({ category_excluded_from_pnl: true, category_suggested: true, pnl_fixed: true, in_pnl: true }, null)).toMatchObject({ out: false });
+  });
 });
 
 describe("one line out of the P&L", () => {

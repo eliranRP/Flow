@@ -11,7 +11,7 @@ These are client hints. Flow does not read them and does not treat them as a con
 | Tools | readOnlyHint | destructiveHint | idempotentHint |
 | --- | --- | --- | --- |
 | Every read below | true | false | true |
-| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `undo`, `undo_batch` | false | true | true |
+| `assign_expense`, `assign_expense_split`, `set_expense_category`, `create_project`, `create_category`, `create_projects`, `create_categories`, `sync_bank`, `hide_category`, `set_category_pnl`, `set_overhead_project`, `rename_company`, `add_loan`, `update_loan`, `attach_loan_payment`, `split_line`, `set_line_pnl`, `set_lines_pnl`, `undo`, `undo_batch` | false | true | true |
 
 ## Which id
 
@@ -20,8 +20,8 @@ These are client hints. Flow does not read them and does not treat them as a con
 | `get_expense`, `assign_expense`, `assign_expense_split`, `set_expense_category`, `split_line`, `set_line_pnl` | `transaction_id` | `list_review.transaction_id` or `get_expense.id` |
 | `undo` `kind: "review"` | `id` | the review-queue id the write closed |
 | `undo` `kind: "reassign"` | `id` | the `reassign_undo` id |
-| `undo` `kind: "project"` | `id` | the project id `create_project` returned |
-| `undo` `kind: "category"` | `id` | the category id `create_category` returned |
+| `undo` `kind: "project"` | `id` | the project id `create_project` or a `create_projects` row returned |
+| `undo` `kind: "category"` | `id` | the category id `create_category` or a `create_categories` row returned |
 | `undo` `kind: "category_hidden"` | `id` | the category id `hide_category` returned |
 | `undo` `kind: "category_pnl"` | `id` | the category id `set_category_pnl` returned |
 | `undo` `kind: "company"` | `id` | the company id `rename_company` returned |
@@ -39,6 +39,10 @@ A review-queue id in a transaction argument is `validation` and the message is `
 Success: `{ "ok": true, "data": {} }`.
 
 Failure: `{ "ok": false, "error": { "code": "not_found", "message": "not found" } }`. Tool failures set MCP `isError` true. HTTP 401 and 429 are not tool results.
+
+## Tool list changes
+
+`initialize` says `listChanged: true` and returns an `Mcp-Session-Id` that stamps the tool list the token sees. After a deploy changes that list, a `tools/call` from an older session that accepts `text/event-stream` is answered as a stream: `notifications/tools/list_changed` first, then the reply. List the tools again on that notification. Without a session id, or with `Accept: application/json` only, the reply is plain JSON ([0119](../decisions/0119-mcp-bulk-setup.md)).
 
 `code` is `forbidden`, `validation`, `not_found`, `conflict`, `already_closed`, `refused`, or `unavailable`. `forbidden` is a token whose scope does not allow the tool. `conflict` is an undo whose current project, category, `pnl_role`, or shares differ from the snapshot in `private.mcp_writes`. `unavailable` with message `retry` is a deadlock or serialization failure. It is not stored, so the same idempotency key can be sent again. `stale` is not a tool code. It is the app's אישור path only, when the shown project or category differs from the stored row.
 
@@ -60,13 +64,13 @@ Output `data`: `basis` (the basis used, `cash` when omitted) and `projects[]`: `
 
 ### get_project
 
-`get_project(p_id, p_basis)`, with no company id. `id` is a project id from `list_projects`. It takes no dates: every total is all time, so it matches the `list_projects` row only when `list_projects` omits both dates. `basis` is `cash` or `invoiced` (default `cash`, the same as `list_projects` and `get_totals`; the app's project screen reads `invoiced`). Only income depends on the basis. A malformed `id` or `basis` is `validation`. An unknown id and a project in another company are both `not_found`.
+`get_project(p_id, p_basis)`, with no company id. `id` is a project id from `list_projects`. It takes no dates: every total is all time, so it matches the `list_projects` row only when `list_projects` omits both dates. `basis` is `cash` or `invoiced` (default `cash`, the same as `list_projects` and `get_totals`; the app's project screen reads `invoiced`). Income depends on the basis, and on `cash` an unpaid supplier invoice (an expense `invoice` or `credit` with no cash date) is left out of every field, `categories` included ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)). A malformed `id` or `basis` is `validation`. An unknown id and a project in another company are both `not_found`.
 
 Input: `{ "id": "8c1a0b2e-1111-4000-8000-000000000001", "basis": "cash" }`.
 
-Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `category`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`), the loans filed under this project (FLOW-105; empty when none). `loans` is read apart from the P&L and changes none of its numbers. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
+Output `data`: `id`, `name`, `status`, `state_label`, `budget_agorot`, `sumit_budget_section_id`, `is_overhead`, `after_overhead`, `basis`, `income_agorot`, `direct_agorot`, `shared_agorot`, `profit_agorot`, `overhead_share_agorot`, `overhead_weighted`, `profit_after_overhead_agorot`, `pending_count`, `pending_agorot`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `profit_minor`), `categories[]` (`id`, `name`, `amount_agorot`, `has_shared_share`), `categories_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `has_shared_share`), `excluded_categories_by_currency[]` (same fields), `excluded_income_by_currency[]` (`currency`, `id`, `name`, `amount_minor`, `count`; FLOW-121), `other_currencies[]`, `pending_other_currencies[]`, and `transactions[]` (`id`, `description`, `doc_date`, `amount_net`, `currency`, `direction`, `source`, `doc_kind`, `category`), the 40 newest lines, and `loans[]` (`id`, `name`, `currency`, `balance_minor`), the loans filed under this project (FLOW-105; empty when none). `loans` is read apart from the P&L and changes none of its numbers. `*_agorot` fields are ILS only; `by_currency` and `categories_by_currency` are minor units per currency (cents for USD). Each transaction's `amount_net` is in its own `currency`.
 
-Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category. Each `count` in `other_currencies[]` and `pending_other_currencies[]` counts only lines in the P&L.
+Expense lines in a category with `excluded_from_pnl` (see `set_category_pnl`) are left out of `direct_*`, `shared_*`, `profit_*`, `by_currency`, `categories`, and `categories_by_currency`. They are listed per currency in `excluded_categories_by_currency` (minor units, positive for an expense), so nothing disappears. Income filed to the project that is out of the P&L (a kept-out income category, or a line taken out with `set_line_pnl`) is left out of `income_*` and listed by category in `excluded_income_by_currency`, on the same basis as `income_agorot`, in positive minor units with its line `count`. A line whose category is only a guess (`category_suggested`) counts in the P&L even when that category is kept out, until the category is confirmed; a loan category stays kept out either way ([0114](../decisions/0114-kept-out-guesses.md)). `categories`, `categories_by_currency` and `excluded_categories_by_currency` list only confirmed lines, so a guessed line is in `direct_*` but in none of the category lists until it is confirmed. Uncategorised lines stay in the P&L. `transactions[]` still lists the newest lines whatever their category. Each `count` in `other_currencies[]` and `pending_other_currencies[]` counts only lines in the P&L.
 
 `transactions[]` is the 40 newest lines filed to the project or shared with it, by `doc_date`, then `created_at`, then `id`, all newest first, so the list is the same on every call. It is not the P&L. It includes lines with `line_status` `pending` (unsettled bank lines), which no total counts until they post. A row does not carry `line_status`, so a pending row looks the same as a posted one. A shared line shows its full `amount_net`, not this project's share; the share is in `shared_*`. A line in a kept-out category is listed too.
 
@@ -101,13 +105,15 @@ Input:
 
 Output `data`: `{ "total", "reviews" }`. `id` is the review-queue id. `transaction_id` is the ledger id. Also `description`, `doc_date`, `doc_kind`, `amount_net`, `vat_agorot`, `direction`, `reason`, `pnl_role`, `share_count`, `project_id`, `category_id`, `project_name`, `category_name`, `category_suggested`, `project_suggested`, `supplier_name`, `meta` (the line's bank details, see [get_expense](#get_expense)), `line_status` (`pending`, `posted`, or `void`; a pending bank line may still change) and `source` (`sumit`, `mercury`, `manual`, or `photo`) ([FLOW-305](../backlog/TASKS.md#flow-305)). `search_expenses` with `scope: "pending"` returns the same rows, so it carries both fields too.
 
+Income that already has a project but only a guess of a kept-out category is queued with `reason` `suggested`: the guess counts in the P&L until it is confirmed, and approving it (or `assign_expense` / `set_expense_category`) confirms it ([FLOW-126](../backlog/TASKS.md#flow-126), [0114](../decisions/0114-kept-out-guesses.md)). A guessed loan category is not queued: it is out of the P&L even as a guess ([FLOW-127](../backlog/TASKS.md#flow-127)).
+
 ### get_expense
 
 `get_transaction` with the transaction id. A missing row is `not_found`. Output includes `allocations[]` of `{project_id, project_name, share_bp, amount_net}`. A line split with `split_line` also has `line_split` (see [split_line](#split_line)).
 
 Output also has `loan_split` ([FLOW-107](../backlog/TASKS.md#flow-107)), from `get_loan_split`: `null` when the line has no loan split (and always for income, which skips the read), else `{loan_id, loan_name, needs_review, by_parts, parts[]}` with `parts` in the order interest, escrow, principal, each `{part, amount_minor, in_pnl}`. `amount_minor` is positive and the parts add up to the line. `by_parts` is true when the P&L counts the line by its parts (three parts, none needs review, no VAT, parts add up), and then `in_pnl` says whether that part counts; the principal is kept out by default. When `by_parts` is false, `in_pnl` is null and the whole line counts under its own category. A failed split read is `refused`, like the row read.
 
-The row also has `in_pnl` (whether the line counts in the P&L), `in_pnl_override` (`false` out, `true` in, `null` follows the category; see [set_line_pnl](#set_line_pnl)), `category_excluded_from_pnl`, and `pnl_fixed` (a loan line: `set_line_pnl` refuses it) ([FLOW-108](../backlog/TASKS.md#flow-108)).
+The row also has `in_pnl` (whether the line counts in the P&L), `in_pnl_override` (`false` out, `true` in, `null` follows the category; see [set_line_pnl](#set_line_pnl)), `category_excluded_from_pnl`, and `pnl_fixed` (a loan line: `set_line_pnl` refuses it) ([FLOW-108](../backlog/TASKS.md#flow-108)). `category_suggested` is true while the category is only a guess; a guessed kept-out category still counts, so `in_pnl` is true until the category is confirmed ([FLOW-121](../backlog/TASKS.md#flow-121)).
 
 Output also has `meta` ([FLOW-304](../backlog/TASKS.md#flow-304)), the line's bank details from `get_line_meta`: `{method, card_last4, memo, account, counterparty, bank_description}`. `method` is `card`, `ach`, `wire`, `check`, `transfer`, `other`, or null when the provider gave none (manual and most SUMIT lines). `card_last4` is exactly the last 4 digits or null. `account` is the bank account's name; no account number is returned. In `memo` and `bank_description` any run of 5 or more digits keeps only its last 4 (`••1234`). Every field is null when unknown. Lines imported before FLOW-304 have only `method` (from the provider's kind), `counterparty` and `bank_description` until the next sync touches them. A failed meta read is `refused`. `list_review` and `search_expenses` rows carry the same `meta`.
 
@@ -119,13 +125,13 @@ Input: `{ "scope": "filed", "query": "מלט", "limit": 50, "offset": 0 }`.
 
 ### get_totals
 
-`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `unassigned_income_agorot`, `unassigned_expense_agorot`, `overhead_project_id`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`, `loan_split_fallback_count`, `unassigned_income_minor`, `unassigned_expense_minor`). The buckets add up ([0101](../decisions/0101-unassigned-and-overhead-project.md)): `direct + shared + overhead + unassigned_expense = expense`, and the projects' `profit_minor` minus `overhead` plus `unassigned_income - unassigned_expense` is `net_profit`, within 1 minor unit per shared loan-split part. Unassigned income has no project. Unassigned cost has no `pnl_role`, a project role and no project, or a shared role and no split. Cost filed to the overhead project (see `set_overhead_project`) is in `overhead_*`, not `direct_*`. `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields. A loan payment with a valid three-part split counts by part: interest and escrow in the totals, the principal in `excluded_expense_*` and `excluded_count`, and the bank line's own category gets nothing. `loan_split_fallback_count` is the number of lines in the period that have a split but count whole, because a part needs review or the line carries VAT. It is 0 when none do. `count` counts lines in the P&L only, so a split line counts once and a kept-out line is in `excluded_count`, not `count`. Before decision [0099](../decisions/0099-categories-outside-pnl.md) `count` included kept-out lines; `count + excluded_count` is the old number (a loan payment that counts by part adds 1 to both). A project's shared share of each part rounds half to even.
+`get_dashboard`, with no company id. Output `data`: `company_id`, `name`, `basis`, `from`, `to`, `income_agorot`, `direct_agorot`, `shared_agorot`, `overhead_agorot`, `expense_agorot`, `unassigned_income_agorot`, `unassigned_expense_agorot`, `overhead_project_id`, `net_profit_agorot`, `excluded_income_agorot`, `excluded_expense_agorot`, `active_projects`, `review_count`, `by_currency[]` (`currency`, `income_minor`, `direct_minor`, `shared_minor`, `overhead_minor`, `expense_minor`, `net_profit_minor`, `excluded_income_minor`, `excluded_expense_minor`, `excluded_count`, `count`, `loan_split_fallback_count`, `unassigned_income_minor`, `unassigned_expense_minor`). The buckets add up ([0101](../decisions/0101-unassigned-and-overhead-project.md)): `direct + shared + overhead + unassigned_expense = expense`, and the projects' `profit_minor` minus `overhead` plus `unassigned_income - unassigned_expense` is `net_profit`, within 1 minor unit per shared loan-split part. Unassigned income has no project. Unassigned cost has no `pnl_role`, a project role and no project, or a shared role and no split. Cost filed to the overhead project (see `set_overhead_project`) is in `overhead_*`, not `direct_*`. `*_agorot` fields are ILS only; foreign amounts are in `by_currency` minor units (cents for USD). Excluded lines stay out of the main buckets and appear only in the `excluded_*` fields. A line whose category is only a guess counts in the main buckets even when that category is kept out, and moves to `excluded_*` once the category is confirmed; a guessed loan category stays out ([0114](../decisions/0114-kept-out-guesses.md)). A loan payment with a valid three-part split counts by part: interest and escrow in the totals, the principal in `excluded_expense_*` and `excluded_count`, and the bank line's own category gets nothing. `loan_split_fallback_count` is the number of lines in the period that have a split but count whole, because a part needs review or the line carries VAT. It is 0 when none do. `count` counts lines in the P&L only, so a split line counts once and a kept-out line is in `excluded_count`, not `count`. Before decision [0099](../decisions/0099-categories-outside-pnl.md) `count` included kept-out lines; `count + excluded_count` is the old number (a loan payment that counts by part adds 1 to both). A project's shared share of each part rounds half to even. On `cash`, a supplier invoice or credit note with no cash date (unpaid) is in no field at all, not even `excluded_*` or `count`; on `invoiced` it counts by its document date ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)).
 
 ### get_breakdown
 
 `get_breakdown` or `get_breakdown_lines` ([0110](../decisions/0110-home-breakdown.md)). `direction` is `income` or `expense` (required). `group_by` is `category` (default), `project`, or `payer`. `basis` defaults to `cash`. Omit both dates for all time; one date alone is `validation`.
 
-Without `group`: output `data` is `direction`, `basis`, `group_by`, `from`, `to`, `totals[]` (`currency`, `amount_minor`, `count`), `groups[]` (`key`, `name`, `currency`, `amount_minor`, `count`, `shared`), `excluded[]` (kept-out lines, not in the totals), and `review_count`. `totals` equal `get_totals`' `income_minor` / `expense_minor`. Under `project`, `key` is a project id, `overhead`, or `unassigned`; a shared cost is split by its allocations and the project's row has `shared: true`. A null `name` means no category, payer, or project (key `none` or `unassigned`). Passing `currency`, `limit`, or `offset` here is `validation`.
+Without `group`: output `data` is `direction`, `basis`, `group_by`, `from`, `to`, `totals[]` (`currency`, `amount_minor`, `count`), `groups[]` (`key`, `name`, `currency`, `amount_minor`, `count`, `shared`), `excluded[]` (kept-out lines, not in the totals), and `review_count`. `totals` equal `get_totals`' `income_minor` / `expense_minor`. On `cash`, an unpaid supplier invoice is left out of every row, like `get_totals`. Under `project`, `key` is a project id, `overhead`, or `unassigned`; a shared cost is split by its allocations and the project's row has `shared: true`. A null `name` means no category, payer, or project (key `none` or `unassigned`). Passing `currency`, `limit`, or `offset` here is `validation`.
 
 With `group` (a `key` from `groups`) and `currency` (default `ILS`), or with `excluded: true` (not both): output `data.rows[]` (`transaction_id`, `part`, `description`, `supplier_name`, `project_name`, `category_name`, `doc_date`, `currency`, `amount_minor`, `shared`) newest first, and `has_more`. `limit` defaults to 40, at most 100.
 
@@ -177,7 +183,7 @@ Output `data`: `{ "undo_kind", "id", "closed_review" }` with the same meaning as
 
 ### set_expense_category
 
-The category changes. Shares stay. An open review is closed the same way, using the row's current project.
+The category changes. The line's project and shares stay. An open review is closed the same way, using the row's current project.
 
 A category of the other kind is a reversal (see `assign_expense`): it counts as negative income on an outflow and negative expense on an inflow. On a line filed to one project the role follows the new kind, as in `assign_expense`; a shared line keeps its shares.
 
@@ -219,6 +225,22 @@ Output `data` when a review closed: `{ "undo_kind": "review", "id": "11111111-11
 
 There is no cost-type argument on categories. Output `data`: `{ "id", "undo_kind": "category" }`.
 
+### create_projects and create_categories
+
+For a company setup: up to 100 rows in one write, so a setup of dozens of projects and categories stays inside the write rate limit ([0119](../decisions/0119-mcp-bulk-setup.md)).
+
+```json
+{ "idempotency_key": "setup-1", "items": [{ "name": "Site Alpha" }, { "name": "Site Beta", "status": "finished" }] }
+```
+
+```json
+{ "idempotency_key": "setup-2", "items": [{ "name": "Tools", "kind": "expense" }, { "name": "Rent", "kind": "income" }] }
+```
+
+Rows take the same fields as `create_project` and `create_category`. The same name twice in one call (per kind for categories), an empty list, or more than 100 rows is `validation` for the whole call. Each row uses the key `idempotency_key:ordinal`, so the key is 1–124 characters. A bad row does not block good rows.
+
+Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each result is `{ "name", "ok": true, "id", "undo_kind" }` or `{ "name", "ok": false, "code" }`; category rows add `kind`. A name that is already taken is `refused` and adds `existing_id`, so a rerun of a setup still returns every id. [undo_batch](#undo_batch) with `batch_key` removes the rows that were created; a row that something already uses is `conflict` and stays.
+
 ### hide_category
 
 ```json
@@ -241,11 +263,11 @@ Output `data`: `{ "id", "undo_kind": "category_pnl" }`. Undo restores the prior 
 { "idempotency_key": "oh-1", "project_id": "8c1a0b2e-1111-4000-8000-000000000002" }
 ```
 
-Marks one project as the company's overhead project. Expense lines filed to it with a project role count as overhead in `get_totals`, `list_projects`, and `get_project`, not as direct cost, and the overhead share of the after-overhead view includes them. `project_id: null` clears it. `project_id` is required. Output `data`: `{ "id", "overhead_project_id", "undo_kind": "overhead_project" }`, where `id` is the company id. Undo restores the prior overhead project, or is `conflict` if it changed since. A project in another company is `refused` / `project not found`. `list_projects` and `get_project` return `is_overhead`, and `get_totals` returns `overhead_project_id`.
+Marks one project as the company's overhead project. Expense lines filed to it with a project role count as overhead in `get_totals`, `list_projects`, and `get_project`, not as direct cost, and the overhead share of the after-overhead view includes them. `project_id: null` clears it. `project_id` is required. Output `data`: `{ "id", "overhead_project_id", "undo_kind": "overhead_project" }`, where `id` is the company id. Undo restores the prior overhead project, or is `conflict` if it changed since or the prior project was deleted. In `get_project`, the overhead project's `overhead_share_agorot` is 0 and its income is left out of the other projects' weights ([0117](../decisions/0117-overhead-project-weights.md)). A project in another company is `refused` / `project not found`. `list_projects` and `get_project` return `is_overhead`, and `get_totals` returns `overhead_project_id`.
 
 ### rename_company
 
-Renames the token's company. The owner only: a viewer or a read token is `forbidden`. There is no company argument, so another company cannot be named. The name is trimmed and must be 2 to 100 characters, or the call is `validation`. The app calls the same rule through `public.rename_company(p_company_id, p_name)`, which refuses any id but the caller's own company.
+Renames the token's company. The owner only: a viewer or a read token is `forbidden`. There is no company argument, so another company cannot be named. The name is trimmed of all whitespace (the characters JavaScript `trim()` removes, such as tabs, line breaks and no-break spaces) and must be 2 to 100 characters, counted as code points so an emoji counts once, with no control character; otherwise the call is `validation`. The app calls the same rule through `public.rename_company(p_company_id, p_name)`, which refuses any id but the caller's own company, and a direct update of `companies.name` is held to it too (`23514`), so the MCP, the RPC and the table accept and refuse the same names. Each rename and each undo writes one `audit_log` row (`update` on `companies`).
 
 ```json
 { "idempotency_key": "rename-1", "name": "Example Holdings" }
@@ -378,7 +400,7 @@ Takes one line out of the P&L, or counts one line of a kept-out category. Decisi
 ```
 
 - `in_pnl: false` keeps the line out, `true` counts it although its category is kept out, `null` clears the override so the line follows its category again. The override wins over the category's `excluded_from_pnl` and covers every part of a split line.
-- An out line moves to the `excluded_*` totals of `get_totals`, `list_projects` and `get_project`, and to `get_breakdown`'s `excluded` group, on both bases. Nothing is hidden.
+- An out line moves to the `excluded_*` totals of `get_totals`, `list_projects` and `get_project`, and to `get_breakdown`'s `excluded` group, on both bases. Nothing is hidden, except that an unpaid supplier invoice is in no field on `cash` ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)).
 - Refused: `transaction not found` (also another company's line) and `loan line is fixed` (a line with a loan split or in a loan category; its parts decide what counts).
 
 Output `data`: `{ "transaction_id", "in_pnl_override", "in_pnl", "undo_kind": "line_pnl", "id" }`. Undo `kind: "line_pnl"` with the transaction id puts back the override from before this write. If the override changed since (for example in the app), undo is `conflict`.
@@ -436,7 +458,7 @@ Output `data`: `{ "batch_key", "ok_count", "error_count", "results" }`. Each res
 { "idempotency_key": "undo-batch-1", "batch_key": "33333333-3333-4000-8000-000000000003" }
 ```
 
-Undoes every successful row from an `assign_expenses` or `set_lines_pnl` batch through `mcp_undo`, newest first. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
+Undoes every successful row from an `assign_expenses`, `set_lines_pnl`, `create_projects` or `create_categories` batch through `mcp_undo`, newest first. Each result names its row by `transaction_id`, or by `id` and `name` (and `kind` for a category) for a created project or category. A split row goes back to its shares, category and open review from before the split. Another company or a missing batch is `not_found`. A row changed since assign is `conflict` for that row only. Replay returns the stored response.
 
 ## Not in tools/list
 

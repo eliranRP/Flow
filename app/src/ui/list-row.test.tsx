@@ -260,7 +260,7 @@ describe("ListRow", () => {
     expect(expense.closest(".t-amount")).not.toBeNull();
   });
 
-  it("shows transaction cents small and raised, .00 included, and keeps project rows whole (decision 0114, option C)", () => {
+  it("shows transaction cents small and raised, .00 included, and keeps project rows whole (decision 0120, option C)", () => {
     const { container } = render(
       <MemoryRouter>
         <>

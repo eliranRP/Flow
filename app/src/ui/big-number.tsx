@@ -28,13 +28,13 @@ type BigNumberProps = {
   loss?: boolean;
   direction?: "income" | "expense";
   /**
-   * Money in: draws the figure in the income colour (decision 0114). Only a figure that shows no
+   * Money in: draws the figure in the income colour (decision 0120). Only a figure that shows no
    * minus turns green; a negative income keeps its minus in the main text colour. Never on the band.
    */
   income?: boolean;
   /**
    * "always": transaction rows show cents like Mercury, ".00" included, drawn small and raised
-   * (decision 0114, option C). Other lists, totals and summaries stay whole units.
+   * (decision 0120, option C). Other lists, totals and summaries stay whole units.
    */
   cents?: "always";
 };

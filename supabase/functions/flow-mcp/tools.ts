@@ -39,6 +39,8 @@ export const WRITE_TOOL_NAMES = [
   "set_expense_category",
   "create_project",
   "create_category",
+  "create_projects",
+  "create_categories",
   "sync_bank",
   "hide_category",
   "set_category_pnl",
@@ -76,6 +78,8 @@ const ALLOWED: Record<string, Set<string>> = {
   set_expense_category: new Set(["idempotency_key", "transaction_id", "category_id"]),
   create_project: new Set(["idempotency_key", "name", "status"]),
   create_category: new Set(["idempotency_key", "name", "kind"]),
+  create_projects: new Set(["idempotency_key", "items"]),
+  create_categories: new Set(["idempotency_key", "items"]),
   sync_bank: new Set(["idempotency_key"]),
   hide_category: new Set(["idempotency_key", "category_id"]),
   set_category_pnl: new Set(["idempotency_key", "category_id", "excluded"]),
@@ -164,9 +168,19 @@ const undoSchema = z.object({
   kind: z.enum(["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"]),
   id: UUID_TEXT,
 }).strict();
+// Same rule as private.company_name_problem: 2 to 100 code points after trim()
+// (SQL private.trim_name strips the same whitespace) and no control character.
+function companyNameIsValid(name: string): boolean {
+  const points = Array.from(name);
+  if (points.length < 2 || points.length > 100) return false;
+  return points.every((point) => {
+    const code = point.codePointAt(0) ?? 0;
+    return code >= 0x20 && (code < 0x7f || code > 0x9f);
+  });
+}
 const renameCompanySchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
-  name: z.string().trim().min(2).max(100),
+  name: z.string().trim().refine(companyNameIsValid),
 }).strict();
 const LOAN_NAME = z.string().trim().min(1).max(80);
 const LOAN_CURRENCY = z.string().regex(/^[A-Z]{3}$/);
@@ -210,6 +224,36 @@ const createCategorySchema = z.object({
   name: z.string().trim().min(2).max(120),
   kind: z.enum(["expense", "income"]),
 }).strict();
+// A setup batch: up to 100 rows, a name at most once (per kind for categories).
+const PROJECT_ROW = z.object({
+  name: z.string().trim().min(2).max(120),
+  status: z.enum(["active", "finished"]).optional(),
+}).strict();
+const CATEGORY_ROW = z.object({
+  name: z.string().trim().min(2).max(120),
+  kind: z.enum(["expense", "income"]),
+}).strict();
+function uniqueRows<T>(keyOf: (row: T) => string) {
+  return (body: { items: T[] }, ctx: z.RefinementCtx) => {
+    const seen = new Set<string>();
+    for (const item of body.items) {
+      const key = keyOf(item);
+      if (seen.has(key)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom });
+        return;
+      }
+      seen.add(key);
+    }
+  };
+}
+const createProjectsSchema = z.object({
+  idempotency_key: BATCH_KEY,
+  items: z.array(PROJECT_ROW).min(1).max(100),
+}).strict().superRefine(uniqueRows<z.infer<typeof PROJECT_ROW>>((row) => row.name));
+const createCategoriesSchema = z.object({
+  idempotency_key: BATCH_KEY,
+  items: z.array(CATEGORY_ROW).min(1).max(100),
+}).strict().superRefine(uniqueRows<z.infer<typeof CATEGORY_ROW>>((row) => `${row.kind}|${row.name}`));
 const syncBankSchema = z.object({
   idempotency_key: IDEMPOTENCY_KEY,
 }).strict();
@@ -617,7 +661,7 @@ function readTools() {
       to: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
-    toolSpec("get_project", "One project's all-time P&L, categories, and its 40 newest lines. It takes no dates, so it matches list_projects only when list_projects omits both dates. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Each transaction carries its currency and its full line amount, including pending lines and the whole of a shared line. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
+    toolSpec("get_project", "One project's all-time P&L, categories, and its 40 newest lines. It takes no dates, so it matches list_projects only when list_projects omits both dates. id is the project id from list_projects. basis is cash or invoiced (default cash, like list_projects and get_totals). Amounts in *_agorot are ILS only. by_currency and categories_by_currency are in minor units per currency (cents for USD). Expense categories kept out of the P&L are not in categories or the totals; they are listed in excluded_categories_by_currency. Kept-out project income is listed by category in excluded_income_by_currency (positive minor units). A guessed (category_suggested) kept-out category still counts until it is confirmed. Each transaction carries its currency and its full line amount, including pending lines and the whole of a shared line. loans lists the loans filed under this project (id, name, currency, balance_minor); it does not change the P&L numbers. A project outside the company is not_found.", {
       id: { type: "string" },
       basis: { type: "string", enum: ["cash", "invoiced"] },
     }),
@@ -632,7 +676,7 @@ function readTools() {
       limit: { type: "integer" },
       offset: { type: "integer" },
     }),
-    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
+    toolSpec("get_expense", "One ledger row, including its allocations; for a split line, line_split.parts; and its loan split. loan_split is null, or the parts of a loan payment: by_parts says whether the P&L counts the line by its parts, and then each part's in_pnl says whether that part counts (the principal is kept out). in_pnl says whether the line counts in the P&L, in_pnl_override is its own override (null follows the category), and category_excluded_from_pnl is the category flag; category_suggested is true while the category is only a guess, and a guessed kept-out category still counts. meta is the line's bank details: method (card, ach, wire, check, transfer, other, or null when the provider gave none), card_last4 (only the last 4 digits), memo, account (the bank account's name), counterparty, and bank_description (the bank's original text); a field is null when unknown. transaction_id is the ledger id.", {
       transaction_id: { type: "string" },
     }),
     toolSpec("search_expenses", "Search pending review rows, filed rows, or both. id is the ledger id. meta is the line's bank details (see get_expense).", {
@@ -743,6 +787,36 @@ function writeTools() {
       name: { type: "string" },
       kind: { type: "string", enum: ["expense", "income"] },
     }, true),
+    toolSpec("create_projects", "Create up to 100 projects in one write, for a company setup. Partial success is allowed: each row returns ok with its id, or a code; a name that is already taken returns existing_id. undo_batch with the returned batch_key removes the rows that were created.", {
+      idempotency_key: { type: "string" },
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            status: { type: "string", enum: ["active", "finished"] },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
+    toolSpec("create_categories", "Create up to 100 categories in one write, for a company setup. Partial success is allowed: each row returns ok with its id, or a code; a name already taken for that kind returns existing_id. undo_batch with the returned batch_key removes the rows that were created.", {
+      idempotency_key: { type: "string" },
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            kind: { type: "string", enum: ["expense", "income"] },
+          },
+          required: ["name", "kind"],
+          additionalProperties: false,
+        },
+      },
+    }, true),
     toolSpec("sync_bank", "Start a pull of the latest Mercury bank lines for this company. Returns job_id and state at once; poll get_sync_status with job_id until state is done or failed. The same idempotency_key returns the same job.", {
       idempotency_key: { type: "string" },
     }, true),
@@ -759,7 +833,7 @@ function writeTools() {
       idempotency_key: { type: "string" },
       project_id: { type: ["string", "null"] },
     }, true),
-    toolSpec("rename_company", "Rename this company. 2 to 100 characters after trimming. Undo restores the prior name.", {
+    toolSpec("rename_company", "Rename this company. 2 to 100 characters (code points) after trimming, with no control character. Undo restores the prior name.", {
       idempotency_key: { type: "string" },
       name: { type: "string" },
     }, true),
@@ -834,7 +908,7 @@ function writeTools() {
       kind: { type: "string", enum: ["review", "reassign", "project", "category", "category_hidden", "category_pnl", "loan", "loan_update", "loan_split", "overhead_project", "company", "line_split", "line_pnl"] },
       id: { type: "string" },
     }, true),
-    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses or set_lines_pnl batch.", {
+    toolSpec("undo_batch", "Undo every successful row from a prior assign_expenses, set_lines_pnl, create_projects or create_categories batch.", {
       idempotency_key: { type: "string" },
       batch_key: { type: "string" },
     }, true),
@@ -1186,6 +1260,22 @@ async function callWrite(
       p_idempotency_key: parsed.data.idempotency_key,
       p_name: parsed.data.name,
       p_kind: parsed.data.kind,
+    };
+  } else if (name === "create_projects") {
+    const parsed = createProjectsSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_create_projects";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items.map((item) => item.status == null ? { name: item.name } : item),
+    };
+  } else if (name === "create_categories") {
+    const parsed = createCategoriesSchema.safeParse(args);
+    if (!parsed.success) return fail("validation", "validation");
+    rpcName = "mcp_create_categories";
+    body = {
+      p_idempotency_key: parsed.data.idempotency_key,
+      p_items: parsed.data.items,
     };
   } else if (name === "hide_category") {
     const parsed = hideCategorySchema.safeParse(args);

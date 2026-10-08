@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { BigNumber } from "./big-number";
 import { padded } from "./story-support";
 
-/** The type scale from decision 0114 (option C, full Mercury). Sample words only, no real data. */
+/** The type scale from decision 0120 (option C, full Mercury). Sample words only, no real data. */
 const STYLES = [
   { name: "title-1 · 34/1.15/600", className: "t-title-1", text: "פרויקטים" },
   { name: "band-title · 32/1.25/600", className: "t-band-title", text: "וילה לדוגמה" },

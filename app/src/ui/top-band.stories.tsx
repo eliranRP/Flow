@@ -53,7 +53,7 @@ export const LongHebrew: Story = {
   args: { heading: longHebrew, amount: String(largeAgorot) },
 };
 
-/** The project name on the band is `band-title` 32 (decision 0114), above the 36 profit. */
+/** The project name on the band is `band-title` 32 (decision 0120), above the 36 profit. */
 function ProjectBand({ name }: { name: string }) {
   return (
     <TopBand>

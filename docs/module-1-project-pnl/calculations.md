@@ -107,7 +107,7 @@ A company can name one of its projects as its overhead project ([0101](../decisi
 
 Lines that belong to no bucket are **unassigned**: income with no project, and cost with no role, a project role and no project, or a shared role and no split. Company figures are the sum of every project, overhead, and unassigned. Expenses are direct + shared + overhead + unassigned cost.
 
-On the invoiced basis, only income changes. An expense line counts by its document date on both bases, so a supplier invoice that is not paid yet counts on the invoiced basis. A bank line that has not settled (`pending`) counts on neither basis until it posts.
+An expense line counts by its document date on both bases. The one exception is a supplier invoice or credit note that is not paid yet (no cash date): it counts on the invoiced basis and stays out of the cash basis until it is paid ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)). A bank line that has not settled (`pending`) counts on neither basis until it posts.
 
 Home always paints overhead as its own row under the projects, including when the top 5 are sorted by losses. Overhead is not eligible for the top 5. If overhead's profit for the period is 0 and the company has no projects and no transactions, Home uses the empty state and hides the row.
 
@@ -173,7 +173,7 @@ View only. Stored transactions, the overhead bucket, and the company income, exp
 
 The period is the one selected on that screen. On Home that is this month, last month, or year to date. On the project screen it is project to date, meaning every counting line on every project and on overhead, any date. The project screen does not gain the Home period switch.
 
-Let `H` be overhead profit in that period (income − expenses on the overhead bucket). Let `I_p` be project `p`'s income in that period. Let `I = sum I_p` over projects, not including overhead's own income.
+Let `H` be overhead profit in that period (income − expenses on the overhead bucket). On the cash basis `H` leaves out unpaid overhead invoices, like the overhead bucket ([0118](../decisions/0118-unpaid-invoices-cash-basis.md)). Let `I_p` be project `p`'s income in that period. Let `I = sum I_p` over projects, not including overhead's own income. The company's overhead project is left out of `I` and its share is 0: its cost is the overhead being spread, so it does not carry a share of it ([0117](../decisions/0117-overhead-project-weights.md)).
 
 - If `I` is 0, allocation is unavailable. The after-overhead view is not shown. The screen says so. It does not pretend every share is zero.
 - Otherwise each exact share is `H × I_p / I`. A project with `I_p = 0` has share 0.

@@ -798,11 +798,17 @@ isOneToOne: false
 "mcp_company_loan_currency":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"mcp_create_categories":
+{ Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
+                           },
 "mcp_create_category":
 { Args: { "p_idempotency_key": string,"p_kind": string,"p_name": string }; Returns: Json
                            },
 "mcp_create_project":
 { Args: { "p_idempotency_key": string,"p_name": string,"p_status"?: string }; Returns: Json
+                           },
+"mcp_create_projects":
+{ Args: { "p_idempotency_key": string,"p_items": Json }; Returns: Json
                            },
 "mcp_credential_status":
 { Args: { "p_user": string }; Returns: Json

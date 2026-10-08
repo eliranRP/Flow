@@ -24,11 +24,15 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 8 | [FLOW-602](#flow-602) | Rename a company (RPC and MCP merged; screen next) | SMALL CYCLE | in-progress (#82) |
 | 9 | [FLOW-603](#flow-603) | Per-user cache isolation on a shared device | BUG | in-progress (#79) |
 | 10 | [FLOW-112](#flow-112) | Kept-out categories follow-ups (#67 review) | BACKLOG NIT | in-progress (#81) |
-| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | ready (item a waits on the owner's answer) |
+| 10b | [FLOW-121](#flow-121) | Kept-out lines: guessed categories and project income | SMALL CYCLE | in-progress (#113) |
 | 10c | [FLOW-122](#flow-122) | Loan categories by key in the app and the Mercury hint | SMALL CYCLE | in-progress (#112) |
+| 10d | [FLOW-126](#flow-126) | Kept-out guesses follow-ups (#113 review) | BACKLOG NIT | done (#114) |
+| 10e | [FLOW-127](#flow-127) | Kept-out income and overhead undo review follow-ups (#114, #116 reviews) | BACKLOG NIT | done (#117) |
 | 11 | [FLOW-204](#flow-204) | assign_expense_split follow-ups (#68 review) | BACKLOG NIT | in-progress (#88) |
 | 12 | [FLOW-203](#flow-203) | get_project docs and list_projects basis echo (#66 review) | BACKLOG NIT | in-progress (#90) |
-| 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | ready |
+| 13 | [FLOW-116](#flow-116) | Overhead project follow-ups (#71 review) | BACKLOG NIT | done (#116) |
+| 13b | [FLOW-128](#flow-128) | Unpaid supplier invoices on the cash basis | SMALL CYCLE | done (#118) |
+| 13c | [FLOW-206](#flow-206) | Bulk setup without rate-limit stalls | MCP | done (#119) |
 | 14 | [FLOW-509](#flow-509) | Mercury connector hardening (#44, #52, #64 reviews) | BACKLOG NIT | in-progress (#91) |
 | 15 | [FLOW-902](#flow-902) | Replace the deny-listed supplier word | BACKLOG NIT | ready |
 | 16 | [FLOW-901](#flow-901) | Deny-list test coverage gaps | SMALL CYCLE | ready |
@@ -43,15 +47,16 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 25 | [FLOW-106](#flow-106) | More loan types and loan fields | PLAN FIRST | plan-first |
 | 26 | [FLOW-701](#flow-701) | Jev phase 1 | PLAN FIRST | on-hold |
 | 27 | [FLOW-501](#flow-501) | Tabs reorg: connectors and loans pages | PLAN FIRST | in-progress (#111) |
-| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | ready |
+| 28 | [FLOW-604](#flow-604) | rename_company follow-ups (#77 review) | BACKLOG NIT | in-progress (#120) |
 | 29 | [FLOW-117](#flow-117) | Reversal section in the category picker | SMALL UI | in-progress (#101) |
 | 30 | [FLOW-118](#flow-118) | Reversals follow-ups (#76 review) | BACKLOG NIT | ready |
 | 31 | [FLOW-119](#flow-119) | Project picker in the loan sheet | SMALL UI | in-progress (#104) |
 | 32 | [FLOW-120](#flow-120) | Loan project follow-ups (#89 review) | BACKLOG NIT | ready |
 | 33 | [FLOW-208](#flow-208) | Split and undo follow-ups (#88 review) | BACKLOG NIT | ready |
 | 34 | [FLOW-605](#flow-605) | Shared-device follow-ups (#79 review) | BACKLOG NIT | ready |
+| 34b | [FLOW-606](#flow-606) | Company name rule in create_company and the rename sheet | BACKLOG NIT | ready |
 | 35 | [FLOW-209](#flow-209) | get_project follow-ups (#90 review) | BACKLOG NIT | ready |
-| 36 | [FLOW-121](#flow-121) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
+| 36 | [FLOW-125](#flow-125) | Loan split follow-ups (#83 review) | BACKLOG NIT | ready |
 | 37 | [FLOW-123](#flow-123) | Loan balance checks follow-ups (#72 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
@@ -105,9 +110,25 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-121"></a>
 ### FLOW-121 · Kept-out lines: guessed categories and project income
-- **Type:** SMALL CYCLE · **Status:** ready (item a waits on the owner's answer) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
+- **Type:** SMALL CYCLE · **Status:** in-progress (#113) · **Depends on:** FLOW-102 (#71), FLOW-104 (#76), both merged; they rewrote `private.pnl_lines` and `get_project`
 - **What:** Split out of FLOW-112. (a) A guessed (`category_suggested`) kept-out category already takes the line out of the P&L. Owner decision asked 2026-10-07; the recommended answer is that a guess counts in the P&L until the category is confirmed. (b) `get_project` lists kept-out project expenses in `excluded_categories_by_currency` but not kept-out project income.
 - **Acceptance:** the owner's answer to (a) written here; pgTAP for both bases; TOOLS.md for `get_project` and `get_totals`.
+- **Answer to (a):** built as recommended, a guess counts until confirmed (decision [0114](../decisions/0114-kept-out-guesses.md)); the owner was asked again on 2026-10-07 and can still pick the other way.
+
+<a id="flow-126"></a>
+### FLOW-126 · Kept-out guesses follow-ups (#113 review)
+- **Type:** BACKLOG NIT · **Status:** done (#114) · **Depends on:** FLOW-121
+- [x] Income that already has a project and a guessed kept-out category is never queued for review, so the guess is never confirmed and the line keeps counting. Owner call: queue a guessed kept-out category for income too, or leave it. (#114: queued with reason `suggested`, the recommended answer; the owner was asked on 2026-10-07 and can still pick "leave it".)
+
+<a id="flow-127"></a>
+### FLOW-127 · Kept-out income and overhead undo review follow-ups (#114, #116 reviews)
+- **Type:** BACKLOG NIT · **Status:** done (#117) · **Depends on:** FLOW-126 (#114), FLOW-116 (#116)
+- [x] `20261007224500_kept_out_income_review.sql`: the `user_assigned` / `category_assigned` checks next to `category_suggested` are redundant. Drop them in the next migration that replaces the function, or add a comment saying why they stay. (Kept with a comment: not every owner write clears `category_suggested`.)
+- [x] The same review queue can pick up a guessed loan category. Skip it through `private.line_category_out`, as the other review paths do.
+- [x] [TOOLS.md](../mcp/TOOLS.md): say that `set_expense_category` keeps the line's project.
+- [x] #116 review: `private.overhead_share` has one mis-indented `in_pnl` line.
+- [x] #116 review: `undo` kind `overhead_project` checks that the prior project still exists without locking it, so a delete at the same moment turns `conflict` into `refused`. Lock it with `for key share`.
+- [x] #116 review: `overhead_project_undo_deleted.test.sql` has two no-op `as_mcp()` / `reset role` pairs before the deletes.
 
 <a id="flow-122"></a>
 ### FLOW-122 · Loan categories by key in the app and the Mercury hint
@@ -124,10 +145,17 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-116"></a>
 ### FLOW-116 · Overhead project follow-ups (#71 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** —
-- [ ] `private.overhead_share` counts the overhead project's own income in the weights, so the overhead project gets a share of overhead. Decide whether it should (Decisions needed).
-- [ ] `undo` kind `overhead_project` after the prior overhead project was deleted is `refused` / `project not found`; `conflict` would match the other undo kinds.
-- [ ] Cash-basis expenses count an unpaid supplier invoice by document date, which [0007](../decisions/0007-bank-statement-is-primary-input.md) does not intend (follow-up named in [0101](../decisions/0101-unassigned-and-overhead-project.md)).
+- **Type:** BACKLOG NIT · **Status:** done (#116) · **Depends on:** —
+- [x] `private.overhead_share` counts the overhead project's own income in the weights, so the overhead project gets a share of overhead. (#116: left out, share 0, the recommended answer; owner asked 2026-10-07 by card. Decision [0117](../decisions/0117-overhead-project-weights.md).)
+- [x] `undo` kind `overhead_project` after the prior overhead project was deleted is `refused` / `project not found`; `conflict` would match the other undo kinds. (#116)
+- [ ] Cash-basis expenses count an unpaid supplier invoice by document date. Moved to [FLOW-128](#flow-128).
+
+<a id="flow-128"></a>
+### FLOW-128 · Unpaid supplier invoices on the cash basis
+- **Type:** SMALL CYCLE · **Status:** done (#118) · **Depends on:** —
+- **What:** Split out of FLOW-116. On the cash basis an expense line counts by its document date, so a posted supplier invoice that is not paid yet counts, which [0007](../decisions/0007-bank-statement-is-primary-input.md) does not intend (follow-up named in [0101](../decisions/0101-unassigned-and-overhead-project.md)). Decide the rule (count by payment date, or leave unpaid invoices out of the cash basis) and apply it in `private.pnl_lines` so every P&L read follows.
+- **Acceptance:** decision; pgTAP on both bases for a paid and an unpaid supplier invoice; TOOLS.md and calculations.md updated.
+- **Answer:** an unpaid supplier invoice stays out of the cash basis; other expenses keep their document date (decision [0118](../decisions/0118-unpaid-invoices-cash-basis.md)). Built as recommended; the owner was asked on 2026-10-08 and can still pick "count by payment date".
 
 <a id="flow-107"></a>
 ### FLOW-107 · Loan split breakdown on the transaction
@@ -136,8 +164,9 @@ Everything else follows by area, roughly in priority order inside each area.
 - **What:** When a bank line is a split loan payment, show its parts (principal, interest, escrow) on the transaction row and in the detail, so the expense makes sense. Icon-based, minimal wording, expenses with a minus. MCP: `get_expense` returns the split parts.
 - **Acceptance:** quick mockup approved; parts add up to the line amount on screen; MCP test; design review.
 
-<a id="flow-121"></a>
-### FLOW-121 · Loan split follow-ups (#83 review)
+<a id="flow-125"></a>
+### FLOW-125 · Loan split follow-ups (#83 review)
+- Renumbered from a second FLOW-121 (2026-10-07).
 - **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-107
 - [ ] Transaction rows in the category drill-down, a project's recent list and "שויכו היום" always pass `source="invoice"` (`app/src/screens/flow-screens.tsx`), so bank lines show the document icon. Have the list reads return the line's source and pass it on; do not special-case loan rows.
 - [ ] A Latin row title is cut at its start in an RTL row at 320 ("…gate Home Loans"). Use `dir="auto"` on `.ui-row-title`, or `ltrTitle` when the description is Latin.
@@ -291,9 +320,14 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-206"></a>
 ### FLOW-206 · Bulk setup without rate-limit stalls
-- **Type:** MCP · **Status:** ready · **Depends on:** —
+- **Type:** MCP · **Status:** done (#119) · **Depends on:** —
 - **What:** `create_project` and `create_category` hit HTTP 429 after about 10 calls in a row during a company setup. Add batch create tools (like `assign_expenses`) or a higher burst for setup. Also send the MCP `tools/list_changed` notification so clients refresh a stale tool list after a deploy.
 - **Acceptance:** a setup of 30 projects and categories runs without a 429; tests for the batch and the notification.
+
+<a id="flow-210"></a>
+### FLOW-210 · Bulk setup follow-ups (#119 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-206 (#119)
+- [ ] pgTAP: `undo_batch` of a created project or category that a line already uses is `conflict` for that row; `create_projects` with `status: "finished"`.
 
 <a id="flow-207"></a>
 ### FLOW-207 · sync_bank job follow-ups (#75 review)
@@ -660,15 +694,22 @@ Everything else follows by area, roughly in priority order inside each area.
 
 <a id="flow-604"></a>
 ### FLOW-604 · rename_company follow-ups (#77 review)
-- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-602
+- **Type:** BACKLOG NIT · **Status:** in-progress (#120) · **Depends on:** FLOW-602
 - **What:** (1) The MCP length check counts UTF-16 units, SQL counts code points; align them. (2) SQL `btrim` strips only spaces while the MCP trims all whitespace; trim all whitespace and reject control characters in `rename_company`. (3) A direct table update can still set any name; add a not-valid check constraint for 2 to 100 characters, or revoke `update(name)` once the screen uses the RPC. (4) pgTAP: assert an `audit_log` row after the MCP rename and after undo, and cover the refused path.
 - **Acceptance:** the same name is accepted or refused by the MCP, the RPC, and the table; audit rows tested.
+- **Built (#120):** `private.trim_name` trims what JavaScript `trim()` trims and `private.company_name_problem` holds the rule (2 to 100 code points, no control character) for `rename_company` and `mcp_rename_company`; the MCP counts code points. (3) is a `before update of name` trigger, not a check constraint, so a name that already breaks the rule never blocks an update of another column; it refuses with `23514`.
 
 <a id="flow-603"></a>
 ### FLOW-603 · Per-user cache isolation on a shared device
 - **Type:** BUG · **Status:** in-progress (#79) · **Depends on:** —
 - **What:** Query cache keys are shared across users and the cache isn't cleared on sign-out; saved roles stay in localStorage after sign-out; the dashboard cache isn't user-scoped, so a user switch without a reload could show the wrong company's flag. Scope keys by user and company and clear on sign-out (including an expired session or another tab).
 - **Acceptance:** tests for sign-out, a user switch without reload, and an expired session.
+
+<a id="flow-606"></a>
+### FLOW-606 · Company name rule in create_company and the rename sheet
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-604
+- [ ] `public.create_company` still trims spaces only, has no 100-character limit and accepts control characters. Use `private.trim_name` and `private.company_name_problem` there too (inserts are not checked by the FLOW-604 trigger). Until then, an MCP `undo` of a rename back to such an older name is `refused` by the trigger, and the app's ביטול is refused by the RPC.
+- [ ] The rename sheet's `companyNameError` does not refuse a control character, so a pasted tab gets the generic "שם העסק לא נשמר" toast. Add a field error (UI: through the Mercury thread).
 
 <a id="flow-605"></a>
 ### FLOW-605 · Shared-device follow-ups (#79 review)

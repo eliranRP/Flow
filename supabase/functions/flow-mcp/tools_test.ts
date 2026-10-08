@@ -333,6 +333,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -372,6 +374,8 @@ Deno.test("write tools are listed only for a write scope", () => {
     "set_expense_category",
     "create_project",
     "create_category",
+    "create_projects",
+    "create_categories",
     "sync_bank",
     "hide_category",
     "set_category_pnl",
@@ -944,6 +948,82 @@ Deno.test("create_project and create_category send exact p_* bodies", async () =
     name: "mcp_create_category",
     body: { p_idempotency_key: "cat-new-1", p_name: "Tools", p_kind: "expense" },
   });
+});
+
+Deno.test("create_projects and create_categories send one batch write each", async () => {
+  const { calls, rpc } = rpcOf(() => ({
+    status: 200,
+    json: {
+      ok: true,
+      data: {
+        batch_key: "cccccccc-cccc-4000-8000-0000000000c1",
+        ok_count: 1,
+        error_count: 1,
+        results: [
+          { name: "Site Alpha", ok: true, id: PROJECT_NEW, undo_kind: "project" },
+          { name: "Site Beta", ok: false, code: "refused", existing_id: PROJECT_NEW },
+        ],
+      },
+    },
+  }));
+  const projects = await callTool("create_projects", {
+    idempotency_key: "setup-p",
+    items: [{ name: "  Site Alpha " }, { name: "Site Beta", status: "finished" }],
+  }, ["write"], rpc);
+  assertEquals(projects.isError, false);
+  assertEquals(calls[0], {
+    name: "mcp_create_projects",
+    body: {
+      p_idempotency_key: "setup-p",
+      p_items: [{ name: "Site Alpha" }, { name: "Site Beta", status: "finished" }],
+    },
+  });
+  if (projects.structuredContent.ok) {
+    assertEquals((projects.structuredContent.data as { error_count: number }).error_count, 1);
+  }
+  const categories = await callTool("create_categories", {
+    idempotency_key: "setup-c",
+    items: [{ name: "Tools", kind: "expense" }, { name: "Tools", kind: "income" }],
+  }, ["write"], rpc);
+  assertEquals(categories.isError, false);
+  assertEquals(calls[1], {
+    name: "mcp_create_categories",
+    body: {
+      p_idempotency_key: "setup-c",
+      p_items: [{ name: "Tools", kind: "expense" }, { name: "Tools", kind: "income" }],
+    },
+  });
+});
+
+Deno.test("setup batches refuse bad rows before any write", async () => {
+  const { calls, rpc } = rpcOf(() => ({ status: 200, json: { ok: true, data: {} } }));
+  const many = Array.from({ length: 101 }, (_, index) => ({ name: `Site ${index}` }));
+  const cases = [
+    callTool("create_projects", { idempotency_key: "k", items: [] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: many }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "x" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "Site A" }, { name: " Site A" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k", items: [{ name: "Site A", company_id: "forged" }] }, ["write"], rpc),
+    callTool("create_projects", { idempotency_key: "k".repeat(125), items: [{ name: "Site A" }] }, ["write"], rpc),
+    callTool("create_categories", { idempotency_key: "k", items: [{ name: "Tools" }] }, ["write"], rpc),
+    callTool("create_categories", { idempotency_key: "k", items: [{ name: "Tools", kind: "asset" }] }, ["write"], rpc),
+    callTool("create_categories", {
+      idempotency_key: "k",
+      items: [{ name: "Tools", kind: "expense" }, { name: "Tools ", kind: "expense" }],
+    }, ["write"], rpc),
+  ];
+  for (const pending of cases) {
+    const result = await pending;
+    assertEquals(result.isError, true);
+    if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
+  }
+  const denied = await callTool("create_categories", {
+    idempotency_key: "k",
+    items: [{ name: "Tools", kind: "expense" }],
+  }, ["read"], rpc);
+  assertEquals(denied.isError, true);
+  if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
+  assertEquals(calls.length, 0);
 });
 
 Deno.test("cycle 4 write validation and read-token forbidden", async () => {
@@ -1710,7 +1790,7 @@ Deno.test("set_category_pnl forwards excluded false, rejects bad input, and refu
   assertEquals(calls.length, 1);
 });
 
-Deno.test("rename_company trims, forwards p_* args, validates, refuses a read token, and undo accepts company", async () => {
+Deno.test("rename_company trims, counts code points, refuses control characters and a read token, and undo accepts company", async () => {
   const { calls, rpc } = rpcOf(() => ({
     status: 200,
     json: { ok: true, data: { id: PROJECT, name: "Example North", prior_name: "Example Co", undo_kind: "company" } },
@@ -1731,18 +1811,32 @@ Deno.test("rename_company trims, forwards p_* args, validates, refuses a read to
     callTool("rename_company", { idempotency_key: "k", name: "a".repeat(101) }, ["write"], rpc),
     callTool("rename_company", { idempotency_key: "k", name: 42 }, ["write"], rpc),
     callTool("rename_company", { idempotency_key: "k", name: "Example North", company_id: PROJECT }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example\u0007North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "Example\u0085North" }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "\u{1F600}".repeat(101) }, ["write"], rpc),
+    callTool("rename_company", { idempotency_key: "k", name: "\u00a0x\u3000" }, ["write"], rpc),
   ];
   for (const result of await Promise.all(cases)) {
     assertEquals(result.isError, true);
     if (!result.structuredContent.ok) assertEquals(result.structuredContent.error.code, "validation");
   }
+  // Code points, like char_length: 100 emoji are 200 UTF-16 units and still pass.
+  const emoji = await callTool("rename_company", { idempotency_key: "rename-emoji", name: "\u{1F600}".repeat(100) }, ["write"], rpc);
+  assertEquals(emoji.isError, false);
+  // trim() strips every whitespace, as private.trim_name does in SQL.
+  const spaced = await callTool("rename_company", {
+    idempotency_key: "rename-spaced",
+    name: "\u00a0\tExample North\u2003\ufeff",
+  }, ["write"], rpc);
+  assertEquals(spaced.isError, false);
+  assertEquals(calls[2].body, { p_idempotency_key: "rename-spaced", p_name: "Example North" });
   const denied = await callTool("rename_company", { idempotency_key: "rename-read", name: "Example North" }, ["read"], rpc);
   assertEquals(denied.isError, true);
   if (!denied.structuredContent.ok) assertEquals(denied.structuredContent.error.code, "forbidden");
-  assertEquals(calls.length, 1);
+  assertEquals(calls.length, 3);
   const undo = await callTool("undo", { idempotency_key: "rename-undo", kind: "company", id: PROJECT }, ["write"], rpc);
   assertEquals(undo.isError, false);
-  assertEquals(calls[1], {
+  assertEquals(calls[3], {
     name: "mcp_undo",
     body: { p_idempotency_key: "rename-undo", p_kind: "company", p_id: PROJECT },
   });
@@ -1767,6 +1861,9 @@ const PROJECT_FIXTURE = {
   ],
   excluded_categories_by_currency: [
     { currency: "USD", id: CATEGORY_NEW, name: "Example Loan Principal", amount_minor: 50000, has_shared_share: false },
+  ],
+  excluded_income_by_currency: [
+    { currency: "USD", id: CATEGORY, name: "Example Owner Money", amount_minor: 3000, count: 1 },
   ],
   other_currencies: [{ currency: "USD", income_minor: 250000, expense_minor: -1250, count: 2 }],
   pending_count: 0,
@@ -1833,6 +1930,7 @@ Deno.test("get_project calls get_project with the id and each basis", async () =
       assertEquals(data.categories_by_currency, PROJECT_FIXTURE.categories_by_currency);
       assertEquals(data.excluded_categories_by_currency, PROJECT_FIXTURE.excluded_categories_by_currency);
       assertEquals(data.excluded_categories_by_currency[0]?.amount_minor, 50000);
+      assertEquals(data.excluded_income_by_currency, PROJECT_FIXTURE.excluded_income_by_currency);
       assertEquals(data.transactions, PROJECT_FIXTURE.transactions);
       assertEquals(data.transactions.map((row) => row.currency), ["USD", "USD"]);
       assertEquals(data.budget_agorot, null);
