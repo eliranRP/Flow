@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(22);
+select plan(29);
 
 do $users$
 begin
@@ -42,7 +42,8 @@ $$;
 grant execute on function pg_temp.as_mcp(text) to authenticated, service_role;
 
 -- A line with the given status and amount, split by the app (as the owner) into
--- interest 0, escrow 0 and the whole amount as principal.
+-- interest 0, escrow 0 and the whole amount as principal. A null status splits an
+-- existing line, found by its external id.
 create or replace function pg_temp.app_split_line(p_key text, p_status text, p_amount bigint)
 returns void
 language plpgsql
@@ -50,6 +51,7 @@ set search_path = ''
 as $$
 begin
   reset role;
+  if p_status is not null then
   insert into public.transactions (
     company_id, direction, doc_kind, line_status, amount_gross, amount_net, amount_original,
     vat_amount, vat_status, doc_date, currency, source, idempotency_key, description
@@ -57,6 +59,7 @@ begin
   select c.id, 'expense', 'expense', p_status::public.line_status, -p_amount, -p_amount, p_amount, 0, 'unknown',
     '2026-02-01', 'USD', 'manual', p_key, 'Example loan payment'
   from pg_temp.f123 c where c.label = 'company';
+  end if;
 
   perform tests.authenticate_as('f123_owner');
   insert into public.loan_splits (company_id, loan_id, transaction_id, part, amount_minor, scheduled_minor, category_id)
@@ -69,7 +72,7 @@ begin
     ('principal', 'תשלומי הלוואה', p_amount)
   ) as v(part, category, amount)
   join public.categories c on c.company_id = t.company_id and c.name = v.category and c.kind = 'expense'
-  where t.idempotency_key = p_key;
+  where t.idempotency_key = p_key or t.external_id = p_key;
   set constraints all immediate;
   set constraints all deferred;
   reset role;
@@ -92,7 +95,7 @@ set search_path = ''
 as $$
   select count(*) from public.loan_splits s
   join public.transactions t on t.id = s.transaction_id
-  where t.idempotency_key = p_key and s.needs_review;
+  where (t.idempotency_key = p_key or t.external_id = p_key) and s.needs_review;
 $$;
 grant execute on function pg_temp.balance() to authenticated, service_role;
 grant execute on function pg_temp.flagged(text) to authenticated, service_role;
@@ -118,7 +121,7 @@ reset role;
 -- 1. The app split check locks the loan, like the MCP attach path.
 
 select ok(
-  pg_get_functiondef('private.loan_splits_check(uuid)'::regprocedure) ~* 'from public\.loans l where l\.id = loan for update',
+  pg_get_functiondef('private.loan_splits_check(uuid)'::regprocedure) ~* 'from public\.loans l where l\.id = loan for no key update',
   'loan_splits_check locks the loan before the balance check'
 );
 
@@ -221,6 +224,78 @@ select throws_ok(
   'a direct update below the paid principal is refused too'
 );
 
+-- 5. The bank sync: a pending line split in the app, then posted by the sync past the
+-- balance (12,000,000 principal, 11,000,000 counted), is flagged, and the sync saves.
+
+insert into public.connector_connections (
+  company_id, provider,
+  key_ciphertext, key_nonce, dek_ciphertext, dek_nonce,
+  kek_ref, kek_version, envelope_version, account_labels
+)
+select id, 'mercury', '\x01'::bytea, '\x0201'::bytea, '\x03'::bytea, '\x0401'::bytea,
+  'MERCURY_KEK', '1', '3', '[]'::jsonb
+from f123 where label = 'company';
+
+create temp table f123_line (line jsonb);
+insert into f123_line (line) values (jsonb_build_object(
+  'source', 'mercury', 'external_id', 'f123-sync', 'direction', 'expense',
+  'line_status', 'pending', 'doc_kind', 'expense', 'currency', 'USD',
+  'amount_original', 2000000, 'amount_negated', true,
+  'doc_date', '2026-03-01', 'cash_date', '2026-03-01',
+  'description', 'Example loan payment',
+  'vat', jsonb_build_object('amount', 0, 'status', 'source')
+));
+
+create or replace function pg_temp.sync(p_status text)
+returns integer
+language plpgsql
+set search_path = ''
+as $$
+declare
+  result integer;
+begin
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform set_config('request.jwt.claim.sub', '', true);
+  select (public.upsert_connector_lines(
+    (select id from pg_temp.f123 where label = 'company'), 'mercury',
+    jsonb_build_object(
+      'lines', jsonb_build_array((select line || jsonb_build_object('line_status', p_status) from pg_temp.f123_line)),
+      'removed_ids', '[]'::jsonb, 'complete', false
+    ),
+    null, null
+  )).inserted into result;
+  return result;
+end;
+$$;
+
+select is(pg_temp.sync('pending'), 1, 'the sync stores the pending line');
+select pg_temp.app_split_line('f123-sync', null, 2000000);
+select is(pg_temp.balance(), 1000000::bigint, 'the pending split does not count');
+select is(pg_temp.sync('posted'), 0, 'the sync posts the line in place, without a refusal');
+select is(pg_temp.flagged('f123-sync'), 3::bigint, 'the line the sync posted past the balance is flagged');
+
+-- Once the principal covers it, the owner can clear the flag and the line counts.
+select pg_temp.as_mcp('write');
+select public.mcp_update_loan('f123-cover', (select id from f123 where label = 'loan'), '{"principal_minor": 13000000}'::jsonb);
+select tests.authenticate_as('f123_owner');
+select lives_ok(
+  $$
+    select public.clear_loan_split_review((select id from public.transactions where external_id = 'f123-sync'));
+    set constraints all immediate;
+  $$,
+  'the owner clears the flag once the split fits'
+);
+reset role;
+select is(pg_temp.balance(), 0::bigint, 'the cleared line counts, down to exactly zero');
+
+-- An edit that does not make a line start to count is not checked, even on a loan that
+-- is already past its balance (a row saved before these checks).
+alter table public.loans disable trigger loans_principal_covers_paid;
+update public.loans set principal_minor = 1000000 where id = (select id from f123 where label = 'loan');
+alter table public.loans enable trigger loans_principal_covers_paid;
+update public.transactions set line_status = 'posted', description = 'Example edit' where external_id = 'f123-sync';
+select is(pg_temp.flagged('f123-sync'), 0::bigint, 'a posted line that stays posted is not flagged');
 select * from finish();
 
 rollback;

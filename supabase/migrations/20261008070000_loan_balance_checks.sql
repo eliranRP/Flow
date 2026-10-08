@@ -132,9 +132,15 @@ begin
 
   select s.loan_id into loan from public.loan_splits s where s.transaction_id = txn limit 1;
 
+  -- Wait for a bank sync that is posting or restoring this line right now, so the
+  -- read below sees its status (its trigger cannot see these parts until we commit).
+  perform 1 from public.transactions t where t.id = txn for share;
+
   -- Wait for any other write on this loan to commit, then read its parts too.
-  -- The MCP attach path takes the same lock.
-  perform 1 from public.loans l where l.id = loan for update;
+  -- No key update: it queues behind the MCP attach (for update) and other checks, but
+  -- not behind the key-share locks every loan_splits insert takes on the loan, so two
+  -- app splits at once do not deadlock.
+  perform 1 from public.loans l where l.id = loan for no key update;
 
   -- Same rule as public.loan_balances: posted principal still on the books,
   -- not waiting for review, may not pass the loan's principal.
@@ -177,7 +183,18 @@ begin
     return null;
   end if;
 
-  perform 1 from public.loans l where l.id = loan for update;
+  -- Never wait here: the sync already holds row locks on other lines, and the MCP
+  -- attach locks the loan before the line, so waiting can deadlock the whole sync.
+  -- A loan someone else is writing right now: flag the parts; clearing re-checks.
+  perform 1 from public.loans l where l.id = loan for no key update skip locked;
+  if not found then
+    update public.loan_splits
+       set needs_review = true
+     where company_id = new.company_id
+       and transaction_id = new.id
+       and needs_review is distinct from true;
+    return null;
+  end if;
 
   if exists (
     select 1

@@ -13,8 +13,8 @@
 
 ## Decision
 
-- `private.loan_splits_check` locks the loan row before the balance check, as the MCP `attach_loan_payment` path does. Concurrent splits on one loan check one after the other.
-- When a line with loan parts starts to count (it becomes posted, or its removal is undone) and the balance would go below zero, its parts are flagged for review (`needs_review`), the same way an amount change already flags them. The write itself is not refused: the bank sync and undo write these lines, and a refusal would stop a whole sync. A flagged line's parts count nowhere in the balance until the owner corrects the split and clears the flag, and clearing runs the balance check again.
+- `private.loan_splits_check` waits for any open write on the line (`for share`), then locks the loan row (`for no key update`, which does not wait on the key-share lock every `loan_splits` insert takes) before the balance check. Concurrent splits on one loan check one after the other, and a split on a line the bank sync is posting sees the posted status.
+- When a line with loan parts starts to count (it becomes posted, or its removal is undone) and the balance would go below zero, its parts are flagged for review (`needs_review`), the same way an amount change already flags them. The write itself is not refused: the bank sync and undo write these lines, and a refusal would stop a whole sync. The trigger never waits for the loan (`skip locked`): the sync already holds other lines and the MCP attach locks the loan before the line, so waiting could deadlock the sync. If another write holds the loan at that moment, the parts are flagged anyway, and clearing the flag runs the check. A flagged line's parts count nowhere in the balance until the owner corrects the split and clears the flag, and clearing runs the balance check again.
 - Lowering a loan's principal below the principal already paid is refused with `loan balance exceeded`, from MCP `update_loan`, its undo, and any direct update. Equal is allowed (balance zero).
 
 ## Alternatives rejected
