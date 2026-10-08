@@ -2,6 +2,7 @@
 
 **Date:** 2026-10-08
 **Status:** Accepted (owner approved the FLOW-106 plan, 2026-10-08)
+**Amended in part by:** [0129](0129-loan-fees-installments.md) (the fees part: any expense category, exempt from the P&L-flip check)
 
 ## Context
 
@@ -26,4 +27,4 @@
 
 The checks on a split and on a loan's mapping hold the categories they read (`for share`), so a concurrent `set_category_pnl` on one of them waits and then sees the loan or the part, and is refused if it would break the rule. The flip waits on nothing but its own category row, and `for share` does not conflict with the share and key-share locks other checks take, so a check that already holds the loan (the MCP attach locks it before the deferred check runs) cannot deadlock on a category; the order of 0121 still holds.
 
-This supersedes the fixed-category paragraph of 0088 (the split rows keep their meaning). The fees part and its category come with FLOW-106 part 3. The loan sheet does not show or set these yet; that goes to the Mercury UI thread.
+This supersedes the fixed-category paragraph of 0088 (the split rows keep their meaning). The fees part and its category come with FLOW-106 part 3 ([0129](0129-loan-fees-installments.md)). The loan sheet does not show or set these yet; that goes to the Mercury UI thread.

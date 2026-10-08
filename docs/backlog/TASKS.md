@@ -65,6 +65,7 @@ Take tasks in this order. On-hold and plan-first items are listed so nobody star
 | 37d | [FLOW-133](#flow-133) | Batch undo by write id; split undo keeps percent and rest (#145 review) | BACKLOG NIT | ready |
 | 37e | [FLOW-132](#flow-132) | Closed loan follow-ups (#132 review) | BACKLOG NIT | ready |
 | 37f | [FLOW-134](#flow-134) | Loan part categories follow-ups (FLOW-106 part 2 review) | BACKLOG NIT | ready |
+| 37g | [FLOW-135](#flow-135) | Loan installments follow-ups (FLOW-106 part 3 review) | BACKLOG NIT | ready |
 | 38 | [FLOW-313](#flow-313) | Month dividers follow-ups (#98 review) | BACKLOG NIT | ready |
 | 39 | [FLOW-314](#flow-314) | Swipe between transactions on the card | SMALL UI | ready |
 | 40 | [FLOW-124](#flow-124) | One line out of the P&L follow-ups (#105) | SMALL UI | ready |
@@ -285,6 +286,12 @@ Everything else follows by area, roughly in priority order inside each area.
 - [ ] The categories screen shows a generic error when a flip is refused with `loan category is fixed` for a category a loan uses; give it copy (Mercury UI thread).
 - [ ] The match sheet offers a loan only for lines on the keyed principal category (`offerMatch` in `loan-match.tsx`); also offer it on a loan's own principal category (Mercury UI thread).
 - [ ] `mcp_update_loan` repeats the fit check for each part; one loop over the three keys would do. The loans trigger also runs on every `update_loan` and `loan_update` undo, since they always set the three columns.
+
+<a id="flow-135"></a>
+### FLOW-135 · Loan installments follow-ups (FLOW-106 part 3 review)
+- **Type:** BACKLOG NIT · **Status:** ready · **Depends on:** FLOW-106 part 3
+- [ ] N1. `attach_loan_payment` `installments` finds the first unpaid row from the principal already paid: a part-paid row counts as unpaid; extra principal paid ahead skips rows; a row with zero scheduled principal always counts as paid; and pending lines do not lower the balance, so two quick installment attaches before the first line posts start on the same row.
+- [ ] N3. Exact `parts` still need a schedule row for the line's date (`no schedule row for this date`), although the scheduled figures are only kept for comparison.
 
 <a id="flow-106"></a>
 ### FLOW-106 · More loan types and loan fields

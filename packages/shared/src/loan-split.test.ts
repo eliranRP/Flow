@@ -151,6 +151,17 @@ describe("allocateLoanSplitWithFees", () => {
     expect(parts?.map((part) => part.amountMinor)).toEqual([0n, 0n, 0n, 250n]);
   });
 
+  it("takes a 1-cent fee as its own part", () => {
+    const parts = allocateLoanSplitWithFees({ lineMinor: 1_001n, feesMinor: 1n, ...scheduled });
+    expect(parts?.map((part) => [part.part, part.amountMinor, part.scheduledMinor])).toEqual([
+      ["interest", 500n, 500n],
+      ["escrow", 200n, 200n],
+      ["principal", 300n, 300n],
+      ["fees", 1n, 1n],
+    ]);
+    expect(allocateLoanSplitWithFees({ lineMinor: 0n, feesMinor: 1n, ...scheduled })).toBeNull();
+  });
+
   it("refuses a line smaller than the fees", () => {
     expect(allocateLoanSplitWithFees({ lineMinor: 249n, feesMinor: 250n, ...scheduled })).toBeNull();
   });

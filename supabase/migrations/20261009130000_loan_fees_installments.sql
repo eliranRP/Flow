@@ -1,11 +1,14 @@
 -- FLOW-106 part 3. A loan payment can carry a fees part. Decision 0129.
 -- loan_split_part gets 'fees'. A split is interest, escrow and principal, plus at most one
--- fees part above zero. Fees go to loans.fees_category_id, else to the loan's interest
--- category (its own, else the keyed interest default); there is no keyed fees category.
--- A fees category is an expense category counted in the P&L whose loan_part is null or
--- 'interest'. The balance still counts principal only. private.pnl_lines counts a 4-part
--- split by its parts like a 3-part one, so fees count under their category like interest.
--- mcp_attach_loan_payment takes the optional fees part, mcp_update_loan sets
+-- fees part above zero. Fees go to the category the attach call names, else to
+-- loans.fees_category_id; with neither, the attach is refused (fees category required).
+-- There is no default and no keyed fees category (owner, 2026-10-08).
+-- A fees category is any expense category, counted in the P&L or kept out, whose loan_part
+-- is null or 'interest', and it may flip sides freely. The balance still counts principal
+-- only. private.pnl_lines counts a 4-part split by its parts like a 3-part one, so fees
+-- count or stay out by their own category's flag.
+-- mcp_attach_loan_payment takes the optional fees part (with an optional category_id),
+-- mcp_refused names the new refusal, mcp_update_loan sets
 -- fees_category_id, undo restores it, mcp_list_loans returns it, get_loan_split lists it.
 -- Functions are as in 20261009000000_loan_part_categories.sql otherwise; pnl_lines is as in
 -- 20261008003000_unpaid_invoices_cash.sql and get_loan_split as in
@@ -29,12 +32,12 @@ alter table public.loans
     on delete set null (fees_category_id);
 
 comment on column public.loans.fees_category_id is
-  'Category for the fees part of this loan''s payments. Null uses the loan''s interest category (its own, else the keyed default). Decision 0129.';
+  'Category for the fees part of this loan''s payments, unless the attach call names one. With neither, a payment with fees is refused. Decision 0129.';
 
 create index loans_fees_category_idx on public.loans (fees_category_id) where fees_category_id is not null;
 
--- Whether a category of the company may hold a loan part. Fees: an expense category in the
--- P&L that is not keyed, or is the keyed interest category (0129).
+-- Whether a category of the company may hold a loan part. Fees: any expense category, in the
+-- P&L or kept out, that is not keyed, or is the keyed interest category (0129).
 create or replace function private.loan_part_category_ok(
   p_company_id uuid,
   p_part public.loan_split_part,
@@ -57,7 +60,7 @@ as $$
         or c.loan_part = p_part
         or (p_part::text = 'fees' and c.loan_part::text = 'interest')
       )
-      and c.excluded_from_pnl = (p_part::text = 'principal')
+      and (p_part::text = 'fees' or c.excluded_from_pnl = (p_part::text = 'principal'))
   );
 $$;
 
@@ -102,7 +105,8 @@ create trigger loans_part_categories_check
   for each row execute function private.loans_part_categories_check();
 
 -- A category that holds loan parts, or that a loan names, keeps its side of the P&L:
--- flipping it would count principal as an expense, or drop interest or fees from the totals.
+-- flipping it would count principal as an expense, or drop interest from the totals. Fees
+-- are exempt: they may sit on either side, and each part follows its category's flag (0129).
 create or replace function private.categories_loan_pnl_check()
 returns trigger
 language plpgsql
@@ -116,6 +120,7 @@ begin
          select 1 from public.loan_splits s
          where s.company_id = new.company_id
            and s.category_id = new.id
+           and s.part::text <> 'fees'
            and new.excluded_from_pnl is distinct from (s.part = 'principal'::public.loan_split_part)
        )
        or exists (
@@ -124,7 +129,7 @@ begin
            and (
              (l.principal_category_id = new.id and not new.excluded_from_pnl)
              or (
-               (l.interest_category_id = new.id or l.escrow_category_id = new.id or l.fees_category_id = new.id)
+               (l.interest_category_id = new.id or l.escrow_category_id = new.id)
                and new.excluded_from_pnl
              )
            )
@@ -186,9 +191,9 @@ begin
     raise exception 'loan_split_income' using errcode = '23514';
   end if;
 
-  -- Interest, escrow and fees go to an expense category in the P&L, principal to one kept
-  -- out; a keyed loan category takes only its own part, and fees also the interest one
-  -- (0128, 0129). The categories are held so a
+  -- Interest and escrow go to an expense category in the P&L, principal to one kept out,
+  -- fees to any expense category; a keyed loan category takes only its own part, and fees
+  -- also the interest one (0128, 0129). The categories are held so a
   -- concurrent flip of their P&L side waits for this check (the flip updates the row).
   perform 1
   from public.categories c
@@ -416,6 +421,72 @@ where t.removed_at is null
 revoke all on private.pnl_lines from public, anon;
 grant select on private.pnl_lines to authenticated, service_role;
 
+-- private.mcp_refused: as in 20261009000000_loan_part_categories.sql, plus a payment whose fees have no
+-- category (0129).
+create or replace function private.mcp_refused(p_message text)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select private.mcp_error(
+    'refused',
+    case
+      when p_message in (
+        'no company',
+        'unknown review action',
+        'review item not found',
+        'shared costs are split, not assigned to one project',
+        'category is required',
+        'project or category not found',
+        'category kind must match the direction',
+        'project and category are required',
+        'transaction not found',
+        'category not found',
+        'project name is too short',
+        'project already exists',
+        'category name is too short',
+        'category already exists',
+        'unknown category kind',
+        'in use',
+        'loan not found',
+        'loan currency mismatch',
+        'loan already attached',
+        'loan balance exceeded',
+        'no schedule row for this date',
+        'loan categories missing',
+        'invalid loan terms',
+        'loan category is fixed',
+        'project not found',
+        'parts must sum to the line',
+        'line has a loan split',
+        'line has a split by category',
+        'line has an open review',
+        'payment below interest',
+        'invalid loan parts',
+        'loan line is fixed',
+        'parts exceed the line',
+        'a part rounds to zero',
+        'nothing is left for the rest',
+        'line has no category for the rest',
+        'a reversal part needs a project',
+        'same category and project twice',
+        'line amount is zero',
+        -- FLOW-106 parts 1 and 2 (decisions 0122 and 0128).
+        'closed_on required',
+        'loan is open',
+        'payments after closed_on',
+        'loan closed',
+        'category does not fit the loan part',
+        -- FLOW-106 part 3 (decision 0129).
+        'fees category required'
+      ) then p_message
+      when p_message = 'loan_closed' then 'loan closed'
+      else 'The write was refused.'
+    end
+  );
+$$;
+
 -- get_loan_split: as in 20261007200000_loan_split_read.sql, with the fees part listed last.
 create or replace function public.get_loan_split(p_transaction_id uuid)
 returns jsonb
@@ -464,7 +535,8 @@ comment on function public.get_loan_split(uuid) is
 revoke all on function public.get_loan_split(uuid) from public, anon;
 grant execute on function public.get_loan_split(uuid) to authenticated, service_role;
 
--- mcp_attach_loan_payment: as in 20261009000000_loan_part_categories.sql, plus an optional fees part.
+-- mcp_attach_loan_payment: as in 20261009000000_loan_part_categories.sql, plus an optional fees part
+-- whose optional category_id names this payment's fees category (else the loan's; no default).
 create or replace function public.mcp_attach_loan_payment(
   p_idempotency_key text,
   p_transaction_id uuid,
@@ -495,6 +567,8 @@ declare
   cat_escrow uuid;
   cat_principal uuid;
   cat_fees uuid;
+  call_fees_cat uuid;
+  has_fees boolean := false;
   line record;
   inherited boolean := false;
   inherit_reason text;
@@ -574,7 +648,8 @@ begin
           response := private.mcp_refused('loan balance exceeded');
         else
           -- Exactly interest, escrow and principal, once each, plus at most one fees part
-          -- above zero (0129), as whole non-negative minor units.
+          -- above zero (0129), as whole non-negative minor units. Only the fees part may
+          -- name a category_id (a uuid string): this payment's fees category.
           select count(*) in (3, 4)
              and count(distinct e.value->>'part') = count(*)
              and count(*) filter (where e.value->>'part' in ('interest', 'escrow', 'principal')) = 3
@@ -586,7 +661,15 @@ begin
                and jsonb_typeof(e.value->'scheduled_minor') = 'number'
                and (e.value->>'amount_minor') ~ '^[0-9]{1,18}$'
                and (e.value->>'scheduled_minor') ~ '^[0-9]{1,18}$'
-               and (e.value->>'part' <> 'fees' or (e.value->>'amount_minor') !~ '^0+$'),
+               and (e.value->>'part' <> 'fees' or (e.value->>'amount_minor') !~ '^0+$')
+               and (
+                 not (e.value ? 'category_id')
+                 or (
+                   e.value->>'part' = 'fees'
+                   and jsonb_typeof(e.value->'category_id') = 'string'
+                   and e.value->>'category_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                 )
+               ),
                false
              ))
           into parts_ok
@@ -599,6 +682,10 @@ begin
               if part->>'part' = 'principal' then
                 principal_amt := (part->>'amount_minor')::bigint;
               end if;
+              if part->>'part' = 'fees' then
+                has_fees := true;
+                call_fees_cat := (part->>'category_id')::uuid;
+              end if;
             end loop;
           end if;
 
@@ -606,6 +693,17 @@ begin
             response := private.mcp_refused('invalid loan parts');
           elsif principal_amt > balance then
             response := private.mcp_refused('loan balance exceeded');
+          elsif has_fees and call_fees_cat is not null and not exists (
+            select 1 from public.categories c where c.company_id = cid and c.id = call_fees_cat
+          ) then
+            response := private.mcp_refused('category not found');
+          elsif has_fees and call_fees_cat is not null
+            and not private.loan_part_category_ok(cid, 'fees', call_fees_cat)
+          then
+            response := private.mcp_refused('category does not fit the loan part');
+          elsif has_fees and coalesce(call_fees_cat, loan.fees_category_id) is null then
+            -- No default for fees: the call or the loan names the category (owner, 2026-10-08).
+            response := private.mcp_refused('fees category required');
           else
             -- The loan's own category for a part wins; null keeps the keyed default (0128).
             cat_interest := loan.interest_category_id;
@@ -626,8 +724,8 @@ begin
               from public.categories c
               where c.company_id = cid and c.loan_part = 'principal'::public.loan_split_part;
             end if;
-            -- Fees default to the interest category this payment uses (0129).
-            cat_fees := coalesce(loan.fees_category_id, cat_interest);
+            -- Fees go to this call's category, else the loan's; there is no default (0129).
+            cat_fees := coalesce(call_fees_cat, loan.fees_category_id);
 
             if cat_interest is null or cat_escrow is null or cat_principal is null then
               response := private.mcp_refused('loan categories missing');
