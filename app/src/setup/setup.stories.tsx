@@ -50,7 +50,6 @@ export const HomeCard: Story = {
 /** FLOW-606: a pasted tab is refused on the field, as create_company refuses it. */
 const businessNameError = {
   args: SmartTag.args,
-  // StoryRoute brings its own router.
   parameters: { flowRouter: false },
   render: () => (
     <StoryRoute entry="/setup/0">
@@ -68,5 +67,5 @@ export const BusinessNameErrorDark: Story = {
 export const BusinessNameError320: Story = {
   ...businessNameError,
   name: "Business step, name error, 320",
-  parameters: { ...businessNameError.parameters, viewport: { defaultViewport: "flow320" } },
+  parameters: { flowRouter: false, viewport: { defaultViewport: "flow320" } },
 };
