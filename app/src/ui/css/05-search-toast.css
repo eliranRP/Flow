@@ -1,0 +1,136 @@
+.ui-search {
+  display: flex;
+  align-items: stretch;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  block-size: var(--size-search);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+}
+
+.ui-search-field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  min-block-size: 100%;
+  padding-inline: var(--field-pad);
+  cursor: text;
+}
+
+.ui-search-icon {
+  display: inline-flex;
+  flex: none;
+  pointer-events: none;
+}
+
+.ui-search:focus-within {
+  box-shadow: inset 0 0 0 var(--stroke-strong) var(--color-accent);
+}
+
+.ui-search input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  inline-size: 100%;
+  min-block-size: var(--touch-min);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: max(16px, var(--type-body-size));
+  outline: none;
+}
+
+.ui-search input::-webkit-search-cancel-button,
+.ui-search input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.ui-search-clear {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: inherit;
+}
+
+.ui-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--toast-gap);
+  inline-size: 100%;
+  max-inline-size: var(--content-max);
+  border-radius: var(--radius-button);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-toast-bg);
+  color: var(--color-toast-text);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  pointer-events: auto;
+}
+
+.ui-toast button {
+  position: relative;
+  margin-inline-start: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* The label stays its text size. The hit target is at least 44×44, centred on it. */
+.ui-toast button::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, var(--touch-min));
+  height: var(--touch-min);
+  transform: translate(-50%, -50%);
+}
+
+.ui-toast button:active {
+  opacity: 0.72;
+}
+
+.ui-toast-mark {
+  display: inline-flex;
+  flex: none;
+  inline-size: var(--spinner);
+  block-size: var(--spinner);
+}
+
+.ui-toast-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  text-wrap: balance;
+  unicode-bidi: isolate;
+}
+
+.ui-notice-title,
+.ui-notice-body,
+.ui-form-error,
+.ui-empty-title,
+.ui-empty-line {
+  unicode-bidi: isolate;
+}
+
+.ui-toast-bad {
+  color: var(--color-toast-bad);
+}
+
+.ui-bar-thin {
+  height: var(--figure-gap);
+  flex: 1;
+}
