@@ -1,0 +1,1 @@
+Connecting Mercury before the business exists comes back to Mercury (FLOW-508). The "פרטי העסק" link in the Mercury sheet returned to the SUMIT sheet after the business was saved. It now opens the Mercury sheet again.
