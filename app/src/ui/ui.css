@@ -5128,8 +5128,8 @@ html[data-kb="open"] .ui-search-dock {
 }
 
 /*
-  Slim banner: one line, the hint (לרשימה ›) after the title instead of under it; on a 320 phone
-  the title may take a second line rather than be cut. On לאישור it
+  Slim banner: one line, the hint (לרשימה ›) after the title instead of under it. When the two
+  don't fit (a 320 phone, a long count), the hint wraps under the title rather than cutting it. On לאישור it
   frees the room the card needs above the pinned action bar on a 375×667 phone (owner's pick,
   2026-10-08).
 */
@@ -5142,13 +5142,16 @@ html[data-kb="open"] .ui-search-dock {
 .ui-banner.ui-banner-slim .ui-row-text {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  column-gap: var(--space-3);
+  padding-block: var(--space-1);
 }
 
 .ui-banner.ui-banner-slim .ui-row-title {
   flex: 0 1 auto;
   min-inline-size: 0;
+  max-inline-size: 100%;
   -webkit-line-clamp: 2;
 }
 
